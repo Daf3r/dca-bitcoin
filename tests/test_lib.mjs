@@ -47,6 +47,37 @@ const una = resumen([{ id: 1, fecha: '2026-10-31', monto: 28.68, sats: 36578, pr
 eq([una.racha, una.meta, Math.round(una.valor * 100) / 100], [1, 1e5, 28.38], 'el estado real del dueño');
 eq(resumen([], null).valor, null, 'sin compras ni precio');
 
+
+// Racha semanal (lunes a domingo, hora local)
+const semanales = (desde, n, salto = []) => Array.from({ length: n }, (_, i) => i).filter((i) => !salto.includes(i)).map((i) => {
+  const d = new Date(Date.UTC(...desde) + i * 7 * 864e5);
+  return { id: i + 1, fecha: d.toISOString().slice(0, 10), monto: 10, sats: 12000, precio: 83000 };
+});
+// Cambio de año: lunes 15-dic-2025 a lunes 12-ene-2026, hoy miércoles 14-ene-2026.
+const anioNuevo = resumen(semanales([2025, 11, 15], 5), 80000, '2026-01-14');
+eq([anioNuevo.racha, anioNuevo.semanaEnCurso], [5, true], 'la racha cruza el cambio de año');
+// Semana actual vacía: última compra el lunes pasado; hoy es domingo de la semana siguiente.
+const vacia = resumen(semanales([2026, 9, 5], 4), 80000, '2026-11-08');
+eq([vacia.racha, vacia.semanaEnCurso], [4, false], 'semana en curso sin compra no rompe la racha');
+// Y si pasa una semana completa sin comprar, sí se rompe.
+eq(resumen(semanales([2026, 9, 5], 4), 80000, '2026-11-09').racha, 0, 'semana completa sin compra rompe la racha');
+// Hueco de una semana a mitad: cuenta solo lo posterior; la mejor racha recuerda lo anterior.
+const hueco = resumen(semanales([2026, 6, 6], 12, [5]), 80000, '2026-09-23');
+eq([hueco.racha, hueco.mejorRacha], [6, 6], 'hueco de una semana');
+const hueco2 = resumen(semanales([2026, 6, 6], 12, [8]), 80000, '2026-09-23');
+eq([hueco2.racha, hueco2.mejorRacha], [3, 8], 'mejor racha anterior al hueco');
+// Primera compra hace menos de 52 semanas.
+const corta = resumen(semanales([2026, 8, 7], 10), 80000, '2026-11-11');
+eq([corta.racha, corta.ultimas52.filter(Boolean).length, corta.semanasDesdePrimera], [10, 10, 10], 'historia corta');
+// El caso del bug: 52 semanas seguidas y la semana en curso aún sin compra.
+const bug = resumen(semanales([2025, 10, 3], 52), 80000, '2026-11-04');
+eq([bug.racha, bug.ultimas52.filter(Boolean).length], [52, 52], 'racha de 52 = 52 de 52 semanas en la ventana');
+// Invariante: la racha (hasta 52) nunca supera las semanas con compra de la ventana.
+for (const [desde, n, salto, hoy] of [[[2025, 10, 3], 52, [], '2026-11-04'], [[2024, 0, 1], 120, [30, 77], '2026-04-22'], [[2026, 9, 5], 4, [], '2026-11-08'], [[2025, 11, 15], 5, [2], '2026-01-14']]) {
+  const x = resumen(semanales(desde, n, salto), 80000, hoy);
+  ok(Math.min(x.racha, 52) <= x.ultimas52.filter(Boolean).length, `invariante racha ≤ semanas de la ventana (${hoy})`);
+}
+
 // Gráfico: el último punto es el precio en vivo; las velas son UTC
 const velas = [['2026-11-01', 76000], ['2026-11-02', 76500], ['2026-11-03', 77000]];
 eq(serieGrafico(velas, 77598, '2026-11-03').at(-1), { fecha: '2026-11-03', p: 77598, vivo: true }, 'vivo reemplaza la vela de hoy');

@@ -108,9 +108,13 @@ export function resumen(compras, precio, hoy = hoyISO()) {
 
   const porSemana = new Map();
   for (const c of items) porSemana.set(semana(c.fecha), (porSemana.get(semana(c.fecha)) ?? 0) + c.monto);
+  // Semana = lunes a domingo en hora local. La semana en curso sin compra aún no rompe
+  // la racha (le quedan días): entonces la referencia es la semana anterior, y la ventana
+  // de 52 semanas termina en esa misma referencia para que ambas cuenten lo mismo.
   const actual = semana(hoy);
-  // La semana en curso aún puede tener compra: si no la tiene, la racha se cuenta desde la anterior.
-  let w = porSemana.has(actual) ? actual : actual - 1, racha = 0;
+  const enCurso = porSemana.has(actual);
+  const ref = enCurso ? actual : actual - 1;
+  let w = ref, racha = 0;
   while (porSemana.has(w)) { racha++; w--; }
   let mejorRacha = 0, seguidas = 0, previa = null;
   for (const s of [...porSemana.keys()].sort((a, b) => a - b)) {
@@ -118,7 +122,8 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     mejorRacha = Math.max(mejorRacha, seguidas);
     previa = s;
   }
-  const ultimas52 = Array.from({ length: 52 }, (_, i) => porSemana.get(actual - 51 + i) ?? 0);
+  const ultimas52 = Array.from({ length: 52 }, (_, i) => porSemana.get(ref - 51 + i) ?? 0);
+  const semanasDesdePrimera = n ? actual - semana(items[0].fecha) + 1 : 0;
 
   const porPrecio = [...items].sort((a, b) => a.precio - b.precio);
   return {
@@ -131,7 +136,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     // Solo la siguiente meta y solo si es alcanzable en un plazo razonable.
     proyeccion: meses != null && meses > 0 && meses <= 60 ? meses : null,
     anios: [...anios.values()],
-    racha, mejorRacha, ultimas52, semanasConCompra: porSemana.size,
+    racha, mejorRacha, ultimas52, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
     mejor: porPrecio[0] ?? null, peor: porPrecio.at(-1) ?? null,
   };
 }
