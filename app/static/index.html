@@ -30,8 +30,9 @@
 </section>
 
 <main class="cuerpo">
-  <button class="anotar" type="button" id="anotar">Anotar compra</button>
-
+  <!-- Dos columnas en escritorio; en móvil y tablet los contenedores no cuentan (display: contents)
+       y el orden visual es el del documento, igual que el de tabulación. -->
+  <div class="col-principal">
   <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden>
     <h2 class="sr" id="t-tramo">Siguiente meta</h2>
     <p class="tr-k">Próximo campamento</p>
@@ -47,10 +48,33 @@
         <button type="button" data-r="30">1M</button><button type="button" data-r="182">6M</button><button type="button" data-r="365">1A</button><button type="button" data-r="0">Todo</button>
       </div>
     </div>
-    <p class="lectura" id="g-lectura" aria-live="polite"></p>
+    <p class="lectura" id="g-lectura"></p>
+    <p class="sr" id="g-sr" aria-live="polite"></p>
     <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo."></div>
     <p class="leyenda" aria-hidden="true"><span class="k-p">Precio de BTC</span><span class="k-c">Tus compras, a su precio</span><span class="k-a">Tu costo promedio</span></p>
   </section>
+
+  <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>
+    <h2 class="sr" id="t-rep">Reportes</h2>
+    <article class="rep rep-const">
+      <h3>Constancia</h3>
+      <p class="const-cifra"><b id="const-racha"></b><span id="const-unidad"></span></p>
+      <p class="rep-txt" id="const-txt"></p>
+      <div class="semanas" id="semanas" aria-hidden="true"></div>
+    </article>
+    <article class="rep rep-hitos">
+      <h3>Campamentos</h3>
+      <ol class="hitos" id="hitos"></ol>
+    </article>
+    <article class="rep rep-ext" id="rep-ext">
+      <h3>Tu mejor y tu peor precio</h3>
+      <div class="extremos" id="extremos"></div>
+    </article>
+  </section>
+  </div>
+
+  <div class="col-lateral">
+  <button class="anotar" type="button" id="anotar">Anotar compra</button>
 
   <section class="compras" aria-labelledby="t-compras">
     <div class="sec-cab">
@@ -76,27 +100,11 @@
     <button type="button" class="com-boton" id="com-anotar">Anotar la siguiente compra</button>
   </section>
 
-  <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>
-    <h2 class="sr" id="t-rep">Reportes</h2>
-    <article class="rep rep-const">
-      <h3>Constancia</h3>
-      <p class="const-cifra"><b id="const-racha"></b><span id="const-unidad"></span></p>
-      <p class="rep-txt" id="const-txt"></p>
-      <div class="semanas" id="semanas" aria-hidden="true"></div>
-    </article>
-    <article class="rep rep-hitos">
-      <h3>Campamentos</h3>
-      <ol class="hitos" id="hitos"></ol>
-    </article>
-    <article class="rep rep-anios">
-      <h3>Año por año</h3>
+    <article class="rep rep-anios" id="rep-anios" aria-labelledby="t-anios" hidden>
+      <h3 id="t-anios">Año por año</h3>
       <div id="anios"></div>
     </article>
-    <article class="rep rep-ext" id="rep-ext">
-      <h3>Tu mejor y tu peor precio</h3>
-      <div class="extremos" id="extremos"></div>
-    </article>
-  </section>
+  </div>
 
   <footer class="pie">Tus datos viven en tu servidor, con respaldo diario. Precios de Coinbase (Kraken de reserva).</footer>
 </main>

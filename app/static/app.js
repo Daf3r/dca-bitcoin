@@ -1,5 +1,5 @@
 import {
-  usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, fechaLarga, fechaCorta,
+  usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
   resumen, nombreHito, serieGrafico, textoMeses, compacto,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
@@ -207,7 +207,7 @@ function rangoPorDefecto() {
   // El menor rango que contenga la primera compra, nunca menos de 6 meses: con una compra se ve contexto.
   const primera = R.items[0];
   if (!primera) return 365;
-  const dias = (Date.now() - new Date(primera.fecha)) / 864e5;
+  const dias = (aFecha(hoyISO()) - aFecha(primera.fecha)) / 864e5;
   return RANGOS.find((r) => r >= 182 && dias <= r) ?? 0;
 }
 let anchoGrafico = 0;
@@ -394,8 +394,7 @@ const semanas = (n) => `${n} ${n === 1 ? 'semana' : 'semanas'}`;
 function pintarReportes() {
   // Con menos de tres compras los reportes serían casi vacíos: su lugar lo ocupa «Siguiente paso».
   $('reportes').hidden = R.n < 3;
-  document.body.classList.toggle('pocas', R.n > 0 && R.n < 3);
-  if (R.n < 3) return;
+  if (R.n < 3) { $('rep-anios').hidden = true; return; }
   const hasta = Math.max(1e8, R.meta);
   $('hitos').innerHTML = R.hitos.filter((h) => h.m <= hasta).map((h) => {
     const estado = h.fecha ? 'hecho' : h.m === R.meta ? 'siguiente' : 'lejos';
@@ -407,7 +406,7 @@ function pintarReportes() {
 
   // Con un solo mes de compras no hay nada que comparar todavía.
   const mesesConCompra = R.anios.reduce((t, a) => t + a.meses.filter(Boolean).length, 0);
-  document.querySelector('.rep-anios').hidden = mesesConCompra < 2;
+  $('rep-anios').hidden = mesesConCompra < 2;
   const maxMes = Math.max(...R.anios.flatMap((a) => a.meses));
   $('anios').innerHTML = [...R.anios].reverse().map((a) =>
     `<div class="anio"><b class="an-y">${a.anio}</b><div class="an-barras" aria-hidden="true">` +
@@ -439,9 +438,9 @@ function pintarReportes() {
 
 // ------------------------------------------------------------ siguiente paso
 const dfDomingo = new Intl.DateTimeFormat('es-SV', { weekday: 'long', day: 'numeric', month: 'short' });
-/** Domingo que cierra la semana local en la que cae `d` (+7 días si se pide la siguiente). */
+/** Domingo que cierra la semana en curso (+7 días por cada semana más). */
 function domingo(semanasMas = 0) {
-  const d = new Date();
+  const d = aFecha(hoyISO());
   d.setDate(d.getDate() + ((7 - d.getDay()) % 7) + 7 * semanasMas);
   return dfDomingo.format(d).replace('.', '');
 }
@@ -499,4 +498,9 @@ $('csv-in').addEventListener('change', async (e) => {
 cargarCompras();
 consultarPrecio();
 setInterval(() => document.visibilityState === 'visible' && consultarPrecio(), 30_000);
-document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && consultarPrecio());
+// Al volver a la pestaña: precio fresco y compras al día (la base es compartida por la familia).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  consultarPrecio();
+  if (hoja.hidden && S.cargado) cargarCompras();
+});

@@ -41,17 +41,20 @@ export function dibujarGrafico(host, lectura, { serie, compras, promedio, rango,
     s += `<text class="g-t" x="${f1(x(p.fecha))}" y="${H - 8}" text-anchor="${k === 0 ? 'start' : k === n - 1 ? 'end' : 'middle'}">${rango && rango <= 182 ? fechaCorta(p.fecha) : mes(p.fecha)}</text>`;
   }
   s += `<path class="g-area" d="${linea}L${f1(x(pts.at(-1).fecha))} ${H - m.b}L${f1(x(pts[0].fecha))} ${H - m.b}Z"/><path class="g-linea" d="${linea}"/>`;
+  let etiquetaCosto = '';
   if (promedio) {
     const yp = promDentro ? y(promedio) : promedio < lo ? H - m.b - 4 : m.t + 4;
     if (promDentro) s += `<line class="g-prom" x1="${m.l}" x2="${W - m.r}" y1="${f1(yp)}" y2="${f1(yp)}"/>`;
     const txt = `Tu costo ${usd0(promedio)}${promDentro ? '' : promedio < lo ? ' ↓' : ' ↑'}`;
     const ty = promDentro ? yp - 24 : promedio < lo ? yp - 22 : yp;
-    s += `<g class="g-prom-tag"><rect x="${m.l}" y="${f1(ty)}" width="${f1(txt.length * 7 + 16)}" height="20" rx="10"/><text x="${m.l + 8}" y="${f1(ty + 14)}">${txt}</text></g>`;
+    etiquetaCosto = `<g class="g-prom-tag"><rect x="${m.l}" y="${f1(ty)}" width="${f1(txt.length * 7 + 16)}" height="20" rx="10"/><text x="${m.l + 8}" y="${f1(ty + 14)}">${txt}</text></g>`;
   }
   // Las compras van a su propio precio: un único path de círculos, ligero aunque sean cientos.
   const r = enRango.length > 120 ? 2.6 : enRango.length > 30 ? 3.6 : 5.5;
   const cxy = enRango.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
   if (cxy.length) s += `<path class="g-compras" d="${cxy.map(([cx, cy]) => `M${f1(cx - r)} ${f1(cy)}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`).join('')}"/>`;
+  // La etiqueta del costo va encima de los puntos para que siempre se lea.
+  if (promedio) s += etiquetaCosto;
   if (enRango.length && enRango.length <= 2) {
     const c = enRango.at(-1), [cx, cy] = cxy.at(-1);
     const izq = cx > W * 0.55;
@@ -83,7 +86,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, promedio, rango,
   primeraVez = false;
 }
 
-function marcar(i) {
+function marcar(i, anunciar = false) {
   if (!G) return;
   G.sel = i;
   const cur = G.host.querySelector('.g-cursor');
@@ -104,6 +107,7 @@ function marcar(i) {
     (p.vivo ? '' : ` · desde entonces <b data-tono="${desde >= 0 ? 'sube' : 'baja'}">${pct(desde)}</b>`) +
     (compra ? `<br><span class="lec-tuya">Compraste ${entero(compra.sats)} sats a ${usd0(compra.precio)} el ${fechaCorta(compra.fecha)}` +
       ` (hoy ${usdSigno((compra.sats / 1e8) * G.pts.at(-1).p - compra.monto)})</span>` : '');
+  if (anunciar) document.getElementById('g-sr').textContent = G.lectura.textContent;
 }
 
 function cercano(ev) {
@@ -127,6 +131,6 @@ export function instalarLectura(host) {
     const sig = { ArrowLeft: act - paso, ArrowRight: act + paso, Home: 0, End: ult }[e.key];
     if (sig == null) return;
     e.preventDefault();
-    marcar(Math.max(0, Math.min(ult, sig)));
+    marcar(Math.max(0, Math.min(ult, sig)), true);
   });
 }

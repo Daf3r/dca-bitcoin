@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -23,6 +23,11 @@ eq(nombreHito(1e11), '1,000 BTC', 'nombre de 1,000 BTC');
 ok(altitud(36578, escalaMontana(36578)) > 0 && altitud(36578, escalaMontana(36578)) < 0.25, 'altitud baja al empezar');
 eq(altitud(1e8, escalaMontana(5e7)), 1, 'la cumbre es altitud 1');
 eq(altitud(0, escalaMontana(0)), 0, 'sin sats, al pie');
+
+// «Hoy» en la zona de la app, no en la del navegador
+const esperado = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date());
+eq([ZONA, hoyISO()], ['America/El_Salvador', esperado], 'hoy es el de El Salvador');
+ok(/^\d{4}-\d{2}-\d{2}$/.test(hoyISO()), 'formato AAAA-MM-DD');
 
 // Textos
 eq([textoMeses(0), textoMeses(1), textoMeses(5)], ['en el primer mes', 'al mes de empezar', 'a los 5 meses'], 'singular y plural');

@@ -121,6 +121,7 @@ button, input { font: inherit; color: inherit; }
 @media (prefers-color-scheme: light) { .saldo-d [data-tono="sube"] { color: #10592f; } .saldo-d [data-tono="baja"] { color: #93231a; } }
 
 /* ------------------------------------------------------------- cuerpo */
+.col-principal, .col-lateral { display: contents; }
 .cuerpo {
   display: grid; gap: 22px; max-width: 1240px; margin: 0 auto;
   padding: 26px max(20px, env(safe-area-inset-right)) 120px max(20px, env(safe-area-inset-left));
@@ -148,7 +149,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .mercado { min-width: 0; }
 .rangos { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--s2); }
 .rangos button {
-  min-width: 52px; min-height: 40px; padding: 0 12px; border: 0; border-radius: 999px; background: none;
+  min-width: 52px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 999px; background: none;
   color: var(--txt2); font-weight: 650; cursor: pointer; transition: background-color 0.2s, color 0.2s;
 }
 .rangos button[aria-pressed="true"] { background: var(--txt); color: var(--fondo); }
@@ -321,7 +322,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; padding: 10px 18px; border-radius: 18px;
   background: var(--txt); color: var(--fondo); font-weight: 600;
 }
-.aviso .enlace { color: inherit; min-height: 36px; }
+.aviso .enlace { color: inherit; min-height: 44px; }
 
 /* Celebración: breve, arriba y sin bloquear nada. */
 .hito-cel { position: fixed; z-index: 11; top: 14px; left: 0; right: 0; display: grid; justify-items: center; pointer-events: none; }
@@ -331,12 +332,21 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 .hito-cel.va p { animation: hito 1.6s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
 @keyframes hito { 0% { transform: translateY(-140%) scale(0.9); } 18%, 82% { transform: none; } 100% { transform: translateY(-140%); opacity: 0; } }
 
+/* Pantallas bajas (320×568 y similares): el saldo encoge para que la montaña respire. */
+@media (max-height: 680px) and (max-width: 699px) {
+  .saldo { top: 52px; }
+  .saldo-k { font-size: 0.875rem; }
+  .cifra-grande { font-size: min(4.4rem, 96cqi / var(--anchos, 6)); }
+  .saldo-v em { font-size: 1.25rem; }
+  .saldo-d { margin-top: 4px; font-size: 0.9375rem; }
+}
+
 /* ------------------------------------------------------------------ tablet */
 @media (min-width: 700px) {
   .saldo { top: 84px; padding-left: 40px; }
   .cima { padding-inline: 40px; }
   .cuerpo { padding-inline: 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
-  .tramo, .mercado, .compras, .pie, .comienzo { grid-column: 1 / -1; }
+  .tramo, .mercado, .compras, .pie, .comienzo, .rep-anios { grid-column: 1 / -1; }
   .reportes { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lienzo { margin-inline: 0; }
   .hoja { align-items: center; justify-items: center; }
@@ -348,24 +358,15 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .escena { height: 86vh; min-height: 620px; max-height: 880px; }
   .saldo { top: 110px; padding-left: max(48px, calc(50vw - 600px)); right: auto; width: min(52vw, 760px); }
   .cima { padding-inline: max(48px, calc(50vw - 600px)); }
-  .cuerpo {
-    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-    grid-template-areas: "mercado cta" "mercado tramo" "mercado compras" "rep compras" "pie pie";
-    grid-template-rows: auto auto auto 1fr;
-    align-items: start;
-    column-gap: 48px; row-gap: 32px; padding: 40px 48px 120px;
-  }
-  .mercado { grid-area: mercado; }
-  .tramo { grid-area: tramo; }
-  .compras { grid-area: compras; }
-  .reportes { grid-area: rep; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; column-gap: 32px; }
-  .rep-anios, .rep-ext { grid-column: span 2; }
-  .comienzo { grid-area: com; }
-  /* Con una o dos compras, «Siguiente paso» llena la columna derecha junto al gráfico. */
-  body.pocas .cuerpo { grid-template-areas: "mercado cta" "mercado tramo" "mercado com" "compras com" "pie pie"; grid-template-rows: auto auto auto 1fr auto; }
-  .pie { grid-area: pie; }
+  /* Dos columnas independientes: cada una apila lo suyo y ninguna espera a la otra. */
+  .cuerpo { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); column-gap: 48px; padding: 40px 48px 120px; }
+  .col-principal, .col-lateral { display: grid; gap: 32px; align-content: start; min-width: 0; }
+  .col-lateral { gap: 28px; }
+  .pie { grid-column: 1 / -1; }
+  .reportes { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; }
+  .rep-ext { grid-column: span 2; }
   /* En escritorio no flota sobre el contenido: va pegajoso en la columna derecha. */
-  .anotar { grid-area: cta; position: sticky; top: 16px; left: auto; bottom: auto; transform: none; justify-self: start; z-index: 2; }
+  .anotar { position: sticky; top: 16px; left: auto; bottom: auto; transform: none; justify-self: start; z-index: 2; }
   .anotar:active { transform: scale(0.96); }
   .aviso { left: auto; right: 32px; transform: none; bottom: 32px; }
 }

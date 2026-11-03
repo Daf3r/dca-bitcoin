@@ -18,9 +18,11 @@ export const compacto = (n) => nfComp.format(n);
 export const btc = (sats) => (sats / 1e8).toFixed(8);
 export const hora = (ts) => dfHora.format(new Date(ts));
 
-const iso = (d) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-export const hoyISO = () => iso(new Date());
+// «Hoy» es siempre el de El Salvador, como en el servidor (TZ del contenedor): así la fecha
+// por defecto, la validación y la racha coinciden aunque el navegador esté en otra zona.
+export const ZONA = 'America/El_Salvador';
+const dfHoy = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA, year: 'numeric', month: '2-digit', day: '2-digit' });
+export const hoyISO = () => dfHoy.format(new Date());
 export const aFecha = (s) => {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(y, m - 1, d);
