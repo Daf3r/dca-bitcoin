@@ -4,41 +4,63 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#141413" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7931a">
 <title>Libro DCA</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/styles.css">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
-<div class="pagina">
-  <header class="cabecera">
-    <h1>Libro DCA</h1>
-    <p class="cotizacion" id="cotizacion" data-estado="cargando">
-      <span class="cot-k">BTC</span>
-      <span class="cot-v cifra" id="precio">—</span>
-      <span class="cot-meta" id="precio-meta">Consultando…</span>
-    </p>
-  </header>
+<header class="banda">
+  <h1>Libro<br>DCA</h1>
+  <p class="cotizacion" id="cotizacion" data-estado="cargando">
+    <span class="cot-k">1 BTC</span>
+    <span class="cot-v cifra" id="precio">—</span>
+    <span class="cot-meta" id="precio-meta">consultando…</span>
+  </p>
+</header>
 
-  <div class="aviso" id="aviso" role="status" hidden><span id="aviso-txt"></span><button type="button" class="enlace" id="aviso-btn" hidden>Reintentar</button></div>
+<main class="pagina">
+  <section class="pila" aria-labelledby="t-pila">
+    <h2 class="rotulo" id="t-pila">Tu pila</h2>
+    <p class="total"><span class="cifra" id="p-sats">—</span><span class="unidad">sats</span></p>
+    <p class="p-btc cifra" id="p-btc"></p>
+    <div class="cuadricula" id="p-cuadricula" role="img" aria-label="Cargando"></div>
+    <div class="leyenda" id="p-leyenda" aria-hidden="true">
+      <span class="k-lleno">acumulado</span>
+      <span class="k-ultimo">última compra</span>
+      <span class="k-fantasma" id="k-fantasma" hidden>esta compra</span>
+    </div>
+    <p class="p-escala" id="p-escala"></p>
+    <ol class="hitos" id="p-hitos" aria-label="Hitos"></ol>
+    <p class="p-ritmo" id="p-ritmo"></p>
+  </section>
 
-  <section class="resumen" aria-labelledby="t-resumen">
-    <h2 class="rotulo" id="t-resumen">Valor hoy</h2>
-    <p class="valor cifra" id="r-valor">—</p>
-    <p class="ganancia cifra" id="r-gan"></p>
+  <section class="libro" aria-labelledby="t-libro">
+    <h2 class="sr" id="t-libro">Resumen</h2>
     <dl class="cifras">
-      <div><dt>Invertido</dt><dd class="cifra" id="r-inv">—</dd><dd class="sub" id="r-n"></dd></div>
-      <div><dt>Costo promedio</dt><dd class="cifra" id="r-prom">—</dd><dd class="sub" id="r-prom-sub"></dd></div>
-      <div><dt>Acumulado</dt><dd class="cifra" id="r-sats">—</dd><dd class="sub cifra" id="r-btc"></dd></div>
+      <div class="c-valor">
+        <dt>Valor hoy</dt>
+        <dd class="cifra grande" id="r-valor">—</dd>
+        <dd class="ganancia cifra" id="r-gan"></dd>
+      </div>
+      <div>
+        <dt>Invertido</dt>
+        <dd class="cifra" id="r-inv">—</dd>
+        <dd class="sub" id="r-n"></dd>
+      </div>
+      <div>
+        <dt>Costo promedio</dt>
+        <dd class="cifra" id="r-prom">—</dd>
+        <dd class="sub cifra" id="r-prom-sub"></dd>
+      </div>
     </dl>
   </section>
 
   <section class="registro" aria-labelledby="t-form">
     <form id="form" novalidate>
       <div class="sec-h">
-        <h2 id="t-form">Nueva compra</h2>
+        <h2 id="t-form">Anotar compra</h2>
         <span class="editando" id="f-editando" hidden></span>
       </div>
       <fieldset id="f-campos">
@@ -49,11 +71,11 @@
         </div>
         <div class="par">
           <div class="campo">
-            <label for="f-monto">Monto (USD)</label>
+            <label for="f-monto">Pagaste (USD)</label>
             <input id="f-monto" class="cifra" inputmode="decimal" autocomplete="off" placeholder="50.00">
           </div>
           <div class="campo">
-            <label for="f-sats">Sats recibidos</label>
+            <label for="f-sats">Recibiste (sats)</label>
             <input id="f-sats" class="cifra" inputmode="numeric" autocomplete="off" placeholder="74,627">
           </div>
         </div>
@@ -85,7 +107,7 @@
     <p class="lectura cifra" id="g-lectura"></p>
     <div class="lienzo" id="g-lienzo" tabindex="0" role="img" aria-label="Gráfico de lo invertido y el valor de tus sats en el tiempo"></div>
     <p class="sr" id="g-sr" aria-live="polite"></p>
-    <p class="nota" id="g-nota">El valor se calcula con el precio de cada compra y, al final, con el precio actual. Entre compras la línea es una aproximación.</p>
+    <p class="nota" id="g-nota">El valor usa el precio de cada compra y, al final, el actual. Entre compras la línea es una aproximación.</p>
   </section>
 
   <section class="compras" aria-labelledby="t-compras">
@@ -103,7 +125,9 @@
   <footer class="pie">
     Datos en tu servidor, con respaldo diario. Precio de Coinbase (Kraken de reserva), cada 30 s.
   </footer>
-</div>
+</main>
+
+<div class="aviso" id="aviso" role="status" hidden><span id="aviso-txt"></span><button type="button" class="enlace" id="aviso-btn" hidden>Reintentar</button></div>
 
 <dialog id="d-borrar" aria-labelledby="d-titulo">
   <form method="dialog">

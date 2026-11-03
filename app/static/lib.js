@@ -100,3 +100,15 @@ export function serie(r, precioVivo) {
   }
   return pts;
 }
+
+/** Sats al mes según los últimos ~6 meses y cuánto falta para `tope` a ese ritmo. */
+export function ritmo(items, sats, tope) {
+  const dia = 864e5;
+  const hoy = aFecha(hoyISO()).getTime();
+  const desde = hoy - 182 * dia;
+  const ventana = items.filter((c) => aFecha(c.fecha).getTime() >= desde);
+  if (ventana.length < 3) return null;
+  const dias = Math.max(30, (hoy - Math.max(desde, aFecha(items[0].fecha).getTime())) / dia);
+  const porMes = (ventana.reduce((a, c) => a + c.sats, 0) / dias) * 30.44;
+  return { porMes, meses: (tope - sats) / porMes };
+}

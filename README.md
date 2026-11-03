@@ -2,7 +2,7 @@
 
 Registro de compras DCA de Bitcoin con precio en vivo. Flask + SQLite en tu servidor, detrás de Caddy y Cloudflare Access.
 
-Muestra lo que importa al hacer DCA: valor hoy, ganancia o pérdida (USD y %), total invertido, costo promedio y sats acumulados, más un gráfico de lo invertido frente al valor. Registras fecha, monto y sats (el precio se deriva); si no tienes los sats, se calculan con un precio. Tocar una compra la abre para editar o borrar. Exporta e importa CSV desde la propia página. Funciona en el teléfono y respeta el modo oscuro.
+Tu pila de sats es lo primero que ves: una cuadrícula que se llena hacia la próxima meta (1M sats, 10M, 1 BTC), marca tu última compra y te dice en cuánto llegas a ese ritmo. Al lado van el valor de hoy, la ganancia o pérdida (USD y %), lo invertido y el costo promedio, más un gráfico de lo invertido frente al valor. Registras fecha, monto y sats (el precio se deriva); si no tienes los sats, se calculan con un precio. Tocar una compra la abre para editar o borrar. Exporta e importa CSV desde la propia página. Funciona en el teléfono y respeta el modo oscuro.
 
 ```
 navegador ──▶ Cloudflare Access (login) ──▶ Caddy ──▶ 127.0.0.1:18082 ──▶ data/libro.db

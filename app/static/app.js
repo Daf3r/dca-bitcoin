@@ -1,8 +1,9 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, fechaLarga, mesLargo,
-  leerNumero, leerSats, completar, resumir, serie,
+  leerNumero, leerSats, completar, resumir, serie, ritmo,
 } from './lib.js';
 import { dibujar } from './chart.js';
+import { dibujarPila, HITOS, meta } from './pila.js';
 
 const $ = (id) => document.getElementById(id);
 const reducirMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
@@ -19,6 +20,8 @@ const S = {
   editando: null,
   guardando: false,
   verTodas: false,
+  fantasma: 0,
+  animarPila: false,
 };
 
 const VISIBLES = 20;
@@ -85,6 +88,7 @@ function avisar(texto, reintentar = null, temporal = false) {
 function pintar() {
   const r = resumir(S.compras, S.precio);
   pintarPrecio();
+  pintarPila(r);
   pintarResumen(r);
   pintarGrafico(r);
   pintarLista(r);
@@ -130,8 +134,40 @@ function pintarResumen(r) {
     sub.textContent = '';
     tono(sub, null);
   }
-  $('r-sats').textContent = r.n ? `${entero(r.sats)} sats` : '—';
-  $('r-btc').textContent = r.n ? `${btc(r.sats)} BTC` : '';
+}
+
+// ------------------------------------------------------------------- pila
+const plazo = (m) => (m < 1 ? 'menos de un mes' : m < 24 ? `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}` : `${(m / 12).toFixed(1)} años`);
+
+function pintarPila(r) {
+  const ult = r.items.at(-1);
+  const fantasma = S.fantasma;
+  $('p-sats').textContent = S.cargado ? entero(r.sats) : '—';
+  $('p-btc').textContent = r.n ? `${btc(r.sats)} BTC${r.valor != null ? ` · valen ${usd(r.valor)}` : ''}` : '';
+  const { tope, unidad, nuevos } = dibujarPila($('p-cuadricula'), { sats: r.sats, previo: ult ? r.sats - ult.sats : 0, fantasma });
+  const nombre = HITOS.find(([m]) => m === tope)[1] + (tope < 1e8 ? ' sats' : '');
+  $('k-fantasma').hidden = !fantasma;
+  $('p-leyenda').hidden = !r.n && !fantasma;
+  $('p-escala').textContent =
+    `Cada cuadro, ${entero(unidad)} sats. Meta: ${nombre}, vas en ${((r.sats / tope) * 100).toFixed(1)}%.` +
+    (fantasma ? ` Esta compra suma ${((fantasma / tope) * 100).toFixed(1)}%.` : '');
+
+  $('p-hitos').innerHTML = HITOS.filter(([m]) => m <= Math.max(1e8, tope))
+    .map(([m, txt]) => `<li data-estado="${r.sats >= m ? 'logrado' : m === tope ? 'meta' : 'pendiente'}">${txt}</li>`)
+    .join('');
+
+  const rt = ritmo(r.items, r.sats, tope);
+  $('p-ritmo').textContent = rt
+    ? `Al ritmo de los últimos 6 meses (${entero(rt.porMes)} sats/mes) llegas a ${nombre} en ${plazo(rt.meses)}.`
+    : '';
+
+  if (S.animarPila && !reducirMovimiento.matches) {
+    nuevos.forEach((el, i) => {
+      el.classList.add('cae');
+      el.style.animationDelay = `${Math.min(i, 30) * 35}ms`;
+    });
+  }
+  S.animarPila = false;
 }
 
 // --------------------------------------------------------------- gráfico
@@ -261,6 +297,8 @@ $('lista').addEventListener('click', (e) => {
 // ------------------------------------------------------------ formulario
 const F = { fecha: $('f-fecha'), monto: $('f-monto'), sats: $('f-sats'), precio: $('f-precio') };
 
+const sumaSats = () => S.compras.reduce((a, c) => a + c.sats, 0);
+
 const leerForm = () =>
   completar(
     { monto: leerNumero(F.monto.value), sats: leerSats(F.sats.value), precio: leerNumero(F.precio.value) },
@@ -269,9 +307,15 @@ const leerForm = () =>
 
 function pintarCalculo() {
   const c = leerForm();
+  const fantasma = !S.editando && c && !c.falta ? c.sats : 0;
+  if (fantasma !== S.fantasma) {
+    S.fantasma = fantasma;
+    if (!S.animarPila) pintarPila(resumir(S.compras, S.precio));
+  }
   $('f-calc').textContent = !c ? ''
     : c.falta ? 'Falta el precio de 1 BTC para calcular.'
-      : `${usd(c.monto)} por ${entero(c.sats)} sats · 1 BTC a ${usd(c.precio)}${c.estimado ? ' (estimado con el precio actual)' : ''}`;
+      : `${usd(c.monto)} por ${entero(c.sats)} sats · 1 BTC a ${usd(c.precio)}${c.estimado ? ' (estimado con el precio actual)' : ''}` +
+        (S.fantasma ? ` · suma ${((S.fantasma / meta(sumaSats())) * 100).toFixed(1)}% a tu meta` : '');
 }
 
 function error(texto = '', campo = null) {
@@ -286,7 +330,7 @@ function error(texto = '', campo = null) {
 
 function pintarForm() {
   const ed = S.compras.find((c) => c.id === S.editando);
-  $('t-form').textContent = ed ? 'Editar compra' : 'Nueva compra';
+  $('t-form').textContent = ed ? 'Editar compra' : 'Anotar compra';
   $('f-editando').hidden = !ed;
   $('f-editando').textContent = ed ? fechaLarga(ed.fecha) : '';
   $('f-cancelar').hidden = !ed;
@@ -353,6 +397,7 @@ $('form').addEventListener('submit', async (e) => {
   try {
     const guardada = normalizar(id ? await api('PUT', `/api/compras/${id}`, datos) : await api('POST', '/api/compras', datos));
     S.compras = id ? S.compras.map((x) => (x.id === id ? guardada : x)) : [...S.compras, guardada];
+    S.animarPila = !id;
     limpiarForm();
     avisar(id ? 'Cambios guardados.' : 'Compra guardada.', null, true);
     S.guardando = false;
