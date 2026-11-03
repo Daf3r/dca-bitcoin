@@ -65,5 +65,5 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 
 ## Pruebas
 - `python tests/test_api.py` (necesita Flask; base temporal, exchanges simulados, sin red): API completa, validaciones, CSV, migración, precio e histórico (descarga en segundo plano, una sola descarga, paginación, Kraken, fallos).
-- `node tests/test_lib.mjs`: cálculos del frontend (hitos, racha, proyección, borde de husos horarios, decimación).
+- `node tests/test_lib.mjs`: cálculos del frontend (hitos, racha con casos límite, proyección, «hoy» de El Salvador, borde de husos horarios, decimación).
 - El frontend se prueba con Playwright contra el servidor local en siete estados (de 0 compras a más de 200 BTC, sin precio y sin histórico), de 320 a 1920 px, claro y oscuro. El build de Docker y la integración con Caddy y Access se validan en el servidor.

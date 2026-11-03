@@ -390,6 +390,8 @@ dialogo.addEventListener('close', async () => {
 const MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 const nombreMeta = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`);
 const semanas = (n) => `${n} ${n === 1 ? 'semana' : 'semanas'}`;
+// Por encima de 1 BTC se habla en BTC: «4.8B sats» es ambiguo en español.
+const satsCorto = (s) => (s >= 1e8 ? `${(s / 1e8).toFixed(s >= 1e10 ? 0 : 1)} BTC` : `${compacto(s)} sats`);
 
 function pintarReportes() {
   // Con menos de tres compras los reportes serían casi vacíos: su lugar lo ocupa «Siguiente paso».
@@ -411,7 +413,7 @@ function pintarReportes() {
   $('anios').innerHTML = [...R.anios].reverse().map((a) =>
     `<div class="anio"><b class="an-y">${a.anio}</b><div class="an-barras" aria-hidden="true">` +
     a.meses.map((v, i) => `<i class="${v ? '' : 'vacio'}" data-h="${v / maxMes}" title="${MESES[i]}: ${usd(v)}"></i>`).join('') +
-    `</div><p class="an-tot"><span><b>+${compacto(a.sats)}</b> sats</span><span>${usd0(a.usd)} · ${a.n} ${a.n === 1 ? 'compra' : 'compras'}</span></p></div>`).join('');
+    `</div><p class="an-tot"><span><b>+${satsCorto(a.sats)}</b></span><span>${usd0(a.usd)} · ${a.n} ${a.n === 1 ? 'compra' : 'compras'}</span></p></div>`).join('');
   $('anios').querySelectorAll('[data-h]').forEach((i) => { i.style.height = `${Math.max(Number(i.dataset.h) * 100, 6)}%`; });
 
   // Ventana de 52 semanas desde la primera compra si es más reciente: sin huellas vacías antes de empezar.
@@ -425,7 +427,7 @@ function pintarReportes() {
     ? `Has comprado todas las semanas desde que empezaste (${ventana.length}). `
     : `Compraste en <b>${con}</b> de ${ventana.length === 52 ? 'las últimas 52 semanas' : `tus ${ventana.length} semanas`}. `;
   $('const-txt').innerHTML = resumenSemanas +
-    `Tu mejor racha: <b>${semanas(R.mejorRacha)}</b>.` + (R.semanaEnCurso || !R.racha ? '' : ' Esta semana aún no has comprado: tienes hasta el domingo.');
+    (R.mejorRacha > R.racha ? `Tu mejor racha: <b>${semanas(R.mejorRacha)}</b>.` : '') + (R.semanaEnCurso || !R.racha ? '' : ' Esta semana aún no has comprado: tienes hasta el domingo.');
 
   const ext = $('extremos');
   const tarjeta = (c, titulo) => {
