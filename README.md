@@ -63,6 +63,6 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 - Las escrituras rechazan peticiones marcadas por el navegador como de otro sitio (`Sec-Fetch-Site`), y la importación exige `text/csv`, que obliga a un preflight CORS.
 - El precio lo consulta el servidor (Coinbase, con Kraken de reserva), se guarda 30 s en caché y el navegador nunca habla con terceros.
 
-## Qué se probó
-API con el cliente de pruebas de Flask: alta, edición, borrado, validaciones, importación/exportación CSV idempotente, migración de una base sin `sats`, caché y respaldo del precio, protección de origen y el respaldo verificado. Frontend con Playwright contra el servidor local (registrar, estimar con precio, editar, borrar con diálogo, importar, exportar, gráfico con teclado) a 360/375 px y escritorio, claro y oscuro, sin errores de consola ni violaciones de CSP ni scroll horizontal.
-No hay suite automática en el repo. El build de Docker y la integración con Caddy y Access se validan en el servidor.
+## Pruebas
+`python tests/test_api.py` (necesita Flask; usa una base temporal y no sale a la red). Cubre la API con el cliente de pruebas de Flask: alta, edición, borrado, validaciones, importación/exportación CSV idempotente, migración de una base sin `sats`, caché y respaldo del precio, protección de origen y el respaldo verificado. Frontend con Playwright contra el servidor local (registrar, estimar con precio, editar, borrar con diálogo, importar, exportar, gráfico con teclado) a 360/375 px y escritorio, claro y oscuro, sin errores de consola ni violaciones de CSP ni scroll horizontal.
+El frontend también se probó con cientos de compras, carteras de más de 10 BTC, 320 px, 1920 px y solo teclado. El build de Docker y la integración con Caddy y Access se validan en el servidor.

@@ -9,6 +9,7 @@
   --regla: #d9d1c1;
   --naranja: #f7931a;
   --naranja-texto: #a65308;
+  --naranja-trazo: #c05f00;
   --sobre-naranja: #15130f;
   --panel: #15130f;
   --panel-tinta: #f4f0e8;
@@ -16,7 +17,6 @@
   --campo: #26231e;
   --sube: #146b3a;
   --baja: #b42318;
-  --sube-panel: #6fd39b;
   --baja-panel: #ff9a90;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", "Roboto Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
@@ -30,6 +30,7 @@
     --tinta-3: #91897c;
     --regla: #2f2a23;
     --naranja-texto: #f9a43f;
+    --naranja-trazo: #f7931a;
     --panel: #1d1a15;
     --panel-tinta: #f1ece2;
     --panel-tinta-2: #b8b0a2;
@@ -122,8 +123,9 @@ h1 {
 
 /* ------------------------------------------------------------------- pila */
 .total { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 10px; margin-top: 4px; }
+.pila, .libro { container-type: inline-size; }
 .total .cifra {
-  font-size: clamp(2.6rem, 13vw, 5.25rem);
+  font-size: min(5.25rem, 96cqi / (var(--caracteres, 9) * 0.62));
   font-weight: 800;
   letter-spacing: -0.06em;
   line-height: 0.95;
@@ -133,8 +135,8 @@ h1 {
 
 .cuadricula { margin-top: 20px; max-width: 30rem; aspect-ratio: 1; }
 .cuadricula svg { display: block; width: 100%; height: 100%; overflow: visible; }
-.c-vacio { fill: color-mix(in srgb, var(--tinta) 8%, transparent); }
-.c-lleno { fill: var(--naranja); }
+.c-vacio { fill: color-mix(in srgb, var(--tinta) 6%, transparent); stroke: color-mix(in srgb, var(--tinta) 14%, transparent); stroke-width: 0.4; }
+.c-lleno { fill: var(--naranja); stroke: var(--naranja-trazo); stroke-width: 0.5; }
 .c-ultimo { fill: var(--tinta); }
 .c-fantasma { fill: color-mix(in srgb, var(--naranja) 35%, transparent); stroke: var(--tinta); stroke-width: 0.5; stroke-dasharray: 1 0.8; }
 .cae { animation: cae 0.45s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
@@ -142,7 +144,7 @@ h1 {
 
 .leyenda { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; font: 500 0.75rem var(--mono); color: var(--tinta-2); }
 .leyenda span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
-.k-lleno::before { background: var(--naranja); }
+.k-lleno::before { background: var(--naranja); outline: 1px solid var(--naranja-trazo); outline-offset: -1px; }
 .k-ultimo::before { background: var(--tinta); }
 .k-fantasma::before { outline: 1px dashed var(--tinta); outline-offset: -1px; background: color-mix(in srgb, var(--naranja) 35%, transparent); }
 
@@ -167,8 +169,8 @@ h1 {
 .hitos li:last-child { flex: 0 0 auto; }
 .hitos li:last-child::after { display: none; }
 .hitos [data-estado="logrado"] { color: var(--tinta); }
-.hitos [data-estado="logrado"]::before { background: var(--naranja); border-color: var(--naranja); }
-.hitos [data-estado="logrado"]::after { border-top-color: var(--naranja); }
+.hitos [data-estado="logrado"]::before { background: var(--naranja); border-color: var(--naranja-trazo); }
+.hitos [data-estado="logrado"]::after { border-top-color: var(--naranja-trazo); }
 .hitos [data-estado="meta"] { color: var(--tinta); font-weight: 800; }
 .hitos [data-estado="meta"]::before { border-color: var(--tinta); }
 .p-ritmo { margin-top: 14px; font-size: 0.9375rem; color: var(--tinta-2); max-width: 34rem; }
@@ -179,8 +181,8 @@ h1 {
 .cifras > div { padding: 12px 0 14px; min-width: 0; }
 .cifras .c-valor { grid-column: 1 / -1; border-bottom: 1px solid var(--regla); }
 .cifras > div:nth-child(3) { padding-left: 16px; border-left: 1px solid var(--regla); }
-.cifras dd.cifra { font-size: 1.25rem; font-weight: 700; margin-top: 4px; overflow-wrap: anywhere; }
-.cifras dd.grande { font-size: clamp(2.1rem, 10vw, 3rem); font-weight: 800; letter-spacing: -0.05em; line-height: 1; margin-top: 6px; }
+.cifras dd.cifra:not(.ganancia, .sub) { font-size: min(1.25rem, 44cqi / (var(--caracteres, 9) * 0.62)); font-weight: 700; margin-top: 4px; white-space: nowrap; }
+.cifras dd.cifra.grande { font-size: min(3rem, 96cqi / (var(--caracteres, 9) * 0.62)); font-weight: 800; letter-spacing: -0.05em; line-height: 1; margin-top: 6px; }
 .ganancia { margin-top: 8px; font-size: 1rem; font-weight: 600; color: var(--tinta-2); }
 .cifras dd.sub { margin-top: 2px; font-size: 0.8125rem; color: var(--tinta-2); }
 .cifras dd.sub:empty { display: none; }
@@ -264,7 +266,7 @@ label { font-size: 0.8125rem; font-weight: 600; color: var(--panel-tinta-2); }
 .l-fecha { flex-basis: 100%; color: var(--tinta); font-weight: 700; }
 .l-inv::before, .l-val::before { content: ""; display: inline-block; width: 16px; margin-right: 6px; vertical-align: middle; }
 .l-inv::before { border-top: 2px solid var(--tinta); }
-.l-val::before { border-top: 4px solid var(--naranja); }
+.l-val::before { border-top: 4px solid var(--naranja-trazo); }
 .lienzo { touch-action: pan-y; }
 .lienzo svg { display: block; width: 100%; height: auto; overflow: visible; }
 .lienzo text {
@@ -274,11 +276,11 @@ label { font-size: 0.8125rem; font-weight: 600; color: var(--panel-tinta-2); }
 .g-rejilla { stroke: var(--regla); stroke-width: 1; }
 .g-base { stroke: var(--tinta); stroke-width: 1.5; }
 .g-inv { fill: none; stroke: var(--tinta); stroke-width: 1.5; }
-.g-val { fill: none; stroke: var(--naranja); stroke-width: 3; stroke-linejoin: round; stroke-linecap: square; }
-.g-punto { fill: var(--naranja); }
+.g-val { fill: none; stroke: var(--naranja-trazo); stroke-width: 3; stroke-linejoin: round; stroke-linecap: square; }
+.g-punto { fill: var(--naranja-trazo); }
 .g-marca line { stroke: var(--tinta); stroke-width: 1; stroke-dasharray: 2 3; }
 .g-m-inv { fill: var(--fondo); stroke: var(--tinta); stroke-width: 2; }
-.g-m-val { fill: var(--naranja); stroke: var(--tinta); stroke-width: 2; }
+.g-m-val { fill: var(--naranja-trazo); stroke: var(--tinta); stroke-width: 2; }
 
 /* -------------------------------------------------------------- compras */
 .lista { container-type: inline-size; }

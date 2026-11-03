@@ -1,9 +1,9 @@
 import {
-  usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, fechaLarga, mesLargo,
+  usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, mesLargo,
   leerNumero, leerSats, completar, resumir, serie, ritmo,
 } from './lib.js';
 import { dibujar } from './chart.js';
-import { dibujarPila, HITOS, meta } from './pila.js';
+import { dibujarPila, meta, nombreMeta, hitos, etiquetaHito } from './pila.js';
 
 const $ = (id) => document.getElementById(id);
 const reducirMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
@@ -112,19 +112,27 @@ function tono(el, n) {
   else el.dataset.tono = n >= 0 ? 'sube' : 'baja';
 }
 
+const haceDias = (fecha) => {
+  const d = Math.round((aFecha(hoyISO()) - aFecha(fecha)) / 864e5);
+  return d <= 0 ? 'hoy' : d === 1 ? 'ayer' : `hace ${d} días`;
+};
+
 function pintarResumen(r) {
   const gan = $('r-gan');
-  $('r-valor').textContent = r.valor != null ? usd(r.valor) : '—';
+  ajustarCifra($('r-valor'), r.valor != null ? usd(r.valor) : '—');
   if (r.ganancia != null) {
     gan.textContent = `${usdSigno(r.ganancia)} (${pct(r.ganPct)}) sin vender`;
   } else {
-    gan.textContent = !S.cargado ? 'Cargando…' : !r.n ? 'Aún no hay compras.' : 'Falta el precio en vivo para calcular el valor.';
+    gan.textContent = !S.cargado ? 'Cargando…' : S.errorCarga && !r.n ? 'No se pudieron cargar las compras.' : !r.n ? 'Aún no hay compras.' : 'Falta el precio en vivo para calcular el valor.';
   }
   tono(gan, r.ganancia);
+  gan.classList.toggle('cifra', r.ganancia != null);
 
-  $('r-inv').textContent = r.n ? usd(r.inv) : '—';
-  $('r-n').textContent = r.n ? `${r.n} ${r.n === 1 ? 'compra' : 'compras'} desde ${fechaLarga(r.items[0].fecha)}` : '';
-  $('r-prom').textContent = r.promedio ? usd(r.promedio) : '—';
+  ajustarCifra($('r-inv'), r.n ? usd(r.inv) : '—');
+  $('r-n').textContent = r.n
+    ? `${r.n} ${r.n === 1 ? 'compra' : 'compras'} desde ${fechaLarga(r.items[0].fecha)}. Última ${haceDias(r.items.at(-1).fecha)}.`
+    : '';
+  ajustarCifra($('r-prom'), r.promedio ? usd(r.promedio) : '—');
   const sub = $('r-prom-sub');
   if (r.promedio && S.precio) {
     const d = (S.precio / r.promedio - 1) * 100;
@@ -139,21 +147,29 @@ function pintarResumen(r) {
 // ------------------------------------------------------------------- pila
 const plazo = (m) => (m < 1 ? 'menos de un mes' : m < 24 ? `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}` : `${(m / 12).toFixed(1)} años`);
 
+function ajustarCifra(el, texto) {
+  el.textContent = texto;
+  el.style.setProperty('--caracteres', String(Math.max(texto.length, 6)));
+}
+
 function pintarPila(r) {
   const ult = r.items.at(-1);
   const fantasma = S.fantasma;
-  $('p-sats').textContent = S.cargado ? entero(r.sats) : '—';
+  const listo = S.cargado && !(S.errorCarga && !r.n);
+  ajustarCifra($('p-sats'), listo ? entero(r.sats) : '—');
   $('p-btc').textContent = r.n ? `${btc(r.sats)} BTC${r.valor != null ? ` · valen ${usd(r.valor)}` : ''}` : '';
   const { tope, unidad, nuevos } = dibujarPila($('p-cuadricula'), { sats: r.sats, previo: ult ? r.sats - ult.sats : 0, fantasma });
-  const nombre = HITOS.find(([m]) => m === tope)[1] + (tope < 1e8 ? ' sats' : '');
+  const nombre = nombreMeta(tope);
   $('k-fantasma').hidden = !fantasma;
   $('p-leyenda').hidden = !r.n && !fantasma;
-  $('p-escala').textContent =
-    `Cada cuadro, ${entero(unidad)} sats. Meta: ${nombre}, vas en ${((r.sats / tope) * 100).toFixed(1)}%.` +
-    (fantasma ? ` Esta compra suma ${((fantasma / tope) * 100).toFixed(1)}%.` : '');
+  $('p-detalle').hidden = !listo;
+  $('p-escala').textContent = r.n
+    ? `Cada cuadro, ${entero(unidad)} sats. Meta: ${nombre}, vas en ${((r.sats / tope) * 100).toFixed(1)}%.` +
+      (fantasma ? ` Esta compra suma ${((fantasma / tope) * 100).toFixed(1)}%.` : '')
+    : `Cada cuadro, ${entero(unidad)} sats. Tu primera meta: ${nombre}.`;
 
-  $('p-hitos').innerHTML = HITOS.filter(([m]) => m <= Math.max(1e8, tope))
-    .map(([m, txt]) => `<li data-estado="${r.sats >= m ? 'logrado' : m === tope ? 'meta' : 'pendiente'}">${txt}</li>`)
+  $('p-hitos').innerHTML = hitos(tope)
+    .map((m) => `<li data-estado="${r.sats >= m ? 'logrado' : m === tope ? 'meta' : 'pendiente'}">${etiquetaHito(m)}</li>`)
     .join('');
 
   const rt = ritmo(r.items, r.sats, tope);
@@ -180,7 +196,7 @@ function pintarGrafico(r) {
   $('g-nota').hidden = !pts.length;
   if (!pts.length) {
     G = null;
-    host.innerHTML = `<p class="vacio">${S.cargado ? 'El gráfico aparece con tu primera compra.' : 'Cargando…'}</p>`;
+    host.innerHTML = `<p class="vacio">${!S.cargado ? 'Cargando…' : S.errorCarga ? 'Sin datos por ahora.' : 'El gráfico aparece con tu primera compra.'}</p>`;
     $('g-lectura').textContent = '';
     return;
   }
@@ -270,7 +286,7 @@ function pintarLista(r) {
         `<span class="f-fecha">${fechaLarga(c.fecha)}</span>` +
         `<span class="f-monto cifra">${usd(c.monto)}</span>` +
         `<span class="f-sats cifra">${entero(c.sats)} sats</span>` +
-        `<span class="f-precio cifra">a ${usd0(c.precio)}</span>` +
+        `<span class="f-precio cifra">a\u00a0${usd0(c.precio)}</span>` +
         `<span class="f-var cifra"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : pct(v)}</span>` +
         `</button></li>`;
     }

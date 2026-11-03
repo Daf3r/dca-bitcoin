@@ -10,7 +10,8 @@ function escala(max) {
   return Array.from({ length: Math.ceil(max / paso) + 1 }, (_, i) => i * paso);
 }
 
-const etiqueta = (v) => (v >= 1000 ? `$${+(v / 1000).toFixed(1)}k` : `$${v}`);
+const etiqueta = (v) =>
+  v >= 1e6 ? `$${+(v / 1e6).toFixed(1)}M` : v >= 1000 ? `$${+(v / 1000).toFixed(1)}k` : `$${v}`;
 const f = (n) => n.toFixed(1);
 
 /** Dibuja en `host` y devuelve las posiciones x y una función para marcar un punto. */

@@ -10,9 +10,9 @@ App familiar para registrar compras DCA de Bitcoin con precio en vivo. Dueño: D
 - `docker-compose.yml`: servicios `app` y `backup`, endurecidos (read_only, cap_drop ALL, no-new-privileges). La app publica solo `127.0.0.1:18082`.
 
 ## Interfaz
-Concepto: **la pila hacia la próxima meta**. El protagonista es lo acumulado en sats, dibujado como una cuadrícula de 10×10 que se llena de abajo arriba hacia el siguiente hito (1M sats → 10M → 1 BTC → 10 BTC; cada cuadro = meta/100). La última compra va en tinta; mientras escribes una compra nueva se ve en fantasma lo que sumará, y al guardarla sus cuadros "caen" (sin animación con `prefers-reduced-motion`). Debajo van los hitos y una proyección: "al ritmo de los últimos 6 meses llegas a X en N meses" (`lib.ritmo`, exige 3 compras en la ventana).
+Concepto: **la pila hacia la próxima meta**. El protagonista es lo acumulado en sats, dibujado como una cuadrícula de 10×10 que se llena de abajo arriba hacia el siguiente hito (la próxima potencia de 10, mínimo 1M sats: 1M → 10M → 1 BTC → 10 BTC…; cada cuadro = meta/100). La última compra va en tinta; mientras escribes una compra nueva se ve en fantasma lo que sumará, y al guardarla sus cuadros "caen" (sin animación con `prefers-reduced-motion`). Debajo van los hitos y una proyección: "al ritmo de los últimos 6 meses llegas a X en N meses" (`lib.ritmo`, exige 3 compras en la ventana).
 - Identidad: banda naranja Bitcoin (`#f7931a`) con el logotipo en monoespaciada; cifras en `--mono` (fuentes del sistema); el formulario es un panel oscuro con borde naranja; botones rectos, sin sombras.
-- El naranja sobre el papel da 2:1: úsalo solo para rellenos y líneas, nunca para texto ni para el foco (en claro, texto naranja = `--naranja-texto`; el foco va en tinta, y en naranja dentro del panel).
+- El naranja sobre el papel da 2:1: es solo relleno. Bordes y líneas usan `--naranja-trazo` (3.8:1 en claro) y el texto `--naranja-texto`; el foco va en tinta, y en naranja dentro del panel.
 - Orden en móvil: banda → pila → valor/invertido/costo promedio → anotar compra → gráfico invertido/valor → compras por mes (últimas 20). En ≥ 56rem: pila a la izquierda; cifras y formulario a la derecha; gráfico y lista debajo a todo el ancho.
 - Tocar una compra la carga en el formulario para editarla; borrar está ahí, con un `<dialog>` de confirmación.
 
@@ -33,9 +33,9 @@ Tabla `compras(id, fecha, monto, precio, sats, creado)`. Se guarda **sats** (ent
 4. Opcional: alerta a Discord del resultado de los respaldos.
 
 ## Pruebas rápidas
-- API: Flask test client con `DB_PATH` temporal; simula `server.consultar_precio` para no salir a la red. Incluye una base vieja sin columna `sats`.
+- API: `python tests/test_api.py` (Flask test client, `DB_PATH` temporal, `server.consultar_precio` simulado; incluye una base vieja sin columna `sats`). Añade casos ahí.
 - Frontend: Playwright (`require('playwright')`, `chromium.launch()`) contra el servidor Flask local con datos sembrados; capturas a 375 px y escritorio, claro y oscuro; revisar consola/CSP.
-- Verifica siempre sin overflow horizontal en móvil (360–400 px).
+- Verifica siempre sin overflow horizontal en móvil (320–400 px) y con cifras enormes: las cifras grandes se escalan con `--caracteres` (lo pone `ajustarCifra` en `app.js`) y unidades `cqi`.
 
 ## Cuidado
 - Nunca subir `.env`, `data/` ni la base `libro.db`.

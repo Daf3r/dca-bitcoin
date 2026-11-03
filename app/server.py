@@ -247,7 +247,9 @@ def borrar(cid: int) -> Any:
 
 
 def _fmt(x: float) -> str:
-    return ("%.8f" % x).rstrip("0").rstrip(".")
+    # 15 cifras significativas: sin el ruido de coma flotante de los montos grandes.
+    s = f"{x:.15g}"
+    return s if "e" not in s else ("%.8f" % x).rstrip("0").rstrip(".")
 
 
 @app.get("/api/export.csv")

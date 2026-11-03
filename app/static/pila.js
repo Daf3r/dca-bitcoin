@@ -1,15 +1,18 @@
 // La pila: 100 cuadros hacia la próxima meta. Se llena de abajo arriba.
 import { entero } from './lib.js';
 
-export const HITOS = [
-  [1e5, '100k'],
-  [1e6, '1M'],
-  [1e7, '10M'],
-  [1e8, '1 BTC'],
-  [1e9, '10 BTC'],
-];
+/** Próxima potencia de 10 por encima de lo acumulado, como mínimo 1M sats. */
+export const meta = (sats) => Math.max(1e6, 10 ** (Math.floor(Math.log10(Math.max(1, sats))) + 1));
 
-export const meta = (sats) => (HITOS.find(([m]) => m > sats && m >= 1e6) ?? HITOS.at(-1))[0];
+export const nombreMeta = (m) =>
+  m >= 1e8 ? `${entero(m / 1e8)} BTC` : m >= 1e6 ? `${m / 1e6}M sats` : `${m / 1e3}k sats`;
+
+/** Escalera de hitos: los cuatro últimos hasta la meta, al menos hasta 1 BTC. */
+export function hitos(tope) {
+  const out = [];
+  for (let m = 1e5; m <= Math.max(1e8, tope); m *= 10) out.push(m);
+  return out.slice(-4);
+}
 
 const LADO = 10;
 const HUECO = 1.4;
@@ -28,7 +31,7 @@ export function dibujarPila(host, { sats, previo, fantasma = 0 }) {
     [previo, sats, 'c-ultimo'],
     [sats, Math.min(tope, sats + fantasma), 'c-fantasma'],
   ];
-  let s = `<svg viewBox="0 0 100 100" aria-hidden="true">`;
+  let s = `<svg viewBox="-0.5 -0.5 101 101" aria-hidden="true">`;
   for (let i = 0; i < 100; i++) {
     const x = f((i % LADO) * (CUADRO + HUECO));
     const y = (LADO - 1 - Math.floor(i / LADO)) * (CUADRO + HUECO);
@@ -39,10 +42,12 @@ export function dibujarPila(host, { sats, previo, fantasma = 0 }) {
       if (b - a < u * 0.02) continue;
       const fa = (a - i * u) / u;
       const fb = (b - i * u) / u;
-      s += `<rect class="${clase}" data-i="${i}" x="${x}" y="${f(y + CUADRO * (1 - fb))}" width="${f(CUADRO)}" height="${f(CUADRO * (fb - fa))}"/>`;
+      s += `<rect class="${clase}" x="${x}" y="${f(y + CUADRO * (1 - fb))}" width="${f(CUADRO)}" height="${f(CUADRO * (fb - fa))}"/>`;
     }
   }
   host.innerHTML = s + '</svg>';
   host.setAttribute('aria-label', `${entero(sats)} de ${entero(tope)} sats, ${((sats / tope) * 100).toFixed(1)}% de la meta`);
   return { tope, unidad: u, nuevos: host.querySelectorAll('.c-ultimo') };
 }
+
+export const etiquetaHito = (m) => (m >= 1e8 ? `${entero(m / 1e8)} BTC` : m >= 1e6 ? `${m / 1e6}M` : `${m / 1e3}k`);
