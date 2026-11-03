@@ -56,6 +56,7 @@ CSP = (
 )
 
 COLS = "id, fecha, monto, precio, sats, creado"
+GENESIS = date(2009, 1, 3)
 Compra = tuple[str, float, float, int]  # fecha, monto, precio, sats
 
 
@@ -133,6 +134,8 @@ def parse_compra(body: Any) -> Compra:
         raise ValueError("Fecha inválida.") from None
     if d > date.today() + timedelta(days=1):  # un día de margen por zonas horarias
         raise ValueError("La fecha no puede ser futura.")
+    if d < GENESIS:
+        raise ValueError("La fecha es anterior a bitcoin.")
     monto = _num(body.get("monto"), "Monto")
     if body.get("sats") is not None:
         s = body["sats"]
@@ -381,11 +384,13 @@ def velas_kraken(a: date, b: date) -> list[tuple[str, float]]:
     return [(d, float(f[4])) for f in filas if desde <= (d := _dia_utc(f[0])) <= hasta]
 
 
-def descargar_velas(a: date, b: date) -> list[tuple[str, float]]:
+def descargar_velas(a: date, b: date) -> tuple[list[tuple[str, float]], bool]:
+    """Velas del tramo y si el tramo quedó completo (Kraken solo llega a ~2 años atrás)."""
     try:
-        return velas_coinbase(a, b)
+        return velas_coinbase(a, b), True
     except Exception:
-        return velas_kraken(a, b)
+        filas = velas_kraken(a, b)
+        return filas, bool(filas) and filas[0][0] <= (a + timedelta(days=3)).isoformat()
 
 
 def huecos_historico(conn: sqlite3.Connection, desde: date, hoy: date) -> list[tuple[date, date]]:
@@ -421,26 +426,41 @@ def _tomar_candado() -> str:
 
 
 def _rellenar(desde: date) -> None:
-    conn = connect()
+    """Corre en un hilo: cualquier error se anota como fallo y el candado se suelta siempre."""
+    conn = None
+    completo = False
     try:
+        conn = connect()
         hoy = _hoy_utc()
-        try:
-            for a, b in huecos_historico(conn, desde, hoy):
-                filas = descargar_velas(a, b)
-                conn.executemany(
-                    "INSERT INTO precios (fecha, cierre) VALUES (?, ?) ON CONFLICT(fecha) DO UPDATE SET cierre = excluded.cierre",
-                    [f for f in filas if f[1] > 0],
-                )
-                conn.commit()
-            cubierto = _meta(conn, "hist_desde")
-            _meta_poner(conn, "hist_desde", min(desde.isoformat(), cubierto or desde.isoformat()))
-            _meta_poner(conn, "hist_dia", hoy.isoformat())
-        except Exception:
-            _meta_poner(conn, "hist_fallo", str(time.time() + HIST_ESPERA_FALLO_S))
-        _meta_poner(conn, "hist_bloqueo", "0")
+        cubre = desde
+        completo = True
+        for a, b in huecos_historico(conn, desde, hoy):
+            filas, tramo_completo = descargar_velas(a, b)
+            conn.executemany(
+                "INSERT INTO precios (fecha, cierre) VALUES (?, ?) ON CONFLICT(fecha) DO UPDATE SET cierre = excluded.cierre",
+                [f for f in filas if f[1] > 0 and math.isfinite(f[1])],
+            )
+            conn.commit()
+            if not tramo_completo:
+                # Solo se da por cubierto lo que de verdad llegó; el resto se reintenta más tarde.
+                completo = False
+                cubre = max(cubre, date.fromisoformat(filas[0][0])) if filas else max(cubre, b + timedelta(days=1))
+        cubierto = _meta(conn, "hist_desde")
+        _meta_poner(conn, "hist_desde", min(cubre.isoformat(), cubierto or cubre.isoformat()))
+        _meta_poner(conn, "hist_dia", hoy.isoformat())
         conn.commit()
+    except Exception:
+        completo = False
     finally:
-        conn.close()
+        try:
+            c = conn or connect()
+            if not completo:
+                _meta_poner(c, "hist_fallo", str(time.time() + HIST_ESPERA_FALLO_S))
+            _meta_poner(c, "hist_bloqueo", "0")
+            c.commit()
+            c.close()
+        except Exception:
+            pass  # sin base no hay nada que soltar: el candado caduca solo
 
 
 def _lanzar_relleno(desde: date) -> str:
@@ -484,12 +504,27 @@ def historico() -> Any:
     return resp
 
 
+@app.errorhandler(404)
+@app.errorhandler(405)
+@app.errorhandler(413)
+@app.errorhandler(500)
+def error_http(e: Any) -> Any:
+    # En la API, errores en JSON y sin detalles internos; en el resto, el texto estándar.
+    codigo = getattr(e, "code", 500) or 500
+    if not request.path.startswith("/api/"):
+        return e if codigo != 500 else ("Error interno.", 500)
+    mensajes = {404: "No existe.", 405: "Método no permitido.", 413: "El envío es demasiado grande.", 500: "Error interno."}
+    return jsonify(error=mensajes.get(codigo, "Error.")), codigo
+
+
 @app.after_request
 def cabeceras(resp: Response) -> Response:
     resp.headers["Content-Security-Policy"] = CSP
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Referrer-Policy"] = "no-referrer"
+    resp.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
     if "Cache-Control" not in resp.headers:
         resp.headers["Cache-Control"] = "no-store" if request.path.startswith("/api/") else "no-cache"
     return resp

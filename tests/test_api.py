@@ -185,6 +185,7 @@ def falso_get_json(url, timeout=8):
         if modo["kr"] != "ok":
             raise OSError("kraken caído")
         hoy_ = _dt.now(_tz.utc).date()
+        a = max(a, hoy_ - timedelta(days=719))  # como el real: solo las últimas 720 velas
         return {"error": [], "result": {"XXBTZUSD": [[_ts(d), "1", "2", "3", str(40000 + d.toordinal() % 1000), "0", "0", 1] for d in _dias(a, hoy_)], "last": 0}}
     raise AssertionError(url)
 
@@ -241,12 +242,18 @@ esperar(desde900)
 nuevas = llamadas[n:]
 check(len(nuevas) == 1 and nuevas[0][1] == hoy_utc - timedelta(days=3), f"refresco corto {nuevas}")
 
-# Reserva a Kraken cuando Coinbase falla (hueco anterior a lo cubierto).
+# Reserva a Kraken cuando Coinbase falla: lo reciente sí se completa.
 modo["cb"] = "caido"
+c2 = server.connect(); server._meta_poner(c2, "hist_dia", (hoy_utc - timedelta(days=1)).isoformat()); c2.commit(); c2.close()
+n = len(llamadas)
+r = esperar(desde900); j = r.get_json()
+check(any(c[0] == "kr" for c in llamadas[n:]) and not j["desactualizado"], "refresco reciente por Kraken")
+# Un hueco antiguo que Kraken no alcanza no se da por cubierto: se sirve lo que hay y se reintenta luego.
 desde1000 = (hoy_utc - timedelta(days=1000)).isoformat()
-esperar(desde1000)
-check(any(c[0] == "kr" for c in llamadas), "usa Kraken")
-check(hist(desde1000).get_json()["precios"][0][0] == desde1000, "hueco rellenado por Kraken")
+r = esperar(desde1000); j = r.get_json()
+c2 = server.connect(); cub = server._meta(c2, "hist_desde"); c2.close()
+check(cub == desde900 and j["precios"][0][0] == desde900 and j["desactualizado"], f"hueco antiguo pendiente ({cub})")
+c2 = server.connect(); c2.execute("DELETE FROM meta WHERE clave = 'hist_fallo'"); c2.commit(); c2.close()
 
 # Fallo total con caché: sirve lo guardado marcado como desactualizado y espera antes de reintentar.
 modo["kr"] = "caido"
@@ -263,6 +270,34 @@ r = esperar(desde900)
 check(r.status_code == 503 and "error" in r.get_json(), "503 sin datos")
 c2 = server.connect(); c2.execute("DELETE FROM meta"); c2.commit(); c2.close()
 modo["cb"] = modo["kr"] = "ok"
+
+# --- robustez y seguridad
+r = cl.get("/api/nada")
+check(r.status_code == 404 and r.is_json and r.get_json()["error"], "404 de la API en JSON")
+r = cl.post("/api/precio")
+check(r.status_code == 405 and r.is_json, "405 de la API en JSON")
+check(cl.post("/api/compras", json={"fecha": "2008-12-31", "monto": 10, "sats": 1000}).status_code == 400, "fecha anterior a bitcoin")
+r = cl.get("/")
+check(r.headers["Cross-Origin-Opener-Policy"] == "same-origin" and "camera=()" in r.headers["Permissions-Policy"], "cabeceras extra")
+# El hilo del histórico ante una excepción: anota el fallo y suelta el candado.
+orig = server.huecos_historico
+llamadas_huecos = []
+def explota(*a):
+    llamadas_huecos.append(1)
+    if len(llamadas_huecos) > 1:  # la primera es la del request; la segunda, la del hilo
+        raise RuntimeError("boom")
+    return orig(*a)
+server.huecos_historico = explota
+c2 = server.connect(); server._meta_poner(c2, "hist_dia", (hoy_utc - timedelta(days=1)).isoformat()); c2.commit(); c2.close()
+hist(desde900)
+for _ in range(60):
+    c2 = server.connect(); bl, fa = server._meta(c2, "hist_bloqueo"), server._meta(c2, "hist_fallo"); c2.close()
+    if bl == "0":
+        break
+    _t.sleep(0.05)
+check(bl == "0" and float(fa or 0) > _t.time(), "el hilo suelta el candado y anota el fallo")
+server.huecos_historico = orig
+c2 = server.connect(); c2.execute("DELETE FROM meta"); c2.commit(); c2.close()
 
 # CLI importar
 p = os.path.join(tmp, "c.csv"); open(p, "w").write(txt)
