@@ -65,8 +65,25 @@
     <button type="button" class="ver-todas" id="ver-todas" hidden></button>
   </section>
 
-  <section class="reportes" id="reportes" aria-labelledby="t-rep">
+  <section class="comienzo" id="comienzo" aria-labelledby="t-comienzo" hidden>
+    <p class="com-k">Siguiente paso</p>
+    <h2 id="t-comienzo"></h2>
+    <p class="com-txt" id="com-txt"></p>
+    <ul class="com-datos">
+      <li><span>Racha</span><b id="com-racha"></b><small id="com-racha-sub"></small></li>
+      <li><span>Después</span><b id="com-despues"></b><small>campamentos por delante</small></li>
+    </ul>
+    <button type="button" class="com-boton" id="com-anotar">Anotar la siguiente compra</button>
+  </section>
+
+  <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>
     <h2 class="sr" id="t-rep">Reportes</h2>
+    <article class="rep rep-const">
+      <h3>Constancia</h3>
+      <p class="const-cifra"><b id="const-racha"></b><span id="const-unidad"></span></p>
+      <p class="rep-txt" id="const-txt"></p>
+      <div class="semanas" id="semanas" aria-hidden="true"></div>
+    </article>
     <article class="rep rep-hitos">
       <h3>Campamentos</h3>
       <ol class="hitos" id="hitos"></ol>
@@ -74,11 +91,6 @@
     <article class="rep rep-anios">
       <h3>Año por año</h3>
       <div id="anios"></div>
-    </article>
-    <article class="rep rep-const">
-      <h3>Constancia</h3>
-      <p class="rep-txt" id="const-txt"></p>
-      <div class="semanas" id="semanas" aria-hidden="true"></div>
     </article>
     <article class="rep rep-ext" id="rep-ext">
       <h3>Tu mejor y tu peor precio</h3>

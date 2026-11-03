@@ -116,6 +116,7 @@ function pintar({ montana = false, animar = false, desde = null } = {}) {
   pintarMercado();
   pintarLista();
   pintarReportes();
+  pintarComienzo();
 }
 
 function pintarPrecio() {
@@ -391,8 +392,10 @@ const nombreMeta = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`);
 const semanas = (n) => `${n} ${n === 1 ? 'semana' : 'semanas'}`;
 
 function pintarReportes() {
-  $('reportes').hidden = !R.n;
-  if (!R.n) return;
+  // Con menos de tres compras los reportes serían casi vacíos: su lugar lo ocupa «Siguiente paso».
+  $('reportes').hidden = R.n < 3;
+  document.body.classList.toggle('pocas', R.n > 0 && R.n < 3);
+  if (R.n < 3) return;
   const hasta = Math.max(1e8, R.meta);
   $('hitos').innerHTML = R.hitos.filter((h) => h.m <= hasta).map((h) => {
     const estado = h.fecha ? 'hecho' : h.m === R.meta ? 'siguiente' : 'lejos';
@@ -402,6 +405,9 @@ function pintarReportes() {
     return `<li data-estado="${estado}"><b>${nombreMeta(h.m)}</b><span>${detalle}</span></li>`;
   }).join('');
 
+  // Con un solo mes de compras no hay nada que comparar todavía.
+  const mesesConCompra = R.anios.reduce((t, a) => t + a.meses.filter(Boolean).length, 0);
+  document.querySelector('.rep-anios').hidden = mesesConCompra < 2;
   const maxMes = Math.max(...R.anios.flatMap((a) => a.meses));
   $('anios').innerHTML = [...R.anios].reverse().map((a) =>
     `<div class="anio"><b class="an-y">${a.anio}</b><div class="an-barras" aria-hidden="true">` +
@@ -409,17 +415,20 @@ function pintarReportes() {
     `</div><p class="an-tot"><span><b>+${compacto(a.sats)}</b> sats</span><span>${usd0(a.usd)} · ${a.n} ${a.n === 1 ? 'compra' : 'compras'}</span></p></div>`).join('');
   $('anios').querySelectorAll('[data-h]').forEach((i) => { i.style.height = `${Math.max(Number(i.dataset.h) * 100, 6)}%`; });
 
-  $('semanas').innerHTML = R.ultimas52.map((v) => `<i${v ? ' class="con"' : ''}></i>`).join('');
-  const con = R.ultimas52.filter(Boolean).length;
-  $('const-txt').innerHTML = R.n === 1
-    ? 'Tu primera huella. El DCA se gana con constancia: vuelve a comprar la próxima semana.'
-    : `<b>${con}</b> de las últimas 52 semanas con compra. Racha actual: <b>${semanas(R.racha)}</b>; la mejor: <b>${semanas(R.mejorRacha)}</b>.`;
+  // Ventana de 52 semanas desde la primera compra si es más reciente: sin huellas vacías antes de empezar.
+  const ventana = R.ultimas52.slice(-Math.min(52, Math.max(R.semanasDesdePrimera - (R.semanaEnCurso ? 0 : 1), 1)));
+  $('semanas').innerHTML = ventana.map((v) => `<i${v ? ' class="con"' : ''}></i>`).join('');
+  $('semanas').style.setProperty('--n', String(Math.max(ventana.length, 13)));
+  const con = ventana.filter(Boolean).length;
+  $('const-racha').textContent = R.racha;
+  $('const-unidad').textContent = R.racha === 1 ? 'semana seguida' : 'semanas seguidas';
+  const resumenSemanas = con === ventana.length && ventana.length < 52
+    ? `Has comprado todas las semanas desde que empezaste (${ventana.length}). `
+    : `Compraste en <b>${con}</b> de ${ventana.length === 52 ? 'las últimas 52 semanas' : `tus ${ventana.length} semanas`}. `;
+  $('const-txt').innerHTML = resumenSemanas +
+    `Tu mejor racha: <b>${semanas(R.mejorRacha)}</b>.` + (R.semanaEnCurso || !R.racha ? '' : ' Esta semana aún no compras: tienes hasta el domingo.');
 
   const ext = $('extremos');
-  if (R.n < 3) {
-    ext.innerHTML = '<p>Con tres compras o más verás aquí tu mejor y tu peor precio.</p>';
-    return;
-  }
   const tarjeta = (c, titulo) => {
     const v = S.precio ? (S.precio / c.precio - 1) * 100 : null;
     return `<div class="ext"><small>${titulo}</small><b>${usd0(c.precio)}</b><span>${fechaLarga(c.fecha)} · ${entero(c.sats)} sats</span>` +
@@ -427,6 +436,34 @@ function pintarReportes() {
   };
   ext.innerHTML = tarjeta(R.mejor, 'Mejor precio') + tarjeta(R.peor, 'Precio más alto');
 }
+
+// ------------------------------------------------------------ siguiente paso
+const dfDomingo = new Intl.DateTimeFormat('es-SV', { weekday: 'long', day: 'numeric', month: 'short' });
+/** Domingo que cierra la semana local en la que cae `d` (+7 días si se pide la siguiente). */
+function domingo(semanasMas = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + ((7 - d.getDay()) % 7) + 7 * semanasMas);
+  return dfDomingo.format(d).replace('.', '');
+}
+
+function pintarComienzo() {
+  const ver = R.n > 0 && R.n < 3;
+  $('comienzo').hidden = !ver;
+  if (!ver) return;
+  const falta = R.meta - R.sats;
+  const porCompra = R.sats / R.n;
+  const compras = Math.max(1, Math.ceil(falta / porCompra));
+  $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.meta === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.meta)}`}`;
+  $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.meta)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
+  $('com-racha').textContent = semanas(R.racha);
+  $('com-racha-sub').textContent = R.racha
+    ? `sigue si vuelves a comprar antes del ${domingo(R.semanaEnCurso ? 1 : 0)}`
+    : `empieza de nuevo con tu próxima compra`;
+  const despues = R.hitos.filter((h) => !h.fecha && h.m > R.meta && h.m <= 1e8).map((h) => nombreHito(h.m));
+  const lista = despues.length > 1 ? `${despues.slice(0, -1).join(', ')} y ${despues.at(-1)}` : despues[0] ?? nombreHito(1e8);
+  $('com-despues').textContent = lista.replace(/ BTC/g, '\u00a0BTC');
+}
+$('com-anotar').addEventListener('click', () => abrirHoja());
 
 // -------------------------------------------------------------- celebración
 /** Solo cuando la acción de esta sesión cruza un hito; breve y sin bloquear nada. */

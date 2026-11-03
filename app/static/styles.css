@@ -201,10 +201,33 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .f-var { grid-area: v; font-weight: 650; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
 .ver-todas { margin-top: 8px; min-height: 44px; padding: 0 18px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 600; cursor: pointer; }
 
+/* -------------------------------------------------------- siguiente paso */
+.comienzo { padding: 22px 20px 20px; border-radius: 24px; background: color-mix(in srgb, var(--naranja) 13%, var(--fondo)); border-top: 3px solid var(--naranja); }
+.com-k { font-size: 0.875rem; font-weight: 650; color: var(--naranja-txt); }
+.comienzo h2 { margin-top: 4px; font-size: clamp(1.6rem, 6.4vw, 2.1rem); }
+.com-txt { margin-top: 8px; color: var(--txt2); }
+.com-datos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+.com-datos li { display: grid; align-content: start; gap: 2px; min-width: 0; }
+.com-datos span { font-size: 0.8125rem; color: var(--txt3); }
+.com-datos b { font: 500 1.375rem/1.15 var(--serif); }
+.com-datos small { font-size: 0.8125rem; color: var(--txt2); }
+.com-boton {
+  margin-top: 18px; min-height: 48px; padding: 0 20px; border: 1.5px solid var(--naranja); border-radius: 999px;
+  background: none; color: var(--txt); font-weight: 650; cursor: pointer;
+}
+.com-boton:hover { background: color-mix(in srgb, var(--naranja) 14%, transparent); }
+
 /* -------------------------------------------------------------- reportes */
-.reportes { display: grid; gap: 14px; }
-.rep { padding: 20px; border-radius: 24px; background: var(--s1); min-width: 0; }
+/* Ritmo variado: solo «Constancia» va en caja; el resto respira sobre el fondo. */
+.reportes { display: grid; gap: 30px; }
+.rep { min-width: 0; }
 .rep h3 { font: 600 1.375rem var(--serif); }
+.rep-const { padding: 20px; border-radius: 24px; background: var(--s1); align-self: start; }
+.const-cifra { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; }
+.const-cifra b { font: 300 clamp(3rem, 14vw, 4.2rem)/0.95 var(--serif); color: var(--naranja-txt); }
+.const-cifra span { font: italic 400 1.125rem var(--serif); color: var(--txt2); }
+.rep-hitos, .rep-anios { padding-top: 16px; border-top: 1px solid var(--s3); }
+.rep-ext h3 { font-size: 1.125rem; font-weight: 500; color: var(--txt2); }
 .rep-txt { margin-top: 6px; color: var(--txt2); font-size: 0.9375rem; }
 .rep-txt b { color: var(--txt); }
 .hitos { display: grid; margin-top: 12px; }
@@ -222,19 +245,20 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .anio { display: grid; grid-template-columns: 4rem minmax(0, 1fr); grid-template-areas: "y b" "t t"; gap: 6px 14px; align-items: end; padding: 14px 0; }
 .anio + .anio { border-top: 1px solid var(--s3); }
 .an-y { grid-area: y; font: 400 1.75rem/1 var(--serif); color: var(--naranja-txt); }
-.an-barras { grid-area: b; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: end; gap: 3px; height: 52px; }
+.an-barras { grid-area: b; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: end; gap: 4px; height: 64px; }
 .an-barras i { display: block; min-height: 3px; border-radius: 4px 4px 1px 1px; background: var(--naranja); }
 .an-barras i.vacio { background: var(--s3); }
 .an-tot { grid-area: t; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 0.875rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
 .an-tot b { color: var(--txt); }
-.semanas { display: grid; grid-template-columns: repeat(26, minmax(0, 1fr)); gap: 6px 4px; margin-top: 14px; }
+.semanas { display: grid; grid-template-columns: repeat(min(26, var(--n, 26)), minmax(0, 1fr)); gap: 6px 4px; margin-top: 14px; max-width: calc(var(--n, 26) * 22px); }
 .semanas i { aspect-ratio: 0.62; border-radius: 50% 50% 46% 46%; background: var(--s3); }
 .semanas i:nth-child(odd) { transform: rotate(-8deg); }
 .semanas i:nth-child(even) { transform: translateY(35%) rotate(8deg); }
 .semanas i.con { background: var(--naranja); }
 .extremos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .extremos > p { grid-column: 1 / -1; color: var(--txt2); }
-.ext { display: grid; gap: 2px; padding: 14px; border-radius: 18px; background: var(--s2); }
+.ext { display: grid; gap: 2px; padding: 4px 0 4px 14px; border-left: 3px solid var(--s3); }
+.ext:first-child { border-left-color: var(--sube); }
 .ext small { font-size: 0.8125rem; color: var(--txt2); font-weight: 600; }
 .ext b { font: 500 1.6rem/1.1 var(--serif); }
 .ext span { font-size: 0.8125rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
@@ -312,7 +336,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .saldo { top: 84px; padding-left: 40px; }
   .cima { padding-inline: 40px; }
   .cuerpo { padding-inline: 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
-  .tramo, .mercado, .compras, .pie { grid-column: 1 / -1; }
+  .tramo, .mercado, .compras, .pie, .comienzo { grid-column: 1 / -1; }
   .reportes { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lienzo { margin-inline: 0; }
   .hoja { align-items: center; justify-items: center; }
@@ -334,8 +358,11 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .mercado { grid-area: mercado; }
   .tramo { grid-area: tramo; }
   .compras { grid-area: compras; }
-  .reportes { grid-area: rep; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; }
+  .reportes { grid-area: rep; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; column-gap: 32px; }
   .rep-anios, .rep-ext { grid-column: span 2; }
+  .comienzo { grid-area: com; }
+  /* Con una o dos compras, «Siguiente paso» llena la columna derecha junto al gráfico. */
+  body.pocas .cuerpo { grid-template-areas: "mercado cta" "mercado tramo" "mercado com" "compras com" "pie pie"; grid-template-rows: auto auto auto 1fr auto; }
   .pie { grid-area: pie; }
   /* En escritorio no flota sobre el contenido: va pegajoso en la columna derecha. */
   .anotar { grid-area: cta; position: sticky; top: 16px; left: auto; bottom: auto; transform: none; justify-self: start; z-index: 2; }
