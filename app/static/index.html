@@ -3,123 +3,131 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#1a1713" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0a1322" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbe8cc" media="(prefers-color-scheme: light)">
 <title>Libro DCA</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="preload" href="/fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
-<div class="pagina">
-  <header class="cabecera">
-    <h1 class="marca">Libro <i>DCA</i></h1>
+<section class="escena" aria-labelledby="t-saldo">
+  <div class="montana" id="montana"></div>
+  <header class="cima">
+    <p class="marca">Libro <b>DCA</b></p>
     <p class="cotizacion" id="cotizacion" data-estado="cargando">
-      <span class="cot-k">1 bitcoin</span>
-      <span class="cot-v cifra" id="precio">—</span>
+      <span class="cot-k">1 BTC</span> <b class="cot-v" id="precio">—</b>
       <span class="cot-meta" id="precio-meta">consultando…</span>
     </p>
   </header>
+  <div class="saldo">
+    <h1 class="saldo-k" id="t-saldo">Tu saldo</h1>
+    <p class="saldo-v"><span class="cifra-grande" id="s-sats">—</span><em>sats</em></p>
+    <p class="saldo-d" id="s-valor">Abriendo tu libro…</p>
+  </div>
+</section>
 
-  <main>
-    <section class="saldo" aria-labelledby="t-saldo">
-      <h2 class="saldo-k" id="t-saldo">Saldo</h2>
-      <p class="saldo-v"><span id="p-sats">—</span> <span class="unidad">sats</span></p>
-      <p class="saldo-usd" id="r-valor-linea"></p>
+<main class="cuerpo">
+  <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden>
+    <h2 class="sr" id="t-tramo">Siguiente meta</h2>
+    <p class="tr-k">Próximo campamento</p>
+    <p class="tr-v"><b id="t-meta"></b><span id="t-falta"></span></p>
+    <div class="tr-barra" aria-hidden="true"><i id="t-barra"></i></div>
+    <p class="tr-ritmo" id="t-ritmo"></p>
+  </section>
 
-      <div class="camino" id="p-camino" hidden>
-        <div class="regla" id="p-regla" aria-hidden="true"></div>
-        <p class="camino-txt" id="p-escala"></p>
-        <p class="camino-txt suave" id="p-ritmo"></p>
+  <section class="mercado" id="mercado" aria-labelledby="t-mercado" hidden>
+    <div class="sec-cab">
+      <h2 id="t-mercado">El precio y tus compras</h2>
+      <div class="rangos" id="rangos" role="group" aria-label="Rango del gráfico">
+        <button type="button" data-r="30">1M</button><button type="button" data-r="182">6M</button><button type="button" data-r="365">1A</button><button type="button" data-r="0">Todo</button>
       </div>
-    </section>
+    </div>
+    <p class="lectura" id="g-lectura" aria-live="polite"></p>
+    <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo."></div>
+    <p class="leyenda" aria-hidden="true"><span class="k-p">Precio de BTC</span><span class="k-c">Tus compras, a su precio</span><span class="k-a">Tu costo promedio</span></p>
+  </section>
 
-    <dl class="datos" id="r-datos" hidden>
-      <div><dt>Costo promedio</dt><dd class="cifra" id="r-prom">—</dd><dd class="sub" id="r-prom-sub"></dd></div>
-      <div><dt>Invertido</dt><dd class="cifra" id="r-inv">—</dd><dd class="sub" id="r-n"></dd></div>
-      <div><dt>En bitcoin</dt><dd class="cifra" id="p-btc">—</dd><dd class="sub" id="r-ultima"></dd></div>
-    </dl>
+  <section class="compras" aria-labelledby="t-compras">
+    <div class="sec-cab">
+      <h2 id="t-compras" tabindex="-1">Últimas compras</h2>
+      <p class="csv">
+        <a class="enlace" id="csv-out" href="/api/export.csv" download>Exportar CSV</a>
+        <label class="enlace" for="csv-in">Importar CSV</label>
+        <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
+      </p>
+    </div>
+    <ul class="lista" id="lista"><li class="vacio">Cargando compras…</li></ul>
+    <button type="button" class="ver-todas" id="ver-todas" hidden></button>
+  </section>
 
-    <section class="libreta" aria-labelledby="t-compras">
-      <div class="libreta-h">
-        <h2 id="t-compras" tabindex="-1">La libreta</h2>
-        <p class="csv">
-          <a class="enlace" id="csv-out" href="/api/export.csv" download>Exportar CSV</a>
-          <label class="enlace" for="csv-in">Importar CSV</label>
-          <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
-        </p>
-      </div>
+  <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>
+    <h2 class="sr" id="t-rep">Reportes</h2>
+    <article class="rep rep-hitos">
+      <h3>Campamentos</h3>
+      <ol class="hitos" id="hitos"></ol>
+    </article>
+    <article class="rep rep-anios">
+      <h3>Año por año</h3>
+      <div id="anios"></div>
+    </article>
+    <article class="rep rep-const">
+      <h3>Constancia</h3>
+      <p class="rep-txt" id="const-txt"></p>
+      <div class="semanas" id="semanas" aria-hidden="true"></div>
+    </article>
+    <article class="rep rep-ext" id="rep-ext">
+      <h3>Tu mejor y tu peor precio</h3>
+      <div class="extremos" id="extremos"></div>
+    </article>
+  </section>
 
-      <div class="hoja">
-        <div class="columnas" aria-hidden="true">
-          <span>Fecha</span><span>Pagaste</span><span>Precio</span><span>Depósito</span><span>Saldo</span>
-        </div>
-        <div class="lista" id="lista"><p class="vacio">Abriendo la libreta…</p></div>
+  <footer class="pie">Tus datos viven en tu servidor, con respaldo diario. Precios de Coinbase (Kraken de reserva).</footer>
+</main>
 
-        <form id="form" class="linea-nueva" novalidate>
-          <h3 class="linea-t" id="t-form">Anotar compra</h3>
-          <span class="editando" id="f-editando" hidden></span>
-          <fieldset id="f-campos">
-            <legend class="sr">Datos de la compra</legend>
-            <div class="campo c-fecha">
-              <label for="f-fecha">Fecha</label>
-              <input id="f-fecha" type="date" required>
-            </div>
-            <div class="campo c-monto">
-              <label for="f-monto">Pagaste (USD)</label>
-              <input id="f-monto" class="cifra" inputmode="decimal" autocomplete="off" placeholder="50.00">
-            </div>
-            <div class="campo c-sats">
-              <label for="f-sats">Recibiste (sats)</label>
-              <input id="f-sats" class="cifra" inputmode="numeric" autocomplete="off" placeholder="74,627">
-            </div>
-            <details class="precio-manual" id="f-det">
-              <summary>¿No tienes los sats? Calcúlalos con un precio</summary>
-              <div class="campo">
-                <label for="f-precio">Precio de 1 BTC (USD)</label>
-                <div class="con-boton">
-                  <input id="f-precio" class="cifra" inputmode="decimal" autocomplete="off" placeholder="Vacío: precio actual">
-                  <button type="button" class="boton" id="f-usar">Usar el actual</button>
-                </div>
-              </div>
-            </details>
-            <p class="calculo" id="f-calc" aria-live="polite"></p>
-            <p class="error" id="f-error" role="alert"></p>
-            <div class="botones">
-              <button type="submit" class="boton primario" id="f-guardar">Anotar</button>
-              <button type="button" class="boton" id="f-cancelar" hidden>Cancelar</button>
-              <button type="button" class="boton peligro" id="f-borrar" hidden>Borrar línea</button>
-            </div>
-          </fieldset>
-        </form>
-      </div>
-    </section>
+<button class="anotar" type="button" id="anotar">Anotar compra</button>
 
-    <section class="curva" aria-labelledby="t-grafico">
-      <h2 id="t-grafico">Invertido y valor</h2>
-      <p class="lectura cifra" id="g-lectura"></p>
-      <div class="lienzo" id="g-lienzo" tabindex="0" role="img" aria-label="Gráfico de lo invertido y el valor de tus sats en el tiempo"></div>
-      <p class="sr" id="g-sr" aria-live="polite"></p>
-      <p class="nota" id="g-nota">El valor usa el precio de cada compra y, al final, el actual. Entre compras la línea es una aproximación.</p>
-    </section>
-  </main>
-
-  <footer class="pie">Tus datos viven en tu servidor, con respaldo diario. El precio viene de Coinbase (Kraken de reserva) cada 30 s.</footer>
+<div class="hoja" id="hoja" hidden>
+  <div class="hoja-fondo" data-cerrar></div>
+  <div class="hoja-panel" role="dialog" aria-modal="true" aria-labelledby="hoja-t">
+    <div class="hoja-cab">
+      <h2 id="hoja-t">Anotar compra</h2>
+      <button type="button" class="cerrar" data-cerrar>Cerrar</button>
+    </div>
+    <label class="h-fecha">Fecha <input type="date" id="h-fecha" required></label>
+    <div class="modo" role="group" aria-label="Campo que escribes">
+      <button type="button" data-campo="usd" aria-pressed="true"><span>Pagaste</span><b id="v-usd">$0</b></button>
+      <button type="button" data-campo="sats" aria-pressed="false"><span>Recibiste</span><b id="v-sats">0 sats</b></button>
+    </div>
+    <p class="hoja-calc" id="hoja-calc" aria-live="polite"></p>
+    <p class="hoja-error" id="hoja-error" role="alert"></p>
+    <div class="teclado" id="teclado">
+      <button type="button">1</button><button type="button">2</button><button type="button">3</button>
+      <button type="button">4</button><button type="button">5</button><button type="button">6</button>
+      <button type="button">7</button><button type="button">8</button><button type="button">9</button>
+      <button type="button">.</button><button type="button">0</button><button type="button" data-borrar aria-label="Borrar último dígito">⌫</button>
+    </div>
+    <div class="hoja-bot">
+      <button type="button" class="borrar" id="h-borrar" hidden>Borrar</button>
+      <button type="button" class="guardar" id="guardar" disabled>Guardar</button>
+    </div>
+  </div>
 </div>
-
-<div class="aviso" id="aviso" role="status" hidden><span id="aviso-txt"></span><button type="button" class="enlace" id="aviso-btn" hidden>Reintentar</button></div>
 
 <dialog id="d-borrar" aria-labelledby="d-titulo">
   <form method="dialog">
-    <h2 id="d-titulo">¿Borrar esta línea?</h2>
-    <p id="d-texto" class="cifra"></p>
-    <div class="botones">
-      <button type="submit" class="boton" value="no" autofocus>Cancelar</button>
-      <button type="submit" class="boton peligro-lleno" value="si">Borrar</button>
+    <h2 id="d-titulo">¿Borrar esta compra?</h2>
+    <p id="d-texto"></p>
+    <div class="d-bot">
+      <button type="submit" value="no" autofocus>Cancelar</button>
+      <button type="submit" value="si" class="peligro">Borrar</button>
     </div>
   </form>
 </dialog>
+
+<div class="hito-cel" id="hito-cel" hidden aria-live="polite"><p><small>Nuevo campamento</small><b id="hc-txt"></b></p></div>
+<div class="aviso" id="aviso" role="status" hidden><span id="aviso-txt"></span><button type="button" class="enlace" id="aviso-btn" hidden></button></div>
 </body>
 </html>
