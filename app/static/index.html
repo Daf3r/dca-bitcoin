@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Libro DCA Bitcoin</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%230F1730'/%3E%3Cpath d='M8 23h4v-4H8zM14 23h4v-8h-4zM20 23h4V9h-4z' fill='%23F7A23B'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Onest:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="bg-glow" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg class="iso" viewBox="0 0 40 40" aria-hidden="true">
+        <defs><linearGradient id="iso-g" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="currentColor" stop-opacity=".55"/><stop offset="1" stop-color="currentColor"/></linearGradient></defs>
+        <rect class="iso-bg" width="40" height="40" rx="12"/>
+        <rect x="9" y="24" width="5.5" height="7" rx="1.6" fill="url(#iso-g)"/>
+        <rect x="17.25" y="18" width="5.5" height="13" rx="1.6" fill="url(#iso-g)"/>
+        <rect x="25.5" y="10" width="5.5" height="21" rx="1.6" fill="url(#iso-g)"/>
+      </svg>
+      <div>
+        <p class="brand-n">Libro DCA</p>
+        <h1 class="brand-s">Mis compras de BTC</h1>
+      </div>
+    </div>
+    <div class="ppill" id="ppill">
+      <label for="precio" class="ppill-l"><span class="live-dot" aria-hidden="true"></span>BTC / USD</label>
+      <div class="pref ppill-in"><span>$</span><input id="precio" type="text" inputmode="decimal" autocomplete="off" placeholder="Obteniendo…" aria-describedby="precio-ago"></div>
+      <p class="ppill-meta"><span id="precio-ago">Obteniendo el precio…</span><button type="button" class="link" id="usar-vivo" hidden>Usar precio en vivo</button></p>
+    </div>
+  </header>
+
+  <div id="aviso" class="aviso" role="status" hidden></div>
+
+  <section class="hero" aria-labelledby="hero-l">
+    <div class="hero-main">
+      <p class="eyebrow" id="hero-l">Tu posición hoy</p>
+      <p class="hero-num" id="h-val">$0.00</p>
+      <div class="hero-row">
+        <p class="chip" id="h-pnl" hidden></p>
+        <p class="hero-sub" id="h-sub"></p>
+      </div>
+    </div>
+    <div class="spark" id="spark" aria-hidden="true"></div>
+  </section>
+
+  <section class="stats" id="stats" aria-label="Resumen de tus compras"></section>
+
+  <div class="main">
+    <div class="col-a">
+      <form id="form" class="card form" novalidate>
+        <h2 id="form-t">Registrar compra</h2>
+        <fieldset id="fs" class="campos">
+          <legend class="sr">Datos de la compra</legend>
+          <div class="campo">
+            <div class="lbl-row">
+              <label for="f-fecha">Fecha</label>
+              <div class="chips" role="group" aria-label="Fecha rápida">
+                <button type="button" class="qchip" data-dia="0">Hoy</button>
+                <button type="button" class="qchip" data-dia="1">Ayer</button>
+              </div>
+            </div>
+            <input id="f-fecha" type="date" required>
+          </div>
+          <div class="campo">
+            <label for="f-monto">Monto invertido (USD)</label>
+            <div class="pref"><span>$</span><input id="f-monto" type="text" inputmode="decimal" autocomplete="off" placeholder="50.00"></div>
+            <div class="chips" role="group" aria-label="Monto rápido">
+              <button type="button" class="qchip" data-amt="25">$25</button>
+              <button type="button" class="qchip" data-amt="50">$50</button>
+              <button type="button" class="qchip" data-amt="100">$100</button>
+            </div>
+          </div>
+          <div class="campo">
+            <label for="f-sats">Satoshis recibidos</label>
+            <div class="pref"><span>₿</span><input id="f-sats" type="text" inputmode="numeric" autocomplete="off" placeholder="74,627"></div>
+          </div>
+          <div class="campo">
+            <div class="lbl-row">
+              <label for="f-precio">Precio de 1 BTC <span class="opc">(opcional)</span></label>
+              <button type="button" class="link" id="usar-precio">Usar precio actual</button>
+            </div>
+            <div class="pref"><span>$</span><input id="f-precio" type="text" inputmode="decimal" autocomplete="off" placeholder="Vacío = precio actual"></div>
+          </div>
+          <div class="preview" id="preview" aria-live="polite"></div>
+          <p class="error" id="f-error" role="alert"></p>
+          <div class="acciones">
+            <button class="btn" id="f-guardar" type="submit">Guardar compra</button>
+            <button class="btn sec" id="f-cancelar" type="button" hidden>Cancelar</button>
+          </div>
+        </fieldset>
+      </form>
+
+      <section class="card" aria-labelledby="mes-t">
+        <div class="card-h">
+          <div>
+            <h2 id="mes-t">Aportes por mes</h2>
+            <p class="card-sub" id="mes-sub"></p>
+          </div>
+        </div>
+        <div class="bars" id="bars"></div>
+      </section>
+    </div>
+
+    <div class="col-b">
+      <section class="card chart-card" aria-labelledby="chart-t">
+        <div class="card-h">
+          <div>
+            <h2 id="chart-t">Tu promedio frente al mercado</h2>
+            <p class="card-sub">Pasa el cursor o toca la gráfica para ver cada compra.</p>
+          </div>
+          <div class="leyenda">
+            <span><i class="k-dot"></i>Compras</span>
+            <span><i class="k-avg"></i>Tu promedio</span>
+            <span><i class="k-cur"></i>Precio actual</span>
+          </div>
+        </div>
+        <div class="chart" id="chart"></div>
+      </section>
+
+      <section class="card tabla-card" aria-labelledby="tabla-t">
+        <div class="card-h">
+          <h2 id="tabla-t" tabindex="-1">Compras registradas</h2>
+          <button type="button" class="btn sec sm" id="csv" hidden>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9m0 0-3.5-3.5M10 12l3.5-3.5M4 14v2h12v-2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Exportar CSV
+          </button>
+        </div>
+        <p class="sr" id="tabla-live" aria-live="polite"></p>
+        <div class="tabla-wrap" id="tabla"></div>
+      </section>
+    </div>
+  </div>
+
+  <p class="nota">Tus compras viven en tu propio servidor, con respaldo diario. El precio de BTC viene de Coinbase (con Kraken de reserva) y se actualiza cada 30 segundos; si prefieres, puedes escribir uno a mano.</p>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

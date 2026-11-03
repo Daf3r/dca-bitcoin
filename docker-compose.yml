@@ -1,0 +1,37 @@
+# Libro DCA: app + respaldos diarios.
+# La app solo escucha en 127.0.0.1:18082; Caddy (en el host) la publica en dca.polarzero.dev
+# detrás de Cloudflare Access. No exponer este puerto a internet: la app no tiene login propio.
+x-endurecido: &endurecido
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp"]
+
+services:
+  app:
+    <<: *endurecido
+    build: ./app
+    image: libro-dca:local
+    environment:
+      DB_PATH: /data/libro.db
+      TZ: America/El_Salvador
+    ports:
+      - "127.0.0.1:18082:8000"
+    volumes:
+      - ./data:/data
+
+  backup:
+    <<: *endurecido
+    build: ./app          # misma imagen que app; el caché evita reconstruirla
+    image: libro-dca:local
+    depends_on: [app]
+    command: ["python", "backup.py", "--loop"]
+    environment:
+      DB_PATH: /data/libro.db
+      BACKUP_DIR: /data/backups
+      BACKUP_KEEP: ${BACKUP_KEEP:-30}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      TZ: America/El_Salvador
+    volumes:
+      - ./data:/data
