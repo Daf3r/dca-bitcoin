@@ -63,7 +63,8 @@ button, input { font: inherit; color: inherit; }
 /* -------------------------------------------------------------------- escena */
 .escena {
   position: relative; overflow: hidden; background: var(--c0);
-  height: 88vh; height: 88svh; min-height: 560px; max-height: 900px;
+  /* Pantalla completa en móvil y tablet: bajo el botón fijo solo quedan los pinos. */
+  height: 100vh; height: 100svh; min-height: 560px; max-height: 1100px;
 }
 .montana { position: absolute; inset: 0; }
 .montana svg { display: block; width: 100%; height: 100%; }
@@ -325,8 +326,8 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .cima { padding-inline: max(48px, calc(50vw - 600px)); }
   .cuerpo {
     grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-    grid-template-areas: "mercado tramo" "mercado compras" "rep compras" "pie pie";
-    grid-template-rows: auto auto 1fr;
+    grid-template-areas: "mercado cta" "mercado tramo" "mercado compras" "rep compras" "pie pie";
+    grid-template-rows: auto auto auto 1fr;
     align-items: start;
     column-gap: 48px; row-gap: 32px; padding: 40px 48px 120px;
   }
@@ -336,9 +337,10 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .reportes { grid-area: rep; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; }
   .rep-anios, .rep-ext { grid-column: span 2; }
   .pie { grid-area: pie; }
-  .anotar { left: auto; right: 32px; bottom: 28px; transform: none; }
+  /* En escritorio no flota sobre el contenido: va pegajoso en la columna derecha. */
+  .anotar { grid-area: cta; position: sticky; top: 16px; left: auto; bottom: auto; transform: none; justify-self: start; z-index: 2; }
   .anotar:active { transform: scale(0.96); }
-  .aviso { left: auto; right: 32px; transform: none; bottom: 100px; }
+  .aviso { left: auto; right: 32px; transform: none; bottom: 32px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
