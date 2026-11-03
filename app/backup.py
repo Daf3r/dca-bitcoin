@@ -19,7 +19,7 @@ KEEP = int(os.environ.get("BACKUP_KEEP", "30"))
 INTERVAL = int(os.environ.get("BACKUP_INTERVAL_HOURS", "24")) * 3600
 
 
-def run():
+def run() -> bool:
     if not os.path.exists(DB_PATH):
         print("backup: todavía no existe la base, nada que copiar", flush=True)
         return True
