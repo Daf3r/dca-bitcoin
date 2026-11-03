@@ -1,12 +1,12 @@
 import {
-  usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, mesLargo,
-  leerNumero, leerSats, completar, resumir, serie, ritmo,
+  usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta, mesLargo,
+  leerNumero, leerSats, completar, resumir, serie, ritmo, meta, nombreMeta, etiquetaSats,
 } from './lib.js';
 import { dibujar } from './chart.js';
-import { dibujarPila, meta, nombreMeta, hitos, etiquetaHito } from './pila.js';
 
 const $ = (id) => document.getElementById(id);
 const reducirMovimiento = matchMedia('(prefers-reduced-motion: reduce)');
+const LINEAS = 12;
 
 const S = {
   compras: [],
@@ -21,10 +21,8 @@ const S = {
   guardando: false,
   verTodas: false,
   fantasma: 0,
-  animarPila: false,
+  sellar: false,
 };
-
-const VISIBLES = 20;
 
 // ------------------------------------------------------------------ API
 async function api(metodo, ruta, cuerpo, tipo = 'application/json') {
@@ -50,13 +48,12 @@ const normalizar = (c) => ({ ...c, id: Number(c.id), sats: c.sats > 0 ? c.sats :
 
 async function cargar() {
   try {
-    const lista = await api('GET', '/api/compras');
-    S.compras = lista.map(normalizar);
+    S.compras = (await api('GET', '/api/compras')).map(normalizar);
     S.errorCarga = false;
     avisar('');
   } catch (e) {
     S.errorCarga = true;
-    avisar(`No se pudieron cargar las compras. ${e.status === 0 ? e.message : ''}`.trim(), cargar);
+    avisar(`No se pudo abrir la libreta. ${e.status === 0 ? e.message : ''}`.trim(), cargar);
   }
   S.cargado = true;
   pintar();
@@ -88,10 +85,10 @@ function avisar(texto, reintentar = null, temporal = false) {
 function pintar() {
   const r = resumir(S.compras, S.precio);
   pintarPrecio();
-  pintarPila(r);
-  pintarResumen(r);
-  pintarGrafico(r);
+  pintarSaldo(r);
+  pintarDatos(r);
   pintarLista(r);
+  pintarGrafico(r);
   pintarForm();
 }
 
@@ -100,16 +97,68 @@ function pintarPrecio() {
   $('cotizacion').dataset.estado = estado;
   $('precio').textContent = S.precio ? usd0(S.precio) : '—';
   $('precio-meta').textContent = {
-    vivo: `${S.fuente} · ${hora(S.precioTs)}`,
-    viejo: `sin actualizar desde ${hora(S.precioTs)}`,
+    vivo: `${S.fuente}, ${hora(S.precioTs)}`,
+    viejo: `sin actualizar desde las ${hora(S.precioTs)}`,
     error: 'no disponible',
     cargando: 'consultando…',
   }[estado];
 }
 
-function tono(el, n) {
-  if (n == null) delete el.dataset.tono;
-  else el.dataset.tono = n >= 0 ? 'sube' : 'baja';
+const tono = (n) => (n >= 0 ? 'sube' : 'baja');
+
+function ajustarCifra(el, texto) {
+  el.textContent = texto;
+  el.style.setProperty('--caracteres', String(Math.max(texto.length, 5)));
+}
+
+function pintarSaldo(r) {
+  const listo = S.cargado && !(S.errorCarga && !r.n);
+  ajustarCifra($('p-sats'), listo ? entero(r.sats) : '—');
+
+  const linea = $('r-valor-linea');
+  if (!S.cargado) linea.textContent = 'Abriendo la libreta…';
+  else if (!listo) linea.textContent = 'No se pudo abrir la libreta.';
+  else if (!r.n) linea.textContent = 'La libreta está en blanco. Anota tu primera compra y empieza la cuenta.';
+  else if (r.valor == null) linea.textContent = `Invertiste ${usd(r.inv)}. El valor aparece cuando vuelva el precio en vivo.`;
+  else {
+    linea.innerHTML =
+      `Hoy valen <b class="cifra">${usd(r.valor)}</b>. ` +
+      `<span class="cifra" data-tono="${tono(r.ganancia)}">${usdSigno(r.ganancia)} (${pct(r.ganPct)})</span> ` +
+      `sobre ${usd(r.inv)} invertidos.`;
+  }
+
+  $('p-camino').hidden = !listo;
+  if (!listo) return;
+  const tope = meta(r.sats);
+  const avance = r.sats / tope;
+  const extra = Math.min(S.fantasma, tope - r.sats) / tope;
+  pintarRegla(tope, avance, extra);
+  $('p-escala').textContent =
+    (r.n ? `Te faltan ${entero(tope - r.sats)} sats para ${nombreMeta(tope)}.` : 'Primera meta: un millón de sats.') +
+    (S.fantasma ? ` Esta compra te acerca un ${(extra * 100).toFixed(1)}% más.` : '');
+  const rt = ritmo(r.items, r.sats, tope);
+  $('p-ritmo').textContent = rt ? `A tu ritmo de los últimos 6 meses (${entero(rt.porMes)} sats al mes), llegas en ${plazo(rt.meses)}.` : '';
+}
+
+const plazo = (m) => (m < 1 ? 'menos de un mes' : m < 24 ? `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}` : `${(m / 12).toFixed(1)} años`);
+
+function pintarRegla(tope, avance, extra) {
+  const host = $('p-regla');
+  if (!host.firstChild) {
+    host.innerHTML =
+      '<div class="r-pista"><span class="r-lleno"></span><span class="r-fantasma"></span>' +
+      Array.from({ length: 9 }, (_, i) => `<span class="r-tic${i === 4 ? ' r-medio' : ''}"></span>`).join('') +
+      '</div><div class="r-etiquetas"><span>0</span><span class="r-mitad"></span><span class="r-fin"></span></div>';
+    host.querySelectorAll('.r-tic').forEach((t, i) => { t.style.left = `${(i + 1) * 10}%`; });
+  }
+  const lleno = host.querySelector('.r-lleno');
+  const fantasma = host.querySelector('.r-fantasma');
+  // Un mínimo visible: con 36k de 1M sats la barra no debe parecer vacía.
+  lleno.style.width = `${avance > 0 ? Math.max(avance * 100, 0.8) : 0}%`;
+  fantasma.style.left = lleno.style.width;
+  fantasma.style.width = `${extra * 100}%`;
+  host.querySelector('.r-mitad').textContent = etiquetaSats(tope / 2);
+  host.querySelector('.r-fin').textContent = etiquetaSats(tope);
 }
 
 const haceDias = (fecha) => {
@@ -117,74 +166,87 @@ const haceDias = (fecha) => {
   return d <= 0 ? 'hoy' : d === 1 ? 'ayer' : `hace ${d} días`;
 };
 
-function pintarResumen(r) {
-  const gan = $('r-gan');
-  ajustarCifra($('r-valor'), r.valor != null ? usd(r.valor) : '—');
-  if (r.ganancia != null) {
-    gan.textContent = `${usdSigno(r.ganancia)} (${pct(r.ganPct)}) sin vender`;
-  } else {
-    gan.textContent = !S.cargado ? 'Cargando…' : S.errorCarga && !r.n ? 'No se pudieron cargar las compras.' : !r.n ? 'Aún no hay compras.' : 'Falta el precio en vivo para calcular el valor.';
-  }
-  tono(gan, r.ganancia);
-  gan.classList.toggle('cifra', r.ganancia != null);
-
-  ajustarCifra($('r-inv'), r.n ? usd(r.inv) : '—');
-  $('r-n').textContent = r.n
-    ? `${r.n} ${r.n === 1 ? 'compra' : 'compras'} desde ${fechaLarga(r.items[0].fecha)}. Última ${haceDias(r.items.at(-1).fecha)}.`
-    : '';
-  ajustarCifra($('r-prom'), r.promedio ? usd(r.promedio) : '—');
+function pintarDatos(r) {
+  $('r-datos').hidden = !r.n;
+  if (!r.n) return;
+  ajustarCifra($('r-prom'), usd(r.promedio));
   const sub = $('r-prom-sub');
-  if (r.promedio && S.precio) {
+  if (S.precio) {
     const d = (S.precio / r.promedio - 1) * 100;
-    sub.textContent = `BTC hoy: ${pct(d)}`;
-    tono(sub, d);
+    sub.textContent = Math.abs(d) < 0.05 ? 'igual al precio de hoy' : `BTC hoy está ${Math.abs(d).toFixed(1)}% ${d > 0 ? 'por encima' : 'por debajo'}`;
+    sub.dataset.tono = tono(d);
   } else {
     sub.textContent = '';
-    tono(sub, null);
+    delete sub.dataset.tono;
   }
+  ajustarCifra($('r-inv'), usd(r.inv));
+  $('r-n').textContent = `en ${r.n} ${r.n === 1 ? 'compra' : 'compras'}`;
+  ajustarCifra($('p-btc'), btc(r.sats));
+  $('r-ultima').textContent = `última compra ${haceDias(r.items.at(-1).fecha)}`;
 }
 
-// ------------------------------------------------------------------- pila
-const plazo = (m) => (m < 1 ? 'menos de un mes' : m < 24 ? `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}` : `${(m / 12).toFixed(1)} años`);
-
-function ajustarCifra(el, texto) {
-  el.textContent = texto;
-  el.style.setProperty('--caracteres', String(Math.max(texto.length, 6)));
-}
-
-function pintarPila(r) {
-  const ult = r.items.at(-1);
-  const fantasma = S.fantasma;
-  const listo = S.cargado && !(S.errorCarga && !r.n);
-  ajustarCifra($('p-sats'), listo ? entero(r.sats) : '—');
-  $('p-btc').textContent = r.n ? `${btc(r.sats)} BTC${r.valor != null ? ` · valen ${usd(r.valor)}` : ''}` : '';
-  const { tope, unidad, nuevos } = dibujarPila($('p-cuadricula'), { sats: r.sats, previo: ult ? r.sats - ult.sats : 0, fantasma });
-  const nombre = nombreMeta(tope);
-  $('k-fantasma').hidden = !fantasma;
-  $('p-leyenda').hidden = !r.n && !fantasma;
-  $('p-detalle').hidden = !listo;
-  $('p-escala').textContent = r.n
-    ? `Cada cuadro, ${entero(unidad)} sats. Meta: ${nombre}, vas en ${((r.sats / tope) * 100).toFixed(1)}%.` +
-      (fantasma ? ` Esta compra suma ${((fantasma / tope) * 100).toFixed(1)}%.` : '')
-    : `Cada cuadro, ${entero(unidad)} sats. Tu primera meta: ${nombre}.`;
-
-  $('p-hitos').innerHTML = hitos(tope)
-    .map((m) => `<li data-estado="${r.sats >= m ? 'logrado' : m === tope ? 'meta' : 'pendiente'}">${etiquetaHito(m)}</li>`)
-    .join('');
-
-  const rt = ritmo(r.items, r.sats, tope);
-  $('p-ritmo').textContent = rt
-    ? `Al ritmo de los últimos 6 meses (${entero(rt.porMes)} sats/mes) llegas a ${nombre} en ${plazo(rt.meses)}.`
-    : '';
-
-  if (S.animarPila && !reducirMovimiento.matches) {
-    nuevos.forEach((el, i) => {
-      el.classList.add('cae');
-      el.style.animationDelay = `${Math.min(i, 30) * 35}ms`;
-    });
+// --------------------------------------------------------------- libreta
+function pintarLista(r) {
+  const host = $('lista');
+  $('csv-out').hidden = !r.n;
+  if (!r.n) {
+    host.innerHTML = `<p class="vacio">${
+      !S.cargado ? 'Abriendo la libreta…'
+        : S.errorCarga ? 'No se pudo abrir la libreta.'
+          : 'Aún no hay líneas. La primera se escribe aquí abajo, o importa un CSV.'
+    }</p>`;
+    return;
   }
-  S.animarPila = false;
+  const enFoco = document.activeElement?.closest?.('#lista .fila')?.dataset.id;
+  const desde = S.verTodas ? 0 : Math.max(0, r.n - LINEAS);
+  const visibles = r.items.slice(desde);
+  const totales = new Map();
+  for (const c of r.items) {
+    const k = c.fecha.slice(0, 7);
+    const t = totales.get(k) ?? { usd: 0, n: 0 };
+    totales.set(k, { usd: t.usd + c.monto, n: t.n + 1 });
+  }
+  const ultima = r.items.at(-1).id;
+  let html = desde ? `<button type="button" class="enlace anteriores" id="ver-todas">Ver las ${desde} líneas anteriores</button>` : '';
+  let mes = '';
+  for (const c of visibles) {
+    const k = c.fecha.slice(0, 7);
+    if (k !== mes) {
+      if (mes) html += '</ul>';
+      const t = totales.get(k);
+      html += `<h3 class="mes"><span>${mesLargo(c.fecha)}</span><span class="cifra">${usd(t.usd)} en ${t.n} ${t.n === 1 ? 'compra' : 'compras'}</span></h3><ul>`;
+      mes = k;
+    }
+    const v = S.precio ? (S.precio / c.precio - 1) * 100 : null;
+    html +=
+      `<li><button type="button" class="fila" data-id="${c.id}"${S.editando === c.id ? ' aria-current="true"' : ''}` +
+      (v == null ? '' : ` title="Desde entonces BTC ${pct(v)}"`) + '>' +
+      `<span class="sr">Corregir la línea del </span>` +
+      `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
+      `<span class="f-monto cifra">${usd(c.monto)}</span>` +
+      `<span class="f-precio cifra">a ${usd0(c.precio)}</span>` +
+      `<span class="f-sats cifra">+${entero(c.sats)}</span>` +
+      `<span class="f-saldo cifra"><span class="f-k">saldo </span>${entero(c.satsAcum)}</span>` +
+      `</button>` +
+      (c.id === ultima ? `<span class="sello${S.sellar ? ' golpe' : ''}" aria-hidden="true"><span>anotado</span><b>${fechaLarga(c.fecha)}</b></span>` : '') +
+      `</li>`;
+  }
+  host.innerHTML = html + '</ul>';
+  if (reducirMovimiento.matches) host.querySelector('.golpe')?.classList.remove('golpe');
+  S.sellar = false;
+  if (enFoco) host.querySelector(`.fila[data-id="${enFoco}"]`)?.focus();
 }
+
+$('lista').addEventListener('click', (e) => {
+  if (e.target.closest('#ver-todas')) {
+    S.verTodas = true;
+    pintar();
+    $('lista').querySelector('.fila')?.focus();
+    return;
+  }
+  const b = e.target.closest('.fila');
+  if (b) editar(Number(b.dataset.id));
+});
 
 // --------------------------------------------------------------- gráfico
 let G = null;
@@ -193,11 +255,18 @@ let selG = null;
 function pintarGrafico(r) {
   const host = $('g-lienzo');
   const pts = serie(r, S.precio);
-  $('g-nota').hidden = !pts.length;
-  if (!pts.length) {
+  // Con menos de tres puntos la curva es una raya: mejor decirlo que dibujarla.
+  const pocos = pts.length < 3;
+  host.hidden = pocos;
+  $('g-lectura').hidden = pocos;
+  $('g-nota').textContent = !r.n
+    ? 'Aquí verás cómo crece lo invertido frente a lo que vale.'
+    : pocos
+      ? 'La curva aparece desde la tercera compra; con menos puntos solo sería una raya.'
+      : 'El valor usa el precio de cada compra y, al final, el actual. Entre compras la línea es una aproximación.';
+  if (pocos) {
     G = null;
-    host.innerHTML = `<p class="vacio">${!S.cargado ? 'Cargando…' : S.errorCarga ? 'Sin datos por ahora.' : 'El gráfico aparece con tu primera compra.'}</p>`;
-    $('g-lectura').textContent = '';
+    host.innerHTML = '';
     return;
   }
   if (selG != null && selG >= pts.length) selG = null;
@@ -218,8 +287,7 @@ function leer(i) {
 }
 
 function puntoCercano(ev) {
-  const svg = $('g-lienzo').querySelector('svg');
-  const caja = svg.getBoundingClientRect();
+  const caja = $('g-lienzo').querySelector('svg').getBoundingClientRect();
   const x = ((ev.clientX - caja.left) * G.dib.ancho) / caja.width;
   let mejor = 0;
   G.dib.xs.forEach((xi, i) => {
@@ -245,75 +313,14 @@ lienzo.addEventListener('keydown', (e) => {
 
 let anchoG = 0;
 new ResizeObserver(() => {
-  if (lienzo.clientWidth !== anchoG) {
+  if (lienzo.clientWidth && lienzo.clientWidth !== anchoG) {
     anchoG = lienzo.clientWidth;
     pintarGrafico(resumir(S.compras, S.precio));
   }
 }).observe(lienzo);
 
-// ----------------------------------------------------------------- lista
-function pintarLista(r) {
-  const host = $('lista');
-  $('csv-out').hidden = !r.n;
-  if (!r.n) {
-    host.innerHTML = `<p class="vacio">${
-      !S.cargado ? 'Cargando compras…'
-        : S.errorCarga ? 'No se pudieron cargar las compras.'
-          : 'Todavía no hay compras. Registra la primera o importa un CSV.'
-    }</p>`;
-    return;
-  }
-  const enFoco = document.activeElement?.closest?.('#lista .fila')?.dataset.id;
-  const meses = new Map();
-  const recientes = [...r.items].reverse();
-  const mostradas = S.verTodas ? recientes : recientes.slice(0, VISIBLES);
-  for (const c of mostradas) {
-    const k = c.fecha.slice(0, 7);
-    if (!meses.has(k)) meses.set(k, []);
-    meses.get(k).push(c);
-  }
-  let html = '';
-  const totales = new Map();
-  for (const c of r.items) totales.set(c.fecha.slice(0, 7), (totales.get(c.fecha.slice(0, 7)) ?? 0) + c.monto);
-  for (const [mes, compras] of meses) {
-    const total = totales.get(mes);
-    html += `<h3 class="mes"><span>${mesLargo(compras[0].fecha)}</span><span class="cifra">${usd(total)}</span></h3><ul>`;
-    for (const c of compras) {
-      const v = S.precio ? (S.precio / c.precio - 1) * 100 : null;
-      html +=
-        `<li><button type="button" class="fila" data-id="${c.id}"${S.editando === c.id ? ' aria-current="true"' : ''}>` +
-        `<span class="sr">Editar compra del </span>` +
-        `<span class="f-fecha">${fechaLarga(c.fecha)}</span>` +
-        `<span class="f-monto cifra">${usd(c.monto)}</span>` +
-        `<span class="f-sats cifra">${entero(c.sats)} sats</span>` +
-        `<span class="f-precio cifra">a\u00a0${usd0(c.precio)}</span>` +
-        `<span class="f-var cifra"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : pct(v)}</span>` +
-        `</button></li>`;
-    }
-    html += '</ul>';
-  }
-  if (mostradas.length < r.n) {
-    html += `<button type="button" class="boton mas" id="ver-todas">Mostrar las ${r.n} compras</button>`;
-  }
-  host.innerHTML = html;
-  if (enFoco) host.querySelector(`.fila[data-id="${enFoco}"]`)?.focus();
-}
-
-$('lista').addEventListener('click', (e) => {
-  if (e.target.closest('#ver-todas')) {
-    S.verTodas = true;
-    pintar();
-    document.querySelectorAll('#lista .fila')[VISIBLES]?.focus();
-    return;
-  }
-  const b = e.target.closest('.fila');
-  if (b) editar(Number(b.dataset.id));
-});
-
 // ------------------------------------------------------------ formulario
 const F = { fecha: $('f-fecha'), monto: $('f-monto'), sats: $('f-sats'), precio: $('f-precio') };
-
-const sumaSats = () => S.compras.reduce((a, c) => a + c.sats, 0);
 
 const leerForm = () =>
   completar(
@@ -326,12 +333,13 @@ function pintarCalculo() {
   const fantasma = !S.editando && c && !c.falta ? c.sats : 0;
   if (fantasma !== S.fantasma) {
     S.fantasma = fantasma;
-    if (!S.animarPila) pintarPila(resumir(S.compras, S.precio));
+    pintarSaldo(resumir(S.compras, S.precio));
   }
+  const saldo = S.compras.reduce((a, x) => a + x.sats, 0);
   $('f-calc').textContent = !c ? ''
     : c.falta ? 'Falta el precio de 1 BTC para calcular.'
-      : `${usd(c.monto)} por ${entero(c.sats)} sats · 1 BTC a ${usd(c.precio)}${c.estimado ? ' (estimado con el precio actual)' : ''}` +
-        (S.fantasma ? ` · suma ${((S.fantasma / meta(sumaSats())) * 100).toFixed(1)}% a tu meta` : '');
+      : `1 BTC a ${usd(c.precio)}${c.estimado ? ', estimado con el precio actual' : ''}.` +
+        (fantasma ? ` Nuevo saldo: ${entero(saldo + fantasma)} sats.` : '');
 }
 
 function error(texto = '', campo = null) {
@@ -346,12 +354,13 @@ function error(texto = '', campo = null) {
 
 function pintarForm() {
   const ed = S.compras.find((c) => c.id === S.editando);
-  $('t-form').textContent = ed ? 'Editar compra' : 'Anotar compra';
+  $('t-form').textContent = ed ? 'Corrigiendo la línea' : S.compras.length ? 'Siguiente línea' : 'Primera línea';
   $('f-editando').hidden = !ed;
-  $('f-editando').textContent = ed ? fechaLarga(ed.fecha) : '';
+  $('f-editando').textContent = ed ? `del ${fechaLarga(ed.fecha)}` : '';
+  $('form').classList.toggle('corrigiendo', !!ed);
   $('f-cancelar').hidden = !ed;
   $('f-borrar').hidden = !ed;
-  $('f-guardar').textContent = S.guardando ? 'Guardando…' : ed ? 'Guardar cambios' : 'Guardar compra';
+  $('f-guardar').textContent = S.guardando ? 'Anotando…' : ed ? 'Guardar cambios' : 'Anotar';
   $('f-guardar').setAttribute('aria-disabled', String(S.guardando));
   F.fecha.max = hoyISO();
 }
@@ -377,15 +386,8 @@ function editar(id) {
   error();
   pintarCalculo();
   pintar();
-  $('form').scrollIntoView({ block: 'start', behavior: reducirMovimiento.matches ? 'auto' : 'smooth' });
+  $('form').scrollIntoView({ block: 'center', behavior: reducirMovimiento.matches ? 'auto' : 'smooth' });
   F.monto.focus({ preventScroll: true });
-}
-
-function terminarEdicion() {
-  const id = S.editando;
-  limpiarForm();
-  pintar();
-  document.querySelector(`#lista .fila[data-id="${id}"]`)?.focus();
 }
 
 for (const el of [F.monto, F.sats, F.precio]) el.addEventListener('input', pintarCalculo);
@@ -394,7 +396,12 @@ $('f-usar').addEventListener('click', () => {
   F.precio.value = S.precio.toFixed(2);
   pintarCalculo();
 });
-$('f-cancelar').addEventListener('click', terminarEdicion);
+$('f-cancelar').addEventListener('click', () => {
+  const id = S.editando;
+  limpiarForm();
+  pintar();
+  document.querySelector(`#lista .fila[data-id="${id}"]`)?.focus();
+});
 
 $('form').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -403,7 +410,7 @@ $('form').addEventListener('submit', async (e) => {
   const c = leerForm();
   if (!fecha) return error('Elige la fecha de la compra.', F.fecha);
   if (fecha > hoyISO()) return error('La fecha no puede ser futura.', F.fecha);
-  if (!c) return error('Escribe el monto en USD y los sats que recibiste.', F.monto);
+  if (!c) return error('Escribe cuánto pagaste en USD y los sats que recibiste.', F.monto);
   if (c.falta) return error('Sin precio en vivo: escribe el precio de 1 BTC o los sats.', F.precio);
   error();
   S.guardando = true;
@@ -413,10 +420,10 @@ $('form').addEventListener('submit', async (e) => {
   try {
     const guardada = normalizar(id ? await api('PUT', `/api/compras/${id}`, datos) : await api('POST', '/api/compras', datos));
     S.compras = id ? S.compras.map((x) => (x.id === id ? guardada : x)) : [...S.compras, guardada];
-    S.animarPila = !id;
-    limpiarForm();
-    avisar(id ? 'Cambios guardados.' : 'Compra guardada.', null, true);
+    S.sellar = !id;
     S.guardando = false;
+    limpiarForm();
+    avisar(id ? 'Línea corregida.' : 'Compra anotada.', null, true);
     pintar();
     if (id) document.querySelector(`#lista .fila[data-id="${id}"]`)?.focus();
     else F.monto.focus();
@@ -446,7 +453,7 @@ dialogo.addEventListener('close', async () => {
   if (dialogo.returnValue !== 'si' || id == null) return;
   try {
     await api('DELETE', `/api/compras/${id}`);
-    avisar('Compra borrada.', null, true);
+    avisar('Línea borrada.', null, true);
   } catch (err) {
     if (err.status !== 404) return error(err.message);
   }

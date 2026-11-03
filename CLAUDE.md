@@ -4,17 +4,19 @@ App familiar para registrar compras DCA de Bitcoin con precio en vivo. Dueño: D
 
 ## Stack
 - `app/server.py`: Flask + SQLite (WAL, synchronous=FULL), gunicorn, con tipos. Rutas: `/`, `/healthz`, `GET/POST /api/compras`, `PUT/DELETE /api/compras/<id>`, `GET /api/export.csv`, `POST /api/import` (cuerpo `text/csv`, idempotente), `/api/precio` (Coinbase, Kraken de reserva, caché 30 s). Rechaza escrituras con `Sec-Fetch-Site` de otro sitio.
-- `app/static/`: frontend sin dependencias ni build, ES modules: `lib.js` (cálculos y formatos puros), `pila.js` (cuadrícula de sats), `chart.js` (gráfico SVG propio), `app.js` (estado y DOM), `styles.css`, `icon.svg`. Fuentes del sistema: **cero llamadas a terceros** desde el navegador.
-- CSP estricta: **sin scripts ni estilos inline** (`script-src 'self'; style-src 'self'`); solo se permite CSSOM (`el.style.x=`) y SVG generado por JS.
+- `app/static/`: frontend sin dependencias ni build, ES modules: `lib.js` (cálculos y formatos puros), `chart.js` (gráfico SVG propio), `app.js` (estado y DOM), `styles.css`, `icon.svg`, `fonts/` (Instrument Serif, OFL). **Cero llamadas a terceros** desde el navegador.
+- CSP estricta: **sin scripts ni estilos inline** (`script-src 'self'; style-src 'self'; font-src 'self'`); solo se permite CSSOM (`el.style.x=`) y SVG generado por JS.
 - `app/backup.py` (respaldo diario verificado con integrity_check, conserva 30), `app/importar.py` (CLI sobre `server.importar_csv`).
 - `docker-compose.yml`: servicios `app` y `backup`, endurecidos (read_only, cap_drop ALL, no-new-privileges). La app publica solo `127.0.0.1:18082`.
 
 ## Interfaz
-Concepto: **la pila hacia la próxima meta**. El protagonista es lo acumulado en sats, dibujado como una cuadrícula de 10×10 que se llena de abajo arriba hacia el siguiente hito (la próxima potencia de 10, mínimo 1M sats: 1M → 10M → 1 BTC → 10 BTC…; cada cuadro = meta/100). La última compra va en tinta; mientras escribes una compra nueva se ve en fantasma lo que sumará, y al guardarla sus cuadros "caen" (sin animación con `prefers-reduced-motion`). Debajo van los hitos y una proyección: "al ritmo de los últimos 6 meses llegas a X en N meses" (`lib.ritmo`, exige 3 compras en la ventana).
-- Identidad: banda naranja Bitcoin (`#f7931a`) con el logotipo en monoespaciada; cifras en `--mono` (fuentes del sistema); el formulario es un panel oscuro con borde naranja; botones rectos, sin sombras.
-- El naranja sobre el papel da 2:1: es solo relleno. Bordes y líneas usan `--naranja-trazo` (3.8:1 en claro) y el texto `--naranja-texto`; el foco va en tinta, y en naranja dentro del panel.
-- Orden en móvil: banda → pila → valor/invertido/costo promedio → anotar compra → gráfico invertido/valor → compras por mes (últimas 20). En ≥ 56rem: pila a la izquierda; cifras y formulario a la derecha; gráfico y lista debajo a todo el ancho.
-- Tocar una compra la carga en el formulario para editarla; borrar está ahí, con un `<dialog>` de confirmación.
+Concepto: **la libreta de ahorro**. Cada compra es una línea con su depósito y el **saldo corrido en sats**; la siguiente línea en blanco es el formulario ("Siguiente línea"); la última anotación lleva un **sello** naranja con la fecha, que "golpea" al anotar (sin animación con `prefers-reduced-motion`).
+- Arriba, el saldo en sats en serif grande, una frase con valor y ganancia, y una regla hacia la próxima meta (potencia de 10, mínimo 1M sats) que muestra en fantasma lo que sumará la compra que se escribe, más la proyección al ritmo de 6 meses (`lib.ritmo`). Al lado (escritorio) o debajo (móvil): costo promedio, invertido y BTC.
+- La libreta muestra las últimas 12 líneas agrupadas por mes ("Ver las N líneas anteriores"). Tocar una línea la carga en el formulario para corregirla; borrar va con `<dialog>`.
+- El gráfico invertido/valor solo aparece con 3 puntos o más; antes se explica con una nota.
+- Tipografía: Instrument Serif (OFL, `app/static/fonts/`, 43 KB, servida desde `'self'` con `font-src 'self'`) para saldo, títulos y meses; sans del sistema con cifras tabulares para todo lo demás. Nada de monoespaciada ni rótulos en mayúsculas.
+- Color: papel y tinta cálidos; el naranja es tinta de sello y de avance. En claro, el naranja de relleno (`--sello`) da 2.8:1: bordes, líneas y sello usan `--sello-trazo` (≥3.8:1) y el texto `--sello-texto`. El foco va en tinta.
+- Móvil: las filas son flex con salto forzado (si no cabe, el saldo baja de línea) y el sello va al pie de la última línea. Desde 40rem de hoja, columnas Fecha/Pagaste/Precio/Depósito/Saldo y el sello a la derecha.
 
 ## Modelo de datos
 Tabla `compras(id, fecha, monto, precio, sats, creado)`. Se guarda **sats** (entero) y el precio se deriva: `precio = monto*1e8/sats`. La API acepta `{fecha, monto, sats}` (o `{fecha, monto, precio}` por compatibilidad). El frontend pide monto y sats; si falta uno se calcula con un precio escrito o el actual (se marca "estimado"). El importador usa `sats` si la columna existe y, si no, `precio_btc_usd`. Migración automática en `init_db()` (agrega `sats` y estima las filas viejas).

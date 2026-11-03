@@ -4,136 +4,116 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f7931a">
+<meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1713" media="(prefers-color-scheme: dark)">
 <title>Libro DCA</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
-<header class="banda">
-  <h1>Libro<br>DCA</h1>
-  <p class="cotizacion" id="cotizacion" data-estado="cargando">
-    <span class="cot-k">1 BTC</span>
-    <span class="cot-v cifra" id="precio">—</span>
-    <span class="cot-meta" id="precio-meta">consultando…</span>
-  </p>
-</header>
+<div class="pagina">
+  <header class="cabecera">
+    <h1 class="marca">Libro <i>DCA</i></h1>
+    <p class="cotizacion" id="cotizacion" data-estado="cargando">
+      <span class="cot-k">1 bitcoin</span>
+      <span class="cot-v cifra" id="precio">—</span>
+      <span class="cot-meta" id="precio-meta">consultando…</span>
+    </p>
+  </header>
 
-<main class="pagina">
-  <section class="pila" aria-labelledby="t-pila">
-    <h2 class="rotulo" id="t-pila">Tu pila</h2>
-    <p class="total"><span class="cifra" id="p-sats">—</span><span class="unidad">sats</span></p>
-    <p class="p-btc cifra" id="p-btc"></p>
-    <div class="cuadricula" id="p-cuadricula" role="img" aria-label="Cargando"></div>
-    <div class="leyenda" id="p-leyenda" aria-hidden="true">
-      <span class="k-lleno">acumulado</span>
-      <span class="k-ultimo">última compra</span>
-      <span class="k-fantasma" id="k-fantasma" hidden>esta compra</span>
-    </div>
-    <div id="p-detalle" hidden>
-      <p class="p-escala" id="p-escala"></p>
-      <ol class="hitos" id="p-hitos" aria-label="Hitos"></ol>
-      <p class="p-ritmo" id="p-ritmo"></p>
-    </div>
-  </section>
+  <main>
+    <section class="saldo" aria-labelledby="t-saldo">
+      <h2 class="saldo-k" id="t-saldo">Saldo</h2>
+      <p class="saldo-v"><span id="p-sats">—</span> <span class="unidad">sats</span></p>
+      <p class="saldo-usd" id="r-valor-linea"></p>
 
-  <section class="libro" aria-labelledby="t-libro">
-    <h2 class="sr" id="t-libro">Resumen</h2>
-    <dl class="cifras">
-      <div class="c-valor">
-        <dt>Valor hoy</dt>
-        <dd class="cifra grande" id="r-valor">—</dd>
-        <dd class="ganancia cifra" id="r-gan"></dd>
+      <div class="camino" id="p-camino" hidden>
+        <div class="regla" id="p-regla" aria-hidden="true"></div>
+        <p class="camino-txt" id="p-escala"></p>
+        <p class="camino-txt suave" id="p-ritmo"></p>
       </div>
-      <div>
-        <dt>Invertido</dt>
-        <dd class="cifra" id="r-inv">—</dd>
-        <dd class="sub" id="r-n"></dd>
-      </div>
-      <div>
-        <dt>Costo promedio</dt>
-        <dd class="cifra" id="r-prom">—</dd>
-        <dd class="sub cifra" id="r-prom-sub"></dd>
-      </div>
+    </section>
+
+    <dl class="datos" id="r-datos" hidden>
+      <div><dt>Costo promedio</dt><dd class="cifra" id="r-prom">—</dd><dd class="sub" id="r-prom-sub"></dd></div>
+      <div><dt>Invertido</dt><dd class="cifra" id="r-inv">—</dd><dd class="sub" id="r-n"></dd></div>
+      <div><dt>En bitcoin</dt><dd class="cifra" id="p-btc">—</dd><dd class="sub" id="r-ultima"></dd></div>
     </dl>
-  </section>
 
-  <section class="registro" aria-labelledby="t-form">
-    <form id="form" novalidate>
-      <div class="sec-h">
-        <h2 id="t-form">Anotar compra</h2>
-        <span class="editando" id="f-editando" hidden></span>
+    <section class="libreta" aria-labelledby="t-compras">
+      <div class="libreta-h">
+        <h2 id="t-compras" tabindex="-1">La libreta</h2>
+        <p class="csv">
+          <a class="enlace" id="csv-out" href="/api/export.csv" download>Exportar CSV</a>
+          <label class="enlace" for="csv-in">Importar CSV</label>
+          <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
+        </p>
       </div>
-      <fieldset id="f-campos">
-        <legend class="sr">Datos de la compra</legend>
-        <div class="campo">
-          <label for="f-fecha">Fecha</label>
-          <input id="f-fecha" type="date" required>
+
+      <div class="hoja">
+        <div class="columnas" aria-hidden="true">
+          <span>Fecha</span><span>Pagaste</span><span>Precio</span><span>Depósito</span><span>Saldo</span>
         </div>
-        <div class="par">
-          <div class="campo">
-            <label for="f-monto">Pagaste (USD)</label>
-            <input id="f-monto" class="cifra" inputmode="decimal" autocomplete="off" placeholder="50.00">
-          </div>
-          <div class="campo">
-            <label for="f-sats">Recibiste (sats)</label>
-            <input id="f-sats" class="cifra" inputmode="numeric" autocomplete="off" placeholder="74,627">
-          </div>
-        </div>
-        <details class="precio-manual" id="f-det">
-          <summary>¿No tienes los sats? Calcula con un precio</summary>
-          <div class="campo">
-            <label for="f-precio">Precio de 1 BTC (USD)</label>
-            <div class="con-boton">
-              <input id="f-precio" class="cifra" inputmode="decimal" autocomplete="off" placeholder="Vacío: precio actual">
-              <button type="button" class="boton" id="f-usar">Usar actual</button>
+        <div class="lista" id="lista"><p class="vacio">Abriendo la libreta…</p></div>
+
+        <form id="form" class="linea-nueva" novalidate>
+          <h3 class="linea-t" id="t-form">Anotar compra</h3>
+          <span class="editando" id="f-editando" hidden></span>
+          <fieldset id="f-campos">
+            <legend class="sr">Datos de la compra</legend>
+            <div class="campo c-fecha">
+              <label for="f-fecha">Fecha</label>
+              <input id="f-fecha" type="date" required>
             </div>
-          </div>
-        </details>
-        <p class="calculo cifra" id="f-calc" aria-live="polite"></p>
-        <p class="error" id="f-error" role="alert"></p>
-        <div class="botones">
-          <button type="submit" class="boton primario" id="f-guardar">Guardar compra</button>
-          <button type="button" class="boton" id="f-cancelar" hidden>Cancelar</button>
-          <button type="button" class="boton peligro" id="f-borrar" hidden>Borrar</button>
-        </div>
-      </fieldset>
-    </form>
-  </section>
-
-  <section class="grafico" aria-labelledby="t-grafico">
-    <div class="sec-h">
-      <h2 id="t-grafico">Invertido y valor</h2>
-    </div>
-    <p class="lectura cifra" id="g-lectura"></p>
-    <div class="lienzo" id="g-lienzo" tabindex="0" role="img" aria-label="Gráfico de lo invertido y el valor de tus sats en el tiempo"></div>
-    <p class="sr" id="g-sr" aria-live="polite"></p>
-    <p class="nota" id="g-nota">El valor usa el precio de cada compra y, al final, el actual. Entre compras la línea es una aproximación.</p>
-  </section>
-
-  <section class="compras" aria-labelledby="t-compras">
-    <div class="sec-h">
-      <h2 id="t-compras" tabindex="-1">Compras</h2>
-      <div class="csv">
-        <a class="enlace" id="csv-out" href="/api/export.csv" download>Exportar CSV</a>
-        <label class="enlace" for="csv-in">Importar CSV</label>
-        <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
+            <div class="campo c-monto">
+              <label for="f-monto">Pagaste (USD)</label>
+              <input id="f-monto" class="cifra" inputmode="decimal" autocomplete="off" placeholder="50.00">
+            </div>
+            <div class="campo c-sats">
+              <label for="f-sats">Recibiste (sats)</label>
+              <input id="f-sats" class="cifra" inputmode="numeric" autocomplete="off" placeholder="74,627">
+            </div>
+            <details class="precio-manual" id="f-det">
+              <summary>¿No tienes los sats? Calcúlalos con un precio</summary>
+              <div class="campo">
+                <label for="f-precio">Precio de 1 BTC (USD)</label>
+                <div class="con-boton">
+                  <input id="f-precio" class="cifra" inputmode="decimal" autocomplete="off" placeholder="Vacío: precio actual">
+                  <button type="button" class="boton" id="f-usar">Usar el actual</button>
+                </div>
+              </div>
+            </details>
+            <p class="calculo" id="f-calc" aria-live="polite"></p>
+            <p class="error" id="f-error" role="alert"></p>
+            <div class="botones">
+              <button type="submit" class="boton primario" id="f-guardar">Anotar</button>
+              <button type="button" class="boton" id="f-cancelar" hidden>Cancelar</button>
+              <button type="button" class="boton peligro" id="f-borrar" hidden>Borrar línea</button>
+            </div>
+          </fieldset>
+        </form>
       </div>
-    </div>
-    <div class="lista" id="lista"><p class="vacio">Cargando compras…</p></div>
-  </section>
+    </section>
 
-  <footer class="pie">
-    Datos en tu servidor, con respaldo diario. Precio de Coinbase (Kraken de reserva), cada 30 s.
-  </footer>
-</main>
+    <section class="curva" aria-labelledby="t-grafico">
+      <h2 id="t-grafico">Invertido y valor</h2>
+      <p class="lectura cifra" id="g-lectura"></p>
+      <div class="lienzo" id="g-lienzo" tabindex="0" role="img" aria-label="Gráfico de lo invertido y el valor de tus sats en el tiempo"></div>
+      <p class="sr" id="g-sr" aria-live="polite"></p>
+      <p class="nota" id="g-nota">El valor usa el precio de cada compra y, al final, el actual. Entre compras la línea es una aproximación.</p>
+    </section>
+  </main>
+
+  <footer class="pie">Tus datos viven en tu servidor, con respaldo diario. El precio viene de Coinbase (Kraken de reserva) cada 30 s.</footer>
+</div>
 
 <div class="aviso" id="aviso" role="status" hidden><span id="aviso-txt"></span><button type="button" class="enlace" id="aviso-btn" hidden>Reintentar</button></div>
 
 <dialog id="d-borrar" aria-labelledby="d-titulo">
   <form method="dialog">
-    <h2 id="d-titulo">¿Borrar esta compra?</h2>
+    <h2 id="d-titulo">¿Borrar esta línea?</h2>
     <p id="d-texto" class="cifra"></p>
     <div class="botones">
       <button type="submit" class="boton" value="no" autofocus>Cancelar</button>

@@ -2,7 +2,7 @@
 
 Registro de compras DCA de Bitcoin con precio en vivo. Flask + SQLite en tu servidor, detrás de Caddy y Cloudflare Access.
 
-Tu pila de sats es lo primero que ves: una cuadrícula que se llena hacia la próxima meta (1M sats, 10M, 1 BTC), marca tu última compra y te dice en cuánto llegas a ese ritmo. Al lado van el valor de hoy, la ganancia o pérdida (USD y %), lo invertido y el costo promedio, más un gráfico de lo invertido frente al valor. Registras fecha, monto y sats (el precio se deriva); si no tienes los sats, se calculan con un precio. Tocar una compra la abre para editar o borrar. Exporta e importa CSV desde la propia página. Funciona en el teléfono y respeta el modo oscuro.
+Se ve como una libreta de ahorro: cada compra es una línea con su depósito y el saldo en sats, la siguiente línea en blanco es donde anotas, y la última lleva un sello con la fecha. Arriba, tu saldo, lo que vale hoy, la ganancia o pérdida y cuánto te falta para la próxima meta (1M sats, 10M, 1 BTC) a tu ritmo; al lado, el costo promedio y lo invertido. Con tres compras o más aparece el gráfico de invertido frente a valor. Registras fecha, monto y sats (el precio se deriva); si no tienes los sats, se calculan con un precio. Tocar una compra la abre para editar o borrar. Exporta e importa CSV desde la propia página. Funciona en el teléfono y respeta el modo oscuro.
 
 ```
 navegador ──▶ Cloudflare Access (login) ──▶ Caddy ──▶ 127.0.0.1:18082 ──▶ data/libro.db
@@ -59,7 +59,7 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 ## Notas de seguridad
 - Ningún servicio publica puertos; los contenedores van en solo lectura, sin capabilities y con `no-new-privileges`.
 - La app confía en que Cloudflare Access ya autenticó la petición y solo escucha en localhost. Si algún día se expone de otra forma, valida el encabezado `Cf-Access-Jwt-Assertion` en `server.py` o añade login propio.
-- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. Usa las fuentes del sistema: el navegador no llama a ningún tercero.
+- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. La única fuente web (Instrument Serif, licencia OFL en `app/static/fonts/OFL.txt`) va dentro del repo: el navegador no llama a ningún tercero.
 - Las escrituras rechazan peticiones marcadas por el navegador como de otro sitio (`Sec-Fetch-Site`), y la importación exige `text/csv`, que obliga a un preflight CORS.
 - El precio lo consulta el servidor (Coinbase, con Kraken de reserva), se guarda 30 s en caché y el navegador nunca habla con terceros.
 

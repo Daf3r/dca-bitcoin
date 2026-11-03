@@ -130,6 +130,9 @@ r = cl.get("/")
 check(r.status_code == 200 and "script-src 'self'" in r.headers["Content-Security-Policy"] and "unsafe" not in r.headers["Content-Security-Policy"], "csp")
 check(cl.get("/app.js").mimetype in ("text/javascript", "application/javascript"), cl.get("/app.js").mimetype)
 check(cl.get("/api/compras").headers["Cache-Control"] == "no-store", "no-store")
+r = cl.get("/fonts/instrument-serif.woff2")
+check(r.status_code == 200 and r.mimetype == "font/woff2", "fuente servida desde self")
+check("font-src 'self'" in r.headers["Content-Security-Policy"], "csp font-src")
 check(cl.get("/healthz").get_json() == {"ok": True}, "healthz")
 
 # precio con fuentes simuladas

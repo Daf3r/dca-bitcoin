@@ -5,6 +5,7 @@ const nfUSD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'US
 const nfInt = new Intl.NumberFormat('en-US');
 const dfDia = new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short', year: 'numeric' });
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'long', year: 'numeric' });
+const dfCorto = new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short' });
 const dfHora = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
 
 const signo = (n) => (n > 0 ? '+' : n < 0 ? '−' : '');
@@ -25,6 +26,7 @@ export const aFecha = (s) => {
 };
 export const fechaLarga = (s) => dfDia.format(aFecha(s)).replace('.', '');
 export const mesLargo = (s) => dfMes.format(aFecha(s));
+export const fechaCorta = (s) => dfCorto.format(aFecha(s)).replace('.', '');
 
 /** Acepta "1,234.56", "1234,5" o "$ 50". */
 export function leerNumero(txt) {
@@ -112,3 +114,15 @@ export function ritmo(items, sats, tope) {
   const porMes = (ventana.reduce((a, c) => a + c.sats, 0) / dias) * 30.44;
   return { porMes, meses: (tope - sats) / porMes };
 }
+
+/** Próxima potencia de 10 por encima de lo acumulado, como mínimo 1M sats. */
+export const meta = (sats) => Math.max(1e6, 10 ** (Math.floor(Math.log10(Math.max(1, sats))) + 1));
+
+export const nombreMeta = (m) =>
+  m === 1e6 ? 'el primer millón'
+    : m < 1e8 ? `los ${entero(m / 1e6)} millones`
+      : m === 1e8 ? 'tu primer bitcoin entero'
+        : `${entero(m / 1e8)} bitcoin`;
+
+export const etiquetaSats = (v) =>
+  v >= 1e8 ? `${entero(v / 1e8)} BTC` : v >= 1e6 ? `${entero(v / 1e6)}M` : `${entero(v / 1e3)}k`;
