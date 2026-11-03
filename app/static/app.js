@@ -426,7 +426,7 @@ function pintarReportes() {
     ? `Has comprado todas las semanas desde que empezaste (${ventana.length}). `
     : `Compraste en <b>${con}</b> de ${ventana.length === 52 ? 'las últimas 52 semanas' : `tus ${ventana.length} semanas`}. `;
   $('const-txt').innerHTML = resumenSemanas +
-    `Tu mejor racha: <b>${semanas(R.mejorRacha)}</b>.` + (R.semanaEnCurso || !R.racha ? '' : ' Esta semana aún no compras: tienes hasta el domingo.');
+    `Tu mejor racha: <b>${semanas(R.mejorRacha)}</b>.` + (R.semanaEnCurso || !R.racha ? '' : ' Esta semana aún no has comprado: tienes hasta el domingo.');
 
   const ext = $('extremos');
   const tarjeta = (c, titulo) => {
