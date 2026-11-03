@@ -1,6 +1,8 @@
 # Libro DCA (autoalojado)
 
-Registro de compras DCA de Bitcoin con precio en vivo. Flask + SQLite en tu servidor, detrás de Caddy y Cloudflare Access. Registras con sats o USD y el precio se calcula.
+Registro de compras DCA de Bitcoin con precio en vivo. Flask + SQLite en tu servidor, detrás de Caddy y Cloudflare Access.
+
+Muestra lo que importa al hacer DCA: valor hoy, ganancia o pérdida (USD y %), total invertido, costo promedio y sats acumulados, más un gráfico de lo invertido frente al valor. Registras fecha, monto y sats (el precio se deriva); si no tienes los sats, se calculan con un precio. Tocar una compra la abre para editar o borrar. Exporta e importa CSV desde la propia página. Funciona en el teléfono y respeta el modo oscuro.
 
 ```
 navegador ──▶ Cloudflare Access (login) ──▶ Caddy ──▶ 127.0.0.1:18082 ──▶ data/libro.db
@@ -43,12 +45,13 @@ rm -f data/libro.db-wal data/libro.db-shm
 docker compose start app backup
 ```
 
-## Importar compras de la versión anterior
-Exporta el CSV desde el botón *Exportar CSV* y súbelo al servidor como `compras.csv`:
+## Importar y exportar
+*Exportar CSV* descarga todas las compras (`fecha,monto_usd,precio_btc_usd,sats,btc`). *Importar CSV* acepta ese mismo formato o uno viejo sin `sats` (usa `precio_btc_usd`). Salta filas repetidas e inválidas y dice cuáles, así que puedes importar el mismo archivo dos veces sin duplicar.
+
+Desde el servidor, para archivos grandes (la página acepta hasta 1 MB):
 ```bash
 docker compose run --rm --no-deps -v "$PWD/compras.csv:/import/compras.csv:ro" app python importar.py /import/compras.csv
 ```
-Se puede repetir sin duplicar.
 
 ## Actualizar
 Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos viven en `./data` y no se tocan.
@@ -56,9 +59,10 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 ## Notas de seguridad
 - Ningún servicio publica puertos; los contenedores van en solo lectura, sin capabilities y con `no-new-privileges`.
 - La app confía en que Cloudflare Access ya autenticó la petición y solo escucha en localhost. Si algún día se expone de otra forma, valida el encabezado `Cf-Access-Jwt-Assertion` en `server.py` o añade login propio.
-- Las cabeceras CSP limitan la página a su propio origen. Las únicas llamadas externas son las fuentes de Google (hoja de estilos y tipografías); se pueden autoalojar si prefieres cero terceros.
+- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. Usa las fuentes del sistema: el navegador no llama a ningún tercero.
+- Las escrituras rechazan peticiones marcadas por el navegador como de otro sitio (`Sec-Fetch-Site`), y la importación exige `text/csv`, que obliga a un preflight CORS.
 - El precio lo consulta el servidor (Coinbase, con Kraken de reserva), se guarda 30 s en caché y el navegador nunca habla con terceros.
 
 ## Qué se probó
-Probado: API completa y validaciones, caché y respaldo del precio, respaldos con rotación y verificación, restauración, importación idempotente, arranque bajo gunicorn y el frontend completo contra el servidor (registrar, editar, borrar, precio manual y en vivo).
-El despliegue con Docker, Caddy y Access está funcionando en producción. La suite de pruebas automáticas no está en el repo: solo se probó a mano con el cliente de pruebas de Flask y un navegador.
+API con el cliente de pruebas de Flask: alta, edición, borrado, validaciones, importación/exportación CSV idempotente, migración de una base sin `sats`, caché y respaldo del precio, protección de origen y el respaldo verificado. Frontend con Playwright contra el servidor local (registrar, estimar con precio, editar, borrar con diálogo, importar, exportar, gráfico con teclado) a 360/375 px y escritorio, claro y oscuro, sin errores de consola ni violaciones de CSP ni scroll horizontal.
+No hay suite automática en el repo. El build de Docker y la integración con Caddy y Access se validan en el servidor.
