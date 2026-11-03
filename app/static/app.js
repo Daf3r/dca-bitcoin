@@ -179,7 +179,8 @@ function pintarMontana(animar, desde) {
   const host = $('montana');
   anchoMontana = host.clientWidth;
   const inicio = animar ? 0 : desde ?? R.sats;
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, inicio });
+  const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
+  dibujarMontana(host, { sats: R.sats, meta: R.meta, inicio, techo });
   if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : 1600);
 }
 new ResizeObserver(() => {

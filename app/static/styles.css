@@ -26,6 +26,7 @@
   --txt: #f3ead8; --txt2: #aab3c3; --txt3: #8b96a9;
   --naranja: #ff8a1f; --naranja-txt: #ffa04a; --naranja-osc: #2a1405;
   --linea: #e9dfcc;
+  --compra-borde: #050a11;
   --sube: #6fd8a0; --baja: #ff958a;
   --serif: "Fraunces", "Fraunces reserva", Georgia, serif;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -42,6 +43,7 @@
     --txt: #221d17; --txt2: #5a5045; --txt3: #6e6356;
     --naranja-txt: #9c4a05;
     --linea: #24443f;
+    --compra-borde: #9c4a05;
     --sube: #146b3c; --baja: #b02a1d;
   }
 }
@@ -166,7 +168,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .g-prom { stroke: var(--naranja); stroke-width: 1.5; stroke-dasharray: 5 5; }
 .g-prom-tag rect { fill: var(--naranja); }
 .g-prom-tag text { fill: var(--naranja-osc); font: 700 12px var(--sans); }
-.g-compras { fill: var(--naranja); stroke: var(--fondo); stroke-width: 1.6; }
+.g-compras { fill: var(--naranja); stroke: var(--compra-borde); stroke-width: 1.4; }
 .g-nota line { stroke: var(--txt2); stroke-width: 1; }
 .g-nota text { fill: var(--txt); font: 600 13px var(--sans); paint-order: stroke; stroke: var(--fondo); stroke-width: 5px; stroke-linejoin: round; }
 .g-nota .gn-k { fill: var(--naranja-txt); font: 600 15px var(--serif); }
@@ -179,7 +181,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .leyenda { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 0.8125rem; color: var(--txt3); }
 .leyenda span::before { content: ""; display: inline-block; margin-right: 6px; vertical-align: middle; }
 .k-p::before { width: 16px; border-top: 2px solid var(--linea); }
-.k-c::before { width: 10px; height: 10px; border-radius: 50%; background: var(--naranja); }
+.k-c::before { width: 10px; height: 10px; border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 1.4px var(--compra-borde); }
 .k-a::before { width: 16px; border-top: 2px dashed var(--naranja); }
 
 /* ----------------------------------------------------------------- lista */

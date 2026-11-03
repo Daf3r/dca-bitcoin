@@ -4,7 +4,6 @@ const nfUSD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD
 const nfUSD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const nfInt = new Intl.NumberFormat('en-US');
 const dfDia = new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short', year: 'numeric' });
-const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'long', year: 'numeric' });
 const dfCorto = new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short' });
 const dfHora = new Intl.DateTimeFormat('es-SV', { hour: 'numeric', minute: '2-digit' });
 
@@ -27,12 +26,11 @@ export const aFecha = (s) => {
   return new Date(y, m - 1, d);
 };
 export const fechaLarga = (s) => dfDia.format(aFecha(s)).replace('.', '');
-export const mesLargo = (s) => dfMes.format(aFecha(s));
 export const fechaCorta = (s) => dfCorto.format(aFecha(s)).replace('.', '');
 
 // --------------------------------------------------------- hitos y montaña
 /** Hitos: potencias de 10 desde 100k sats hasta `tope`. */
-export function hitosHasta(tope) {
+function hitosHasta(tope) {
   const out = [];
   for (let m = 1e5; m <= tope; m *= 10) out.push(m);
   return out;

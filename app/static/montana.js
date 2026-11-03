@@ -8,9 +8,10 @@ function azar(s) {
 }
 
 /** Composición según el tamaño: en móvil la cumbre baja para dejar el cielo al saldo. */
-function composicion(W, H) {
-  if (W < 700) return { sx: W * 0.62, sy: H * 0.43, base: [W * 0.14, H * 0.95], vueltas: 5, ancho: 0.34, campos: 3, sol: [W * 0.86, H * 0.47], rs: W * 0.1 };
-  if (W < 1100) return { sx: W * 0.64, sy: H * 0.3, base: [W * 0.2, H * 0.95], vueltas: 6, ancho: 0.27, campos: 4, sol: [W * 0.87, H * 0.3], rs: W * 0.07 };
+function composicion(W, H, techo) {
+  // techo: dónde acaba el texto del saldo; la cumbre y su etiqueta quedan por debajo.
+  if (W < 700) return { sx: W * 0.62, sy: Math.max(H * 0.43, techo + 70), base: [W * 0.14, H * 0.95], vueltas: 5, ancho: 0.34, campos: 3, sol: [W * 0.86, H * 0.47], rs: W * 0.1 };
+  if (W < 1100) return { sx: W * 0.64, sy: Math.max(H * 0.3, techo + 70), base: [W * 0.2, H * 0.95], vueltas: 6, ancho: 0.27, campos: 4, sol: [W * 0.87, H * 0.3], rs: W * 0.07 };
   // Escritorio: el pico se dimensiona por la altura; el resto del ancho es cielo y cordillera.
   const mw = Math.min(W, H * 1.7);
   return { sx: W - mw * 0.42, sy: H * 0.16, base: [W - mw * 0.86, H * 0.95], vueltas: 7, ancho: mw * 0.26 / W, campos: 4, sol: [W - mw * 0.12, H * 0.24], rs: H * 0.08 };
@@ -21,10 +22,10 @@ let estado = null;
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, inicio = sats }) {
+export function dibujarMontana(host, { sats, meta, inicio = sats, techo = 0 }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
-  const c = composicion(W, H);
+  const c = composicion(W, H, techo);
   const esc = escalaMontana(sats, c.campos);
   const rnd = azar(42);
   let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><g aria-hidden="true">`;

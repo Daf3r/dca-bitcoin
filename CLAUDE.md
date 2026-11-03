@@ -3,23 +3,27 @@
 App familiar para registrar compras DCA de Bitcoin con precio en vivo. Dueño: Daf3r (El Salvador, habla español, prefiere respuestas **concisas y directas**; usa Windows en su PC y entra al servidor por `ssh vultr`).
 
 ## Stack
-- `app/server.py`: Flask + SQLite (WAL, synchronous=FULL), gunicorn, con tipos. Rutas: `/`, `/healthz`, `GET/POST /api/compras`, `PUT/DELETE /api/compras/<id>`, `GET /api/export.csv`, `POST /api/import` (cuerpo `text/csv`, idempotente), `/api/precio` (Coinbase, Kraken de reserva, caché 30 s). Rechaza escrituras con `Sec-Fetch-Site` de otro sitio.
-- `app/static/`: frontend sin dependencias ni build, ES modules: `lib.js` (cálculos y formatos puros), `chart.js` (gráfico SVG propio), `app.js` (estado y DOM), `styles.css`, `icon.svg`, `fonts/` (Instrument Serif, OFL). **Cero llamadas a terceros** desde el navegador.
-- CSP estricta: **sin scripts ni estilos inline** (`script-src 'self'; style-src 'self'; font-src 'self'`); solo se permite CSSOM (`el.style.x=`) y SVG generado por JS.
+- `app/server.py`: Flask + SQLite (WAL, synchronous=FULL), gunicorn (2 workers × 4 hilos), con tipos. Rutas: `/`, `/healthz`, `GET/POST /api/compras`, `PUT/DELETE /api/compras/<id>`, `GET /api/export.csv`, `POST /api/import` (cuerpo `text/csv`, idempotente), `/api/precio` (Coinbase, Kraken de reserva, caché 30 s), `GET /api/historico?desde=AAAA-MM-DD` (cierres diarios UTC; por defecto un año, máximo 10). Rechaza escrituras con `Sec-Fetch-Site` de otro sitio. Todas las llamadas a exchanges pasan por `_get_json` (las pruebas lo simulan).
+- Histórico: responde al instante con lo cacheado y `cargando: true` si falta algo; el relleno corre en un **hilo daemon** (nunca dentro del request) protegido por un candado en la tabla `meta` con caducidad (`BEGIN IMMEDIATE`; solo un proceso descarga). Coinbase en ventanas de 300 días, Kraken de reserva (solo da las últimas 720 velas). Actualización perezosa una vez al día. Tras un fallo, 10 min sin reintentar y se sirve lo cacheado (`desactualizado: true`); sin datos, 503.
+- `app/static/` (ES modules, sin build ni dependencias): `lib.js` (cálculos puros: `resumen`, escala de la montaña, serie del gráfico, decimación), `montana.js` (escena SVG), `grafico.js` (precio con tus compras), `app.js` (estado, `api()` único, hoja de anotar, reportes), `styles.css`, `icon.svg`, `fonts/` (Fraunces, OFL). **Cero llamadas a terceros** desde el navegador.
+- CSP estricta: **sin scripts ni estilos inline** (`script-src 'self'; style-src 'self'; font-src 'self'`); solo CSSOM (`el.style.x=`) y SVG generado por JS. `.woff2` se sirve como `font/woff2` (fijado en `server.py`).
 - `app/backup.py` (respaldo diario verificado con integrity_check, conserva 30), `app/importar.py` (CLI sobre `server.importar_csv`).
 - `docker-compose.yml`: servicios `app` y `backup`, endurecidos (read_only, cap_drop ALL, no-new-privileges). La app publica solo `127.0.0.1:18082`.
 
 ## Interfaz
-Concepto: **la libreta de ahorro**. Cada compra es una línea con su depósito y el **saldo corrido en sats**; la siguiente línea en blanco es el formulario ("Siguiente línea"); la última anotación lleva un **sello** naranja con la fecha, que "golpea" al anotar (sin animación con `prefers-reduced-motion`).
-- Arriba, el saldo en sats en serif grande, una frase con valor y ganancia, y una regla hacia la próxima meta (potencia de 10, mínimo 1M sats) que muestra en fantasma lo que sumará la compra que se escribe, más la proyección al ritmo de 6 meses (`lib.ritmo`). Al lado (escritorio) o debajo (móvil): costo promedio, invertido y BTC.
-- La libreta muestra las últimas 12 líneas agrupadas por mes ("Ver las N líneas anteriores"). Tocar una línea la carga en el formulario para corregirla; borrar va con `<dialog>`.
-- El gráfico invertido/valor solo aparece con 3 puntos o más; antes se explica con una nota.
-- Tipografía: Instrument Serif (OFL, `app/static/fonts/`, 43 KB, servida desde `'self'` con `font-src 'self'`) para saldo, títulos y meses; sans del sistema con cifras tabulares para todo lo demás. Nada de monoespaciada ni rótulos en mayúsculas.
-- Color: papel y tinta cálidos; el naranja es tinta de sello y de avance. En claro, el naranja de relleno (`--sello`) da 2.8:1: bordes, líneas y sello usan `--sello-trazo` (≥3.8:1) y el texto `--sello-texto`. El foco va en tinta.
-- Móvil: las filas son flex con salto forzado (si no cabe, el saldo baja de línea) y el sello va al pie de la última línea. Desde 40rem de hoja, columnas Fecha/Pagaste/Precio/Depósito/Saldo y el sello a la derecha.
+Concepto: **el ascenso**. La cabecera es una montaña ilustrada de noche (amanecer en modo claro) y el saldo en sats es la altitud: un sendero en zigzag con campamentos en los hitos y tu punto ("Tú") subiendo. Debajo, el gráfico del precio de BTC con tus compras y tu costo promedio, y los reportes.
+- Montaña (`montana.js`): SVG a la medida de la caja, composición propia en móvil (<700 px, cumbre baja, 3 campamentos), tablet y escritorio (pico dimensionado por la altura). Hitos = potencias de 10 desde 100k; la cumbre es la siguiente meta y nunca menos de 1 BTC (más de 200 BTC → cumbre 1,000 BTC); altitud logarítmica (`lib.escalaMontana`/`altitud`). Etiquetas sin choques (cambian de lado o se ocultan) y la cumbre nunca invade el texto del saldo (`techo`). `role="img"` con descripción dinámica.
+- Saldo en Fraunces con **ranuras de ancho fijo** (la fuente no tiene cifras tabulares) y tamaño fijado con la cifra final (`--anchos`) para que no salte al contar.
+- Gráfico (`grafico.js`): decimado al ancho conservando extremos; compras como un único path a su propio precio; el último punto es siempre el precio en vivo; compras posteriores a la última vela UTC se acotan a ella. Rangos 1M/6M/1A/Todo, por defecto el menor que contiene la primera compra y nunca menos de 6M. Lectura con puntero y flechas. Si no hay histórico, la sección lo dice.
+- Anotar: botón fijo abajo (siempre alcanzable); hoja con teclado numérico, fecha y modo Pagaste/Recibiste; editar y borrar (con `<dialog>`) desde la lista. Celebración breve (~1.5 s, sin bloquear) solo si la acción de esta sesión cruza un hito.
+- Reportes: campamentos con fecha y meses, año por año (barras mensuales), constancia (52 semanas, racha actual y mejor), mejor y peor precio. Proyección solo hacia la siguiente meta y solo si llega en ≤ 60 meses.
+- Color: noche (principal) y amanecer; el naranja marca lo tuyo. En claro, los puntos de compra llevan borde oscuro para llegar a 3:1. `prefers-reduced-motion` quita toda animación.
 
 ## Modelo de datos
-Tabla `compras(id, fecha, monto, precio, sats, creado)`. Se guarda **sats** (entero) y el precio se deriva: `precio = monto*1e8/sats`. La API acepta `{fecha, monto, sats}` (o `{fecha, monto, precio}` por compatibilidad). El frontend pide monto y sats; si falta uno se calcula con un precio escrito o el actual (se marca "estimado"). El importador usa `sats` si la columna existe y, si no, `precio_btc_usd`. Migración automática en `init_db()` (agrega `sats` y estima las filas viejas).
+- `compras(id, fecha, monto, precio, sats, creado)`: se guarda **sats** (entero) y el precio se deriva (`precio = monto*1e8/sats`). La API acepta `{fecha, monto, sats}` (o `{fecha, monto, precio}` por compatibilidad). El importador usa `sats` si existe y, si no, `precio_btc_usd`.
+- `precios(fecha, cierre)`: cierres diarios UTC de BTC-USD (caché del histórico).
+- `meta(clave, valor)`: estado del histórico (`hist_desde`, `hist_dia`, `hist_bloqueo`, `hist_fallo`).
+- Todo se crea o migra solo en `init_db()`.
 
 ## Producción (Vultr, Ubuntu 24.04, host `remesafam-vpn`)
 - Carpeta `~/libro-dca-selfhost`, datos en `./data` (uid 1000: `chown -R 1000:1000 data`).
@@ -30,14 +34,14 @@ Tabla `compras(id, fecha, monto, precio, sats, creado)`. Se guarda **sats** (ent
 
 ## Pendientes
 1. **Acceso familiar**: Access con login de Google (varios Gmail en iPhone), sesión de 1 mes. Alternativa: login propio en la app (contraseña familiar, cookie 90 días, límite de intentos) quitando Access. La base es **compartida** entre todos.
-2. Cache Rule en Cloudflare: *Bypass cache* para `dca.polarzero.dev` (se sirvieron `app.js` viejos tras actualizar; ahora hay más módulos JS, así que importa más).
+2. Cache Rule en Cloudflare: *Bypass cache* para `dca.polarzero.dev` (se sirvieron `app.js` viejos tras actualizar; ahora hay más módulos JS y una fuente, así que importa más). Paso 2 de la interfaz: histograma de precios de compra y mapa de calor mes a mes.
 3. Incluir `~/libro-dca-selfhost/data/backups/` en el restic diario a B2.
 4. Opcional: alerta a Discord del resultado de los respaldos.
 
 ## Pruebas rápidas
-- API: `python tests/test_api.py` (Flask test client, `DB_PATH` temporal, `server.consultar_precio` simulado; incluye una base vieja sin columna `sats`). Añade casos ahí.
-- Frontend: Playwright (`require('playwright')`, `chromium.launch()`) contra el servidor Flask local con datos sembrados; capturas a 375 px y escritorio, claro y oscuro; revisar consola/CSP.
-- Verifica siempre sin overflow horizontal en móvil (320–400 px) y con cifras enormes: las cifras grandes se escalan con `--caracteres` (lo pone `ajustarCifra` en `app.js`) y unidades `cqi`.
+- API: `python tests/test_api.py` (Flask test client, `DB_PATH` temporal, exchanges simulados con `server._get_json`; histórico: no bloquear, una sola descarga con peticiones simultáneas, paginación, refresco diario, Kraken, fallo con y sin caché, validación). Añade casos ahí.
+- Cálculos del frontend: `node tests/test_lib.mjs` (escala de hitos, racha, proyección, borde UTC, decimación).
+- Frontend: Playwright contra el Flask local con exchanges simulados; estados hoy (1 compra) / ~50 / ~300 / más de 200 BTC / sin compras / sin precio / sin histórico, a 320, 375, 768, 1280 y 1920 px, claro y oscuro. Revisa consola, CSP, scroll horizontal, que las etiquetas de la montaña no se solapen y que el saldo quede en la primera pantalla.
 
 ## Cuidado
 - Nunca subir `.env`, `data/` ni la base `libro.db`.
