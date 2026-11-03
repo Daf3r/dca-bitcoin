@@ -14,6 +14,8 @@ export const usd0 = (n) => nfUSD0.format(n);
 export const usdSigno = (n) => signo(n) + nfUSD.format(Math.abs(n));
 export const pct = (n) => signo(n) + Math.abs(n).toFixed(1) + '%';
 export const entero = (n) => nfInt.format(Math.round(n));
+const nfComp = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
+export const compacto = (n) => nfComp.format(n);
 export const btc = (sats) => (sats / 1e8).toFixed(8);
 export const hora = (ts) => dfHora.format(new Date(ts));
 

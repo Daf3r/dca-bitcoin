@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, fechaLarga, fechaCorta,
-  resumen, nombreHito, serieGrafico,
+  resumen, nombreHito, serieGrafico, textoMeses, compacto,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -115,6 +115,7 @@ function pintar({ montana = false, animar = false, desde = null } = {}) {
   pintarTramo();
   pintarMercado();
   pintarLista();
+  pintarReportes();
 }
 
 function pintarPrecio() {
@@ -382,6 +383,49 @@ dialogo.addEventListener('close', async () => {
   pintar({ montana: true, desde: antes.sats });
   avisar('Compra borrada.', null, true);
 });
+
+// --------------------------------------------------------------- reportes
+const MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+const nombreMeta = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`);
+const semanas = (n) => `${n} ${n === 1 ? 'semana' : 'semanas'}`;
+
+function pintarReportes() {
+  $('reportes').hidden = !R.n;
+  if (!R.n) return;
+  const hasta = Math.max(1e8, R.meta);
+  $('hitos').innerHTML = R.hitos.filter((h) => h.m <= hasta).map((h) => {
+    const estado = h.fecha ? 'hecho' : h.m === R.meta ? 'siguiente' : 'lejos';
+    const detalle = h.fecha ? `${fechaLarga(h.fecha)} · ${textoMeses(h.meses)}`
+      : estado === 'siguiente' ? (R.proyeccion ? `faltan ${entero(h.m - R.sats)} sats · a tu ritmo, en ${plazo(R.proyeccion)}` : `faltan ${entero(h.m - R.sats)} sats`)
+        : 'más arriba';
+    return `<li data-estado="${estado}"><b>${nombreMeta(h.m)}</b><span>${detalle}</span></li>`;
+  }).join('');
+
+  const maxMes = Math.max(...R.anios.flatMap((a) => a.meses));
+  $('anios').innerHTML = [...R.anios].reverse().map((a) =>
+    `<div class="anio"><b class="an-y">${a.anio}</b><div class="an-barras" aria-hidden="true">` +
+    a.meses.map((v, i) => `<i class="${v ? '' : 'vacio'}" data-h="${v / maxMes}" title="${MESES[i]}: ${usd(v)}"></i>`).join('') +
+    `</div><p class="an-tot"><span><b>+${compacto(a.sats)}</b> sats</span><span>${usd0(a.usd)} · ${a.n} ${a.n === 1 ? 'compra' : 'compras'}</span></p></div>`).join('');
+  $('anios').querySelectorAll('[data-h]').forEach((i) => { i.style.height = `${Math.max(Number(i.dataset.h) * 100, 6)}%`; });
+
+  $('semanas').innerHTML = R.ultimas52.map((v) => `<i${v ? ' class="con"' : ''}></i>`).join('');
+  const con = R.ultimas52.filter(Boolean).length;
+  $('const-txt').innerHTML = R.n === 1
+    ? 'Tu primera huella. El DCA se gana con constancia: vuelve a comprar la próxima semana.'
+    : `<b>${con}</b> de las últimas 52 semanas con compra. Racha actual: <b>${semanas(R.racha)}</b>; la mejor: <b>${semanas(R.mejorRacha)}</b>.`;
+
+  const ext = $('extremos');
+  if (R.n < 3) {
+    ext.innerHTML = '<p>Con tres compras o más verás aquí tu mejor y tu peor precio.</p>';
+    return;
+  }
+  const tarjeta = (c, titulo) => {
+    const v = S.precio ? (S.precio / c.precio - 1) * 100 : null;
+    return `<div class="ext"><small>${titulo}</small><b>${usd0(c.precio)}</b><span>${fechaLarga(c.fecha)} · ${entero(c.sats)} sats</span>` +
+      (v == null ? '' : `<span data-tono="${v >= 0 ? 'sube' : 'baja'}">${pct(v)} desde entonces</span>`) + '</div>';
+  };
+  ext.innerHTML = tarjeta(R.mejor, 'Mejor precio') + tarjeta(R.peor, 'Precio más alto');
+}
 
 // -------------------------------------------------------------- celebración
 /** Solo cuando la acción de esta sesión cruza un hito; breve y sin bloquear nada. */

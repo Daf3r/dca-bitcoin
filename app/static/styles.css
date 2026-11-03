@@ -323,15 +323,16 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .cima { padding-inline: max(48px, calc(50vw - 600px)); }
   .cuerpo {
     grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-    grid-template-areas: "mercado tramo" "mercado compras" "rep rep" "pie pie";
-    grid-template-rows: auto 1fr;
+    grid-template-areas: "mercado tramo" "mercado compras" "rep compras" "pie pie";
+    grid-template-rows: auto auto 1fr;
+    align-items: start;
     column-gap: 48px; row-gap: 32px; padding: 40px 48px 120px;
   }
   .mercado { grid-area: mercado; }
   .tramo { grid-area: tramo; }
   .compras { grid-area: compras; }
-  .reportes { grid-area: rep; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .rep-anios { grid-column: span 2; }
+  .reportes { grid-area: rep; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: row dense; }
+  .rep-anios, .rep-ext { grid-column: span 2; }
   .pie { grid-area: pie; }
   .anotar { left: auto; right: 32px; bottom: 28px; transform: none; }
   .anotar:active { transform: scale(0.96); }
