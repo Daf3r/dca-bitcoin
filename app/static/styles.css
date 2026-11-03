@@ -158,7 +158,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .lienzo.esqueleto::after { content: ""; position: absolute; inset: 0; background: var(--s2); animation: esq 1.4s ease-in-out infinite alternate; opacity: 0.4; }
 @keyframes esq { to { opacity: 1; } }
 .lienzo .g-vacio { display: grid; place-content: center; min-height: 200px; padding: 20px; text-align: center; color: var(--txt2); font: italic 400 1.125rem var(--serif); }
-.ga-1 { stop-color: var(--linea); stop-opacity: 0.18; }
+.ga-1 { stop-color: var(--linea); stop-opacity: 0.12; }
 .ga-2 { stop-color: var(--linea); stop-opacity: 0; }
 .g-area { fill: url(#g-area); }
 .g-linea { fill: none; stroke: var(--linea); stroke-width: 1.8; stroke-linejoin: round; }
@@ -327,9 +327,9 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
     grid-template-rows: auto 1fr;
     column-gap: 48px; row-gap: 32px; padding: 40px 48px 120px;
   }
-  .mercado { grid-area: mercado; grid-column: auto; }
-  .tramo { grid-area: tramo; grid-column: auto; }
-  .compras { grid-area: compras; grid-column: auto; }
+  .mercado { grid-area: mercado; }
+  .tramo { grid-area: tramo; }
+  .compras { grid-area: compras; }
   .reportes { grid-area: rep; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .rep-anios { grid-column: span 2; }
   .pie { grid-area: pie; }

@@ -1,8 +1,9 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, fechaLarga, fechaCorta,
-  resumen, nombreHito,
+  resumen, nombreHito, serieGrafico,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
+import { dibujarGrafico, instalarLectura } from './grafico.js';
 
 const $ = (id) => document.getElementById(id);
 const reducido = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -10,7 +11,7 @@ const reducido = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const S = {
   compras: [], cargado: false, errorCarga: false,
   precio: null, precioTs: 0, fuente: '', viejo: false, errorPrecio: false,
-  historico: null, histEstado: 'cargando',
+  historico: [], histEstado: 'cargando', histDesde: null, rango: null,
   verTodas: false,
 };
 let R = resumen([], null);
@@ -54,6 +55,32 @@ async function cargarCompras() {
   const primeraVez = !S.cargado;
   S.cargado = true;
   pintar({ montana: true, animar: primeraVez });
+  if (primeraVez) cargarHistorico();
+}
+
+/** Desde la primera compra (o un año, si es más reciente), con el tope de 10 años del servidor. */
+function desdeHistorico() {
+  const hoy = new Date();
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const anio = iso(new Date(hoy - 365 * 864e5));
+  const tope = iso(new Date(hoy - 3650 * 864e5));
+  const primera = R.items[0]?.fecha;
+  return primera && primera < anio ? (primera < tope ? tope : primera) : anio;
+}
+
+async function cargarHistorico(intento = 0) {
+  const desde = desdeHistorico();
+  try {
+    const j = await api(`/api/historico?desde=${desde}`);
+    S.historico = j.precios;
+    S.histDesde = desde;
+    // El servidor rellena en segundo plano: se vuelve a preguntar mientras diga «cargando».
+    if (j.cargando && intento < 10) setTimeout(() => cargarHistorico(intento + 1), 3000);
+    S.histEstado = j.precios.length > 1 ? 'ok' : j.cargando && intento < 10 ? 'cargando' : 'error';
+  } catch {
+    S.histEstado = S.historico.length > 1 ? 'ok' : 'error';
+  }
+  pintarMercado();
 }
 
 async function consultarPrecio() {
@@ -86,6 +113,7 @@ function pintar({ montana = false, animar = false, desde = null } = {}) {
   pintarSaldo(desde);
   if (montana) pintarMontana(animar, desde);
   pintarTramo();
+  pintarMercado();
   pintarLista();
 }
 
@@ -169,6 +197,37 @@ function pintarTramo() {
     : R.n ? `Vas en ${(prog * 100).toFixed(1)}% de este tramo.` : 'El primer campamento está en 100k sats.';
 }
 const plazo = (m) => (m < 1 ? 'menos de un mes' : `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}`);
+
+// --------------------------------------------------------------- gráfico
+const RANGOS = [30, 182, 365, 0];
+function rangoPorDefecto() {
+  // El menor rango que contenga la primera compra, nunca menos de 6 meses: con una compra se ve contexto.
+  const primera = R.items[0];
+  if (!primera) return 365;
+  const dias = (Date.now() - new Date(primera.fecha)) / 864e5;
+  return RANGOS.find((r) => r >= 182 && dias <= r) ?? 0;
+}
+let anchoGrafico = 0;
+function pintarMercado() {
+  const host = $('lienzo');
+  if (S.rango === null && S.cargado) S.rango = rangoPorDefecto();
+  document.querySelectorAll('#rangos button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.r) === S.rango)));
+  const listo = S.histEstado === 'ok' && S.cargado;
+  host.classList.toggle('esqueleto', S.histEstado === 'cargando' || !S.cargado);
+  if (!listo) {
+    host.innerHTML = S.histEstado === 'error' ? '<p class="g-vacio">El histórico de precios no está disponible ahora. Lo demás funciona igual.</p>' : '';
+    $('g-lectura').textContent = S.histEstado === 'error' ? '' : 'Cargando el histórico de precios…';
+    return;
+  }
+  anchoGrafico = host.clientWidth;
+  dibujarGrafico(host, $('g-lectura'), { serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items, promedio: R.promedio, rango: S.rango, hoy: hoyISO() });
+}
+instalarLectura($('lienzo'));
+$('rangos').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) { S.rango = Number(b.dataset.r); pintarMercado(); }
+});
+new ResizeObserver(() => { if ($('lienzo').clientWidth !== anchoGrafico) pintarMercado(); }).observe($('lienzo'));
 
 // ----------------------------------------------------------------- lista
 const VISIBLES = 8;
@@ -289,6 +348,7 @@ $('guardar').addEventListener('click', async () => {
     H.guardando = false;
     cerrarHoja();
     pintar({ montana: true, desde: antes.sats });
+    if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
     avisar(editando ? 'Compra corregida.' : `Anotado: +${entero(g.sats)} sats`, null, true);
     celebrar(antes);
   } catch (err) {
