@@ -105,22 +105,25 @@ function pasoSemanas(items) {
 
 /**
  * Avisos antes de guardar una compra nueva o con sats cambiados (no bloquean: piden confirmar).
- * - `atipico`: con al menos 4 compras tuyas, sats 10 veces mayores o menores que la mediana (error de dedo).
+ * - `atipico`: con al menos 4 compras tuyas, un monto en dólares 10 veces mayor o menor que la mediana
+ *   (error de dedo: un cero de más o de menos). Se compara en **dólares**, no en sats: así $25 y $50 no
+ *   avisan (solo 2 veces) y el precio de BTC, que cambia con los años, no provoca avisos falsos.
+ *   Sin monto estimado (sin precio) no se evalúa.
  * - `duplicado`: ya hay otra compra el mismo día (solo al crear).
- * Las ventas no se avisan (ya no pueden pasar del saldo). Sin sorpresas con lo ya guardado: al editar
- * sin tocar los sats no se avisa de lo atípico.
+ * Las ventas no se avisan (ya no pueden pasar del saldo). Al editar sin tocar los sats no se avisa de
+ * lo atípico, para no insistir con lo ya guardado.
  */
-export function avisosAlAnotar(compras, { tipo, sats, fecha, editando = null }) {
+export function avisosAlAnotar(compras, { tipo, sats, monto, fecha, editando = null }) {
   if (tipo !== 'compra' || !(sats > 0)) return [];
   const previa = editando != null ? compras.find((c) => c.id === editando) : null;
   const otras = compras.filter((c) => c.tipo === 'compra' && c.id !== editando);
   const avisos = [];
-  if (otras.length >= 4 && !(previa && previa.sats === sats)) {
-    const orden = otras.map((c) => c.sats).sort((a, b) => a - b);
+  if (monto > 0 && otras.length >= 4 && !(previa && previa.sats === sats)) {
+    const orden = otras.map((c) => c.monto).filter((m) => m > 0).sort((a, b) => a - b);
     const mid = orden.length >> 1;
-    const mediana = orden.length % 2 ? orden[mid] : (orden[mid - 1] + orden[mid]) / 2;
-    if (mediana > 0 && sats >= mediana * 10) avisos.push({ tipo: 'atipico', sentido: 'mas', veces: Math.round(sats / mediana), mediana: Math.round(mediana) });
-    else if (mediana > 0 && sats * 10 <= mediana) avisos.push({ tipo: 'atipico', sentido: 'menos', veces: Math.round(mediana / sats), mediana: Math.round(mediana) });
+    const mediana = orden.length < 4 ? 0 : orden.length % 2 ? orden[mid] : (orden[mid - 1] + orden[mid]) / 2;
+    if (mediana > 0 && monto >= mediana * 10) avisos.push({ tipo: 'atipico', sentido: 'mas', veces: Math.round(monto / mediana), mediana });
+    else if (mediana > 0 && monto * 10 <= mediana) avisos.push({ tipo: 'atipico', sentido: 'menos', veces: Math.round(mediana / monto), mediana });
   }
   if (editando == null) {
     const mismas = otras.filter((c) => c.fecha === fecha);

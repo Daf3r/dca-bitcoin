@@ -409,7 +409,7 @@ function limpiarError() {
 function textoAvisos(avisos) {
   const partes = avisos.map((a) => a.tipo === 'duplicado'
     ? `ya anotaste ${a.n === 1 ? 'otra compra' : `${a.n} compras`} ese día (${entero(a.sats)} sats).`
-    : `esto es ${a.veces} veces ${a.sentido === 'mas' ? 'más' : 'menos'} que tu compra habitual (unos ${entero(a.mediana)} sats). ¿Faltó o sobró un cero?`);
+    : `esto es ${a.veces} veces ${a.sentido === 'mas' ? 'más' : 'menos'} que tu compra habitual (unos ${usd(a.mediana)}). ¿Faltó o sobró un cero?`);
   return `Ojo: ${partes.join(' Además, ')} Si está bien, toca «Sí, guardar así».`;
 }
 function pintarHoja() {
@@ -478,7 +478,7 @@ $('guardar').addEventListener('click', async () => {
   // Antes de guardar: si algo se ve raro (cifra 10 veces fuera de lo normal, compra repetida ese día), se avisa
   // una vez y se pide confirmar con un segundo toque. No bloquea: tú decides.
   if (!confirmando()) {
-    const avisos = avisosAlAnotar(S.compras, { tipo: H.tipo, sats: d.sats, fecha, editando: H.editando });
+    const avisos = avisosAlAnotar(S.compras, { tipo: H.tipo, sats: d.sats, monto: d.monto, fecha, editando: H.editando });
     if (avisos.length) {
       const e = $('hoja-error');
       e.textContent = textoAvisos(avisos);
