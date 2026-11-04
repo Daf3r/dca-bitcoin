@@ -334,6 +334,25 @@ check(f'url("/fonts/fraunces.woff2?v={V}")' in cl.get("/styles.css").get_data(as
 r = cl.get(f"/fonts/bricolage.woff2?v={V}")
 check(r.status_code == 200 and r.mimetype == "font/woff2" and "immutable" in r.headers["Cache-Control"], "fuente inmutable")
 check(cl.get("/icon.svg").headers["Cache-Control"] == "no-cache", "resto de estáticos revalida")
+# --- PWA: manifiesto e iconos públicos (el navegador los pide sin cookie), con su tipo y CSP
+import json as _json, struct as _struct
+anon = server.app.test_client()
+r = anon.get("/manifest.webmanifest")
+check(r.status_code == 200 and r.mimetype == "application/manifest+json", "manifiesto público con su tipo")
+mf = _json.loads(r.get_data(as_text=True))
+check(mf["display"] == "standalone" and mf["start_url"] == "/" and mf["scope"] == "/" and mf["name"] == "Libro DCA", "manifiesto: standalone desde /")
+check("manifest-src 'self'" in r.headers["Content-Security-Policy"], "CSP permite el manifiesto")
+check(all(i["type"] == "image/png" for i in mf["icons"]) and {i["purpose"] for i in mf["icons"]} == {"any", "maskable"}, "manifiesto: iconos any y maskable")
+for ic in mf["icons"]:
+    r = anon.get(ic["src"])
+    ancho, alto = _struct.unpack(">II", r.data[16:24])
+    check(r.status_code == 200 and r.mimetype == "image/png" and f"{ancho}x{alto}" == ic["sizes"], f"icono {ic['src']} sirve y mide {ic['sizes']}")
+r = anon.get("/apple-touch-icon.png")
+check(r.status_code == 200 and _struct.unpack(">II", r.data[16:24]) == (180, 180), "apple-touch-icon 180x180 público")
+for pagina in ("/", "/login"):
+    h = cl.get(pagina).get_data(as_text=True) if pagina == "/" else anon.get(pagina).get_data(as_text=True)
+    check('rel="manifest" href="/manifest.webmanifest"' in h and 'rel="apple-touch-icon"' in h and 'apple-mobile-web-app-capable' in h, f"{pagina} enlaza manifiesto e icono de Apple")
+check(anon.get("/icon-evil.js").status_code == 404 and anon.get("/api/compras").status_code == 401, "lo público no abre nada más")
 check(cl.get("/app.js", headers={"If-None-Match": f'"{V}-app.js"'}).status_code == 304, "304 con ETag")
 check(cl.get("/../server.js").status_code == 404 and cl.get("/nada.js").status_code == 404, "solo módulos existentes")
 
