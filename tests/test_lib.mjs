@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -308,5 +308,27 @@ eq(Math.round(qe3.precio), 80000, 'con ventas, lo realizado baja el equilibrio')
 eq(equilibrio(resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }, { id: 2, tipo: 'venta', fecha: '2026-10-02', monto: 100, sats: 50000, precio: 200000 }], null, '2026-10-05'), 90000), null, 'si lo vendido ya cubre lo invertido no hay equilibrio');
 eq(equilibrio(resumen([], null, '2026-10-05'), 90000), null, 'sin compras no hay equilibrio');
 eq([haceCuanto(1000, 3000), haceCuanto(0, 12000), haceCuanto(0, 59000), haceCuanto(0, 60000), haceCuanto(0, 150000), haceCuanto(0, 3 * 3600e3)], ['ahora mismo', 'hace 12 s', 'hace 59 s', 'hace 1 min', 'hace 2 min', 'hace 3 h'], 'hace cuánto se actualizó el precio');
+
+// Serie «lo que pusiste y lo que vale»
+const dv = (k) => new Date(Date.UTC(2026, 9, 1 + k)).toISOString().slice(0, 10); // 1 oct + k días
+const histV = Array.from({ length: 10 }, (_, k) => [dv(k), 100000 + k * 1000]); // 1 oct (100,000) a 10 oct (109,000)
+const movs = [
+  { id: 1, tipo: 'compra', fecha: dv(2), monto: 100, sats: 100000 },
+  { id: 2, tipo: 'compra', fecha: dv(5), monto: 100, sats: 100000 },
+];
+const Rv2 = resumen(movs, null, dv(10));
+const sv = serieValor(Rv2.items, histV, 120000, dv(10));
+eq(sv[0].fecha, dv(2), 'la serie empieza el día de tu primera compra, no antes');
+eq([sv[0].inv, sv[0].sats], [100, 100000], 'primer punto: invertido $100 y 100,000 sats');
+eq(Math.round(sv[0].valor * 100) / 100, 102, 'valor = sats × precio del día (100,000 sats a $102,000 = $102)');
+const dia5 = sv.find((x) => x.fecha === dv(5));
+eq([dia5.inv, dia5.sats], [200, 200000], 'el día de la segunda compra ya cuenta (mismo día)');
+eq(sv.at(-1).vivo, true, 'el último punto usa el precio vivo');
+eq(Math.round(sv.at(-1).valor), 240, '200,000 sats a $120,000 vivo = $240');
+eq(sv.every((x) => x.p === x.valor), true, 'cada punto lleva p = valor para decimar');
+eq(serieValor([], histV, 120000, dv(10)), [], 'sin movimientos no hay serie');
+const movsV = [...movs, { id: 3, tipo: 'venta', fecha: dv(7), monto: 150, sats: 100000 }];
+const svv = serieValor(resumen(movsV, null, dv(10)).items, histV, 120000, dv(10));
+eq([svv.find((x) => x.fecha === dv(8)).sats, Math.round(svv.find((x) => x.fecha === dv(8)).inv)], [100000, 100], 'tras vender la mitad el saldo y el invertido neto bajan a la mitad');
 
 console.log(`OK ${n} comprobaciones`);

@@ -392,6 +392,27 @@ export function serieGrafico(historico, precioVivo, hoy = hoyISO()) {
   return s;
 }
 
+/**
+ * Lo que pusiste y lo que vale, día a día desde tu primera compra. `items` son los movimientos de `resumen()`
+ * (con `inv`, el invertido neto, y `satsAcum`, el saldo, tras cada uno). `valor` es el saldo de sats al precio de
+ * cada día; el último punto usa el precio vivo. Cada punto lleva `p: valor` para poder decimarlo con `muestrear`.
+ */
+export function serieValor(items, historico, vivo, hoy = hoyISO()) {
+  if (!items.length) return [];
+  const primera = items[0].fecha;
+  const out = [];
+  let k = -1; // último movimiento con fecha <= día
+  for (const d of serieGrafico(historico, vivo, hoy)) {
+    if (d.fecha < primera) continue;
+    while (k + 1 < items.length && items[k + 1].fecha <= d.fecha) k++;
+    if (k < 0) continue;
+    const it = items[k];
+    const valor = (it.satsAcum * d.p) / 1e8;
+    out.push({ fecha: d.fecha, inv: it.inv, sats: it.satsAcum, precio: d.p, valor, p: valor, vivo: d.vivo });
+  }
+  return out;
+}
+
 /** Índice del punto de la serie para una fecha; si cae después de la última vela, la última. */
 export function ubicar(fecha, serie) {
   if (!serie.length || fecha < serie[0].fecha) return -1;

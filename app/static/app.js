@@ -1,9 +1,10 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, serieValor, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
+import { dibujarValor, instalarLecturaValor } from './valor.js';
 
 const $ = (id) => document.getElementById(id);
 const reducido = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -89,6 +90,7 @@ async function cargarHistorico(intento = 0) {
     S.histEstado = S.historico.length > 1 ? 'ok' : 'error';
   }
   pintarMercado();
+  pintarValor();
   pintarCaida();
 }
 
@@ -125,6 +127,7 @@ function pintar({ montana = false, animar = false, desde = null, festejo = null 
   pintarCaida();
   pintarTramo();
   pintarMercado();
+  pintarValor();
   pintarEquilibrio();
   pintarLista();
   pintarReportes();
@@ -280,6 +283,18 @@ function pintarMercado() {
   dibujarGrafico(host, $('g-lectura'), { serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items.filter((c) => c.tipo !== 'venta'), ventas: R.items.filter((c) => c.tipo === 'venta'), promedio: R.promedio, rango: S.rango, hoy: hoyISO() });
 }
 instalarLectura($('lienzo'));
+
+// Lo que pusiste y lo que vale: desde 3 compras y con histórico y precio; si falta algo, la sección no sale.
+let anchoValor = 0;
+function pintarValor() {
+  const serie = R.nCompras >= 3 && S.cargado && S.histEstado === 'ok' && S.precio ? serieValor(R.items, S.historico, S.precio, hoyISO()) : [];
+  $('valor').hidden = serie.length < 2;
+  if (serie.length < 2) return;
+  anchoValor = $('v-lienzo').clientWidth;
+  dibujarValor($('v-lienzo'), $('v-lectura'), { serie });
+}
+instalarLecturaValor($('v-lienzo'));
+new ResizeObserver(() => { if ($('v-lienzo').clientWidth && $('v-lienzo').clientWidth !== anchoValor) pintarValor(); }).observe($('v-lienzo'));
 $('rangos').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (b) { S.rango = Number(b.dataset.r); pintarMercado(); }

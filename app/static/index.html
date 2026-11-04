@@ -74,6 +74,15 @@
     <p class="leyenda" aria-hidden="true"><span class="k-p">Precio de BTC</span><span class="k-c">Tus compras, a su precio</span><span class="k-a">Tu costo promedio</span></p>
   </section>
 
+  <!-- Lo que pusiste (neto) frente a lo que vale tu saldo, día a día. Desde 3 compras y con histórico. -->
+  <section class="valor" id="valor" aria-labelledby="t-valor" hidden>
+    <div class="sec-cab"><h2 id="t-valor">Lo que pusiste y lo que vale</h2></div>
+    <p class="lectura" id="v-lectura"></p>
+    <p class="sr" id="v-sr" aria-live="polite"></p>
+    <div class="lienzo" id="v-lienzo" tabindex="0" role="img" aria-label="Lo que has invertido y lo que vale tu saldo, día a día. Usa las flechas para recorrerlo."></div>
+    <p class="leyenda" aria-hidden="true"><span class="k-v">Lo que vale tu saldo</span><span class="k-i">Lo que pusiste (neto)</span></p>
+  </section>
+
   <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>
     <h2 class="sr" id="t-rep">Reportes</h2>
     <article class="rep rep-const">
