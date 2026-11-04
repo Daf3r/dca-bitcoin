@@ -227,6 +227,21 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .g-cursor line { stroke: var(--txt2); stroke-width: 1; }
 .g-cursor .gc-p { fill: var(--fondo); stroke: var(--linea); stroke-width: 2.5; }
 .g-cursor .gc-c { fill: var(--naranja); stroke: var(--fondo); stroke-width: 2; }
+/* Gráfico «lo que pusiste y lo que vale». */
+.valor { padding-top: 6px; }
+.va-1 { stop-color: var(--naranja-txt); stop-opacity: 0.2; }
+.va-2 { stop-color: var(--naranja-txt); stop-opacity: 0; }
+.v-area { fill: url(#v-grad); }
+.v-valor { fill: none; stroke: var(--naranja-txt); stroke-width: 2.2; stroke-linejoin: round; }
+.v-inv { fill: none; stroke: var(--txt3); stroke-width: 1.8; stroke-linejoin: round; }
+.v-base { stroke: var(--s3); stroke-width: 1.5; }
+.v-rej { stroke: var(--s3); stroke-width: 1; stroke-dasharray: 2 5; }
+.v-eje { paint-order: stroke; stroke: var(--fondo); stroke-width: 3px; stroke-linejoin: round; }
+.v-hoy { fill: var(--fondo); stroke: var(--naranja-txt); stroke-width: 2.5; }
+.g-cursor .vc-v { fill: var(--fondo); stroke: var(--naranja-txt); stroke-width: 2.5; }
+.g-cursor .vc-i { fill: var(--txt3); stroke: var(--fondo); stroke-width: 2; }
+.k-v::before { width: 16px; border-top: 3px solid var(--naranja-txt); }
+.k-i::before { width: 16px; border-top: 2px solid var(--txt3); }
 .leyenda { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 0.8125rem; color: var(--txt3); }
 .leyenda span::before { content: ""; display: inline-block; margin-right: 6px; vertical-align: middle; }
 .k-p::before { width: 16px; border-top: 2px solid var(--linea); }

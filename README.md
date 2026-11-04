@@ -128,3 +128,5 @@ Solo el admin ve, bajo la montaña, una línea según su ritmo (semanal o quince
 Cuando el precio cae 15 % o más frente a su máximo de 30 días, el admin ve una tarjeta opcional con el dato y con qué haría «reponer» (una compra como las tuyas) en el costo promedio. Es solo información: no recomienda comprar, y «Ocultar hoy» la quita hasta mañana.
 
 Toca la cifra del saldo para verla en sats o en BTC (se recuerda en cada dispositivo). Bajo el título del gráfico, una línea dice con qué precio de BTC estarías en cero. La cotización muestra hace cuánto se actualizó el precio, y la hoja de anotar enseña a cuántos sats equivale hoy una compra como las tuyas.
+
+Bajo el gráfico de precio, «Lo que pusiste y lo que vale» compara, día a día desde tu primera compra, lo invertido (neto de ventas) con lo que valía tu saldo cada día. Sale desde 3 compras y cuando hay histórico de precios; pasa el dedo o usa las flechas para leer un día.
