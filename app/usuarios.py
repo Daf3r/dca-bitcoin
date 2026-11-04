@@ -66,9 +66,9 @@ def main(args: list[str]) -> int:
             conn.execute("UPDATE usuarios SET activo = ? WHERE id = ?", (1 if orden == "activar" else 0, u["id"]))
             if orden == "desactivar":
                 auth.cerrar_todas(conn, u["id"])
-            auth.auditar(conn, "cli", f"cuenta_{orden}da", "usuario", u["id"], None, {"nombre": u["nombre"]})
+            auth.auditar(conn, "cli", "cuenta_activada" if orden == "activar" else "cuenta_desactivada", "usuario", u["id"], None, {"nombre": u["nombre"]})
             conn.commit()
-            print(f"Cuenta {orden}da.")
+            print("Cuenta activada." if orden == "activar" else "Cuenta desactivada.")
         elif orden == "cerrar-sesiones":
             n = auth.cerrar_todas(conn, u["id"])
             auth.auditar(conn, "cli", "sesiones_cerradas", "usuario", u["id"], None, {"nombre": u["nombre"], "sesiones": n})
