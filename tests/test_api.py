@@ -15,12 +15,29 @@ c.commit(); c.close()
 os.environ["DB_PATH"] = dbp
 sys.path.insert(0, APP)
 import server
-cl = server.app.test_client()
+import auth
 ok = 0
 def check(cond, msg):
     global ok
     assert cond, msg
     ok += 1
+
+# Sin cuentas la app no se abre: todo 503 y la entrada lo explica.
+anon = server.app.test_client()
+check(anon.get("/api/compras").status_code == 503 and anon.get("/api/estado").get_json() == {"abierto": False}, "sin cuentas: cerrado")
+check(anon.get("/").status_code == 302 and anon.get("/").headers["Location"].endswith("/login"), "sin cuentas: a /login")
+CLAVE_ADMIN = "montaña-de-sats-2026"
+_c = server.connect(); auth.crear_usuario(_c, "Daf3r", CLAVE_ADMIN, "admin", "prueba"); _c.close()
+
+def cliente(nombre="Daf3r", clave=CLAVE_ADMIN):
+    c = server.app.test_client()
+    c.environ_base.update({"wsgi.url_scheme": "https", "HTTP_X_LIBRO": "1"})
+    r = c.post("/api/login", json={"usuario": nombre, "clave": clave})
+    assert r.status_code == 200, r.data
+    return c
+
+cl = cliente()
+TOKEN = cl.get_cookie("__Host-sesion").value
 
 r = cl.get("/api/compras"); rows = r.get_json()
 check(r.status_code == 200 and len(rows) == 2, "listar")
@@ -220,7 +237,10 @@ j = r.get_json()
 check(r.status_code == 200 and j["cargando"] and j["precios"] == [] and dt_ < 0.12, f"no bloquea ({dt_:.3f}s) {j}")
 # Peticiones simultáneas mientras descarga: una sola descarga.
 res = []
-hilos = [_th.Thread(target=lambda: res.append(server.app.test_client().get(f"/api/historico?desde={desde900}").get_json())) for _ in range(4)]
+def _copia():
+    c = server.app.test_client(); c.set_cookie("__Host-sesion", TOKEN); return c
+clientes = [_copia() for _ in range(4)]
+hilos = [_th.Thread(target=lambda c=c: res.append(c.get(f"/api/historico?desde={desde900}").get_json())) for c in clientes]
 [h.start() for h in hilos]; [h.join() for h in hilos]
 check(all(x["cargando"] for x in res), "simultáneas ven la descarga en curso")
 r = esperar(desde900); j = r.get_json()
@@ -303,7 +323,7 @@ c2 = server.connect(); c2.execute("DELETE FROM meta"); c2.commit(); c2.close()
 V = server.VERSION
 r = cl.get("/")
 html = r.get_data(as_text=True)
-check(r.headers["Cache-Control"] == "no-cache" and f"/app.js?v={V}" in html and f"/styles.css?v={V}" in html and f"/fonts/bricolage.woff2?v={V}" in html, "index con versión y sin caché")
+check(r.headers["Cache-Control"] == "no-store" and f"/app.js?v={V}" in html and f"/styles.css?v={V}" in html and f"/fonts/bricolage.woff2?v={V}" in html, "index con versión y sin caché")
 r = cl.get("/app.js")
 t = r.get_data(as_text=True)
 check(r.mimetype == "text/javascript" and f"./lib.js?v={V}'" in t and f"./montana.js?v={V}'" in t and r.headers["Cache-Control"] == "no-cache", "módulos con imports versionados")

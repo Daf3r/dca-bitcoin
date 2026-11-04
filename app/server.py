@@ -16,7 +16,10 @@ import urllib.request
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Callable
 
-from flask import Flask, Response, g, jsonify, request, send_from_directory
+from flask import Flask, Response, g, jsonify, redirect, request, send_from_directory
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+import auth
 
 DB_PATH = os.environ.get("DB_PATH", "/data/libro.db")
 PRICE_TTL = int(os.environ.get("PRICE_TTL", "30"))               # segundos entre consultas al exchange
@@ -30,6 +33,15 @@ mimetypes.add_type("font/woff2", ".woff2")
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024  # el CSV de importación es lo más grande que llega
+# Caddy habla con la app por HTTP local: el esquema real viene en X-Forwarded-Proto.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=0, x_proto=1, x_host=0)  # type: ignore[method-assign]
+COOKIE = "__Host-sesion"
+# La IP real solo se cree si Caddy la pone (sobrescribiendo lo que mande el cliente) y así se
+# declara; si no, el límite por IP se desactiva en vez de meter a todos en el mismo saco.
+CONFIAR_IP = os.environ.get("CONFIAR_X_CLIENTE_IP") == "1"
+_scrypt_sem = threading.BoundedSemaphore(2)  # verificaciones simultáneas por proceso
+if not CONFIAR_IP:
+    print("aviso: CONFIAR_X_CLIENTE_IP no está activo; el límite de intentos por IP queda desactivado", flush=True)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS compras (
@@ -49,7 +61,10 @@ CREATE TABLE IF NOT EXISTS meta (clave TEXT PRIMARY KEY, valor TEXT NOT NULL);
 
 MIGRACIONES = (
     ("sats", "ALTER TABLE compras ADD COLUMN sats INTEGER CHECK (sats IS NULL OR sats > 0)"),
+    ("anulada_ts", "ALTER TABLE compras ADD COLUMN anulada_ts INTEGER"),
+    ("anulada_por", "ALTER TABLE compras ADD COLUMN anulada_por TEXT"),
 )
+VIGENTES = "anulada_ts IS NULL"
 
 CSP = (
     "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; "
@@ -75,6 +90,7 @@ def init_db() -> None:
     conn = connect()
     try:
         conn.executescript(SCHEMA)
+        conn.executescript(auth.SCHEMA)
         cols = {r["name"] for r in conn.execute("PRAGMA table_info(compras)")}
         for col, ddl in MIGRACIONES:
             if col not in cols:
@@ -159,15 +175,17 @@ def _decimal(v: str | None, nombre: str) -> float:
         raise ValueError(f"{nombre} inválido.") from None
 
 
-def importar_csv(conn: sqlite3.Connection, texto: str) -> dict[str, Any]:
+def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip: str | None = None) -> dict[str, Any]:
     """Importa un CSV como el de /api/export.csv. Salta filas inválidas y repetidas,
-    así que se puede importar el mismo archivo varias veces sin duplicar."""
+    así que se puede importar el mismo archivo varias veces sin duplicar. Las compras anuladas
+    no cuentan como repetidas: si se anuló una por error, se puede volver a importar."""
     lector = csv.DictReader(io.StringIO(texto.lstrip("﻿")))
     campos = {c.strip() for c in lector.fieldnames or []}
     if "fecha" not in campos or not campos & {"monto_usd", "monto"}:
         raise ValueError("El CSV necesita las columnas fecha y monto_usd.")
     nuevas = repetidas = 0
     omitidas: list[str] = []
+    ids: list[int] = []
     for n, row in enumerate(lector, start=2):
         row = {(k or "").strip(): v for k, v in row.items()}
         try:
@@ -186,24 +204,69 @@ def importar_csv(conn: sqlite3.Connection, texto: str) -> dict[str, Any]:
         fecha, monto, precio, sats = c
         # las filas viejas tienen sats estimados, así que también vale coincidir en precio
         existe = conn.execute(
-            "SELECT 1 FROM compras WHERE fecha = ? AND abs(monto - ?) < 1e-6 AND (sats = ? OR abs(precio - ?) < 1e-6 * ?)",
+            f"SELECT 1 FROM compras WHERE {VIGENTES} AND fecha = ? AND abs(monto - ?) < 1e-6 AND (sats = ? OR abs(precio - ?) < 1e-6 * ?)",
             (fecha, monto, sats, precio, precio),
         ).fetchone()
         if existe:
             repetidas += 1
             continue
-        insertar(conn, c)
+        ids.append(insertar(conn, c))
         nuevas += 1
+    resumen = {"nuevas": nuevas, "repetidas": repetidas, "omitidas": len(omitidas), "ids": ids[:500]}
+    if nuevas:
+        auth.auditar(conn, usuario, "importacion", "compra", None, None, resumen, ip)
     conn.commit()
     return {"nuevas": nuevas, "repetidas": repetidas, "omitidas": omitidas}
 
 
 # ------------------------------------------------------------------------ rutas
+ESCRITURA = ("POST", "PUT", "DELETE", "PATCH")
+PUBLICAS = {"/healthz", "/login", "/api/login", "/api/estado"}
+# El código de la página no es secreto: módulos, estilos, fuentes e icono se sirven sin sesión.
+RECURSO_PUBLICO = re.compile(r"/(?:[\w-]+\.js|styles\.css|icon\.svg|fonts/[\w.-]+)")
+
+
 @app.before_request
 def mismo_origen() -> Any:
-    # Defensa extra contra CSRF: el navegador marca las peticiones de otros sitios.
-    if request.method not in ("GET", "HEAD") and request.headers.get("Sec-Fetch-Site", "same-origin") not in ("same-origin", "none"):
+    if request.method not in ESCRITURA:
+        return None
+    # Defensa contra CSRF: el navegador marca las peticiones de otros sitios, y una cabecera
+    # propia obliga a un preflight CORS que el servidor nunca concede.
+    if request.headers.get("Sec-Fetch-Site", "same-origin") not in ("same-origin", "none"):
         return jsonify(error="Origen no permitido."), 403
+    if request.headers.get("X-Libro") != "1":
+        return jsonify(error="Solicitud no permitida."), 403
+    return None
+
+
+def ip_real() -> str | None:
+    if not CONFIAR_IP:
+        return None
+    ip = (request.headers.get("X-Cliente-IP") or "").strip()
+    return ip if re.fullmatch(r"[0-9a-fA-F:.]{3,45}", ip) else None
+
+
+def quien() -> str:
+    u = g.get("usuario")
+    return u["nombre"] if u else "?"
+
+
+@app.before_request
+def exigir_sesion() -> Any:
+    ruta = request.path
+    if ruta in PUBLICAS or (request.method in ("GET", "HEAD") and RECURSO_PUBLICO.fullmatch(ruta)):
+        return None
+    api = ruta.startswith("/api/")
+    conn = db()
+    if not auth.hay_usuarios(conn):
+        # Sin cuentas no se abre nada: la pantalla de entrada explica cómo crear el primer admin.
+        return (jsonify(error="Aún no hay cuentas. Crea el primer admin en el servidor."), 503) if api else redirect("/login")
+    u = auth.sesion(conn, request.cookies.get(COOKIE))
+    if not u:
+        return (jsonify(error="Inicia sesión."), 401) if api else redirect("/login")
+    g.usuario = u
+    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave"):
+        return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
 
 
@@ -262,6 +325,137 @@ def estilos() -> Response:
     return _servir_versionado("styles.css", "text/css", _REF_CSS, _cache_recurso())
 
 
+# ---------------------------------------------------------------- cuentas
+@app.get("/login")
+def pantalla_login() -> Any:
+    if auth.sesion(db(), request.cookies.get(COOKIE)):
+        return redirect("/")
+    return _servir_versionado("login.html", "text/html", _REF_HTML, "no-store")
+
+
+@app.get("/api/estado")
+def estado() -> Response:
+    # Lo único público: si ya hay cuentas. No dice cuántas ni cuáles.
+    return jsonify(abierto=auth.hay_usuarios(db()))
+
+
+def _poner_cookie(resp: Response, token: str) -> None:
+    resp.set_cookie(COOKIE, token, max_age=auth.SESION_DESLIZANTE, path="/", secure=True, httponly=True, samesite="Lax")
+
+
+@app.post("/api/login")
+def login() -> Any:
+    body = request.get_json(silent=True)
+    nombre = body.get("usuario") if isinstance(body, dict) else None
+    clave = body.get("clave") if isinstance(body, dict) else None
+    if not isinstance(nombre, str) or not isinstance(clave, str) or not 0 < len(nombre) <= 64 or not 0 < len(clave) <= 256:
+        return jsonify(error="Escribe usuario y contraseña."), 400
+    conn = db()
+    ip = ip_real()
+    claves = [auth.clave_usuario(nombre)] + ([f"ip:{ip}"] if ip else [])
+    auth.limpiar(conn)
+    # Bloqueado: se responde sin calcular scrypt, así un ataque no cuesta CPU.
+    if (seg := auth.espera(conn, claves)):
+        conn.commit()
+        r = jsonify(error="Demasiados intentos. Espera unos minutos.")
+        r.headers["Retry-After"] = str(seg)
+        return r, 429
+    if not _scrypt_sem.acquire(timeout=1):
+        return jsonify(error="El servidor está ocupado. Intenta en unos segundos."), 503
+    try:
+        u = auth.buscar(conn, nombre.strip())
+        ok, rehacer = auth.verificar(clave, u["hash"] if u else auth.RELLENO)
+        ok = ok and u is not None and u["activo"] == 1
+    finally:
+        _scrypt_sem.release()
+    ipr = auth.ip_resumida(ip)
+    if not ok:
+        # Solo se audita el primer fallo de la ventana y los bloqueos, y solo para cuentas que
+        # existen (o por IP): un bucle de intentos no puede llenar la auditoría.
+        for clave_i in claves:
+            _, primero, bloqueo = auth.fallo(conn, clave_i)
+            sujeto = u["nombre"] if (u and clave_i.startswith("u:")) else None
+            if clave_i.startswith("ip:"):
+                sujeto = "?"
+            if sujeto and (primero or bloqueo):
+                auth.auditar(conn, sujeto, "bloqueo" if bloqueo else "login_fallido",
+                             "ip" if clave_i.startswith("ip:") else "usuario", u["id"] if u and clave_i.startswith("u:") else None,
+                             None, None, ipr)
+        conn.commit()
+        return jsonify(error="Usuario o contraseña incorrectos."), 401
+    auth.acierto(conn, claves)
+    if rehacer:
+        conn.execute("UPDATE usuarios SET hash = ? WHERE id = ?", (auth.hashear(clave), u["id"]))
+    auth.cerrar_sesion(conn, request.cookies.get(COOKIE))  # la cookie anterior, si había, deja de valer
+    token = auth.crear_sesion(conn, u["id"], ip, request.headers.get("User-Agent", ""))
+    auth.auditar(conn, u["nombre"], "login", "usuario", u["id"], None, None, ipr)
+    conn.commit()
+    resp = jsonify(usuario=u["nombre"], rol=u["rol"])
+    _poner_cookie(resp, token)
+    return resp
+
+
+@app.post("/api/logout")
+def logout() -> Any:
+    body = request.get_json(silent=True) or {}
+    conn = db()
+    u = g.usuario
+    if isinstance(body, dict) and body.get("todas"):
+        auth.cerrar_todas(conn, u["id"])
+        auth.auditar(conn, u["nombre"], "logout_todas", "usuario", u["id"], ip=auth.ip_resumida(ip_real()))
+    else:
+        auth.cerrar_sesion(conn, request.cookies.get(COOKIE))
+        auth.auditar(conn, u["nombre"], "logout", "usuario", u["id"], ip=auth.ip_resumida(ip_real()))
+    conn.commit()
+    resp = jsonify(ok=True)
+    resp.delete_cookie(COOKIE, path="/", secure=True, httponly=True, samesite="Lax")
+    return resp
+
+
+@app.get("/api/yo")
+def yo() -> Response:
+    return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"])
+
+
+@app.post("/api/clave")
+def nueva_clave() -> Any:
+    body = request.get_json(silent=True)
+    actual = body.get("actual") if isinstance(body, dict) else None
+    nueva = body.get("nueva") if isinstance(body, dict) else None
+    if not isinstance(actual, str) or not isinstance(nueva, str) or len(actual) > 256:
+        return jsonify(error="Escribe la contraseña actual y la nueva."), 400
+    conn = db()
+    u = g.usuario
+    claves = [auth.clave_usuario(u["nombre"])]
+    if (seg := auth.espera(conn, claves)):
+        return jsonify(error="Demasiados intentos. Espera unos minutos."), 429
+    if not _scrypt_sem.acquire(timeout=1):
+        return jsonify(error="El servidor está ocupado. Intenta en unos segundos."), 503
+    try:
+        ok, _ = auth.verificar(actual, conn.execute("SELECT hash FROM usuarios WHERE id = ?", (u["id"],)).fetchone()["hash"])
+    finally:
+        _scrypt_sem.release()
+    if not ok:
+        auth.fallo(conn, claves[0])
+        conn.commit()
+        return jsonify(error="La contraseña actual no es correcta."), 400
+    try:
+        auth.cambiar_clave(conn, u["id"], nueva, u["nombre"], conservar=u["hash"])
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    return jsonify(ok=True)
+
+
+@app.get("/api/auditoria")
+def ver_auditoria() -> Any:
+    if g.usuario["rol"] != "admin":
+        return jsonify(error="Solo el admin ve el historial."), 403
+    antes = request.args.get("antes", type=int) or 2**62
+    rows = db().execute("SELECT * FROM auditoria WHERE id < ? ORDER BY id DESC LIMIT 100", (antes,)).fetchall()
+    return jsonify([{**dict(r), "antes": json.loads(r["antes"]) if r["antes"] else None,
+                     "despues": json.loads(r["despues"]) if r["despues"] else None} for r in rows])
+
+
 @app.get("/healthz")
 def healthz() -> Response:
     db().execute("SELECT 1").fetchone()
@@ -270,7 +464,7 @@ def healthz() -> Response:
 
 @app.get("/api/compras")
 def listar() -> Response:
-    rows = db().execute(f"SELECT {COLS} FROM compras ORDER BY fecha, id").fetchall()
+    rows = db().execute(f"SELECT {COLS} FROM compras WHERE {VIGENTES} ORDER BY fecha, id").fetchall()
     return jsonify([fila(r) for r in rows])
 
 
@@ -282,8 +476,10 @@ def crear() -> Any:
         return jsonify(error=str(e)), 400
     conn = db()
     cid = insertar(conn, c)
+    nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
+    auth.auditar(conn, quien(), "alta", "compra", cid, None, nueva, auth.ip_resumida(ip_real()))
     conn.commit()
-    return jsonify(fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())), 201
+    return jsonify(nueva), 201
 
 
 @app.put("/api/compras/<int:cid>")
@@ -293,22 +489,26 @@ def editar(cid: int) -> Any:
     except ValueError as e:
         return jsonify(error=str(e)), 400
     conn = db()
-    cur = conn.execute(
-        "UPDATE compras SET fecha = ?, monto = ?, precio = ?, sats = ? WHERE id = ?", (fecha, monto, precio, sats, cid)
-    )
-    conn.commit()
-    if cur.rowcount == 0:
+    previa = conn.execute(f"SELECT {COLS} FROM compras WHERE id = ? AND {VIGENTES}", (cid,)).fetchone()
+    if not previa:
         return jsonify(error="La compra no existe."), 404
-    return jsonify(fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone()))
+    conn.execute("UPDATE compras SET fecha = ?, monto = ?, precio = ?, sats = ? WHERE id = ?", (fecha, monto, precio, sats, cid))
+    nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
+    auth.auditar(conn, quien(), "edicion", "compra", cid, fila(previa), nueva, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return jsonify(nueva)
 
 
 @app.delete("/api/compras/<int:cid>")
 def borrar(cid: int) -> Any:
+    # Borrar es anular: la fila y su historia se quedan; listados, export y cálculos la excluyen.
     conn = db()
-    cur = conn.execute("DELETE FROM compras WHERE id = ?", (cid,))
-    conn.commit()
-    if cur.rowcount == 0:
+    previa = conn.execute(f"SELECT {COLS} FROM compras WHERE id = ? AND {VIGENTES}", (cid,)).fetchone()
+    if not previa:
         return jsonify(error="La compra no existe."), 404
+    conn.execute("UPDATE compras SET anulada_ts = ?, anulada_por = ? WHERE id = ?", (int(time.time()), quien(), cid))
+    auth.auditar(conn, quien(), "anulacion", "compra", cid, fila(previa), None, auth.ip_resumida(ip_real()))
+    conn.commit()
     return "", 204
 
 
@@ -320,7 +520,7 @@ def _fmt(x: float) -> str:
 
 @app.get("/api/export.csv")
 def exportar() -> Response:
-    rows = db().execute("SELECT fecha, monto, precio, sats FROM compras ORDER BY fecha, id").fetchall()
+    rows = db().execute(f"SELECT fecha, monto, precio, sats FROM compras WHERE {VIGENTES} ORDER BY fecha, id").fetchall()
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
     w.writerow(["fecha", "monto_usd", "precio_btc_usd", "sats", "btc"])
@@ -339,7 +539,7 @@ def importar() -> Any:
     if request.mimetype != "text/csv":
         return jsonify(error="Envía el archivo como text/csv."), 415
     try:
-        return jsonify(importar_csv(db(), request.get_data(as_text=True)))
+        return jsonify(importar_csv(db(), request.get_data(as_text=True), quien(), auth.ip_resumida(ip_real())))
     except ValueError as e:
         return jsonify(error=str(e)), 400
 
@@ -578,8 +778,12 @@ def cabeceras(resp: Response) -> Response:
     resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
     if request.path.startswith("/fonts/") and request.args.get("v") == VERSION and resp.status_code == 200:
         resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif request.path == "/" or request.path == "/login":
+        resp.headers["Cache-Control"] = "no-store"
     elif "Cache-Control" not in resp.headers:
         resp.headers["Cache-Control"] = "no-store" if request.path.startswith("/api/") else "no-cache"
+    if request.path == "/" or request.path.startswith("/api/"):
+        resp.headers["Vary"] = "Cookie"
     return resp
 
 
