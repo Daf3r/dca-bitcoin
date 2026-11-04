@@ -581,10 +581,13 @@ function celebrar(antes) {
   // Aparece cuando tu punto llega a la bandera, no antes.
   clearTimeout(celebrar.t);
   celebrar.t = setTimeout(() => {
-    // En móvil y tablet va bajo el saldo, sin tapar la cabecera ni la cifra.
+    // Siempre bajo el saldo, sin tapar la cabecera, la cifra ni la etiqueta de la cumbre. En móvil y tablet va
+    // centrada; en escritorio, alineada a la izquierda con el saldo.
     const saldo = document.querySelector('.saldo-d')?.getBoundingClientRect();
-    if (innerWidth < 1100 && saldo) el.style.top = `${Math.round(Math.max(saldo.bottom, 0) + 12)}px`;
+    if (saldo) el.style.top = `${Math.round(Math.max(saldo.bottom, 0) + 12)}px`;
     else el.style.removeProperty('top');
+    if (saldo && innerWidth >= 1100) { el.style.justifyItems = 'start'; el.style.paddingLeft = `${Math.round(saldo.left)}px`; }
+    else { el.style.removeProperty('justify-items'); el.style.removeProperty('padding-left'); }
     el.hidden = false;
     el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
     celebrar.t = setTimeout(() => { el.hidden = true; }, hito ? 2600 : 2000);
