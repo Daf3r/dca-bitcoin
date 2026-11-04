@@ -5,13 +5,14 @@ import csv
 import io
 import json
 import math
+import mimetypes
 import os
 import re
 import sqlite3
 import threading
 import time
 import urllib.request
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Callable
 
 from flask import Flask, Response, g, jsonify, request, send_from_directory
@@ -19,6 +20,12 @@ from flask import Flask, Response, g, jsonify, request, send_from_directory
 DB_PATH = os.environ.get("DB_PATH", "/data/libro.db")
 PRICE_TTL = int(os.environ.get("PRICE_TTL", "30"))               # segundos entre consultas al exchange
 PRICE_MAX_STALE = int(os.environ.get("PRICE_MAX_STALE", "900"))  # cuánto se sirve un precio viejo si falla la red
+HIST_MAX_DIAS = 3660        # el histórico se pide como mucho 10 años atrás
+HIST_BLOQUEO_S = 180        # caducidad del candado de descarga (por si un proceso muere a medias)
+HIST_ESPERA_FALLO_S = 600   # tras un fallo de los exchanges, nadie reintenta en este tiempo
+
+# Algunas imágenes base no traen el tipo de .woff2 y lo servirían como octet-stream.
+mimetypes.add_type("font/woff2", ".woff2")
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024  # el CSV de importación es lo más grande que llega
@@ -32,6 +39,11 @@ CREATE TABLE IF NOT EXISTS compras (
   creado INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_compras_fecha ON compras (fecha);
+CREATE TABLE IF NOT EXISTS precios (
+  fecha  TEXT PRIMARY KEY CHECK (fecha GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  cierre REAL NOT NULL CHECK (cierre > 0)
+);
+CREATE TABLE IF NOT EXISTS meta (clave TEXT PRIMARY KEY, valor TEXT NOT NULL);
 """
 
 MIGRACIONES = (
@@ -39,11 +51,12 @@ MIGRACIONES = (
 )
 
 CSP = (
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; "
+    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; "
     "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
 COLS = "id, fecha, monto, precio, sats, creado"
+GENESIS = date(2009, 1, 3)
 Compra = tuple[str, float, float, int]  # fecha, monto, precio, sats
 
 
@@ -121,6 +134,8 @@ def parse_compra(body: Any) -> Compra:
         raise ValueError("Fecha inválida.") from None
     if d > date.today() + timedelta(days=1):  # un día de margen por zonas horarias
         raise ValueError("La fecha no puede ser futura.")
+    if d < GENESIS:
+        raise ValueError("La fecha es anterior a bitcoin.")
     monto = _num(body.get("monto"), "Monto")
     if body.get("sats") is not None:
         s = body["sats"]
@@ -287,12 +302,16 @@ _precio: dict[str, Any] = {"precio": None, "ts": 0.0, "fuente": None}
 _candado = threading.Lock()
 
 
+def _get_json(url: str, timeout: float = 8) -> Any:
+    req = urllib.request.Request(url, headers={"User-Agent": "libro-dca/1.0", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.load(r)
+
+
 def consultar_precio() -> tuple[float | None, str | None]:
     for nombre, url, extraer in FUENTES:
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "libro-dca/1.0", "Accept": "application/json"})
-            with urllib.request.urlopen(req, timeout=5) as r:
-                p = extraer(json.load(r))
+            p = extraer(_get_json(url, timeout=5))
             if math.isfinite(p) and p > 0:
                 return p, nombre
         except Exception:
@@ -319,13 +338,195 @@ def precio() -> Any:
         )
 
 
+# ------------------------------------------------------- histórico de precios
+# Cierres diarios en UTC (así vienen las velas). Se descargan en un hilo de fondo:
+# el primer relleno son varias peticiones y no debe bloquear a los workers.
+CB_VELAS = "https://api.exchange.coinbase.com/products/BTC-USD/candles?granularity=86400&start={a}T00:00:00Z&end={b}T23:59:59Z"
+KR_VELAS = "https://api.kraken.com/0/public/OHLC?pair=XBTUSD&interval=1440&since={ts}"
+_hist_hilo = threading.Lock()
+
+
+def _hoy_utc() -> date:
+    return datetime.now(UTC).date()
+
+
+def _dia_utc(ts: float) -> str:
+    return datetime.fromtimestamp(ts, UTC).date().isoformat()
+
+
+def _meta(conn: sqlite3.Connection, clave: str) -> str | None:
+    row = conn.execute("SELECT valor FROM meta WHERE clave = ?", (clave,)).fetchone()
+    return row["valor"] if row else None
+
+
+def _meta_poner(conn: sqlite3.Connection, clave: str, valor: str) -> None:
+    conn.execute("INSERT INTO meta (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor", (clave, valor))
+
+
+def velas_coinbase(a: date, b: date) -> list[tuple[str, float]]:
+    out = []
+    ini = a
+    while ini <= b:  # Coinbase devuelve como mucho 300 velas por petición
+        fin = min(b, ini + timedelta(days=299))
+        for v in _get_json(CB_VELAS.format(a=ini.isoformat(), b=fin.isoformat())):
+            out.append((_dia_utc(v[0]), float(v[4])))
+        ini = fin + timedelta(days=1)
+    return out
+
+
+def velas_kraken(a: date, b: date) -> list[tuple[str, float]]:
+    # Kraken solo da las últimas 720 velas: sirve de reserva para lo reciente.
+    j = _get_json(KR_VELAS.format(ts=int(datetime(a.year, a.month, a.day, tzinfo=UTC).timestamp())))
+    if j.get("error"):
+        raise ValueError(str(j["error"]))
+    filas = next(v for k, v in j["result"].items() if k != "last")
+    desde, hasta = a.isoformat(), b.isoformat()
+    return [(d, float(f[4])) for f in filas if desde <= (d := _dia_utc(f[0])) <= hasta]
+
+
+def descargar_velas(a: date, b: date) -> tuple[list[tuple[str, float]], bool]:
+    """Velas del tramo y si el tramo quedó completo (Kraken solo llega a ~2 años atrás)."""
+    try:
+        return velas_coinbase(a, b), True
+    except Exception:
+        filas = velas_kraken(a, b)
+        return filas, bool(filas) and filas[0][0] <= (a + timedelta(days=3)).isoformat()
+
+
+def huecos_historico(conn: sqlite3.Connection, desde: date, hoy: date) -> list[tuple[date, date]]:
+    cubierto, dia = _meta(conn, "hist_desde"), _meta(conn, "hist_dia")
+    if not cubierto or not dia:
+        return [(desde, hoy)]
+    out = []
+    c = date.fromisoformat(cubierto)
+    if desde < c:
+        out.append((desde, c - timedelta(days=1)))
+    if dia != hoy.isoformat():  # la vela de hoy cambia: se repasan los últimos días
+        out.append((date.fromisoformat(dia) - timedelta(days=2), hoy))
+    return out
+
+
+def _tomar_candado() -> str:
+    """Devuelve 'tomado', 'ocupado' (otro proceso descarga) o 'espera' (falló hace poco)."""
+    conn = connect()
+    try:
+        conn.execute("BEGIN IMMEDIATE")  # serializa a todos los workers sobre la misma base
+        ahora = time.time()
+        if float(_meta(conn, "hist_bloqueo") or 0) > ahora:
+            conn.rollback()
+            return "ocupado"
+        if float(_meta(conn, "hist_fallo") or 0) > ahora:
+            conn.rollback()
+            return "espera"
+        _meta_poner(conn, "hist_bloqueo", str(ahora + HIST_BLOQUEO_S))
+        conn.commit()
+        return "tomado"
+    finally:
+        conn.close()
+
+
+def _rellenar(desde: date) -> None:
+    """Corre en un hilo: cualquier error se anota como fallo y el candado se suelta siempre."""
+    conn = None
+    completo = False
+    try:
+        conn = connect()
+        hoy = _hoy_utc()
+        cubre = desde
+        completo = True
+        for a, b in huecos_historico(conn, desde, hoy):
+            filas, tramo_completo = descargar_velas(a, b)
+            conn.executemany(
+                "INSERT INTO precios (fecha, cierre) VALUES (?, ?) ON CONFLICT(fecha) DO UPDATE SET cierre = excluded.cierre",
+                [f for f in filas if f[1] > 0 and math.isfinite(f[1])],
+            )
+            conn.commit()
+            if not tramo_completo:
+                # Solo se da por cubierto lo que de verdad llegó; el resto se reintenta más tarde.
+                completo = False
+                cubre = max(cubre, date.fromisoformat(filas[0][0])) if filas else max(cubre, b + timedelta(days=1))
+        cubierto = _meta(conn, "hist_desde")
+        _meta_poner(conn, "hist_desde", min(cubre.isoformat(), cubierto or cubre.isoformat()))
+        _meta_poner(conn, "hist_dia", hoy.isoformat())
+        conn.commit()
+    except Exception:
+        completo = False
+    finally:
+        try:
+            c = conn or connect()
+            if not completo:
+                _meta_poner(c, "hist_fallo", str(time.time() + HIST_ESPERA_FALLO_S))
+            _meta_poner(c, "hist_bloqueo", "0")
+            c.commit()
+            c.close()
+        except Exception:
+            pass  # sin base no hay nada que soltar: el candado caduca solo
+
+
+def _lanzar_relleno(desde: date) -> str:
+    with _hist_hilo:
+        estado = _tomar_candado()
+        if estado == "tomado":
+            threading.Thread(target=_rellenar, args=(desde,), daemon=True).start()
+        return estado
+
+
+@app.get("/api/historico")
+def historico() -> Any:
+    hoy = _hoy_utc()
+    txt = request.args.get("desde") or (hoy - timedelta(days=365)).isoformat()
+    try:
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", txt):
+            raise ValueError
+        desde = date.fromisoformat(txt)
+    except ValueError:
+        return jsonify(error="Fecha inválida. Usa AAAA-MM-DD."), 400
+    if desde > hoy:
+        return jsonify(error="La fecha no puede ser futura."), 400
+    if (hoy - desde).days > HIST_MAX_DIAS:
+        return jsonify(error="Como mucho 10 años de histórico."), 400
+    conn = db()
+    cargando = False
+    pendiente = bool(huecos_historico(conn, desde, hoy))
+    if pendiente:
+        cargando = _lanzar_relleno(desde) in ("tomado", "ocupado")
+    rows = conn.execute("SELECT fecha, cierre FROM precios WHERE fecha >= ? ORDER BY fecha", (desde.isoformat(),)).fetchall()
+    if not rows and not cargando:
+        return jsonify(error="El histórico de precios no está disponible ahora."), 503
+    resp = jsonify(
+        desde=desde.isoformat(),
+        precios=[[r["fecha"], round(r["cierre"], 2)] for r in rows],
+        cargando=cargando,
+        desactualizado=pendiente and not cargando,
+    )
+    if not pendiente:
+        resp.headers["Cache-Control"] = "private, max-age=600"
+    return resp
+
+
+@app.errorhandler(404)
+@app.errorhandler(405)
+@app.errorhandler(413)
+@app.errorhandler(500)
+def error_http(e: Any) -> Any:
+    # En la API, errores en JSON y sin detalles internos; en el resto, el texto estándar.
+    codigo = getattr(e, "code", 500) or 500
+    if not request.path.startswith("/api/"):
+        return e if codigo != 500 else ("Error interno.", 500)
+    mensajes = {404: "No existe.", 405: "Método no permitido.", 413: "El envío es demasiado grande.", 500: "Error interno."}
+    return jsonify(error=mensajes.get(codigo, "Error.")), codigo
+
+
 @app.after_request
 def cabeceras(resp: Response) -> Response:
     resp.headers["Content-Security-Policy"] = CSP
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Referrer-Policy"] = "no-referrer"
-    resp.headers["Cache-Control"] = "no-store" if request.path.startswith("/api/") else "no-cache"
+    resp.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
+    if "Cache-Control" not in resp.headers:
+        resp.headers["Cache-Control"] = "no-store" if request.path.startswith("/api/") else "no-cache"
     return resp
 
 

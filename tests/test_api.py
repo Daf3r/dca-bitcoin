@@ -130,6 +130,9 @@ r = cl.get("/")
 check(r.status_code == 200 and "script-src 'self'" in r.headers["Content-Security-Policy"] and "unsafe" not in r.headers["Content-Security-Policy"], "csp")
 check(cl.get("/app.js").mimetype in ("text/javascript", "application/javascript"), cl.get("/app.js").mimetype)
 check(cl.get("/api/compras").headers["Cache-Control"] == "no-store", "no-store")
+r = cl.get("/fonts/fraunces.woff2")
+check(r.status_code == 200 and r.mimetype == "font/woff2", "fuente servida desde self")
+check("font-src 'self'" in r.headers["Content-Security-Policy"], "csp font-src")
 check(cl.get("/healthz").get_json() == {"ok": True}, "healthz")
 
 # precio con fuentes simuladas
@@ -143,6 +146,158 @@ server.consultar_precio = lambda: (None, None)
 r = cl.get("/api/precio"); check(r.status_code == 200 and r.get_json()["viejo"], "viejo")
 server._precio["ts"] -= 1000
 check(cl.get("/api/precio").status_code == 503, "503")
+
+
+# --- histórico de precios, con los exchanges simulados
+import threading as _th
+import time as _t
+from datetime import datetime as _dt, timezone as _tz
+from urllib.parse import urlparse, parse_qs
+
+llamadas = []
+modo = {"cb": "ok", "kr": "ok", "lento": 0.0}
+
+
+def _dias(a, b):
+    d = a
+    while d <= b:
+        yield d
+        d += timedelta(days=1)
+
+
+def _ts(d):
+    return int(_dt(d.year, d.month, d.day, tzinfo=_tz.utc).timestamp())
+
+
+def falso_get_json(url, timeout=8):
+    q = parse_qs(urlparse(url).query)
+    if "coinbase" in url:
+        a = date.fromisoformat(q["start"][0][:10]); b = date.fromisoformat(q["end"][0][:10])
+        llamadas.append(("cb", a, b))
+        _t.sleep(modo["lento"])
+        if modo["cb"] != "ok":
+            raise OSError("coinbase caído")
+        assert (b - a).days < 300, "ventana de más de 300 días"
+        return [[_ts(d), 1, 2, 3, 30000 + d.toordinal() % 1000, 5] for d in reversed(list(_dias(a, b)))]
+    if "kraken" in url:
+        a = _dt.fromtimestamp(int(q["since"][0]), _tz.utc).date()
+        llamadas.append(("kr", a, None))
+        if modo["kr"] != "ok":
+            raise OSError("kraken caído")
+        hoy_ = _dt.now(_tz.utc).date()
+        a = max(a, hoy_ - timedelta(days=719))  # como el real: solo las últimas 720 velas
+        return {"error": [], "result": {"XXBTZUSD": [[_ts(d), "1", "2", "3", str(40000 + d.toordinal() % 1000), "0", "0", 1] for d in _dias(a, hoy_)], "last": 0}}
+    raise AssertionError(url)
+
+
+server._get_json = falso_get_json
+hoy_utc = _dt.now(_tz.utc).date()
+
+
+def hist(desde=None):
+    return cl.get("/api/historico" + (f"?desde={desde}" if desde else ""))
+
+
+def esperar(desde):
+    for _ in range(100):
+        r = hist(desde)
+        if not r.get_json().get("cargando"):
+            return r
+        _t.sleep(0.05)
+    raise AssertionError("el relleno no terminó")
+
+
+check(hist("2024-13-01").status_code == 400, "desde mal formado")
+check(hist("ayer").status_code == 400, "desde no fecha")
+check(hist((hoy_utc + timedelta(days=2)).isoformat()).status_code == 400, "desde futuro")
+check(hist((hoy_utc - timedelta(days=4000)).isoformat()).status_code == 400, "más de 10 años")
+
+# Primer relleno lento: la respuesta no espera a la descarga.
+desde900 = (hoy_utc - timedelta(days=900)).isoformat()
+modo["lento"] = 0.15
+t0 = _t.time(); r = hist(desde900); dt_ = _t.time() - t0
+j = r.get_json()
+check(r.status_code == 200 and j["cargando"] and j["precios"] == [] and dt_ < 0.12, f"no bloquea ({dt_:.3f}s) {j}")
+# Peticiones simultáneas mientras descarga: una sola descarga.
+res = []
+hilos = [_th.Thread(target=lambda: res.append(server.app.test_client().get(f"/api/historico?desde={desde900}").get_json())) for _ in range(4)]
+[h.start() for h in hilos]; [h.join() for h in hilos]
+check(all(x["cargando"] for x in res), "simultáneas ven la descarga en curso")
+r = esperar(desde900); j = r.get_json()
+inicios = [c for c in llamadas if c[0] == "cb" and c[1].isoformat() == desde900]
+check(len(inicios) == 1, f"una sola descarga ({len(inicios)})")
+check(len([c for c in llamadas if c[0] == "cb"]) == 4, f"paginación de 300 en 300: {len(llamadas)} llamadas")
+check(len(j["precios"]) == 901 and j["precios"][0][0] == desde900 and j["precios"][-1][0] == hoy_utc.isoformat(), "relleno completo")
+check(not j["desactualizado"] and r.headers["Cache-Control"] == "private, max-age=600", "caché http")
+modo["lento"] = 0.0
+n = len(llamadas)
+r = hist(desde900)
+check(len(llamadas) == n and not r.get_json()["cargando"], "segunda petición sale de la caché")
+check(len(hist((hoy_utc - timedelta(days=30)).isoformat()).get_json()["precios"]) == 31, "subrango sin descargar")
+
+# Actualización diaria perezosa: solo los últimos días.
+c2 = server.connect(); server._meta_poner(c2, "hist_dia", (hoy_utc - timedelta(days=1)).isoformat()); c2.commit(); c2.close()
+n = len(llamadas)
+esperar(desde900)
+nuevas = llamadas[n:]
+check(len(nuevas) == 1 and nuevas[0][1] == hoy_utc - timedelta(days=3), f"refresco corto {nuevas}")
+
+# Reserva a Kraken cuando Coinbase falla: lo reciente sí se completa.
+modo["cb"] = "caido"
+c2 = server.connect(); server._meta_poner(c2, "hist_dia", (hoy_utc - timedelta(days=1)).isoformat()); c2.commit(); c2.close()
+n = len(llamadas)
+r = esperar(desde900); j = r.get_json()
+check(any(c[0] == "kr" for c in llamadas[n:]) and not j["desactualizado"], "refresco reciente por Kraken")
+# Un hueco antiguo que Kraken no alcanza no se da por cubierto: se sirve lo que hay y se reintenta luego.
+desde1000 = (hoy_utc - timedelta(days=1000)).isoformat()
+r = esperar(desde1000); j = r.get_json()
+c2 = server.connect(); cub = server._meta(c2, "hist_desde"); c2.close()
+check(cub == desde900 and j["precios"][0][0] == desde900 and j["desactualizado"], f"hueco antiguo pendiente ({cub})")
+c2 = server.connect(); c2.execute("DELETE FROM meta WHERE clave = 'hist_fallo'"); c2.commit(); c2.close()
+
+# Fallo total con caché: sirve lo guardado marcado como desactualizado y espera antes de reintentar.
+modo["kr"] = "caido"
+c2 = server.connect(); server._meta_poner(c2, "hist_dia", (hoy_utc - timedelta(days=1)).isoformat()); c2.commit(); c2.close()
+esperar(desde900)
+n = len(llamadas)
+r = hist(desde900); j = r.get_json()
+check(r.status_code == 200 and j["desactualizado"] and not j["cargando"] and len(j["precios"]) == 901, "sirve caché si fallan")
+check(len(llamadas) == n and "max-age" not in r.headers["Cache-Control"], "no reintenta durante la espera")
+
+# Fallo total sin caché: error claro.
+c2 = server.connect(); c2.execute("DELETE FROM precios"); c2.execute("DELETE FROM meta"); c2.commit(); c2.close()
+r = esperar(desde900)
+check(r.status_code == 503 and "error" in r.get_json(), "503 sin datos")
+c2 = server.connect(); c2.execute("DELETE FROM meta"); c2.commit(); c2.close()
+modo["cb"] = modo["kr"] = "ok"
+
+# --- robustez y seguridad
+r = cl.get("/api/nada")
+check(r.status_code == 404 and r.is_json and r.get_json()["error"], "404 de la API en JSON")
+r = cl.post("/api/precio")
+check(r.status_code == 405 and r.is_json, "405 de la API en JSON")
+check(cl.post("/api/compras", json={"fecha": "2008-12-31", "monto": 10, "sats": 1000}).status_code == 400, "fecha anterior a bitcoin")
+r = cl.get("/")
+check(r.headers["Cross-Origin-Opener-Policy"] == "same-origin" and "camera=()" in r.headers["Permissions-Policy"], "cabeceras extra")
+# El hilo del histórico ante una excepción: anota el fallo y suelta el candado.
+orig = server.huecos_historico
+llamadas_huecos = []
+def explota(*a):
+    llamadas_huecos.append(1)
+    if len(llamadas_huecos) > 1:  # la primera es la del request; la segunda, la del hilo
+        raise RuntimeError("boom")
+    return orig(*a)
+server.huecos_historico = explota
+c2 = server.connect(); server._meta_poner(c2, "hist_dia", (hoy_utc - timedelta(days=1)).isoformat()); c2.commit(); c2.close()
+hist(desde900)
+for _ in range(60):
+    c2 = server.connect(); bl, fa = server._meta(c2, "hist_bloqueo"), server._meta(c2, "hist_fallo"); c2.close()
+    if bl == "0":
+        break
+    _t.sleep(0.05)
+check(bl == "0" and float(fa or 0) > _t.time(), "el hilo suelta el candado y anota el fallo")
+server.huecos_historico = orig
+c2 = server.connect(); c2.execute("DELETE FROM meta"); c2.commit(); c2.close()
 
 # CLI importar
 p = os.path.join(tmp, "c.csv"); open(p, "w").write(txt)

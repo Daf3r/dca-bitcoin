@@ -2,7 +2,7 @@
 
 Registro de compras DCA de Bitcoin con precio en vivo. Flask + SQLite en tu servidor, detrás de Caddy y Cloudflare Access.
 
-Tu pila de sats es lo primero que ves: una cuadrícula que se llena hacia la próxima meta (1M sats, 10M, 1 BTC), marca tu última compra y te dice en cuánto llegas a ese ritmo. Al lado van el valor de hoy, la ganancia o pérdida (USD y %), lo invertido y el costo promedio, más un gráfico de lo invertido frente al valor. Registras fecha, monto y sats (el precio se deriva); si no tienes los sats, se calculan con un precio. Tocar una compra la abre para editar o borrar. Exporta e importa CSV desde la propia página. Funciona en el teléfono y respeta el modo oscuro.
+Tu saldo en sats es una montaña que subes compra a compra: la cabecera es un paisaje de noche (de amanecer en modo claro) con campamentos en 100k, 1M, 10M y 1 BTC, y una celebración cuando cruzas uno. Debajo, el precio de BTC con tus compras marcadas y tu costo promedio, y reportes: campamentos con fecha, año por año, constancia semanal y tu mejor y peor precio. Anotas con un teclado numérico (pagaste y recibiste; el precio se deriva), tocas una compra para editarla o borrarla, e importas o exportas CSV. Funciona igual de bien en el teléfono y en el PC.
 
 ```
 navegador ──▶ Cloudflare Access (login) ──▶ Caddy ──▶ 127.0.0.1:18082 ──▶ data/libro.db
@@ -59,10 +59,11 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 ## Notas de seguridad
 - Ningún servicio publica puertos; los contenedores van en solo lectura, sin capabilities y con `no-new-privileges`.
 - La app confía en que Cloudflare Access ya autenticó la petición y solo escucha en localhost. Si algún día se expone de otra forma, valida el encabezado `Cf-Access-Jwt-Assertion` en `server.py` o añade login propio.
-- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. Usa las fuentes del sistema: el navegador no llama a ningún tercero.
+- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. La única fuente web (Fraunces, licencia OFL en `app/static/fonts/OFL.txt`) va dentro del repo: el navegador no llama a ningún tercero.
 - Las escrituras rechazan peticiones marcadas por el navegador como de otro sitio (`Sec-Fetch-Site`), y la importación exige `text/csv`, que obliga a un preflight CORS.
-- El precio lo consulta el servidor (Coinbase, con Kraken de reserva), se guarda 30 s en caché y el navegador nunca habla con terceros.
+- El precio y el histórico los consulta el servidor (Coinbase, con Kraken de reserva). El precio se guarda 30 s; el histórico diario se guarda en la base (tabla `precios`) y se actualiza como mucho una vez al día, en segundo plano. El navegador nunca habla con terceros.
 
 ## Pruebas
-`python tests/test_api.py` (necesita Flask; usa una base temporal y no sale a la red). Cubre la API con el cliente de pruebas de Flask: alta, edición, borrado, validaciones, importación/exportación CSV idempotente, migración de una base sin `sats`, caché y respaldo del precio, protección de origen y el respaldo verificado. Frontend con Playwright contra el servidor local (registrar, estimar con precio, editar, borrar con diálogo, importar, exportar, gráfico con teclado) a 360/375 px y escritorio, claro y oscuro, sin errores de consola ni violaciones de CSP ni scroll horizontal.
-El frontend también se probó con cientos de compras, carteras de más de 10 BTC, 320 px, 1920 px y solo teclado. El build de Docker y la integración con Caddy y Access se validan en el servidor.
+- `python tests/test_api.py` (necesita Flask; base temporal, exchanges simulados, sin red): API completa, validaciones, CSV, migración, precio e histórico (descarga en segundo plano, una sola descarga, paginación, Kraken, fallos).
+- `node tests/test_lib.mjs`: cálculos del frontend (hitos, racha con casos límite, proyección, «hoy» de El Salvador, borde de husos horarios, decimación).
+- El frontend se prueba con Playwright contra el servidor local en siete estados (de 0 compras a más de 200 BTC, sin precio y sin histórico), de 320 a 1920 px, claro y oscuro. El build de Docker y la integración con Caddy y Access se validan en el servidor.
