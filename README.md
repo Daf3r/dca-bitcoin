@@ -114,3 +114,10 @@ Además de los campamentos grandes de la montaña (100k, 1M, 10M, 1 BTC), la bar
 
 ## Novedades al abrir la web
 Quien entra con una cuenta de lector ve, la primera vez que abre la web, un resumen de lo que pasó desde su última visita: las compras o ventas nuevas, el saldo, lo que vale hoy, la ganancia, el avance hacia la siguiente meta y la racha. Si no pasó nada, no sale nada. La primera vez es una bienvenida con los últimos movimientos. Al cerrarlo, el servidor guarda la visita de esa persona, así que vale igual en el móvil y en el PC. No hace falta ningún canal externo: como se compra una vez por semana o por quincena, basta con que lo vean al entrar.
+
+## Instalar en el iPhone (PWA)
+En Safari abre `https://dca.polarzero.dev`, toca **Compartir → Añadir a pantalla de inicio**. Queda con su icono y sin la barra de Safari. En Android (Chrome): menú → «Instalar app». Notas:
+- La app instalada en iPhone **no comparte las cookies de Safari**: la primera vez hay que entrar de nuevo. La sesión dura 90 días deslizantes.
+- No hay modo sin conexión a propósito (sin service worker): así nunca se sirve un `app.js` viejo tras actualizar.
+- El manifiesto (`/manifest.webmanifest`) y los iconos son públicos, porque el navegador los pide sin cookie. Los iconos PNG salen de `icon.svg` (el de Apple va a sangre completa y el «maskable» con margen).
+- La barra de estado es la opaca (`black`). Si se quiere que la montaña llegue hasta arriba, cambiar a `black-translucent` en `index.html` y añadir `env(safe-area-inset-top)` a la cabecera; probar en el iPhone antes.

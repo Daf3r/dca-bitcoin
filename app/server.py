@@ -31,6 +31,7 @@ HIST_ESPERA_FALLO_S = 600   # tras un fallo de los exchanges, nadie reintenta en
 
 # Algunas imágenes base no traen el tipo de .woff2 y lo servirían como octet-stream.
 mimetypes.add_type("font/woff2", ".woff2")
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024  # el CSV de importación es lo más grande que llega
@@ -78,7 +79,7 @@ MIGRACIONES = (
 VIGENTES = "anulada_ts IS NULL"
 
 CSP = (
-    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; "
+    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; manifest-src 'self'; "
     "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
@@ -316,7 +317,7 @@ def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip:
 ESCRITURA = ("POST", "PUT", "DELETE", "PATCH")
 PUBLICAS = {"/healthz", "/login", "/api/login", "/api/estado"}
 # El código de la página no es secreto: módulos, estilos, fuentes e icono se sirven sin sesión.
-RECURSO_PUBLICO = re.compile(r"/(?:[\w-]+\.js|styles\.css|icon\.svg|fonts/[\w.-]+)")
+RECURSO_PUBLICO = re.compile(r"/(?:[\w-]+\.js|styles\.css|icon\.svg|manifest\.webmanifest|(?:icon-[\w-]+|apple-touch-icon)\.png|fonts/[\w.-]+)")
 
 
 @app.before_request
