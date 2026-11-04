@@ -228,6 +228,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .g-cursor .gc-c { fill: var(--naranja); stroke: var(--fondo); stroke-width: 2; }
 /* Gráfico «lo que pusiste y lo que vale». */
 .valor { padding-top: 6px; }
+.valor .rep-txt { margin-top: 12px; }
 .va-1 { stop-color: var(--naranja-txt); stop-opacity: 0.2; }
 .va-2 { stop-color: var(--naranja-txt); stop-opacity: 0; }
 .v-area { fill: url(#v-grad); }

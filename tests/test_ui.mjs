@@ -90,6 +90,22 @@ try {
       const inv = compras.reduce((a, c) => a + c.monto, 0);
       ok((await p.textContent('#v-lectura')).includes(`pusiste $${entero(inv)}`), 'el gráfico de valor coincide con el cálculo');
 
+      // Tu costo contra el precio promedio del período: la cifra sale del histórico y del precio vivo.
+      {
+        const vivo = (await datos(p, '/api/precio')).precio;
+        const desde = compras[0].fecha;
+        const hist = (await datos(p, `/api/historico?desde=${desde}`)).precios.filter(([f]) => f >= desde).map(([f, c]) => [f, c]);
+        const hoyIso = new Date().toISOString().slice(0, 10);
+        if (hist.at(-1)[0] >= hoyIso) hist[hist.length - 1] = [hist.at(-1)[0], vivo];
+        else hist.push([hoyIso, vivo]);
+        const media = hist.reduce((a, [, c]) => a + c, 0) / hist.length;
+        const costo = (compras.reduce((a, c) => a + c.monto, 0) * 1e8) / compras.reduce((a, c) => a + c.sats, 0);
+        const esperado = (costo / media - 1) * 100;
+        const txt = (await p.textContent('#v-vs')).trim();
+        const m = /un ([\d.]+)% por (debajo|encima)/.exec(txt);
+        ok(!!m && Math.abs((m[2] === 'debajo' ? -1 : 1) * Number(m[1]) - esperado) < 0.15, `costo contra promedio del período: «${txt.slice(0, 90)}…» (esperado ${esperado.toFixed(1)} %)`);
+      }
+
       // Tema: automático → claro → oscuro → automático.
       await p.click('#cuenta-btn');
       await p.waitForTimeout(250);
