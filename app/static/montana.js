@@ -26,16 +26,18 @@ let estado = null;
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, inicio = sats, techo = 0 }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0 }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
   const esc = escalaMontana(sats, c.campos);
   const rnd = azar(42);
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><g aria-hidden="true">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient></defs><g aria-hidden="true">`;
   [0, 0.17, 0.31, 0.43, 0.53].forEach((b, i) => { s += `<rect class="cielo-${i}" x="0" y="${f1(b * H)}" width="${W}" height="${f1(H - b * H)}"/>`; });
   for (let i = 0; i < 46; i++) s += `<circle class="estrella" cx="${f1(rnd() * W)}" cy="${f1(rnd() * H * 0.5)}" r="${f1(0.5 + rnd() * 1.1)}"/>`;
   s += `<circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 1.7)}"/><circle class="astro" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs)}"/>`;
+  // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
+  s += `<rect class="alba" id="m-alba" x="0" y="0" width="${W}" height="${H}"/>`;
   const sierra = (base, amp, paso, clase) => {
     let d = `M0 ${H}`;
     for (let x = 0; x <= W + paso; x += paso) d += `L${f1(x)} ${f1(base * H - (Math.sin(x / (W / 3.3) + base * 9) * 0.5 + rnd() * 0.6) * amp * H)}`;
@@ -86,9 +88,9 @@ export function dibujarMontana(host, { sats, meta, inicio = sats, techo = 0 }) {
     const [nx, ny] = pts[i + 1], k = 0.22;
     d += `L${f1(x + (px - x) * k)} ${f1(y + (py - y) * k)}Q${f1(x)} ${f1(y)} ${f1(x + (nx - x) * k)} ${f1(y + (ny - y) * k)}`;
   }
-  s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/>`;
+  s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
-  s += `<g id="m-campos"></g><g class="yo" id="m-yo"><circle class="yo-halo" r="15"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g>`;
+  s += `<g id="m-campos"></g><g class="yo" id="m-yo"><circle class="yo-halo" r="15"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   for (let fila = 0; fila < 2; fila++) {
     const yb = H * (fila ? 1.005 : 0.975), alto = H * (fila ? 0.07 : 0.05);
     for (let x = -10; x < W + 20; x += alto * (0.55 + rnd() * 0.4)) {
@@ -112,7 +114,7 @@ export function dibujarMontana(host, { sats, meta, inicio = sats, techo = 0 }) {
     `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})"><line y2="-28"/><path class="banderin" d="M0 -28L20 -22L0 -16Z"/></g>`).join('');
   estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c };
   colocar(inicio, false);
-  describir(sats, meta);
+  describir(sats, etapa);
 }
 
 /** Etiquetas sin choques: a la derecha de la bandera; si choca o se sale, a la izquierda; si sigue, se oculta. */
@@ -151,23 +153,116 @@ function colocar(sats, animado) {
   return p;
 }
 
-/** Sube a "Tú" desde `desde` hasta `hasta` sats. Con movimiento reducido, salta al final. */
-export function subir(desde, hasta, ms = 2000) {
+/**
+ * Sube a "Tú" desde `desde` hasta `hasta` sats. Con movimiento reducido, salta al final.
+ * `festejo` ({nivel: 'compra'|'etapa'|'hito', etapa, delta}) solo llega por una compra de esta
+ * sesión: el tramo recién subido se enciende y, al llegar, la montaña celebra.
+ */
+export function subir(desde, hasta, ms = 2000, festejo = null) {
   if (!estado) return;
   estado.sats = hasta;
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || desde === hasta) { colocar(hasta, false); return; }
   estado.host.querySelector('#m-etiquetas').innerHTML = '';
-  const { esc } = estado;
+  const { esc, enAltura, L, host } = estado;
   const a0 = altitud(desde, esc), a1 = altitud(hasta, esc);
+  const estela = festejo && host.querySelector('#m-estela');
+  const l0 = estela ? enAltura(a0) : 0;
+  if (estela) estela.classList.add('viva');
   const t0 = performance.now();
   const paso = (t) => {
+    if (estado.host !== host || !host.isConnected) return; // la escena se redibujó (resize)
     const k = Math.min(1, (t - t0) / ms), e = 1 - (1 - k) ** 3;
     const alt = a0 + (a1 - a0) * e;
     const satsAhora = 10 ** (Math.log10(esc.base) + alt * (Math.log10(esc.cima) - Math.log10(esc.base)));
-    colocar(k < 1 ? satsAhora : hasta, k < 1);
+    const p = colocar(k < 1 ? satsAhora : hasta, k < 1);
+    if (estela) estela.style.strokeDasharray = `0 ${f1(l0)} ${f1(Math.max(0, enAltura(alt) - l0))} ${f1(L)}`;
     if (k < 1) requestAnimationFrame(paso);
+    else if (festejo) llegar(festejo, p, hasta);
   };
   requestAnimationFrame(paso);
+}
+
+// ------------------------------------------------------------------ celebración
+const NS = 'http://www.w3.org/2000/svg';
+function nodo(tag, attrs, padre) {
+  const el = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  padre.appendChild(el);
+  return el;
+}
+const retirar = (el, ms) => setTimeout(() => el.remove(), ms);
+
+/** Pocas brasas que suben desde (x, y) y se apagan: solo transform y opacity. */
+function brasas(fx, x, y, n, alcance, retraso = 0) {
+  for (let i = 0; i < n; i++) {
+    const g = nodo('g', { transform: `translate(${f1(x)} ${f1(y)})` }, fx);
+    const c = nodo('circle', { class: 'brasa', r: f1(1.3 + Math.random() * 1.9) }, g);
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.7;
+    const dist = alcance * (0.45 + Math.random() * 0.55);
+    c.style.setProperty('--dx', `${f1(Math.cos(ang) * dist)}px`);
+    c.style.setProperty('--dy', `${f1(Math.sin(ang) * dist)}px`);
+    c.style.animationDuration = `${900 + Math.round(Math.random() * 700)}ms`;
+    c.style.animationDelay = `${retraso + i * 22}ms`;
+    retirar(g, retraso + 2000);
+  }
+}
+
+function llegar({ nivel, etapa, delta }, p, hasta) {
+  const { host, W, c, campos, enAltura, camino, esc } = estado;
+  const fx = host.querySelector('#m-fx');
+  const estela = host.querySelector('#m-estela');
+  if (!fx) return;
+  estela.classList.remove('viva');
+  estela.classList.add('apaga');
+  setTimeout(() => estela.classList.remove('apaga'), 1000);
+
+  // Cada compra: brasas desde tu punto, la cifra flotando y la siguiente bandera que se agita.
+  brasas(fx, p.x, p.y, nivel === 'compra' ? 9 : 14, nivel === 'compra' ? 46 : 64);
+  // «+N sats» donde no choque con las etiquetas (banderas y «Tú»): se prueban varios sitios.
+  const t = nodo('text', { class: 'flota' }, fx);
+  t.textContent = `+${entero(delta)} sats`;
+  const ocupadas = [...host.querySelectorAll('#m-etiquetas text')].map((e) => e.getBBox());
+  // La cifra entra 8 px más abajo y sube 24 px mientras se apaga: se reserva todo su recorrido.
+  const choca = (b) => b.x < 4 || b.x + b.width > W - 4 || b.y - 26 < 4
+    || ocupadas.some((o) => b.x < o.x + o.width + 4 && b.x + b.width + 4 > o.x && b.y - 26 < o.y + o.height + 2 && b.y + b.height + 10 > o.y);
+  const sitios = [[18, 22, 'start'], [-18, 22, 'end'], [0, -40, 'middle'], [18, -10, 'start'], [-18, -10, 'end'], [0, -64, 'middle'], [0, 42, 'middle']];
+  for (const [dx, dy, ancla] of sitios) {
+    t.setAttribute('x', f1(p.x + dx)); t.setAttribute('y', f1(p.y + dy)); t.setAttribute('text-anchor', ancla);
+    if (!choca(t.getBBox())) break;
+  }
+  retirar(t, 1800);
+  const siguiente = host.querySelector(`.campo[data-m="${campos.find((x) => x.m > hasta)?.m}"]`);
+  if (siguiente) { siguiente.classList.add('agita'); setTimeout(() => siguiente.classList.remove('agita'), 1700); }
+  if (nivel === 'compra') return;
+
+  // Etapa: la bandera de la etapa se iza con un anillo de luz y el cielo respira.
+  const alba = host.querySelector('#m-alba');
+  alba.classList.remove('respira', 'amanece'); void alba.getBBox();
+  alba.classList.add(nivel === 'hito' ? 'amanece' : 'respira');
+  setTimeout(() => alba.classList.remove('respira', 'amanece'), 3000);
+  let bandera = host.querySelector(`.campo[data-m="${etapa}"]`);
+  const pe = bandera ? campos.find((x) => x.m === etapa).p : camino.getPointAtLength(enAltura(altitud(etapa, esc)));
+  if (bandera) {
+    bandera.classList.add('iza');
+    setTimeout(() => bandera.classList.remove('iza'), 1800);
+  } else {
+    bandera = nodo('g', { class: 'campo alcanzado iza plantada', transform: `translate(${f1(pe.x)} ${f1(pe.y)})` }, fx);
+    nodo('line', { y2: '-24' }, bandera);
+    nodo('path', { class: 'banderin', d: 'M0 -24L17 -19L0 -14Z' }, bandera);
+    retirar(bandera, 3200);
+  }
+  for (const [i, r] of [[0, 12], [1, 12]]) {
+    const a = nodo('circle', { class: 'anillo', cx: f1(pe.x), cy: f1(pe.y - 20), r }, fx);
+    a.style.animationDelay = `${i * 260}ms`;
+    retirar(a, 2000);
+  }
+  if (nivel !== 'hito') return;
+
+  // Hito grande (1M, 10M, 1 BTC): amanecer completo con luz sobre la cumbre.
+  const rl = Math.min(W, estado.H) * 0.22;
+  const luz = nodo('circle', { class: 'luz-cima', cx: f1(c.sx), cy: f1(c.sy), r: f1(rl), fill: 'url(#m-luz)' }, fx);
+  retirar(luz, 3000);
+  brasas(fx, c.sx, c.sy + 6, 10, rl * 0.9, 500);
 }
 
 function describir(sats, meta) {

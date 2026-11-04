@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -115,11 +115,11 @@ function avisar(texto, accion = null, temporal = false) {
 }
 
 // ---------------------------------------------------------------- pintar
-function pintar({ montana = false, animar = false, desde = null } = {}) {
+function pintar({ montana = false, animar = false, desde = null, festejo = null } = {}) {
   R = resumen(S.compras, S.precio);
   pintarPrecio();
   pintarSaldo(desde);
-  if (montana) pintarMontana(animar, desde);
+  if (montana) pintarMontana(animar, desde, festejo);
   pintarTramo();
   pintarMercado();
   pintarLista();
@@ -196,24 +196,35 @@ function pintarSaldo(desde) {
 }
 
 let anchoMontana = 0;
-function pintarMontana(animar, desde) {
+// Una etapa que sea potencia de 10 desde 1M (1M, 10M, 1 BTC…) es un hito grande.
+const esHito = (m) => m >= 1e6 && Math.abs(Math.log10(m) - Math.round(Math.log10(m))) < 1e-9;
+const MS_SUBIDA = 1400;
+
+function pintarMontana(animar, desde, festejo = null) {
   const host = $('montana');
   anchoMontana = host.clientWidth;
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, inicio, techo });
-  if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : 1600);
+  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo });
+  let f = null;
+  if (festejo && R.sats > festejo.antes) {
+    const m = etapasCruzadas(festejo.antes, R.sats).at(-1);
+    f = { delta: festejo.delta, etapa: m, nivel: !m ? 'compra' : esHito(m) ? 'hito' : 'etapa' };
+  }
+  if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : f ? MS_SUBIDA : 1600, f);
 }
 new ResizeObserver(() => {
   if (S.cargado && $('montana').clientWidth !== anchoMontana) pintarMontana(false);
 }).observe($('montana'));
 
+/** Avance de 0 a 1 entre la etapa anterior y la siguiente. */
+const progresoEtapa = () => (R.sats - R.etapaPrev) / (R.etapa - R.etapaPrev);
+
 function pintarTramo() {
   $('tramo').hidden = !S.cargado || (S.errorCarga && !R.n);
-  const anterior = R.meta / 10 >= 1e5 ? R.meta / 10 : 0;
-  const prog = (R.sats - anterior) / (R.meta - anterior);
-  $('t-meta').textContent = R.meta >= 1e8 ? nombreHito(R.meta) : `${nombreHito(R.meta)} sats`;
-  $('t-falta').textContent = `faltan ${entero(R.meta - R.sats)}`;
+  const prog = progresoEtapa();
+  $('t-meta').textContent = R.etapa >= 1e8 ? nombreHito(R.etapa) : `${nombreHito(R.etapa)} sats`;
+  $('t-falta').textContent = `faltan ${entero(R.etapa - R.sats)}`;
   requestAnimationFrame(() => { $('t-barra').style.transform = `scaleX(${Math.max(0, Math.min(1, prog))})`; });
   $('t-ritmo').textContent = R.proyeccion
     ? `Al ritmo de los últimos 6 meses (${entero(R.satsMes)} sats al mes) llegas en ${plazo(R.proyeccion)}.`
@@ -327,7 +338,7 @@ function abrirHoja(id = null, tipoInicial = 'compra') {
 function cerrarHoja() {
   hoja.classList.remove('abierta');
   document.activeElement?.blur?.();
-  setTimeout(() => { hoja.hidden = true; hoja.style.removeProperty('--kb'); H.origen?.focus?.(); }, reducido() ? 0 : 260);
+  setTimeout(() => { hoja.hidden = true; hoja.style.removeProperty('--kb'); H.origen?.focus?.({ preventScroll: true }); }, reducido() ? 0 : 260);
 }
 // En iPhone el teclado tapa lo de abajo sin cambiar el viewport de maquetación: se sube la hoja la altura del teclado.
 function ajustarTeclado() {
@@ -419,9 +430,19 @@ $('guardar').addEventListener('click', async () => {
     const editando = H.editando;
     H.guardando = false;
     cerrarHoja();
-    pintar({ montana: true, desde: antes.sats });
+    // Una compra nueva se celebra en la montaña: si estás más abajo, se sube con suavidad a verla.
+    const festejo = !editando && g.tipo === 'compra' ? { antes: antes.sats, delta: g.sats } : null;
+    if (festejo && !reducido() && window.scrollY > 40) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await new Promise((ok) => setTimeout(ok, 480));
+    }
+    pintar({ montana: true, desde: antes.sats, festejo });
+    if (festejo && !reducido()) setTimeout(() => destello(), MS_SUBIDA);
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
-    avisar((editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : ''), null, true);
+    const texto = (editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : '');
+    // Con celebración, el aviso de abajo espera a que acabe para no tapar el sendero.
+    if (festejo && !reducido()) setTimeout(() => avisar(texto, null, true), MS_SUBIDA + 1300);
+    else avisar(texto, null, true);
     celebrar(antes);
   } catch (err) {
     H.guardando = false;
@@ -478,9 +499,8 @@ function pintarReportes() {
   $('reportes').hidden = R.nCompras < 3;
   if (R.nCompras < 3) { $('rep-anios').hidden = true; $('rep-ganancia').hidden = true; return; }
   pintarGanancia();
-  const hasta = Math.max(1e8, R.meta);
-  $('hitos').innerHTML = R.hitos.filter((h) => h.m <= hasta).map((h) => {
-    const estado = h.fecha ? 'hecho' : h.m === R.meta ? 'siguiente' : 'lejos';
+  $('hitos').innerHTML = R.camino.map((h) => {
+    const estado = h.fecha ? 'hecho' : h.m === R.etapa ? 'siguiente' : 'lejos';
     const detalle = h.fecha ? `${fechaLarga(h.fecha)} · ${textoMeses(h.meses)}`
       : estado === 'siguiente' ? (R.proyeccion ? `faltan ${entero(h.m - R.sats)} sats · a tu ritmo, en ${plazo(R.proyeccion)}` : `faltan ${entero(h.m - R.sats)} sats`)
         : 'más arriba';
@@ -532,11 +552,11 @@ function pintarComienzo() {
   const ver = R.nCompras > 0 && R.nCompras < 3;
   $('comienzo').hidden = !ver;
   if (!ver) return;
-  const falta = R.meta - R.sats;
+  const falta = R.etapa - R.sats;
   const porCompra = R.satsComprados / R.nCompras;
   const compras = Math.max(1, Math.ceil(falta / porCompra));
-  $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.meta === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.meta)}`}`;
-  $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.meta)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
+  $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.etapa === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.etapa)}`}`;
+  $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.etapa)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
   $('com-racha').textContent = rachaTxt(R.racha);
   $('com-racha-sub').textContent = R.racha
     ? `sigue si vuelves a comprar antes del ${domingo(R.venceSemanas)}`
@@ -550,14 +570,36 @@ $('com-anotar').addEventListener('click', () => abrirHoja());
 // -------------------------------------------------------------- celebración
 /** Solo cuando la acción de esta sesión cruza un hito; breve y sin bloquear nada. */
 function celebrar(antes) {
-  const nuevo = R.hitos.find((h) => h.fecha && !antes.hitos.find((a) => a.m === h.m)?.fecha);
-  if (!nuevo) return;
+  // Cualquier etapa (100k, 250k, 500k, 1M…) que se cruce hacia arriba; si son varias, la más alta.
+  const m = etapasCruzadas(antes.sats, R.sats).at(-1);
+  if (!m) return;
   const el = $('hito-cel');
-  $('hc-txt').textContent = nuevo.m >= 1e8 ? nombreHito(nuevo.m) : `${nombreHito(nuevo.m)} sats`;
-  el.hidden = false;
-  el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
+  const hito = esHito(m);
+  $('hc-k').textContent = hito ? 'Nuevo hito' : 'Nueva etapa';
+  $('hc-txt').textContent = m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`;
+  el.classList.toggle('grande', hito);
+  // Aparece cuando tu punto llega a la bandera, no antes.
   clearTimeout(celebrar.t);
-  celebrar.t = setTimeout(() => { el.hidden = true; }, 1600);
+  celebrar.t = setTimeout(() => {
+    // Siempre bajo el saldo, sin tapar la cabecera, la cifra ni la etiqueta de la cumbre. En móvil y tablet va
+    // centrada; en escritorio, alineada a la izquierda con el saldo.
+    const saldo = document.querySelector('.saldo-d')?.getBoundingClientRect();
+    if (saldo) el.style.top = `${Math.round(Math.max(saldo.bottom, 0) + 12)}px`;
+    else el.style.removeProperty('top');
+    if (saldo && innerWidth >= 1100) { el.style.justifyItems = 'start'; el.style.paddingLeft = `${Math.round(saldo.left)}px`; }
+    else { el.style.removeProperty('justify-items'); el.style.removeProperty('padding-left'); }
+    el.hidden = false;
+    el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
+    celebrar.t = setTimeout(() => { el.hidden = true; }, hito ? 2600 : 2000);
+  }, reducido() ? 0 : MS_SUBIDA);
+}
+
+/** La barra del tramo se llena con un destello cuando tu punto llega. */
+function destello() {
+  const b = document.querySelector('.tr-barra');
+  if (!b) return;
+  b.classList.remove('destello'); void b.offsetWidth; b.classList.add('destello');
+  setTimeout(() => b.classList.remove('destello'), 1000);
 }
 
 // -------------------------------------------------------------------- CSV
@@ -602,14 +644,33 @@ async function cargarYo() {
 }
 $('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); dCuenta.showModal(); });
 
+const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
+/** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
+function textoMov(x) {
+  if (!x?.sats) return '';
+  return `${entero(x.sats)} sats (${usd(x.monto)}) del ${fechaLarga(x.fecha)}` +
+    (x.txid ? ` · TXID ${txCorto(x.txid)}` : '') + (x.nota ? ` · «${x.nota}»` : '');
+}
+/** Qué cambió en una edición: solo los campos que difieren. */
+function cambiosEdicion(antes, despues) {
+  if (!antes || !despues) return '';
+  const c = [];
+  if (antes.sats !== despues.sats) c.push(`${entero(antes.sats)} → ${entero(despues.sats)} sats`);
+  if (antes.monto !== despues.monto) c.push(`${usd(antes.monto)} → ${usd(despues.monto)}`);
+  if (antes.fecha !== despues.fecha) c.push(`fecha ${fechaLarga(antes.fecha)} → ${fechaLarga(despues.fecha)}`);
+  if ((antes.txid ?? null) !== (despues.txid ?? null)) c.push(`TXID ${txCorto(antes.txid)} → ${txCorto(despues.txid)}`);
+  if ((antes.nota ?? null) !== (despues.nota ?? null)) c.push(`nota ${antes.nota ? `«${antes.nota}»` : 'vacía'} → ${despues.nota ? `«${despues.nota}»` : 'vacía'}`);
+  return c.join(' · ') || 'sin cambios visibles';
+}
 function textoAuditoria(a) {
   const d = a.despues || a.antes || {};
-  const compra = d.sats ? `${entero(d.sats)} sats (${usd(d.monto)}) del ${fechaLarga(d.fecha)}` : '';
+  const venta = d.tipo === 'venta';
+  const mov = venta ? 'la venta' : 'la compra';
   return {
-    alta: `anotó ${compra}`,
-    edicion: `corrigió la compra del ${a.antes ? fechaLarga(a.antes.fecha) : ''}: ${a.antes ? entero(a.antes.sats) : ''} → ${compra}`,
-    anulacion: `anuló ${compra}`,
-    importacion: `importó ${d.nuevas} ${d.nuevas === 1 ? 'compra' : 'compras'}`,
+    alta: venta ? `registró una venta de ${textoMov(d)}` : `anotó ${textoMov(d)}`,
+    edicion: `corrigió ${mov} del ${a.antes ? fechaLarga(a.antes.fecha) : ''}: ${cambiosEdicion(a.antes, a.despues)}`,
+    anulacion: `anuló ${mov} de ${textoMov(d)}`,
+    importacion: `importó ${d.nuevas} ${d.nuevas === 1 ? 'movimiento' : 'movimientos'}`,
     login: 'entró', logout: 'salió', logout_todas: 'salió en todos los dispositivos',
     login_fallido: a.entidad === 'ip' ? 'falló varias veces al entrar desde una misma red' : 'falló al entrar',
     bloqueo: a.entidad === 'ip' ? 'quedó bloqueado desde una red por demasiados intentos' : 'quedó bloqueado unos minutos por demasiados intentos',

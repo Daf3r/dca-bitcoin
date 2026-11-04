@@ -358,11 +358,15 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 
 /* Celebración: breve, arriba y sin bloquear nada. */
 .hito-cel { position: fixed; z-index: 11; top: 14px; left: 0; right: 0; display: grid; justify-items: center; pointer-events: none; }
-.hito-cel p { display: grid; justify-items: center; padding: 12px 26px 14px; border-radius: 22px; background: var(--naranja); color: var(--naranja-osc); text-align: center; box-shadow: 0 16px 34px -14px rgb(0 0 0 / 0.6); }
+.hito-cel p { display: grid; justify-items: center; padding: 12px 26px 14px; border-radius: 22px; background: var(--s1); border: 2px solid var(--naranja); color: var(--txt); text-align: center; box-shadow: 0 16px 34px -14px rgb(0 0 0 / 0.6); }
+.hito-cel small { color: var(--naranja-txt); }
 .hito-cel small { font-weight: 650; font-size: 0.8125rem; }
 .hito-cel b { font: 600 1.75rem/1.1 var(--serif); }
-.hito-cel.va p { animation: hito 1.6s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
-@keyframes hito { 0% { transform: translateY(-140%) scale(0.9); } 18%, 82% { transform: none; } 100% { transform: translateY(-140%); opacity: 0; } }
+.hito-cel.va p { animation: hito 2s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.hito-cel.grande p { padding: 16px 34px 18px; }
+.hito-cel.grande b { font-size: clamp(1.9rem, 9vw, 2.4rem); }
+.hito-cel.grande.va p { animation-duration: 2.6s; }
+@keyframes hito { 0% { transform: translateY(-14px) scale(0.92); opacity: 0; } 14%, 84% { transform: none; opacity: 1; } 100% { transform: translateY(-8px); opacity: 0; } }
 
 /* Pantallas bajas (320×568 y similares): el saldo encoge para que la montaña respire. */
 @media (max-height: 680px) and (max-width: 699px) {
@@ -404,6 +408,46 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .anotar:active { transform: scale(0.96); }
   .aviso { left: auto; right: 32px; transform: none; bottom: 32px; }
 }
+
+/* ------------------------------------------------------------ celebración en la montaña */
+/* Solo transform y opacity; sin nodos permanentes; nunca bloquea un toque. */
+:root { --brasa: #ffb25e; --alba: #f39a5b; --luz: #ffd9a0; }
+@media (prefers-color-scheme: light) { :root { --brasa: #e8790d; --alba: #fff1cf; --luz: #fff6dc; } }
+.fx, .alba, .estela { pointer-events: none; }
+.estela { fill: none; stroke: var(--brasa); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.estela.viva { opacity: 0.55; }
+.estela.apaga { animation: estela-apaga 0.9s ease-out forwards; }
+@keyframes estela-apaga { from { opacity: 0.55; } to { opacity: 0; } }
+.brasa { fill: var(--brasa); transform-box: fill-box; transform-origin: center; animation: brasa 1.2s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+@keyframes brasa { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0.25); opacity: 0; } }
+.flota { fill: var(--nieve); font: 700 15px var(--sans); paint-order: stroke; stroke: var(--monte); stroke-width: 4px; stroke-linejoin: round; animation: flota 1.7s ease-out both; }
+@keyframes flota { 0% { opacity: 0; transform: translateY(8px); } 15%, 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-24px); } }
+.campo.agita .banderin { animation: agita 0.42s ease-in-out 4; }
+@keyframes agita { 50% { transform: skewY(-12deg) scaleX(0.85); } }
+.campo.iza line { transform-box: fill-box; transform-origin: 50% 100%; animation: iza-mastil 0.6s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.campo.iza .banderin { fill: var(--naranja); opacity: 1; animation: iza-banderin 0.8s 0.35s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.plantada { animation: plantada-sale 3.2s ease-in both; }
+@keyframes iza-mastil { from { transform: scaleY(0); } }
+@keyframes iza-banderin { from { transform: translateY(14px); opacity: 0; } }
+@keyframes plantada-sale { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+.anillo { fill: none; stroke: var(--brasa); stroke-width: 2.5; transform-box: fill-box; transform-origin: center; animation: anillo 1.4s ease-out both; }
+@keyframes anillo { from { transform: scale(0.4); opacity: 0.9; } to { transform: scale(5); opacity: 0; } }
+.alba { fill: var(--alba); opacity: 0; }
+.alba.respira { animation: cielo-respira 2s ease-in-out; }
+.alba.amanece { animation: cielo-amanece 2.8s ease-in-out; }
+@keyframes cielo-respira { 0%, 100% { opacity: 0; } 45% { opacity: 0.26; } }
+@keyframes cielo-amanece { 0%, 100% { opacity: 0; } 40%, 62% { opacity: 0.5; } }
+.luz-0 { stop-color: var(--luz); stop-opacity: 0.95; }
+.luz-1 { stop-color: var(--luz); stop-opacity: 0; }
+.luz-cima { transform-box: fill-box; transform-origin: center; animation: luz-cima 2.8s ease-in-out both; }
+@keyframes luz-cima { 0% { opacity: 0; transform: scale(0.5); } 45% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.25); } }
+.tr-barra { position: relative; }
+.tr-barra.destello::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+  animation: barrido 0.9s ease-out both;
+}
+@keyframes barrido { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
