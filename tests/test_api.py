@@ -413,6 +413,8 @@ def _contar(*a): llamadas_scrypt.append(1); return _orig_verificar(*a)
 auth.verificar = _contar
 n_audit = len(audit())
 atac = nuevo()
+# Reloj congelado durante el ataque: el bloqueo es de 1 s y, en una máquina lenta, expiraría a mitad del bucle (prueba intermitente).
+_reloj_real = _tt.time; _t0 = _reloj_real(); _tt.time = lambda: _t0
 codigos = [atac.post("/api/login", json={"usuario": "Daf3r", "clave": f"intento-{i}-xxxxx"}).status_code for i in range(40)]
 check(codigos[:5] == [401] * 5 and codigos[5] == 429 and set(codigos[5:]) == {429}, codigos)
 check(len(llamadas_scrypt) == 5, f"scrypt solo antes del bloqueo ({len(llamadas_scrypt)})")
@@ -420,6 +422,7 @@ fallidas = [r for r in audit()[n_audit:] if r["usuario"] == "Daf3r"]
 check(len(fallidas) == 2 and {r["accion"] for r in fallidas} == {"login_fallido", "bloqueo"}, [dict(r) for r in fallidas])
 check(cl.get("/api/yo").status_code == 200, "una sesión válida no se ve afectada por el bloqueo")
 check(atac.post("/api/login", json={"usuario": "Daf3r", "clave": CLAVE_ADMIN}).status_code == 429, "bloqueado incluso con la clave buena")
+_tt.time = _reloj_real
 # Nombres inexistentes: sin auditoría, misma respuesta; sin IP real no hay bloqueo global
 n_audit = len(audit())
 r1 = atac.post("/api/login", json={"usuario": "nadie-xyz", "clave": "loquesea-1234"})
@@ -570,6 +573,21 @@ try:
 except sqlite3.IntegrityError:
     check(True, "CHECK de tipo")
 check(any(x["accion"] == "alta" and '"venta"' in (x["despues"] or "") for x in audit()), "la auditoría guarda el tipo de la venta")
+
+# --- Novedades: cuándo vio cada persona el resumen (un lector también puede marcarlo)
+_c = server.connect(); auth.crear_usuario(_c, "Luz", "clave-de-luz-2026", "lector", "prueba"); _c.close()
+luz = cliente("Luz", "clave-de-luz-2026")
+check(luz.get("/api/yo").get_json() == {"usuario": "Luz", "rol": "lector", "visto": None}, "sin visita registrada al principio")
+check("visto_ts" in [r[1] for r in sql("PRAGMA table_info(usuarios)")], "columna visto_ts")
+r = luz.post("/api/visto"); v1 = r.get_json()["visto"]
+check(r.status_code == 200 and isinstance(v1, int) and abs(v1 - _tt.time() * 1000) < 5000, f"un lector puede marcar que vio las novedades {r.data}")
+check(luz.get("/api/yo").get_json()["visto"] == v1, "yo devuelve la última visita")
+check(adm.get("/api/yo").get_json()["visto"] is None, "la visita es por persona")
+check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "pero un lector sigue sin poder escribir")
+check(anon.post("/api/visto", headers={"X-Libro": "1"}).status_code == 401, "sin sesión no se marca")
+check(not [x for x in audit() if x["accion"] == "visto"], "no se audita cada visita")
+nolibro = server.app.test_client(); nolibro.set_cookie("__Host-sesion", luz.get_cookie("__Host-sesion").value)
+check(nolibro.post("/api/visto").status_code == 403, "sin X-Libro se rechaza")
 
 # CLI: generar, mínimo de 12 y desbloquear
 import usuarios, getpass as _gp

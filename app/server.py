@@ -98,6 +98,9 @@ def init_db() -> None:
         for col, ddl in MIGRACIONES:
             if col not in cols:
                 conn.execute(ddl)
+        # «Novedades»: cuándo vio cada persona el resumen por última vez (en bases anteriores, se añade aquí)
+        if "visto_ts" not in {r["name"] for r in conn.execute("PRAGMA table_info(usuarios)")}:
+            conn.execute("ALTER TABLE usuarios ADD COLUMN visto_ts INTEGER")
         conn.execute("CREATE INDEX IF NOT EXISTS compras_txid ON compras (txid) WHERE txid IS NOT NULL")
         # filas de antes de guardar sats: se estiman con monto y precio
         conn.execute(
@@ -347,7 +350,7 @@ def exigir_sesion() -> Any:
     if not u:
         return (jsonify(error="Inicia sesión."), 401) if api else redirect("/login")
     g.usuario = u
-    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave"):
+    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto"):
         return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
 
@@ -496,7 +499,19 @@ def logout() -> Any:
 
 @app.get("/api/yo")
 def yo() -> Response:
-    return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"])
+    visto = db().execute("SELECT visto_ts FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
+    return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"], visto=visto["visto_ts"] if visto else None)
+
+
+@app.post("/api/visto")
+def visto() -> Response:
+    """Marca que esta persona ya vio las novedades (hasta ahora). Cualquiera puede, también un lector;
+    no se audita: solo guarda cuándo, para no mostrar dos veces lo mismo."""
+    ahora = int(time.time() * 1000)
+    conn = db()
+    conn.execute("UPDATE usuarios SET visto_ts = ? WHERE id = ?", (ahora, g.usuario["id"]))
+    conn.commit()
+    return jsonify(visto=ahora)
 
 
 @app.post("/api/clave")

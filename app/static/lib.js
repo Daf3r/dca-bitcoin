@@ -197,6 +197,26 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   };
 }
 
+// -------------------------------------------------------------- novedades
+/**
+ * Qué hay de nuevo para quien vuelve: los movimientos creados después de su última visita (`visto`, en ms).
+ * Sin visita previa (null) se enseñan los últimos tres como bienvenida. Sin nada nuevo, null.
+ */
+export function novedades(items, visto, ahora = Date.now()) {
+  if (!items.length) return null;
+  const primera = visto == null;
+  const nuevos = primera ? items.slice(-3) : items.filter((c) => c.creado > visto);
+  if (!nuevos.length) return null;
+  return {
+    primera,
+    dias: primera ? null : Math.max(0, Math.floor((ahora - visto) / 864e5)),
+    nuevos: nuevos.slice(-5),
+    masNuevos: Math.max(0, nuevos.length - 5),
+    compras: nuevos.filter((c) => c.tipo !== 'venta').length,
+    ventas: nuevos.filter((c) => c.tipo === 'venta').length,
+  };
+}
+
 // ------------------------------------------------------------------- TXID
 /** Enlace a la transacción en mempool.space, solo si el TXID tiene la forma correcta (64 hex). */
 export const mempoolUrl = (txid) => (/^[0-9a-f]{64}$/.test(txid ?? '') ? `https://mempool.space/tx/${txid}` : null);
