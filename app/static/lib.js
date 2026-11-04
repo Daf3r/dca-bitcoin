@@ -140,6 +140,17 @@ export function proximosHitosConstancia(compras, hoy = hoyISO()) {
 }
 
 /**
+ * Cómo movería tu costo promedio una compra nueva (el «ajuste» del DCA: comprar barato lo baja, comprar caro lo sube).
+ * Sin saldo ni invertido (primera compra o tras vender todo) no hay costo previo y devuelve null.
+ */
+export function costoTrasCompra(R, monto, sats) {
+  if (!R || !(R.sats > 0) || !(R.inv > 0) || !(sats > 0) || !(monto > 0)) return null;
+  const antes = (R.inv * 1e8) / R.sats;
+  const despues = ((R.inv + monto) * 1e8) / (R.sats + sats);
+  return { antes, despues, cambio: (despues / antes - 1) * 100 };
+}
+
+/**
  * Avisos antes de guardar una compra nueva o con sats cambiados (no bloquean: piden confirmar).
  * - `atipico`: con al menos 4 compras tuyas, un monto en dólares 10 veces mayor o menor que la mediana
  *   (error de dedo: un cero de más o de menos). Se compara en **dólares**, no en sats: así $25 y $50 no

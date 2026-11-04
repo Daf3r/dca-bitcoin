@@ -345,6 +345,8 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .h-usd input { min-height: 48px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1.125rem; }
 .h-nota { margin-top: 6px; font-size: 0.8125rem; }
 .hoja-calc { min-height: 2.6em; font-size: 0.875rem; color: var(--txt2); }
+.hoja-calc .costo { display: block; margin-top: 2px; }
+.hoja-calc .costo[data-tono="sube"] { color: var(--sube); font-weight: 600; }
 .hoja-error { color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .hoja-error:empty { display: none; }
 .hoja-error.hoja-aviso { color: var(--naranja-txt); }

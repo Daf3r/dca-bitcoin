@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -264,5 +264,16 @@ const Rx1 = resumen(compSemFechas([...qBase, fq(7, 3)]), null, fq(9, 2));
 eq([Rx1.paso, Rx1.racha, tocaComprar(Rx1, fq(9, 2)).estado], [2, 6, 'aldia'], 'una compra extra entre medias suma a la racha y no cambia el ritmo');
 const Rs = resumen(compSemFechas([...[0, 1, 2, 3, 4, 5].map((k) => fq(k)), fq(5, 4)]), null, fq(6, 2));
 eq([Rs.paso, Rs.racha], [1, 6], 'semanal con dos compras en una semana: la semana cuenta una vez');
+
+// Efecto de una compra en el costo promedio (comprar barato lo baja)
+const Rc = resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }], null, '2026-10-05');
+const barato = costoTrasCompra(Rc, 50, 200000); // $50 por 200k sats = $25,000 el BTC
+eq([Math.round(barato.antes), Math.round(barato.despues), Math.round(barato.cambio)], [100000, 50000, -50], 'comprar barato baja el costo promedio');
+const caro = costoTrasCompra(Rc, 100, 50000); // $100 por 50k sats = $200,000 el BTC
+ok(caro.despues > caro.antes && caro.cambio > 0, 'comprar caro lo sube');
+eq(costoTrasCompra(resumen([], null, '2026-10-05'), 25, 30000), null, 'sin compras previas no hay costo anterior');
+eq(costoTrasCompra(Rc, 0, 100), null, 'sin monto no se calcula');
+const Rsin = resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }, { id: 2, tipo: 'venta', fecha: '2026-10-02', monto: 90, sats: 100000, precio: 90000 }], null, '2026-10-05');
+eq(costoTrasCompra(Rsin, 25, 30000), null, 'tras vender todo, la siguiente compra parte de cero');
 
 console.log(`OK ${n} comprobaciones`);

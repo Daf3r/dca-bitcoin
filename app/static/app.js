@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, constanciaCruzada, tocaComprar, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -429,6 +429,16 @@ function pintarHoja() {
     : d.sinPrecio ? 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares.'
       : sinSaldo ? `No tienes tantos sats: tu saldo es ${entero(saldo)}.`
         : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(resto)} sats`;
+  // El «ajuste» del DCA: cómo mueve esta compra tu costo promedio (solo al crear una compra con precio).
+  const c = d && !d.sinPrecio && !venta && !H.editando ? costoTrasCompra(R, d.monto, d.sats) : null;
+  if (c) {
+    const s = document.createElement('span');
+    s.className = 'costo';
+    s.dataset.tono = c.despues < c.antes ? 'sube' : '';
+    s.textContent = Math.abs(c.cambio) < 0.05 ? `Tu costo promedio casi no cambia (${usd0(c.antes)}).`
+      : `Tu costo promedio ${c.despues < c.antes ? 'baja' : 'sube'} de ${usd0(c.antes)} a ${usd0(c.despues)} (${pct(c.cambio)}).`;
+    $('hoja-calc').append(s);
+  }
   $('guardar').disabled = !d || d.sinPrecio || sinSaldo || H.guardando;
   $('guardar').textContent = H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
 }
