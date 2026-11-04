@@ -1,0 +1,24 @@
+# Avisos mensuales de actualizaciones (un PR por cosa, sin mezclarse con el trabajo normal).
+# Cada PR corre las pruebas: si pasan, se puede mezclar; si no, se ve qué rompe.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /app
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+  - package-ecosystem: docker
+    directory: /app
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+  - package-ecosystem: npm
+    directory: /tests
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 1

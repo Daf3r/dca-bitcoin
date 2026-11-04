@@ -1,0 +1,9 @@
+{
+  "name": "libro-dca-pruebas",
+  "private": true,
+  "description": "Solo para las pruebas de navegador (tests/test_ui.mjs); la app no usa npm.",
+  "type": "module",
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
