@@ -46,8 +46,7 @@
   --serif: "Fraunces", "Fraunces reserva", Georgia, serif;
   --sans: "Bricolage", "Bricolage reserva", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
-@media (prefers-color-scheme: light) {
-  :root {
+:root[data-tema="claro"] {
     color-scheme: light;
     --c0: #fbe8cc; --c1: #f8d9b2; --c2: #f5c597; --c3: #f1af7f; --c4: #ec976a;
     --astro: #fff7e8; --halo: rgb(255 247 232 / 0.45); --estrellas: 0;
@@ -60,7 +59,6 @@
     --linea: #24443f;
     --compra-borde: #9c4a05;
     --sube: #146b3c; --baja: #b02a1d;
-  }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -120,7 +118,7 @@ button, input { font: inherit; color: inherit; }
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
 .cotizacion[data-estado="viejo"] .cot-meta, .cotizacion[data-estado="error"] .cot-meta { color: var(--baja); }
-@media (prefers-color-scheme: light) { .marca b { color: #9c4a05; } }
+:root[data-tema="claro"] .marca b { color: #9c4a05; }
 
 /* La caja del saldo se coloca con left/right y nunca con un relleno que crezca con la ventana:
    así su ancho útil no puede llegar a 0 (era la causa del saldo invisible con zoom pequeño). */
@@ -153,7 +151,8 @@ button, input { font: inherit; color: inherit; }
 .saldo-d { margin-top: 8px; font-size: 1.0625rem; color: var(--cielo-txt2); }
 .saldo-d b, .saldo-d span { white-space: nowrap; }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
-@media (prefers-color-scheme: light) { .saldo-d [data-tono="sube"] { color: #10592f; } .saldo-d [data-tono="baja"] { color: #93231a; } }
+:root[data-tema="claro"] .saldo-d [data-tono="sube"] { color: #10592f; }
+:root[data-tema="claro"] .saldo-d [data-tono="baja"] { color: #93231a; }
 
 /* ------------------------------------------------------------- cuerpo */
 .col-principal, .col-lateral { display: contents; }
@@ -453,7 +452,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 /* ------------------------------------------------------------ celebración en la montaña */
 /* Solo transform y opacity; sin nodos permanentes; nunca bloquea un toque. */
 :root { --brasa: #ffb25e; --alba: #f39a5b; --luz: #ffd9a0; }
-@media (prefers-color-scheme: light) { :root { --brasa: #e8790d; --alba: #fff1cf; --luz: #fff6dc; } }
+:root[data-tema="claro"] { --brasa: #e8790d; --alba: #fff1cf; --luz: #fff6dc; }
 .fx, .alba, .estela { pointer-events: none; }
 .estela { fill: none; stroke: var(--brasa); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
 .estela.viva { opacity: 0.55; }
