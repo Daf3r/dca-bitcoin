@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -345,12 +345,12 @@ $('ver-todas').addEventListener('click', () => {
 
 // ------------------------------------------------------------- hoja de anotar
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', usdTocado: false, editando: null, guardando: false, origen: null };
+const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '' };
 const hoja = $('hoja');
 
 function abrirHoja(id = null, tipoInicial = 'compra') {
   const c = id ? S.compras.find((x) => x.id === id) : null;
-  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement });
+  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement, confirmadoPara: '' });
   H.sats = c ? String(c.sats) : '';
   H.usd = c ? String(c.monto) : '';
   H.txid = c?.txid ?? '';
@@ -366,7 +366,7 @@ function abrirHoja(id = null, tipoInicial = 'compra') {
   $('h-fecha').max = hoyISO();
   $('hoja-t').textContent = c ? 'Editar compra' : 'Anotar compra';
   $('h-borrar').hidden = !c;
-  $('hoja-error').textContent = '';
+  limpiarError();
   pintarHoja();
   hoja.hidden = false;
   requestAnimationFrame(() => hoja.classList.add('abierta'));
@@ -397,6 +397,21 @@ function datosHoja() {
   if (!p) return { sats, sinPrecio: true };
   return { sats, monto: estimarMonto(sats, p.precio), precio: p.precio, fuente: p.fuente, dia: p.dia };
 }
+/** Lo que se va a guardar, para saber si el aviso ya confirmado sigue valiendo (si cambias algo, vuelve a avisar). */
+const claveHoja = () => `${H.tipo}|${H.sats}|${$('h-fecha').value}`;
+const confirmando = () => H.confirmadoPara !== '' && H.confirmadoPara === claveHoja();
+function limpiarError() {
+  const e = $('hoja-error');
+  e.textContent = '';
+  e.classList.remove('hoja-aviso');
+  H.confirmadoPara = '';
+}
+function textoAvisos(avisos) {
+  const partes = avisos.map((a) => a.tipo === 'duplicado'
+    ? `ya anotaste ${a.n === 1 ? 'otra compra' : `${a.n} compras`} ese día (${entero(a.sats)} sats).`
+    : `esto es ${a.veces} veces ${a.sentido === 'mas' ? 'más' : 'menos'} que tu compra habitual (unos ${usd(a.mediana)}). ¿Faltó o sobró un cero?`);
+  return `Ojo: ${partes.join(' Además, ')} Si está bien, toca «Sí, guardar así».`;
+}
 function pintarHoja() {
   const d = datosHoja();
   const venta = H.tipo === 'venta';
@@ -414,11 +429,11 @@ function pintarHoja() {
       : sinSaldo ? `No tienes tantos sats: tu saldo es ${entero(saldo)}.`
         : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(resto)} sats`;
   $('guardar').disabled = !d || d.sinPrecio || sinSaldo || H.guardando;
-  $('guardar').textContent = H.guardando ? 'Guardando…' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
+  $('guardar').textContent = H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
 }
 $('h-tipo').addEventListener('click', (e) => {
   const b = e.target.closest('button');
-  if (b) { H.tipo = b.dataset.tipo; $('hoja-error').textContent = ''; pintarHoja(); }
+  if (b) { H.tipo = b.dataset.tipo; limpiarError(); pintarHoja(); }
 });
 $('h-nota').addEventListener('input', (e) => { H.nota = e.target.value; });
 /** Pone separadores de miles al escribir sin mover el cursor de su sitio. */
@@ -435,7 +450,7 @@ $('h-sats').addEventListener('input', (e) => {
   formatearSats(e.target);
   // Si corriges los sats de una compra y no tocaste los dólares, se recalculan con el precio del día.
   if (H.editando && !H.usdTocado && H.usd) { H.usd = ''; $('h-usd').value = ''; }
-  $('hoja-error').textContent = '';
+  limpiarError();
   pintarHoja();
 });
 $('h-usd').addEventListener('input', (e) => {
@@ -447,7 +462,7 @@ $('h-usd').addEventListener('input', (e) => {
 $('h-txid').addEventListener('input', (e) => { H.txid = e.target.value.trim(); $('hoja-error').textContent = ''; });
 // Al salir del campo, si pegaron un enlace de un explorador se deja solo el TXID.
 $('h-txid').addEventListener('change', (e) => { e.target.value = H.txid = extraerTxid(e.target.value); });
-$('h-fecha').addEventListener('input', pintarHoja);
+$('h-fecha').addEventListener('input', () => { limpiarError(); pintarHoja(); });
 hoja.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') return cerrarHoja();
   if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'date') { e.preventDefault(); $('guardar').click(); }
@@ -460,6 +475,19 @@ $('guardar').addEventListener('click', async () => {
   const fecha = $('h-fecha').value;
   if (!d || H.guardando) return;
   if (!fecha || fecha > hoyISO()) { $('hoja-error').textContent = 'Elige una fecha de hoy o anterior.'; return; }
+  // Antes de guardar: si algo se ve raro (cifra 10 veces fuera de lo normal, compra repetida ese día), se avisa
+  // una vez y se pide confirmar con un segundo toque. No bloquea: tú decides.
+  if (!confirmando()) {
+    const avisos = avisosAlAnotar(S.compras, { tipo: H.tipo, sats: d.sats, monto: d.monto, fecha, editando: H.editando });
+    if (avisos.length) {
+      const e = $('hoja-error');
+      e.textContent = textoAvisos(avisos);
+      e.classList.add('hoja-aviso');
+      H.confirmadoPara = claveHoja();
+      pintarHoja();
+      return;
+    }
+  }
   H.guardando = true; pintarHoja();
   const antes = R;
   try {
@@ -485,6 +513,7 @@ $('guardar').addEventListener('click', async () => {
     celebrar(antes);
   } catch (err) {
     H.guardando = false;
+    $('hoja-error').classList.remove('hoja-aviso');
     $('hoja-error').textContent = err.message;
     pintarHoja();
   }

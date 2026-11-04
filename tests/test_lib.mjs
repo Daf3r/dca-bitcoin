@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -198,5 +198,27 @@ const n3 = novedades(muchos, AHORA - 10 * DIA, AHORA);
 eq([n3.nuevos.length, n3.masNuevos, n3.nuevos[0].id], [5, 3, 4], 'más de cinco: se enseñan las cinco últimas y se cuenta el resto');
 eq(novedades(lote, AHORA - 0.2 * DIA, AHORA + 0.2 * DIA), null, 'hace menos de un día sin novedades: nada');
 eq(novedades([nv(1, 0.1)], AHORA - 1 * DIA, AHORA).dias, 1, 'días desde la visita, redondeando hacia abajo');
+
+// Avisos al anotar: dedo gordo (en dólares) y compra repetida el mismo día
+const hab = [20, 24, 25, 26, 30].map((m, i) => ({ id: i + 1, tipo: 'compra', monto: m, sats: m * 1000, fecha: `2026-10-0${i + 1}` }));
+const av = (o) => avisosAlAnotar(hab, { tipo: 'compra', fecha: '2026-10-20', ...o });
+eq(av({ sats: 25000, monto: 25 }), [], 'una compra normal no avisa');
+eq(av({ sats: 50000, monto: 50 }), [], '$50 con una mediana de $25 no avisa (solo 2 veces)');
+eq(av({ sats: 100000, monto: 100 }), [], '$100 tampoco (4 veces)');
+eq(av({ sats: 250000, monto: 250 }), [{ tipo: 'atipico', sentido: 'mas', veces: 10, mediana: 25 }], '$250: 10 veces más, avisa');
+eq(av({ sats: 249000, monto: 249 }), [], 'justo por debajo de 10 veces: no avisa');
+eq(av({ sats: 2500, monto: 2.5 }), [{ tipo: 'atipico', sentido: 'menos', veces: 10, mediana: 25 }], '$2.50: una décima parte, avisa');
+eq(av({ sats: 3200, monto: 25 }), [], 'mismos dólares con BTC 10 veces más caro: no avisa (por eso se compara en dólares)');
+eq(av({ sats: 25000 }), [], 'sin monto estimado no se evalúa lo atípico');
+eq(avisosAlAnotar(hab.slice(0, 3), { tipo: 'compra', sats: 9e6, monto: 9000, fecha: '2026-10-20' }), [], 'con menos de 4 compras no hay referencia');
+eq(avisosAlAnotar(hab, { tipo: 'venta', sats: 9e6, monto: 9000, fecha: '2026-10-20' }), [], 'las ventas no avisan');
+eq(av({ sats: 25000, monto: 25, fecha: '2026-10-03' }), [{ tipo: 'duplicado', n: 1, sats: 25000 }], 'otra compra el mismo día: avisa');
+eq(av({ sats: 250000, monto: 250, fecha: '2026-10-03' }).map((a) => a.tipo), ['atipico', 'duplicado'], 'pueden salir los dos');
+eq(avisosAlAnotar([...hab, { id: 9, tipo: 'venta', monto: 10, sats: 1000, fecha: '2026-10-20' }], { tipo: 'compra', sats: 25000, monto: 25, fecha: '2026-10-20' }), [], 'una venta el mismo día no cuenta como compra repetida');
+eq(avisosAlAnotar(hab, { tipo: 'compra', sats: 24000, monto: 24, fecha: '2026-10-02', editando: 2 }), [], 'editar sin cambiar nada: no avisa de duplicado');
+const rara = [...hab, { id: 7, tipo: 'compra', monto: 900, sats: 900000, fecha: '2026-10-07' }];
+eq(avisosAlAnotar(rara, { tipo: 'compra', sats: 900000, monto: 900, fecha: '2026-10-07', editando: 7 }), [], 'editar una compra rara sin tocar los sats: no insiste');
+eq(avisosAlAnotar(rara, { tipo: 'compra', sats: 950000, monto: 950, fecha: '2026-10-07', editando: 7 }).map((a) => a.tipo), ['atipico'], 'si cambias los sats a otra cifra rara: avisa');
+eq(av({ sats: 0, monto: 0 }), [], 'sin sats no hay avisos');
 
 console.log(`OK ${n} comprobaciones`);
