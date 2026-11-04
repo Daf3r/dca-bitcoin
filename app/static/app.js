@@ -13,6 +13,7 @@ const S = {
   precio: null, precioTs: 0, fuente: '', viejo: false, errorPrecio: false,
   historico: [], histEstado: 'cargando', histDesde: null, rango: null,
   verTodas: false,
+  usuario: null, rol: null,
 };
 let R = resumen([], null);
 
@@ -22,7 +23,8 @@ let R = resumen([], null);
  * aquí se trata el 401 (redirigir o pedir la contraseña) para toda la app.
  */
 async function api(ruta, { metodo = 'GET', cuerpo, tipo = 'application/json' } = {}) {
-  const opt = { method: metodo, headers: { Accept: 'application/json' }, cache: 'no-store' };
+  // X-Libro obliga a un preflight CORS: otra web no puede escribir aquí aunque tengas sesión.
+  const opt = { method: metodo, headers: { Accept: 'application/json', 'X-Libro': '1' }, cache: 'no-store' };
   if (cuerpo !== undefined) {
     opt.headers['Content-Type'] = tipo;
     opt.body = tipo === 'application/json' ? JSON.stringify(cuerpo) : cuerpo;
@@ -36,10 +38,16 @@ async function api(ruta, { metodo = 'GET', cuerpo, tipo = 'application/json' } =
   }
   if (r.status === 204) return null;
   const j = await r.json().catch(() => null);
-  if (r.status === 401) throw Object.assign(new Error('Tu sesión venció. Recarga la página.'), { status: 401 });
+  if (r.status === 401) {
+    location.assign('/login');
+    throw Object.assign(new Error('Tu sesión venció.'), { status: 401 });
+  }
   if (!r.ok) throw Object.assign(new Error(j?.error || `Error ${r.status}.`), { status: r.status, datos: j });
   return j;
 }
+
+// Hasta saber el rol, la interfaz se muestra como solo lectura.
+const esAdmin = () => S.rol === 'admin';
 
 const normalizar = (c) => ({ ...c, id: Number(c.id), sats: c.sats > 0 ? c.sats : Math.round((c.monto / c.precio) * 1e8) });
 
@@ -258,11 +266,12 @@ function pintarLista() {
   const mostradas = S.verTodas ? recientes : recientes.slice(0, VISIBLES);
   host.innerHTML = mostradas.map((c) => {
     const v = S.precio ? (S.precio / c.precio - 1) * 100 : null;
-    return `<li><button type="button" class="fila" data-id="${c.id}">` +
-      `<span class="sr">Editar la compra del </span><span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
+    const etiqueta = esAdmin() ? 'button type="button"' : 'div';
+    return `<li><${etiqueta} class="fila" data-id="${c.id}">` +
+      (esAdmin() ? '<span class="sr">Editar la compra del </span>' : '') + `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
       `<span class="f-sats">+${entero(c.sats)} <small>sats</small></span>` +
       `<span class="f-det">${usd(c.monto)} a ${usd0(c.precio)}</span>` +
-      `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : pct(v)}</span></button></li>`;
+      `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : pct(v)}</span></${esAdmin() ? 'button' : 'div'}></li>`;
   }).join('');
   const vt = $('ver-todas');
   vt.hidden = mostradas.length >= R.n;
@@ -271,7 +280,7 @@ function pintarLista() {
 }
 $('lista').addEventListener('click', (e) => {
   const b = e.target.closest('.fila');
-  if (b) abrirHoja(Number(b.dataset.id));
+  if (b && esAdmin()) abrirHoja(Number(b.dataset.id));
 });
 $('ver-todas').addEventListener('click', () => {
   S.verTodas = true;
@@ -413,7 +422,7 @@ dialogo.addEventListener('close', async () => {
   H.origen = $('t-compras');
   cerrarHoja();
   pintar({ montana: true, desde: antes.sats });
-  avisar('Compra borrada.', null, true);
+  avisar('Compra anulada. Queda en el historial.', null, true);
 });
 
 // --------------------------------------------------------------- reportes
@@ -529,6 +538,103 @@ $('csv-in').addEventListener('change', async (e) => {
 });
 
 // ---------------------------------------------------------------- arranque
+// ------------------------------------------------------------------ cuenta
+const dfAudit = new Intl.DateTimeFormat('es-SV', { timeZone: 'America/El_Salvador', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+const dCuenta = $('d-cuenta');
+function vistaCuenta(cual) {
+  $('dc-menu').hidden = cual !== 'menu';
+  $('f-clave').hidden = cual !== 'clave';
+  $('dc-hist').hidden = cual !== 'historial';
+}
+async function cargarYo() {
+  try {
+    const yo = await api('/api/yo');
+    Object.assign(S, { usuario: yo.usuario, rol: yo.rol });
+    document.body.dataset.rol = yo.rol;
+    $('cuenta-btn').textContent = yo.usuario;
+    $('cuenta-btn').setAttribute('aria-label', `Tu cuenta: ${yo.usuario}`);
+    $('cuenta-btn').hidden = false;
+    $('dc-quien').textContent = `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`;
+    $('dc-historial').hidden = yo.rol !== 'admin';
+    $('fc-usuario').value = yo.usuario;
+    pintar();
+  } catch { /* el 401 ya redirige; si falla la red, la app sigue en solo lectura */ }
+}
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); dCuenta.showModal(); });
+
+function textoAuditoria(a) {
+  const d = a.despues || a.antes || {};
+  const compra = d.sats ? `${entero(d.sats)} sats (${usd(d.monto)}) del ${fechaLarga(d.fecha)}` : '';
+  return {
+    alta: `anotó ${compra}`,
+    edicion: `corrigió la compra del ${a.antes ? fechaLarga(a.antes.fecha) : ''}: ${a.antes ? entero(a.antes.sats) : ''} → ${compra}`,
+    anulacion: `anuló ${compra}`,
+    importacion: `importó ${d.nuevas} ${d.nuevas === 1 ? 'compra' : 'compras'}`,
+    login: 'entró', logout: 'salió', logout_todas: 'salió en todos los dispositivos',
+    login_fallido: a.entidad === 'ip' ? 'falló varias veces al entrar desde una misma red' : 'falló al entrar',
+    bloqueo: a.entidad === 'ip' ? 'quedó bloqueado desde una red por demasiados intentos' : 'quedó bloqueado unos minutos por demasiados intentos',
+    clave_cambiada: `cambió la contraseña de ${d.nombre}`,
+    cuenta_creada: `creó la cuenta ${d.nombre} (${d.rol})`,
+    cuenta_activada: `activó la cuenta ${d.nombre}`, cuenta_desactivada: `desactivó la cuenta ${d.nombre}`,
+    sesiones_cerradas: `cerró las sesiones de ${d.nombre}`, desbloqueo: `desbloqueó la cuenta ${d.nombre}`,
+  }[a.accion] ?? a.accion;
+}
+let histUltimo = null;
+async function cargarHistorial(mas = false) {
+  const lista = $('hist-lista');
+  if (!mas) { lista.textContent = ''; histUltimo = null; }
+  try {
+    const filas = await api(`/api/auditoria${histUltimo ? `?antes=${histUltimo}` : ''}`);
+    for (const a of filas) {
+      const li = document.createElement('li');
+      const t = document.createElement('time');
+      t.textContent = dfAudit.format(new Date(a.ts * 1000)).replace('.', '');
+      const p = document.createElement('p');
+      const b = document.createElement('b');
+      b.textContent = a.usuario === 'cli' ? 'Servidor' : a.usuario === '?' ? 'Alguien' : a.usuario;
+      p.append(b, ` ${textoAuditoria(a)}`);
+      li.append(t, p);
+      lista.append(li);
+    }
+    histUltimo = filas.at(-1)?.id ?? histUltimo;
+    $('hist-mas').hidden = filas.length < 100;
+    if (!lista.children.length) lista.innerHTML = '<li class="vacio">Aún no hay nada en el historial.</li>';
+  } catch (e) {
+    lista.innerHTML = '';
+    const li = document.createElement('li'); li.className = 'vacio'; li.textContent = e.message; lista.append(li);
+  }
+}
+$('hist-mas').addEventListener('click', () => cargarHistorial(true));
+
+dCuenta.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-cuenta]');
+  if (!b) return;
+  const accion = b.dataset.cuenta;
+  if (accion === 'cerrar') dCuenta.close();
+  else if (accion === 'volver') vistaCuenta('menu');
+  else if (accion === 'clave') { vistaCuenta('clave'); $('fc-error').textContent = ''; $('fc-actual').focus(); }
+  else if (accion === 'historial') { vistaCuenta('historial'); cargarHistorial(); }
+  else if (accion === 'salir' || accion === 'salir-todas') {
+    try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }
+    location.replace('/login');
+  }
+});
+$('f-clave').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const actual = $('fc-actual').value, nueva = $('fc-nueva').value;
+  if (nueva.length < 12) { $('fc-error').textContent = 'La nueva necesita al menos 12 caracteres.'; $('fc-nueva').focus(); return; }
+  if (nueva !== $('fc-nueva2').value) { $('fc-error').textContent = 'Las dos nuevas no coinciden.'; $('fc-nueva2').focus(); return; }
+  try {
+    await api('/api/clave', { metodo: 'POST', cuerpo: { actual, nueva } });
+    e.target.reset();
+    dCuenta.close();
+    avisar('Contraseña cambiada. Tus otras sesiones se cerraron.', null, true);
+  } catch (err) {
+    $('fc-error').textContent = err.message;
+  }
+});
+
+cargarYo();
 cargarCompras();
 consultarPrecio();
 setInterval(() => document.visibilityState === 'visible' && consultarPrecio(), 30_000);

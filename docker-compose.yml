@@ -16,6 +16,8 @@ services:
     environment:
       DB_PATH: /data/libro.db
       TZ: America/El_Salvador
+      # 1 solo cuando Caddy ponga X-Cliente-IP (ver README); activa el límite de intentos por IP.
+      CONFIAR_X_CLIENTE_IP: ${CONFIAR_X_CLIENTE_IP:-0}
     ports:
       - "127.0.0.1:18082:8000"
     volumes:

@@ -406,3 +406,59 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ------------------------------------------------------------ cuenta y roles */
+/* Mientras no se sabe el rol (o si es lector), no se muestra nada que escriba. */
+body:not([data-rol="admin"]) .anotar,
+body:not([data-rol="admin"]) #com-anotar,
+body:not([data-rol="admin"]) label[for="csv-in"] { display: none !important; }
+div.fila { cursor: default; }
+div.fila:hover { background: none; }
+.cima-izq { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
+.cuenta-btn {
+  min-height: 44px; padding: 0 2px; border: 0; background: none; color: var(--cielo-txt2);
+  font: 600 0.8125rem var(--sans); cursor: pointer;
+  text-decoration: underline; text-decoration-color: var(--naranja); text-decoration-thickness: 1.5px; text-underline-offset: 4px;
+}
+.d-cuenta { width: min(26rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.dc-quien { margin: 4px 0 14px; }
+.dc-lista { display: grid; gap: 6px; }
+.dc-lista button {
+  min-height: 48px; padding: 0 16px; border: 0; border-radius: 14px; background: var(--s2);
+  text-align: left; font-weight: 600; cursor: pointer;
+}
+.dc-lista button:hover { background: var(--s3); }
+.dc-lista button[data-cuenta="cerrar"] { background: none; color: var(--txt2); }
+.dc-clave { display: grid; gap: 6px; }
+.dc-clave label, .login-caja .campo-l { margin-top: 6px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
+.dc-clave input, .login-caja input {
+  min-height: 48px; padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 12px;
+  background: var(--s2); color: var(--txt); font: 400 1rem var(--sans);
+}
+.dc-clave input:focus-visible, .login-caja input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
+.dc-nota { font-size: 0.8125rem; color: var(--txt3); }
+.d-bot .primario { border-color: var(--naranja); background: var(--naranja); color: var(--naranja-osc); }
+.hist { max-height: 60vh; overflow-y: auto; margin: 10px 0 14px; }
+.hist li { display: grid; gap: 1px; padding: 10px 0; border-bottom: 1px solid var(--s3); }
+.hist time { font-size: 0.75rem; color: var(--txt3); }
+.hist p { margin: 0; font-size: 0.9375rem; }
+.hist .vacio { color: var(--txt2); }
+
+/* ------------------------------------------------------------ pantalla de entrada */
+.pag-login .escena { height: 100vh; height: 100svh; min-height: 560px; max-height: none; }
+.pag-login .login {
+  position: absolute; z-index: 2; left: 0; right: 0; bottom: max(24px, env(safe-area-inset-bottom));
+  display: grid; justify-items: center; padding: 0 16px;
+}
+.login-caja {
+  display: grid; gap: 4px; width: min(24rem, 100%); padding: 22px 20px 20px; border-radius: 26px;
+  background: color-mix(in srgb, var(--s1) 94%, transparent); box-shadow: 0 24px 50px -24px rgb(0 0 0 / 0.7);
+}
+.login-caja h1 { font: 600 1.875rem/1.1 var(--serif); margin-bottom: 6px; }
+.login-aviso { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--naranja) 16%, var(--s2)); font-size: 0.875rem; overflow-wrap: anywhere; }
+.login-error { min-height: 1.3em; margin-top: 6px; color: var(--baja); font-weight: 600; font-size: 0.875rem; }
+.login-caja .guardar { margin-top: 6px; }
+.login-caja .guardar:disabled { opacity: 0.6; }
+@media (min-width: 1100px) {
+  .pag-login .login { left: max(48px, calc(50% - 600px)); right: auto; bottom: auto; top: 50%; transform: translateY(-50%); justify-items: start; padding: 0; }
+}

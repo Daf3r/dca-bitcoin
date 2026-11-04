@@ -17,7 +17,10 @@
 <section class="escena" aria-labelledby="t-saldo">
   <div class="montana" id="montana"></div>
   <header class="cima">
-    <p class="marca">Libro <b>DCA</b></p>
+    <div class="cima-izq">
+      <p class="marca">Libro <b>DCA</b></p>
+      <button type="button" class="cuenta-btn" id="cuenta-btn" hidden></button>
+    </div>
     <p class="cotizacion" id="cotizacion" data-estado="cargando">
       <span class="cot-k">1 BTC</span> <b class="cot-v" id="precio">—</b>
       <span class="cot-meta" id="precio-meta">consultando…</span>
@@ -131,19 +134,51 @@
       <p class="h-nota">Si no los escribes, se calculan con el precio de ese día.</p>
     </details>
     <div class="hoja-bot">
-      <button type="button" class="borrar" id="h-borrar" hidden>Borrar</button>
+      <button type="button" class="borrar" id="h-borrar" hidden>Anular</button>
       <button type="button" class="guardar" id="guardar" disabled>Guardar</button>
     </div>
   </div>
 </div>
 
+<dialog id="d-cuenta" class="d-cuenta" aria-labelledby="dc-t">
+  <div class="dc-menu" id="dc-menu">
+    <h2 id="dc-t">Tu cuenta</h2>
+    <p class="dc-quien" id="dc-quien"></p>
+    <div class="dc-lista">
+      <button type="button" data-cuenta="clave">Cambiar contraseña</button>
+      <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
+      <button type="button" data-cuenta="salir">Salir</button>
+      <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
+      <button type="button" data-cuenta="cerrar">Cerrar</button>
+    </div>
+  </div>
+  <form class="dc-clave" id="f-clave" novalidate hidden>
+    <h2>Cambiar contraseña</h2>
+    <input type="text" name="username" id="fc-usuario" autocomplete="username" hidden>
+    <label for="fc-actual">Contraseña actual</label>
+    <input id="fc-actual" type="password" autocomplete="current-password" required>
+    <label for="fc-nueva">Nueva (12 caracteres o más)</label>
+    <input id="fc-nueva" type="password" autocomplete="new-password" minlength="12" required>
+    <label for="fc-nueva2">Repite la nueva</label>
+    <input id="fc-nueva2" type="password" autocomplete="new-password" minlength="12" required>
+    <p class="hoja-error" id="fc-error" role="alert"></p>
+    <p class="dc-nota">Al cambiarla se cierran tus otras sesiones.</p>
+    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button><button type="submit" class="primario">Guardar</button></div>
+  </form>
+  <div class="dc-historial" id="dc-hist" hidden>
+    <h2>Historial</h2>
+    <ol class="hist" id="hist-lista"></ol>
+    <div class="d-bot"><button type="button" id="hist-mas" hidden>Ver más</button><button type="button" data-cuenta="volver">Volver</button></div>
+  </div>
+</dialog>
+
 <dialog id="d-borrar" aria-labelledby="d-titulo">
   <form method="dialog">
-    <h2 id="d-titulo">¿Borrar esta compra?</h2>
+    <h2 id="d-titulo">¿Anular esta compra?</h2>
     <p id="d-texto"></p>
     <div class="d-bot">
       <button type="submit" value="no" autofocus>Cancelar</button>
-      <button type="submit" value="si" class="peligro">Borrar</button>
+      <button type="submit" value="si" class="peligro">Anular</button>
     </div>
   </form>
 </dialog>
