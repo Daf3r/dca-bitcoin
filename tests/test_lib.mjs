@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -293,5 +293,20 @@ const rep = reposicion(Rr, 70000); // mediana $25 al precio vivo $70,000
 eq([rep.monto, rep.despues < rep.antes, Math.round(rep.antes)], [25, true, 100000], 'reponer con una compra como las tuyas baja el costo promedio si el precio cayó');
 eq(reposicion(resumen(cuatro.slice(0, 2), null, '2026-10-31'), 70000), null, 'con menos de 3 compras no hay referencia');
 eq(reposicion(Rr, 0), null, 'sin precio no hay reposición');
+
+// Monto habitual, precio de equilibrio y «hace X»
+eq(montoHabitual(Rr.items), 25, 'monto habitual = mediana de tus compras ($20, 25, 30, 25)');
+eq(montoHabitual(Rr.items.slice(0, 2)), null, 'con menos de 3 compras no hay monto habitual');
+const Re = resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }], null, '2026-10-05');
+const qe1 = equilibrio(Re, 80000);
+eq([Math.round(qe1.precio), Math.round(qe1.cambio * 10) / 10, qe1.enGanancia], [100000, 25, false], 'sin ventas el equilibrio es el costo promedio: con BTC a 80,000 hay que subir 25 %');
+const qe2 = equilibrio(Re, 125000);
+eq([qe2.enGanancia, Math.round(qe2.cambio)], [true, -20], 'en ganancia: BTC podría bajar 20 % hasta el equilibrio');
+const Rv = resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }, { id: 2, tipo: 'venta', fecha: '2026-10-02', monto: 60, sats: 50000, precio: 120000 }], null, '2026-10-05');
+const qe3 = equilibrio(Rv, 90000); // realizada = 60 - 50 = 10; base = (inv neto 50) - 10 = 40 por 50,000 sats → $80,000
+eq(Math.round(qe3.precio), 80000, 'con ventas, lo realizado baja el equilibrio');
+eq(equilibrio(resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }, { id: 2, tipo: 'venta', fecha: '2026-10-02', monto: 100, sats: 50000, precio: 200000 }], null, '2026-10-05'), 90000), null, 'si lo vendido ya cubre lo invertido no hay equilibrio');
+eq(equilibrio(resumen([], null, '2026-10-05'), 90000), null, 'sin compras no hay equilibrio');
+eq([haceCuanto(1000, 3000), haceCuanto(0, 12000), haceCuanto(0, 59000), haceCuanto(0, 60000), haceCuanto(0, 150000), haceCuanto(0, 3 * 3600e3)], ['ahora mismo', 'hace 12 s', 'hace 59 s', 'hace 1 min', 'hace 2 min', 'hace 3 h'], 'hace cuánto se actualizó el precio');
 
 console.log(`OK ${n} comprobaciones`);

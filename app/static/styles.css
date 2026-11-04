@@ -143,6 +143,12 @@ button, input { font: inherit; color: inherit; }
 }
 .cifra-grande > span:not(.sr) { grid-area: 1 / 1; }
 .cg-reserva { visibility: hidden; }
+/* Tocar el saldo alterna entre sats y BTC. */
+.saldo-v[role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 12px; }
+.saldo-v[role="button"]:focus-visible { outline: 2px solid var(--naranja); outline-offset: 6px; }
+.saldo-v[role="button"] em::after { content: " ⇄"; font-style: normal; font-size: 0.6em; opacity: 0.55; }
+.equilibrio { margin-top: -4px; color: var(--txt2); font-size: 0.9375rem; }
+.equilibrio[hidden] { display: none; }
 .saldo-v em { font: italic 400 clamp(1.3rem, 5vw, 2.1rem) var(--serif); color: var(--cielo-txt2); }
 .saldo-d { margin-top: 8px; font-size: 1.0625rem; color: var(--cielo-txt2); }
 .saldo-d b, .saldo-d span { white-space: nowrap; }

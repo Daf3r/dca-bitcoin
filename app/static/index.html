@@ -34,7 +34,7 @@
   </header>
   <div class="saldo">
     <h1 class="saldo-k" id="t-saldo">Tu saldo</h1>
-    <p class="saldo-v"><span class="cifra-grande" id="s-sats">—</span><em>sats</em></p>
+    <p class="saldo-v" id="s-saldo-v" role="button" tabindex="0"><span class="cifra-grande" id="s-sats">—</span><em id="s-unidad">sats</em></p>
     <p class="saldo-d" id="s-valor">Abriendo tu libro…</p>
   </div>
 </section>
@@ -69,6 +69,7 @@
     </div>
     <p class="lectura" id="g-lectura"></p>
     <p class="sr" id="g-sr" aria-live="polite"></p>
+    <p class="equilibrio" id="g-equilibrio" hidden></p>
     <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo."></div>
     <p class="leyenda" aria-hidden="true"><span class="k-p">Precio de BTC</span><span class="k-c">Tus compras, a su precio</span><span class="k-a">Tu costo promedio</span></p>
   </section>
