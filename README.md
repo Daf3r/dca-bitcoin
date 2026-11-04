@@ -33,6 +33,36 @@ dca.tudominio.com {
 
 Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)*, y una aplicación de Zero Trust → Access para ese dominio con política *Allow* a los correos permitidos (código por correo o login con Google). En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Access. La app no tiene login propio.
 
+## Acceso con cuentas
+La app tiene login propio: una cuenta por persona, **admin** (anota, corrige, anula, importa, ve el historial) o **lector** (ve todo, no escribe). Toda escritura queda en un historial que no se puede modificar, y borrar una compra la **anula** (sigue en el historial).
+
+Despliegue la primera vez (con Cloudflare Access todavía activo):
+```bash
+docker compose exec backup python backup.py        # respaldo antes de nada
+docker compose up -d --build                       # la app muestra «Aún no hay cuentas»
+docker compose exec app python usuarios.py crear Daf3r --rol admin --generar
+docker compose exec app python usuarios.py crear Ana --rol lector --generar
+docker compose exec app python usuarios.py listar
+```
+Las contraseñas generadas son de 16 caracteres sin letras ambiguas (`xxxx-xxxx-xxxx-xxxx`); también puedes escribir una (mínimo 12) quitando `--generar`. Cada uno puede cambiar la suya desde la app (botón con su nombre → Cambiar contraseña).
+
+Caddy debe decir a la app la IP real del visitante (solo así funciona el límite de intentos por IP). En el Caddyfile del servidor:
+```caddy
+dca.polarzero.dev {
+	reverse_proxy 127.0.0.1:18082 {
+		header_up X-Forwarded-Proto https
+		header_up X-Cliente-IP {http.request.header.CF-Connecting-IP}
+	}
+}
+```
+`header_up` sobrescribe lo que mande el visitante, y el firewall solo deja llegar a Cloudflare, así que la cabecera es de fiar. Después: `sudo systemctl reload caddy`, añade `CONFIAR_X_CLIENTE_IP=1` a `.env` y `docker compose up -d`. Sin eso, la app avisa en el log y desactiva el límite por IP (el límite por cuenta sigue).
+
+Probar: entra en el iPhone y en el PC con Access activo (las dos sesiones conviven), prueba un lector, revisa el Historial. Cuando todo vaya bien unos días, quita la aplicación de Cloudflare Zero Trust → Access, y crea en Cloudflare una regla de límite de peticiones para `/api/login` (por ejemplo, 10 por minuto por IP). La regla de *Bypass cache* para el dominio es obligatoria.
+
+Otras órdenes: `usuarios.py clave NOMBRE` (cambia la contraseña y cierra sus sesiones), `desactivar`/`activar`, `cerrar-sesiones`, `desbloquear` (tras muchos intentos fallidos la cuenta espera hasta 15 min).
+
+Si algo falla: vuelve a activar Access en Cloudflare (un clic) y despliega el commit anterior (`git checkout <commit> && docker compose up -d --build`). Las tablas nuevas no estorban al código viejo, pero este verá como normales las compras anuladas; si ya anulaste alguna, restaura el respaldo de antes del despliegue (ver abajo).
+
 ## Respaldos (para no perder datos)
 - El servicio `backup` copia la base cada 24 h a `data/backups/`, verifica cada copia con `PRAGMA integrity_check` y conserva las últimas 30.
 - Copia manual: `docker compose exec backup python backup.py`
@@ -58,12 +88,13 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 
 ## Notas de seguridad
 - Ningún servicio publica puertos; los contenedores van en solo lectura, sin capabilities y con `no-new-privileges`.
-- La app confía en que Cloudflare Access ya autenticó la petición y solo escucha en localhost. Si algún día se expone de otra forma, valida el encabezado `Cf-Access-Jwt-Assertion` en `server.py` o añade login propio.
+- La app autentica con cuentas propias (scrypt, sesiones con cookie `__Host-` `HttpOnly; Secure; SameSite=Lax`, límite de intentos, roles comprobados en el servidor) y aun así solo escucha en localhost detrás de Caddy y Cloudflare.
+- Los respaldos contienen hashes de contraseña: guárdalos cifrados (restic ya cifra). Las sesiones solo se guardan como hash del token, inservibles para entrar.
 - Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. Las únicas fuentes web (Fraunces y Bricolage Grotesque, licencias OFL en `app/static/fonts/`) va dentro del repo: el navegador no llama a ningún tercero.
 - Las escrituras rechazan peticiones marcadas por el navegador como de otro sitio (`Sec-Fetch-Site`), y la importación exige `text/csv`, que obliga a un preflight CORS.
 - El precio y el histórico los consulta el servidor (Coinbase, con Kraken de reserva). El precio se guarda 30 s; el histórico diario se guarda en la base (tabla `precios`) y se actualiza como mucho una vez al día, en segundo plano. El navegador nunca habla con terceros.
 
 ## Pruebas
-- `python tests/test_api.py` (necesita Flask; base temporal, exchanges simulados, sin red): API completa, validaciones, CSV, migración, precio e histórico (descarga en segundo plano, una sola descarga, paginación, Kraken, fallos).
+- `python tests/test_api.py` (necesita Flask; base temporal, exchanges simulados, sin red): API completa, validaciones, CSV, migración, precio e histórico, y el acceso: sesiones, roles, fuerza bruta, auditoría inmutable y acotada, anular y la CLI de cuentas.
 - `node tests/test_lib.mjs`: cálculos del frontend (hitos, racha con casos límite, proyección, «hoy» de El Salvador, borde de husos horarios, decimación).
 - El frontend se prueba con Playwright contra el servidor local en siete estados (de 0 compras a más de 200 BTC, sin precio y sin histórico), de 320 a 1920 px, claro y oscuro. El build de Docker y la integración con Caddy y Access se validan en el servidor.

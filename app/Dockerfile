@@ -4,7 +4,7 @@ RUN useradd --uid 1000 --no-create-home --shell /usr/sbin/nologin app
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY server.py backup.py importar.py ./
+COPY server.py auth.py usuarios.py backup.py importar.py ./
 COPY static ./static
 USER app
 EXPOSE 8000

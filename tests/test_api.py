@@ -15,12 +15,29 @@ c.commit(); c.close()
 os.environ["DB_PATH"] = dbp
 sys.path.insert(0, APP)
 import server
-cl = server.app.test_client()
+import auth
 ok = 0
 def check(cond, msg):
     global ok
     assert cond, msg
     ok += 1
+
+# Sin cuentas la app no se abre: todo 503 y la entrada lo explica.
+anon = server.app.test_client()
+check(anon.get("/api/compras").status_code == 503 and anon.get("/api/estado").get_json() == {"abierto": False}, "sin cuentas: cerrado")
+check(anon.get("/").status_code == 302 and anon.get("/").headers["Location"].endswith("/login"), "sin cuentas: a /login")
+CLAVE_ADMIN = "montaña-de-sats-2026"
+_c = server.connect(); auth.crear_usuario(_c, "Daf3r", CLAVE_ADMIN, "admin", "prueba"); _c.close()
+
+def cliente(nombre="Daf3r", clave=CLAVE_ADMIN):
+    c = server.app.test_client()
+    c.environ_base.update({"wsgi.url_scheme": "https", "HTTP_X_LIBRO": "1"})
+    r = c.post("/api/login", json={"usuario": nombre, "clave": clave})
+    assert r.status_code == 200, r.data
+    return c
+
+cl = cliente()
+TOKEN = cl.get_cookie("__Host-sesion").value
 
 r = cl.get("/api/compras"); rows = r.get_json()
 check(r.status_code == 200 and len(rows) == 2, "listar")
@@ -220,7 +237,10 @@ j = r.get_json()
 check(r.status_code == 200 and j["cargando"] and j["precios"] == [] and dt_ < 0.12, f"no bloquea ({dt_:.3f}s) {j}")
 # Peticiones simultáneas mientras descarga: una sola descarga.
 res = []
-hilos = [_th.Thread(target=lambda: res.append(server.app.test_client().get(f"/api/historico?desde={desde900}").get_json())) for _ in range(4)]
+def _copia():
+    c = server.app.test_client(); c.set_cookie("__Host-sesion", TOKEN); return c
+clientes = [_copia() for _ in range(4)]
+hilos = [_th.Thread(target=lambda c=c: res.append(c.get(f"/api/historico?desde={desde900}").get_json())) for c in clientes]
 [h.start() for h in hilos]; [h.join() for h in hilos]
 check(all(x["cargando"] for x in res), "simultáneas ven la descarga en curso")
 r = esperar(desde900); j = r.get_json()
@@ -303,7 +323,7 @@ c2 = server.connect(); c2.execute("DELETE FROM meta"); c2.commit(); c2.close()
 V = server.VERSION
 r = cl.get("/")
 html = r.get_data(as_text=True)
-check(r.headers["Cache-Control"] == "no-cache" and f"/app.js?v={V}" in html and f"/styles.css?v={V}" in html and f"/fonts/bricolage.woff2?v={V}" in html, "index con versión y sin caché")
+check(r.headers["Cache-Control"] == "no-store" and f"/app.js?v={V}" in html and f"/styles.css?v={V}" in html and f"/fonts/bricolage.woff2?v={V}" in html, "index con versión y sin caché")
 r = cl.get("/app.js")
 t = r.get_data(as_text=True)
 check(r.mimetype == "text/javascript" and f"./lib.js?v={V}'" in t and f"./montana.js?v={V}'" in t and r.headers["Cache-Control"] == "no-cache", "módulos con imports versionados")
@@ -316,6 +336,155 @@ check(r.status_code == 200 and r.mimetype == "font/woff2" and "immutable" in r.h
 check(cl.get("/icon.svg").headers["Cache-Control"] == "no-cache", "resto de estáticos revalida")
 check(cl.get("/app.js", headers={"If-None-Match": f'"{V}-app.js"'}).status_code == 304, "304 con ETag")
 check(cl.get("/../server.js").status_code == 404 and cl.get("/nada.js").status_code == 404, "solo módulos existentes")
+
+# --- Fase A: cuentas, sesiones, roles y auditoría
+import time as _tt
+def audit(accion=None):
+    c = server.connect()
+    q = "SELECT * FROM auditoria" + (" WHERE accion = ?" if accion else "")
+    rows = c.execute(q, (accion,) if accion else ()).fetchall(); c.close(); return rows
+def sql(q, args=()):
+    c = server.connect()
+    try:
+        r = c.execute(q, args); c.commit(); return r.fetchall()
+    finally:
+        c.close()
+def nuevo():
+    c = server.app.test_client(); c.environ_base.update({"wsgi.url_scheme": "https", "HTTP_X_LIBRO": "1"}); return c
+
+check(anon.get("/api/estado").get_json() == {"abierto": True}, "estado solo dice abierto")
+check(anon.get("/api/compras").status_code == 401 and anon.get("/").status_code == 302, "sin sesión: 401 y redirección")
+check(anon.get("/app.js").status_code == 200 and anon.get("/login").status_code == 200, "recursos y login públicos")
+check(anon.get("/index.html").status_code == 302, "index.html directo exige sesión")
+# Cookie con sus atributos
+c1 = nuevo(); r = c1.post("/api/login", json={"usuario": "daf3r", "clave": CLAVE_ADMIN})
+sc = r.headers["Set-Cookie"]
+check(r.status_code == 200 and r.get_json() == {"usuario": "Daf3r", "rol": "admin"}, "login sin distinguir mayúsculas")
+check(sc.startswith("__Host-sesion=") and "Secure" in sc and "HttpOnly" in sc and "SameSite=Lax" in sc and "Path=/" in sc and "Domain" not in sc, sc)
+check(c1.get("/api/yo").get_json()["rol"] == "admin", "yo")
+r = c1.get("/api/compras"); check(r.headers["Cache-Control"] == "no-store" and "Cookie" in r.headers["Vary"], "no-store y Vary")
+# Sin X-Libro la escritura se rechaza
+sin = server.app.test_client(); sin.set_cookie("__Host-sesion", TOKEN)
+check(sin.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 1000}).status_code == 403, "escritura sin X-Libro")
+check(sin.post("/api/login", json={"usuario": "x", "clave": "y"}).status_code == 403, "login sin X-Libro")
+# Rotación: entrar con una cookie vieja la invalida
+viejo = c1.get_cookie("__Host-sesion").value
+c1.post("/api/login", json={"usuario": "Daf3r", "clave": CLAVE_ADMIN})
+v2 = server.app.test_client(); v2.set_cookie("__Host-sesion", viejo)
+check(v2.get("/api/compras").status_code == 401 and c1.get("/api/compras").status_code == 200, "rotación de token")
+# Caducidad deslizante y tope
+th = auth._h(c1.get_cookie("__Host-sesion").value)
+ahora = int(_tt.time())
+sql("UPDATE sesiones SET ultima = ?, caduca = ? WHERE hash = ?", (ahora - 2 * 86400, ahora + 10, th))
+c1.get("/api/yo")
+check(sql("SELECT caduca FROM sesiones WHERE hash = ?", (th,))[0][0] > ahora + 80 * 86400, "caducidad deslizante")
+sql("UPDATE sesiones SET creada = ? WHERE hash = ?", (ahora - 181 * 86400, th))
+check(c1.get("/api/yo").status_code == 401, "tope de 180 días")
+c1 = cliente()
+th = auth._h(c1.get_cookie("__Host-sesion").value)
+sql("UPDATE sesiones SET caduca = ? WHERE hash = ?", (ahora - 1, th))
+check(c1.get("/api/yo").status_code == 401, "sesión caducada")
+# Lector: lee y exporta; no escribe
+c2 = server.connect(); auth.crear_usuario(c2, "Ana", "lectora-de-la-familia", "lector", "prueba"); c2.close()
+lec = cliente("Ana", "lectora-de-la-familia")
+check(lec.get("/api/compras").status_code == 200 and lec.get("/api/export.csv").status_code == 200, "lector lee y exporta")
+cid_l = cl.get("/api/compras").get_json()[0]["id"]
+check(all(x.status_code == 403 for x in [lec.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 1000}),
+       lec.put(f"/api/compras/{cid_l}", json={"fecha": today, "monto": 1, "sats": 1000}), lec.delete(f"/api/compras/{cid_l}"),
+       lec.post("/api/import", data="fecha,monto_usd,sats\n2024-01-01,1,1000\n", content_type="text/csv"),
+       lec.get("/api/auditoria")]), "lector no escribe ni ve auditoría")
+# Contraseña de la UI: actual incorrecta, demasiado corta, y cambio que cierra las demás sesiones
+otra = cliente("Ana", "lectora-de-la-familia")
+check(lec.post("/api/clave", json={"actual": "mal-mal-mal-mal", "nueva": "otra-clave-larga-1"}).status_code == 400, "clave actual mala")
+check(lec.post("/api/clave", json={"actual": "lectora-de-la-familia", "nueva": "corta"}).status_code == 400, "clave corta")
+check(lec.post("/api/clave", json={"actual": "lectora-de-la-familia", "nueva": "otra-clave-larga-1"}).status_code == 200, "cambio de clave")
+check(lec.get("/api/yo").status_code == 200 and otra.get("/api/yo").status_code == 401, "cierra las demás sesiones")
+# Salir y salir en todos
+a1, a2 = cliente(), cliente()
+a1.post("/api/logout", json={})
+check(a1.get("/api/yo").status_code == 401 and a2.get("/api/yo").status_code == 200, "salir")
+a3 = cliente(); a3.post("/api/logout", json={"todas": True})
+check(a2.get("/api/yo").status_code == 401 and cl.get("/api/yo").status_code == 401, "salir en todos")
+cl = cliente(); TOKEN = cl.get_cookie("__Host-sesion").value
+# Fuerza bruta: espera creciente, sin scrypt al estar bloqueado, auditoría acotada
+llamadas_scrypt = []
+_orig_verificar = auth.verificar
+def _contar(*a): llamadas_scrypt.append(1); return _orig_verificar(*a)
+auth.verificar = _contar
+n_audit = len(audit())
+atac = nuevo()
+codigos = [atac.post("/api/login", json={"usuario": "Daf3r", "clave": f"intento-{i}-xxxxx"}).status_code for i in range(40)]
+check(codigos[:5] == [401] * 5 and codigos[5] == 429 and set(codigos[5:]) == {429}, codigos)
+check(len(llamadas_scrypt) == 5, f"scrypt solo antes del bloqueo ({len(llamadas_scrypt)})")
+fallidas = [r for r in audit()[n_audit:] if r["usuario"] == "Daf3r"]
+check(len(fallidas) == 2 and {r["accion"] for r in fallidas} == {"login_fallido", "bloqueo"}, [dict(r) for r in fallidas])
+check(cl.get("/api/yo").status_code == 200, "una sesión válida no se ve afectada por el bloqueo")
+check(atac.post("/api/login", json={"usuario": "Daf3r", "clave": CLAVE_ADMIN}).status_code == 429, "bloqueado incluso con la clave buena")
+# Nombres inexistentes: sin auditoría, misma respuesta; sin IP real no hay bloqueo global
+n_audit = len(audit())
+r1 = atac.post("/api/login", json={"usuario": "nadie-xyz", "clave": "loquesea-1234"})
+check(r1.status_code == 401 and r1.get_json() == {"error": "Usuario o contraseña incorrectos."}, "mismo mensaje")
+for i in range(30):
+    atac.post("/api/login", json={"usuario": f"azar{i}", "clave": "loquesea-1234"}, headers={"X-Cliente-IP": "203.0.113.7"})
+check(len(audit()) == n_audit, "inexistentes no inflan la auditoría")
+check(lec.post("/api/logout", json={}).status_code == 200 and cliente("Ana", "otra-clave-larga-1"), "sin IP real nadie queda bloqueado por IP")
+# Tiempos parecidos exista o no el usuario
+def t(nombre):
+    t0 = _tt.perf_counter(); nuevo().post("/api/login", json={"usuario": nombre, "clave": "otra-cosa-123456"}); return _tt.perf_counter() - t0
+sql("DELETE FROM intentos")
+ta = min(t("Ana") for _ in range(3)); tn = min(t("fantasma") for _ in range(3))
+check(0.5 < ta / tn < 2, f"tiempos parecidos ({ta:.3f} / {tn:.3f})")
+sql("DELETE FROM intentos")
+auth.verificar = _orig_verificar
+# Con IP real (Caddy configurado): bloqueo por IP tras 20 fallos, auditado una vez
+server.CONFIAR_IP = True
+n_audit = len(audit())
+for i in range(21):
+    nuevo().post("/api/login", json={"usuario": f"azar{i}", "clave": "loquesea-1234"}, headers={"X-Cliente-IP": "198.51.100.9"})
+check(nuevo().post("/api/login", json={"usuario": "Daf3r", "clave": CLAVE_ADMIN}, headers={"X-Cliente-IP": "198.51.100.9"}).status_code == 429, "bloqueo por IP")
+check(nuevo().post("/api/login", json={"usuario": "Daf3r", "clave": CLAVE_ADMIN}, headers={"X-Cliente-IP": "198.51.100.10"}).status_code == 200, "otra IP entra")
+check([r["accion"] for r in audit()[n_audit:] if r["entidad"] == "ip"] == ["login_fallido", "bloqueo"], "auditoría de IP acotada")
+server.CONFIAR_IP = False
+sql("DELETE FROM intentos")
+# Semáforo: con dos verificaciones en curso, 503 sin esperar
+server._scrypt_sem.acquire(); server._scrypt_sem.acquire()
+check(nuevo().post("/api/login", json={"usuario": "Daf3r", "clave": CLAVE_ADMIN}).status_code == 503, "semáforo lleno: 503")
+server._scrypt_sem.release(); server._scrypt_sem.release()
+# Auditoría inmutable
+for q in ("UPDATE auditoria SET usuario = 'x'", "DELETE FROM auditoria"):
+    try:
+        sql(q); check(False, q)
+    except sqlite3.DatabaseError:
+        check(True, q)
+# Anular: la fila queda, la lista y el export la excluyen, el importador permite volver a meterla
+r = cl.post("/api/compras", json={"fecha": "2024-07-07", "monto": 77, "sats": 99999})
+assert r.status_code == 201, (r.status_code, r.data)
+cid_a = r.get_json()["id"]
+check(cl.delete(f"/api/compras/{cid_a}").status_code == 204, "anular")
+check(sql("SELECT anulada_por FROM compras WHERE id = ?", (cid_a,))[0][0] == "Daf3r", "fila anulada se conserva")
+check(all(c["id"] != cid_a for c in cl.get("/api/compras").get_json()) and "99999" not in cl.get("/api/export.csv").get_data(as_text=True), "excluida")
+check(cl.put(f"/api/compras/{cid_a}", json={"fecha": "2024-07-07", "monto": 77, "sats": 99999}).status_code == 404, "no se edita anulada")
+r = cl.post("/api/import", data="fecha,monto_usd,sats\n2024-07-07,77,99999\n", content_type="text/csv")
+check(r.get_json()["nuevas"] == 1, "importar una anulada la vuelve a crear")
+acc = [r["accion"] for r in audit() if r["entidad"] == "compra"]
+check({"alta", "edicion", "anulacion", "importacion"} <= set(acc), acc)
+h = cl.get("/api/auditoria").get_json()
+check(len(h) <= 100 and h[0]["id"] > h[-1]["id"] and cl.get(f"/api/auditoria?antes={h[-1]['id']}").status_code == 200, "historial admin paginado")
+# CLI: generar, mínimo de 12 y desbloquear
+import usuarios, getpass as _gp
+g = auth.generar_clave()
+check(len(g) == 19 and g.count("-") == 3 and not set(g) & set("0O1lI"), g)
+_resp = iter(["corta", "una-clave-buena-1", "una-clave-buena-1"])
+_gp.getpass = lambda prompt="": next(_resp)
+check(usuarios.main(["crear", "Beto", "--rol", "lector"]) == 0 and auth.buscar(server.connect(), "Beto")["rol"] == "lector", "CLI crear")
+for i in range(6): nuevo().post("/api/login", json={"usuario": "Beto", "clave": f"mala-{i}-xxxxxxx"})
+check(nuevo().post("/api/login", json={"usuario": "Beto", "clave": "una-clave-buena-1"}).status_code == 429, "Beto bloqueado")
+check(usuarios.main(["desbloquear", "Beto"]) == 0 and cliente("Beto", "una-clave-buena-1"), "CLI desbloquear")
+bet = cliente("Beto", "una-clave-buena-1")
+check(usuarios.main(["desactivar", "Beto"]) == 0 and bet.get("/api/yo").status_code == 401, "CLI desactivar cierra sesiones")
+check({r["accion"] for r in audit() if r["usuario"] == "cli"} >= {"cuenta_creada", "desbloqueo", "cuenta_desactivada"}, "CLI auditada")
+# Los respaldos solo guardan hashes de token: una cookie no se puede reconstruir
+check(all(len(x[0]) == 64 for x in sql("SELECT hash FROM sesiones")) and TOKEN not in str(sql("SELECT * FROM sesiones")), "solo hashes de token")
 
 # CLI importar
 p = os.path.join(tmp, "c.csv"); open(p, "w").write(txt)
