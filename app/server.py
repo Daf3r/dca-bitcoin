@@ -63,6 +63,7 @@ MIGRACIONES = (
     ("sats", "ALTER TABLE compras ADD COLUMN sats INTEGER CHECK (sats IS NULL OR sats > 0)"),
     ("anulada_ts", "ALTER TABLE compras ADD COLUMN anulada_ts INTEGER"),
     ("anulada_por", "ALTER TABLE compras ADD COLUMN anulada_por TEXT"),
+    ("txid", "ALTER TABLE compras ADD COLUMN txid TEXT CHECK (txid IS NULL OR length(txid) = 64)"),
 )
 VIGENTES = "anulada_ts IS NULL"
 
@@ -71,7 +72,7 @@ CSP = (
     "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
-COLS = "id, fecha, monto, precio, sats, creado"
+COLS = "id, fecha, monto, precio, sats, creado, txid"
 GENESIS = date(2009, 1, 3)
 Compra = tuple[str, float, float, int]  # fecha, monto, precio, sats
 
@@ -95,6 +96,7 @@ def init_db() -> None:
         for col, ddl in MIGRACIONES:
             if col not in cols:
                 conn.execute(ddl)
+        conn.execute("CREATE INDEX IF NOT EXISTS compras_txid ON compras (txid) WHERE txid IS NOT NULL")
         # filas de antes de guardar sats: se estiman con monto y precio
         conn.execute(
             "UPDATE compras SET sats = MAX(1, CAST(ROUND(monto / precio * 100000000) AS INTEGER)) WHERE sats IS NULL"
@@ -118,16 +120,24 @@ def _close_db(_exc: BaseException | None) -> None:
 
 
 def fila(row: sqlite3.Row) -> dict[str, Any]:
-    return {k: row[k] for k in ("id", "fecha", "monto", "precio", "sats", "creado")}
+    return {k: row[k] for k in ("id", "fecha", "monto", "precio", "sats", "creado", "txid")}
 
 
-def insertar(conn: sqlite3.Connection, c: Compra) -> int:
+def insertar(conn: sqlite3.Connection, c: Compra, txid: str | None = None) -> int:
     fecha, monto, precio, sats = c
     cur = conn.execute(
-        "INSERT INTO compras (fecha, monto, precio, sats, creado) VALUES (?, ?, ?, ?, ?)",
-        (fecha, monto, precio, sats, int(time.time() * 1000)),
+        "INSERT INTO compras (fecha, monto, precio, sats, creado, txid) VALUES (?, ?, ?, ?, ?, ?)",
+        (fecha, monto, precio, sats, int(time.time() * 1000), txid),
     )
     return int(cur.lastrowid or 0)
+
+
+def txid_repetido(conn: sqlite3.Connection, txid: str | None, excepto: int = 0) -> list[int]:
+    """Ids de otras compras vigentes con el mismo TXID (se avisa, no se rechaza)."""
+    if not txid:
+        return []
+    return [r["id"] for r in conn.execute(
+        f"SELECT id FROM compras WHERE txid = ? AND id != ? AND {VIGENTES} ORDER BY id", (txid, excepto))]
 
 
 # ------------------------------------------------------------------ validación
@@ -168,6 +178,26 @@ def parse_compra(body: Any) -> Compra:
     return fecha, monto, precio, max(1, round(monto / precio * 1e8))
 
 
+def parse_txid(v: Any) -> str | None:
+    """TXID opcional: 64 caracteres hexadecimales. También se acepta pegar un enlace de un explorador
+    (mempool.space, blockstream…): se saca el TXID de la dirección. Vacío o None = sin TXID."""
+    if v is None:
+        return None
+    if not isinstance(v, str) or len(v) > 400:
+        raise ValueError("TXID inválido.")
+    t = v.strip()
+    if not t:
+        return None
+    if re.match(r"https?://", t, re.I):
+        m = re.search(r"(?<![0-9a-fA-F])[0-9a-fA-F]{64}(?![0-9a-fA-F])", t)
+        if m:
+            t = m.group(0)
+    t = t.lower()
+    if not re.fullmatch(r"[0-9a-f]{64}", t):
+        raise ValueError("El TXID debe tener 64 caracteres hexadecimales (0-9 y a-f).")
+    return t
+
+
 def _decimal(v: str | None, nombre: str) -> float:
     try:
         return float((v or "").strip())
@@ -198,6 +228,7 @@ def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip:
             else:
                 body["precio"] = _decimal(row.get("precio_btc_usd") or row.get("precio"), "Precio")
             c = parse_compra(body)
+            txid = parse_txid(row.get("txid"))
         except ValueError as e:
             omitidas.append(f"Línea {n}: {e}")
             continue
@@ -210,7 +241,7 @@ def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip:
         if existe:
             repetidas += 1
             continue
-        ids.append(insertar(conn, c))
+        ids.append(insertar(conn, c, txid))
         nuevas += 1
     resumen = {"nuevas": nuevas, "repetidas": repetidas, "omitidas": len(omitidas), "ids": ids[:500]}
     if nuevas:
@@ -470,33 +501,42 @@ def listar() -> Response:
 
 @app.post("/api/compras")
 def crear() -> Any:
+    body = request.get_json(silent=True)
     try:
-        c = parse_compra(request.get_json(silent=True))
+        c = parse_compra(body)
+        txid = parse_txid(body.get("txid"))
     except ValueError as e:
         return jsonify(error=str(e)), 400
     conn = db()
-    cid = insertar(conn, c)
+    cid = insertar(conn, c, txid)
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "alta", "compra", cid, None, nueva, auth.ip_resumida(ip_real()))
     conn.commit()
-    return jsonify(nueva), 201
+    rep = txid_repetido(conn, txid, cid)
+    return jsonify({**nueva, **({"txid_repetido": rep} if rep else {})}), 201
 
 
 @app.put("/api/compras/<int:cid>")
 def editar(cid: int) -> Any:
+    body = request.get_json(silent=True)
     try:
-        fecha, monto, precio, sats = parse_compra(request.get_json(silent=True))
+        fecha, monto, precio, sats = parse_compra(body)
+        txid = parse_txid(body.get("txid")) if "txid" in body else None
     except ValueError as e:
         return jsonify(error=str(e)), 400
     conn = db()
     previa = conn.execute(f"SELECT {COLS} FROM compras WHERE id = ? AND {VIGENTES}", (cid,)).fetchone()
     if not previa:
         return jsonify(error="La compra no existe."), 404
-    conn.execute("UPDATE compras SET fecha = ?, monto = ?, precio = ?, sats = ? WHERE id = ?", (fecha, monto, precio, sats, cid))
+    if "txid" not in body:  # un cliente que no manda el campo no borra el TXID guardado
+        txid = previa["txid"]
+    conn.execute("UPDATE compras SET fecha = ?, monto = ?, precio = ?, sats = ?, txid = ? WHERE id = ?",
+                 (fecha, monto, precio, sats, txid, cid))
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "edicion", "compra", cid, fila(previa), nueva, auth.ip_resumida(ip_real()))
     conn.commit()
-    return jsonify(nueva)
+    rep = txid_repetido(conn, txid, cid)
+    return jsonify({**nueva, **({"txid_repetido": rep} if rep else {})})
 
 
 @app.delete("/api/compras/<int:cid>")
@@ -520,12 +560,12 @@ def _fmt(x: float) -> str:
 
 @app.get("/api/export.csv")
 def exportar() -> Response:
-    rows = db().execute(f"SELECT fecha, monto, precio, sats FROM compras WHERE {VIGENTES} ORDER BY fecha, id").fetchall()
+    rows = db().execute(f"SELECT fecha, monto, precio, sats, txid FROM compras WHERE {VIGENTES} ORDER BY fecha, id").fetchall()
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
-    w.writerow(["fecha", "monto_usd", "precio_btc_usd", "sats", "btc"])
+    w.writerow(["fecha", "monto_usd", "precio_btc_usd", "sats", "btc", "txid"])
     for r in rows:
-        w.writerow([r["fecha"], _fmt(r["monto"]), _fmt(r["precio"]), r["sats"], "%.8f" % (r["sats"] / 1e8)])
+        w.writerow([r["fecha"], _fmt(r["monto"]), _fmt(r["precio"]), r["sats"], "%.8f" % (r["sats"] / 1e8), r["txid"] or ""])
     return Response(
         out.getvalue(),
         mimetype="text/csv",

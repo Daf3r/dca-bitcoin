@@ -94,7 +94,7 @@ check(r.status_code == 201, "same-origin"); cl.delete(f"/api/compras/{r.get_json
 
 # export
 r = cl.get("/api/export.csv"); txt = r.get_data(as_text=True)
-check(r.status_code == 200 and txt.startswith("fecha,monto_usd,precio_btc_usd,sats,btc\n"), txt[:80])
+check(r.status_code == 200 and txt.startswith("fecha,monto_usd,precio_btc_usd,sats,btc,txid\n"), txt[:80])
 check("attachment" in r.headers["Content-Disposition"], "disposition")
 n_antes = len(cl.get("/api/compras").get_json())
 # reimportar el export: todo repetido
@@ -470,6 +470,55 @@ acc = [r["accion"] for r in audit() if r["entidad"] == "compra"]
 check({"alta", "edicion", "anulacion", "importacion"} <= set(acc), acc)
 h = cl.get("/api/auditoria").get_json()
 check(len(h) <= 100 and h[0]["id"] > h[-1]["id"] and cl.get(f"/api/auditoria?antes={h[-1]['id']}").status_code == 200, "historial admin paginado")
+# --- Fase B: TXID opcional y enlace a mempool.space
+adm = cliente()
+TX1 = "a" * 63 + "1"
+TX2 = "0123456789abcdef" * 4
+r = adm.post("/api/compras", json={"fecha": "2024-08-01", "monto": 30, "sats": 50000, "txid": TX2.upper()})
+check(r.status_code == 201 and r.get_json()["txid"] == TX2 and "txid_repetido" not in r.get_json(), f"TXID válido, en minúsculas {r.data}")
+tid = r.get_json()["id"]
+check(next(c for c in adm.get("/api/compras").get_json() if c["id"] == tid)["txid"] == TX2, "el listado devuelve el TXID")
+# Sin TXID: nulo, y las compras viejas siguen igual
+r = adm.post("/api/compras", json={"fecha": "2024-08-02", "monto": 30, "sats": 50000})
+check(r.status_code == 201 and r.get_json()["txid"] is None, "sin TXID es nulo")
+sin_tx = r.get_json()["id"]
+# Inválidos: corto, no hexadecimal, tipo raro, demasiado largo
+for malo in ("abc", "g" * 64, "a" * 65, 12345, "a" * 500, {"x": 1}, True):
+    r = adm.post("/api/compras", json={"fecha": "2024-08-03", "monto": 30, "sats": 50000, "txid": malo})
+    check(r.status_code == 400 and "TXID" in r.get_json()["error"], f"TXID inválido {malo!r}: {r.status_code}")
+# Pegar un enlace de un explorador: se saca el TXID
+r = adm.post("/api/compras", json={"fecha": "2024-08-04", "monto": 30, "sats": 50000, "txid": f"https://mempool.space/es/tx/{TX1}?mode=details"})
+check(r.status_code == 201 and r.get_json()["txid"] == TX1, f"TXID desde un enlace {r.data}")
+check(adm.post("/api/compras", json={"fecha": "2024-08-04", "monto": 30, "sats": 50000, "txid": "https://mempool.space/tx/" + "b" * 62}).status_code == 400, "enlace sin TXID completo")
+# Repetido: se guarda pero se avisa con el id de la otra compra
+r = adm.post("/api/compras", json={"fecha": "2024-08-05", "monto": 30, "sats": 50000, "txid": TX1})
+check(r.status_code == 201 and len(r.get_json()["txid_repetido"]) == 1, f"TXID repetido avisa {r.data}")
+repetida = r.get_json()["id"]
+# Editar: poner, cambiar, no tocarlo (cliente viejo sin el campo) y quitarlo
+r = adm.put(f"/api/compras/{sin_tx}", json={"fecha": "2024-08-02", "monto": 30, "sats": 50000, "txid": TX2})
+check(r.status_code == 200 and r.get_json()["txid"] == TX2 and r.get_json()["txid_repetido"] == [tid], f"editar pone el TXID {r.data}")
+r = adm.put(f"/api/compras/{sin_tx}", json={"fecha": "2024-08-02", "monto": 31, "sats": 50000})
+check(r.status_code == 200 and r.get_json()["txid"] == TX2, "sin el campo, el TXID se conserva")
+r = adm.put(f"/api/compras/{sin_tx}", json={"fecha": "2024-08-02", "monto": 31, "sats": 50000, "txid": ""})
+check(r.status_code == 200 and r.get_json()["txid"] is None, "TXID vacío lo quita")
+# La auditoría guarda el TXID antes y después
+ed = [x for x in audit("edicion") if x["entidad_id"] == sin_tx]
+check(any(TX2 in (x["despues"] or "") for x in ed) and any(TX2 in (x["antes"] or "") for x in ed), "auditoría registra el TXID")
+# La base rechaza un TXID corrupto aunque alguien se salte la validación
+try:
+    sql("UPDATE compras SET txid = 'corto' WHERE id = ?", (tid,)); check(False, "CHECK de txid")
+except sqlite3.IntegrityError:
+    check(True, "CHECK de txid")
+# Export con TXID e importación ida y vuelta
+txt = adm.get("/api/export.csv").get_data(as_text=True)
+check(txt.splitlines()[0].endswith(",txid") and TX2 in txt and TX1 in txt, "export incluye txid")
+sql("UPDATE compras SET anulada_ts = 1 WHERE txid IS NOT NULL")
+r = adm.post("/api/import", data=txt, content_type="text/csv"); j = r.get_json()
+check(r.status_code == 200 and j["nuevas"] >= 2, f"reimportar con txid {j}")
+check(any(c["txid"] == TX2 for c in adm.get("/api/compras").get_json()), "el TXID sobrevive al CSV")
+r = adm.post("/api/import", data="fecha,monto_usd,sats,txid\n2024-09-01,10,1000,malo\n2024-09-02,10,1000,\n", content_type="text/csv"); j = r.get_json()
+check(j["nuevas"] == 1 and len(j["omitidas"]) == 1 and "TXID" in j["omitidas"][0], f"CSV con TXID malo omite la fila {j}")
+
 # CLI: generar, mínimo de 12 y desbloquear
 import usuarios, getpass as _gp
 g = auth.generar_clave()

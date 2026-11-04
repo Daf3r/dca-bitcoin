@@ -1,11 +1,11 @@
 # Libro DCA (autoalojado)
 
-Registro de compras DCA de Bitcoin con precio en vivo. Flask + SQLite en tu servidor, detrás de Caddy y Cloudflare Access.
+Registro de compras DCA de Bitcoin con precio en vivo. Flask + SQLite en tu servidor, detrás de Caddy y Cloudflare, con login propio por persona.
 
 Tu saldo en sats es una montaña que subes compra a compra: la cabecera es un paisaje de noche (de amanecer en modo claro) con campamentos en 100k, 1M, 10M y 1 BTC, y una celebración cuando cruzas uno. Debajo, el precio de BTC con tus compras marcadas y tu costo promedio, y reportes: campamentos con fecha, año por año, constancia semanal y tu mejor y peor precio. Anotas escribiendo solo los sats que recibiste, con el teclado numérico del teléfono (los dólares se calculan con el precio de ese día; si quieres, los escribes exactos), tocas una compra para editarla o borrarla, e importas o exportas CSV. Funciona igual de bien en el teléfono y en el PC.
 
 ```
-navegador ──▶ Cloudflare Access (login) ──▶ Caddy ──▶ 127.0.0.1:18082 ──▶ data/libro.db
+navegador ──▶ Cloudflare (proxy) ──▶ Caddy ──▶ 127.0.0.1:18082 (login propio) ──▶ data/libro.db
                                                        backup ──▶ data/backups/ (diario)
 ```
 
@@ -13,7 +13,7 @@ navegador ──▶ Cloudflare Access (login) ──▶ Caddy ──▶ 127.0.0.
 - Docker y Docker Compose en el servidor, y Caddy (u otro proxy) para HTTPS.
 - Un dominio en Cloudflare y Zero Trust (el plan gratis alcanza).
 
-## Despliegue (Caddy + Cloudflare Access)
+## Despliegue (Caddy + Cloudflare)
 
 ```bash
 mkdir -p data && sudo chown -R 1000:1000 data     # el contenedor corre como uid 1000
@@ -31,7 +31,7 @@ dca.tudominio.com {
 }
 ```
 
-Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)*, y una aplicación de Zero Trust → Access para ese dominio con política *Allow* a los correos permitidos (código por correo o login con Google). En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Access. La app no tiene login propio.
+Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)* y una regla de límite de peticiones para `/api/login` (por ejemplo, 10 por minuto por IP). En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Cloudflare. La protección de la app es su login propio (cuentas por persona, abajo); Cloudflare Access ya no se usa.
 
 ## Acceso con cuentas
 La app tiene login propio: una cuenta por persona, **admin** (anota, corrige, anula, importa, ve el historial) o **lector** (ve todo, no escribe). Toda escritura queda en un historial que no se puede modificar, y borrar una compra la **anula** (sigue en el historial).
@@ -57,7 +57,7 @@ dca.polarzero.dev {
 ```
 `header_up` sobrescribe lo que mande el visitante, y el firewall solo deja llegar a Cloudflare, así que la cabecera es de fiar. Después: `sudo systemctl reload caddy`, añade `CONFIAR_X_CLIENTE_IP=1` a `.env` y `docker compose up -d`. Sin eso, la app avisa en el log y desactiva el límite por IP (el límite por cuenta sigue).
 
-Probar: entra en el iPhone y en el PC con Access activo (las dos sesiones conviven), prueba un lector, revisa el Historial. Cuando todo vaya bien unos días, quita la aplicación de Cloudflare Zero Trust → Access, y crea en Cloudflare una regla de límite de peticiones para `/api/login` (por ejemplo, 10 por minuto por IP). La regla de *Bypass cache* para el dominio es obligatoria.
+Probar: entra en el iPhone y en el PC, prueba un lector y revisa el Historial. Si migras desde una instalación con Cloudflare Access, mantenla activa unos días mientras pruebas el login y quítala después. La regla de *Bypass cache* para el dominio es obligatoria.
 
 Otras órdenes: `usuarios.py clave NOMBRE` (cambia la contraseña y cierra sus sesiones), `desactivar`/`activar`, `cerrar-sesiones`, `desbloquear` (tras muchos intentos fallidos la cuenta espera hasta 15 min).
 
@@ -98,3 +98,6 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 - `python tests/test_api.py` (necesita Flask; base temporal, exchanges simulados, sin red): API completa, validaciones, CSV, migración, precio e histórico, y el acceso: sesiones, roles, fuerza bruta, auditoría inmutable y acotada, anular y la CLI de cuentas.
 - `node tests/test_lib.mjs`: cálculos del frontend (hitos, racha con casos límite, proyección, «hoy» de El Salvador, borde de husos horarios, decimación).
 - El frontend se prueba con Playwright contra el servidor local en siete estados (de 0 compras a más de 200 BTC, sin precio y sin histórico), de 320 a 1920 px, claro y oscuro. El build de Docker y la integración con Caddy y Access se validan en el servidor.
+
+## TXID y auditoría de las compras
+Cada compra puede llevar su **TXID** (64 caracteres hexadecimales, o pega el enlace de mempool.space y se extrae solo): en «Más detalles» de la hoja de anotar. Con TXID, la lista muestra «Ver en mempool.space» (abre `https://mempool.space/tx/<txid>` en otra pestaña) para que cualquiera de la familia compruebe la transacción. Es opcional: una compra dentro del exchange o por Lightning no tiene. Si un TXID ya está en otra compra, se guarda y se avisa. El CSV de exportación incluye la columna `txid` y el importador la lee. Los cambios de TXID quedan en la auditoría como cualquier edición.

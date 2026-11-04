@@ -127,11 +127,15 @@
     <p class="hoja-error" id="hoja-error" role="alert"></p>
     <label class="h-fecha">Fecha <input type="date" id="h-fecha" required></label>
     <details class="h-avanzado" id="h-avanzado">
-      <summary>Escribir los dólares exactos</summary>
+      <summary>Más detalles: dólares exactos y TXID</summary>
       <label class="h-usd">Pagaste (USD)
         <input id="h-usd" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00">
       </label>
       <p class="h-nota">Si no los escribes, se calculan con el precio de ese día.</p>
+      <label class="h-usd">TXID (opcional)
+        <input id="h-txid" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="64 caracteres, o pega el enlace de mempool.space">
+      </label>
+      <p class="h-nota">Sirve para comprobar la transacción en la cadena. Una compra dentro del exchange o por Lightning no tiene.</p>
     </details>
     <div class="hoja-bot">
       <button type="button" class="borrar" id="h-borrar" hidden>Anular</button>

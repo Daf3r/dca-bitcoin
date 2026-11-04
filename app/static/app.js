@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto,
+  resumen, nombreHito, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -271,7 +271,8 @@ function pintarLista() {
       (esAdmin() ? '<span class="sr">Editar la compra del </span>' : '') + `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
       `<span class="f-sats">+${entero(c.sats)} <small>sats</small></span>` +
       `<span class="f-det">${usd(c.monto)} a ${usd0(c.precio)}</span>` +
-      `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : pct(v)}</span></${esAdmin() ? 'button' : 'div'}></li>`;
+      `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : pct(v)}</span></${esAdmin() ? 'button' : 'div'}>` +
+      (mempoolUrl(c.txid) ? `<a class="f-tx" href="${mempoolUrl(c.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space <span aria-hidden="true">↗</span><span class="sr"> (se abre en otra pestaña)</span></a>` : '') + '</li>';
   }).join('');
   const vt = $('ver-todas');
   vt.hidden = mostradas.length >= R.n;
@@ -289,7 +290,7 @@ $('ver-todas').addEventListener('click', () => {
 });
 
 // ------------------------------------------------------------- hoja de anotar
-const H = { sats: '', usd: '', usdTocado: false, editando: null, guardando: false, origen: null };
+const H = { sats: '', usd: '', txid: '', usdTocado: false, editando: null, guardando: false, origen: null };
 const hoja = $('hoja');
 
 function abrirHoja(id = null) {
@@ -297,6 +298,8 @@ function abrirHoja(id = null) {
   Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement });
   H.sats = c ? String(c.sats) : '';
   H.usd = c ? String(c.monto) : '';
+  H.txid = c?.txid ?? '';
+  $('h-txid').value = H.txid;
   $('h-sats').value = H.sats ? entero(Number(H.sats)) : '';
   $('h-usd').value = H.usd;
   $('h-avanzado').open = !!c;
@@ -367,6 +370,9 @@ $('h-usd').addEventListener('input', (e) => {
   H.usdTocado = true;
   pintarHoja();
 });
+$('h-txid').addEventListener('input', (e) => { H.txid = e.target.value.trim(); $('hoja-error').textContent = ''; });
+// Al salir del campo, si pegaron un enlace de un explorador se deja solo el TXID.
+$('h-txid').addEventListener('change', (e) => { e.target.value = H.txid = extraerTxid(e.target.value); });
 $('h-fecha').addEventListener('input', pintarHoja);
 hoja.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') return cerrarHoja();
@@ -383,7 +389,7 @@ $('guardar').addEventListener('click', async () => {
   H.guardando = true; pintarHoja();
   const antes = R;
   try {
-    const cuerpo = { fecha, monto: d.monto, sats: d.sats };
+    const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid) };
     const g = normalizar(H.editando ? await api(`/api/compras/${H.editando}`, { metodo: 'PUT', cuerpo }) : await api('/api/compras', { metodo: 'POST', cuerpo }));
     S.compras = H.editando ? S.compras.map((x) => (x.id === g.id ? g : x)) : [...S.compras, g];
     const editando = H.editando;
@@ -391,7 +397,7 @@ $('guardar').addEventListener('click', async () => {
     cerrarHoja();
     pintar({ montana: true, desde: antes.sats });
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
-    avisar(editando ? 'Compra corregida.' : `Anotado: +${entero(g.sats)} sats`, null, true);
+    avisar((editando ? 'Compra corregida.' : `Anotado: +${entero(g.sats)} sats`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : ''), null, true);
     celebrar(antes);
   } catch (err) {
     H.guardando = false;
