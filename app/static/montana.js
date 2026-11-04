@@ -218,9 +218,18 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
 
   // Cada compra: brasas desde tu punto, la cifra flotando y la siguiente bandera que se agita.
   brasas(fx, p.x, p.y, nivel === 'compra' ? 9 : 14, nivel === 'compra' ? 46 : 64);
-  const izq = p.x > W - 130;
-  const t = nodo('text', { class: 'flota', x: f1(p.x + (izq ? -18 : 18)), y: f1(p.y - 10), 'text-anchor': izq ? 'end' : 'start' }, fx);
+  // «+N sats» donde no choque con las etiquetas (banderas y «Tú»): se prueban varios sitios.
+  const t = nodo('text', { class: 'flota' }, fx);
   t.textContent = `+${entero(delta)} sats`;
+  const ocupadas = [...host.querySelectorAll('#m-etiquetas text')].map((e) => e.getBBox());
+  // La cifra entra 8 px más abajo y sube 24 px mientras se apaga: se reserva todo su recorrido.
+  const choca = (b) => b.x < 4 || b.x + b.width > W - 4 || b.y - 26 < 4
+    || ocupadas.some((o) => b.x < o.x + o.width + 4 && b.x + b.width + 4 > o.x && b.y - 26 < o.y + o.height + 2 && b.y + b.height + 10 > o.y);
+  const sitios = [[18, 22, 'start'], [-18, 22, 'end'], [0, -40, 'middle'], [18, -10, 'start'], [-18, -10, 'end'], [0, -64, 'middle'], [0, 42, 'middle']];
+  for (const [dx, dy, ancla] of sitios) {
+    t.setAttribute('x', f1(p.x + dx)); t.setAttribute('y', f1(p.y + dy)); t.setAttribute('text-anchor', ancla);
+    if (!choca(t.getBBox())) break;
+  }
   retirar(t, 1800);
   const siguiente = host.querySelector(`.campo[data-m="${campos.find((x) => x.m > hasta)?.m}"]`);
   if (siguiente) { siguiente.classList.add('agita'); setTimeout(() => siguiente.classList.remove('agita'), 1700); }

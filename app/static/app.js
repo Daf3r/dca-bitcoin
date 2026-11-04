@@ -439,7 +439,10 @@ $('guardar').addEventListener('click', async () => {
     pintar({ montana: true, desde: antes.sats, festejo });
     if (festejo && !reducido()) setTimeout(() => destello(), MS_SUBIDA);
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
-    avisar((editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : ''), null, true);
+    const texto = (editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : '');
+    // Con celebración, el aviso de abajo espera a que acabe para no tapar el sendero.
+    if (festejo && !reducido()) setTimeout(() => avisar(texto, null, true), MS_SUBIDA + 1300);
+    else avisar(texto, null, true);
     celebrar(antes);
   } catch (err) {
     H.guardando = false;
@@ -578,6 +581,10 @@ function celebrar(antes) {
   // Aparece cuando tu punto llega a la bandera, no antes.
   clearTimeout(celebrar.t);
   celebrar.t = setTimeout(() => {
+    // En móvil y tablet va bajo el saldo, sin tapar la cabecera ni la cifra.
+    const saldo = document.querySelector('.saldo-d')?.getBoundingClientRect();
+    if (innerWidth < 1100 && saldo) el.style.top = `${Math.round(Math.max(saldo.bottom, 0) + 12)}px`;
+    else el.style.removeProperty('top');
     el.hidden = false;
     el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
     celebrar.t = setTimeout(() => { el.hidden = true; }, hito ? 2600 : 2000);
