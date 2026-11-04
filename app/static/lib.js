@@ -155,6 +155,20 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   };
 }
 
+// ------------------------------------------------------------------- TXID
+/** Enlace a la transacción en mempool.space, solo si el TXID tiene la forma correcta (64 hex). */
+export const mempoolUrl = (txid) => (/^[0-9a-f]{64}$/.test(txid ?? '') ? `https://mempool.space/tx/${txid}` : null);
+
+/** Si pegan un enlace de un explorador, saca el TXID; si no, devuelve el texto en minúsculas. */
+export function extraerTxid(texto) {
+  const t = String(texto ?? '').trim();
+  if (/^https?:\/\//i.test(t)) {
+    const m = t.match(/(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])/i);
+    if (m) return m[0].toLowerCase();
+  }
+  return t.toLowerCase();
+}
+
 // ---------------------------------------------------------- gráfico de precio
 /** Serie [{fecha, p}] desde los cierres diarios; el último punto es siempre el precio en vivo. */
 export function serieGrafico(historico, precioVivo, hoy = hoyISO()) {
