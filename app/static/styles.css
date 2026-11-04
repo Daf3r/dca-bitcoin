@@ -66,6 +66,10 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { background: var(--fondo); -webkit-text-size-adjust: 100%; scroll-padding-bottom: 130px; }
+/* Sin zoom por doble toque (iPhone): tocar varias veces seguidas un botón o el teclado no debe ampliar la
+   página. El zoom con dos dedos sigue funcionando. */
+html, body { touch-action: manipulation; }
+button, label, summary { -webkit-tap-highlight-color: transparent; }
 /* Todas las cifras tabulares y de altura de mayúscula: alinean en columnas y no bailan al cambiar. */
 body { margin: 0; background: var(--fondo); color: var(--txt); font: 400 16px/1.5 var(--sans); font-variant-numeric: tabular-nums lining-nums; -webkit-font-smoothing: antialiased; }
 h1, h2, h3, p, ul, ol, dl, dd { margin: 0; }
@@ -316,7 +320,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .h-fecha { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.875rem; color: var(--txt2); }
 .h-fecha input { min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }
 .modo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.modo button { display: grid; justify-items: start; gap: 2px; min-height: 76px; padding: 10px 14px; border: 2px solid transparent; border-radius: 18px; background: var(--s2); text-align: left; cursor: pointer; }
+.modo button { touch-action: manipulation; -webkit-user-select: none; user-select: none; display: grid; justify-items: start; gap: 2px; min-height: 76px; padding: 10px 14px; border: 2px solid transparent; border-radius: 18px; background: var(--s2); text-align: left; cursor: pointer; }
 .modo button span { font-size: 0.8125rem; color: var(--txt2); font-weight: 600; }
 .modo b { font: 500 clamp(1.4rem, 7vw, 2rem)/1.1 var(--sans); letter-spacing: -0.02em; overflow-wrap: anywhere; }
 .modo button[aria-pressed="true"] { border-color: var(--naranja); background: color-mix(in srgb, var(--naranja) 10%, var(--s2)); }
@@ -324,8 +328,9 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .hoja-error { color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .hoja-error:empty { display: none; }
 .teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.teclado button { min-height: 58px; border: 0; border-radius: 16px; background: var(--s2); font: 400 1.6rem var(--sans); cursor: pointer; transition: background-color 0.15s; }
-.teclado button:hover { background: var(--s3); }
+.teclado button { min-height: 58px; border: 0; border-radius: 16px; background: var(--s2); font: 400 1.6rem var(--sans); cursor: pointer; transition: background-color 0.15s; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+@media (hover: hover) { .teclado button:hover { background: var(--s3); } }
+.teclado button:active { background: var(--s3); }
 .teclado button.pulsa { animation: pulsa 0.2s ease-out; }
 @keyframes pulsa { 40% { transform: scale(0.93); background: var(--s3); } }
 .hoja-bot { display: flex; gap: 10px; }
