@@ -411,7 +411,8 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 /* Mientras no se sabe el rol (o si es lector), no se muestra nada que escriba. */
 body:not([data-rol="admin"]) .anotar,
 body:not([data-rol="admin"]) #com-anotar,
-body:not([data-rol="admin"]) label[for="csv-in"] { display: none !important; }
+body:not([data-rol="admin"]) label[for="csv-in"],
+body:not([data-rol="admin"]) #comienzo { display: none !important; }
 div.fila { cursor: default; }
 div.fila:hover { background: none; }
 .cima-izq { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
@@ -452,7 +453,7 @@ div.fila:hover { background: none; }
 }
 .login-caja {
   display: grid; gap: 4px; width: min(24rem, 100%); padding: 22px 20px 20px; border-radius: 26px;
-  background: color-mix(in srgb, var(--s1) 94%, transparent); box-shadow: 0 24px 50px -24px rgb(0 0 0 / 0.7);
+  background: color-mix(in srgb, var(--s1) 98%, transparent); box-shadow: 0 24px 50px -24px rgb(0 0 0 / 0.7);
 }
 .login-caja h1 { font: 600 1.875rem/1.1 var(--serif); margin-bottom: 6px; }
 .login-aviso { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--naranja) 16%, var(--s2)); font-size: 0.875rem; overflow-wrap: anywhere; }
