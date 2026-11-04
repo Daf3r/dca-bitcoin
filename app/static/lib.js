@@ -81,6 +81,14 @@ const semana = (f) => {
   return Math.floor((Date.UTC(y, m - 1, d) - SEMANA0) / (7 * 864e5));
 };
 
+/** 1 si compras cada semana (o menos de 10 días entre compras), 2 si cada quincena. Pide al menos 4 compras. */
+function pasoSemanas(items) {
+  const fechas = [...new Set(items.map((c) => c.fecha))].slice(-9);
+  if (fechas.length < 4) return 1;
+  const d = fechas.slice(1).map((f, i) => (aFecha(f) - aFecha(fechas[i])) / 864e5).sort((a, b) => a - b);
+  return d[d.length >> 1] >= 10 ? 2 : 1;
+}
+
 /** Todo lo que muestran la cabecera y los reportes, sin tocar el DOM. */
 export function resumen(compras, precio, hoy = hoyISO()) {
   const orden = [...compras].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id - b.id));
@@ -116,14 +124,18 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   const actual = semana(hoy);
   const enCurso = porSemana.has(actual);
   const ref = enCurso ? actual : actual - 1;
-  let w = ref, racha = 0;
-  while (porSemana.has(w)) { racha++; w--; }
-  let mejorRacha = 0, seguidas = 0, previa = null;
+  // Ritmo: cada semana o cada quincena (mediana de días entre tus últimas compras). Una racha es una
+  // corrida de compras con no más de `paso` semanas entre una y otra; sigue viva mientras la última
+  // compra no quede a más de `paso` semanas de hoy (la semana en curso aún no la rompe).
+  const paso = pasoSemanas(items);
+  let mejorRacha = 0, corrida = 0, previa = null;
   for (const s of [...porSemana.keys()].sort((a, b) => a - b)) {
-    seguidas = previa !== null && s === previa + 1 ? seguidas + 1 : 1;
-    mejorRacha = Math.max(mejorRacha, seguidas);
+    corrida = previa !== null && s - previa <= paso ? corrida + 1 : 1;
+    mejorRacha = Math.max(mejorRacha, corrida);
     previa = s;
   }
+  const racha = previa !== null && actual - previa <= paso ? corrida : 0;
+  const venceSemanas = previa !== null ? previa + paso - actual : 0;
   const ultimas52 = Array.from({ length: 52 }, (_, i) => porSemana.get(ref - 51 + i) ?? 0);
   const semanasDesdePrimera = n ? actual - semana(items[0].fecha) + 1 : 0;
 
@@ -138,7 +150,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     // Solo la siguiente meta y solo si es alcanzable en un plazo razonable.
     proyeccion: meses != null && meses > 0 && meses <= 60 ? meses : null,
     anios: [...anios.values()],
-    racha, mejorRacha, ultimas52, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
+    racha, mejorRacha, paso, venceSemanas, ultimas52, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
     mejor: porPrecio[0] ?? null, peor: porPrecio.at(-1) ?? null,
   };
 }
