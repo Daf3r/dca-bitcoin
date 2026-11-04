@@ -446,20 +446,42 @@ div.fila:hover { background: none; }
 .hist .vacio { color: var(--txt2); }
 
 /* ------------------------------------------------------------ pantalla de entrada */
-.pag-login .escena { height: 100vh; height: 100svh; min-height: 560px; max-height: none; }
-.pag-login .login {
-  position: absolute; z-index: 2; left: 0; right: 0; bottom: max(24px, env(safe-area-inset-bottom));
-  display: grid; justify-items: center; padding: 0 16px;
-}
-.login-caja {
-  display: grid; gap: 4px; width: min(24rem, 100%); padding: 22px 20px 20px; border-radius: 26px;
-  background: color-mix(in srgb, var(--s1) 98%, transparent); box-shadow: 0 24px 50px -24px rgb(0 0 0 / 0.7);
-}
-.login-caja h1 { font: 600 1.875rem/1.1 var(--serif); margin-bottom: 6px; }
+/* Móvil y tablet: la escena arriba (protagonista y entera) y el formulario debajo, sobre el
+   fondo, sin tapar nada. Escritorio: formulario a la izquierda, montaña grande a la derecha. */
+.pag-login { touch-action: manipulation; }
+.pag-login .escena { height: 54vh; height: 54svh; min-height: 300px; max-height: 560px; }
+/* El lienzo es más alto que la escena y sube: así la montaña llena lo visible (la composición
+   móvil reserva abajo el sitio del botón de anotar, que aquí no existe). */
+.pag-login .montana { top: -42%; height: 142%; bottom: auto; }
+/* La entrada no representa a nadie: sin «Tú» ni camino recorrido, solo la salida. */
+.pag-login .yo, .pag-login .yo-txt, .pag-login .sendero-hecho { display: none; }
+.pag-login .login { display: grid; justify-items: center; padding: 22px max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+.login-caja { display: grid; gap: 4px; width: min(24rem, 100%); }
+.login-caja h1 { font: 600 clamp(1.75rem, 7vw, 2.1rem)/1.1 var(--serif); }
+.login-lema { margin: 2px 0 8px; color: var(--txt2); font-size: 0.9375rem; }
 .login-aviso { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--naranja) 16%, var(--s2)); font-size: 0.875rem; overflow-wrap: anywhere; }
-.login-error { min-height: 1.3em; margin-top: 6px; color: var(--baja); font-weight: 600; font-size: 0.875rem; }
-.login-caja .guardar { margin-top: 6px; }
+.login-error { min-height: 1.3em; margin-top: 4px; color: var(--baja); font-weight: 600; font-size: 0.875rem; }
+.login-caja .guardar { margin-top: 4px; min-height: 52px; }
 .login-caja .guardar:disabled { opacity: 0.6; }
+.login-pie { margin-top: 14px; font-size: 0.8125rem; color: var(--txt3); text-align: center; }
 @media (min-width: 1100px) {
-  .pag-login .login { left: max(48px, calc(50% - 600px)); right: auto; bottom: auto; top: 50%; transform: translateY(-50%); justify-items: start; padding: 0; }
+  .pag-login .escena { height: 100vh; height: 100svh; min-height: 620px; max-height: none; }
+  .pag-login .montana { top: 0; height: 100%; }
+  .pag-login .login {
+    position: absolute; z-index: 2; top: 50%; transform: translateY(-50%);
+    left: max(48px, calc(50% - 600px)); right: auto; padding: 0; justify-items: start;
+  }
+  .login-caja {
+    width: 22rem; padding: 26px 24px 22px; border-radius: 26px;
+    background: color-mix(in srgb, var(--s1) 96%, transparent); box-shadow: 0 24px 50px -24px rgb(0 0 0 / 0.6);
+  }
+  .login-pie { text-align: left; }
+}
+}
+@media (max-height: 680px) and (max-width: 1099px) {
+  .pag-login .montana { top: -30%; height: 130%; }
+}
+/* La composición de tablet ya sube la cumbre: el lienzo sube menos para no cortarla. */
+@media (min-width: 700px) and (max-width: 1099px) {
+  .pag-login .montana { top: -22%; height: 122%; }
 }

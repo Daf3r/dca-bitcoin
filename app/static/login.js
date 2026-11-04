@@ -8,8 +8,24 @@ let ancho = host.clientWidth;
 new ResizeObserver(() => { if (host.clientWidth !== ancho) { ancho = host.clientWidth; pintar(); } }).observe(host);
 
 const form = $('f-login');
+
+// Con el teclado del teléfono abierto, el formulario entero (hasta Entrar y el error) debe verse:
+// se añade el alto del teclado como relleno y se sube lo justo para que quepa.
+const vv = window.visualViewport;
+function encajar() {
+  if (!vv || !form.contains(document.activeElement)) return;
+  const teclado = Math.max(0, window.innerHeight - vv.height);
+  document.body.style.paddingBottom = teclado > 80 ? `${teclado}px` : '';
+  const caja = form.getBoundingClientRect();
+  const sobra = caja.bottom - (vv.offsetTop + vv.height) + 12;
+  if (sobra > 0) window.scrollBy({ top: Math.min(sobra, caja.top - vv.offsetTop - 8), behavior: 'auto' });
+}
+vv?.addEventListener('resize', encajar);
+form.addEventListener('focusin', () => setTimeout(encajar, 60));
+form.addEventListener('focusout', () => setTimeout(() => { if (!form.contains(document.activeElement)) document.body.style.paddingBottom = ''; }, 120));
+
 const boton = $('l-entrar');
-const error = (t) => { $('l-error').textContent = t; };
+const error = (t) => { $('l-error').textContent = t; if (t) encajar(); };
 
 fetch('/api/estado', { cache: 'no-store' }).then((r) => r.json()).then((j) => {
   if (j.abierto) return;
