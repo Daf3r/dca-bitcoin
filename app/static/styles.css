@@ -224,8 +224,13 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
   border-radius: 10px; transition: background-color 0.15s;
 }
 .fila:hover { background: var(--s1); }
-.f-tx { display: flex; align-items: center; gap: 4px; width: fit-content; min-height: 32px; margin: -2px 0 6px calc(4.6rem + 16px); font-size: 0.8125rem; font-weight: 600; color: var(--naranja-txt); text-decoration: underline; text-underline-offset: 3px; }
-@media (pointer: coarse) { .f-tx { min-height: 44px; margin-bottom: 0; } }
+.f-txw { display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; margin: -2px 0 6px calc(4.6rem + 16px); }
+.f-est { font-size: 0.8125rem; font-weight: 600; color: var(--txt2); }
+.f-est[data-estado="confirmada"] { color: var(--sube); }
+.f-est[data-estado="pendiente"] { color: var(--naranja-txt); }
+.f-est[data-estado="no_encontrada"] { color: var(--baja); }
+.f-tx { display: flex; align-items: center; gap: 4px; width: fit-content; min-height: 32px; margin: 0; font-size: 0.8125rem; font-weight: 600; color: var(--naranja-txt); text-decoration: underline; text-underline-offset: 3px; }
+@media (pointer: coarse) { .f-tx { min-height: 44px; } .f-txw { margin-bottom: 0; } }
 .f-fecha { grid-area: f; font: 600 0.9375rem var(--sans); color: var(--txt2); }
 .f-sats { grid-area: s; font-weight: 650; font-variant-numeric: tabular-nums; }
 .f-sats small { color: var(--txt3); font-weight: 500; }
@@ -554,3 +559,9 @@ div.fila:hover { background: none; }
 .nov-resumen dt { color: var(--txt2); }
 .nov-resumen dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
 #nov-ok { background: var(--naranja); border-color: transparent; color: var(--naranja-osc); }
+
+/* Vista previa temporal de la celebración (solo admin). */
+.dc-previa { margin: 0 0 14px; padding: 12px; border-radius: 14px; background: var(--s2); }
+.dc-previa p { margin: 0 0 8px; font-size: 0.8125rem; color: var(--txt2); }
+.dc-previa div { display: flex; flex-wrap: wrap; gap: 8px; }
+.dc-previa button { min-height: 44px; padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 650; cursor: pointer; touch-action: manipulation; }

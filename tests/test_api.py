@@ -589,6 +589,67 @@ check(not [x for x in audit() if x["accion"] == "visto"], "no se audita cada vis
 nolibro = server.app.test_client(); nolibro.set_cookie("__Host-sesion", luz.get_cookie("__Host-sesion").value)
 check(nolibro.post("/api/visto").status_code == 403, "sin X-Libro se rechaza")
 
+# --- Verificación de TXID contra mempool.space (con la red simulada)
+import urllib.error as _ue
+TXV, TXP, TXN, TXE = "1" * 64, "2" * 64, "3" * 64, "4" * 64
+for tx_, d_ in ((TXV, "2024-10-01"), (TXP, "2024-10-02"), (TXN, "2024-10-03")):
+    assert adm.post("/api/compras", json={"fecha": d_, "monto": 5, "sats": 5000, "txid": tx_}).status_code == 201
+llamadas_tx = []
+estado_red = {"caida": False}
+def falso_mempool(url, timeout=8):
+    llamadas_tx.append(url)
+    if estado_red["caida"]:
+        raise _ue.URLError("sin red")
+    if url.endswith("/blocks/tip/height"):
+        return 850010
+    if url.endswith(TXV):
+        return {"fee": 1234, "status": {"confirmed": True, "block_height": 850000, "block_time": 1700000000}}
+    if url.endswith(TXP):
+        return {"fee": 500, "status": {"confirmed": False}}
+    if url.endswith(TXN):
+        raise _ue.HTTPError(url, 404, "no", {}, None)
+    raise AssertionError(url)
+_get_real = server._get_json; server._get_json = falso_mempool
+check(adm.get("/api/tx/abc").status_code == 400, "TXID inválido")
+check(adm.get(f"/api/tx/{TXE}").status_code == 404 and not llamadas_tx, "un TXID que no está en ninguna compra no se consulta (no es un proxy abierto)")
+check(anon.get(f"/api/tx/{TXV}").status_code == 401, "sin sesión no se consulta")
+r = adm.get(f"/api/tx/{TXV}"); j = r.get_json()
+check(r.status_code == 200 and j["estado"] == "confirmada" and j["confirmaciones"] == 11 and j["comision"] == 1234 and j["bloque"] == 850000, f"confirmada {j}")
+check(all(u.startswith("https://mempool.space/api/") for u in llamadas_tx), "solo habla con mempool.space")
+n_antes = len(llamadas_tx)
+check(adm.get(f"/api/tx/{TXV}").get_json()["estado"] == "confirmada" and len(llamadas_tx) == n_antes, "una confirmada se guarda y no se vuelve a consultar")
+check(luz.get(f"/api/tx/{TXV}").status_code == 200, "un lector también puede verificar")
+j = adm.get(f"/api/tx/{TXP}").get_json()
+check(j["estado"] == "pendiente" and j["confirmaciones"] is None and j["comision"] == 500, f"pendiente {j}")
+n_antes = len(llamadas_tx)
+adm.get(f"/api/tx/{TXP}")
+check(len(llamadas_tx) == n_antes, "una pendiente no se consulta otra vez antes de un minuto")
+j = adm.get(f"/api/tx/{TXN}").get_json()
+check(j["estado"] == "no_encontrada" and j["comision"] is None, f"no encontrada {j}")
+# Una pendiente pasa a confirmada pasado un minuto
+_real_t = _tt.time; _tt.time = lambda: _real_t() + 61
+falso_viejo = falso_mempool
+def falso_ya_confirmada(url, timeout=8):
+    if url.endswith(TXP):
+        llamadas_tx.append(url); return {"fee": 500, "status": {"confirmed": True, "block_height": 850005, "block_time": 1700000600}}
+    return falso_viejo(url, timeout)
+server._get_json = falso_ya_confirmada
+j = adm.get(f"/api/tx/{TXP}").get_json()
+check(j["estado"] == "confirmada" and j["confirmaciones"] == 6, f"la pendiente se confirma {j}")
+# Red caída: sin caché, 503; con caché vieja, se sirve marcada como desactualizada
+estado_red["caida"] = True
+_tt.time = lambda: _real_t() + 200
+j = adm.get(f"/api/tx/{TXN}").get_json()
+check(j["estado"] == "no_encontrada" and j.get("desactualizado") is True, f"red caída con caché: {j}")
+sql("DELETE FROM tx_cache WHERE txid = ?", (TXN,))
+r = adm.get(f"/api/tx/{TXN}")
+check(r.status_code == 503 and "mempool.space" in r.get_json()["error"], f"red caída sin caché {r.data}")
+_tt.time = _real_t; server._get_json = _get_real
+try:
+    sql("INSERT INTO tx_cache (txid, estado, ts) VALUES (?, 'rara', 1)", ("5" * 64,)); check(False, "CHECK de estado")
+except sqlite3.IntegrityError:
+    check(True, "CHECK de estado")
+
 # CLI: generar, mínimo de 12 y desbloquear
 import usuarios, getpass as _gp
 g = auth.generar_clave()

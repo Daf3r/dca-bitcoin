@@ -166,6 +166,16 @@
   <div class="dc-menu" id="dc-menu">
     <h2 id="dc-t">Tu cuenta</h2>
     <p class="dc-quien" id="dc-quien"></p>
+    <!-- VISTA PREVIA TEMPORAL de la celebración (solo admin; no guarda nada). Para quitarla: este bloque, `.dc-previa` en
+         styles.css, el bloque «vista previa temporal» de app.js y la línea de `dc-previa` en cargarYo. -->
+    <div class="dc-previa" id="dc-previa" hidden>
+      <p>Vista previa de la celebración (temporal, no guarda nada):</p>
+      <div>
+        <button type="button" data-previa="compra">Compra</button>
+        <button type="button" data-previa="etapa">Etapa</button>
+        <button type="button" data-previa="hito">Hito grande</button>
+      </div>
+    </div>
     <div class="dc-lista">
       <button type="button" data-cuenta="clave">Cambiar contraseña</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>

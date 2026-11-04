@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, novedades, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -288,12 +288,50 @@ function pintarLista() {
       `<span class="f-sats">${venta ? '−' : '+'}${entero(c.sats)} <small>sats</small></span>` +
       `<span class="f-det">${venta ? 'Venta · ' : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</span>` +
       `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${textoV}</span></${esAdmin() ? 'button' : 'div'}>` +
-      (mempoolUrl(c.txid) ? `<a class="f-tx" href="${mempoolUrl(c.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space <span aria-hidden="true">↗</span><span class="sr"> (se abre en otra pestaña)</span></a>` : '') + '</li>';
+      (mempoolUrl(c.txid) ? `<div class="f-txw"><a class="f-tx" href="${mempoolUrl(c.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space <span aria-hidden="true">↗</span><span class="sr"> (se abre en otra pestaña)</span></a><span class="f-est" data-txid="${c.txid}"></span></div>` : '') + '</li>';
   }).join('');
   const vt = $('ver-todas');
   vt.hidden = mostradas.length >= R.n;
   vt.textContent = `Ver los ${R.n} movimientos`;
   if (enFoco) host.querySelector(`.fila[data-id="${enFoco}"]`)?.focus();
+  pintarEstadoTx();
+  verificarTx();
+}
+
+// Verificación de los TXID: el servidor consulta mempool.space (y lo guarda); aquí solo se pinta el estado.
+const estadoTx = {}; // txid → respuesta del servidor, o 'error'; una vez por carga de la página
+const enColaTx = new Set();
+function textoEstadoTx(t) {
+  if (t === 'error') return { txt: 'No se pudo verificar ahora', estado: 'error' };
+  const fee = t.comision != null ? ` · comisión ${entero(t.comision)} sats` : '';
+  const viejo = t.desactualizado ? ' (dato guardado)' : '';
+  if (t.estado === 'confirmada') return { txt: `Confirmada${t.confirmaciones ? ` · ${entero(t.confirmaciones)} ${t.confirmaciones === 1 ? 'confirmación' : 'confirmaciones'}` : ''}${fee}${viejo}`, estado: 'confirmada' };
+  if (t.estado === 'pendiente') return { txt: `Pendiente de confirmar${fee}${viejo}`, estado: 'pendiente' };
+  return { txt: `No encontrada en mempool.space${viejo}`, estado: 'no_encontrada' };
+}
+function pintarEstadoTx() {
+  document.querySelectorAll('.f-est[data-txid]').forEach((el) => {
+    const t = estadoTx[el.dataset.txid];
+    if (!t) return;
+    const { txt, estado } = textoEstadoTx(t);
+    el.textContent = txt;
+    el.dataset.estado = estado;
+  });
+}
+async function verificarTx() {
+  const faltan = [...new Set([...document.querySelectorAll('.f-est[data-txid]')].map((e) => e.dataset.txid))]
+    .filter((t) => !(t in estadoTx) && !enColaTx.has(t)).slice(0, 12);
+  faltan.forEach((t) => enColaTx.add(t));
+  let i = 0;
+  const trabajador = async () => {
+    while (i < faltan.length) {
+      const t = faltan[i++];
+      try { estadoTx[t] = await api(`/api/tx/${t}`); } catch { estadoTx[t] = 'error'; }
+      enColaTx.delete(t);
+      pintarEstadoTx();
+    }
+  };
+  await Promise.all([trabajador(), trabajador()]); // de dos en dos, para ser amable con mempool.space
 }
 $('lista').addEventListener('click', (e) => {
   const b = e.target.closest('.fila');
@@ -603,6 +641,37 @@ function destello() {
   setTimeout(() => b.classList.remove('destello'), 1000);
 }
 
+// ---------------------------------------------------- vista previa temporal
+// Reproduce la celebración con datos inventados y luego vuelve al estado real. No guarda nada ni toca la
+// auditoría. Es temporal: para quitarla, borra este bloque, el `#dc-previa` de index.html, su regla
+// `.dc-previa` en styles.css y la línea de `dc-previa` en cargarYo.
+let previaActiva = false;
+const pausa = (ms) => new Promise((ok) => setTimeout(ok, ms));
+async function vistaPrevia(nivel) {
+  if (previaActiva) return;
+  previaActiva = true;
+  const base = Math.max(0, R.sats);
+  let antes, despues;
+  if (nivel === 'etapa') { const m = etapaSiguiente(base); antes = Math.max(0, m - 20_000); despues = m + 10_000; }
+  else if (nivel === 'hito') { let m = 1e6; while (m <= base) m *= 10; antes = m - 30_000; despues = m + 5_000; }
+  else { antes = base; despues = base + Math.max(1000, Math.min(30_000, Math.floor((etapaSiguiente(base) - base) / 2))); }
+  R = { ...R, sats: despues, meta: metaSiguiente(despues), etapa: etapaSiguiente(despues), etapaPrev: etapaAnterior(despues) };
+  if (window.scrollY > 40) { window.scrollTo({ top: 0, behavior: reducido() ? 'auto' : 'smooth' }); await pausa(480); }
+  avisar('Vista previa de la celebración: no se guarda nada.', null, true);
+  pintarMontana(false, antes, { antes, delta: despues - antes });
+  if (!reducido()) setTimeout(() => destello(), MS_SUBIDA);
+  celebrar({ sats: antes });
+  await pausa(nivel === 'hito' ? 6500 : 5200);
+  pintar({ montana: true }); // vuelve al estado real
+  previaActiva = false;
+}
+$('dc-previa').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-previa]');
+  if (!b) return;
+  dCuenta.close();
+  setTimeout(() => vistaPrevia(b.dataset.previa), 350);
+});
+
 // ------------------------------------------------------------- novedades
 // Para los lectores: al abrir la web, un resumen de lo que pasó desde su última visita (si pasó algo).
 // «Entendido» (o cerrar) lo marca como visto en el servidor, así que sale igual desde el móvil y el PC.
@@ -632,7 +701,7 @@ function pintarNovedades() {
     if (R.nVentas) filas.push(['Ya realizada', usdSigno(R.realizada)]);
   }
   filas.push(['Avance', `${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`]);
-  if (R.racha) filas.push(['Racha', `${rachaTxt(R.racha)} seguidas`]);
+  if (R.racha) filas.push(['Racha', `${rachaTxt(R.racha)} ${R.racha === 1 ? 'seguida' : 'seguidas'}`]);
   const dl = $('nov-resumen');
   dl.textContent = '';
   for (const [k, v] of filas) {
@@ -683,6 +752,7 @@ async function cargarYo() {
     $('cuenta-btn').hidden = false;
     $('dc-quien').textContent = `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`;
     $('dc-historial').hidden = yo.rol !== 'admin';
+    $('dc-previa').hidden = yo.rol !== 'admin'; // vista previa temporal
     $('fc-usuario').value = yo.usuario;
     pintar();
   } catch { /* el 401 ya redirige; si falla la red, la app sigue en solo lectura */ }
