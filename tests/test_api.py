@@ -335,6 +335,7 @@ r = cl.get(f"/fonts/bricolage.woff2?v={V}")
 check(r.status_code == 200 and r.mimetype == "font/woff2" and "immutable" in r.headers["Cache-Control"], "fuente inmutable")
 check(cl.get("/icon.svg").headers["Cache-Control"] == "no-cache", "resto de estáticos revalida")
 # --- PWA: manifiesto e iconos públicos (el navegador los pide sin cookie), con su tipo y CSP
+import re
 import json as _json, struct as _struct
 anon = server.app.test_client()
 r = anon.get("/manifest.webmanifest")
@@ -352,6 +353,14 @@ check(r.status_code == 200 and _struct.unpack(">II", r.data[16:24]) == (180, 180
 for pagina in ("/", "/login"):
     h = cl.get(pagina).get_data(as_text=True) if pagina == "/" else anon.get(pagina).get_data(as_text=True)
     check('rel="manifest" href="/manifest.webmanifest"' in h and 'rel="apple-touch-icon"' in h and 'apple-mobile-web-app-capable' in h, f"{pagina} enlaza manifiesto e icono de Apple")
+# --- Tema claro/oscuro: tema.js público (lo piden también la entrada y el HTML), bloqueante en <head> y sin inline
+r = anon.get("/tema.js")
+check(r.status_code == 200 and r.mimetype == "text/javascript" and "libro.tema" in r.get_data(as_text=True), "tema.js público")
+for pagina in ("/", "/login"):
+    h = cl.get(pagina).get_data(as_text=True) if pagina == "/" else anon.get(pagina).get_data(as_text=True)
+    check(re.search(r'<script src="/tema\.js\?v=[0-9a-f]+"></script>', h) is not None, f"{pagina} carga tema.js versionado, sin defer ni module")
+    check(h.index("/tema.js") < h.index("/styles.css"), f"{pagina}: tema.js va antes del CSS (sin parpadeo)")
+check("prefers-color-scheme" not in cl.get("/styles.css").get_data(as_text=True), "el CSS ya no depende de la consulta del sistema")
 check(anon.get("/icon-evil.js").status_code == 404 and anon.get("/api/compras").status_code == 401, "lo público no abre nada más")
 check(cl.get("/app.js", headers={"If-None-Match": f'"{V}-app.js"'}).status_code == 304, "304 con ETag")
 check(cl.get("/../server.js").status_code == 404 and cl.get("/nada.js").status_code == 404, "solo módulos existentes")
