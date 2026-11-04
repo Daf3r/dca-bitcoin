@@ -91,6 +91,7 @@ button, input { font: inherit; color: inherit; }
 .monte { fill: var(--monte); } .monte-sombra { fill: var(--monte-sombra); } .nieve { fill: var(--nieve); }
 .pino-0 { fill: var(--pino0); } .pino-1 { fill: var(--pino1); }
 .sendero { fill: none; stroke: var(--nieve); stroke-width: 2; stroke-dasharray: 2 7; stroke-linecap: round; stroke-linejoin: round; opacity: 0.65; }
+.salida { fill: var(--monte); stroke: var(--naranja); stroke-width: 3; }
 .sendero-hecho { fill: none; stroke: var(--naranja); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
 .campo line { stroke: var(--nieve); stroke-width: 2; }
 .banderin { fill: var(--nieve); opacity: 0.7; transform-box: fill-box; transform-origin: left center; }

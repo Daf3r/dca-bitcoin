@@ -18,7 +18,7 @@ function composicion(W, H, techo) {
   const marco = Math.min(W, 1600);
   const dcha = (W + marco) / 2;
   const mw = Math.min(marco, H * 1.7);
-  return { sx: dcha - mw * 0.42, sy: H * 0.16, base: [dcha - mw * 0.86, H * 0.95], vueltas: 7, ancho: mw * 0.26 / W, campos: 4, sol: [dcha - mw * 0.12, H * 0.24], rs: H * 0.08 };
+  return { sx: dcha - mw * 0.42, sy: H * 0.16, base: [dcha - mw * 0.74, H * 0.915], vueltas: 7, ancho: mw * 0.26 / W, campos: 4, sol: [dcha - mw * 0.12, H * 0.24], rs: H * 0.08 };
 }
 
 let estado = null;
@@ -58,28 +58,42 @@ export function dibujarMontana(host, { sats, meta, inicio = sats, techo = 0 }) {
     der.push([c.sx + (derX - c.sx) * f + (ruido ? (rnd() - 0.5) * W * 0.025 : 0), c.sy + (piso * 0.97 - c.sy) * f ** 0.8 + (ruido ? (rnd() - 0.5) * H * 0.035 : 0)]);
   }
   const contorno = [...izq, ...der].map((p, i) => `${i ? 'L' : 'M'}${f1(p[0])} ${f1(p[1])}`).join('');
-  s += `<path class="monte" d="${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z"/>`;
+  const silueta = `${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z`;
+  s += `<defs><clipPath id="m-silueta"><path d="${silueta}"/></clipPath></defs><path class="monte" d="${silueta}"/>`;
   s += `<path class="monte-sombra" d="M${f1(c.sx)} ${f1(c.sy)}${der.map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}L${f1(c.sx + W * 0.07)} ${H}L${f1(c.sx + W * 0.02)} ${f1(c.sy + H * 0.3)}Z"/>`;
-  const nv = H * 0.075, nw = Math.min(W * 0.07, 70);
-  s += `<path class="nieve" d="M${f1(c.sx)} ${f1(c.sy)}L${f1(c.sx + nw)} ${f1(c.sy + nv)}L${f1(c.sx + nw * 0.5)} ${f1(c.sy + nv * 0.8)}L${f1(c.sx + nw * 0.15)} ${f1(c.sy + nv * 1.1)}L${f1(c.sx - nw * 0.3)} ${f1(c.sy + nv * 0.75)}L${f1(c.sx - nw * 0.65)} ${f1(c.sy + nv * 1.05)}L${f1(c.sx - nw)} ${f1(c.sy + nv * 0.95)}Z"/>`;
+  // Nieve: una franja irregular mucho más ancha que el pico, recortada por la silueta, para que
+  // nunca sobresalga de las laderas.
+  const nv = H * 0.075, ancho = Math.max(W * 0.12, 140);
+  const dientes = [0.95, 0.7, 1.1, 0.8, 1.15, 0.75, 1.05, 0.9];
+  let nieve = `M${f1(c.sx - ancho)} ${f1(c.sy - 20)}L${f1(c.sx + ancho)} ${f1(c.sy - 20)}`;
+  dientes.forEach((k, i) => { nieve += `L${f1(c.sx + ancho - (2 * ancho * (i + 0.5)) / dientes.length)} ${f1(c.sy + nv * k)}`; });
+  s += `<path class="nieve" clip-path="url(#m-silueta)" d="${nieve}Z"/>`;
 
   // Sendero en zigzag: siempre sube, así que la altura recorrida es monótona.
   const [bx, by] = c.base;
-  let d = `M${f1(bx)} ${f1(by)}`;
+  const pts = [[bx, by]];
   for (let i = 1; i <= c.vueltas; i++) {
     const f = i / c.vueltas;
     const y = by - (by - c.sy - 6) * f;
     const a = (1 - f) * W * c.ancho + 4;
     const x = i === c.vueltas ? c.sx : i % 2 ? c.sx - a * 0.2 + W * 0.03 : c.sx - a * 1.2;
-    d += `L${f1(x)} ${f1(y)}`;
+    pts.push([x, y]);
+  }
+  let d = `M${f1(bx)} ${f1(by)}`;
+  for (let i = 1; i < pts.length; i++) {
+    const [x, y] = pts[i], [px, py] = pts[i - 1];
+    if (i === pts.length - 1) { d += `L${f1(x)} ${f1(y)}`; break; }
+    const [nx, ny] = pts[i + 1], k = 0.22;
+    d += `L${f1(x + (px - x) * k)} ${f1(y + (py - y) * k)}Q${f1(x)} ${f1(y)} ${f1(x + (nx - x) * k)} ${f1(y + (ny - y) * k)}`;
   }
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/>`;
+  s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
   s += `<g id="m-campos"></g><g class="yo" id="m-yo"><circle class="yo-halo" r="15"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g>`;
   for (let fila = 0; fila < 2; fila++) {
     const yb = H * (fila ? 1.005 : 0.975), alto = H * (fila ? 0.07 : 0.05);
     for (let x = -10; x < W + 20; x += alto * (0.55 + rnd() * 0.4)) {
       const a = alto * (0.7 + rnd() * 0.5), an = a * 0.42;
-      if (!fila && Math.abs(x - bx) < 26) continue;
+      if (Math.abs(x - bx) < 30) continue;
       s += `<path class="pino-${fila}" d="M${f1(x)} ${f1(yb - a)}L${f1(x + an)} ${f1(yb)}L${f1(x - an)} ${f1(yb)}Z"/>`;
     }
   }
