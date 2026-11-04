@@ -135,6 +135,23 @@ try {
       await p.click('#guardar');
       await p.waitForTimeout(1500);
       eq((await datos(p, '/api/compras')).length, compras.length + 2, 'el segundo toque guarda');
+      // Compra extra con nota: no avisa de la cifra rara, se guarda marcada y se ve aparte en la lista.
+      await p.waitForTimeout(6000);
+      const libre3 = (() => { for (let d = new Date(libre2); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f) && f !== libre && f !== libre2) return f; } })();
+      await p.click('#anotar');
+      await p.waitForTimeout(400);
+      await p.fill('#h-sats', String(satsDe(mediana * 12)));
+      await p.fill('#h-fecha', libre3);
+      await p.click('#h-avanzado summary');
+      await p.check('#h-extra');
+      await p.fill('#h-nota-c', 'cayó 20 %');
+      await p.click('#guardar');
+      await p.waitForTimeout(1500);
+      const tras = await datos(p, '/api/compras');
+      eq(tras.length, compras.length + 3, 'la extra se guarda al primer toque, sin aviso de cifra rara');
+      const guardada = tras.find((c) => c.fecha === libre3);
+      eq([guardada.extra, guardada.nota], [true, 'cayó 20 %'], 'se guarda marcada como extra y con su nota');
+      ok((await p.locator('#lista .fila .f-extra').count()) >= 1, 'la lista muestra la etiqueta «Extra»');
       eq(consola, [], `consola limpia (admin): ${consola.join(' | ')}`);
       void hoy;
       await ctx.close();

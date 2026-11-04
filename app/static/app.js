@@ -253,7 +253,7 @@ function pintarTramo() {
   $('t-falta').textContent = `faltan ${entero(R.etapa - R.sats)}`;
   requestAnimationFrame(() => { $('t-barra').style.transform = `scaleX(${Math.max(0, Math.min(1, prog))})`; });
   $('t-ritmo').textContent = R.proyeccion
-    ? `Al ritmo de los últimos 6 meses (${entero(R.satsMes)} sats al mes) llegas en ${plazo(R.proyeccion)}.`
+    ? `Al ritmo de los últimos 6 meses${R.nExtra ? ', sin contar tus compras extra,' : ''} (${entero(R.satsMes)} sats al mes) llegas en ${plazo(R.proyeccion)}.`
     : R.n ? `Vas en ${(prog * 100).toFixed(1)}% de este tramo.` : 'El primer campamento está en 100k sats.';
 }
 const plazo = (m) => (m < 1 ? 'menos de un mes' : `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}`);
@@ -323,7 +323,7 @@ function pintarLista() {
     return `<li><${etiqueta} class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}">` +
       (esAdmin() ? `<span class="sr">Editar la ${venta ? 'venta' : 'compra'} del </span>` : '') + `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
       `<span class="f-sats">${venta ? '−' : '+'}${entero(c.sats)} <small>sats</small></span>` +
-      `<span class="f-det">${venta ? 'Venta · ' : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</span>` +
+      `<span class="f-det">${venta ? 'Venta · ' : ''}${c.extra ? '<b class="f-extra">Extra</b> · ' : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</span>` +
       `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${textoV}</span></${esAdmin() ? 'button' : 'div'}>` +
       (mempoolUrl(c.txid) ? `<div class="f-txw"><a class="f-tx" href="${mempoolUrl(c.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space <span aria-hidden="true">↗</span><span class="sr"> (se abre en otra pestaña)</span></a><span class="f-est" data-txid="${c.txid}"></span></div>` : '') + '</li>';
   }).join('');
@@ -382,7 +382,7 @@ $('ver-todas').addEventListener('click', () => {
 
 // ------------------------------------------------------------- hoja de anotar
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '' };
+const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', extra: false, usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '' };
 const hoja = $('hoja');
 
 function abrirHoja(id = null, tipoInicial = 'compra') {
@@ -393,7 +393,10 @@ function abrirHoja(id = null, tipoInicial = 'compra') {
   H.txid = c?.txid ?? '';
   H.tipo = c?.tipo ?? (tipoInicial === 'venta' ? 'venta' : 'compra');
   H.nota = c?.nota ?? '';
+  H.extra = !!c?.extra;
   $('h-nota').value = H.nota;
+  $('h-nota-c').value = H.nota;
+  $('h-extra').checked = H.extra;
   $('h-tipo').hidden = !!c;
   $('h-txid').value = H.txid;
   $('h-sats').value = H.sats ? entero(Number(H.sats)) : '';
@@ -435,7 +438,7 @@ function datosHoja() {
   return { sats, monto: estimarMonto(sats, p.precio), precio: p.precio, fuente: p.fuente, dia: p.dia };
 }
 /** Lo que se va a guardar, para saber si el aviso ya confirmado sigue valiendo (si cambias algo, vuelve a avisar). */
-const claveHoja = () => `${H.tipo}|${H.sats}|${$('h-fecha').value}`;
+const claveHoja = () => `${H.tipo}|${H.sats}|${$('h-fecha').value}|${H.extra}`;
 const confirmando = () => H.confirmadoPara !== '' && H.confirmadoPara === claveHoja();
 function limpiarError() {
   const e = $('hoja-error');
@@ -459,6 +462,7 @@ function pintarHoja() {
   $('hoja-t').textContent = venta ? (H.editando ? 'Editar venta' : 'Registrar venta o gasto') : H.editando ? 'Editar compra' : 'Anotar compra';
   $('h-sats-l').textContent = venta ? 'Sats que salieron' : 'Sats que recibiste';
   $('h-nota-l').hidden = !venta;
+  document.querySelectorAll('#h-avanzado [data-solo-compra]').forEach((el) => { el.hidden = venta; });
   document.querySelectorAll('#h-tipo button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === H.tipo)));
   const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
   const habitual = !venta && S.precio ? montoHabitual(R.items) : null;
@@ -482,9 +486,12 @@ function pintarHoja() {
 }
 $('h-tipo').addEventListener('click', (e) => {
   const b = e.target.closest('button');
-  if (b) { H.tipo = b.dataset.tipo; limpiarError(); pintarHoja(); }
+  if (b) { H.tipo = b.dataset.tipo; $('h-nota').value = H.nota; $('h-nota-c').value = H.nota; limpiarError(); pintarHoja(); }
 });
 $('h-nota').addEventListener('input', (e) => { H.nota = e.target.value; });
+$('h-nota-c').addEventListener('input', (e) => { H.nota = e.target.value; });
+// Marcar o desmarcar «extra» reinicia el aviso: lo que se confirmó ya no es lo mismo.
+$('h-extra').addEventListener('change', (e) => { H.extra = e.target.checked; limpiarError(); pintarHoja(); });
 /** Pone separadores de miles al escribir sin mover el cursor de su sitio. */
 function formatearSats(inp) {
   const antes = inp.value.slice(0, inp.selectionStart ?? inp.value.length).replace(/\D/g, '').length;
@@ -527,7 +534,7 @@ $('guardar').addEventListener('click', async () => {
   // Antes de guardar: si algo se ve raro (cifra 10 veces fuera de lo normal, compra repetida ese día), se avisa
   // una vez y se pide confirmar con un segundo toque. No bloquea: tú decides.
   if (!confirmando()) {
-    const avisos = avisosAlAnotar(S.compras, { tipo: H.tipo, sats: d.sats, monto: d.monto, fecha, editando: H.editando });
+    const avisos = avisosAlAnotar(S.compras, { tipo: H.tipo, sats: d.sats, monto: d.monto, fecha, editando: H.editando, extra: H.tipo === 'compra' && H.extra });
     if (avisos.length) {
       const e = $('hoja-error');
       e.textContent = textoAvisos(avisos);
@@ -540,7 +547,7 @@ $('guardar').addEventListener('click', async () => {
   H.guardando = true; pintarHoja();
   const antes = R;
   try {
-    const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid), tipo: H.tipo, nota: H.tipo === 'venta' ? H.nota.trim() : '' };
+    const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid), tipo: H.tipo, nota: H.nota.trim(), extra: H.tipo === 'compra' && H.extra };
     const g = normalizar(H.editando ? await api(`/api/compras/${H.editando}`, { metodo: 'PUT', cuerpo }) : await api('/api/compras', { metodo: 'POST', cuerpo }));
     const comprasAntes = S.compras;
     S.compras = H.editando ? S.compras.map((x) => (x.id === g.id ? g : x)) : [...S.compras, g];
@@ -726,7 +733,7 @@ function pintarComienzo() {
   $('comienzo').hidden = !ver;
   if (!ver) return;
   const falta = R.etapa - R.sats;
-  const porCompra = R.satsComprados / R.nCompras;
+  const porCompra = R.nHabituales ? R.satsHabituales / R.nHabituales : R.satsComprados / R.nCompras; // sin las extra
   const compras = Math.max(1, Math.ceil(falta / porCompra));
   $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.etapa === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.etapa)}`}`;
   $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.etapa)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
@@ -913,7 +920,7 @@ const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 function textoMov(x) {
   if (!x?.sats) return '';
   return `${entero(x.sats)} sats (${usd(x.monto)}) del ${fechaLarga(x.fecha)}` +
-    (x.txid ? ` · TXID ${txCorto(x.txid)}` : '') + (x.nota ? ` · «${x.nota}»` : '');
+    (x.extra ? ' · compra extra' : '') + (x.txid ? ` · TXID ${txCorto(x.txid)}` : '') + (x.nota ? ` · «${x.nota}»` : '');
 }
 /** Qué cambió en una edición: solo los campos que difieren. */
 function cambiosEdicion(antes, despues) {
@@ -923,6 +930,7 @@ function cambiosEdicion(antes, despues) {
   if (antes.monto !== despues.monto) c.push(`${usd(antes.monto)} → ${usd(despues.monto)}`);
   if (antes.fecha !== despues.fecha) c.push(`fecha ${fechaLarga(antes.fecha)} → ${fechaLarga(despues.fecha)}`);
   if ((antes.txid ?? null) !== (despues.txid ?? null)) c.push(`TXID ${txCorto(antes.txid)} → ${txCorto(despues.txid)}`);
+  if (!!antes.extra !== !!despues.extra) c.push(despues.extra ? 'marcada como extra' : 'ya no es extra');
   if ((antes.nota ?? null) !== (despues.nota ?? null)) c.push(`nota ${antes.nota ? `«${antes.nota}»` : 'vacía'} → ${despues.nota ? `«${despues.nota}»` : 'vacía'}`);
   return c.join(' · ') || 'sin cambios visibles';
 }

@@ -75,6 +75,8 @@ MIGRACIONES = (
     ("txid", "ALTER TABLE compras ADD COLUMN txid TEXT CHECK (txid IS NULL OR length(txid) = 64)"),
     ("tipo", "ALTER TABLE compras ADD COLUMN tipo TEXT NOT NULL DEFAULT 'compra' CHECK (tipo IN ('compra', 'venta'))"),
     ("nota", "ALTER TABLE compras ADD COLUMN nota TEXT CHECK (nota IS NULL OR length(nota) <= 120)"),
+    # Compra extra (por una caída): se muestra aparte y no cuenta como tu ritmo habitual. Solo compras.
+    ("extra", "ALTER TABLE compras ADD COLUMN extra INTEGER NOT NULL DEFAULT 0 CHECK (extra IN (0, 1))"),
 )
 VIGENTES = "anulada_ts IS NULL"
 
@@ -83,7 +85,7 @@ CSP = (
     "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
-COLS = "id, fecha, monto, precio, sats, creado, txid, tipo, nota"
+COLS = "id, fecha, monto, precio, sats, creado, txid, tipo, nota, extra"
 GENESIS = date(2009, 1, 3)
 Compra = tuple[str, float, float, int]  # fecha, monto, precio, sats
 
@@ -134,14 +136,15 @@ def _close_db(_exc: BaseException | None) -> None:
 
 
 def fila(row: sqlite3.Row) -> dict[str, Any]:
-    return {k: row[k] for k in ("id", "fecha", "monto", "precio", "sats", "creado", "txid", "tipo", "nota")}
+    return {**{k: row[k] for k in ("id", "fecha", "monto", "precio", "sats", "creado", "txid", "tipo", "nota")}, "extra": bool(row["extra"])}
 
 
-def insertar(conn: sqlite3.Connection, c: Compra, txid: str | None = None, tipo: str = "compra", nota: str | None = None) -> int:
+def insertar(conn: sqlite3.Connection, c: Compra, txid: str | None = None, tipo: str = "compra", nota: str | None = None,
+             extra: int = 0) -> int:
     fecha, monto, precio, sats = c
     cur = conn.execute(
-        "INSERT INTO compras (fecha, monto, precio, sats, creado, txid, tipo, nota) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (fecha, monto, precio, sats, int(time.time() * 1000), txid, tipo, nota),
+        "INSERT INTO compras (fecha, monto, precio, sats, creado, txid, tipo, nota, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (fecha, monto, precio, sats, int(time.time() * 1000), txid, tipo, nota, extra),
     )
     return int(cur.lastrowid or 0)
 
@@ -244,6 +247,20 @@ def parse_tipo(v: Any) -> str:
     return str(v)
 
 
+def parse_extra(v: Any, tipo: str = "compra") -> int:
+    """¿Compra extra (por una caída)? Acepta true/false, 1/0 y, en el CSV, 1/si/sí/true/x. Solo las compras pueden serlo."""
+    if isinstance(v, str):
+        v = v.strip().lower()
+        v = True if v in ("1", "si", "sí", "true", "x") else False if v in ("", "0", "no", "false") else v
+    if v is None or v is False or (not isinstance(v, bool) and isinstance(v, (int, float)) and v == 0):
+        return 0
+    if v is True or (not isinstance(v, bool) and isinstance(v, (int, float)) and v == 1):
+        if tipo != "compra":
+            raise ValueError("Solo una compra puede ser extra.")
+        return 1
+    raise ValueError("Extra inválido: sí o no.")
+
+
 def parse_nota(v: Any) -> str | None:
     """Nota opcional (hasta 120 caracteres, sin saltos de línea ni caracteres de control)."""
     if v is None:
@@ -289,6 +306,7 @@ def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip:
             txid = parse_txid(row.get("txid"))
             tipo = parse_tipo((row.get("tipo") or "").strip().lower() or None)
             nota = parse_nota(row.get("nota"))
+            extra = parse_extra(row.get("extra"), tipo)
         except ValueError as e:
             omitidas.append(f"Línea {n}: {e}")
             continue
@@ -301,7 +319,7 @@ def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip:
         if existe:
             repetidas += 1
             continue
-        ids.append(insertar(conn, c, txid, tipo, nota))
+        ids.append(insertar(conn, c, txid, tipo, nota, extra))
         nuevas += 1
     resumen = {"nuevas": nuevas, "repetidas": repetidas, "omitidas": len(omitidas), "ids": ids[:500]}
     if nuevas and (falla := saldo_negativo(movimientos(conn))):
@@ -582,12 +600,13 @@ def crear() -> Any:
         txid = parse_txid(body.get("txid"))
         tipo = parse_tipo(body.get("tipo"))
         nota = parse_nota(body.get("nota"))
+        extra = parse_extra(body.get("extra"), tipo)
     except ValueError as e:
         return jsonify(error=str(e)), 400
     conn = db()
     if tipo == "venta" and (falla := saldo_negativo(movimientos(conn) + [(c[0], 10**12, "venta", c[3])])):
         return jsonify(error=_error_saldo(falla)), 400
-    cid = insertar(conn, c, txid, tipo, nota)
+    cid = insertar(conn, c, txid, tipo, nota, extra)
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "alta", "compra", cid, None, nueva, auth.ip_resumida(ip_real()))
     conn.commit()
@@ -603,6 +622,7 @@ def editar(cid: int) -> Any:
         txid = parse_txid(body.get("txid")) if "txid" in body else None
         tipo = parse_tipo(body.get("tipo")) if "tipo" in body else None
         nota = parse_nota(body.get("nota")) if "nota" in body else None
+        extra = parse_extra(body.get("extra"), tipo or "compra") if "extra" in body else None
     except ValueError as e:
         return jsonify(error=str(e)), 400
     conn = db()
@@ -615,11 +635,17 @@ def editar(cid: int) -> Any:
         tipo = previa["tipo"]
     if "nota" not in body:
         nota = previa["nota"]
+    if extra is None:
+        extra = previa["extra"]
+    if tipo == "venta":
+        if extra and "extra" in body:
+            return jsonify(error="Solo una compra puede ser extra."), 400
+        extra = 0  # una venta nunca es extra
     otros = [m for m in movimientos(conn) if m[1] != cid]
     if falla := saldo_negativo(otros + [(fecha, cid, tipo, sats)]):
         return jsonify(error=_error_saldo(falla)), 400
-    conn.execute("UPDATE compras SET fecha = ?, monto = ?, precio = ?, sats = ?, txid = ?, tipo = ?, nota = ? WHERE id = ?",
-                 (fecha, monto, precio, sats, txid, tipo, nota, cid))
+    conn.execute("UPDATE compras SET fecha = ?, monto = ?, precio = ?, sats = ?, txid = ?, tipo = ?, nota = ?, extra = ? WHERE id = ?",
+                 (fecha, monto, precio, sats, txid, tipo, nota, extra, cid))
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "edicion", "compra", cid, fila(previa), nueva, auth.ip_resumida(ip_real()))
     conn.commit()
@@ -650,12 +676,12 @@ def _fmt(x: float) -> str:
 
 @app.get("/api/export.csv")
 def exportar() -> Response:
-    rows = db().execute(f"SELECT fecha, monto, precio, sats, txid, tipo, nota FROM compras WHERE {VIGENTES} ORDER BY fecha, id").fetchall()
+    rows = db().execute(f"SELECT fecha, monto, precio, sats, txid, tipo, nota, extra FROM compras WHERE {VIGENTES} ORDER BY fecha, id").fetchall()
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
-    w.writerow(["fecha", "monto_usd", "precio_btc_usd", "sats", "btc", "txid", "tipo", "nota"])
+    w.writerow(["fecha", "monto_usd", "precio_btc_usd", "sats", "btc", "txid", "tipo", "nota", "extra"])
     for r in rows:
-        w.writerow([r["fecha"], _fmt(r["monto"]), _fmt(r["precio"]), r["sats"], "%.8f" % (r["sats"] / 1e8), r["txid"] or "", r["tipo"], r["nota"] or ""])
+        w.writerow([r["fecha"], _fmt(r["monto"]), _fmt(r["precio"]), r["sats"], "%.8f" % (r["sats"] / 1e8), r["txid"] or "", r["tipo"], r["nota"] or "", "1" if r["extra"] else ""])
     return Response(
         out.getvalue(),
         mimetype="text/csv",

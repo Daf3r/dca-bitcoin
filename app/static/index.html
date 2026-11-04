@@ -172,7 +172,7 @@
       <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: gasté en renta">
     </label>
     <details class="h-avanzado" id="h-avanzado">
-      <summary>Más detalles: dólares exactos y TXID</summary>
+      <summary>Más detalles: dólares, TXID y compra extra</summary>
       <label class="h-usd">Pagaste (USD)
         <input id="h-usd" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00">
       </label>
@@ -181,6 +181,12 @@
         <input id="h-txid" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="64 caracteres, o pega el enlace de mempool.space">
       </label>
       <p class="h-nota">Sirve para comprobar la transacción en la cadena. Una compra dentro del exchange o por Lightning no tiene.</p>
+      <!-- Solo para compras: la marca de extra y su nota (en una venta, la nota va arriba). -->
+      <label class="h-extra" data-solo-compra><input type="checkbox" id="h-extra"> <span>Compra extra (por una caída)</span></label>
+      <p class="h-nota" data-solo-compra>Las extra se muestran aparte y no cuentan como tu ritmo habitual.</p>
+      <label class="h-usd" data-solo-compra>Nota (opcional)
+        <input id="h-nota-c" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="¿Por qué esta compra?">
+      </label>
     </details>
     <div class="hoja-bot">
       <button type="button" class="borrar" id="h-borrar" hidden>Anular</button>
