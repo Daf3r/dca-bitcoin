@@ -634,14 +634,33 @@ async function cargarYo() {
 }
 $('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); dCuenta.showModal(); });
 
+const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
+/** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
+function textoMov(x) {
+  if (!x?.sats) return '';
+  return `${entero(x.sats)} sats (${usd(x.monto)}) del ${fechaLarga(x.fecha)}` +
+    (x.txid ? ` · TXID ${txCorto(x.txid)}` : '') + (x.nota ? ` · «${x.nota}»` : '');
+}
+/** Qué cambió en una edición: solo los campos que difieren. */
+function cambiosEdicion(antes, despues) {
+  if (!antes || !despues) return '';
+  const c = [];
+  if (antes.sats !== despues.sats) c.push(`${entero(antes.sats)} → ${entero(despues.sats)} sats`);
+  if (antes.monto !== despues.monto) c.push(`${usd(antes.monto)} → ${usd(despues.monto)}`);
+  if (antes.fecha !== despues.fecha) c.push(`fecha ${fechaLarga(antes.fecha)} → ${fechaLarga(despues.fecha)}`);
+  if ((antes.txid ?? null) !== (despues.txid ?? null)) c.push(`TXID ${txCorto(antes.txid)} → ${txCorto(despues.txid)}`);
+  if ((antes.nota ?? null) !== (despues.nota ?? null)) c.push(`nota ${antes.nota ? `«${antes.nota}»` : 'vacía'} → ${despues.nota ? `«${despues.nota}»` : 'vacía'}`);
+  return c.join(' · ') || 'sin cambios visibles';
+}
 function textoAuditoria(a) {
   const d = a.despues || a.antes || {};
-  const compra = d.sats ? `${entero(d.sats)} sats (${usd(d.monto)}) del ${fechaLarga(d.fecha)}` : '';
+  const venta = d.tipo === 'venta';
+  const mov = venta ? 'la venta' : 'la compra';
   return {
-    alta: `anotó ${compra}`,
-    edicion: `corrigió la compra del ${a.antes ? fechaLarga(a.antes.fecha) : ''}: ${a.antes ? entero(a.antes.sats) : ''} → ${compra}`,
-    anulacion: `anuló ${compra}`,
-    importacion: `importó ${d.nuevas} ${d.nuevas === 1 ? 'compra' : 'compras'}`,
+    alta: venta ? `registró una venta de ${textoMov(d)}` : `anotó ${textoMov(d)}`,
+    edicion: `corrigió ${mov} del ${a.antes ? fechaLarga(a.antes.fecha) : ''}: ${cambiosEdicion(a.antes, a.despues)}`,
+    anulacion: `anuló ${mov} de ${textoMov(d)}`,
+    importacion: `importó ${d.nuevas} ${d.nuevas === 1 ? 'movimiento' : 'movimientos'}`,
     login: 'entró', logout: 'salió', logout_todas: 'salió en todos los dispositivos',
     login_fallido: a.entidad === 'ip' ? 'falló varias veces al entrar desde una misma red' : 'falló al entrar',
     bloqueo: a.entidad === 'ip' ? 'quedó bloqueado desde una red por demasiados intentos' : 'quedó bloqueado unos minutos por demasiados intentos',
