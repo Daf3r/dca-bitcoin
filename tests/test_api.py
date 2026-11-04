@@ -299,6 +299,24 @@ check(bl == "0" and float(fa or 0) > _t.time(), "el hilo suelta el candado y ano
 server.huecos_historico = orig
 c2 = server.connect(); c2.execute("DELETE FROM meta"); c2.commit(); c2.close()
 
+# --- estáticos versionados y caché
+V = server.VERSION
+r = cl.get("/")
+html = r.get_data(as_text=True)
+check(r.headers["Cache-Control"] == "no-cache" and f"/app.js?v={V}" in html and f"/styles.css?v={V}" in html and f"/fonts/bricolage.woff2?v={V}" in html, "index con versión y sin caché")
+r = cl.get("/app.js")
+t = r.get_data(as_text=True)
+check(r.mimetype == "text/javascript" and f"./lib.js?v={V}'" in t and f"./montana.js?v={V}'" in t and r.headers["Cache-Control"] == "no-cache", "módulos con imports versionados")
+check(f"./lib.js?v={V}'" in cl.get("/grafico.js").get_data(as_text=True), "también en los módulos importados")
+check(cl.get(f"/app.js?v={V}").headers["Cache-Control"] == "public, max-age=31536000, immutable", "inmutable con la versión vigente")
+check(cl.get("/app.js?v=vieja").headers["Cache-Control"] == "no-cache", "versión vieja: se revalida")
+check(f'url("/fonts/fraunces.woff2?v={V}")' in cl.get("/styles.css").get_data(as_text=True), "fuentes versionadas en el CSS")
+r = cl.get(f"/fonts/bricolage.woff2?v={V}")
+check(r.status_code == 200 and r.mimetype == "font/woff2" and "immutable" in r.headers["Cache-Control"], "fuente inmutable")
+check(cl.get("/icon.svg").headers["Cache-Control"] == "no-cache", "resto de estáticos revalida")
+check(cl.get("/app.js", headers={"If-None-Match": f'"{V}-app.js"'}).status_code == 304, "304 con ETag")
+check(cl.get("/../server.js").status_code == 404 and cl.get("/nada.js").status_code == 404, "solo módulos existentes")
+
 # CLI importar
 p = os.path.join(tmp, "c.csv"); open(p, "w").write(txt)
 out = subprocess.run([sys.executable, os.path.join(APP, "importar.py"), p], capture_output=True, text=True, env={**os.environ}, cwd=APP)

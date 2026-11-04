@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import math
@@ -206,9 +207,59 @@ def mismo_origen() -> Any:
     return None
 
 
+# ------------------------------------------------------- estáticos versionados
+# Sin build: al servir, index.html, los módulos y el CSS llevan ?v=<hash del contenido> en sus
+# referencias. Así una caché intermedia (Cloudflare) nunca mezcla HTML nuevo con JS o CSS viejos.
+ESTATICOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
+
+def _version() -> str:
+    h = hashlib.sha256()
+    for raiz, _, archivos in sorted(os.walk(ESTATICOS)):
+        for nombre in sorted(archivos):
+            ruta = os.path.join(raiz, nombre)
+            h.update(os.path.relpath(ruta, ESTATICOS).encode())
+            with open(ruta, "rb") as f:
+                h.update(f.read())
+    return h.hexdigest()[:12]
+
+
+VERSION = _version()
+_REF_JS = re.compile(r"""(from\s+['"]\./[\w-]+\.js)(['"])""")
+_REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.woff2))(")""")
+_REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
+
+
+def _servir_versionado(nombre: str, tipo: str, patron: re.Pattern[str], cache: str) -> Response:
+    ruta = os.path.join(ESTATICOS, nombre)
+    with open(ruta, encoding="utf-8") as f:
+        texto = patron.sub(rf"\1?v={VERSION}\2", f.read())
+    resp = Response(texto, mimetype=tipo)
+    resp.headers["Cache-Control"] = cache
+    resp.set_etag(f"{VERSION}-{nombre}")
+    return resp.make_conditional(request)
+
+
+def _cache_recurso() -> str:
+    # Con la versión vigente en la URL el contenido no cambia nunca; sin ella, se revalida.
+    return "public, max-age=31536000, immutable" if request.args.get("v") == VERSION else "no-cache"
+
+
 @app.get("/")
 def inicio() -> Response:
-    return send_from_directory(app.static_folder or "static", "index.html")
+    return _servir_versionado("index.html", "text/html", _REF_HTML, "no-cache")
+
+
+@app.get("/<nombre>.js")
+def modulo(nombre: str) -> Response:
+    if not re.fullmatch(r"[\w-]+", nombre) or not os.path.isfile(os.path.join(ESTATICOS, f"{nombre}.js")):
+        return jsonify(error="No existe."), 404
+    return _servir_versionado(f"{nombre}.js", "text/javascript", _REF_JS, _cache_recurso())
+
+
+@app.get("/styles.css")
+def estilos() -> Response:
+    return _servir_versionado("styles.css", "text/css", _REF_CSS, _cache_recurso())
 
 
 @app.get("/healthz")
@@ -525,7 +576,9 @@ def cabeceras(resp: Response) -> Response:
     resp.headers["Referrer-Policy"] = "no-referrer"
     resp.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
-    if "Cache-Control" not in resp.headers:
+    if request.path.startswith("/fonts/") and request.args.get("v") == VERSION and resp.status_code == 200:
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif "Cache-Control" not in resp.headers:
         resp.headers["Cache-Control"] = "no-store" if request.path.startswith("/api/") else "no-cache"
     return resp
 
