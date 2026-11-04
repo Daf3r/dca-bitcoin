@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, serieGrafico, textoMeses, compacto,
+  resumen, nombreHito, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -280,14 +280,17 @@ $('ver-todas').addEventListener('click', () => {
 });
 
 // ------------------------------------------------------------- hoja de anotar
-const H = { usd: '', sats: '', campo: 'usd', editando: null, guardando: false, origen: null };
+const H = { sats: '', usd: '', usdTocado: false, editando: null, guardando: false, origen: null };
 const hoja = $('hoja');
 
 function abrirHoja(id = null) {
   const c = id ? S.compras.find((x) => x.id === id) : null;
-  Object.assign(H, { editando: c?.id ?? null, campo: 'usd', guardando: false, origen: document.activeElement });
-  H.usd = c ? String(c.monto) : '';
+  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement });
   H.sats = c ? String(c.sats) : '';
+  H.usd = c ? String(c.monto) : '';
+  $('h-sats').value = H.sats ? entero(Number(H.sats)) : '';
+  $('h-usd').value = H.usd;
+  $('h-avanzado').open = !!c;
   $('h-fecha').value = c?.fecha ?? hoyISO();
   $('h-fecha').max = hoyISO();
   $('hoja-t').textContent = c ? 'Editar compra' : 'Anotar compra';
@@ -296,53 +299,69 @@ function abrirHoja(id = null) {
   pintarHoja();
   hoja.hidden = false;
   requestAnimationFrame(() => hoja.classList.add('abierta'));
-  $('teclado').querySelector('button').focus();
+  // Dentro del toque que abre la hoja, para que el iPhone muestre su teclado numérico.
+  $('h-sats').focus({ preventScroll: true });
+  ajustarTeclado();
 }
 function cerrarHoja() {
   hoja.classList.remove('abierta');
-  setTimeout(() => { hoja.hidden = true; H.origen?.focus?.(); }, reducido() ? 0 : 260);
+  document.activeElement?.blur?.();
+  setTimeout(() => { hoja.hidden = true; hoja.style.removeProperty('--kb'); H.origen?.focus?.(); }, reducido() ? 0 : 260);
 }
+// En iPhone el teclado tapa lo de abajo sin cambiar el viewport de maquetación: se sube la hoja la altura del teclado.
+function ajustarTeclado() {
+  const vv = window.visualViewport;
+  if (!vv || hoja.hidden) return;
+  hoja.style.setProperty('--kb', `${Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop))}px`);
+}
+window.visualViewport?.addEventListener('resize', ajustarTeclado);
+window.visualViewport?.addEventListener('scroll', ajustarTeclado);
+
 function datosHoja() {
+  const sats = Math.round(Number(H.sats)) || 0;
+  if (!sats) return null;
   const u = Number(H.usd) || 0;
-  const s = Math.round(Number(H.sats)) || 0;
-  if (u && s) return { monto: u, sats: s, precio: (u * 1e8) / s };
-  if (u && S.precio) return { monto: u, sats: Math.max(1, Math.round((u / S.precio) * 1e8)), precio: S.precio, estimado: true };
-  return null;
+  if (u > 0) return { sats, monto: u, precio: (u * 1e8) / sats, exacto: true };
+  const p = precioDelDia($('h-fecha').value, S.historico, S.precio);
+  if (!p) return { sats, sinPrecio: true };
+  return { sats, monto: estimarMonto(sats, p.precio), precio: p.precio, fuente: p.fuente, dia: p.dia };
 }
 function pintarHoja() {
-  $('v-usd').textContent = H.usd ? `$${H.usd}` : '$0';
-  $('v-sats').textContent = `${H.sats ? entero(Number(H.sats)) : '0'} sats`;
-  document.querySelectorAll('.modo button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.campo === H.campo)));
   const d = datosHoja();
   const saldo = R.sats - (H.editando ? S.compras.find((x) => x.id === H.editando).sats : 0);
-  $('hoja-calc').textContent = !H.usd ? 'Escribe cuánto pagaste en USD.'
-    : !d ? 'Sin precio en vivo: escribe también los sats que recibiste.'
-      : `1 BTC a ${usd0(d.precio)}${d.estimado ? ' (estimado con el precio de hoy; toca «Recibiste» para el número exacto)' : ''} · saldo ${entero(saldo + d.sats)} sats`;
-  $('guardar').disabled = !d || H.guardando;
+  $('hoja-calc').textContent = !d ? 'Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.'
+    : d.sinPrecio ? 'Sin precio disponible ahora: abre «Escribir los dólares exactos».'
+      : `${d.exacto ? '' : '≈ '}${usd(d.monto)} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(saldo + d.sats)} sats`;
+  $('guardar').disabled = !d || d.sinPrecio || H.guardando;
   $('guardar').textContent = H.guardando ? 'Guardando…' : H.editando ? 'Guardar cambios' : 'Guardar';
 }
-$('teclado').addEventListener('click', (e) => {
-  const b = e.target.closest('button');
-  if (!b) return;
-  const k = H.campo;
-  if (b.dataset.borrar !== undefined) H[k] = H[k].slice(0, -1);
-  else if (b.textContent === '.') { if (k === 'usd' && !H[k].includes('.')) H[k] += H[k] ? '.' : '0.'; }
-  else if (H[k].length < 13 && !(k === 'usd' && /\.\d\d$/.test(H[k]))) H[k] = (H[k] === '0' ? '' : H[k]) + b.textContent;
-  if (!reducido()) { b.classList.remove('pulsa'); void b.offsetWidth; b.classList.add('pulsa'); }
+/** Pone separadores de miles al escribir sin mover el cursor de su sitio. */
+function formatearSats(inp) {
+  const antes = inp.value.slice(0, inp.selectionStart ?? inp.value.length).replace(/\D/g, '').length;
+  const d = inp.value.replace(/\D/g, '').slice(0, 15);
+  H.sats = d ? String(Number(d)) : '';
+  inp.value = H.sats ? entero(Number(H.sats)) : '';
+  let i = 0;
+  for (let c = 0; i < inp.value.length && c < antes; i++) if (/\d/.test(inp.value[i])) c++;
+  inp.setSelectionRange(i, i);
+}
+$('h-sats').addEventListener('input', (e) => {
+  formatearSats(e.target);
+  // Si corriges los sats de una compra y no tocaste los dólares, se recalculan con el precio del día.
+  if (H.editando && !H.usdTocado && H.usd) { H.usd = ''; $('h-usd').value = ''; }
+  $('hoja-error').textContent = '';
   pintarHoja();
 });
-// Con teclado físico también se puede escribir directamente.
+$('h-usd').addEventListener('input', (e) => {
+  const v = e.target.value.replace(',', '.');
+  if (/^\d{0,10}(\.\d{0,2})?$/.test(v)) { H.usd = v; e.target.value = v; } else e.target.value = H.usd;
+  H.usdTocado = true;
+  pintarHoja();
+});
+$('h-fecha').addEventListener('input', pintarHoja);
 hoja.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') return cerrarHoja();
-  if (e.target.tagName === 'INPUT') return;
-  const tecla = /^[0-9.]$/.test(e.key) ? e.key : e.key === 'Backspace' ? '⌫' : null;
-  if (!tecla) return;
-  e.preventDefault();
-  [...$('teclado').children].find((b) => b.textContent === tecla)?.click();
-});
-document.querySelector('.modo').addEventListener('click', (e) => {
-  const b = e.target.closest('button');
-  if (b) { H.campo = b.dataset.campo; pintarHoja(); }
+  if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'date') { e.preventDefault(); $('guardar').click(); }
 });
 $('anotar').addEventListener('click', () => abrirHoja());
 document.querySelectorAll('[data-cerrar]').forEach((b) => b.addEventListener('click', cerrarHoja));

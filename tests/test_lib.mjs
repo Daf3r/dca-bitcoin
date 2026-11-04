@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -99,5 +99,18 @@ const m = muestrear(larga, 300);
 ok(m.length <= 601 && m.length >= 300, `decima a ~2n puntos (${m.length})`);
 ok(m.some((x) => x.p > 900), 'conserva el pico');
 eq(m.at(-1), larga.at(-1), 'conserva el último punto');
+
+// Dólares estimados de una compra anotada solo con sats
+const cierres = [['2026-10-29', 70000], ['2026-10-30', 71000], ['2026-11-01', 72000]];
+eq(precioDelDia('2026-11-04', cierres, 77598, '2026-11-04'), { precio: 77598, fuente: 'vivo' }, 'hoy usa el precio en vivo');
+eq(precioDelDia('2026-10-30', cierres, 77598, '2026-11-04'), { precio: 71000, fuente: 'cierre', dia: '2026-10-30' }, 'día pasado: su cierre');
+eq(precioDelDia('2026-10-31', cierres, 77598, '2026-11-04'), { precio: 71000, fuente: 'cierre', dia: '2026-10-30' }, 'sin vela ese día: la anterior');
+eq(precioDelDia('2026-11-03', cierres, 77598, '2026-11-04'), { precio: 72000, fuente: 'cierre', dia: '2026-11-01' }, 'después de la última vela: la última');
+eq(precioDelDia('2026-01-01', cierres, 77598, '2026-11-04'), { precio: 77598, fuente: 'hoy' }, 'antes del histórico: precio de hoy, marcado');
+eq(precioDelDia('2026-01-01', [], null, '2026-11-04'), null, 'sin nada, null');
+eq(precioDelDia('2026-11-04', cierres, null, '2026-11-04'), null, 'hoy sin precio en vivo, null');
+eq(estimarMonto(32_500, 76_923), 25, '32,500 sats a 76,923 son $25.00');
+eq(estimarMonto(36_578, 77_598), 28.38, 'redondeo a centavos');
+eq(estimarMonto(1, 50_000), 0.01, 'mínimo un centavo');
 
 console.log(`OK ${n} comprobaciones`);

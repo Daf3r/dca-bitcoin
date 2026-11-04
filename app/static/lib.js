@@ -164,6 +164,23 @@ export function ubicar(fecha, serie) {
   return lo;
 }
 
+/**
+ * Precio de BTC para una fecha, para estimar los dólares de una compra anotada solo con sats:
+ * hoy, el precio en vivo; otro día, el cierre diario (el último disponible si la fecha cae después de la
+ * última vela). Sin dato de ese día, el precio de hoy, marcado como tal. Sin nada, null.
+ * `historico` son los cierres [[fecha, cierre]] ordenados.
+ */
+export function precioDelDia(fecha, historico, vivo, hoy = hoyISO()) {
+  if (!fecha || fecha >= hoy) return vivo ? { precio: vivo, fuente: 'vivo' } : null;
+  let lo = 0, hi = historico.length - 1, i = -1;
+  while (lo <= hi) { const m = (lo + hi) >> 1; if (historico[m][0] <= fecha) { i = m; lo = m + 1; } else hi = m - 1; }
+  if (i >= 0 && historico[i][1] > 0) return { precio: historico[i][1], fuente: 'cierre', dia: historico[i][0] };
+  return vivo ? { precio: vivo, fuente: 'hoy' } : null;
+}
+
+/** Dólares de una compra de `sats` a `precio`, redondeados a centavos (mínimo un centavo). */
+export const estimarMonto = (sats, precio) => Math.max(0.01, Math.round((sats * precio) / 1e8 * 100) / 100);
+
 /** Reduce la serie a ~2n puntos conservando el mínimo y el máximo de cada tramo. */
 export function muestrear(serie, n) {
   if (serie.length <= n * 2) return serie;

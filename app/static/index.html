@@ -117,19 +117,19 @@
       <h2 id="hoja-t">Anotar compra</h2>
       <button type="button" class="cerrar" data-cerrar>Cerrar</button>
     </div>
-    <label class="h-fecha">Fecha <input type="date" id="h-fecha" required></label>
-    <div class="modo" role="group" aria-label="Campo que escribes">
-      <button type="button" data-campo="usd" aria-pressed="true"><span>Pagaste</span><b id="v-usd">$0</b></button>
-      <button type="button" data-campo="sats" aria-pressed="false"><span>Recibiste</span><b id="v-sats">0 sats</b></button>
-    </div>
+    <label class="h-sats"><span>Sats que recibiste</span>
+      <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hoja-calc">
+    </label>
     <p class="hoja-calc" id="hoja-calc" aria-live="polite"></p>
     <p class="hoja-error" id="hoja-error" role="alert"></p>
-    <div class="teclado" id="teclado">
-      <button type="button">1</button><button type="button">2</button><button type="button">3</button>
-      <button type="button">4</button><button type="button">5</button><button type="button">6</button>
-      <button type="button">7</button><button type="button">8</button><button type="button">9</button>
-      <button type="button">.</button><button type="button">0</button><button type="button" data-borrar aria-label="Borrar último dígito">⌫</button>
-    </div>
+    <label class="h-fecha">Fecha <input type="date" id="h-fecha" required></label>
+    <details class="h-avanzado" id="h-avanzado">
+      <summary>Escribir los dólares exactos</summary>
+      <label class="h-usd">Pagaste (USD)
+        <input id="h-usd" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00">
+      </label>
+      <p class="h-nota">Si no los escribes, se calculan con el precio de ese día.</p>
+    </details>
     <div class="hoja-bot">
       <button type="button" class="borrar" id="h-borrar" hidden>Borrar</button>
       <button type="button" class="guardar" id="guardar" disabled>Guardar</button>
