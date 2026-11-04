@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -358,5 +358,21 @@ eq(avisosAlAnotar([...rutina, { id: 9, tipo: 'compra', fecha: '2026-10-20', mont
 const ritmoSin = resumen(rutina.map((c, i) => ({ ...c, fecha: `2026-0${6 + (i % 5)}-15`, id: i + 1 })), null, '2026-10-20').satsMes;
 const ritmoCon = resumen([...rutina.map((c, i) => ({ ...c, fecha: `2026-0${6 + (i % 5)}-15`, id: i + 1 })), { id: 99, tipo: 'compra', fecha: '2026-10-10', monto: 5000, sats: 9e6, precio: 50000, extra: true }], null, '2026-10-20').satsMes;
 eq(ritmoCon, ritmoSin, 'una compra extra enorme no cambia el ritmo de la proyección');
+
+// Tu costo promedio contra el precio promedio del período
+const dd = (k) => new Date(Date.UTC(2026, 0, 1 + k)).toISOString().slice(0, 10); // 1 ene + k días
+const histCV = Array.from({ length: 40 }, (_, k) => [dd(k), k < 20 ? 100000 : 50000]); // 20 días a 100k y 20 a 50k → promedio 75k
+const comprasCV = [{ id: 1, tipo: 'compra', fecha: dd(0), monto: 100, sats: 100000 }, { id: 2, tipo: 'compra', fecha: dd(10), monto: 100, sats: 100000 }, { id: 3, tipo: 'compra', fecha: dd(25), monto: 100, sats: 200000 }];
+const Rcv = resumen(comprasCV, null, dd(39)); // $300 por 400,000 sats → costo $75,000
+const cv = costoVsPromedio(Rcv, histCV, null, dd(39));
+eq([Math.round(cv.costo), Math.round(cv.promedio), Math.round(cv.cambio * 10) / 10, cv.dias], [75000, 75000, 0, 40], 'costo igual al promedio del período: cambio 0');
+const comprasBarato = [{ id: 1, tipo: 'compra', fecha: dd(0), monto: 100, sats: 100000 }, { id: 2, tipo: 'compra', fecha: dd(10), monto: 100, sats: 100000 }, { id: 3, tipo: 'compra', fecha: dd(25), monto: 300, sats: 600000 }];
+const cvB = costoVsPromedio(resumen(comprasBarato, null, dd(39)), histCV, null, dd(39)); // $500 por 800,000 sats → $62,500
+ok(cvB.cambio < 0 && Math.abs(cvB.cambio - (62500 / 75000 - 1) * 100) < 1e-9, 'comprar más cuando el precio estaba bajo deja el costo por debajo del promedio');
+const cvV = costoVsPromedio(Rcv, histCV, 150000, dd(39)); // el precio vivo sustituye al último cierre
+ok(cvV.promedio > cv.promedio, 'el precio vivo entra en el promedio del período');
+eq(costoVsPromedio(resumen(comprasCV.slice(0, 2), null, dd(39)), histCV, null, dd(39)), null, 'con menos de 3 compras no se muestra');
+eq(costoVsPromedio(Rcv, histCV.slice(0, 10), null, dd(9)), null, 'con menos de 14 días de histórico no se muestra');
+eq(costoVsPromedio(Rcv, [], null, dd(39)), null, 'sin histórico no se muestra');
 
 console.log(`OK ${n} comprobaciones`);

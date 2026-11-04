@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, serieValor, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, serieValor, costoVsPromedio, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -292,6 +292,21 @@ function pintarValor() {
   if (serie.length < 2) return;
   anchoValor = $('v-lienzo').clientWidth;
   dibujarValor($('v-lienzo'), $('v-lectura'), { serie });
+  const c = costoVsPromedio(R, S.historico, S.precio, hoyISO());
+  $('v-vs').hidden = !c;
+  if (c) $('v-vs').textContent = textoVs(c);
+}
+/** Tu costo promedio frente al precio promedio del período, en palabras: sin presumir cuando sale por encima. */
+function textoVs(c) {
+  const meses = Math.round(c.dias / 30.44);
+  const periodo = c.dias < 60 ? `estas ${Math.round(c.dias / 7)} semanas` : `estos ${meses} meses`;
+  const base = `Tu costo promedio (${usd0(c.costo)})`;
+  const prom = `precio promedio de ${periodo} (${usd0(c.promedio)})`;
+  if (Math.abs(c.cambio) < 0.5) return `${base} es casi igual al ${prom}.`;
+  const p = Math.abs(c.cambio).toFixed(1);
+  return c.cambio < 0
+    ? `${base} está un ${p}% por debajo del ${prom}. Es el efecto de comprar poco y seguido: cuando el precio baja, los mismos dólares compran más sats.`
+    : `${base} está un ${p}% por encima del ${prom}. Pasa según en qué momentos coincidieron tus compras con las subidas y bajadas del precio.`;
 }
 instalarLecturaValor($('v-lienzo'));
 new ResizeObserver(() => { if ($('v-lienzo').clientWidth && $('v-lienzo').clientWidth !== anchoValor) pintarValor(); }).observe($('v-lienzo'));

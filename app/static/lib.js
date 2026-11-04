@@ -429,6 +429,21 @@ export function serieValor(items, historico, vivo, hoy = hoyISO()) {
   return out;
 }
 
+/**
+ * Tu costo promedio frente al precio promedio de BTC desde tu primera compra (media simple de los cierres diarios, con
+ * el precio vivo al final). Comprar los mismos dólares cada vez compra más sats cuando el precio baja, así que el costo
+ * suele quedar por debajo del promedio: ese es el efecto del DCA. Pide 3 compras y al menos 14 días de histórico; si no, null.
+ * `cambio` es negativo cuando tu costo es menor que el promedio del período.
+ */
+export function costoVsPromedio(R, historico, vivo, hoy = hoyISO()) {
+  if (!R || R.nCompras < 3 || !(R.promedio > 0) || !R.items.length) return null;
+  const desde = R.items[0].fecha;
+  const serie = serieGrafico(historico, vivo, hoy).filter((x) => x.fecha >= desde && x.p > 0);
+  if (serie.length < 14) return null;
+  const promedio = serie.reduce((a, x) => a + x.p, 0) / serie.length;
+  return { costo: R.promedio, promedio, cambio: (R.promedio / promedio - 1) * 100, dias: serie.length };
+}
+
 /** Índice del punto de la serie para una fecha; si cae después de la última vela, la última. */
 export function ubicar(fecha, serie) {
   if (!serie.length || fecha < serie[0].fecha) return -1;
