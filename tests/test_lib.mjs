@@ -239,6 +239,7 @@ eq(resumen(cc(22).map((c) => ({ ...c, monto: 20, sats: 25000, precio: 80000 })),
 // «Te toca comprar» según el ritmo: semanal con compras de lunes a miércoles
 const sem = (k, dia = 0) => new Date(Date.UTC(2026, 5, 1 + k * 7 + dia)).toISOString().slice(0, 10); // lunes 1 jun 2026 + semanas
 const compSem = (ks) => ks.map((k, i) => ({ id: i + 1, tipo: 'compra', fecha: sem(k, 1), monto: 25, sats: 30000, precio: 83000 }));
+const compSemFechas = (fs) => fs.map((f, i) => ({ id: i + 1, tipo: 'compra', fecha: f, monto: 25, sats: 30000, precio: 83000 }));
 const estado = (items, hoy) => tocaComprar(resumen(items, null, hoy), hoy);
 const base = compSem([0, 1, 2, 3, 4, 5]); // última compra: martes de la semana 5 (= 7 jul)
 eq(estado(base, sem(5, 3))?.estado, 'hecho', 'ya compraste esta semana');
@@ -252,5 +253,16 @@ eq(estado(quince, sem(8, 3))?.estado, 'hecho', 'quincenal: compraste esta semana
 eq(estado(quince, sem(9, 2)), { estado: 'aldia', vence: 1 }, 'quincenal: la semana siguiente vas al día, vence en 1');
 eq(estado(quince, sem(10, 2))?.estado, 'toca', 'quincenal: a las 2 semanas toca');
 eq(estado(quince, sem(11, 2))?.estado, 'perdida', 'quincenal: a las 3 semanas se reinició');
+
+// Compras extra por una caída del precio: no deben cambiar el ritmo ni romper la racha
+const fq = (k, dia = 1) => sem(k, dia);
+const qBase = [0, 2, 4, 6, 8].map((k) => fq(k));
+const extras3 = [...qBase, fq(7, 0), fq(7, 3), fq(7, 5)];
+const Rx = resumen(compSemFechas(extras3), null, fq(10, 2));
+eq([Rx.paso, Rx.racha, tocaComprar(Rx, fq(10, 2)).estado], [2, 6, 'toca'], 'quincenal con 3 compras extra en una semana de caída: sigue quincenal y la racha viva');
+const Rx1 = resumen(compSemFechas([...qBase, fq(7, 3)]), null, fq(9, 2));
+eq([Rx1.paso, Rx1.racha, tocaComprar(Rx1, fq(9, 2)).estado], [2, 6, 'aldia'], 'una compra extra entre medias suma a la racha y no cambia el ritmo');
+const Rs = resumen(compSemFechas([...[0, 1, 2, 3, 4, 5].map((k) => fq(k)), fq(5, 4)]), null, fq(6, 2));
+eq([Rs.paso, Rs.racha], [1, 6], 'semanal con dos compras en una semana: la semana cuenta una vez');
 
 console.log(`OK ${n} comprobaciones`);

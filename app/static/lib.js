@@ -95,9 +95,14 @@ const semana = (f) => {
   return Math.floor((Date.UTC(y, m - 1, d) - SEMANA0) / (7 * 864e5));
 };
 
-/** 1 si compras cada semana (o menos de 10 días entre compras), 2 si cada quincena. Pide al menos 4 compras. */
+/**
+ * 1 si compras cada semana (o menos de 10 días entre compras), 2 si cada quincena. Pide al menos 4 semanas con
+ * compra. Cuenta una sola fecha por semana (la primera): comprar de más en una caída del precio no cambia tu ritmo.
+ */
 function pasoSemanas(items) {
-  const fechas = [...new Set(items.map((c) => c.fecha))].slice(-9);
+  const porSemana = new Map();
+  for (const f of items.map((c) => c.fecha).sort()) if (!porSemana.has(semana(f))) porSemana.set(semana(f), f);
+  const fechas = [...porSemana.values()].slice(-9);
   if (fechas.length < 4) return 1;
   const d = fechas.slice(1).map((f, i) => (aFecha(f) - aFecha(fechas[i])) / 864e5).sort((a, b) => a - b);
   return d[d.length >> 1] >= 10 ? 2 : 1;
