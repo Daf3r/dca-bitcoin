@@ -688,6 +688,8 @@ _resp = iter(["corta", "una-clave-buena-1", "una-clave-buena-1"])
 _gp.getpass = lambda prompt="": next(_resp)
 check(usuarios.main(["crear", "Beto", "--rol", "lector"]) == 0 and auth.buscar(server.connect(), "Beto")["rol"] == "lector", "CLI crear")
 for i in range(6): nuevo().post("/api/login", json={"usuario": "Beto", "clave": f"mala-{i}-xxxxxxx"})
+# El 5.º fallo bloquea solo 1 s: se alarga para no depender del borde del segundo (prueba determinista).
+_c = server.connect(); _c.execute("UPDATE intentos SET bloqueado_hasta = ? WHERE clave = 'u:beto'", (int(_t.time()) + 60,)); _c.commit(); _c.close()
 check(nuevo().post("/api/login", json={"usuario": "Beto", "clave": "una-clave-buena-1"}).status_code == 429, "Beto bloqueado")
 check(usuarios.main(["desbloquear", "Beto"]) == 0 and cliente("Beto", "una-clave-buena-1"), "CLI desbloquear")
 bet = cliente("Beto", "una-clave-buena-1")
