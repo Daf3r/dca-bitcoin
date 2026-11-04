@@ -94,7 +94,7 @@ check(r.status_code == 201, "same-origin"); cl.delete(f"/api/compras/{r.get_json
 
 # export
 r = cl.get("/api/export.csv"); txt = r.get_data(as_text=True)
-check(r.status_code == 200 and txt.startswith("fecha,monto_usd,precio_btc_usd,sats,btc,txid\n"), txt[:80])
+check(r.status_code == 200 and txt.startswith("fecha,monto_usd,precio_btc_usd,sats,btc,txid,tipo,nota\n"), txt[:80])
 check("attachment" in r.headers["Content-Disposition"], "disposition")
 n_antes = len(cl.get("/api/compras").get_json())
 # reimportar el export: todo repetido
@@ -511,13 +511,65 @@ except sqlite3.IntegrityError:
     check(True, "CHECK de txid")
 # Export con TXID e importación ida y vuelta
 txt = adm.get("/api/export.csv").get_data(as_text=True)
-check(txt.splitlines()[0].endswith(",txid") and TX2 in txt and TX1 in txt, "export incluye txid")
+check(",txid," in txt.splitlines()[0] and TX2 in txt and TX1 in txt, "export incluye txid")
 sql("UPDATE compras SET anulada_ts = 1 WHERE txid IS NOT NULL")
 r = adm.post("/api/import", data=txt, content_type="text/csv"); j = r.get_json()
 check(r.status_code == 200 and j["nuevas"] >= 2, f"reimportar con txid {j}")
 check(any(c["txid"] == TX2 for c in adm.get("/api/compras").get_json()), "el TXID sobrevive al CSV")
 r = adm.post("/api/import", data="fecha,monto_usd,sats,txid\n2024-09-01,10,1000,malo\n2024-09-02,10,1000,\n", content_type="text/csv"); j = r.get_json()
 check(j["nuevas"] == 1 and len(j["omitidas"]) == 1 and "TXID" in j["omitidas"][0], f"CSV con TXID malo omite la fila {j}")
+
+# --- Fase C: ventas y gastos (restan sats; el saldo nunca queda negativo)
+bal = sum(c["sats"] for c in adm.get("/api/compras").get_json() if c["tipo"] == "compra") - sum(c["sats"] for c in adm.get("/api/compras").get_json() if c["tipo"] == "venta")
+check(all(c["tipo"] == "compra" and c["nota"] is None for c in adm.get("/api/compras").get_json()), "las compras viejas son compras sin nota")
+r = adm.post("/api/compras", json={"fecha": today, "monto": 7.5, "sats": 10000, "tipo": "venta", "nota": "  gasté   en renta  "})
+check(r.status_code == 201 and r.get_json()["tipo"] == "venta" and r.get_json()["nota"] == "gasté en renta", f"venta con nota {r.data}")
+vid = r.get_json()["id"]
+r = adm.post("/api/compras", json={"fecha": today, "monto": 9, "sats": bal, "tipo": "venta"})
+check(r.status_code == 400 and "saldo" in r.get_json()["error"], f"venta sin saldo suficiente {r.data}")
+for malo in ({"tipo": "regalo"}, {"nota": "x" * 121}, {"nota": 5}):
+    r = adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100, **malo})
+    check(r.status_code == 400, f"campo inválido {malo}: {r.status_code}")
+r = adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100, "tipo": "venta", "nota": "a\x00b\x07c"})
+check(r.status_code == 201 and r.get_json()["nota"] == "abc", "caracteres de control fuera de la nota")
+adm.delete(f"/api/compras/{r.get_json()['id']}")
+check(any(c["id"] == vid and c["tipo"] == "venta" for c in adm.get("/api/compras").get_json()), "la lista devuelve la venta")
+txt = adm.get("/api/export.csv").get_data(as_text=True)
+check("venta,gasté en renta" in txt, "export con tipo y nota")
+# Orden: compra primero, venta después, aunque la venta se anote antes de la compra el mismo día no cuenta como error
+A = adm.post("/api/compras", json={"fecha": "2019-01-01", "monto": 5, "sats": 5000}).get_json()["id"]
+V = adm.post("/api/compras", json={"fecha": "2019-01-02", "monto": 4, "sats": 4000, "tipo": "venta"}).get_json()["id"]
+r = adm.put(f"/api/compras/{A}", json={"fecha": "2019-01-01", "monto": 3, "sats": 3000})
+check(r.status_code == 400, f"editar una compra que deja una venta sin sats {r.data}")
+r = adm.delete(f"/api/compras/{A}")
+check(r.status_code == 409 and "ventas posteriores" in r.get_json()["error"], f"anular compra con venta posterior {r.data}")
+r = adm.put(f"/api/compras/{V}", json={"fecha": "2019-01-02", "monto": 6, "sats": 6000})
+check(r.status_code == 400, "editar la venta para que pase del saldo")
+r = adm.put(f"/api/compras/{V}", json={"fecha": "2019-01-02", "monto": 5, "sats": 5000, "nota": "todo"})
+check(r.status_code == 200 and r.get_json()["tipo"] == "venta" and r.get_json()["nota"] == "todo", f"vender exactamente todo el saldo de ese día {r.data}")
+r = adm.put(f"/api/compras/{V}", json={"fecha": "2018-12-31", "monto": 5, "sats": 5000})
+check(r.status_code == 400, "una venta no puede quedar antes de la compra")
+r = adm.put(f"/api/compras/{V}", json={"fecha": "2019-01-02", "monto": 5, "sats": 5000})
+check(r.get_json()["nota"] == "todo", "sin el campo, la nota se conserva")
+check(adm.delete(f"/api/compras/{V}").status_code == 204 and adm.delete(f"/api/compras/{A}").status_code == 204, "anular la venta y luego la compra")
+# Mismo día: las compras van antes que las ventas
+C1 = adm.post("/api/compras", json={"fecha": "2019-02-01", "monto": 7, "sats": 700}).get_json()["id"]
+r = adm.post("/api/compras", json={"fecha": "2019-02-01", "monto": 7, "sats": 700, "tipo": "venta"})
+check(r.status_code == 201, "vender el mismo día de la compra")
+adm.delete(f"/api/compras/{r.get_json()['id']}"); adm.delete(f"/api/compras/{C1}")
+# Importar: una venta sin saldo rechaza todo el archivo; con saldo se importa, y sin columna tipo todo son compras
+antes_n = len(adm.get("/api/compras").get_json())
+r = adm.post("/api/import", data="fecha,monto_usd,sats,tipo,nota\n2019-03-01,1,100,compra,\n2019-03-02,5,999999,venta,mucho\n", content_type="text/csv")
+check(r.status_code == 400 and "saldo" in r.get_json()["error"] and len(adm.get("/api/compras").get_json()) == antes_n, f"importación con venta sin saldo no importa nada {r.data}")
+r = adm.post("/api/import", data="fecha,monto_usd,sats,tipo,nota\n2019-03-02,1,50,venta,\n2019-03-01,1,100,compra,\n", content_type="text/csv")
+check(r.status_code == 200 and r.get_json()["nuevas"] == 2, f"importar venta y compra desordenadas {r.data}")
+check(adm.post("/api/import", data="fecha,monto_usd,sats,tipo\n2019-03-02,1,50,venta\n", content_type="text/csv").get_json()["repetidas"] == 1, "una venta repetida se detecta")
+check(adm.post("/api/import", data="fecha,monto_usd,sats,tipo\n2019-03-04,1,50,regalo\n", content_type="text/csv").get_json()["omitidas"], "tipo inválido omite la fila")
+try:
+    sql("UPDATE compras SET tipo = 'otro' WHERE id = ?", (vid,)); check(False, "CHECK de tipo")
+except sqlite3.IntegrityError:
+    check(True, "CHECK de tipo")
+check(any(x["accion"] == "alta" and '"venta"' in (x["despues"] or "") for x in audit()), "la auditoría guarda el tipo de la venta")
 
 # CLI: generar, mínimo de 12 y desbloquear
 import usuarios, getpass as _gp

@@ -104,6 +104,17 @@
     <button type="button" class="com-boton" id="com-anotar">Anotar la siguiente compra</button>
   </section>
 
+    <article class="rep rep-ganancia" id="rep-ganancia" aria-labelledby="t-ganancia" hidden>
+      <h3 id="t-ganancia">Ganancia</h3>
+      <dl class="gan-lista">
+        <div><dt>Realizada <small>(lo que ya vendiste)</small></dt><dd id="gan-real"></dd></div>
+        <div><dt>No realizada <small>(lo que aún tienes)</small></dt><dd id="gan-noreal"></dd></div>
+        <div class="gan-total"><dt>Total</dt><dd id="gan-total"></dd></div>
+        <div><dt>Invertido neto</dt><dd id="gan-inv"></dd></div>
+      </dl>
+      <p class="h-nota">Costo promedio ponderado, sin impuestos. Un gasto cuenta como venta.</p>
+    </article>
+
     <article class="rep rep-anios" id="rep-anios" aria-labelledby="t-anios" hidden>
       <h3 id="t-anios">Año por año</h3>
       <div id="anios"></div>
@@ -120,12 +131,19 @@
       <h2 id="hoja-t">Anotar compra</h2>
       <button type="button" class="cerrar" data-cerrar>Cerrar</button>
     </div>
-    <label class="h-sats"><span>Sats que recibiste</span>
+    <div class="h-tipo" id="h-tipo" role="group" aria-label="Tipo de movimiento">
+      <button type="button" data-tipo="compra" aria-pressed="true">Compra</button>
+      <button type="button" data-tipo="venta" aria-pressed="false">Venta o gasto</button>
+    </div>
+    <label class="h-sats"><span id="h-sats-l">Sats que recibiste</span>
       <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hoja-calc">
     </label>
     <p class="hoja-calc" id="hoja-calc" aria-live="polite"></p>
     <p class="hoja-error" id="hoja-error" role="alert"></p>
     <label class="h-fecha">Fecha <input type="date" id="h-fecha" required></label>
+    <label class="h-nota-campo" id="h-nota-l" hidden>Nota (opcional)
+      <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: gasté en renta">
+    </label>
     <details class="h-avanzado" id="h-avanzado">
       <summary>Más detalles: dólares exactos y TXID</summary>
       <label class="h-usd">Pagaste (USD)

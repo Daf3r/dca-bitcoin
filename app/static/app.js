@@ -190,7 +190,8 @@ function pintarSaldo(desde) {
   if (!R.n) linea.textContent = 'Tu montaña te espera. Anota tu primera compra para empezar a subir.';
   else if (R.valor == null) linea.textContent = `${btc(R.sats)} BTC · invertiste ${usd(R.inv)}`;
   else {
-    linea.innerHTML = `valen <b>${usd(R.valor)}</b> · <span data-tono="${R.gan >= 0 ? 'sube' : 'baja'}">${usdSigno(R.gan)} (${pct(R.pct)})</span>`;
+    linea.innerHTML = `valen <b>${usd(R.valor)}</b> · <span data-tono="${R.gan >= 0 ? 'sube' : 'baja'}">${usdSigno(R.gan)}${R.pct == null ? '' : ` (${pct(R.pct)})`}</span>` +
+      (R.nVentas ? ` · ya realizaste <span data-tono="${R.realizada >= 0 ? 'sube' : 'baja'}">${usdSigno(R.realizada)}</span>` : '');
   }
 }
 
@@ -242,7 +243,7 @@ function pintarMercado() {
     return;
   }
   anchoGrafico = host.clientWidth;
-  dibujarGrafico(host, $('g-lectura'), { serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items, promedio: R.promedio, rango: S.rango, hoy: hoyISO() });
+  dibujarGrafico(host, $('g-lectura'), { serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items.filter((c) => c.tipo !== 'venta'), ventas: R.items.filter((c) => c.tipo === 'venta'), promedio: R.promedio, rango: S.rango, hoy: hoyISO() });
 }
 instalarLectura($('lienzo'));
 $('rangos').addEventListener('click', (e) => {
@@ -265,18 +266,21 @@ function pintarLista() {
   const recientes = [...R.items].reverse();
   const mostradas = S.verTodas ? recientes : recientes.slice(0, VISIBLES);
   host.innerHTML = mostradas.map((c) => {
-    const v = S.precio ? (S.precio / c.precio - 1) * 100 : null;
+    const venta = c.tipo === 'venta';
+    // Compra: cómo va frente al precio de hoy. Venta: la ganancia que realizó.
+    const v = venta ? c.realizada : S.precio ? (S.precio / c.precio - 1) * 100 : null;
+    const textoV = v == null ? '' : venta ? usdSigno(v) : pct(v);
     const etiqueta = esAdmin() ? 'button type="button"' : 'div';
-    return `<li><${etiqueta} class="fila" data-id="${c.id}">` +
-      (esAdmin() ? '<span class="sr">Editar la compra del </span>' : '') + `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
-      `<span class="f-sats">+${entero(c.sats)} <small>sats</small></span>` +
-      `<span class="f-det">${usd(c.monto)} a ${usd0(c.precio)}</span>` +
-      `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : pct(v)}</span></${esAdmin() ? 'button' : 'div'}>` +
+    return `<li><${etiqueta} class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}">` +
+      (esAdmin() ? `<span class="sr">Editar la ${venta ? 'venta' : 'compra'} del </span>` : '') + `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
+      `<span class="f-sats">${venta ? '−' : '+'}${entero(c.sats)} <small>sats</small></span>` +
+      `<span class="f-det">${venta ? 'Venta · ' : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</span>` +
+      `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${textoV}</span></${esAdmin() ? 'button' : 'div'}>` +
       (mempoolUrl(c.txid) ? `<a class="f-tx" href="${mempoolUrl(c.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space <span aria-hidden="true">↗</span><span class="sr"> (se abre en otra pestaña)</span></a>` : '') + '</li>';
   }).join('');
   const vt = $('ver-todas');
   vt.hidden = mostradas.length >= R.n;
-  vt.textContent = `Ver las ${R.n} compras`;
+  vt.textContent = `Ver los ${R.n} movimientos`;
   if (enFoco) host.querySelector(`.fila[data-id="${enFoco}"]`)?.focus();
 }
 $('lista').addEventListener('click', (e) => {
@@ -290,15 +294,20 @@ $('ver-todas').addEventListener('click', () => {
 });
 
 // ------------------------------------------------------------- hoja de anotar
-const H = { sats: '', usd: '', txid: '', usdTocado: false, editando: null, guardando: false, origen: null };
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', usdTocado: false, editando: null, guardando: false, origen: null };
 const hoja = $('hoja');
 
-function abrirHoja(id = null) {
+function abrirHoja(id = null, tipoInicial = 'compra') {
   const c = id ? S.compras.find((x) => x.id === id) : null;
   Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement });
   H.sats = c ? String(c.sats) : '';
   H.usd = c ? String(c.monto) : '';
   H.txid = c?.txid ?? '';
+  H.tipo = c?.tipo ?? (tipoInicial === 'venta' ? 'venta' : 'compra');
+  H.nota = c?.nota ?? '';
+  $('h-nota').value = H.nota;
+  $('h-tipo').hidden = !!c;
   $('h-txid').value = H.txid;
   $('h-sats').value = H.sats ? entero(Number(H.sats)) : '';
   $('h-usd').value = H.usd;
@@ -340,13 +349,28 @@ function datosHoja() {
 }
 function pintarHoja() {
   const d = datosHoja();
-  const saldo = R.sats - (H.editando ? S.compras.find((x) => x.id === H.editando).sats : 0);
-  $('hoja-calc').textContent = !d ? 'Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.'
-    : d.sinPrecio ? 'Sin precio disponible ahora: abre «Escribir los dólares exactos».'
-      : `${d.exacto ? '' : '≈ '}${usd(d.monto)} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(saldo + d.sats)} sats`;
-  $('guardar').disabled = !d || d.sinPrecio || H.guardando;
-  $('guardar').textContent = H.guardando ? 'Guardando…' : H.editando ? 'Guardar cambios' : 'Guardar';
+  const venta = H.tipo === 'venta';
+  const previa = H.editando ? S.compras.find((x) => x.id === H.editando) : null;
+  // Saldo sin el movimiento que se edita (una venta editada devuelve sus sats, una compra editada los quita).
+  const saldo = R.sats - (previa ? (previa.tipo === 'venta' ? -previa.sats : previa.sats) : 0);
+  const sinSaldo = venta && d && d.sats > saldo;
+  $('hoja-t').textContent = venta ? (H.editando ? 'Editar venta' : 'Registrar venta o gasto') : H.editando ? 'Editar compra' : 'Anotar compra';
+  $('h-sats-l').textContent = venta ? 'Sats que salieron' : 'Sats que recibiste';
+  $('h-nota-l').hidden = !venta;
+  document.querySelectorAll('#h-tipo button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === H.tipo)));
+  const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
+  $('hoja-calc').textContent = !d ? (venta ? 'Escribe los sats que salieron; los dólares se calculan solos con el precio del día.' : 'Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.')
+    : d.sinPrecio ? 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares.'
+      : sinSaldo ? `No tienes tantos sats: tu saldo es ${entero(saldo)}.`
+        : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(resto)} sats`;
+  $('guardar').disabled = !d || d.sinPrecio || sinSaldo || H.guardando;
+  $('guardar').textContent = H.guardando ? 'Guardando…' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
 }
+$('h-tipo').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) { H.tipo = b.dataset.tipo; $('hoja-error').textContent = ''; pintarHoja(); }
+});
+$('h-nota').addEventListener('input', (e) => { H.nota = e.target.value; });
 /** Pone separadores de miles al escribir sin mover el cursor de su sitio. */
 function formatearSats(inp) {
   const antes = inp.value.slice(0, inp.selectionStart ?? inp.value.length).replace(/\D/g, '').length;
@@ -389,7 +413,7 @@ $('guardar').addEventListener('click', async () => {
   H.guardando = true; pintarHoja();
   const antes = R;
   try {
-    const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid) };
+    const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid), tipo: H.tipo, nota: H.tipo === 'venta' ? H.nota.trim() : '' };
     const g = normalizar(H.editando ? await api(`/api/compras/${H.editando}`, { metodo: 'PUT', cuerpo }) : await api('/api/compras', { metodo: 'POST', cuerpo }));
     S.compras = H.editando ? S.compras.map((x) => (x.id === g.id ? g : x)) : [...S.compras, g];
     const editando = H.editando;
@@ -397,7 +421,7 @@ $('guardar').addEventListener('click', async () => {
     cerrarHoja();
     pintar({ montana: true, desde: antes.sats });
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
-    avisar((editando ? 'Compra corregida.' : `Anotado: +${entero(g.sats)} sats`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : ''), null, true);
+    avisar((editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : ''), null, true);
     celebrar(antes);
   } catch (err) {
     H.guardando = false;
@@ -440,10 +464,20 @@ const rachaTxt = (n) => (R.paso === 2 ? `${n} ${n === 1 ? 'quincena' : 'quincena
 // Por encima de 1 BTC se habla en BTC: «4.8B sats» es ambiguo en español.
 const satsCorto = (s) => (s >= 1e8 ? `${(s / 1e8).toFixed(s >= 1e10 ? 0 : 1)} BTC` : `${compacto(s)} sats`);
 
+function pintarGanancia() {
+  const ver = R.nVentas > 0;
+  $('rep-ganancia').hidden = !ver;
+  if (!ver) return;
+  const fila = (id, n) => { const el = $(id); el.textContent = n == null ? '—' : usdSigno(n); el.dataset.tono = n == null ? '' : n >= 0 ? 'sube' : 'baja'; };
+  fila('gan-real', R.realizada); fila('gan-noreal', R.gan); fila('gan-total', R.total);
+  $('gan-inv').textContent = usd(R.inv);
+}
+
 function pintarReportes() {
   // Con menos de tres compras los reportes serían casi vacíos: su lugar lo ocupa «Siguiente paso».
-  $('reportes').hidden = R.n < 3;
-  if (R.n < 3) { $('rep-anios').hidden = true; return; }
+  $('reportes').hidden = R.nCompras < 3;
+  if (R.nCompras < 3) { $('rep-anios').hidden = true; $('rep-ganancia').hidden = true; return; }
+  pintarGanancia();
   const hasta = Math.max(1e8, R.meta);
   $('hitos').innerHTML = R.hitos.filter((h) => h.m <= hasta).map((h) => {
     const estado = h.fecha ? 'hecho' : h.m === R.meta ? 'siguiente' : 'lejos';
@@ -495,11 +529,11 @@ function domingo(semanasMas = 0) {
 }
 
 function pintarComienzo() {
-  const ver = R.n > 0 && R.n < 3;
+  const ver = R.nCompras > 0 && R.nCompras < 3;
   $('comienzo').hidden = !ver;
   if (!ver) return;
   const falta = R.meta - R.sats;
-  const porCompra = R.sats / R.n;
+  const porCompra = R.satsComprados / R.nCompras;
   const compras = Math.max(1, Math.ceil(falta / porCompra));
   $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.meta === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.meta)}`}`;
   $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.meta)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
