@@ -97,7 +97,9 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 ## Pruebas
 - `python tests/test_api.py` (necesita Flask; base temporal, exchanges simulados, sin red): API completa, validaciones, CSV, migración, precio e histórico, y el acceso: sesiones, roles, fuerza bruta, auditoría inmutable y acotada, anular y la CLI de cuentas.
 - `node tests/test_lib.mjs`: cálculos del frontend (hitos, racha con casos límite, proyección, «hoy» de El Salvador, borde de husos horarios, decimación).
-- El frontend se prueba con Playwright contra el servidor local en siete estados (de 0 compras a más de 200 BTC, sin precio y sin histórico), de 320 a 1920 px, claro y oscuro. El build de Docker y la integración con Caddy y Access se validan en el servidor.
+- `node tests/test_ui.mjs`: prueba de navegador (Playwright + Chromium) contra un servidor de pruebas con base temporal y exchanges simulados (`tests/servidor_prueba.py`). Instala una vez con `npm ci --prefix tests` y `npx --prefix tests playwright install chromium`. Comprueba el saldo (sats y BTC, de 320 a 2560 px), los gráficos, el tema, anotar una compra con sus avisos, y lo que ve un lector.
+- **CI en GitHub**: cada PR y cada cambio a `main` corren las tres pruebas anteriores (`.github/workflows/pruebas.yml`). Dependabot propone una vez al mes actualizaciones (pip, Docker, GitHub Actions y npm); revisa que el PR esté en verde antes de mezclarlo.
+- El build de Docker y la integración con Caddy y Cloudflare se validan en el servidor.
 
 ## TXID y auditoría de las compras
 Cada compra puede llevar su **TXID** (64 caracteres hexadecimales, o pega el enlace de mempool.space y se extrae solo): en «Más detalles» de la hoja de anotar. Con TXID, la lista muestra «Ver en mempool.space» (abre `https://mempool.space/tx/<txid>` en otra pestaña) para que cualquiera de la familia compruebe la transacción. Es opcional: una compra dentro del exchange o por Lightning no tiene. Si un TXID ya está en otra compra, se guarda y se avisa. El CSV de exportación incluye la columna `txid` y el importador la lee. Los cambios de TXID quedan en la auditoría como cualquier edición.
