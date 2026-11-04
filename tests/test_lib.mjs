@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -168,5 +168,19 @@ eq([rm.paso, rm.nCompras, rm.nVentas], [2, 6, 2], 'las ventas no cambian el ritm
 // proyección: con ventas que superan lo comprado en 6 meses, no hay proyección
 const sinRitmo = resumen([mov(1, '2026-08-01', 'compra', 10, 100_000), mov(2, '2026-08-08', 'compra', 10, 100_000), mov(3, '2026-08-15', 'compra', 10, 100_000), mov(4, '2026-08-20', 'venta', 35, 350_000), mov(5, '2025-01-01', 'compra', 100, 1_000_000)], 20000, '2026-09-01');
 eq([sinRitmo.satsMes, sinRitmo.proyeccion], [null, null], 'ritmo neto negativo: sin proyección');
+
+// Etapas intermedias: 100k, 250k, 500k, 1M, 2.5M, 5M, 10M…
+eq(etapasHasta(1e7), [1e5, 2.5e5, 5e5, 1e6, 2.5e6, 5e6, 1e7], 'escalera de etapas');
+eq([36578, 1e5, 249_999, 2.5e5, 5e5, 9_999_999, 1e8].map(etapaSiguiente), [1e5, 2.5e5, 2.5e5, 5e5, 1e6, 1e7, 2.5e8], 'siguiente etapa');
+eq([0, 36578, 1e5, 3e5, 5e5, 2.4e6, 1e8].map(etapaAnterior), [0, 0, 1e5, 2.5e5, 5e5, 1e6, 1e8], 'etapa anterior');
+eq([nombreHito(2.5e5), nombreHito(5e5), nombreHito(2.5e6), nombreHito(5e7), nombreHito(2.5e8), nombreHito(1e8)], ['250k', '500k', '2.5M', '50M', '2.5 BTC', '1 BTC'], 'nombres de etapas');
+eq(etapasCruzadas(90_000, 600_000), [1e5, 2.5e5, 5e5], 'etapas cruzadas al subir');
+eq([etapasCruzadas(600_000, 90_000), etapasCruzadas(1e5, 1e5), etapasCruzadas(1e5, 249_999)], [[], [], []], 'sin etapas si no se sube o no se llega');
+const e1 = resumen([{ id: 1, fecha: '2026-11-01', tipo: 'compra', monto: 28.68, sats: 36578, precio: 78408 }], 77598, '2026-11-04');
+eq([e1.etapa, e1.etapaPrev, e1.meta], [1e5, 0, 1e5], 'primera etapa con tu caso real');
+const e2 = resumen([mov(1, '2026-01-01', 'compra', 40, 300_000)], 20000, '2026-01-05');
+eq([e2.etapa, e2.etapaPrev, e2.meta], [5e5, 2.5e5, 1e6], 'con 300k: la etapa es 500k y el gran hito sigue siendo 1M');
+eq(e2.camino.map((c) => [c.m, c.mayor, !!c.fecha]), [[1e5, true, true], [2.5e5, false, true], [5e5, false, false], [1e6, true, false], [1e7, true, false], [1e8, true, false]], 'camino: etapas hechas, la siguiente y los hitos grandes');
+eq(e2.hitos.map((h) => h.m), [1e5, 1e6, 1e7, 1e8], 'los hitos de la montaña siguen siendo potencias de 10');
 
 console.log(`OK ${n} comprobaciones`);

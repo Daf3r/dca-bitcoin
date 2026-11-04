@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -201,19 +201,21 @@ function pintarMontana(animar, desde) {
   anchoMontana = host.clientWidth;
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, inicio, techo });
+  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo });
   if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : 1600);
 }
 new ResizeObserver(() => {
   if (S.cargado && $('montana').clientWidth !== anchoMontana) pintarMontana(false);
 }).observe($('montana'));
 
+/** Avance de 0 a 1 entre la etapa anterior y la siguiente. */
+const progresoEtapa = () => (R.sats - R.etapaPrev) / (R.etapa - R.etapaPrev);
+
 function pintarTramo() {
   $('tramo').hidden = !S.cargado || (S.errorCarga && !R.n);
-  const anterior = R.meta / 10 >= 1e5 ? R.meta / 10 : 0;
-  const prog = (R.sats - anterior) / (R.meta - anterior);
-  $('t-meta').textContent = R.meta >= 1e8 ? nombreHito(R.meta) : `${nombreHito(R.meta)} sats`;
-  $('t-falta').textContent = `faltan ${entero(R.meta - R.sats)}`;
+  const prog = progresoEtapa();
+  $('t-meta').textContent = R.etapa >= 1e8 ? nombreHito(R.etapa) : `${nombreHito(R.etapa)} sats`;
+  $('t-falta').textContent = `faltan ${entero(R.etapa - R.sats)}`;
   requestAnimationFrame(() => { $('t-barra').style.transform = `scaleX(${Math.max(0, Math.min(1, prog))})`; });
   $('t-ritmo').textContent = R.proyeccion
     ? `Al ritmo de los últimos 6 meses (${entero(R.satsMes)} sats al mes) llegas en ${plazo(R.proyeccion)}.`
@@ -421,7 +423,7 @@ $('guardar').addEventListener('click', async () => {
     cerrarHoja();
     pintar({ montana: true, desde: antes.sats });
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
-    avisar((editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : ''), null, true);
+    avisar((editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : ''), null, true);
     celebrar(antes);
   } catch (err) {
     H.guardando = false;
@@ -478,9 +480,8 @@ function pintarReportes() {
   $('reportes').hidden = R.nCompras < 3;
   if (R.nCompras < 3) { $('rep-anios').hidden = true; $('rep-ganancia').hidden = true; return; }
   pintarGanancia();
-  const hasta = Math.max(1e8, R.meta);
-  $('hitos').innerHTML = R.hitos.filter((h) => h.m <= hasta).map((h) => {
-    const estado = h.fecha ? 'hecho' : h.m === R.meta ? 'siguiente' : 'lejos';
+  $('hitos').innerHTML = R.camino.map((h) => {
+    const estado = h.fecha ? 'hecho' : h.m === R.etapa ? 'siguiente' : 'lejos';
     const detalle = h.fecha ? `${fechaLarga(h.fecha)} · ${textoMeses(h.meses)}`
       : estado === 'siguiente' ? (R.proyeccion ? `faltan ${entero(h.m - R.sats)} sats · a tu ritmo, en ${plazo(R.proyeccion)}` : `faltan ${entero(h.m - R.sats)} sats`)
         : 'más arriba';
@@ -532,11 +533,11 @@ function pintarComienzo() {
   const ver = R.nCompras > 0 && R.nCompras < 3;
   $('comienzo').hidden = !ver;
   if (!ver) return;
-  const falta = R.meta - R.sats;
+  const falta = R.etapa - R.sats;
   const porCompra = R.satsComprados / R.nCompras;
   const compras = Math.max(1, Math.ceil(falta / porCompra));
-  $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.meta === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.meta)}`}`;
-  $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.meta)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
+  $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.etapa === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.etapa)}`}`;
+  $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.etapa)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
   $('com-racha').textContent = rachaTxt(R.racha);
   $('com-racha-sub').textContent = R.racha
     ? `sigue si vuelves a comprar antes del ${domingo(R.venceSemanas)}`
@@ -550,10 +551,11 @@ $('com-anotar').addEventListener('click', () => abrirHoja());
 // -------------------------------------------------------------- celebración
 /** Solo cuando la acción de esta sesión cruza un hito; breve y sin bloquear nada. */
 function celebrar(antes) {
-  const nuevo = R.hitos.find((h) => h.fecha && !antes.hitos.find((a) => a.m === h.m)?.fecha);
-  if (!nuevo) return;
+  // Cualquier etapa (100k, 250k, 500k, 1M…) que se cruce hacia arriba; si son varias, la más alta.
+  const m = etapasCruzadas(antes.sats, R.sats).at(-1);
+  if (!m) return;
   const el = $('hito-cel');
-  $('hc-txt').textContent = nuevo.m >= 1e8 ? nombreHito(nuevo.m) : `${nombreHito(nuevo.m)} sats`;
+  $('hc-txt').textContent = m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`;
   el.hidden = false;
   el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
   clearTimeout(celebrar.t);

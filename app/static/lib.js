@@ -45,7 +45,21 @@ export const metaSiguiente = (sats) => {
   return m;
 };
 
-export const nombreHito = (m) => (m >= 1e8 ? `${entero(m / 1e8)} BTC` : m >= 1e6 ? `${entero(m / 1e6)}M` : `${entero(m / 1e3)}k`);
+const num = (n) => (Number.isInteger(n) ? entero(n) : n.toFixed(1));
+export const nombreHito = (m) => (m >= 1e8 ? `${num(m / 1e8)} BTC` : m >= 1e6 ? `${num(m / 1e6)}M` : `${num(m / 1e3)}k`);
+
+// Etapas: además de los hitos grandes (potencias de 10, los campamentos de la montaña), metas intermedias
+// a 2.5 y 5 de cada potencia (100k, 250k, 500k, 1M, 2.5M, 5M, 10M…) para sentir el avance cada pocas compras.
+const PASOS = [1, 2.5, 5];
+export function etapasHasta(tope) {
+  const out = [];
+  for (let d = 1e5; d <= tope; d *= 10) for (const k of PASOS) if (d * k <= tope) out.push(d * k);
+  return out;
+}
+export const etapaSiguiente = (sats) => { for (let d = 1e5; ; d *= 10) for (const k of PASOS) if (d * k > sats) return d * k; };
+export const etapaAnterior = (sats) => { let prev = 0; for (let d = 1e5; ; d *= 10) for (const k of PASOS) { if (d * k > sats) return prev; prev = d * k; } };
+/** Etapas que se cruzan al subir de `desde` a `hasta` sats (vacío si no se sube). */
+export const etapasCruzadas = (desde, hasta) => (hasta > desde ? etapasHasta(Math.max(hasta, 1e5)).filter((m) => m > desde && m <= hasta) : []);
 
 /**
  * Qué campamentos dibujar. La cumbre es la siguiente meta, nunca menos de 1 BTC.
@@ -113,10 +127,19 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   const nCompras = comprasItems.length;
   const valor = n && precio ? (sats / 1e8) * precio : null;
   const meta = metaSiguiente(sats);
+  const etapa = etapaSiguiente(sats), etapaPrev = etapaAnterior(sats);
 
   const hitos = hitosHasta(Math.max(1e8, meta)).map((m) => {
     const c = items.find((x) => x.satsAcum >= m);
     return { m, fecha: c?.fecha ?? null, meses: c ? mesesEntre(items[0].fecha, c.fecha) : null };
+  });
+
+  // Camino que se enseña en «Campamentos»: las etapas hasta la siguiente (con su fecha si ya se cruzaron)
+  // y, más arriba, los hitos grandes que faltan hasta la cumbre.
+  const cima = Math.max(1e8, meta);
+  const camino = [...new Set([...etapasHasta(etapa), ...hitosHasta(cima)])].sort((a, b) => a - b).map((m) => {
+    const c = items.find((x) => x.satsAcum >= m);
+    return { m, mayor: hitosHasta(cima).includes(m), fecha: c?.fecha ?? null, meses: c ? mesesEntre(items[0].fecha, c.fecha) : null };
   });
 
   const limite = new Date(aFecha(hoy).getTime() - 182 * 864e5);
@@ -124,7 +147,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   // Ritmo neto de los últimos 6 meses (compras menos ventas); sin ritmo positivo no hay proyección.
   const netoVentana = ventana.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
   const satsMes = ventana.filter((c) => c.tipo !== 'venta').length >= 3 && netoVentana > 0 ? (netoVentana / 182) * 30.44 : null;
-  const meses = satsMes ? (meta - sats) / satsMes : null;
+  const meses = satsMes ? (etapa - sats) / satsMes : null;
 
   const anios = new Map();
   for (const c of comprasItems) {
@@ -164,7 +187,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     gan: valor == null ? null : valor - inv,
     pct: valor == null || !inv ? null : ((valor - inv) / inv) * 100,
     promedio: sats ? (inv * 1e8) / sats : null,
-    meta, hitos,
+    meta, hitos, etapa, etapaPrev, camino,
     satsMes,
     // Solo la siguiente meta y solo si es alcanzable en un plazo razonable.
     proyeccion: meses != null && meses > 0 && meses <= 60 ? meses : null,

@@ -26,7 +26,7 @@ let estado = null;
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, inicio = sats, techo = 0 }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0 }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
@@ -112,7 +112,7 @@ export function dibujarMontana(host, { sats, meta, inicio = sats, techo = 0 }) {
     `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})"><line y2="-28"/><path class="banderin" d="M0 -28L20 -22L0 -16Z"/></g>`).join('');
   estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c };
   colocar(inicio, false);
-  describir(sats, meta);
+  describir(sats, etapa);
 }
 
 /** Etiquetas sin choques: a la derecha de la bandera; si choca o se sale, a la izquierda; si sigue, se oculta. */
