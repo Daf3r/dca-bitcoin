@@ -6,13 +6,28 @@
   font-weight: 300 700;
   font-display: swap;
 }
-/* Reserva con métricas parecidas para que el cambio de fuente no mueva el saldo. */
+/* Cifras: Bricolage Grotesque, con cifras tabulares y lining de verdad (tnum, lnum).
+   Fraunces queda para títulos y palabras; no tiene cifras tabulares. */
+@font-face {
+  font-family: "Bricolage";
+  src: url("/fonts/bricolage.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+/* Reservas con métricas parecidas (Windows: Georgia y Segoe UI) para que el cambio no salte. */
 @font-face {
   font-family: "Fraunces reserva";
   src: local("Georgia"), local("Times New Roman");
   size-adjust: 104%;
   ascent-override: 92%;
   descent-override: 24%;
+}
+@font-face {
+  font-family: "Bricolage reserva";
+  src: local("Segoe UI"), local("Arial"), local("Helvetica");
+  size-adjust: 103%;
+  ascent-override: 94%;
+  descent-override: 26%;
 }
 
 :root {
@@ -29,7 +44,7 @@
   --compra-borde: #050a11;
   --sube: #6fd8a0; --baja: #ff958a;
   --serif: "Fraunces", "Fraunces reserva", Georgia, serif;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sans: "Bricolage", "Bricolage reserva", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -51,7 +66,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { background: var(--fondo); -webkit-text-size-adjust: 100%; scroll-padding-bottom: 130px; }
-body { margin: 0; background: var(--fondo); color: var(--txt); font: 400 16px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+/* Todas las cifras tabulares y de altura de mayúscula: alinean en columnas y no bailan al cambiar. */
+body { margin: 0; background: var(--fondo); color: var(--txt); font: 400 16px/1.5 var(--sans); font-variant-numeric: tabular-nums lining-nums; -webkit-font-smoothing: antialiased; }
 h1, h2, h3, p, ul, ol, dl, dd { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
 button, input { font: inherit; color: inherit; }
@@ -96,27 +112,35 @@ button, input { font: inherit; color: inherit; }
 .marca b { font-weight: 650; color: var(--naranja-txt); }
 .cotizacion { display: grid; justify-items: end; line-height: 1.2; text-align: right; }
 .cot-k { font-size: 0.75rem; color: var(--cielo-txt2); }
-.cot-v { font: 600 1.25rem var(--serif); }
+.cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
 .cotizacion[data-estado="viejo"] .cot-meta, .cotizacion[data-estado="error"] .cot-meta { color: var(--baja); }
 @media (prefers-color-scheme: light) { .marca b { color: #9c4a05; } }
 
+/* La caja del saldo se coloca con left/right y nunca con un relleno que crezca con la ventana:
+   así su ancho útil no puede llegar a 0 (era la causa del saldo invisible con zoom pequeño). */
 .saldo {
-  position: absolute; z-index: 1; top: 66px; left: 0; right: 0;
-  padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left));
+  position: absolute; z-index: 1; top: 66px;
+  left: max(20px, env(safe-area-inset-left)); right: max(20px, env(safe-area-inset-right));
+  min-width: 16rem;
   color: var(--cielo-txt); container-type: inline-size;
 }
 .saldo-k { font: 400 1rem var(--serif); color: var(--cielo-txt2); }
 .saldo-v { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
+/* El tamaño sale del número de caracteres (dígito = 0.575 em, coma = 0.18 em en Bricolage
+   tabular), con suelo y techo: no se mide nada en JS y no puede quedar en 0. La cifra final,
+   invisible, reserva el ancho en la misma celda de la rejilla en la que cuenta la animada. */
 .cifra-grande {
-  font: 300 min(8rem, 96cqi / var(--anchos, 6)) / 0.95 var(--serif);
-  letter-spacing: -0.01em;
+  display: inline-grid;
+  font: 300 clamp(2.25rem, 94cqi / (var(--n, 7) * 0.575), 8rem) / 0.95 var(--sans);
+  letter-spacing: -0.035em;
+  white-space: nowrap;
 }
-.ranuras { display: inline-flex; }
-.ranuras .d { display: inline-block; width: 0.55em; text-align: center; }
-.ranuras .s { display: inline-block; width: 0.22em; }
+.cifra-grande > span:not(.sr) { grid-area: 1 / 1; }
+.cg-reserva { visibility: hidden; }
 .saldo-v em { font: italic 400 clamp(1.3rem, 5vw, 2.1rem) var(--serif); color: var(--cielo-txt2); }
 .saldo-d { margin-top: 8px; font-size: 1.0625rem; color: var(--cielo-txt2); }
+.saldo-d b, .saldo-d span { white-space: nowrap; }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
 @media (prefers-color-scheme: light) { .saldo-d [data-tono="sube"] { color: #10592f; } .saldo-d [data-tono="baja"] { color: #93231a; } }
 
@@ -195,7 +219,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
   border-radius: 10px; transition: background-color 0.15s;
 }
 .fila:hover { background: var(--s1); }
-.f-fecha { grid-area: f; font: 600 1rem var(--serif); color: var(--txt2); }
+.f-fecha { grid-area: f; font: 600 0.9375rem var(--sans); color: var(--txt2); }
 .f-sats { grid-area: s; font-weight: 650; font-variant-numeric: tabular-nums; }
 .f-sats small { color: var(--txt3); font-weight: 500; }
 .f-det { grid-area: d; font-size: 0.8125rem; color: var(--txt3); font-variant-numeric: tabular-nums; }
@@ -261,7 +285,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .ext { display: grid; gap: 2px; padding: 4px 0 4px 14px; border-left: 3px solid var(--s3); }
 .ext:first-child { border-left-color: var(--sube); }
 .ext small { font-size: 0.8125rem; color: var(--txt2); font-weight: 600; }
-.ext b { font: 500 1.6rem/1.1 var(--serif); }
+.ext b { font: 500 1.6rem/1.1 var(--sans); letter-spacing: -0.02em; }
 .ext span { font-size: 0.8125rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
 .pie { font-size: 0.8125rem; color: var(--txt3); }
 
@@ -293,13 +317,13 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .modo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .modo button { display: grid; justify-items: start; gap: 2px; min-height: 76px; padding: 10px 14px; border: 2px solid transparent; border-radius: 18px; background: var(--s2); text-align: left; cursor: pointer; }
 .modo button span { font-size: 0.8125rem; color: var(--txt2); font-weight: 600; }
-.modo b { font: 400 clamp(1.4rem, 7vw, 2rem)/1.1 var(--serif); overflow-wrap: anywhere; }
+.modo b { font: 500 clamp(1.4rem, 7vw, 2rem)/1.1 var(--sans); letter-spacing: -0.02em; overflow-wrap: anywhere; }
 .modo button[aria-pressed="true"] { border-color: var(--naranja); background: color-mix(in srgb, var(--naranja) 10%, var(--s2)); }
 .hoja-calc { min-height: 2.6em; font-size: 0.875rem; color: var(--txt2); }
 .hoja-error { color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .hoja-error:empty { display: none; }
 .teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.teclado button { min-height: 58px; border: 0; border-radius: 16px; background: var(--s2); font: 400 1.6rem var(--serif); cursor: pointer; transition: background-color 0.15s; }
+.teclado button { min-height: 58px; border: 0; border-radius: 16px; background: var(--s2); font: 400 1.6rem var(--sans); cursor: pointer; transition: background-color 0.15s; }
 .teclado button:hover { background: var(--s3); }
 .teclado button.pulsa { animation: pulsa 0.2s ease-out; }
 @keyframes pulsa { 40% { transform: scale(0.93); background: var(--s3); } }
@@ -336,14 +360,14 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 @media (max-height: 680px) and (max-width: 699px) {
   .saldo { top: 52px; }
   .saldo-k { font-size: 0.875rem; }
-  .cifra-grande { font-size: min(4.4rem, 96cqi / var(--anchos, 6)); }
+  .cifra-grande { font-size: clamp(2.25rem, 94cqi / (var(--n, 7) * 0.575), 4.4rem); }
   .saldo-v em { font-size: 1.25rem; }
   .saldo-d { margin-top: 4px; font-size: 0.9375rem; }
 }
 
 /* ------------------------------------------------------------------ tablet */
 @media (min-width: 700px) {
-  .saldo { top: 84px; padding-left: 40px; }
+  .saldo { top: 84px; left: 40px; right: 40px; }
   .cima { padding-inline: 40px; }
   .cuerpo { padding-inline: 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
   .tramo, .mercado, .compras, .pie, .comienzo, .rep-anios { grid-column: 1 / -1; }
@@ -356,7 +380,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 /* -------------------------------------------------------------- escritorio */
 @media (min-width: 1100px) {
   .escena { height: 86vh; min-height: 620px; max-height: 880px; }
-  .saldo { top: 110px; padding-left: max(48px, calc(50vw - 600px)); right: auto; width: min(52vw, 760px); }
+  .saldo { top: 110px; left: max(48px, calc(50% - 600px)); right: auto; width: min(52%, 720px); }
   .cima { padding-inline: max(48px, calc(50vw - 600px)); }
   /* Dos columnas independientes: cada una apila lo suyo y ninguna espera a la otra. */
   .cuerpo { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); column-gap: 48px; padding: 40px 48px 120px; }

@@ -131,24 +131,37 @@ function pintarPrecio() {
   }[estado];
 }
 
-// El contador va en ranuras de ancho fijo: Fraunces no tiene cifras tabulares y si no, bailaría.
-function cifra(el, n) {
-  const txt = entero(n);
-  if (!el.firstChild || el.firstChild.className !== 'sr') el.innerHTML = '<span class="sr"></span><span class="ranuras" aria-hidden="true"></span>';
-  el.firstChild.textContent = txt;
-  el.lastChild.innerHTML = [...txt].map((c) => `<span class="${/\d/.test(c) ? 'd' : 's'}">${c}</span>`).join('');
-}
+/**
+ * Saldo grande: texto normal con cifras tabulares (nada se mide en JS). La cifra final va
+ * invisible en la misma celda que la animada y reserva el ancho; si la animación no puede
+ * correr (movimiento reducido, pestaña oculta, error), se ve la cifra final directamente.
+ */
 let contadorRaf = 0;
-function contar(el, desde, hasta, ms = 1400) {
+function pintarCifraGrande(el, desde, hasta, ms = 1400) {
+  const final = entero(hasta);
+  // Caracteres en ancho de dígito tabular: dígito = 1, separador ≈ 0.31 (0.18 em / 0.575 em).
+  el.style.setProperty('--n', (final.replace(/\D/g, '').length + final.replace(/\d/g, '').length * 0.31).toFixed(2));
+  if (!el.querySelector('.cg-vivo')) el.innerHTML = '<span class="sr"></span><span class="cg-reserva" aria-hidden="true"></span><span class="cg-vivo" aria-hidden="true"></span>';
+  el.querySelector('.sr').textContent = final;
+  el.querySelector('.cg-reserva').textContent = final;
+  const vivo = el.querySelector('.cg-vivo');
   cancelAnimationFrame(contadorRaf);
-  if (reducido() || desde === hasta) { cifra(el, hasta); return; }
+  clearTimeout(pintarCifraGrande.seguro);
+  if (reducido() || desde == null || desde === hasta) { vivo.textContent = final; return; }
   const t0 = performance.now();
   const paso = (t) => {
-    const k = Math.min(1, (t - t0) / ms);
-    cifra(el, desde + (hasta - desde) * (1 - (1 - k) ** 4));
-    if (k < 1) contadorRaf = requestAnimationFrame(paso);
+    try {
+      const k = Math.min(1, (t - t0) / ms);
+      vivo.textContent = k < 1 ? entero(desde + (hasta - desde) * (1 - (1 - k) ** 4)) : final;
+      if (k < 1) contadorRaf = requestAnimationFrame(paso);
+    } catch {
+      vivo.textContent = final;
+    }
   };
+  vivo.textContent = entero(desde);
   contadorRaf = requestAnimationFrame(paso);
+  // Si requestAnimationFrame no llega a correr (pestaña en segundo plano), se ve la cifra final.
+  pintarCifraGrande.seguro = setTimeout(() => { cancelAnimationFrame(contadorRaf); vivo.textContent = final; }, ms + 400);
 }
 
 let satsMostrados = null;
@@ -158,14 +171,12 @@ function pintarSaldo(desde) {
   if (!S.cargado) return;
   if (S.errorCarga && !R.n) {
     el.textContent = '—';
+    satsMostrados = null;
     linea.textContent = 'No se pudieron cargar tus compras.';
     return;
   }
   if (satsMostrados !== R.sats) {
-    // El tamaño se fija con la cifra final para que no salte mientras cuenta.
-    const t = entero(R.sats);
-    el.style.setProperty('--anchos', (t.replace(/\D/g, '').length * 0.55 + t.replace(/\d/g, '').length * 0.22 + 0.1).toFixed(2));
-    contar(el, desde ?? (satsMostrados === null && !reducido() ? 0 : satsMostrados ?? R.sats), R.sats, satsMostrados === null ? 2000 : 1400);
+    pintarCifraGrande(el, desde ?? (satsMostrados === null ? 0 : satsMostrados), R.sats, satsMostrados === null ? 2000 : 1400);
     satsMostrados = R.sats;
   }
   if (!R.n) linea.textContent = 'Tu montaña te espera. Anota tu primera compra para empezar a subir.';

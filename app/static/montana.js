@@ -13,9 +13,12 @@ function composicion(W, H, techo) {
   // En móvil y tablet el botón fijo «Anotar compra» ocupa los últimos ~90 px: el sendero empieza por encima.
   if (W < 700) return { sx: W * 0.62, sy: Math.max(H * 0.43, techo + 70), base: [W * 0.14, H - 104], vueltas: 5, ancho: 0.34, campos: 3, sol: [W * 0.86, H * 0.47], rs: W * 0.1 };
   if (W < 1100) return { sx: W * 0.64, sy: Math.max(H * 0.3, techo + 70), base: [W * 0.2, H - 104], vueltas: 6, ancho: 0.27, campos: 4, sol: [W * 0.87, H * 0.3], rs: W * 0.07 };
-  // Escritorio: el pico se dimensiona por la altura; el resto del ancho es cielo y cordillera.
-  const mw = Math.min(W, H * 1.7);
-  return { sx: W - mw * 0.42, sy: H * 0.16, base: [W - mw * 0.86, H * 0.95], vueltas: 7, ancho: mw * 0.26 / W, campos: 4, sol: [W - mw * 0.12, H * 0.24], rs: H * 0.08 };
+  // Escritorio: el pico se dimensiona por la altura y se compone en un marco centrado de hasta
+  // 1600 px, alineado con el contenido; fuera del marco solo hay cielo y cordillera.
+  const marco = Math.min(W, 1600);
+  const dcha = (W + marco) / 2;
+  const mw = Math.min(marco, H * 1.7);
+  return { sx: dcha - mw * 0.42, sy: H * 0.16, base: [dcha - mw * 0.86, H * 0.95], vueltas: 7, ancho: mw * 0.26 / W, campos: 4, sol: [dcha - mw * 0.12, H * 0.24], rs: H * 0.08 };
 }
 
 let estado = null;
