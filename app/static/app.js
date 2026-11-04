@@ -420,6 +420,8 @@ dialogo.addEventListener('close', async () => {
 const MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
 const nombreMeta = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`);
 const semanas = (n) => `${n} ${n === 1 ? 'semana' : 'semanas'}`;
+// La racha cuenta semanas o quincenas según tu ritmo (`R.paso`).
+const rachaTxt = (n) => (R.paso === 2 ? `${n} ${n === 1 ? 'quincena' : 'quincenas'}` : semanas(n));
 // Por encima de 1 BTC se habla en BTC: «4.8B sats» es ambiguo en español.
 const satsCorto = (s) => (s >= 1e8 ? `${(s / 1e8).toFixed(s >= 1e10 ? 0 : 1)} BTC` : `${compacto(s)} sats`);
 
@@ -452,12 +454,12 @@ function pintarReportes() {
   $('semanas').style.setProperty('--n', String(Math.max(ventana.length, 13)));
   const con = ventana.filter(Boolean).length;
   $('const-racha').textContent = R.racha;
-  $('const-unidad').textContent = R.racha === 1 ? 'semana seguida' : 'semanas seguidas';
+  $('const-unidad').textContent = R.paso === 2 ? (R.racha === 1 ? 'quincena seguida' : 'quincenas seguidas') : R.racha === 1 ? 'semana seguida' : 'semanas seguidas';
   const resumenSemanas = con === ventana.length && ventana.length < 52
     ? `Has comprado todas las semanas desde que empezaste (${ventana.length}). `
     : `Compraste en <b>${con}</b> de ${ventana.length === 52 ? 'las últimas 52 semanas' : `tus ${ventana.length} semanas`}. `;
   $('const-txt').innerHTML = resumenSemanas +
-    (R.mejorRacha > R.racha ? `Tu mejor racha: <b>${semanas(R.mejorRacha)}</b>.` : '') + (R.semanaEnCurso || !R.racha ? '' : ' Esta semana aún no has comprado: tienes hasta el domingo.');
+    (R.mejorRacha > R.racha ? `Tu mejor racha: <b>${rachaTxt(R.mejorRacha)}</b>.` : '') + (R.semanaEnCurso || !R.racha ? '' : ` Tu próxima compra, antes del ${domingo(R.venceSemanas)}, mantiene la racha.`);
 
   const ext = $('extremos');
   const tarjeta = (c, titulo) => {
@@ -486,9 +488,9 @@ function pintarComienzo() {
   const compras = Math.max(1, Math.ceil(falta / porCompra));
   $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.meta === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.meta)}`}`;
   $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.meta)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
-  $('com-racha').textContent = semanas(R.racha);
+  $('com-racha').textContent = rachaTxt(R.racha);
   $('com-racha-sub').textContent = R.racha
-    ? `sigue si vuelves a comprar antes del ${domingo(R.semanaEnCurso ? 1 : 0)}`
+    ? `sigue si vuelves a comprar antes del ${domingo(R.venceSemanas)}`
     : `empieza de nuevo con tu próxima compra`;
   const despues = R.hitos.filter((h) => !h.fecha && h.m > R.meta && h.m <= 1e8).map((h) => nombreHito(h.m));
   const lista = despues.length > 1 ? `${despues.slice(0, -1).join(', ')} y ${despues.at(-1)}` : despues[0] ?? nombreHito(1e8);

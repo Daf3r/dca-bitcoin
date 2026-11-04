@@ -113,4 +113,22 @@ eq(estimarMonto(32_500, 76_923), 25, '32,500 sats a 76,923 son $25.00');
 eq(estimarMonto(36_578, 77_598), 28.38, 'redondeo a centavos');
 eq(estimarMonto(1, 50_000), 0.01, 'mínimo un centavo');
 
+// Ritmo quincenal: la racha no se rompe entre compras separadas por dos semanas
+const cada = (inicio, dias, veces) => Array.from({ length: veces }, (_, k) => ({
+  id: k + 1, fecha: new Date(Date.UTC(...inicio) + k * dias * 864e5).toISOString().slice(0, 10), monto: 25, sats: 32500, precio: 76923,
+}));
+const quin = resumen(cada([2026, 8, 7], 14, 6), 77598, '2026-11-12');
+eq(quin.paso, 2, 'cada 14 días: ritmo quincenal');
+eq(resumen(cada([2026, 9, 1], 7, 6), 77598, '2026-11-12').paso, 1, 'cada 7 días: ritmo semanal');
+eq(resumen(cada([2026, 9, 1], 14, 3), 77598, '2026-11-12').paso, 1, 'con menos de 4 compras: semanal');
+const ultimaQ = cada([2026, 8, 7], 14, 6).at(-1).fecha;
+const hoyQ = new Date(Date.parse(ultimaQ) + 10 * 864e5).toISOString().slice(0, 10); // 10 días después, aún dentro de la quincena
+const q1 = resumen(cada([2026, 8, 7], 14, 6), 77598, hoyQ);
+eq([q1.paso, q1.racha, q1.mejorRacha], [2, 6, 6], 'quincenal: la racha sigue viva 10 días después de la última compra');
+const hoyRota = new Date(Date.parse(ultimaQ) + 24 * 864e5).toISOString().slice(0, 10);
+eq(resumen(cada([2026, 8, 7], 14, 6), 77598, hoyRota).racha, 0, 'quincenal: 24 días sin comprar rompe la racha');
+const mismoRitmoSemanal = resumen(cada([2026, 8, 7], 7, 6), 77598, new Date(Date.parse(cada([2026, 8, 7], 7, 6).at(-1).fecha) + 17 * 864e5).toISOString().slice(0, 10));
+eq(mismoRitmoSemanal.racha, 0, 'semanal: 17 días sin comprar sí rompe la racha');
+ok(q1.venceSemanas >= 0, 'quincenal: vence en una semana futura o esta');
+
 console.log(`OK ${n} comprobaciones`);
