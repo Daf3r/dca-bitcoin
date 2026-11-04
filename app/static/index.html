@@ -43,6 +43,15 @@
   <!-- Dos columnas en escritorio; en móvil y tablet los contenedores no cuentan (display: contents)
        y el orden visual es el del documento, igual que el de tabulación. -->
   <div class="col-principal">
+  <!-- Recordatorio según tu ritmo (solo admin): al día, te toca, último día o racha reiniciada. -->
+  <p class="toca" id="toca" role="status" hidden><i aria-hidden="true"></i><span id="toca-txt"></span></p>
+  <!-- Gran caída (opcional, solo admin): dice cuánto cayó el precio y qué haría reponer con una compra como las tuyas.
+       Es información, no una recomendación; se puede ocultar por hoy. -->
+  <div class="caida" id="caida" role="status" hidden>
+    <p id="caida-txt"></p>
+    <button type="button" class="enlace" id="caida-ocultar">Ocultar hoy</button>
+  </div>
+
   <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden>
     <h2 class="sr" id="t-tramo">Siguiente meta</h2>
     <p class="tr-k">Próximo campamento</p>
@@ -70,6 +79,7 @@
       <h3>Constancia</h3>
       <p class="const-cifra"><b id="const-racha"></b><span id="const-unidad"></span></p>
       <p class="rep-txt" id="const-txt"></p>
+      <p class="rep-txt" id="const-hito"></p>
       <div class="semanas" id="semanas" aria-hidden="true"></div>
     </article>
     <article class="rep rep-hitos">
@@ -180,6 +190,7 @@
         <button type="button" data-previa="compra">Compra</button>
         <button type="button" data-previa="etapa">Etapa</button>
         <button type="button" data-previa="hito">Hito grande</button>
+        <button type="button" data-previa="constancia">Constancia</button>
       </div>
     </div>
     <div class="dc-lista">

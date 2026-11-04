@@ -95,12 +95,88 @@ const semana = (f) => {
   return Math.floor((Date.UTC(y, m - 1, d) - SEMANA0) / (7 * 864e5));
 };
 
-/** 1 si compras cada semana (o menos de 10 días entre compras), 2 si cada quincena. Pide al menos 4 compras. */
+/**
+ * 1 si compras cada semana (o menos de 10 días entre compras), 2 si cada quincena. Pide al menos 4 semanas con
+ * compra. Cuenta una sola fecha por semana (la primera): comprar de más en una caída del precio no cambia tu ritmo.
+ */
 function pasoSemanas(items) {
-  const fechas = [...new Set(items.map((c) => c.fecha))].slice(-9);
+  const porSemana = new Map();
+  for (const f of items.map((c) => c.fecha).sort()) if (!porSemana.has(semana(f))) porSemana.set(semana(f), f);
+  const fechas = [...porSemana.values()].slice(-9);
   if (fechas.length < 4) return 1;
   const d = fechas.slice(1).map((f, i) => (aFecha(f) - aFecha(fechas[i])) / 864e5).sort((a, b) => a - b);
   return d[d.length >> 1] >= 10 ? 2 : 1;
+}
+
+// ------------------------------------------------------------- constancia
+// Hitos de constancia: cuántas compras llevas y cuánto tiempo desde la primera. Premian no fallar.
+export const HITOS_COMPRAS = [10, 25, 50, 100, 200, 300, 500, 750, 1000];
+export const HITOS_MESES = [6, 12, 24, 36, 60, 120];
+export const nombreHitoMeses = (m) => (m < 12 ? `${m} meses` : m === 12 ? '1 año' : `${m / 12} años`);
+
+const soloCompras = (compras) => compras.filter((c) => c.tipo !== 'venta');
+function medidasConstancia(compras) {
+  const f = soloCompras(compras).map((c) => c.fecha).sort();
+  return { n: f.length, primera: f[0] ?? null, meses: f.length ? mesesEntre(f[0], f[f.length - 1]) : 0 };
+}
+
+/** Hitos de constancia que cruza una compra nueva: de cantidad (10, 25…) y de tiempo (6 meses, 1 año…). */
+export function constanciaCruzada(antes, despues) {
+  const a = medidasConstancia(antes), d = medidasConstancia(despues);
+  const cruzados = [];
+  for (const h of HITOS_COMPRAS) if (a.n < h && d.n >= h) cruzados.push({ tipo: 'compras', valor: h });
+  // El tiempo cuenta desde la primera compra: una compra atrasada que cambia esa fecha no celebra nada.
+  if (a.n > 0 && a.primera === d.primera) for (const m of HITOS_MESES) if (a.meses < m && d.meses >= m) cruzados.push({ tipo: 'tiempo', valor: m });
+  return cruzados;
+}
+
+/** Lo que falta para el siguiente hito de cantidad y de tiempo (tiempo medido hasta hoy). */
+export function proximosHitosConstancia(compras, hoy = hoyISO()) {
+  const { n, primera } = medidasConstancia(compras);
+  const meses = primera ? mesesEntre(primera, hoy) : 0;
+  const pn = HITOS_COMPRAS.find((h) => h > n);
+  const pm = HITOS_MESES.find((m) => m > meses);
+  return { n, meses, compras: pn ? { valor: pn, faltan: pn - n } : null, tiempo: pm ? { valor: pm, faltan: pm - meses } : null };
+}
+
+/**
+ * Cómo movería tu costo promedio una compra nueva (el «ajuste» del DCA: comprar barato lo baja, comprar caro lo sube).
+ * Sin saldo ni invertido (primera compra o tras vender todo) no hay costo previo y devuelve null.
+ */
+export function costoTrasCompra(R, monto, sats) {
+  if (!R || !(R.sats > 0) || !(R.inv > 0) || !(sats > 0) || !(monto > 0)) return null;
+  const antes = (R.inv * 1e8) / R.sats;
+  const despues = ((R.inv + monto) * 1e8) / (R.sats + sats);
+  return { antes, despues, cambio: (despues / antes - 1) * 100 };
+}
+
+/**
+ * Gran caída: el precio vivo frente al máximo de los últimos `dias` días (cierres diarios y el precio vivo).
+ * Devuelve null si no hay caída del `umbral` % o más, o si el histórico es muy corto para saberlo.
+ */
+export function caidaGrande(historico, vivo, hoy = hoyISO(), { dias = 30, umbral = 15 } = {}) {
+  if (!(vivo > 0)) return null;
+  const [y, m, d] = hoy.split('-').map(Number);
+  const desde = new Date(Date.UTC(y, m - 1, d - dias)).toISOString().slice(0, 10);
+  const ventana = historico.filter((x) => x[0] >= desde && x[1] > 0);
+  if (ventana.length < 5) return null;
+  const max = Math.max(vivo, ...ventana.map((x) => x[1]));
+  const caida = Math.round((1 - vivo / max) * 1000) / 10; // a una décima: el umbral queda exacto
+  return caida >= umbral ? { max, caida, dias } : null;
+}
+
+/**
+ * «Reponer» (opcional): qué haría con tu costo promedio una compra como las tuyas (la mediana de tus últimas
+ * compras, en dólares) al precio vivo. Es solo información; no recomienda comprar.
+ */
+export function reposicion(R, vivo) {
+  const montos = (R?.items ?? []).filter((c) => c.tipo !== 'venta' && c.monto > 0).slice(-12).map((c) => c.monto).sort((a, b) => a - b);
+  if (montos.length < 3 || !(vivo > 0)) return null;
+  const mid = montos.length >> 1;
+  const monto = Math.round(montos.length % 2 ? montos[mid] : (montos[mid - 1] + montos[mid]) / 2);
+  if (monto < 1) return null;
+  const c = costoTrasCompra(R, monto, Math.round((monto / vivo) * 1e8));
+  return c && { monto, ...c };
 }
 
 /**
@@ -221,9 +297,24 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     // Solo la siguiente meta y solo si es alcanzable en un plazo razonable.
     proyeccion: meses != null && meses > 0 && meses <= 60 ? meses : null,
     anios: [...anios.values()],
+    constancia: proximosHitosConstancia(comprasItems, hoy),
     racha, mejorRacha, paso, venceSemanas, ultimas52, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
     mejor: porPrecio[0] ?? null, peor: porPrecio.at(-1) ?? null,
   };
+}
+
+/**
+ * Qué toca según tu ritmo (con 3 compras o más), a partir del resumen:
+ * hecho (ya compraste esta semana) · aldia (quincenal, aún sobra una semana) · toca (esta semana vence la racha)
+ * · ultimo (es domingo) · perdida (la racha se reinició). Es un recordatorio, no un reproche.
+ */
+export function tocaComprar(R, hoy = hoyISO()) {
+  if (!R || R.nCompras < 3) return null;
+  const d = R.paso - R.venceSemanas; // semanas desde tu última compra (0 = esta semana)
+  if (d <= 0) return { estado: 'hecho', vence: R.venceSemanas };
+  if (d < R.paso) return { estado: 'aldia', vence: R.venceSemanas };
+  if (d === R.paso) return { estado: aFecha(hoy).getDay() === 0 ? 'ultimo' : 'toca', racha: R.racha };
+  return { estado: 'perdida', mejor: R.mejorRacha };
 }
 
 // -------------------------------------------------------------- novedades

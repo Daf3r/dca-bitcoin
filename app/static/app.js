@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -89,6 +89,7 @@ async function cargarHistorico(intento = 0) {
     S.histEstado = S.historico.length > 1 ? 'ok' : 'error';
   }
   pintarMercado();
+  pintarCaida();
 }
 
 async function consultarPrecio() {
@@ -120,6 +121,8 @@ function pintar({ montana = false, animar = false, desde = null, festejo = null 
   pintarPrecio();
   pintarSaldo(desde);
   if (montana) pintarMontana(animar, desde, festejo);
+  pintarToca();
+  pintarCaida();
   pintarTramo();
   pintarMercado();
   pintarLista();
@@ -428,6 +431,16 @@ function pintarHoja() {
     : d.sinPrecio ? 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares.'
       : sinSaldo ? `No tienes tantos sats: tu saldo es ${entero(saldo)}.`
         : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(resto)} sats`;
+  // El «ajuste» del DCA: cómo mueve esta compra tu costo promedio (solo al crear una compra con precio).
+  const c = d && !d.sinPrecio && !venta && !H.editando ? costoTrasCompra(R, d.monto, d.sats) : null;
+  if (c) {
+    const s = document.createElement('span');
+    s.className = 'costo';
+    s.dataset.tono = c.despues < c.antes ? 'sube' : '';
+    s.textContent = Math.abs(c.cambio) < 0.05 ? `Tu costo promedio casi no cambia (${usd0(c.antes)}).`
+      : `Tu costo promedio ${c.despues < c.antes ? 'baja' : 'sube'} de ${usd0(c.antes)} a ${usd0(c.despues)} (${pct(c.cambio)}).`;
+    $('hoja-calc').append(s);
+  }
   $('guardar').disabled = !d || d.sinPrecio || sinSaldo || H.guardando;
   $('guardar').textContent = H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
 }
@@ -493,8 +506,11 @@ $('guardar').addEventListener('click', async () => {
   try {
     const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid), tipo: H.tipo, nota: H.tipo === 'venta' ? H.nota.trim() : '' };
     const g = normalizar(H.editando ? await api(`/api/compras/${H.editando}`, { metodo: 'PUT', cuerpo }) : await api('/api/compras', { metodo: 'POST', cuerpo }));
+    const comprasAntes = S.compras;
     S.compras = H.editando ? S.compras.map((x) => (x.id === g.id ? g : x)) : [...S.compras, g];
     const editando = H.editando;
+    // Hitos de constancia (10 compras, 6 meses…): solo por una compra nueva, nunca al editar ni en ventas.
+    const constancia = !editando && g.tipo === 'compra' ? constanciaCruzada(comprasAntes, S.compras) : [];
     H.guardando = false;
     cerrarHoja();
     // Una compra nueva se celebra en la montaña: si estás más abajo, se sube con suavidad a verla.
@@ -510,7 +526,7 @@ $('guardar').addEventListener('click', async () => {
     // Con celebración, el aviso de abajo espera a que acabe para no tapar el sendero.
     if (festejo && !reducido()) setTimeout(() => avisar(texto, null, true), MS_SUBIDA + 1300);
     else avisar(texto, null, true);
-    celebrar(antes);
+    celebrar(antes, constancia);
   } catch (err) {
     H.guardando = false;
     $('hoja-error').classList.remove('hoja-aviso');
@@ -598,6 +614,11 @@ function pintarReportes() {
   $('const-txt').innerHTML = resumenSemanas +
     (R.mejorRacha > R.racha ? `Tu mejor racha: <b>${rachaTxt(R.mejorRacha)}</b>.` : '') + (R.semanaEnCurso || !R.racha ? '' : ` Tu próxima compra, antes del ${domingo(R.venceSemanas)}, mantiene la racha.`);
 
+  const hc = R.constancia;
+  const faltan = (n, uno, varios) => (n === 1 ? `falta 1 ${uno}` : `faltan ${n} ${varios}`);
+  const proximos = [hc.compras && `${hc.compras.valor} compras (${faltan(hc.compras.faltan, 'compra', 'compras')})`, hc.tiempo && `${nombreHitoMeses(hc.tiempo.valor)} (${faltan(hc.tiempo.faltan, 'mes', 'meses')})`].filter(Boolean);
+  $('const-hito').innerHTML = proximos.length ? `Llevas <b>${hc.n} compras</b>. Próximos hitos: ${proximos.join(' · ')}.` : `Llevas <b>${hc.n} compras</b>.`;
+
   const ext = $('extremos');
   const tarjeta = (c, titulo) => {
     const v = S.precio ? (S.precio / c.precio - 1) * 100 : null;
@@ -606,6 +627,42 @@ function pintarReportes() {
   };
   ext.innerHTML = tarjeta(R.mejor, 'Mejor precio') + tarjeta(R.peor, 'Precio más alto');
 }
+
+// ------------------------------------------------------------- te toca comprar
+function textoToca(t) {
+  const conRacha = t.racha >= 2;
+  if (t.estado === 'hecho') return R.paso === 2 ? `Al día: ya compraste esta semana. La próxima, antes del ${domingo(t.vence)}.` : 'Al día: ya compraste esta semana.';
+  if (t.estado === 'aldia') return `Vas al día. Tu próxima compra, antes del ${domingo(t.vence)}, mantiene la racha.`;
+  if (t.estado === 'toca') return `Te toca comprar esta semana${conRacha ? ` (hasta el ${domingo(0)}) para mantener tu racha de ${rachaTxt(t.racha)}` : ''}.`;
+  if (t.estado === 'ultimo') return `Hoy es el último día${conRacha ? ` para mantener tu racha de ${rachaTxt(t.racha)}` : ' para comprar esta semana'}.`;
+  return 'Tu racha se reinició. Tu próxima compra empieza una nueva.';
+}
+/** Recordatorio según tu ritmo; solo lo ve el admin (los lectores no compran). */
+function pintarToca() {
+  const t = esAdmin() ? tocaComprar(R) : null;
+  $('toca').hidden = !t;
+  if (!t) return;
+  $('toca').dataset.estado = t.estado;
+  $('toca-txt').textContent = textoToca(t);
+}
+
+// ------------------------------------------------------------ gran caída (opcional)
+// Si el precio cae mucho frente a su máximo de 30 días, una tarjeta lo dice y enseña qué haría reponer con una
+// compra como las tuyas. Es solo información y opcional: «Ocultar hoy» la quita hasta mañana (por dispositivo).
+const CLAVE_CAIDA = 'libro.caida.oculta';
+const caidaOculta = () => { try { return localStorage.getItem(CLAVE_CAIDA); } catch { return null; } };
+function pintarCaida() {
+  const c = esAdmin() && R.nCompras >= 3 && S.precio && caidaOculta() !== hoyISO() ? caidaGrande(S.historico, S.precio) : null;
+  $('caida').hidden = !c;
+  if (!c) return;
+  const r = reposicion(R, S.precio);
+  $('caida-txt').textContent = `BTC está ${Math.round(c.caida)}% por debajo de su máximo de los últimos ${c.dias} días.` +
+    (r ? ` Si decides reponer con una compra como las tuyas (${usd0(r.monto)}), tu costo promedio ${r.despues < r.antes ? 'bajaría' : 'subiría'} de ${usd0(r.antes)} a ${usd0(r.despues)}. Es opcional.` : '');
+}
+$('caida-ocultar').addEventListener('click', () => {
+  try { localStorage.setItem(CLAVE_CAIDA, hoyISO()); } catch { /* sin almacenamiento: se oculta solo ahora */ }
+  $('caida').hidden = true;
+});
 
 // ------------------------------------------------------------ siguiente paso
 const dfDomingo = new Intl.DateTimeFormat('es-SV', { weekday: 'long', day: 'numeric', month: 'short' });
@@ -636,19 +693,28 @@ function pintarComienzo() {
 $('com-anotar').addEventListener('click', () => abrirHoja());
 
 // -------------------------------------------------------------- celebración
-/** Solo cuando la acción de esta sesión cruza un hito; breve y sin bloquear nada. */
-function celebrar(antes) {
+/**
+ * Solo cuando la acción de esta sesión cruza un hito; breve y sin bloquear nada. Si coinciden una etapa y un
+ * hito de constancia (10 compras, 6 meses…), la tarjeta de la etapa sale primero y la de constancia después.
+ */
+function celebrar(antes, constancia = []) {
+  const tarjetas = [];
   // Cualquier etapa (100k, 250k, 500k, 1M…) que se cruce hacia arriba; si son varias, la más alta.
   const m = etapasCruzadas(antes.sats, R.sats).at(-1);
-  if (!m) return;
+  if (m) {
+    const hito = esHito(m);
+    tarjetas.push({ k: hito ? 'Nuevo hito' : 'Nueva etapa', txt: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, grande: hito });
+  }
+  for (const c of constancia.slice(-2)) tarjetas.push({ k: 'Constancia', txt: c.tipo === 'compras' ? `${c.valor} compras` : nombreHitoMeses(c.valor), grande: false });
+  if (!tarjetas.length) return;
   const el = $('hito-cel');
-  const hito = esHito(m);
-  $('hc-k').textContent = hito ? 'Nuevo hito' : 'Nueva etapa';
-  $('hc-txt').textContent = m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`;
-  el.classList.toggle('grande', hito);
-  // Aparece cuando tu punto llega a la bandera, no antes.
   clearTimeout(celebrar.t);
-  celebrar.t = setTimeout(() => {
+  const mostrar = (i) => {
+    if (i >= tarjetas.length) return;
+    const t = tarjetas[i];
+    $('hc-k').textContent = t.k;
+    $('hc-txt').textContent = t.txt;
+    el.classList.toggle('grande', t.grande);
     // Siempre bajo el saldo, sin tapar la cabecera, la cifra ni la etiqueta de la cumbre. En móvil y tablet va
     // centrada; en escritorio, alineada a la izquierda con el saldo.
     const saldo = document.querySelector('.saldo-d')?.getBoundingClientRect();
@@ -658,8 +724,10 @@ function celebrar(antes) {
     else { el.style.removeProperty('justify-items'); el.style.removeProperty('padding-left'); }
     el.hidden = false;
     el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
-    celebrar.t = setTimeout(() => { el.hidden = true; }, hito ? 2600 : 2000);
-  }, reducido() ? 0 : MS_SUBIDA);
+    celebrar.t = setTimeout(() => { el.hidden = true; celebrar.t = setTimeout(() => mostrar(i + 1), 250); }, t.grande ? 2600 : 2000);
+  };
+  // La primera aparece cuando tu punto llega a la bandera, no antes.
+  celebrar.t = setTimeout(() => mostrar(0), reducido() ? 0 : MS_SUBIDA);
 }
 
 /** La barra del tramo se llena con un destello cuando tu punto llega. */
@@ -683,13 +751,13 @@ async function vistaPrevia(nivel) {
   let antes, despues;
   if (nivel === 'etapa') { const m = etapaSiguiente(base); antes = Math.max(0, m - 20_000); despues = m + 10_000; }
   else if (nivel === 'hito') { let m = 1e6; while (m <= base) m *= 10; antes = m - 30_000; despues = m + 5_000; }
-  else { antes = base; despues = base + Math.max(1000, Math.min(30_000, Math.floor((etapaSiguiente(base) - base) / 2))); }
+  else { antes = base; despues = base + Math.max(1000, Math.min(30_000, Math.floor((etapaSiguiente(base) - base) / 2))); } // «compra» y «constancia»
   R = { ...R, sats: despues, meta: metaSiguiente(despues), etapa: etapaSiguiente(despues), etapaPrev: etapaAnterior(despues) };
   if (window.scrollY > 40) { window.scrollTo({ top: 0, behavior: reducido() ? 'auto' : 'smooth' }); await pausa(480); }
   avisar('Vista previa de la celebración: no se guarda nada.', null, true);
   pintarMontana(false, antes, { antes, delta: despues - antes });
   if (!reducido()) setTimeout(() => destello(), MS_SUBIDA);
-  celebrar({ sats: antes });
+  celebrar({ sats: antes }, nivel === 'constancia' ? [{ tipo: 'compras', valor: R.constancia?.compras?.valor ?? 25 }] : []);
   await pausa(nivel === 'hito' ? 6500 : 5200);
   pintar({ montana: true }); // vuelve al estado real
   previaActiva = false;

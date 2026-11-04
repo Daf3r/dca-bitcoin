@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -220,5 +220,78 @@ const rara = [...hab, { id: 7, tipo: 'compra', monto: 900, sats: 900000, fecha: 
 eq(avisosAlAnotar(rara, { tipo: 'compra', sats: 900000, monto: 900, fecha: '2026-10-07', editando: 7 }), [], 'editar una compra rara sin tocar los sats: no insiste');
 eq(avisosAlAnotar(rara, { tipo: 'compra', sats: 950000, monto: 950, fecha: '2026-10-07', editando: 7 }).map((a) => a.tipo), ['atipico'], 'si cambias los sats a otra cifra rara: avisa');
 eq(av({ sats: 0, monto: 0 }), [], 'sin sats no hay avisos');
+
+// Constancia: hitos por cantidad y por tiempo, y progreso hacia el siguiente
+const cc = (n) => Array.from({ length: n }, (_, i) => ({ id: i + 1, tipo: 'compra', fecha: new Date(Date.UTC(2026, 0, 5 + i * 7)).toISOString().slice(0, 10) }));
+const nueva = (fecha) => ({ id: 999, tipo: 'compra', fecha });
+eq(constanciaCruzada(cc(9), [...cc(9), nueva('2026-03-12')]), [{ tipo: 'compras', valor: 10 }], 'la décima compra cruza el hito 10');
+eq(constanciaCruzada(cc(10), [...cc(10), nueva('2026-03-19')]), [], 'la 11.ª no cruza nada');
+eq(constanciaCruzada(cc(24), [...cc(24), nueva('2026-07-06')]).map((h) => h.valor), [25, 6], 'puede cruzar cantidad y tiempo a la vez (25 compras y 6 meses)');
+eq(constanciaCruzada(cc(5), [...cc(5), nueva('2026-07-10')]), [{ tipo: 'tiempo', valor: 6 }], 'una compra tras un hueco largo cruza 6 meses');
+eq(constanciaCruzada(cc(6), [...cc(6), nueva('2025-01-01')]).filter((h) => h.tipo === 'tiempo'), [], 'una compra atrasada que cambia la primera fecha no celebra tiempo');
+eq(constanciaCruzada([], [nueva('2026-01-05')]), [], 'la primera compra no celebra nada');
+eq(constanciaCruzada([...cc(9), { id: 50, tipo: 'venta', fecha: '2026-03-01' }], [...cc(9), { id: 50, tipo: 'venta', fecha: '2026-03-01' }, { id: 51, tipo: 'venta', fecha: '2026-03-02' }]), [], 'las ventas no cuentan');
+const px = proximosHitosConstancia(cc(22), '2026-06-10');
+eq([px.n, px.meses, px.compras, px.tiempo], [22, 5, { valor: 25, faltan: 3 }, { valor: 6, faltan: 1 }], 'faltan 3 compras para 25 y 1 mes para 6');
+eq(proximosHitosConstancia(cc(1001), '2036-01-01').compras, null, 'sin más hitos de cantidad');
+eq(resumen(cc(22).map((c) => ({ ...c, monto: 20, sats: 25000, precio: 80000 })), null, '2026-06-10').constancia.compras, { valor: 25, faltan: 3 }, 'resumen expone la constancia');
+
+// «Te toca comprar» según el ritmo: semanal con compras de lunes a miércoles
+const sem = (k, dia = 0) => new Date(Date.UTC(2026, 5, 1 + k * 7 + dia)).toISOString().slice(0, 10); // lunes 1 jun 2026 + semanas
+const compSem = (ks) => ks.map((k, i) => ({ id: i + 1, tipo: 'compra', fecha: sem(k, 1), monto: 25, sats: 30000, precio: 83000 }));
+const compSemFechas = (fs) => fs.map((f, i) => ({ id: i + 1, tipo: 'compra', fecha: f, monto: 25, sats: 30000, precio: 83000 }));
+const estado = (items, hoy) => tocaComprar(resumen(items, null, hoy), hoy);
+const base = compSem([0, 1, 2, 3, 4, 5]); // última compra: martes de la semana 5 (= 7 jul)
+eq(estado(base, sem(5, 3))?.estado, 'hecho', 'ya compraste esta semana');
+eq(estado(base, sem(6, 2))?.estado, 'toca', 'la semana siguiente toca (miércoles)');
+eq(estado(base, sem(6, 2))?.racha, 6, 'toca con tu racha de 6');
+eq(estado(base, sem(6, 6))?.estado, 'ultimo', 'domingo: último día');
+eq(estado(base, sem(7, 1))?.estado, 'perdida', 'dos semanas sin comprar: la racha se reinició');
+eq(tocaComprar(resumen(compSem([0, 1]), null, sem(2, 2)), sem(2, 2)), null, 'con menos de 3 compras no hay aviso');
+const quince = compSem([0, 2, 4, 6, 8]); // quincenal
+eq(estado(quince, sem(8, 3))?.estado, 'hecho', 'quincenal: compraste esta semana');
+eq(estado(quince, sem(9, 2)), { estado: 'aldia', vence: 1 }, 'quincenal: la semana siguiente vas al día, vence en 1');
+eq(estado(quince, sem(10, 2))?.estado, 'toca', 'quincenal: a las 2 semanas toca');
+eq(estado(quince, sem(11, 2))?.estado, 'perdida', 'quincenal: a las 3 semanas se reinició');
+
+// Compras extra por una caída del precio: no deben cambiar el ritmo ni romper la racha
+const fq = (k, dia = 1) => sem(k, dia);
+const qBase = [0, 2, 4, 6, 8].map((k) => fq(k));
+const extras3 = [...qBase, fq(7, 0), fq(7, 3), fq(7, 5)];
+const Rx = resumen(compSemFechas(extras3), null, fq(10, 2));
+eq([Rx.paso, Rx.racha, tocaComprar(Rx, fq(10, 2)).estado], [2, 6, 'toca'], 'quincenal con 3 compras extra en una semana de caída: sigue quincenal y la racha viva');
+const Rx1 = resumen(compSemFechas([...qBase, fq(7, 3)]), null, fq(9, 2));
+eq([Rx1.paso, Rx1.racha, tocaComprar(Rx1, fq(9, 2)).estado], [2, 6, 'aldia'], 'una compra extra entre medias suma a la racha y no cambia el ritmo');
+const Rs = resumen(compSemFechas([...[0, 1, 2, 3, 4, 5].map((k) => fq(k)), fq(5, 4)]), null, fq(6, 2));
+eq([Rs.paso, Rs.racha], [1, 6], 'semanal con dos compras en una semana: la semana cuenta una vez');
+
+// Efecto de una compra en el costo promedio (comprar barato lo baja)
+const Rc = resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }], null, '2026-10-05');
+const barato = costoTrasCompra(Rc, 50, 200000); // $50 por 200k sats = $25,000 el BTC
+eq([Math.round(barato.antes), Math.round(barato.despues), Math.round(barato.cambio)], [100000, 50000, -50], 'comprar barato baja el costo promedio');
+const caro = costoTrasCompra(Rc, 100, 50000); // $100 por 50k sats = $200,000 el BTC
+ok(caro.despues > caro.antes && caro.cambio > 0, 'comprar caro lo sube');
+eq(costoTrasCompra(resumen([], null, '2026-10-05'), 25, 30000), null, 'sin compras previas no hay costo anterior');
+eq(costoTrasCompra(Rc, 0, 100), null, 'sin monto no se calcula');
+const Rsin = resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }, { id: 2, tipo: 'venta', fecha: '2026-10-02', monto: 90, sats: 100000, precio: 90000 }], null, '2026-10-05');
+eq(costoTrasCompra(Rsin, 25, 30000), null, 'tras vender todo, la siguiente compra parte de cero');
+
+// Gran caída (opcional) y qué haría reponer
+const dia = (k) => new Date(Date.UTC(2026, 9, 31) - k * 864e5).toISOString().slice(0, 10); // 31 oct hacia atrás
+const hist = (precios) => precios.map((p, i) => [dia(precios.length - 1 - i), p]); // el último es 31 oct
+const plano = hist(Array(20).fill(100000));
+eq(caidaGrande(plano, 80000, '2026-10-31')?.caida, 20, 'precio 20 % bajo el máximo de 30 días: gran caída');
+eq(caidaGrande(plano, 85000, '2026-10-31')?.caida, 15, 'justo 15 %: cuenta');
+eq(caidaGrande(plano, 86000, '2026-10-31'), null, '14 %: no es gran caída');
+eq(caidaGrande(plano, 120000, '2026-10-31'), null, 'por encima del máximo: nada');
+eq(caidaGrande([[dia(40), 200000], ...plano], 90000, '2026-10-31'), null, 'un máximo de hace más de 30 días no cuenta');
+eq(caidaGrande(plano.slice(0, 3), 50000, '2026-10-31'), null, 'con histórico demasiado corto no se afirma nada');
+eq(caidaGrande(plano, null, '2026-10-31'), null, 'sin precio vivo: nada');
+const cuatro = [20, 25, 30, 25].map((m, i) => ({ id: i + 1, tipo: 'compra', fecha: `2026-10-0${i + 1}`, monto: m, sats: Math.round((m / 100000) * 1e8), precio: 100000 }));
+const Rr = resumen(cuatro, null, '2026-10-31');
+const rep = reposicion(Rr, 70000); // mediana $25 al precio vivo $70,000
+eq([rep.monto, rep.despues < rep.antes, Math.round(rep.antes)], [25, true, 100000], 'reponer con una compra como las tuyas baja el costo promedio si el precio cayó');
+eq(reposicion(resumen(cuatro.slice(0, 2), null, '2026-10-31'), 70000), null, 'con menos de 3 compras no hay referencia');
+eq(reposicion(Rr, 0), null, 'sin precio no hay reposición');
 
 console.log(`OK ${n} comprobaciones`);
