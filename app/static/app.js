@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, serieValor, costoVsPromedio, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, serieValor, costoVsPromedio, ubicacionSats, walletNeto, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -14,6 +14,7 @@ const S = {
   precio: null, precioTs: 0, fuente: '', viejo: false, errorPrecio: false,
   historico: [], histEstado: 'cargando', histDesde: null, rango: null,
   verTodas: false,
+  traslados: [],
   usuario: null, rol: null,
 };
 let R = resumen([], null);
@@ -55,6 +56,7 @@ const normalizar = (c) => ({ ...c, id: Number(c.id), sats: c.sats > 0 ? c.sats :
 async function cargarCompras() {
   try {
     S.compras = (await api('/api/compras')).map(normalizar);
+    S.traslados = await api('/api/traslados').catch(() => S.traslados); // dónde están los sats; si falla, lo demás sigue
     S.errorCarga = false;
     avisar('');
   } catch (e) {
@@ -130,6 +132,7 @@ function pintar({ montana = false, animar = false, desde = null, festejo = null 
   pintarValor();
   pintarEquilibrio();
   pintarLista();
+  pintarUbicacion();
   pintarReportes();
   pintarComienzo();
   pintarNovedades();
@@ -188,7 +191,7 @@ let unidad = leerUnidad();
 const fmtSaldo = () => (unidad === 'btc' ? btc : entero);
 function etiquetaUnidad() {
   $('s-unidad').textContent = unidad === 'btc' ? 'BTC' : 'sats';
-  $('s-saldo-v').setAttribute('aria-label', `Tu saldo: ${fmtSaldo()(R.sats)} ${unidad === 'btc' ? 'BTC' : 'sats'}. Toca para verlo en ${unidad === 'btc' ? 'sats' : 'BTC'}.`);
+  $('s-saldo-ayuda').textContent = `Tu saldo. Toca para verlo en ${unidad === 'btc' ? 'sats' : 'BTC'}.`;
 }
 function alternarUnidad() {
   unidad = unidad === 'btc' ? 'sats' : 'btc';
@@ -318,6 +321,18 @@ new ResizeObserver(() => { if ($('lienzo').clientWidth !== anchoGrafico) pintarM
 
 // ----------------------------------------------------------------- lista
 const VISIBLES = 8;
+/** Una fila de traslado: no es compra ni venta, solo mueve sats entre el exchange y tu wallet. */
+function htmlTraslado(t) {
+  const aW = t.sentido === 'a_wallet';
+  const etiqueta = esAdmin() ? 'button type="button"' : 'div';
+  const cierre = esAdmin() ? 'button' : 'div';
+  return `<li><${etiqueta} class="fila" data-tras="${t.id}" data-tipo="traslado">` +
+    (esAdmin() ? '<span class="sr">Ver el traslado del </span>' : '') + `<span class="f-fecha">${fechaCorta(t.fecha)}</span>` +
+    `<span class="f-sats">⇄ ${entero(t.sats)} <small>sats</small></span>` +
+    `<span class="f-det">${aW ? 'Traslado a tu wallet' : 'Traslado de tu wallet al exchange'}${t.nota ? ` · ${esc(t.nota)}` : ''}</span>` +
+    `<span class="f-var"></span></${cierre}>` +
+    (mempoolUrl(t.txid) ? `<div class="f-txw"><a class="f-tx" href="${mempoolUrl(t.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space <span aria-hidden="true">↗</span><span class="sr"> (se abre en otra pestaña)</span></a><span class="f-est" data-txid="${t.txid}"></span></div>` : '') + '</li>';
+}
 function pintarLista() {
   const host = $('lista');
   $('csv-out').hidden = !R.n;
@@ -327,9 +342,13 @@ function pintarLista() {
     return;
   }
   const enFoco = document.activeElement?.closest?.('#lista .fila')?.dataset.id;
-  const recientes = [...R.items].reverse();
+  // Compras, ventas y traslados en una sola lista, lo más reciente primero (a igual fecha, lo último que anotaste).
+  const recientes = [...R.items.map((c) => ({ c })), ...S.traslados.map((t) => ({ t }))]
+    .sort((a, b) => { const x = a.c ?? a.t, y = b.c ?? b.t; return x.fecha === y.fecha ? y.creado - x.creado : x.fecha < y.fecha ? 1 : -1; });
   const mostradas = S.verTodas ? recientes : recientes.slice(0, VISIBLES);
-  host.innerHTML = mostradas.map((c) => {
+  host.innerHTML = mostradas.map((fila) => {
+    if (fila.t) return htmlTraslado(fila.t);
+    const c = fila.c;
     const venta = c.tipo === 'venta';
     // Compra: cómo va frente al precio de hoy. Venta: la ganancia que realizó.
     const v = venta ? c.realizada : S.precio ? (S.precio / c.precio - 1) * 100 : null;
@@ -343,8 +362,8 @@ function pintarLista() {
       (mempoolUrl(c.txid) ? `<div class="f-txw"><a class="f-tx" href="${mempoolUrl(c.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space <span aria-hidden="true">↗</span><span class="sr"> (se abre en otra pestaña)</span></a><span class="f-est" data-txid="${c.txid}"></span></div>` : '') + '</li>';
   }).join('');
   const vt = $('ver-todas');
-  vt.hidden = mostradas.length >= R.n;
-  vt.textContent = `Ver los ${R.n} movimientos`;
+  vt.hidden = mostradas.length >= recientes.length;
+  vt.textContent = `Ver los ${recientes.length} movimientos`;
   if (enFoco) host.querySelector(`.fila[data-id="${enFoco}"]`)?.focus();
   pintarEstadoTx();
   verificarTx();
@@ -387,7 +406,9 @@ async function verificarTx() {
 }
 $('lista').addEventListener('click', (e) => {
   const b = e.target.closest('.fila');
-  if (b && esAdmin()) abrirHoja(Number(b.dataset.id));
+  if (!b || !esAdmin()) return;
+  if (b.dataset.tras) abrirAnularTraslado(Number(b.dataset.tras));
+  else abrirHoja(Number(b.dataset.id));
 });
 $('ver-todas').addEventListener('click', () => {
   S.verTodas = true;
@@ -397,7 +418,7 @@ $('ver-todas').addEventListener('click', () => {
 
 // ------------------------------------------------------------- hoja de anotar
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', extra: false, usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '' };
+const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '' };
 const hoja = $('hoja');
 
 function abrirHoja(id = null, tipoInicial = 'compra') {
@@ -406,9 +427,12 @@ function abrirHoja(id = null, tipoInicial = 'compra') {
   H.sats = c ? String(c.sats) : '';
   H.usd = c ? String(c.monto) : '';
   H.txid = c?.txid ?? '';
-  H.tipo = c?.tipo ?? (tipoInicial === 'venta' ? 'venta' : 'compra');
+  H.tipo = c?.tipo ?? (['venta', 'traslado'].includes(tipoInicial) ? tipoInicial : 'compra');
   H.nota = c?.nota ?? '';
   H.extra = !!c?.extra;
+  H.sentido = 'a_wallet';
+  H.comision = '';
+  $('h-comision').value = '';
   $('h-nota').value = H.nota;
   $('h-nota-c').value = H.nota;
   $('h-extra').checked = H.extra;
@@ -446,6 +470,7 @@ window.visualViewport?.addEventListener('scroll', ajustarTeclado);
 function datosHoja() {
   const sats = Math.round(Number(H.sats)) || 0;
   if (!sats) return null;
+  if (H.tipo === 'traslado') return { sats, traslado: true }; // no lleva dólares ni precio
   const u = Number(H.usd) || 0;
   if (u > 0) return { sats, monto: u, precio: (u * 1e8) / sats, exacto: true };
   const p = precioDelDia($('h-fecha').value, S.historico, S.precio);
@@ -467,8 +492,37 @@ function textoAvisos(avisos) {
     : `esto es ${a.veces} veces ${a.sentido === 'mas' ? 'más' : 'menos'} que tu compra habitual (unos ${usd(a.mediana)}). ¿Faltó o sobró un cero?`);
   return `Ojo: ${partes.join(' Además, ')} Si está bien, toca «Sí, guardar así».`;
 }
+/** Qué campos de la hoja valen para cada tipo: compra, venta o gasto, y traslado. */
+function camposSegunTipo() {
+  const tras = H.tipo === 'traslado';
+  $('h-sentido').hidden = !tras;
+  $('h-nota-l').hidden = !(H.tipo === 'venta' || tras);
+  $('h-nota').placeholder = tras ? 'Por ejemplo: a mi Ledger' : 'Por ejemplo: gasté en renta';
+  document.querySelectorAll('#h-avanzado [data-solo-compra]').forEach((el) => { el.hidden = H.tipo !== 'compra'; });
+  document.querySelectorAll('#h-avanzado [data-no-traslado]').forEach((el) => { el.hidden = tras; });
+  document.querySelectorAll('#h-avanzado [data-solo-traslado]').forEach((el) => { el.hidden = !tras || H.sentido !== 'a_wallet'; });
+  document.querySelectorAll('#h-tipo button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === H.tipo)));
+  document.querySelectorAll('#h-sentido button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sentido === H.sentido)));
+}
+/** Traslado: el saldo total no cambia, solo cambia dónde están los sats. */
+function pintarHojaTraslado() {
+  const d = datosHoja();
+  const aWallet = H.sentido === 'a_wallet';
+  const neto = walletNeto(S.traslados);
+  $('hoja-t').textContent = aWallet ? 'Traslado a tu wallet' : 'Traslado de tu wallet al exchange';
+  $('h-sats-l').textContent = aWallet ? 'Sats que llegaron a tu wallet' : 'Sats que salieron de tu wallet';
+  const falla = !!d && (aWallet ? neto + d.sats > R.sats : d.sats > neto);
+  const enWallet = d ? Math.max(0, neto + (aWallet ? d.sats : -d.sats)) : neto;
+  $('hoja-calc').textContent = !d ? (aWallet ? 'Escribe los sats que te llegaron a la wallet. El saldo total no cambia: solo cambia dónde están.' : 'Escribe los sats que sacaste de tu wallet hacia el exchange.')
+    : falla ? (aWallet ? `No tienes tantos sats: tu saldo es ${entero(R.sats)} y ya tienes ${entero(neto)} en la wallet.` : `No tienes tantos sats en tu wallet: tienes ${entero(neto)}.`)
+      : `Quedarán ${entero(enWallet)} sats en tu wallet y ${entero(Math.max(0, R.sats - enWallet))} en el exchange.`;
+  $('guardar').disabled = !d || falla || H.guardando;
+  $('guardar').textContent = H.guardando ? 'Guardando…' : 'Guardar traslado';
+}
 function pintarHoja() {
   const d = datosHoja();
+  camposSegunTipo();
+  if (H.tipo === 'traslado') return pintarHojaTraslado();
   const venta = H.tipo === 'venta';
   const previa = H.editando ? S.compras.find((x) => x.id === H.editando) : null;
   // Saldo sin el movimiento que se edita (una venta editada devuelve sus sats, una compra editada los quita).
@@ -476,9 +530,6 @@ function pintarHoja() {
   const sinSaldo = venta && d && d.sats > saldo;
   $('hoja-t').textContent = venta ? (H.editando ? 'Editar venta' : 'Registrar venta o gasto') : H.editando ? 'Editar compra' : 'Anotar compra';
   $('h-sats-l').textContent = venta ? 'Sats que salieron' : 'Sats que recibiste';
-  $('h-nota-l').hidden = !venta;
-  document.querySelectorAll('#h-avanzado [data-solo-compra]').forEach((el) => { el.hidden = venta; });
-  document.querySelectorAll('#h-tipo button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === H.tipo)));
   const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
   const habitual = !venta && S.precio ? montoHabitual(R.items) : null;
   const referencia = habitual ? ` Hoy ${usd0(habitual)} son ≈ ${entero((habitual / S.precio) * 1e8)} sats ($1 = ${entero(1e8 / S.precio)} sats).` : '';
@@ -507,6 +558,15 @@ $('h-nota').addEventListener('input', (e) => { H.nota = e.target.value; });
 $('h-nota-c').addEventListener('input', (e) => { H.nota = e.target.value; });
 // Marcar o desmarcar «extra» reinicia el aviso: lo que se confirmó ya no es lo mismo.
 $('h-extra').addEventListener('change', (e) => { H.extra = e.target.checked; limpiarError(); pintarHoja(); });
+$('h-sentido').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (b) { H.sentido = b.dataset.sentido; limpiarError(); pintarHoja(); }
+});
+$('h-comision').addEventListener('input', (e) => {
+  const d = e.target.value.replace(/\D/g, '').slice(0, 9);
+  H.comision = d;
+  e.target.value = d ? entero(Number(d)) : '';
+});
 /** Pone separadores de miles al escribir sin mover el cursor de su sitio. */
 function formatearSats(inp) {
   const antes = inp.value.slice(0, inp.selectionStart ?? inp.value.length).replace(/\D/g, '').length;
@@ -541,11 +601,47 @@ hoja.addEventListener('keydown', (e) => {
 $('anotar').addEventListener('click', () => abrirHoja());
 document.querySelectorAll('[data-cerrar]').forEach((b) => b.addEventListener('click', cerrarHoja));
 
+/** Guarda un traslado. Si pagaste comisión de red, se anota también como un gasto (baja tu saldo). */
+async function guardarTraslado(d, fecha) {
+  H.guardando = true;
+  pintarHoja();
+  const antes = R;
+  let nota = '';
+  try {
+    const t = await api('/api/traslados', { metodo: 'POST', cuerpo: { fecha, sats: d.sats, sentido: H.sentido, txid: extraerTxid(H.txid), nota: H.nota.trim() } });
+    S.traslados = [...S.traslados, t];
+    const com = Number(H.comision) || 0;
+    if (H.sentido === 'a_wallet' && com > 0) {
+      const p = precioDelDia(fecha, S.historico, S.precio);
+      if (!p) nota = ' No pude anotar la comisión (sin precio): anótala como gasto.';
+      else {
+        try {
+          const g = normalizar(await api('/api/compras', { metodo: 'POST', cuerpo: { fecha, monto: estimarMonto(com, p.precio), sats: com, tipo: 'venta', nota: 'Comisión de retiro' } }));
+          S.compras = [...S.compras, g];
+          nota = ` Comisión de ${entero(com)} sats anotada como gasto.`;
+        } catch (err) {
+          nota = ` El traslado se guardó, pero la comisión no (${err.message}): anótala como gasto.`;
+        }
+      }
+    }
+    H.guardando = false;
+    cerrarHoja();
+    pintar({ montana: true, desde: antes.sats });
+    avisar(`Traslado anotado: ${entero(d.sats)} sats ${H.sentido === 'a_wallet' ? 'a tu wallet' : 'al exchange'}.${nota}`, null, true);
+  } catch (err) {
+    H.guardando = false;
+    $('hoja-error').classList.remove('hoja-aviso');
+    $('hoja-error').textContent = err.message;
+    pintarHoja();
+  }
+}
+
 $('guardar').addEventListener('click', async () => {
   const d = datosHoja();
   const fecha = $('h-fecha').value;
   if (!d || H.guardando) return;
   if (!fecha || fecha > hoyISO()) { $('hoja-error').textContent = 'Elige una fecha de hoy o anterior.'; return; }
+  if (H.tipo === 'traslado') return guardarTraslado(d, fecha);
   // Antes de guardar: si algo se ve raro (cifra 10 veces fuera de lo normal, compra repetida ese día), se avisa
   // una vez y se pide confirmar con un segundo toque. No bloquea: tú decides.
   if (!confirmando()) {
@@ -598,11 +694,36 @@ const dialogo = $('d-borrar');
 $('h-borrar').addEventListener('click', () => {
   const c = S.compras.find((x) => x.id === H.editando);
   if (!c) return;
+  $('d-titulo').textContent = '¿Anular esta compra?';
   $('d-texto').textContent = `${fechaLarga(c.fecha)} · ${usd(c.monto)} · ${entero(c.sats)} sats`;
   dialogo.returnValue = '';
   dialogo.showModal();
 });
+/** Un traslado no se edita: se anula (queda en el historial) y se vuelve a anotar bien. */
+function abrirAnularTraslado(id) {
+  const t = S.traslados.find((x) => x.id === id);
+  if (!t) return;
+  $('d-titulo').textContent = '¿Anular este traslado?';
+  $('d-texto').textContent = `${fechaLarga(t.fecha)} · ${entero(t.sats)} sats ${t.sentido === 'a_exchange' ? 'de tu wallet al exchange' : 'a tu wallet'}`;
+  dialogo.dataset.tras = String(id);
+  dialogo.returnValue = '';
+  dialogo.showModal();
+}
 dialogo.addEventListener('close', async () => {
+  const tid = Number(dialogo.dataset.tras || 0);
+  delete dialogo.dataset.tras;
+  if (tid) {
+    if (dialogo.returnValue !== 'si') return;
+    try {
+      await api(`/api/traslados/${tid}`, { metodo: 'DELETE' });
+    } catch (err) {
+      if (err.status !== 404) { avisar(err.message, null, true); return; }
+    }
+    S.traslados = S.traslados.filter((x) => x.id !== tid);
+    pintar();
+    avisar('Traslado anulado. Queda en el historial.', null, true);
+    return;
+  }
   const id = H.editando;
   if (dialogo.returnValue !== 'si' || !id) return;
   const antes = R;
@@ -703,6 +824,23 @@ function pintarToca() {
   $('toca').dataset.estado = t.estado;
   $('toca-txt').textContent = textoToca(t);
 }
+
+// ------------------------------------------------------ dónde están tus sats
+/** Wallet frente a exchange, según los traslados. Todos la ven cuando hay traslados; el admin ve además la pista inicial. */
+function pintarUbicacion() {
+  const u = ubicacionSats(S.traslados, R.sats);
+  const ver = S.cargado && R.n > 0 && (u.hay || esAdmin());
+  $('ubicacion').hidden = !ver;
+  if (!ver) return;
+  $('ub-datos').hidden = !u.hay;
+  $('ub-pista').hidden = u.hay;
+  $('ub-anotar').hidden = u.hay;
+  // La pista y el botón son para quien anota; un lector sin traslados no ve la tarjeta.
+  $('ub-barra').style.transform = `scaleX(${Math.max(0, Math.min(1, u.pctWallet / 100))})`;
+  $('ub-w').textContent = `${entero(u.wallet)} sats · ${Math.round(u.pctWallet)}%`;
+  $('ub-e').textContent = `${entero(u.exchange)} sats · ${Math.round(100 - u.pctWallet)}%`;
+}
+$('ub-anotar').addEventListener('click', () => abrirHoja(null, 'traslado'));
 
 // ------------------------------------------------------- precio de equilibrio
 /** Con qué precio de BTC tu ganancia total sería cero (sin ventas, tu costo promedio) y cuánto falta desde hoy. */
@@ -951,6 +1089,10 @@ function cambiosEdicion(antes, despues) {
 }
 function textoAuditoria(a) {
   const d = a.despues || a.antes || {};
+  if (a.entidad === 'traslado') {
+    const dir = d.sentido === 'a_exchange' ? 'de su wallet al exchange' : 'a su wallet';
+    return a.accion === 'alta' ? `anotó un traslado de ${entero(d.sats)} sats ${dir}` : `anuló el traslado de ${entero(d.sats)} sats ${dir}`;
+  }
   const venta = d.tipo === 'venta';
   const mov = venta ? 'la venta' : 'la compra';
   return {

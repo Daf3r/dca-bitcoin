@@ -138,3 +138,14 @@ En «Tu cuenta», el botón «Tema» elige entre automático (como el teléfono)
 **Compra extra por una caída.** Al anotar una compra, en «Más detalles» puedes marcarla como *extra* y escribir una nota (por qué la hiciste). Las extra se ven aparte en la lista y no cuentan como tu ritmo habitual: no desvían la «compra como las tuyas», los avisos ni la proyección. Sí suman al saldo y al costo promedio. El CSV de exportación lleva una columna `extra` al final (`1` en las extra); un CSV antiguo sin esa columna se importa igual. La base se actualiza sola al desplegar (columna nueva en `compras`): haz antes el respaldo de siempre.
 
 Bajo «Lo que pusiste y lo que vale», una línea compara tu costo promedio con el precio promedio de BTC desde tu primera compra. Comprar los mismos dólares cada vez compra más sats cuando el precio baja, así que el costo suele quedar por debajo del promedio: es el efecto del DCA, medido con tus datos. Sale desde 3 compras y con al menos 14 días de histórico.
+
+## Dónde están tus sats (traslados)
+Tu saldo cuenta cuántos sats tienes en total, sin importar dónde estén. Para ver cuánto sigue en el exchange y cuánto ya está en tu wallet, anota un **Traslado** (tercer botón de «Anotar»): los sats que **llegaron** a tu wallet, la fecha y, si quieres, el TXID. La tarjeta «Dónde están tus sats» muestra la barra y los porcentajes, y la ven también tus papás. Un traslado **no cambia tu saldo ni tu costo promedio**.
+- Si pagaste comisión de red, escríbela en «Más detalles»: se anota además como un gasto («Comisión de retiro») y baja tu saldo en esa cantidad.
+- Si algún día vendes o gastas desde la wallet, antes anota un traslado «De mi wallet al exchange».
+- Un traslado no se edita: tócalo para anularlo (queda en el historial) y vuelve a anotarlo bien.
+- Los traslados no van en el CSV; sí van en los respaldos de la base. La tabla se crea sola al desplegar: haz antes el respaldo de siempre.
+
+## Revisión del código
+El CI revisa en cada PR el estilo y los errores latentes de Python con `ruff` y los tipos con `mypy` (versiones fijadas en `tests/requirements-dev.txt`), además de las pruebas. Para revisar todo el frontend a la vez (diez escenarios, varios tamaños, claro y oscuro) usa `node tests/barrido_ui.mjs`.
+

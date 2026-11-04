@@ -311,7 +311,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .hitos li[data-estado="siguiente"]::after { background: var(--txt); }
 .hitos b { font: 500 1.25rem var(--serif); }
 .hitos span { color: var(--txt2); font-size: 0.875rem; }
-.hitos li[data-estado="lejos"] { opacity: 0.55; }
+.hitos li[data-estado="lejos"] b { color: var(--txt2); }
 .anio { display: grid; grid-template-columns: 4rem minmax(0, 1fr); grid-template-areas: "y b" "t t"; gap: 6px 14px; align-items: end; padding: 14px 0; }
 .anio + .anio { border-top: 1px solid var(--s3); }
 .an-y { grid-area: y; font: 400 1.75rem/1 var(--serif); color: var(--naranja-txt); }
@@ -376,6 +376,21 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .h-extra input { flex: none; width: 22px; height: 22px; accent-color: var(--naranja); }
 .h-extra[hidden] { display: none; }
 .f-extra { color: var(--naranja-txt); font-weight: 650; }
+.h-sentido { margin-top: 8px; }
+/* Dónde están tus sats: barra partida entre la wallet (naranja) y el exchange (gris). */
+.ubicacion { padding: 18px 20px; border-radius: 24px; background: var(--s1); }
+.ubicacion h2 { font-size: 1.25rem; }
+.ubicacion[hidden], #ub-datos[hidden] { display: none; }
+.ub-barra { height: 12px; margin-top: 14px; border-radius: 6px; background: var(--s3); overflow: hidden; }
+.ub-barra i { display: block; height: 100%; border-radius: 6px; background: var(--naranja); transform-origin: left; transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ub-lista { display: grid; gap: 8px; margin-top: 14px; }
+.ub-lista > div { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.ub-lista dt { display: flex; align-items: center; gap: 8px; color: var(--txt2); font-size: 0.9375rem; }
+.ub-lista dd { font-weight: 650; text-align: right; }
+.ub-lista dt i { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.ub-w { background: var(--naranja); }
+.ub-e { background: var(--s3); box-shadow: inset 0 0 0 1.5px var(--txt3); }
+.ub-pista { margin: 8px 0 12px; color: var(--txt2); font-size: 0.9375rem; }
 .hoja-calc .costo[data-tono="sube"] { color: var(--sube); font-weight: 600; }
 .hoja-error { color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .hoja-error:empty { display: none; }
@@ -503,12 +518,13 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 body:not([data-rol="admin"]) .anotar,
 body:not([data-rol="admin"]) #com-anotar,
 body:not([data-rol="admin"]) label[for="csv-in"],
+body:not([data-rol="admin"]) #csv-in,
 body:not([data-rol="admin"]) #comienzo { display: none !important; }
 div.fila { cursor: default; }
 div.fila:hover { background: none; }
 .cima-izq { display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; }
 .cuenta-btn {
-  min-height: 44px; padding: 0 2px; border: 0; background: none; color: var(--cielo-txt2);
+  min-width: 44px; min-height: 44px; padding: 0 6px; border: 0; background: none; color: var(--cielo-txt2);
   font: 600 0.8125rem var(--sans); cursor: pointer;
   text-decoration: underline; text-decoration-color: var(--naranja); text-decoration-thickness: 1.5px; text-underline-offset: 4px;
 }
@@ -579,8 +595,8 @@ div.fila:hover { background: none; }
 
 /* ------------------------------------------------------------ ventas y gastos */
 .g-ventas { fill: var(--fondo); stroke: var(--txt); stroke-width: 1.8; }
-.h-tipo { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 14px; background: var(--s2); }
-.h-tipo button { min-height: 44px; border: 0; border-radius: 10px; background: none; font-weight: 650; cursor: pointer; touch-action: manipulation; }
+.h-tipo { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; padding: 4px; border-radius: 14px; background: var(--s2); }
+.h-tipo button { min-height: 44px; padding: 0 4px; border: 0; border-radius: 10px; background: none; font-size: 0.875rem; font-weight: 650; cursor: pointer; touch-action: manipulation; }
 .h-tipo button[aria-pressed="true"] { background: var(--s1); box-shadow: inset 0 0 0 2px var(--naranja); }
 .h-nota-campo { display: grid; gap: 4px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
 .h-nota-campo input { min-height: 48px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }

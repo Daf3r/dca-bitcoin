@@ -168,6 +168,51 @@ try {
       const guardada = tras.find((c) => c.fecha === libre3);
       eq([guardada.extra, guardada.nota], [true, 'cayó 20 %'], 'se guarda marcada como extra y con su nota');
       ok((await p.locator('#lista .fila .f-extra').count()) >= 1, 'la lista muestra la etiqueta «Extra»');
+      // Dónde están tus sats: un traslado sin comisión y otro con comisión (que se anota también como gasto).
+      await p.waitForTimeout(6000);
+      ok(await p.locator('#ub-pista').isVisible() && await p.locator('#ub-anotar').isVisible(), 'sin traslados, el admin ve la pista para anotar el primero');
+      ok(!(await p.locator('#ub-datos').isVisible()), 'sin traslados no hay barra');
+      const antesT = await datos(p, '/api/compras');
+      await p.click('#ub-anotar');
+      await p.waitForTimeout(500);
+      eq((await p.getAttribute('#h-tipo button[data-tipo="traslado"]', 'aria-pressed')), 'true', 'el botón de la pista abre la hoja en «Traslado»');
+      eq(await p.locator('#h-avanzado [data-no-traslado]').evaluateAll((els) => els.every((el) => el.hidden)), true, 'los dólares no aplican a un traslado: se ocultan');
+      await p.fill('#h-sats', '300000');
+      ok(/Quedarán 300,000 sats en tu wallet/.test(await p.textContent('#hoja-calc')), 'la hoja dice cuántos sats quedarán en la wallet');
+      await p.click('#guardar');
+      await p.waitForTimeout(1500);
+      eq((await datos(p, '/api/traslados')).length, 1, 'el traslado se guarda');
+      eq((await datos(p, '/api/compras')).length, antesT.length, 'un traslado sin comisión no crea ningún gasto');
+      ok(await p.locator('#ub-datos').isVisible(), 'con un traslado sale la barra');
+      ok(/300,000 sats · \d+%/.test(await p.textContent('#ub-w')), 'la tarjeta dice cuánto hay en la wallet');
+      ok((await p.locator('#lista .fila[data-tras]').count()) === 1, 'la lista muestra el traslado');
+      // Sobrepasar lo que tienes en total se rechaza en la hoja
+      await p.waitForTimeout(6000);
+      await p.click('#anotar');
+      await p.waitForTimeout(400);
+      await p.click('#h-tipo button[data-tipo="traslado"]');
+      await p.fill('#h-sats', '999999999');
+      ok(/No tienes tantos sats/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'no deja trasladar más de lo que tienes');
+      // Con comisión: se guarda el traslado y, además, un gasto «Comisión de retiro»
+      await p.fill('#h-sats', '100000');
+      await p.click('#h-avanzado summary');
+      await p.fill('#h-comision', '300');
+      await p.click('#guardar');
+      await p.waitForTimeout(2000);
+      const trasAhora = await datos(p, '/api/traslados');
+      const comprasAhora = await datos(p, '/api/compras');
+      eq(trasAhora.length, 2, 'el segundo traslado se guarda');
+      const gasto = comprasAhora.find((c) => c.tipo === 'venta' && c.nota === 'Comisión de retiro');
+      ok(!!gasto && gasto.sats === 300, 'la comisión se anotó como gasto de 300 sats');
+      eq(comprasAhora.length, antesT.length + 1, 'solo se creó ese gasto');
+      // Anular un traslado desde la lista
+      await p.waitForTimeout(6000);
+      await p.locator('#lista .fila[data-tras]').first().click();
+      await p.waitForTimeout(400);
+      ok(/¿Anular este traslado\?/.test(await p.textContent('#d-titulo')), 'tocar un traslado ofrece anularlo');
+      await p.click('#d-borrar button[value="si"]');
+      await p.waitForTimeout(1500);
+      eq((await datos(p, '/api/traslados')).length, 1, 'el traslado anulado desaparece');
       eq(consola, [], `consola limpia (admin): ${consola.join(' | ')}`);
       void hoy;
       await ctx.close();
@@ -182,6 +227,8 @@ try {
       ok(!(await p.locator('#anotar').isVisible()), 'el lector no ve «Anotar compra»');
       ok(!(await p.locator('#toca').isVisible()), 'el lector no ve «te toca comprar»');
       ok(await p.locator('#valor').isVisible(), 'el lector sí ve el gráfico de valor');
+      ok(await p.locator('#ub-datos').isVisible() && !(await p.locator('#ub-anotar').isVisible()), 'el lector ve dónde están los sats pero no el botón de anotar');
+      eq(await p.locator('#lista .fila[data-tras]').evaluate((el) => el.tagName), 'DIV', 'el traslado es solo lectura para el lector (no es un botón)');
       const r = await p.evaluate(() => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: '{}' }).then((x) => x.status));
       eq(r, 403, 'el servidor rechaza escribir a un lector');
       // El 403 de arriba es la prueba de que el servidor rechaza al lector: es lo esperado; nada más debe salir.

@@ -35,7 +35,8 @@
   </header>
   <div class="saldo">
     <h1 class="saldo-k" id="t-saldo">Tu saldo</h1>
-    <p class="saldo-v" id="s-saldo-v" role="button" tabindex="0"><span class="cifra-grande" id="s-sats">—</span><em id="s-unidad">sats</em></p>
+    <p class="saldo-v" id="s-saldo-v" role="button" tabindex="0" aria-describedby="s-saldo-ayuda"><span class="cifra-grande" id="s-sats">—</span><em id="s-unidad">sats</em></p>
+    <span class="sr" id="s-saldo-ayuda"></span>
     <p class="saldo-d" id="s-valor">Abriendo tu libro…</p>
   </div>
 </section>
@@ -121,6 +122,21 @@
     <button type="button" class="ver-todas" id="ver-todas" hidden></button>
   </section>
 
+  <!-- Dónde están tus sats: lo trasladado a tu wallet frente al saldo total. La ven todos cuando hay traslados;
+       el admin, además, ve una pista para anotar el primero. -->
+  <section class="ubicacion" id="ubicacion" aria-labelledby="t-ubic" hidden>
+    <h2 id="t-ubic">Dónde están tus sats</h2>
+    <div id="ub-datos" hidden>
+      <div class="ub-barra" aria-hidden="true"><i id="ub-barra"></i></div>
+      <dl class="ub-lista">
+        <div><dt><i class="ub-w" aria-hidden="true"></i> En tu wallet</dt><dd id="ub-w"></dd></div>
+        <div><dt><i class="ub-e" aria-hidden="true"></i> En el exchange</dt><dd id="ub-e"></dd></div>
+      </dl>
+    </div>
+    <p class="ub-pista" id="ub-pista" hidden>¿Ya sacaste sats del exchange? Anótalo como «Traslado» para ver cuánto tienes en tu wallet.</p>
+    <button type="button" class="com-boton" id="ub-anotar" hidden>Anotar un traslado</button>
+  </section>
+
   <section class="comienzo" id="comienzo" aria-labelledby="t-comienzo" hidden>
     <p class="com-k">Siguiente paso</p>
     <h2 id="t-comienzo"></h2>
@@ -162,6 +178,12 @@
     <div class="h-tipo" id="h-tipo" role="group" aria-label="Tipo de movimiento">
       <button type="button" data-tipo="compra" aria-pressed="true">Compra</button>
       <button type="button" data-tipo="venta" aria-pressed="false">Venta o gasto</button>
+      <button type="button" data-tipo="traslado" aria-pressed="false">Traslado</button>
+    </div>
+    <!-- Solo en un traslado: hacia dónde van los sats. -->
+    <div class="h-tipo h-sentido" id="h-sentido" role="group" aria-label="Sentido del traslado" hidden>
+      <button type="button" data-sentido="a_wallet" aria-pressed="true">A mi wallet</button>
+      <button type="button" data-sentido="a_exchange" aria-pressed="false">De mi wallet al exchange</button>
     </div>
     <label class="h-sats"><span id="h-sats-l">Sats que recibiste</span>
       <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hoja-calc">
@@ -174,14 +196,19 @@
     </label>
     <details class="h-avanzado" id="h-avanzado">
       <summary>Más detalles: dólares, TXID y compra extra</summary>
-      <label class="h-usd">Pagaste (USD)
+      <label class="h-usd" data-no-traslado>Pagaste (USD)
         <input id="h-usd" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00">
       </label>
-      <p class="h-nota">Si no los escribes, se calculan con el precio de ese día.</p>
+      <p class="h-nota" data-no-traslado>Si no los escribes, se calculan con el precio de ese día.</p>
       <label class="h-usd">TXID (opcional)
         <input id="h-txid" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="64 caracteres, o pega el enlace de mempool.space">
       </label>
       <p class="h-nota">Sirve para comprobar la transacción en la cadena. Una compra dentro del exchange o por Lightning no tiene.</p>
+      <!-- Solo en un traslado a tu wallet: la comisión de red, que se anota también como un gasto. -->
+      <label class="h-usd" data-solo-traslado hidden>Comisión de red pagada (sats, opcional)
+        <input id="h-comision" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0">
+      </label>
+      <p class="h-nota" data-solo-traslado hidden>Si la pagaste, se anota también como un gasto («Comisión de retiro») y baja tu saldo.</p>
       <!-- Solo para compras: la marca de extra y su nota (en una venta, la nota va arriba). -->
       <label class="h-extra" data-solo-compra><input type="checkbox" id="h-extra"> <span>Compra extra (por una caída)</span></label>
       <p class="h-nota" data-solo-compra>Las extra se muestran aparte y no cuentan como tu ritmo habitual.</p>
