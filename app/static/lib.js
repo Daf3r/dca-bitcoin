@@ -91,10 +91,26 @@ function pasoSemanas(items) {
 
 /** Todo lo que muestran la cabecera y los reportes, sin tocar el DOM. */
 export function resumen(compras, precio, hoy = hoyISO()) {
-  const orden = [...compras].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id - b.id));
-  let inv = 0, sats = 0;
-  const items = orden.map((c) => { inv += c.monto; sats += c.sats; return { ...c, inv, satsAcum: sats }; });
+  // Movimientos: compras (suman sats) y ventas o gastos (restan). Mismo orden que el servidor: por fecha y,
+  // dentro del mismo día, las compras antes que las ventas.
+  const orden = [...compras].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.tipo === 'venta') - (b.tipo === 'venta') || a.id - b.id));
+  // Costo promedio ponderado: al vender, el costo base baja en proporción a los sats que salen y la
+  // ganancia realizada es lo recibido menos ese costo. Sin impuestos: es contabilidad, no declaración.
+  let inv = 0, sats = 0, realizada = 0, comprado = 0, vendido = 0, satsComprados = 0;
+  const items = orden.map((c) => {
+    const venta = c.tipo === 'venta';
+    let real = null;
+    if (venta) {
+      const base = sats > 0 ? Math.min(inv, (inv / sats) * c.sats) : 0;
+      real = c.monto - base;
+      inv -= base; sats -= c.sats; realizada += real; vendido += c.monto;
+      if (sats <= 0) { sats = 0; inv = 0; }
+    } else { inv += c.monto; sats += c.sats; comprado += c.monto; satsComprados += c.sats; }
+    return { ...c, tipo: venta ? 'venta' : 'compra', inv, satsAcum: sats, realizada: real };
+  });
   const n = items.length;
+  const comprasItems = items.filter((c) => c.tipo !== 'venta');
+  const nCompras = comprasItems.length;
   const valor = n && precio ? (sats / 1e8) * precio : null;
   const meta = metaSiguiente(sats);
 
@@ -105,11 +121,13 @@ export function resumen(compras, precio, hoy = hoyISO()) {
 
   const limite = new Date(aFecha(hoy).getTime() - 182 * 864e5);
   const ventana = items.filter((c) => aFecha(c.fecha) >= limite);
-  const satsMes = ventana.length >= 3 ? (ventana.reduce((a, c) => a + c.sats, 0) / 182) * 30.44 : null;
+  // Ritmo neto de los últimos 6 meses (compras menos ventas); sin ritmo positivo no hay proyección.
+  const netoVentana = ventana.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+  const satsMes = ventana.filter((c) => c.tipo !== 'venta').length >= 3 && netoVentana > 0 ? (netoVentana / 182) * 30.44 : null;
   const meses = satsMes ? (meta - sats) / satsMes : null;
 
   const anios = new Map();
-  for (const c of items) {
+  for (const c of comprasItems) {
     const y = c.fecha.slice(0, 4);
     const a = anios.get(y) ?? { anio: y, usd: 0, sats: 0, n: 0, meses: Array(12).fill(0) };
     a.usd += c.monto; a.sats += c.sats; a.n++; a.meses[Number(c.fecha.slice(5, 7)) - 1] += c.monto;
@@ -117,7 +135,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   }
 
   const porSemana = new Map();
-  for (const c of items) porSemana.set(semana(c.fecha), (porSemana.get(semana(c.fecha)) ?? 0) + c.monto);
+  for (const c of comprasItems) porSemana.set(semana(c.fecha), (porSemana.get(semana(c.fecha)) ?? 0) + c.monto);
   // Semana = lunes a domingo en hora local. La semana en curso sin compra aún no rompe
   // la racha (le quedan días): entonces la referencia es la semana anterior, y la ventana
   // de 52 semanas termina en esa misma referencia para que ambas cuenten lo mismo.
@@ -127,7 +145,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   // Ritmo: cada semana o cada quincena (mediana de días entre tus últimas compras). Una racha es una
   // corrida de compras con no más de `paso` semanas entre una y otra; sigue viva mientras la última
   // compra no quede a más de `paso` semanas de hoy (la semana en curso aún no la rompe).
-  const paso = pasoSemanas(items);
+  const paso = pasoSemanas(comprasItems);
   let mejorRacha = 0, corrida = 0, previa = null;
   for (const s of [...porSemana.keys()].sort((a, b) => a - b)) {
     corrida = previa !== null && s - previa <= paso ? corrida + 1 : 1;
@@ -137,11 +155,12 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   const racha = previa !== null && actual - previa <= paso ? corrida : 0;
   const venceSemanas = previa !== null ? previa + paso - actual : 0;
   const ultimas52 = Array.from({ length: 52 }, (_, i) => porSemana.get(ref - 51 + i) ?? 0);
-  const semanasDesdePrimera = n ? actual - semana(items[0].fecha) + 1 : 0;
+  const semanasDesdePrimera = nCompras ? actual - semana(comprasItems[0].fecha) + 1 : 0;
 
-  const porPrecio = [...items].sort((a, b) => a.precio - b.precio);
+  const porPrecio = [...comprasItems].sort((a, b) => a.precio - b.precio);
   return {
-    items, n, inv, sats, valor,
+    items, n, nCompras, nVentas: n - nCompras, inv, sats, valor, realizada, comprado, vendido, satsComprados,
+    total: valor == null ? null : realizada + (valor - inv),
     gan: valor == null ? null : valor - inv,
     pct: valor == null || !inv ? null : ((valor - inv) / inv) * 100,
     promedio: sats ? (inv * 1e8) / sats : null,

@@ -11,7 +11,7 @@ let primeraVez = true;
  * serie: [{fecha, p}] con el precio en vivo al final; compras: items de resumen();
  * rango: días visibles (0 = todo).
  */
-export function dibujarGrafico(host, lectura, { serie, compras, promedio, rango, hoy }) {
+export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], promedio, rango, hoy }) {
   const W = Math.max(280, host.clientWidth);
   const H = W < 560 ? 250 : W < 900 ? 300 : 340;
   const corte = rango ? new Date(aFecha(hoy).getTime() - rango * 864e5) : null;
@@ -21,7 +21,8 @@ export function dibujarGrafico(host, lectura, { serie, compras, promedio, rango,
   // Con años de datos diarios, ~2 puntos por cada 3 px bastan y el móvil va fluido.
   const pts = muestrear(visible, Math.min(300, Math.round(W / 3)));
   const enRango = compras.filter((c) => ubicar(c.fecha, visible) >= 0);
-  const ps = pts.map((x) => x.p).concat(enRango.map((c) => c.precio));
+  const ventasRango = ventas.filter((c) => ubicar(c.fecha, visible) >= 0);
+  const ps = pts.map((x) => x.p).concat(enRango.map((c) => c.precio), ventasRango.map((c) => c.precio));
   let lo = Math.min(...ps), hi = Math.max(...ps);
   const promDentro = promedio && promedio > lo * 0.7 && promedio < hi * 1.3;
   if (promDentro) { lo = Math.min(lo, promedio); hi = Math.max(hi, promedio); }
@@ -53,6 +54,10 @@ export function dibujarGrafico(host, lectura, { serie, compras, promedio, rango,
   const r = enRango.length > 120 ? 2.6 : enRango.length > 30 ? 3.6 : 5.5;
   const cxy = enRango.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
   if (cxy.length) s += `<path class="g-compras" d="${cxy.map(([cx, cy]) => `M${f1(cx - r)} ${f1(cy)}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`).join('')}"/>`;
+  // Las ventas van como rombos huecos a su precio de venta.
+  const vxy = ventasRango.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
+  const rv = r + 1.5;
+  if (vxy.length) s += `<path class="g-ventas" d="${vxy.map(([cx, cy]) => `M${f1(cx)} ${f1(cy - rv)}L${f1(cx + rv)} ${f1(cy)}L${f1(cx)} ${f1(cy + rv)}L${f1(cx - rv)} ${f1(cy)}Z`).join('')}"/>`;
   // La etiqueta del costo va encima de los puntos para que siempre se lea.
   if (promedio) s += etiquetaCosto;
   if (enRango.length && enRango.length <= 2) {
