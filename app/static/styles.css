@@ -381,6 +381,8 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 @media (min-width: 1100px) {
   .escena { height: 86vh; min-height: 620px; max-height: 880px; }
   .saldo { top: 110px; left: max(48px, calc(50% - 600px)); right: auto; width: min(52%, 720px); }
+  /* Deja sitio a «sats» en la misma línea sin invadir la montaña. */
+  .cifra-grande { font-size: clamp(2.25rem, 80cqi / (var(--n, 7) * 0.575), 8rem); }
   .cima { padding-inline: max(48px, calc(50vw - 600px)); }
   /* Dos columnas independientes: cada una apila lo suyo y ninguna espera a la otra. */
   .cuerpo { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); column-gap: 48px; padding: 40px 48px 120px; }

@@ -59,7 +59,7 @@ Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos vi
 ## Notas de seguridad
 - Ningún servicio publica puertos; los contenedores van en solo lectura, sin capabilities y con `no-new-privileges`.
 - La app confía en que Cloudflare Access ya autenticó la petición y solo escucha en localhost. Si algún día se expone de otra forma, valida el encabezado `Cf-Access-Jwt-Assertion` en `server.py` o añade login propio.
-- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. La única fuente web (Fraunces, licencia OFL en `app/static/fonts/OFL.txt`) va dentro del repo: el navegador no llama a ningún tercero.
+- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. Las únicas fuentes web (Fraunces y Bricolage Grotesque, licencias OFL en `app/static/fonts/`) va dentro del repo: el navegador no llama a ningún tercero.
 - Las escrituras rechazan peticiones marcadas por el navegador como de otro sitio (`Sec-Fetch-Site`), y la importación exige `text/csv`, que obliga a un preflight CORS.
 - El precio y el histórico los consulta el servidor (Coinbase, con Kraken de reserva). El precio se guarda 30 s; el histórico diario se guarda en la base (tabla `precios`) y se actualiza como mucho una vez al día, en segundo plano. El navegador nunca habla con terceros.
 
