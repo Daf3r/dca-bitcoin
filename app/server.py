@@ -15,9 +15,10 @@ import time
 import urllib.error
 import urllib.request
 from datetime import UTC, date, datetime, timedelta
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
-from flask import Flask, Response, g, jsonify, redirect, request, send_from_directory
+from flask import Flask, Response, g, jsonify, redirect, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
@@ -65,6 +66,18 @@ CREATE TABLE IF NOT EXISTS tx_cache (
   estado TEXT NOT NULL CHECK (estado IN ('confirmada', 'pendiente', 'no_encontrada')),
   bloque INTEGER, fee INTEGER, hora INTEGER,
   ts     INTEGER NOT NULL
+);
+-- Traslados entre el exchange y tu wallet: dónde están los sats. No cambian el saldo total ni el costo promedio.
+CREATE TABLE IF NOT EXISTS traslados (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  fecha       TEXT    NOT NULL CHECK (fecha GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  sats        INTEGER NOT NULL CHECK (sats > 0),
+  sentido     TEXT    NOT NULL DEFAULT 'a_wallet' CHECK (sentido IN ('a_wallet', 'a_exchange')),
+  txid        TEXT    CHECK (txid IS NULL OR length(txid) = 64),
+  nota        TEXT    CHECK (nota IS NULL OR length(nota) <= 120),
+  creado      INTEGER NOT NULL,
+  anulada_ts  INTEGER,
+  anulada_por TEXT
 );
 """
 
@@ -166,6 +179,66 @@ def saldo_negativo(movs: list[Mov]) -> str | None:
         saldo += -sats if tipo == "venta" else sats
         if saldo < 0:
             return fecha
+    return None
+
+
+# ------------------------------------------------------------------ traslados
+# Un traslado mueve sats entre el exchange y tu wallet. `sats` es lo que LLEGÓ a destino: si pagaste comisión de red,
+# se anota aparte como un gasto. Dónde están los sats = lo trasladado a tu wallet (neto) frente al saldo total.
+Tras = tuple[str, int, str, int]  # fecha, id, sentido, sats
+
+
+def parse_sentido(v: Any) -> str:
+    if v is None or v == "":
+        return "a_wallet"
+    if v not in ("a_wallet", "a_exchange"):
+        raise ValueError("Sentido inválido: a_wallet o a_exchange.")
+    return str(v)
+
+
+def parse_fecha(v: Any) -> str:
+    if not isinstance(v, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+        raise ValueError("Fecha inválida.")
+    try:
+        d = date.fromisoformat(v)
+    except ValueError:
+        raise ValueError("Fecha inválida.") from None
+    if d > date.today() + timedelta(days=1):  # un día de margen por zonas horarias
+        raise ValueError("La fecha no puede ser futura.")
+    if d < GENESIS:
+        raise ValueError("La fecha es anterior a bitcoin.")
+    return v
+
+
+def parse_sats(v: Any) -> int:
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    if isinstance(v, bool) or not isinstance(v, int) or not 0 < v < 10**13:
+        raise ValueError("Sats inválidos. Usa un número entero.")
+    return v
+
+
+def fila_traslado(row: sqlite3.Row) -> dict[str, Any]:
+    return {k: row[k] for k in ("id", "fecha", "sats", "sentido", "txid", "nota", "creado")}
+
+
+def traslados_vigentes(conn: sqlite3.Connection) -> list[Tras]:
+    return [(r["fecha"], r["id"], r["sentido"], r["sats"]) for r in
+            conn.execute("SELECT fecha, id, sentido, sats FROM traslados WHERE anulada_ts IS NULL")]
+
+
+def falla_traslados(conn: sqlite3.Connection, tras: list[Tras]) -> str | None:
+    """Mensaje de error si los traslados no cuadran: la wallet no puede quedar en negativo ni tener más sats de los
+    que posees en total ese día. None si todo cuadra."""
+    movs = movimientos(conn)
+    wallet = 0
+    for fecha, _id, sentido, sats in sorted(tras, key=lambda t: (t[0], t[1])):
+        wallet += sats if sentido == "a_wallet" else -sats
+        if wallet < 0:
+            return f"No tienes tantos sats en tu wallet (el {fecha})."
+        total = sum(-s if tipo == "venta" else s for f, _i, tipo, s in movs if f <= fecha)
+        if sentido == "a_wallet" and wallet > total:
+            return f"No tienes tantos sats en total (el {fecha})."
     return None
 
 
@@ -405,7 +478,7 @@ _REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.w
 _REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
 
 
-def _servir_versionado(nombre: str, tipo: str, patron: re.Pattern[str], cache: str) -> Response:
+def _servir_versionado(nombre: str, tipo: str, patron: re.Pattern[str], cache: str) -> Any:
     ruta = os.path.join(ESTATICOS, nombre)
     with open(ruta, encoding="utf-8") as f:
         texto = patron.sub(rf"\1?v={VERSION}\2", f.read())
@@ -426,7 +499,7 @@ def inicio() -> Response:
 
 
 @app.get("/<nombre>.js")
-def modulo(nombre: str) -> Response:
+def modulo(nombre: str) -> Any:
     if not re.fullmatch(r"[\w-]+", nombre) or not os.path.isfile(os.path.join(ESTATICOS, f"{nombre}.js")):
         return jsonify(error="No existe."), 404
     return _servir_versionado(f"{nombre}.js", "text/javascript", _REF_JS, _cache_recurso())
@@ -457,7 +530,7 @@ def _poner_cookie(resp: Response, token: str) -> None:
 
 @app.post("/api/login")
 def login() -> Any:
-    body = request.get_json(silent=True)
+    body: Any = request.get_json(silent=True)
     nombre = body.get("usuario") if isinstance(body, dict) else None
     clave = body.get("clave") if isinstance(body, dict) else None
     if not isinstance(nombre, str) or not isinstance(clave, str) or not 0 < len(nombre) <= 64 or not 0 < len(clave) <= 256:
@@ -495,6 +568,7 @@ def login() -> Any:
                              None, None, ipr)
         conn.commit()
         return jsonify(error="Usuario o contraseña incorrectos."), 401
+    assert u is not None  # arriba ya se rechazó al que no existe o no acierta
     auth.acierto(conn, claves)
     if rehacer:
         conn.execute("UPDATE usuarios SET hash = ? WHERE id = ?", (auth.hashear(clave), u["id"]))
@@ -543,7 +617,7 @@ def visto() -> Response:
 
 @app.post("/api/clave")
 def nueva_clave() -> Any:
-    body = request.get_json(silent=True)
+    body: Any = request.get_json(silent=True)
     actual = body.get("actual") if isinstance(body, dict) else None
     nueva = body.get("nueva") if isinstance(body, dict) else None
     if not isinstance(actual, str) or not isinstance(nueva, str) or len(actual) > 256:
@@ -551,7 +625,7 @@ def nueva_clave() -> Any:
     conn = db()
     u = g.usuario
     claves = [auth.clave_usuario(u["nombre"])]
-    if (seg := auth.espera(conn, claves)):
+    if auth.espera(conn, claves):
         return jsonify(error="Demasiados intentos. Espera unos minutos."), 429
     if not _scrypt_sem.acquire(timeout=1):
         return jsonify(error="El servidor está ocupado. Intenta en unos segundos."), 503
@@ -594,7 +668,7 @@ def listar() -> Response:
 
 @app.post("/api/compras")
 def crear() -> Any:
-    body = request.get_json(silent=True)
+    body: Any = request.get_json(silent=True)
     try:
         c = parse_compra(body)
         txid = parse_txid(body.get("txid"))
@@ -616,7 +690,7 @@ def crear() -> Any:
 
 @app.put("/api/compras/<int:cid>")
 def editar(cid: int) -> Any:
-    body = request.get_json(silent=True)
+    body: Any = request.get_json(silent=True)
     try:
         fecha, monto, precio, sats = parse_compra(body)
         txid = parse_txid(body.get("txid")) if "txid" in body else None
@@ -653,6 +727,52 @@ def editar(cid: int) -> Any:
     return jsonify({**nueva, **({"txid_repetido": rep} if rep else {})})
 
 
+@app.get("/api/traslados")
+def listar_traslados() -> Response:
+    rows = db().execute("SELECT id, fecha, sats, sentido, txid, nota, creado FROM traslados WHERE anulada_ts IS NULL ORDER BY fecha, id").fetchall()
+    return jsonify([fila_traslado(r) for r in rows])
+
+
+@app.post("/api/traslados")
+def crear_traslado() -> Any:
+    body: Any = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify(error="Datos inválidos."), 400
+    try:
+        fecha = parse_fecha(body.get("fecha"))
+        sats = parse_sats(body.get("sats"))
+        sentido = parse_sentido(body.get("sentido"))
+        txid = parse_txid(body.get("txid"))
+        nota = parse_nota(body.get("nota"))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    conn = db()
+    if falla := falla_traslados(conn, traslados_vigentes(conn) + [(fecha, 10**12, sentido, sats)]):
+        return jsonify(error=falla), 400
+    cur = conn.execute("INSERT INTO traslados (fecha, sats, sentido, txid, nota, creado) VALUES (?, ?, ?, ?, ?, ?)",
+                       (fecha, sats, sentido, txid, nota, int(time.time() * 1000)))
+    tid = int(cur.lastrowid or 0)
+    nuevo = fila_traslado(conn.execute("SELECT id, fecha, sats, sentido, txid, nota, creado FROM traslados WHERE id = ?", (tid,)).fetchone())
+    auth.auditar(conn, quien(), "alta", "traslado", tid, None, nuevo, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return jsonify(nuevo), 201
+
+
+@app.delete("/api/traslados/<int:tid>")
+def anular_traslado(tid: int) -> Any:
+    # Igual que las compras: anular conserva la fila y su historia; las cuentas dejan de contarla.
+    conn = db()
+    previa = conn.execute("SELECT id, fecha, sats, sentido, txid, nota, creado FROM traslados WHERE id = ? AND anulada_ts IS NULL", (tid,)).fetchone()
+    if not previa:
+        return jsonify(error="El traslado no existe."), 404
+    if falla := falla_traslados(conn, [t for t in traslados_vigentes(conn) if t[1] != tid]):
+        return jsonify(error=f"No se puede anular: los traslados posteriores se quedarían sin sats. {falla}"), 409
+    conn.execute("UPDATE traslados SET anulada_ts = ?, anulada_por = ? WHERE id = ?", (int(time.time()), quien(), tid))
+    auth.auditar(conn, quien(), "anulacion", "traslado", tid, fila_traslado(previa), None, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return "", 204
+
+
 @app.delete("/api/compras/<int:cid>")
 def borrar(cid: int) -> Any:
     # Borrar es anular: la fila y su historia se quedan; listados, export y cálculos la excluyen.
@@ -671,7 +791,7 @@ def borrar(cid: int) -> Any:
 def _fmt(x: float) -> str:
     # 15 cifras significativas: sin el ruido de coma flotante de los montos grandes.
     s = f"{x:.15g}"
-    return s if "e" not in s else ("%.8f" % x).rstrip("0").rstrip(".")
+    return s if "e" not in s else f"{x:.8f}".rstrip("0").rstrip(".")
 
 
 @app.get("/api/export.csv")
@@ -681,7 +801,7 @@ def exportar() -> Response:
     w = csv.writer(out, lineterminator="\n")
     w.writerow(["fecha", "monto_usd", "precio_btc_usd", "sats", "btc", "txid", "tipo", "nota", "extra"])
     for r in rows:
-        w.writerow([r["fecha"], _fmt(r["monto"]), _fmt(r["precio"]), r["sats"], "%.8f" % (r["sats"] / 1e8), r["txid"] or "", r["tipo"], r["nota"] or "", "1" if r["extra"] else ""])
+        w.writerow([r["fecha"], _fmt(r["monto"]), _fmt(r["precio"]), r["sats"], f'{r["sats"] / 1e8:.8f}', r["txid"] or "", r["tipo"], r["nota"] or "", "1" if r["extra"] else ""])
     return Response(
         out.getvalue(),
         mimetype="text/csv",
@@ -772,7 +892,7 @@ def verificar_tx(conn: sqlite3.Connection, txid: str) -> dict[str, Any]:
     except Exception:
         return _fallo_tx(txid, f)
     else:
-        st = j.get("status") if isinstance(j.get("status"), dict) else {}
+        st: dict[str, Any] = j["status"] if isinstance(j.get("status"), dict) else {}
         fee = j.get("fee") if isinstance(j.get("fee"), int) and not isinstance(j.get("fee"), bool) else None
         if st.get("confirmed") is True and isinstance(st.get("block_height"), int):
             estado, bloque = "confirmada", st["block_height"]
@@ -797,8 +917,9 @@ def estado_tx(txid: str) -> Any:
     if not re.fullmatch(r"[0-9a-f]{64}", txid):
         return jsonify(error="TXID inválido."), 400
     conn = db()
-    if not conn.execute(f"SELECT 1 FROM compras WHERE txid = ? AND {VIGENTES} LIMIT 1", (txid,)).fetchone():
-        return jsonify(error="Ese TXID no está en ninguna compra."), 404
+    if not (conn.execute(f"SELECT 1 FROM compras WHERE txid = ? AND {VIGENTES} LIMIT 1", (txid,)).fetchone()
+            or conn.execute("SELECT 1 FROM traslados WHERE txid = ? AND anulada_ts IS NULL LIMIT 1", (txid,)).fetchone()):
+        return jsonify(error="Ese TXID no está en ninguna compra ni traslado."), 404
     try:
         return jsonify(verificar_tx(conn, txid))
     except ConnectionError:
@@ -1013,7 +1134,7 @@ def cabeceras(resp: Response) -> Response:
     resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
     if request.path.startswith("/fonts/") and request.args.get("v") == VERSION and resp.status_code == 200:
         resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    elif request.path == "/" or request.path == "/login":
+    elif request.path in {"/", "/login"}:
         resp.headers["Cache-Control"] = "no-store"
     elif "Cache-Control" not in resp.headers:
         resp.headers["Cache-Control"] = "no-store" if request.path.startswith("/api/") else "no-cache"

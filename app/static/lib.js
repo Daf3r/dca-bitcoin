@@ -110,8 +110,8 @@ function pasoSemanas(items) {
 
 // ------------------------------------------------------------- constancia
 // Hitos de constancia: cuántas compras llevas y cuánto tiempo desde la primera. Premian no fallar.
-export const HITOS_COMPRAS = [10, 25, 50, 100, 200, 300, 500, 750, 1000];
-export const HITOS_MESES = [6, 12, 24, 36, 60, 120];
+const HITOS_COMPRAS = [10, 25, 50, 100, 200, 300, 500, 750, 1000];
+const HITOS_MESES = [6, 12, 24, 36, 60, 120];
 export const nombreHitoMeses = (m) => (m < 12 ? `${m} meses` : m === 12 ? '1 año' : `${m / 12} años`);
 
 const soloCompras = (compras) => compras.filter((c) => c.tipo !== 'venta');
@@ -442,6 +442,18 @@ export function costoVsPromedio(R, historico, vivo, hoy = hoyISO()) {
   if (serie.length < 14) return null;
   const promedio = serie.reduce((a, x) => a + x.p, 0) / serie.length;
   return { costo: R.promedio, promedio, cambio: (R.promedio / promedio - 1) * 100, dias: serie.length };
+}
+
+/**
+ * Dónde están tus sats. Un traslado mueve sats entre el exchange y tu wallet y no cambia el saldo total: lo trasladado a la
+ * wallet (neto de lo que volvió al exchange) es lo que hay en la wallet; el resto sigue en el exchange. La wallet nunca
+ * supera el saldo (si vendiste o gastaste más de lo que quedaba en el exchange, se recorta).
+ */
+export const walletNeto = (traslados) => (traslados ?? []).reduce((a, t) => a + (t.sentido === 'a_exchange' ? -t.sats : t.sats), 0);
+export function ubicacionSats(traslados, saldo) {
+  const wallet = Math.max(0, Math.min(saldo, walletNeto(traslados)));
+  const exchange = Math.max(0, saldo - wallet);
+  return { wallet, exchange, pctWallet: saldo > 0 ? (wallet / saldo) * 100 : 0, hay: (traslados ?? []).length > 0 };
 }
 
 /** Índice del punto de la serie para una fecha; si cae después de la última vela, la última. */

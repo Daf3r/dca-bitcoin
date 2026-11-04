@@ -32,7 +32,7 @@ ANCLAS = [(-2192, 13800), (-2026, 63000), (-1929, 30000), (-1817, 67000), (-1597
 rnd = random.Random(7)
 PRECIOS = {}
 ruido = 0.0
-for (da, pa), (db_, pb) in zip(ANCLAS, ANCLAS[1:]):
+for (da, pa), (db_, pb) in zip(ANCLAS, ANCLAS[1:], strict=False):
     for i in range(db_ - da):
         f = i / (db_ - da)
         ruido = ruido * 0.93 + (rnd.random() - 0.5) * 0.05

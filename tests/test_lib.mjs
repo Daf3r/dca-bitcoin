@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -374,5 +374,18 @@ ok(cvV.promedio > cv.promedio, 'el precio vivo entra en el promedio del período
 eq(costoVsPromedio(resumen(comprasCV.slice(0, 2), null, dd(39)), histCV, null, dd(39)), null, 'con menos de 3 compras no se muestra');
 eq(costoVsPromedio(Rcv, histCV.slice(0, 10), null, dd(9)), null, 'con menos de 14 días de histórico no se muestra');
 eq(costoVsPromedio(Rcv, [], null, dd(39)), null, 'sin histórico no se muestra');
+
+// Dónde están tus sats: traslados entre el exchange y la wallet
+const tr = (sats, sentido = 'a_wallet') => ({ sats, sentido });
+eq(ubicacionSats([], 1000), { wallet: 0, exchange: 1000, pctWallet: 0, hay: false }, 'sin traslados todo se considera en el exchange');
+const u1 = ubicacionSats([tr(600)], 1000);
+eq([u1.wallet, u1.exchange, u1.pctWallet, u1.hay], [600, 400, 60, true], 'un traslado a la wallet');
+eq(ubicacionSats([tr(600), tr(200, 'a_exchange')], 1000).wallet, 400, 'lo que vuelve al exchange baja la wallet');
+eq(ubicacionSats([tr(600), tr(200)], 1000).wallet, 800, 'varios traslados suman');
+const u2 = ubicacionSats([tr(1500)], 1000);
+eq([u2.wallet, u2.exchange, u2.pctWallet], [1000, 0, 100], 'la wallet nunca supera el saldo (si vendiste lo que quedaba en el exchange, se recorta)');
+eq(ubicacionSats([tr(100, 'a_exchange')], 1000).wallet, 0, 'la wallet nunca es negativa');
+eq(ubicacionSats([tr(600)], 0).pctWallet, 0, 'con saldo cero no se divide');
+eq([walletNeto([tr(5), tr(2, 'a_exchange')]), walletNeto(null)], [3, 0], 'walletNeto suma con signo y tolera null');
 
 console.log(`OK ${n} comprobaciones`);

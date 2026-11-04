@@ -395,6 +395,8 @@ r = c1.get("/api/compras"); check(r.headers["Cache-Control"] == "no-store" and "
 sin = server.app.test_client(); sin.set_cookie("__Host-sesion", TOKEN)
 check(sin.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 1000}).status_code == 403, "escritura sin X-Libro")
 check(sin.post("/api/login", json={"usuario": "x", "clave": "y"}).status_code == 403, "login sin X-Libro")
+check(sin.post("/api/traslados", json={"fecha": today, "sats": 1}).status_code == 403, "traslado sin X-Libro")
+check(sin.delete("/api/traslados/1").status_code == 403, "anular un traslado sin X-Libro")
 # Rotación: entrar con una cookie vieja la invalida
 viejo = c1.get_cookie("__Host-sesion").value
 c1.post("/api/login", json={"usuario": "Daf3r", "clave": CLAVE_ADMIN})
@@ -686,6 +688,8 @@ _resp = iter(["corta", "una-clave-buena-1", "una-clave-buena-1"])
 _gp.getpass = lambda prompt="": next(_resp)
 check(usuarios.main(["crear", "Beto", "--rol", "lector"]) == 0 and auth.buscar(server.connect(), "Beto")["rol"] == "lector", "CLI crear")
 for i in range(6): nuevo().post("/api/login", json={"usuario": "Beto", "clave": f"mala-{i}-xxxxxxx"})
+# El 5.º fallo bloquea solo 1 s: se alarga para no depender del borde del segundo (prueba determinista).
+_c = server.connect(); _c.execute("UPDATE intentos SET bloqueado_hasta = ? WHERE clave = 'u:beto'", (int(_t.time()) + 60,)); _c.commit(); _c.close()
 check(nuevo().post("/api/login", json={"usuario": "Beto", "clave": "una-clave-buena-1"}).status_code == 429, "Beto bloqueado")
 check(usuarios.main(["desbloquear", "Beto"]) == 0 and cliente("Beto", "una-clave-buena-1"), "CLI desbloquear")
 bet = cliente("Beto", "una-clave-buena-1")
@@ -738,6 +742,60 @@ lec_ex = cliente("Ana", "otra-clave-larga-1").get("/api/compras").get_json()
 check(isinstance(lec_ex, list) and all("extra" in c for c in lec_ex) and any(c["extra"] for c in lec_ex), "el lector también ve la marca extra")
 for i in (EX0, EX1):
     adm.delete(f"/api/compras/{i}")
+
+# --- Traslados: dónde están los sats (exchange o wallet); no cambian el saldo total
+check("traslados" in {r[0] for r in sqlite3.connect(dbp).execute("SELECT name FROM sqlite_master WHERE type='table'")}, "la tabla traslados se crea sola en bases anteriores")
+check(adm.get("/api/traslados").get_json() == [], "sin traslados al principio")
+TB = adm.post("/api/compras", json={"fecha": "2017-01-01", "monto": 100, "sats": 5000000}).get_json()["id"]
+TXT = "5" * 64
+compras_antes = adm.get("/api/compras").get_json()
+r = adm.post("/api/traslados", json={"fecha": "2017-02-01", "sats": 3000000, "txid": TXT, "nota": "a mi wallet"})
+check(r.status_code == 201 and r.get_json()["sentido"] == "a_wallet" and r.get_json()["txid"] == TXT, f"traslado a la wallet {r.data}")
+T1 = r.get_json()["id"]
+check([x["id"] for x in adm.get("/api/traslados").get_json()] == [T1], "el listado devuelve el traslado")
+lec_t = cliente("Ana", "otra-clave-larga-1")
+check([x["id"] for x in lec_t.get("/api/traslados").get_json()] == [T1], "el lector ve los traslados")
+check(lec_t.post("/api/traslados", json={"fecha": "2017-02-02", "sats": 1}).status_code == 403, "el lector no puede anotar un traslado")
+check(lec_t.delete(f"/api/traslados/{T1}").status_code == 403, "el lector no puede anular un traslado")
+# El saldo total no cambia con un traslado
+check(adm.get("/api/compras").get_json() == compras_antes, "anotar un traslado no cambia ninguna compra, ni el saldo total")
+# Validaciones
+for cuerpo, motivo in [({"fecha": "2017-02-02", "sats": 0}, "sats cero"), ({"fecha": "2017-02-02", "sats": 1.5}, "sats con decimales"),
+                       ({"fecha": "2017-02-02", "sats": "5"}, "sats como texto"), ({"fecha": "2017-02-02", "sats": 10, "sentido": "otro"}, "sentido inválido"),
+                       ({"fecha": "2099-01-01", "sats": 10}, "fecha futura"), ({"fecha": "ayer", "sats": 10}, "fecha mala"),
+                       ({"fecha": "2005-01-01", "sats": 10}, "fecha anterior a bitcoin"), ({"fecha": "2017-02-02", "sats": 10, "txid": "xyz"}, "TXID inválido")]:
+    check(adm.post("/api/traslados", json=cuerpo).status_code == 400, f"traslado inválido: {motivo}")
+check(adm.post("/api/traslados", data="no es json", content_type="text/plain").status_code == 400, "cuerpo que no es JSON da 400")
+# La wallet no puede tener más de lo que posees ni quedar en negativo
+r = adm.post("/api/traslados", json={"fecha": "2017-02-01", "sats": 3000000})
+check(r.status_code == 400 and "en total" in r.get_json()["error"], f"no puedes mandar a la wallet más de lo que tienes {r.data}")
+r = adm.post("/api/traslados", json={"fecha": "2017-03-01", "sats": 4000000, "sentido": "a_exchange"})
+check(r.status_code == 400 and "en tu wallet" in r.get_json()["error"], f"no puedes sacar de la wallet más de lo que hay {r.data}")
+check(adm.post("/api/traslados", json={"fecha": "2016-12-01", "sats": 100}).status_code == 400, "no puedes trasladar sats antes de haberlos comprado")
+r = adm.post("/api/traslados", json={"fecha": "2017-03-01", "sats": 1000000, "sentido": "a_exchange", "nota": "para vender"})
+check(r.status_code == 201 and r.get_json()["sentido"] == "a_exchange", f"traslado de la wallet al exchange {r.data}")
+T2 = r.get_json()["id"]
+# Anular
+r = adm.delete(f"/api/traslados/{T1}")
+check(r.status_code == 409 and "posteriores" in r.get_json()["error"], f"no se anula si un traslado posterior se queda sin sats {r.data}")
+check(adm.delete(f"/api/traslados/{T2}").status_code == 204, "anular el traslado de vuelta")
+check(adm.delete(f"/api/traslados/{T1}").status_code == 204, "ahora sí se anula el primero")
+check(adm.get("/api/traslados").get_json() == [] and adm.delete(f"/api/traslados/{T1}").status_code == 404, "anulados no salen y no se anulan dos veces")
+# Auditoría (alta y anulación) y TXID verificable
+au = adm.get("/api/auditoria").get_json()
+check(any(a["accion"] == "alta" and a["entidad"] == "traslado" and a["despues"]["sats"] == 3000000 for a in au), "la auditoría guarda el alta del traslado")
+check(any(a["accion"] == "anulacion" and a["entidad"] == "traslado" and a["antes"]["id"] == T1 for a in au), "la auditoría guarda la anulación del traslado")
+adm.post("/api/traslados", json={"fecha": "2017-02-01", "sats": 100, "txid": TXT})  # vuelve a existir un traslado con ese TXID
+_get_antes = server._get_json
+def _sin_red(url, timeout=8):
+    raise OSError("sin red en pruebas")
+server._get_json = _sin_red
+check(adm.get(f"/api/tx/{TXT}").status_code == 503, "el TXID de un traslado se puede verificar (no da 404)")
+check(adm.get(f"/api/tx/{'6' * 64}").status_code == 404, "un TXID que no está en compras ni traslados sigue dando 404")
+server._get_json = _get_antes
+for x in adm.get("/api/traslados").get_json():
+    adm.delete(f"/api/traslados/{x['id']}")
+adm.delete(f"/api/compras/{TB}")
 
 # backup
 os.environ["BACKUP_DIR"] = os.path.join(tmp, "bk")
