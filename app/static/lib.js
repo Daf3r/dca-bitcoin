@@ -165,9 +165,9 @@ export function caidaGrande(historico, vivo, hoy = hoyISO(), { dias = 30, umbral
   return caida >= umbral ? { max, caida, dias } : null;
 }
 
-/** Monto en dólares de una compra «como las tuyas»: la mediana de las últimas 12 compras (null con menos de 3). */
+/** Monto en dólares de una compra «como las tuyas»: la mediana de tus últimas 12 compras habituales, sin las extra (null con menos de 3). */
 export function montoHabitual(items) {
-  const montos = (items ?? []).filter((c) => c.tipo !== 'venta' && c.monto > 0).slice(-12).map((c) => c.monto).sort((a, b) => a - b);
+  const montos = (items ?? []).filter((c) => c.tipo !== 'venta' && !c.extra && c.monto > 0).slice(-12).map((c) => c.monto).sort((a, b) => a - b);
   if (montos.length < 3) return null;
   const mid = montos.length >> 1;
   const monto = Math.round(montos.length % 2 ? montos[mid] : (montos[mid - 1] + montos[mid]) / 2);
@@ -218,10 +218,11 @@ export function haceCuanto(ts, ahora = Date.now()) {
  * Las ventas no se avisan (ya no pueden pasar del saldo). Al editar sin tocar los sats no se avisa de
  * lo atípico, para no insistir con lo ya guardado.
  */
-export function avisosAlAnotar(compras, { tipo, sats, monto, fecha, editando = null }) {
-  if (tipo !== 'compra' || !(sats > 0)) return [];
+export function avisosAlAnotar(compras, { tipo, sats, monto, fecha, editando = null, extra = false }) {
+  // Una compra extra (por una caída) es grande a propósito y puede coincidir con la del día: no se avisa.
+  if (tipo !== 'compra' || !(sats > 0) || extra) return [];
   const previa = editando != null ? compras.find((c) => c.id === editando) : null;
-  const otras = compras.filter((c) => c.tipo === 'compra' && c.id !== editando);
+  const otras = compras.filter((c) => c.tipo === 'compra' && !c.extra && c.id !== editando); // las extra no son referencia
   const avisos = [];
   if (monto > 0 && otras.length >= 4 && !(previa && previa.sats === sats)) {
     const orden = otras.map((c) => c.monto).filter((m) => m > 0).sort((a, b) => a - b);
@@ -279,8 +280,9 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   const limite = new Date(aFecha(hoy).getTime() - 182 * 864e5);
   const ventana = items.filter((c) => aFecha(c.fecha) >= limite);
   // Ritmo neto de los últimos 6 meses (compras menos ventas); sin ritmo positivo no hay proyección.
-  const netoVentana = ventana.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
-  const satsMes = ventana.filter((c) => c.tipo !== 'venta').length >= 3 && netoVentana > 0 ? (netoVentana / 182) * 30.44 : null;
+  // Las compras extra (por una caída) no son tu ritmo habitual: no inflan la proyección.
+  const netoVentana = ventana.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.extra ? 0 : c.sats), 0);
+  const satsMes = ventana.filter((c) => c.tipo !== 'venta' && !c.extra).length >= 3 && netoVentana > 0 ? (netoVentana / 182) * 30.44 : null;
   const meses = satsMes ? (etapa - sats) / satsMes : null;
 
   const anios = new Map();
@@ -322,6 +324,9 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     pct: valor == null || !inv ? null : ((valor - inv) / inv) * 100,
     promedio: sats ? (inv * 1e8) / sats : null,
     meta, hitos, etapa, etapaPrev, camino,
+    nExtra: comprasItems.filter((c) => c.extra).length,
+    satsHabituales: comprasItems.filter((c) => !c.extra).reduce((a, c) => a + c.sats, 0),
+    nHabituales: comprasItems.filter((c) => !c.extra).length,
     satsMes,
     // Solo la siguiente meta y solo si es alcanzable en un plazo razonable.
     proyeccion: meses != null && meses > 0 && meses <= 60 ? meses : null,

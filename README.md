@@ -134,3 +134,5 @@ Toca la cifra del saldo para verla en sats o en BTC (se recuerda en cada disposi
 Bajo el gráfico de precio, «Lo que pusiste y lo que vale» compara, día a día desde tu primera compra, lo invertido (neto de ventas) con lo que valía tu saldo cada día. Sale desde 3 compras y cuando hay histórico de precios; pasa el dedo o usa las flechas para leer un día.
 
 En «Tu cuenta», el botón «Tema» elige entre automático (como el teléfono), claro y oscuro; se recuerda en cada dispositivo y también se aplica en la pantalla de entrada.
+
+**Compra extra por una caída.** Al anotar una compra, en «Más detalles» puedes marcarla como *extra* y escribir una nota (por qué la hiciste). Las extra se ven aparte en la lista y no cuentan como tu ritmo habitual: no desvían la «compra como las tuyas», los avisos ni la proyección. Sí suman al saldo y al costo promedio. El CSV de exportación lleva una columna `extra` al final (`1` en las extra); un CSV antiguo sin esa columna se importa igual. La base se actualiza sola al desplegar (columna nueva en `compras`): haz antes el respaldo de siempre.

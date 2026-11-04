@@ -371,6 +371,10 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .h-nota { margin-top: 6px; font-size: 0.8125rem; }
 .hoja-calc { min-height: 2.6em; font-size: 0.875rem; color: var(--txt2); }
 .hoja-calc .costo { display: block; margin-top: 2px; }
+.h-extra { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-top: 10px; font-size: 0.9375rem; font-weight: 600; color: var(--txt); cursor: pointer; }
+.h-extra input { flex: none; width: 22px; height: 22px; accent-color: var(--naranja); }
+.h-extra[hidden] { display: none; }
+.f-extra { color: var(--naranja-txt); font-weight: 650; }
 .hoja-calc .costo[data-tono="sube"] { color: var(--sube); font-weight: 600; }
 .hoja-error { color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .hoja-error:empty { display: none; }

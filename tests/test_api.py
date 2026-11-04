@@ -94,7 +94,7 @@ check(r.status_code == 201, "same-origin"); cl.delete(f"/api/compras/{r.get_json
 
 # export
 r = cl.get("/api/export.csv"); txt = r.get_data(as_text=True)
-check(r.status_code == 200 and txt.startswith("fecha,monto_usd,precio_btc_usd,sats,btc,txid,tipo,nota\n"), txt[:80])
+check(r.status_code == 200 and txt.startswith("fecha,monto_usd,precio_btc_usd,sats,btc,txid,tipo,nota,extra\n"), txt[:80])
 check("attachment" in r.headers["Content-Disposition"], "disposition")
 n_antes = len(cl.get("/api/compras").get_json())
 # reimportar el export: todo repetido
@@ -698,6 +698,46 @@ check(all(len(x[0]) == 64 for x in sql("SELECT hash FROM sesiones")) and TOKEN n
 p = os.path.join(tmp, "c.csv"); open(p, "w").write(txt)
 out = subprocess.run([sys.executable, os.path.join(APP, "importar.py"), p], capture_output=True, text=True, env={**os.environ}, cwd=APP)
 check(out.returncode == 0 and "importadas: 0" in out.stdout, out.stdout + out.stderr)
+
+# --- Compra extra (por una caída): marca opcional, solo compras, con su nota, en CSV y en la auditoría
+check("extra" in {r[1] for r in sqlite3.connect(dbp).execute("PRAGMA table_info(compras)")}, "la migración añade la columna extra a bases anteriores")
+r = adm.post("/api/compras", json={"fecha": "2018-05-01", "monto": 25, "sats": 40000})
+check(r.status_code == 201 and r.get_json()["extra"] is False, "por defecto una compra no es extra")
+EX0 = r.get_json()["id"]
+r = adm.post("/api/compras", json={"fecha": "2018-05-02", "monto": 250, "sats": 400000, "extra": True, "nota": "cayó 20 %"})
+check(r.status_code == 201 and r.get_json()["extra"] is True and r.get_json()["nota"] == "cayó 20 %", f"compra extra con su nota {r.data}")
+EX1 = r.get_json()["id"]
+check({c["id"]: c["extra"] for c in adm.get("/api/compras").get_json()}[EX1] is True, "el listado devuelve extra")
+check(adm.post("/api/compras", json={"fecha": "2018-05-03", "monto": 5, "sats": 8000, "extra": "tal vez"}).status_code == 400, "extra inválido da 400")
+r = adm.post("/api/compras", json={"fecha": "2018-05-03", "monto": 5, "sats": 100, "tipo": "venta", "extra": True})
+check(r.status_code == 400 and "compra puede ser extra" in r.get_json()["error"], f"una venta no puede ser extra {r.data}")
+r = adm.put(f"/api/compras/{EX0}", json={"fecha": "2018-05-01", "monto": 25, "sats": 40000, "extra": True})
+check(r.status_code == 200 and r.get_json()["extra"] is True, "se puede marcar una compra como extra al editar")
+r = adm.put(f"/api/compras/{EX0}", json={"fecha": "2018-05-01", "monto": 25, "sats": 40000})
+check(r.get_json()["extra"] is True, "un PUT que no manda extra conserva la marca")
+r = adm.put(f"/api/compras/{EX0}", json={"fecha": "2018-05-01", "monto": 25, "sats": 40000, "extra": False})
+check(r.get_json()["extra"] is False, "extra: false la quita")
+# Auditoría: queda en la alta y en la edición
+au = adm.get("/api/auditoria").get_json()
+alta = next(a for a in au if a["accion"] == "alta" and a["entidad_id"] == EX1)
+check(alta["despues"]["extra"] is True, "la auditoría guarda la marca de extra")
+ed = next(a for a in au if a["accion"] == "edicion" and a["entidad_id"] == EX0)
+check(ed["antes"]["extra"] is True and ed["despues"]["extra"] is False, "la edición audita el cambio de extra")
+# CSV: la columna extra sale y vuelve a entrar; un CSV sin esa columna sigue entrando
+txt = adm.get("/api/export.csv").get_data(as_text=True)
+check(any(l.startswith("2018-05-02,") and l.endswith(",1") for l in txt.splitlines()), "el export marca la compra extra con 1")
+check(any(l.startswith("2018-05-01,") and l.endswith(",") for l in txt.splitlines()), "el export deja vacío extra en las normales")
+r = adm.post("/api/import", data="fecha,monto_usd,sats,tipo,nota,extra\n2018-06-01,100,160000,compra,por caída,1\n2018-06-02,25,40000,compra,,\n", content_type="text/csv")
+check(r.get_json()["nuevas"] == 2, f"importar con columna extra {r.data}")
+imp = {c["fecha"]: c for c in adm.get("/api/compras").get_json()}
+check(imp["2018-06-01"]["extra"] is True and imp["2018-06-02"]["extra"] is False, "la importación respeta extra")
+check(adm.post("/api/import", data="fecha,monto_usd,sats\n2018-06-03,25,40000\n", content_type="text/csv").get_json()["nuevas"] == 1, "un CSV sin la columna extra sigue entrando")
+r = adm.post("/api/import", data="fecha,monto_usd,sats,tipo,extra\n2018-06-04,1,10,venta,1\n", content_type="text/csv")
+check(r.get_json()["omitidas"], "una venta marcada extra en el CSV se omite")
+lec_ex = cliente("Ana", "otra-clave-larga-1").get("/api/compras").get_json()
+check(isinstance(lec_ex, list) and all("extra" in c for c in lec_ex) and any(c["extra"] for c in lec_ex), "el lector también ve la marca extra")
+for i in (EX0, EX1):
+    adm.delete(f"/api/compras/{i}")
 
 # backup
 os.environ["BACKUP_DIR"] = os.path.join(tmp, "bk")

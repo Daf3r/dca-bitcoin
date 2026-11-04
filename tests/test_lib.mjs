@@ -340,4 +340,23 @@ eq(ticksDolares(1.1e6), [500000, 1000000], 'hasta $1.1M: $500,000 y $1,000,000')
 eq(ticksDolares(0), [], 'sin máximo no hay marcas');
 ok(ticksDolares(1234).length >= 1 && ticksDolares(1234).length <= 3 && ticksDolares(1234).every((v) => v < 1234), 'nunca más de 3 marcas y siempre dentro del gráfico');
 
+// Compra extra (por una caída): no desvía lo habitual
+const rutina = [20, 25, 30, 25, 25].map((m, i) => ({ id: i + 1, tipo: 'compra', fecha: `2026-10-0${i + 1}`, monto: m, sats: m * 1000, precio: 100000 }));
+const conExtra = [...rutina, { id: 9, tipo: 'compra', fecha: '2026-10-09', monto: 400, sats: 800000, precio: 50000, extra: true }];
+const Rex = resumen(conExtra, null, '2026-10-12');
+eq(montoHabitual(Rex.items), 25, 'la compra habitual ignora la extra de $400');
+const muchasExtra = [...rutina, ...Array.from({ length: 6 }, (_, i) => ({ id: 20 + i, tipo: 'compra', fecha: `2026-10-1${i}`, monto: 400, sats: 800000, precio: 50000, extra: true }))];
+eq(montoHabitual(resumen(muchasExtra, null, '2026-10-20').items), 25, 'aunque haya muchas extra, lo habitual sigue siendo $25');
+eq(montoHabitual(resumen(muchasExtra.map((c) => ({ ...c, extra: false })), null, '2026-10-20').items), 400, 'sin la marca, esas compras sí desviarían lo habitual');
+eq([Rex.nExtra, Rex.nHabituales, Rex.satsHabituales], [1, 5, 125000], 'se cuentan las extra y lo habitual');
+eq(avisosAlAnotar(conExtra, { tipo: 'compra', sats: 25000, monto: 25, fecha: '2026-10-20' }), [], 'con una extra en el historial, una compra normal no avisa');
+eq(avisosAlAnotar(conExtra, { tipo: 'compra', sats: 250000, monto: 250, fecha: '2026-10-20' }).map((a) => a.tipo), ['atipico'], 'una normal 10 veces mayor sigue avisando');
+eq(avisosAlAnotar(conExtra, { tipo: 'compra', sats: 250000, monto: 250, fecha: '2026-10-20', extra: true }), [], 'si la marcas como extra, no avisa de la cifra rara');
+eq(avisosAlAnotar(rutina, { tipo: 'compra', sats: 25000, monto: 25, fecha: '2026-10-03', extra: true }), [], 'una extra el mismo día de otra compra no avisa de repetida');
+eq(avisosAlAnotar([...rutina, { id: 9, tipo: 'compra', fecha: '2026-10-20', monto: 400, sats: 1, extra: true }], { tipo: 'compra', sats: 25000, monto: 25, fecha: '2026-10-20' }), [], 'una compra normal el día de una extra no avisa de repetida');
+// Proyección: el ritmo mensual no cuenta las extra
+const ritmoSin = resumen(rutina.map((c, i) => ({ ...c, fecha: `2026-0${6 + (i % 5)}-15`, id: i + 1 })), null, '2026-10-20').satsMes;
+const ritmoCon = resumen([...rutina.map((c, i) => ({ ...c, fecha: `2026-0${6 + (i % 5)}-15`, id: i + 1 })), { id: 99, tipo: 'compra', fecha: '2026-10-10', monto: 5000, sats: 9e6, precio: 50000, extra: true }], null, '2026-10-20').satsMes;
+eq(ritmoCon, ritmoSin, 'una compra extra enorme no cambia el ritmo de la proyección');
+
 console.log(`OK ${n} comprobaciones`);
