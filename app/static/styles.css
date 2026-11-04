@@ -234,7 +234,9 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .v-area { fill: url(#v-grad); }
 .v-valor { fill: none; stroke: var(--naranja-txt); stroke-width: 2.2; stroke-linejoin: round; }
 .v-inv { fill: none; stroke: var(--txt3); stroke-width: 1.8; stroke-linejoin: round; }
-.v-base { stroke: var(--linea); stroke-width: 1; }
+.v-base { stroke: var(--s3); stroke-width: 1.5; }
+.v-rej { stroke: var(--s3); stroke-width: 1; stroke-dasharray: 2 5; }
+.v-eje { paint-order: stroke; stroke: var(--fondo); stroke-width: 3px; stroke-linejoin: round; }
 .v-hoy { fill: var(--fondo); stroke: var(--naranja-txt); stroke-width: 2.5; }
 .g-cursor .vc-v { fill: var(--fondo); stroke: var(--naranja-txt); stroke-width: 2.5; }
 .g-cursor .vc-i { fill: var(--txt3); stroke: var(--fondo); stroke-width: 2; }

@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -330,5 +330,14 @@ eq(serieValor([], histV, 120000, dv(10)), [], 'sin movimientos no hay serie');
 const movsV = [...movs, { id: 3, tipo: 'venta', fecha: dv(7), monto: 150, sats: 100000 }];
 const svv = serieValor(resumen(movsV, null, dv(10)).items, histV, 120000, dv(10));
 eq([svv.find((x) => x.fecha === dv(8)).sats, Math.round(svv.find((x) => x.fecha === dv(8)).inv)], [100000, 100], 'tras vender la mitad el saldo y el invertido neto bajan a la mitad');
+
+// Escala en dólares del gráfico de valor: marcas redondas
+eq(ticksDolares(1100), [500, 1000], 'hasta $1,100: marcas en $500 y $1,000');
+eq(ticksDolares(24), [10, 20], 'hasta $24: $10 y $20');
+eq(ticksDolares(95), [50], 'hasta $95: solo $50 (la de $100 no cabe)');
+eq(ticksDolares(3000), [1000, 2000], 'hasta $3,000: $1,000 y $2,000');
+eq(ticksDolares(1.1e6), [500000, 1000000], 'hasta $1.1M: $500,000 y $1,000,000');
+eq(ticksDolares(0), [], 'sin máximo no hay marcas');
+ok(ticksDolares(1234).length >= 1 && ticksDolares(1234).length <= 3 && ticksDolares(1234).every((v) => v < 1234), 'nunca más de 3 marcas y siempre dentro del gráfico');
 
 console.log(`OK ${n} comprobaciones`);

@@ -1,10 +1,11 @@
 // Gráfico «lo que pusiste y lo que vale»: el invertido neto frente al saldo de sats valorado a cada día.
-import { usd0, usdSigno, pct, fechaLarga, fechaCorta, muestrear, aFecha } from './lib.js';
+import { usd0, usdSigno, pct, fechaLarga, muestrear, aFecha, ticksDolares } from './lib.js';
 
 const f1 = (n) => n.toFixed(1);
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'short', year: 'numeric' });
 const mes = (f) => dfMes.format(aFecha(f)).replace('.', '');
 let V = null;
+let primeraVez = true;
 
 /** serie: salida de `serieValor` (con el precio vivo en el último punto). */
 export function dibujarValor(host, lectura, { serie }) {
@@ -27,9 +28,13 @@ export function dibujarValor(host, lectura, { serie }) {
     const p = pts[Math.round((k / (n - 1)) * (pts.length - 1))];
     s += `<text class="g-t" x="${f1(x(p.fecha))}" y="${H - 8}" text-anchor="${k === 0 ? 'start' : k === n - 1 ? 'end' : 'middle'}">${mes(p.fecha)}</text>`;
   }
+  // Escala en dólares: líneas de referencia suaves con su cifra redonda; la cifra lleva un halo para leerse sobre las líneas.
+  const ticks = ticksDolares(alto);
+  for (const v of ticks) s += `<line class="v-rej" x1="${m.l}" x2="${W - m.r}" y1="${f1(y(v))}" y2="${f1(y(v))}"/>`;
   s += `<line class="v-base" x1="${m.l}" x2="${W - m.r}" y1="${base}" y2="${base}"/>`;
   s += `<path class="v-area" d="${trazo('valor')}L${f1(x(pts.at(-1).fecha))} ${base}L${f1(x(pts[0].fecha))} ${base}Z"/>`;
   s += `<path class="v-inv" d="${trazo('inv')}"/><path class="v-valor" d="${trazo('valor')}"/>`;
+  for (const v of ticks) s += `<text class="g-t v-eje" x="${m.l}" y="${f1(y(v) - 6)}">${usd0(v)}</text>`;
   const u = pts.at(-1);
   s += `<circle class="v-hoy" cx="${f1(x(u.fecha))}" cy="${f1(y(u.valor))}" r="5"/>`;
   s += `<g class="g-cursor" visibility="hidden"><line y1="${m.t}" y2="${base}"/><circle class="vc-v" r="5.5"/><circle class="vc-i" r="4.5"/></g></svg>`;
@@ -40,6 +45,17 @@ export function dibujarValor(host, lectura, { serie }) {
     (p == null ? '.' : ` (<b data-tono="${gan >= 0 ? 'sube' : 'baja'}">${pct(p)}</b>).`);
   V = { host, lectura, pts, x, y, W, defecto, sel: null };
   lectura.innerHTML = defecto;
+  // La primera vez, la línea del valor se dibuja de izquierda a derecha (sin movimiento reducido).
+  if (primeraVez && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const l = host.querySelector('.v-valor');
+    const L = l.getTotalLength();
+    l.style.strokeDasharray = `${L} ${L}`;
+    l.style.strokeDashoffset = L;
+    l.getBoundingClientRect();
+    l.style.transition = 'stroke-dashoffset 1.3s cubic-bezier(0.6, 0, 0.2, 1)';
+    l.style.strokeDashoffset = 0;
+  }
+  primeraVez = false;
 }
 
 function marcar(i, anunciar = false) {

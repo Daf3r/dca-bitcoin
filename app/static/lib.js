@@ -392,6 +392,17 @@ export function serieGrafico(historico, precioVivo, hoy = hoyISO()) {
   return s;
 }
 
+/** Marcas de dólares «redondas» (1, 2, 5 × 10ⁿ) para el eje de un gráfico que va de 0 a `max`: hasta 3, sin el 0. */
+export function ticksDolares(max) {
+  if (!(max > 0)) return [];
+  const raw = max / 3;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const paso = [1, 2, 5, 10].find((k) => k * mag >= raw) * mag;
+  const ticks = [];
+  for (let v = paso; v <= max * 0.97 + 1e-9; v += paso) ticks.push(Math.round(v * 100) / 100);
+  return ticks;
+}
+
 /**
  * Lo que pusiste y lo que vale, día a día desde tu primera compra. `items` son los movimientos de `resumen()`
  * (con `inv`, el invertido neto, y `satsAcum`, el saldo, tras cada uno). `valor` es el saldo de sats al precio de
