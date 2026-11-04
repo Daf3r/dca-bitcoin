@@ -115,11 +115,11 @@ function avisar(texto, accion = null, temporal = false) {
 }
 
 // ---------------------------------------------------------------- pintar
-function pintar({ montana = false, animar = false, desde = null } = {}) {
+function pintar({ montana = false, animar = false, desde = null, festejo = null } = {}) {
   R = resumen(S.compras, S.precio);
   pintarPrecio();
   pintarSaldo(desde);
-  if (montana) pintarMontana(animar, desde);
+  if (montana) pintarMontana(animar, desde, festejo);
   pintarTramo();
   pintarMercado();
   pintarLista();
@@ -196,13 +196,22 @@ function pintarSaldo(desde) {
 }
 
 let anchoMontana = 0;
-function pintarMontana(animar, desde) {
+// Una etapa que sea potencia de 10 desde 1M (1M, 10M, 1 BTC…) es un hito grande.
+const esHito = (m) => m >= 1e6 && Math.abs(Math.log10(m) - Math.round(Math.log10(m))) < 1e-9;
+const MS_SUBIDA = 1400;
+
+function pintarMontana(animar, desde, festejo = null) {
   const host = $('montana');
   anchoMontana = host.clientWidth;
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
   dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo });
-  if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : 1600);
+  let f = null;
+  if (festejo && R.sats > festejo.antes) {
+    const m = etapasCruzadas(festejo.antes, R.sats).at(-1);
+    f = { delta: festejo.delta, etapa: m, nivel: !m ? 'compra' : esHito(m) ? 'hito' : 'etapa' };
+  }
+  if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : f ? MS_SUBIDA : 1600, f);
 }
 new ResizeObserver(() => {
   if (S.cargado && $('montana').clientWidth !== anchoMontana) pintarMontana(false);
@@ -329,7 +338,7 @@ function abrirHoja(id = null, tipoInicial = 'compra') {
 function cerrarHoja() {
   hoja.classList.remove('abierta');
   document.activeElement?.blur?.();
-  setTimeout(() => { hoja.hidden = true; hoja.style.removeProperty('--kb'); H.origen?.focus?.(); }, reducido() ? 0 : 260);
+  setTimeout(() => { hoja.hidden = true; hoja.style.removeProperty('--kb'); H.origen?.focus?.({ preventScroll: true }); }, reducido() ? 0 : 260);
 }
 // En iPhone el teclado tapa lo de abajo sin cambiar el viewport de maquetación: se sube la hoja la altura del teclado.
 function ajustarTeclado() {
@@ -421,7 +430,14 @@ $('guardar').addEventListener('click', async () => {
     const editando = H.editando;
     H.guardando = false;
     cerrarHoja();
-    pintar({ montana: true, desde: antes.sats });
+    // Una compra nueva se celebra en la montaña: si estás más abajo, se sube con suavidad a verla.
+    const festejo = !editando && g.tipo === 'compra' ? { antes: antes.sats, delta: g.sats } : null;
+    if (festejo && !reducido() && window.scrollY > 40) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await new Promise((ok) => setTimeout(ok, 480));
+    }
+    pintar({ montana: true, desde: antes.sats, festejo });
+    if (festejo && !reducido()) setTimeout(() => destello(), MS_SUBIDA);
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
     avisar((editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : ''), null, true);
     celebrar(antes);
@@ -555,11 +571,25 @@ function celebrar(antes) {
   const m = etapasCruzadas(antes.sats, R.sats).at(-1);
   if (!m) return;
   const el = $('hito-cel');
+  const hito = esHito(m);
+  $('hc-k').textContent = hito ? 'Nuevo hito' : 'Nueva etapa';
   $('hc-txt').textContent = m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`;
-  el.hidden = false;
-  el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
+  el.classList.toggle('grande', hito);
+  // Aparece cuando tu punto llega a la bandera, no antes.
   clearTimeout(celebrar.t);
-  celebrar.t = setTimeout(() => { el.hidden = true; }, 1600);
+  celebrar.t = setTimeout(() => {
+    el.hidden = false;
+    el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
+    celebrar.t = setTimeout(() => { el.hidden = true; }, hito ? 2600 : 2000);
+  }, reducido() ? 0 : MS_SUBIDA);
+}
+
+/** La barra del tramo se llena con un destello cuando tu punto llega. */
+function destello() {
+  const b = document.querySelector('.tr-barra');
+  if (!b) return;
+  b.classList.remove('destello'); void b.offsetWidth; b.classList.add('destello');
+  setTimeout(() => b.classList.remove('destello'), 1000);
 }
 
 // -------------------------------------------------------------------- CSV
