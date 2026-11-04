@@ -107,3 +107,6 @@ Además de compras, puedes registrar **ventas o gastos** (un gasto cuenta como v
 
 ## Metas intermedias
 Además de los campamentos grandes de la montaña (100k, 1M, 10M, 1 BTC), la barra «Próximo campamento» y la tarjeta «Siguiente paso» usan etapas intermedias: 100k, 250k, 500k, 1M, 2.5M, 5M, 10M… Al guardar una compra, el aviso dice cuánto avanzaste hacia la siguiente etapa («+32,500 sats · 69 % del camino a 250k»), y la celebración salta al cruzar cualquiera de ellas.
+
+## Novedades al abrir la web
+Quien entra con una cuenta de lector ve, la primera vez que abre la web, un resumen de lo que pasó desde su última visita: las compras o ventas nuevas, el saldo, lo que vale hoy, la ganancia, el avance hacia la siguiente meta y la racha. Si no pasó nada, no sale nada. La primera vez es una bienvenida con los últimos movimientos. Al cerrarlo, el servidor guarda la visita de esa persona, así que vale igual en el móvil y en el PC. No hace falta ningún canal externo: como se compra una vez por semana o por quincena, basta con que lo vean al entrar.

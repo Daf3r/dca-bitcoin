@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   rol            TEXT    NOT NULL CHECK (rol IN ('admin', 'lector')),
   activo         INTEGER NOT NULL DEFAULT 1,
   creado         INTEGER NOT NULL,
-  clave_cambiada INTEGER NOT NULL
+  clave_cambiada INTEGER NOT NULL,
+  visto_ts       INTEGER
 );
 CREATE TABLE IF NOT EXISTS sesiones (
   hash       TEXT    PRIMARY KEY,

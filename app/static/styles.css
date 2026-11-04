@@ -546,3 +546,11 @@ div.fila:hover { background: none; }
 .gan-lista dt small { color: var(--txt3); font-size: 0.8125rem; }
 .gan-lista dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
 .gan-total { padding-top: 8px; border-top: 1px solid var(--s3); font-size: 1.125rem; }
+
+/* ----------------------------------------------------------------- novedades */
+.nov-lista { display: grid; gap: 6px; margin: 0 0 14px; padding: 0 0 0 18px; list-style: disc; font-variant-numeric: tabular-nums; }
+.nov-lista li::marker { color: var(--naranja); }
+.nov-resumen { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 18px; padding-top: 12px; border-top: 1px solid var(--s3); }
+.nov-resumen dt { color: var(--txt2); }
+.nov-resumen dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+#nov-ok { background: var(--naranja); border-color: transparent; color: var(--naranja-osc); }
