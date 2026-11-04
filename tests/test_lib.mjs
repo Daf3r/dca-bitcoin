@@ -1,7 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
 import {
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -220,5 +220,37 @@ const rara = [...hab, { id: 7, tipo: 'compra', monto: 900, sats: 900000, fecha: 
 eq(avisosAlAnotar(rara, { tipo: 'compra', sats: 900000, monto: 900, fecha: '2026-10-07', editando: 7 }), [], 'editar una compra rara sin tocar los sats: no insiste');
 eq(avisosAlAnotar(rara, { tipo: 'compra', sats: 950000, monto: 950, fecha: '2026-10-07', editando: 7 }).map((a) => a.tipo), ['atipico'], 'si cambias los sats a otra cifra rara: avisa');
 eq(av({ sats: 0, monto: 0 }), [], 'sin sats no hay avisos');
+
+// Constancia: hitos por cantidad y por tiempo, y progreso hacia el siguiente
+const cc = (n) => Array.from({ length: n }, (_, i) => ({ id: i + 1, tipo: 'compra', fecha: new Date(Date.UTC(2026, 0, 5 + i * 7)).toISOString().slice(0, 10) }));
+const nueva = (fecha) => ({ id: 999, tipo: 'compra', fecha });
+eq(constanciaCruzada(cc(9), [...cc(9), nueva('2026-03-12')]), [{ tipo: 'compras', valor: 10 }], 'la décima compra cruza el hito 10');
+eq(constanciaCruzada(cc(10), [...cc(10), nueva('2026-03-19')]), [], 'la 11.ª no cruza nada');
+eq(constanciaCruzada(cc(24), [...cc(24), nueva('2026-07-06')]).map((h) => h.valor), [25, 6], 'puede cruzar cantidad y tiempo a la vez (25 compras y 6 meses)');
+eq(constanciaCruzada(cc(5), [...cc(5), nueva('2026-07-10')]), [{ tipo: 'tiempo', valor: 6 }], 'una compra tras un hueco largo cruza 6 meses');
+eq(constanciaCruzada(cc(6), [...cc(6), nueva('2025-01-01')]).filter((h) => h.tipo === 'tiempo'), [], 'una compra atrasada que cambia la primera fecha no celebra tiempo');
+eq(constanciaCruzada([], [nueva('2026-01-05')]), [], 'la primera compra no celebra nada');
+eq(constanciaCruzada([...cc(9), { id: 50, tipo: 'venta', fecha: '2026-03-01' }], [...cc(9), { id: 50, tipo: 'venta', fecha: '2026-03-01' }, { id: 51, tipo: 'venta', fecha: '2026-03-02' }]), [], 'las ventas no cuentan');
+const px = proximosHitosConstancia(cc(22), '2026-06-10');
+eq([px.n, px.meses, px.compras, px.tiempo], [22, 5, { valor: 25, faltan: 3 }, { valor: 6, faltan: 1 }], 'faltan 3 compras para 25 y 1 mes para 6');
+eq(proximosHitosConstancia(cc(1001), '2036-01-01').compras, null, 'sin más hitos de cantidad');
+eq(resumen(cc(22).map((c) => ({ ...c, monto: 20, sats: 25000, precio: 80000 })), null, '2026-06-10').constancia.compras, { valor: 25, faltan: 3 }, 'resumen expone la constancia');
+
+// «Te toca comprar» según el ritmo: semanal con compras de lunes a miércoles
+const sem = (k, dia = 0) => new Date(Date.UTC(2026, 5, 1 + k * 7 + dia)).toISOString().slice(0, 10); // lunes 1 jun 2026 + semanas
+const compSem = (ks) => ks.map((k, i) => ({ id: i + 1, tipo: 'compra', fecha: sem(k, 1), monto: 25, sats: 30000, precio: 83000 }));
+const estado = (items, hoy) => tocaComprar(resumen(items, null, hoy), hoy);
+const base = compSem([0, 1, 2, 3, 4, 5]); // última compra: martes de la semana 5 (= 7 jul)
+eq(estado(base, sem(5, 3))?.estado, 'hecho', 'ya compraste esta semana');
+eq(estado(base, sem(6, 2))?.estado, 'toca', 'la semana siguiente toca (miércoles)');
+eq(estado(base, sem(6, 2))?.racha, 6, 'toca con tu racha de 6');
+eq(estado(base, sem(6, 6))?.estado, 'ultimo', 'domingo: último día');
+eq(estado(base, sem(7, 1))?.estado, 'perdida', 'dos semanas sin comprar: la racha se reinició');
+eq(tocaComprar(resumen(compSem([0, 1]), null, sem(2, 2)), sem(2, 2)), null, 'con menos de 3 compras no hay aviso');
+const quince = compSem([0, 2, 4, 6, 8]); // quincenal
+eq(estado(quince, sem(8, 3))?.estado, 'hecho', 'quincenal: compraste esta semana');
+eq(estado(quince, sem(9, 2)), { estado: 'aldia', vence: 1 }, 'quincenal: la semana siguiente vas al día, vence en 1');
+eq(estado(quince, sem(10, 2))?.estado, 'toca', 'quincenal: a las 2 semanas toca');
+eq(estado(quince, sem(11, 2))?.estado, 'perdida', 'quincenal: a las 3 semanas se reinició');
 
 console.log(`OK ${n} comprobaciones`);

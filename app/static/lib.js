@@ -103,6 +103,37 @@ function pasoSemanas(items) {
   return d[d.length >> 1] >= 10 ? 2 : 1;
 }
 
+// ------------------------------------------------------------- constancia
+// Hitos de constancia: cuántas compras llevas y cuánto tiempo desde la primera. Premian no fallar.
+export const HITOS_COMPRAS = [10, 25, 50, 100, 200, 300, 500, 750, 1000];
+export const HITOS_MESES = [6, 12, 24, 36, 60, 120];
+export const nombreHitoMeses = (m) => (m < 12 ? `${m} meses` : m === 12 ? '1 año' : `${m / 12} años`);
+
+const soloCompras = (compras) => compras.filter((c) => c.tipo !== 'venta');
+function medidasConstancia(compras) {
+  const f = soloCompras(compras).map((c) => c.fecha).sort();
+  return { n: f.length, primera: f[0] ?? null, meses: f.length ? mesesEntre(f[0], f[f.length - 1]) : 0 };
+}
+
+/** Hitos de constancia que cruza una compra nueva: de cantidad (10, 25…) y de tiempo (6 meses, 1 año…). */
+export function constanciaCruzada(antes, despues) {
+  const a = medidasConstancia(antes), d = medidasConstancia(despues);
+  const cruzados = [];
+  for (const h of HITOS_COMPRAS) if (a.n < h && d.n >= h) cruzados.push({ tipo: 'compras', valor: h });
+  // El tiempo cuenta desde la primera compra: una compra atrasada que cambia esa fecha no celebra nada.
+  if (a.n > 0 && a.primera === d.primera) for (const m of HITOS_MESES) if (a.meses < m && d.meses >= m) cruzados.push({ tipo: 'tiempo', valor: m });
+  return cruzados;
+}
+
+/** Lo que falta para el siguiente hito de cantidad y de tiempo (tiempo medido hasta hoy). */
+export function proximosHitosConstancia(compras, hoy = hoyISO()) {
+  const { n, primera } = medidasConstancia(compras);
+  const meses = primera ? mesesEntre(primera, hoy) : 0;
+  const pn = HITOS_COMPRAS.find((h) => h > n);
+  const pm = HITOS_MESES.find((m) => m > meses);
+  return { n, meses, compras: pn ? { valor: pn, faltan: pn - n } : null, tiempo: pm ? { valor: pm, faltan: pm - meses } : null };
+}
+
 /**
  * Avisos antes de guardar una compra nueva o con sats cambiados (no bloquean: piden confirmar).
  * - `atipico`: con al menos 4 compras tuyas, un monto en dólares 10 veces mayor o menor que la mediana
@@ -221,9 +252,24 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     // Solo la siguiente meta y solo si es alcanzable en un plazo razonable.
     proyeccion: meses != null && meses > 0 && meses <= 60 ? meses : null,
     anios: [...anios.values()],
+    constancia: proximosHitosConstancia(comprasItems, hoy),
     racha, mejorRacha, paso, venceSemanas, ultimas52, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
     mejor: porPrecio[0] ?? null, peor: porPrecio.at(-1) ?? null,
   };
+}
+
+/**
+ * Qué toca según tu ritmo (con 3 compras o más), a partir del resumen:
+ * hecho (ya compraste esta semana) · aldia (quincenal, aún sobra una semana) · toca (esta semana vence la racha)
+ * · ultimo (es domingo) · perdida (la racha se reinició). Es un recordatorio, no un reproche.
+ */
+export function tocaComprar(R, hoy = hoyISO()) {
+  if (!R || R.nCompras < 3) return null;
+  const d = R.paso - R.venceSemanas; // semanas desde tu última compra (0 = esta semana)
+  if (d <= 0) return { estado: 'hecho', vence: R.venceSemanas };
+  if (d < R.paso) return { estado: 'aldia', vence: R.venceSemanas };
+  if (d === R.paso) return { estado: aFecha(hoy).getDay() === 0 ? 'ultimo' : 'toca', racha: R.racha };
+  return { estado: 'perdida', mejor: R.mejorRacha };
 }
 
 // -------------------------------------------------------------- novedades
