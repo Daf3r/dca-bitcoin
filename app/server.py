@@ -12,6 +12,7 @@ import re
 import sqlite3
 import threading
 import time
+import urllib.error
 import urllib.request
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Callable
@@ -57,6 +58,13 @@ CREATE TABLE IF NOT EXISTS precios (
   cierre REAL NOT NULL CHECK (cierre > 0)
 );
 CREATE TABLE IF NOT EXISTS meta (clave TEXT PRIMARY KEY, valor TEXT NOT NULL);
+-- Caché de la verificación de TXID en mempool.space: una confirmada no cambia, una pendiente se revisa cada minuto.
+CREATE TABLE IF NOT EXISTS tx_cache (
+  txid   TEXT PRIMARY KEY CHECK (length(txid) = 64),
+  estado TEXT NOT NULL CHECK (estado IN ('confirmada', 'pendiente', 'no_encontrada')),
+  bloque INTEGER, fee INTEGER, hora INTEGER,
+  ts     INTEGER NOT NULL
+);
 """
 
 MIGRACIONES = (
@@ -689,6 +697,85 @@ def consultar_precio() -> tuple[float | None, str | None]:
         except Exception:
             continue
     return None, None
+
+
+# ------------------------------------------------- verificación de TXID (mempool.space)
+# Solo el servidor habla con mempool.space (el navegador nunca), con una dirección fija y un TXID ya validado
+# y registrado en una compra: no es un proxy abierto. mempool.space solo ve el TXID, no quién lo pregunta.
+MEMPOOL = "https://mempool.space/api"
+_punta = {"altura": 0, "ts": 0.0}
+
+
+def _altura_punta() -> int:
+    if not _punta["altura"] or time.time() - _punta["ts"] > 120:
+        h = _get_json(f"{MEMPOOL}/blocks/tip/height", timeout=6)
+        if isinstance(h, bool) or not isinstance(h, int) or h <= 0:
+            raise ValueError("altura de bloque inválida")
+        _punta.update(altura=h, ts=time.time())
+    return int(_punta["altura"])
+
+
+def _tx_dict(txid: str, f: sqlite3.Row, desactualizado: bool = False) -> dict[str, Any]:
+    conf = None
+    if f["estado"] == "confirmada" and f["bloque"]:
+        try:
+            conf = max(1, _altura_punta() - int(f["bloque"]) + 1)
+        except Exception:
+            conf = None  # sin la altura actual no se inventa el número
+    out: dict[str, Any] = {"txid": txid, "estado": f["estado"], "confirmaciones": conf, "bloque": f["bloque"],
+                           "comision": f["fee"], "hora": f["hora"], "verificado": f["ts"]}
+    if desactualizado:
+        out["desactualizado"] = True
+    return out
+
+
+def verificar_tx(conn: sqlite3.Connection, txid: str) -> dict[str, Any]:
+    ahora = int(time.time())
+    f = conn.execute("SELECT estado, bloque, fee, hora, ts FROM tx_cache WHERE txid = ?", (txid,)).fetchone()
+    if f and (f["estado"] == "confirmada" or ahora - f["ts"] < 60):
+        return _tx_dict(txid, f)
+    try:
+        j = _get_json(f"{MEMPOOL}/tx/{txid}", timeout=6)
+        if not isinstance(j, dict):
+            raise ValueError("respuesta inesperada")
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            return _fallo_tx(txid, f)
+        estado, bloque, fee, hora = "no_encontrada", None, None, None
+    except Exception:
+        return _fallo_tx(txid, f)
+    else:
+        st = j.get("status") if isinstance(j.get("status"), dict) else {}
+        fee = j.get("fee") if isinstance(j.get("fee"), int) and not isinstance(j.get("fee"), bool) else None
+        if st.get("confirmed") is True and isinstance(st.get("block_height"), int):
+            estado, bloque = "confirmada", st["block_height"]
+            hora = st.get("block_time") if isinstance(st.get("block_time"), int) else None
+        else:
+            estado, bloque, hora = "pendiente", None, None
+    conn.execute("INSERT OR REPLACE INTO tx_cache (txid, estado, bloque, fee, hora, ts) VALUES (?, ?, ?, ?, ?, ?)",
+                 (txid, estado, bloque, fee, hora, ahora))
+    conn.commit()
+    return _tx_dict(txid, conn.execute("SELECT estado, bloque, fee, hora, ts FROM tx_cache WHERE txid = ?", (txid,)).fetchone())
+
+
+def _fallo_tx(txid: str, f: sqlite3.Row | None) -> dict[str, Any]:
+    """mempool.space no respondió: se sirve lo guardado marcado como desactualizado, o se avisa."""
+    if f:
+        return _tx_dict(txid, f, desactualizado=True)
+    raise ConnectionError("mempool.space no respondió")
+
+
+@app.get("/api/tx/<txid>")
+def estado_tx(txid: str) -> Any:
+    if not re.fullmatch(r"[0-9a-f]{64}", txid):
+        return jsonify(error="TXID inválido."), 400
+    conn = db()
+    if not conn.execute(f"SELECT 1 FROM compras WHERE txid = ? AND {VIGENTES} LIMIT 1", (txid,)).fetchone():
+        return jsonify(error="Ese TXID no está en ninguna compra."), 404
+    try:
+        return jsonify(verificar_tx(conn, txid))
+    except ConnectionError:
+        return jsonify(error="No se pudo consultar mempool.space ahora."), 503
 
 
 @app.get("/api/precio")
