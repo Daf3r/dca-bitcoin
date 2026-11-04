@@ -124,3 +124,5 @@ En Safari abre `https://dca.polarzero.dev`, toca **Compartir → Añadir a panta
 
 ## Recordatorio «te toca comprar» y hitos de constancia
 Solo el admin ve, bajo la montaña, una línea según su ritmo (semanal o quincenal, el que marcan sus últimas compras): «Al día», «Te toca comprar esta semana», «Hoy es el último día…» o «Tu racha se reinició» (sin reproche). Es solo un recordatorio dentro de la app: no hay notificaciones externas. Además, al anotar la compra 10, 25, 50, 100… o al cumplir 6 meses, 1 año… desde la primera compra, sale una tarjeta «Constancia» y el reporte de Constancia dice cuánto falta para el siguiente hito. No hay cambios de base de datos.
+
+Cuando el precio cae 15 % o más frente a su máximo de 30 días, el admin ve una tarjeta opcional con el dato y con qué haría «reponer» (una compra como las tuyas) en el costo promedio. Es solo información: no recomienda comprar, y «Ocultar hoy» la quita hasta mañana.

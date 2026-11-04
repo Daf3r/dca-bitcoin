@@ -45,6 +45,12 @@
   <div class="col-principal">
   <!-- Recordatorio según tu ritmo (solo admin): al día, te toca, último día o racha reiniciada. -->
   <p class="toca" id="toca" role="status" hidden><i aria-hidden="true"></i><span id="toca-txt"></span></p>
+  <!-- Gran caída (opcional, solo admin): dice cuánto cayó el precio y qué haría reponer con una compra como las tuyas.
+       Es información, no una recomendación; se puede ocultar por hoy. -->
+  <div class="caida" id="caida" role="status" hidden>
+    <p id="caida-txt"></p>
+    <button type="button" class="enlace" id="caida-ocultar">Ocultar hoy</button>
+  </div>
 
   <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden>
     <h2 class="sr" id="t-tramo">Siguiente meta</h2>

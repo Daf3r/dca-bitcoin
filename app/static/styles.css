@@ -172,6 +172,11 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .toca[data-estado="toca"], .toca[data-estado="ultimo"] { background: color-mix(in srgb, var(--naranja) 13%, var(--fondo)); border-color: var(--naranja); color: var(--txt); font-weight: 600; }
 .toca[data-estado="toca"] i, .toca[data-estado="ultimo"] i { background: var(--naranja); }
 .toca[data-estado="perdida"] i { background: var(--txt3); }
+/* Gran caída (opcional): informativa y neutra, con «Ocultar hoy». */
+.caida { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 16px; background: var(--s1); border: 1px solid var(--s3); color: var(--txt2); font-size: 0.9375rem; line-height: 1.4; }
+.caida[hidden] { display: none; }
+.caida p { margin: 0; }
+.caida .enlace { flex: none; }
 .tramo { padding: 4px 0; }
 .tr-k { color: var(--txt3); font-size: 0.9375rem; }
 .tr-v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }

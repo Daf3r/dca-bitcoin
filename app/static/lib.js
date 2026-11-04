@@ -151,6 +151,35 @@ export function costoTrasCompra(R, monto, sats) {
 }
 
 /**
+ * Gran caída: el precio vivo frente al máximo de los últimos `dias` días (cierres diarios y el precio vivo).
+ * Devuelve null si no hay caída del `umbral` % o más, o si el histórico es muy corto para saberlo.
+ */
+export function caidaGrande(historico, vivo, hoy = hoyISO(), { dias = 30, umbral = 15 } = {}) {
+  if (!(vivo > 0)) return null;
+  const [y, m, d] = hoy.split('-').map(Number);
+  const desde = new Date(Date.UTC(y, m - 1, d - dias)).toISOString().slice(0, 10);
+  const ventana = historico.filter((x) => x[0] >= desde && x[1] > 0);
+  if (ventana.length < 5) return null;
+  const max = Math.max(vivo, ...ventana.map((x) => x[1]));
+  const caida = Math.round((1 - vivo / max) * 1000) / 10; // a una décima: el umbral queda exacto
+  return caida >= umbral ? { max, caida, dias } : null;
+}
+
+/**
+ * «Reponer» (opcional): qué haría con tu costo promedio una compra como las tuyas (la mediana de tus últimas
+ * compras, en dólares) al precio vivo. Es solo información; no recomienda comprar.
+ */
+export function reposicion(R, vivo) {
+  const montos = (R?.items ?? []).filter((c) => c.tipo !== 'venta' && c.monto > 0).slice(-12).map((c) => c.monto).sort((a, b) => a - b);
+  if (montos.length < 3 || !(vivo > 0)) return null;
+  const mid = montos.length >> 1;
+  const monto = Math.round(montos.length % 2 ? montos[mid] : (montos[mid - 1] + montos[mid]) / 2);
+  if (monto < 1) return null;
+  const c = costoTrasCompra(R, monto, Math.round((monto / vivo) * 1e8));
+  return c && { monto, ...c };
+}
+
+/**
  * Avisos antes de guardar una compra nueva o con sats cambiados (no bloquean: piden confirmar).
  * - `atipico`: con al menos 4 compras tuyas, un monto en dólares 10 veces mayor o menor que la mediana
  *   (error de dedo: un cero de más o de menos). Se compara en **dólares**, no en sats: así $25 y $50 no

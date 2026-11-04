@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -89,6 +89,7 @@ async function cargarHistorico(intento = 0) {
     S.histEstado = S.historico.length > 1 ? 'ok' : 'error';
   }
   pintarMercado();
+  pintarCaida();
 }
 
 async function consultarPrecio() {
@@ -121,6 +122,7 @@ function pintar({ montana = false, animar = false, desde = null, festejo = null 
   pintarSaldo(desde);
   if (montana) pintarMontana(animar, desde, festejo);
   pintarToca();
+  pintarCaida();
   pintarTramo();
   pintarMercado();
   pintarLista();
@@ -643,6 +645,24 @@ function pintarToca() {
   $('toca').dataset.estado = t.estado;
   $('toca-txt').textContent = textoToca(t);
 }
+
+// ------------------------------------------------------------ gran caída (opcional)
+// Si el precio cae mucho frente a su máximo de 30 días, una tarjeta lo dice y enseña qué haría reponer con una
+// compra como las tuyas. Es solo información y opcional: «Ocultar hoy» la quita hasta mañana (por dispositivo).
+const CLAVE_CAIDA = 'libro.caida.oculta';
+const caidaOculta = () => { try { return localStorage.getItem(CLAVE_CAIDA); } catch { return null; } };
+function pintarCaida() {
+  const c = esAdmin() && R.nCompras >= 3 && S.precio && caidaOculta() !== hoyISO() ? caidaGrande(S.historico, S.precio) : null;
+  $('caida').hidden = !c;
+  if (!c) return;
+  const r = reposicion(R, S.precio);
+  $('caida-txt').textContent = `BTC está ${Math.round(c.caida)}% por debajo de su máximo de los últimos ${c.dias} días.` +
+    (r ? ` Si decides reponer con una compra como las tuyas (${usd0(r.monto)}), tu costo promedio ${r.despues < r.antes ? 'bajaría' : 'subiría'} de ${usd0(r.antes)} a ${usd0(r.despues)}. Es opcional.` : '');
+}
+$('caida-ocultar').addEventListener('click', () => {
+  try { localStorage.setItem(CLAVE_CAIDA, hoyISO()); } catch { /* sin almacenamiento: se oculta solo ahora */ }
+  $('caida').hidden = true;
+});
 
 // ------------------------------------------------------------ siguiente paso
 const dfDomingo = new Intl.DateTimeFormat('es-SV', { weekday: 'long', day: 'numeric', month: 'short' });
