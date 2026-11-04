@@ -632,7 +632,7 @@ function pintarNovedades() {
     if (R.nVentas) filas.push(['Ya realizada', usdSigno(R.realizada)]);
   }
   filas.push(['Avance', `${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`]);
-  if (R.racha) filas.push(['Racha', `${rachaTxt(R.racha)} seguidas`]);
+  if (R.racha) filas.push(['Racha', `${rachaTxt(R.racha)} ${R.racha === 1 ? 'seguida' : 'seguidas'}`]);
   const dl = $('nov-resumen');
   dl.textContent = '';
   for (const [k, v] of filas) {
