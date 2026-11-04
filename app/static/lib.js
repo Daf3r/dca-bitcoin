@@ -165,18 +165,47 @@ export function caidaGrande(historico, vivo, hoy = hoyISO(), { dias = 30, umbral
   return caida >= umbral ? { max, caida, dias } : null;
 }
 
-/**
- * «Reponer» (opcional): qué haría con tu costo promedio una compra como las tuyas (la mediana de tus últimas
- * compras, en dólares) al precio vivo. Es solo información; no recomienda comprar.
- */
-export function reposicion(R, vivo) {
-  const montos = (R?.items ?? []).filter((c) => c.tipo !== 'venta' && c.monto > 0).slice(-12).map((c) => c.monto).sort((a, b) => a - b);
-  if (montos.length < 3 || !(vivo > 0)) return null;
+/** Monto en dólares de una compra «como las tuyas»: la mediana de las últimas 12 compras (null con menos de 3). */
+export function montoHabitual(items) {
+  const montos = (items ?? []).filter((c) => c.tipo !== 'venta' && c.monto > 0).slice(-12).map((c) => c.monto).sort((a, b) => a - b);
+  if (montos.length < 3) return null;
   const mid = montos.length >> 1;
   const monto = Math.round(montos.length % 2 ? montos[mid] : (montos[mid - 1] + montos[mid]) / 2);
-  if (monto < 1) return null;
+  return monto >= 1 ? monto : null;
+}
+
+/**
+ * «Reponer» (opcional): qué haría con tu costo promedio una compra como las tuyas (`montoHabitual`)
+ * al precio vivo. Es solo información; no recomienda comprar.
+ */
+export function reposicion(R, vivo) {
+  const monto = montoHabitual(R?.items);
+  if (!monto || !(vivo > 0)) return null;
   const c = costoTrasCompra(R, monto, Math.round((monto / vivo) * 1e8));
   return c && { monto, ...c };
+}
+
+/**
+ * Precio de equilibrio: el precio de BTC con el que tu ganancia total (realizada + no realizada) sería cero.
+ * Sin ventas es tu costo promedio. `cambio` es cuánto tendría que moverse BTC desde hoy (positivo = subir).
+ * Si lo que ya vendiste cubre lo invertido, no hay equilibrio que mostrar (null).
+ */
+export function equilibrio(R, vivo) {
+  if (!R || !(R.sats > 0) || !(vivo > 0)) return null;
+  const base = R.inv - (R.realizada ?? 0);
+  if (!(base > 0)) return null;
+  const precio = (base * 1e8) / R.sats;
+  return { precio, cambio: (precio / vivo - 1) * 100, enGanancia: vivo > precio };
+}
+
+/** «hace 12 s», «hace 3 min», «hace 2 h»: para el precio en vivo. */
+export function haceCuanto(ts, ahora = Date.now()) {
+  const s = Math.max(0, Math.round((ahora - ts) / 1000));
+  if (s < 5) return 'ahora mismo';
+  if (s < 60) return `hace ${s} s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `hace ${m} min`;
+  return `hace ${Math.floor(m / 60)} h`;
 }
 
 /**

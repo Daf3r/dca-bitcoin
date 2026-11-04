@@ -1,6 +1,6 @@
 import {
   usd, usd0, usdSigno, pct, entero, btc, hora, hoyISO, aFecha, fechaLarga, fechaCorta,
-  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
+  resumen, nombreHito, etapasCruzadas, etapaSiguiente, etapaAnterior, metaSiguiente, novedades, avisosAlAnotar, constanciaCruzada, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, nombreHitoMeses, serieGrafico, textoMeses, compacto, precioDelDia, estimarMonto, mempoolUrl, extraerTxid,
 } from './lib.js';
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
@@ -125,6 +125,7 @@ function pintar({ montana = false, animar = false, desde = null, festejo = null 
   pintarCaida();
   pintarTramo();
   pintarMercado();
+  pintarEquilibrio();
   pintarLista();
   pintarReportes();
   pintarComienzo();
@@ -136,7 +137,7 @@ function pintarPrecio() {
   $('cotizacion').dataset.estado = estado;
   $('precio').textContent = S.precio ? usd0(S.precio) : '—';
   $('precio-meta').textContent = {
-    vivo: `${S.fuente}, ${hora(S.precioTs)}`,
+    vivo: `${S.fuente} · ${haceCuanto(S.precioTs)}`,
     viejo: `sin actualizar desde las ${hora(S.precioTs)}`,
     error: 'no disponible',
     cargando: 'consultando…',
@@ -149,8 +150,8 @@ function pintarPrecio() {
  * correr (movimiento reducido, pestaña oculta, error), se ve la cifra final directamente.
  */
 let contadorRaf = 0;
-function pintarCifraGrande(el, desde, hasta, ms = 1400) {
-  const final = entero(hasta);
+function pintarCifraGrande(el, desde, hasta, ms = 1400, fmt = entero) {
+  const final = fmt(hasta);
   // Caracteres en ancho de dígito tabular: dígito = 1, separador ≈ 0.31 (0.18 em / 0.575 em).
   el.style.setProperty('--n', (final.replace(/\D/g, '').length + final.replace(/\d/g, '').length * 0.31).toFixed(2));
   if (!el.querySelector('.cg-vivo')) el.innerHTML = '<span class="sr"></span><span class="cg-reserva" aria-hidden="true"></span><span class="cg-vivo" aria-hidden="true"></span>';
@@ -164,19 +165,36 @@ function pintarCifraGrande(el, desde, hasta, ms = 1400) {
   const paso = (t) => {
     try {
       const k = Math.min(1, (t - t0) / ms);
-      vivo.textContent = k < 1 ? entero(desde + (hasta - desde) * (1 - (1 - k) ** 4)) : final;
+      vivo.textContent = k < 1 ? fmt(desde + (hasta - desde) * (1 - (1 - k) ** 4)) : final;
       if (k < 1) contadorRaf = requestAnimationFrame(paso);
     } catch {
       vivo.textContent = final;
     }
   };
-  vivo.textContent = entero(desde);
+  vivo.textContent = fmt(desde);
   contadorRaf = requestAnimationFrame(paso);
   // Si requestAnimationFrame no llega a correr (pestaña en segundo plano), se ve la cifra final.
   pintarCifraGrande.seguro = setTimeout(() => { cancelAnimationFrame(contadorRaf); vivo.textContent = final; }, ms + 400);
 }
 
 let satsMostrados = null;
+// El saldo se puede ver en sats o en BTC (toque en la cifra); se recuerda por dispositivo.
+const CLAVE_UNIDAD = 'libro.unidad';
+const leerUnidad = () => { try { return localStorage.getItem(CLAVE_UNIDAD) === 'btc' ? 'btc' : 'sats'; } catch { return 'sats'; } };
+let unidad = leerUnidad();
+const fmtSaldo = () => (unidad === 'btc' ? btc : entero);
+function etiquetaUnidad() {
+  $('s-unidad').textContent = unidad === 'btc' ? 'BTC' : 'sats';
+  $('s-saldo-v').setAttribute('aria-label', `Tu saldo: ${fmtSaldo()(R.sats)} ${unidad === 'btc' ? 'BTC' : 'sats'}. Toca para verlo en ${unidad === 'btc' ? 'sats' : 'BTC'}.`);
+}
+function alternarUnidad() {
+  unidad = unidad === 'btc' ? 'sats' : 'btc';
+  try { localStorage.setItem(CLAVE_UNIDAD, unidad); } catch { /* sin almacenamiento: vale para esta visita */ }
+  if (S.cargado && !(S.errorCarga && !R.n)) pintarCifraGrande($('s-sats'), null, R.sats, 0, fmtSaldo());
+  etiquetaUnidad();
+}
+$('s-saldo-v').addEventListener('click', alternarUnidad);
+$('s-saldo-v').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alternarUnidad(); } });
 function pintarSaldo(desde) {
   const el = $('s-sats');
   const linea = $('s-valor');
@@ -188,9 +206,10 @@ function pintarSaldo(desde) {
     return;
   }
   if (satsMostrados !== R.sats) {
-    pintarCifraGrande(el, desde ?? (satsMostrados === null ? 0 : satsMostrados), R.sats, satsMostrados === null ? 2000 : 1400);
+    pintarCifraGrande(el, desde ?? (satsMostrados === null ? 0 : satsMostrados), R.sats, satsMostrados === null ? 2000 : 1400, fmtSaldo());
     satsMostrados = R.sats;
   }
+  etiquetaUnidad();
   if (!R.n) linea.textContent = 'Tu montaña te espera. Anota tu primera compra para empezar a subir.';
   else if (R.valor == null) linea.textContent = `${btc(R.sats)} BTC · invertiste ${usd(R.inv)}`;
   else {
@@ -427,7 +446,9 @@ function pintarHoja() {
   $('h-nota-l').hidden = !venta;
   document.querySelectorAll('#h-tipo button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === H.tipo)));
   const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
-  $('hoja-calc').textContent = !d ? (venta ? 'Escribe los sats que salieron; los dólares se calculan solos con el precio del día.' : 'Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.')
+  const habitual = !venta && S.precio ? montoHabitual(R.items) : null;
+  const referencia = habitual ? ` Hoy ${usd0(habitual)} son ≈ ${entero((habitual / S.precio) * 1e8)} sats ($1 = ${entero(1e8 / S.precio)} sats).` : '';
+  $('hoja-calc').textContent = !d ? (venta ? 'Escribe los sats que salieron; los dólares se calculan solos con el precio del día.' : `Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.${referencia}`)
     : d.sinPrecio ? 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares.'
       : sinSaldo ? `No tienes tantos sats: tu saldo es ${entero(saldo)}.`
         : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(resto)} sats`;
@@ -644,6 +665,18 @@ function pintarToca() {
   if (!t) return;
   $('toca').dataset.estado = t.estado;
   $('toca-txt').textContent = textoToca(t);
+}
+
+// ------------------------------------------------------- precio de equilibrio
+/** Con qué precio de BTC tu ganancia total sería cero (sin ventas, tu costo promedio) y cuánto falta desde hoy. */
+function pintarEquilibrio() {
+  const e = S.precio ? equilibrio(R, S.precio) : null;
+  const el = $('g-equilibrio');
+  el.hidden = !e;
+  if (!e) return;
+  el.textContent = e.enGanancia
+    ? `Estarías en cero si BTC bajara ${Math.abs(e.cambio).toFixed(1)}% hasta ${usd0(e.precio)}.`
+    : `Para estar en cero, BTC debe subir ${e.cambio.toFixed(1)}% hasta ${usd0(e.precio)}.`;
 }
 
 // ------------------------------------------------------------ gran caída (opcional)
@@ -951,6 +984,8 @@ cargarYo();
 cargarCompras();
 consultarPrecio();
 setInterval(() => document.visibilityState === 'visible' && consultarPrecio(), 30_000);
+// El «hace X s» del precio avanza solo, sin volver a consultar.
+setInterval(() => document.visibilityState === 'visible' && S.precio && pintarPrecio(), 5_000);
 // Al volver a la pestaña: precio fresco y compras al día (la base es compartida por la familia).
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
