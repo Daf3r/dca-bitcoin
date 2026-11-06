@@ -157,5 +157,6 @@ Cada persona activa los avisos **en su dispositivo**: «Tu cuenta» → «Avisos
 - **No suenan de noche** (solo de 8:00 a 21:00, hora de El Salvador): lo de la noche sale por la mañana.
 - **iPhone:** los avisos solo funcionan con la app instalada en la pantalla de inicio (iOS 16.4 o más). Ábrela desde ahí y actívalos.
 - **Al desplegar:** `docker compose up -d --build` crea el servicio nuevo `avisos` y la clave `data/vapid_private.pem`. **No borres esa clave**: si se pierde, cada dispositivo tiene que activar los avisos otra vez. Inclúyela en el respaldo de la carpeta `data`.
+- **Brave:** trae los avisos apagados. En `brave://settings/privacy` activa «Usar servicios de Google para mensajes push» (en inglés, «Use Google services for push messaging»), reinicia Brave y vuelve a activar los avisos. En Chrome, Edge, Firefox y Safari no hace falta.
 - Si algo no llega: `docker compose logs avisos` y `docker compose logs app`; en el teléfono, revisa que la app tenga permiso de notificaciones.
 
