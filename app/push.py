@@ -10,6 +10,7 @@ Categorías (cada dispositivo elige las suyas; `rol` dice quién puede recibirla
   recordatorio  admin   se acaba la semana o quincena y aún no compraste       (encendida)
   txid          admin   un TXID que estaba pendiente ya se confirmó            (encendida)
   respaldo      admin   el respaldo diario falló                               (encendida)
+  caida         admin   BTC cayó 15 % o más de su máximo de 30 días (una vez)  (encendida)
 """
 from __future__ import annotations
 
@@ -68,6 +69,8 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
              "ayuda": "Cuando una transacción que estaba pendiente se confirma en la red."},
     "respaldo": {"rol": "admin", "defecto": True, "nombre": "Fallo del respaldo",
                  "ayuda": "Si el respaldo diario falla."},
+    "caida": {"rol": "admin", "defecto": True, "nombre": "Gran caída",
+              "ayuda": "Una vez por caída, cuando BTC baja 15 % o más de su máximo de 30 días. Solo informa, no recomienda."},
 }
 
 HORA_DESDE, HORA_HASTA = 8, 21  # los avisos no suenan de noche (hora de El Salvador)

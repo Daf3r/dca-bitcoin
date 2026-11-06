@@ -852,7 +852,7 @@ cats = r.get_json()["categorias"]
 check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False)], f"categorías del lector y sus valores por defecto {cats}")
 check(all(c["nombre"] and c["ayuda"] for c in cats), "cada categoría trae nombre y ayuda")
 r = adm.post("/api/push/suscribir", json=_sus(EP_ADM))
-check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True)], "categorías del admin")
+check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True)], "categorías del admin")
 check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "suscribirse no da permiso de escribir")
 
 # Estado por dispositivo: solo el dueño ve el suyo
@@ -991,7 +991,25 @@ if _sh.which("node"):
         casos_const.append({"antes": ff, "despues": sorted([*ff, nueva]) if _r.random() < 0.8 else [*ff, nueva]})
     casos_const += [{"antes": [f"2026-01-{d:02d}" for d in range(1, 10)], "despues": [f"2026-01-{d:02d}" for d in range(1, 11)]}]
     nombres = [100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000, 100000000, 250000000, 1000000000000]
-    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres}
+    casos_caida = []
+    for _ in range(120):
+        hoy_ = date(2026, 1, 1) + _td(days=_r.randrange(0, 300))
+        base_ = _r.uniform(20000, 100000)
+        hist_ = [[(hoy_ - _td(days=d)).isoformat(), round(base_ * _r.uniform(0.7, 1.15), 2)] for d in range(_r.randrange(0, 45)) if _r.random() < 0.9]
+        casos_caida.append({"historico": hist_, "vivo": round(base_ * _r.uniform(0.6, 1.1), 2), "hoy": hoy_.isoformat()})
+    casos_caida += [{"historico": [["2026-03-%02d" % d, 100000] for d in range(1, 9)], "vivo": 85000, "hoy": "2026-03-10"},   # exactamente 15 %
+                    {"historico": [["2026-03-%02d" % d, 100000] for d in range(1, 9)], "vivo": 85001, "hoy": "2026-03-10"},
+                    {"historico": [["2026-03-%02d" % d, 100000] for d in range(1, 4)], "vivo": 50000, "hoy": "2026-03-10"}]   # muy poco histórico
+    casos_repo = []
+    for _ in range(80):
+        movs_ = []
+        for i in range(_r.randrange(0, 30)):
+            precio_ = _r.uniform(20000, 100000)
+            monto_ = round(_r.uniform(4, 220), 2)
+            movs_.append({"fecha": (date(2025, 6, 1) + _td(days=i * _r.randrange(1, 9))).isoformat(), "monto": monto_, "sats": max(1, round(monto_ / precio_ * 1e8)),
+                          "tipo": "venta" if _r.random() < 0.15 else "compra", "extra": _r.random() < 0.2})
+        casos_repo.append({"movs": movs_, "vivo": round(_r.uniform(40000, 100000), 2), "hoy": "2026-11-01"})
+    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres, "caida": casos_caida, "reposicion": casos_repo}
     p_ = subprocess.run(["node", os.path.join(os.path.dirname(os.path.abspath(__file__)), "paridad_ritmo.mjs")], input=json.dumps(entrada), capture_output=True, text=True)
     check(p_.returncode == 0, f"node calcula la paridad: {p_.stderr[:200]}")
     js = json.loads(p_.stdout)
@@ -1006,6 +1024,25 @@ if _sh.which("node"):
     check([[list(x) for x in ritmo.constancia_cruzada(c["antes"], c["despues"])] for c in casos_const] == js["constancia"], "constancia cruzada igual que lib.js")
     check([ritmo.nombre_hito(m).replace(" sats", "") for m in nombres] == js["nombres"], "nombre del hito igual que lib.js")
     check(sum(1 for x in js["toca"] if x and x["estado"] in ("toca", "ultimo")) > 5, "la paridad prueba casos de «toca» de verdad")
+    mal_c = []
+    for caso, esperado in zip(casos_caida, js["caida"], strict=True):
+        mio = ritmo.caida_grande([(f, c_) for f, c_ in caso["historico"]], caso["vivo"], date.fromisoformat(caso["hoy"]))
+        if (mio is None) != (esperado is None) or (mio and (abs(mio["caida"] - esperado["caida"]) > 1e-9 or abs(mio["max"] - esperado["max"]) > 1e-6)):
+            mal_c.append((caso, mio, esperado))
+    check(not mal_c, f"gran caída igual que lib.js ({len(mal_c)} distintos de {len(casos_caida)}): {mal_c[:1]}")
+    check(sum(1 for x in js["caida"] if x) > 10 and sum(1 for x in js["caida"] if not x) > 10, "la paridad de la gran caída prueba casos con y sin caída")
+    mal_r = []
+    for caso, esperado in zip(casos_repo, js["reposicion"], strict=True):
+        movs_p = [(m["fecha"], i + 1, m["tipo"], m["monto"], m["sats"], 1 if m["extra"] and m["tipo"] == "compra" else 0) for i, m in enumerate(caso["movs"])]
+        # lib.js lee `extra` tal cual venga; el servidor guarda extra=0 en las ventas, así que el caso lo normaliza igual
+        r_ = ritmo.reposicion(movs_p, caso["vivo"])
+        inv_, sats_ = ritmo.invertido_y_sats(movs_p)
+        ok_r = ritmo.monto_habitual(movs_p) == esperado["habitual"] and abs(inv_ - esperado["inv"]) < 1e-6 and sats_ == esperado["sats"]
+        ok_r = ok_r and ((r_ is None) == (esperado["r"] is None)) and (r_ is None or all(abs(r_[k] - esperado["r"][k]) < 1e-6 for k in ("monto", "antes", "despues")))
+        if not ok_r:
+            mal_r.append((caso, r_, esperado))
+    check(not mal_r, f"monto habitual y reposición igual que lib.js ({len(mal_r)} distintos de {len(casos_repo)}): {mal_r[:1]}")
+    check(sum(1 for x in js["reposicion"] if x["r"]) > 20, "la paridad de la reposición prueba casos con resultado")
 else:
     print("(sin node: se omite la paridad con lib.js)")
 
@@ -1048,6 +1085,56 @@ cx.execute("INSERT OR REPLACE INTO tx_vigilados (txid, creado) VALUES (?, ?)", (
 avisos._txid(cx)
 check(cx.execute("SELECT COUNT(*) FROM tx_vigilados WHERE txid = ?", ("c3" * 32,)).fetchone()[0] == 0, "tras dos semanas se deja de vigilar")
 server.verificar_tx = _ver
+cx.close()
+
+# Gran caída: una vez por caída, no de noche, y se reinicia al recuperarse a menos de 10 %
+cx = server.connect()
+cx.execute("DELETE FROM precios WHERE fecha >= '2026-10-01'")
+for d in range(20, 30):
+    cx.execute("INSERT INTO precios (fecha, cierre) VALUES (?, ?)", (f"2026-10-{d:02d}", 100000.0))
+cx.execute("DELETE FROM meta WHERE clave IN ('aviso_caida', 'aviso_caida_chequeo')"); cx.commit()
+_vivo = {"p": 100000.0}
+_cp = server.consultar_precio
+server.consultar_precio = lambda: (_vivo["p"], "prueba")
+push.ahora = _de_dia
+enviados.clear()
+check(avisos._caida(cx, cada=0) is False and not enviados, "sin caída no avisa")
+_vivo["p"] = 86000.0   # −14 %: aún no
+check(avisos._caida(cx, cada=0) is False and not enviados, "−14 % todavía no es una gran caída")
+_vivo["p"] = 78000.0   # −22 %
+check(avisos._caida(cx, cada=0) is True and _a_quien() == [EP_ADM] and enviados[0][1]["etiqueta"] == "caida", f"−22 % avisa al admin y a nadie más {enviados}")
+_txt = enviados[0][1]["cuerpo"]
+check(_txt.startswith("BTC está 22% por debajo de su máximo de los últimos 30 días.") and "Es opcional." in _txt and "compra ahora" not in _txt.lower(), f"texto informativo, sin recomendar {_txt}")
+check("Si decides reponer con una compra como las tuyas ($" in _txt, "con la reposición cuando hay compras habituales")
+_vivo["p"] = 60000.0   # sigue cayendo: no repite
+check(avisos._caida(cx, cada=0) is False and len(enviados) == 1, "si sigue cayendo no vuelve a avisar")
+_vivo["p"] = 88000.0   # −12 %: aún no se considera recuperada
+avisos._caida(cx, cada=0); _vivo["p"] = 70000.0
+check(avisos._caida(cx, cada=0) is False and len(enviados) == 1, "oscilar por encima de −10 % no reinicia la caída (no suena dos veces)")
+_vivo["p"] = 95000.0   # −5 %: recuperada
+avisos._caida(cx, cada=0)
+_vivo["p"] = 79000.0
+check(avisos._caida(cx, cada=0) is True and len(enviados) == 2, "recuperada y con una caída nueva, vuelve a avisar")
+# De noche no suena y no gasta el aviso: si por la mañana sigue la caída, sale entonces
+cx.execute("INSERT OR REPLACE INTO meta (clave, valor) VALUES ('aviso_caida', '0')"); cx.commit()
+push.ahora = _de_noche
+check(avisos._caida(cx, cada=0) is False and len(enviados) == 2, "de noche no avisa")
+push.ahora = _manana
+check(avisos._caida(cx, cada=0) is True and len(enviados) == 3, "por la mañana, si sigue la caída, sale")
+# Se limita la frecuencia de las consultas, y sin datos o con pocas compras no hace nada
+cx.execute("INSERT OR REPLACE INTO meta (clave, valor) VALUES ('aviso_caida', '0')"); cx.commit()
+check(avisos._caida(cx, cada=300) is False and len(enviados) == 3, "no consulta el precio más de una vez cada 5 minutos")
+cx.execute("DELETE FROM precios WHERE fecha >= '2026-10-24'"); cx.commit()
+check(avisos._caida(cx, cada=0) is False and len(enviados) == 3, "con menos de 5 días de histórico no dice nada")
+for d in range(24, 30):
+    cx.execute("INSERT INTO precios (fecha, cierre) VALUES (?, ?)", (f"2026-10-{d:02d}", 100000.0))
+cx.commit()
+# Apagada en «Tu cuenta», no llega
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
+push.ahora = _de_dia
+check(avisos._caida(cx, cada=0) is True and len(enviados) == 3, "con la categoría apagada se evalúa pero no llega nada")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
+server.consultar_precio = _cp
 cx.close()
 
 # Servicio de worker y archivos del navegador

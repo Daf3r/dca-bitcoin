@@ -6,6 +6,7 @@ para que no se separen.
 """
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -149,3 +150,88 @@ def constancia_cruzada(antes: list[str], despues: list[str]) -> list[tuple[str, 
     if na > 0 and pa == pd:
         out += [("tiempo", m) for m in HITOS_MESES if ma < m <= md]
     return out
+
+
+# ------------------------------------------------------------------ gran caída
+def redondear(x: float) -> int:
+    """`Math.round` de JavaScript (la mitad hacia arriba), para dar lo mismo que `lib.js`."""
+    return math.floor(x + 0.5)
+
+
+def caida_grande(cierres: list[tuple[str, float]], vivo: float, hoy: date, dias: int = 30, umbral: float = 15.0) -> dict[str, Any] | None:
+    """`lib.caidaGrande`: el precio vivo frente al máximo de los últimos `dias` días (cierres diarios y el vivo).
+
+    None si no hay caída de `umbral` % o más, o si hay menos de 5 cierres en la ventana.
+    """
+    if not vivo > 0:
+        return None
+    desde = (hoy - timedelta(days=dias)).isoformat()
+    ventana = [c for f, c in cierres if f >= desde and c > 0]
+    if len(ventana) < 5:
+        return None
+    maximo = max(vivo, *ventana)
+    caida = math.floor((1 - vivo / maximo) * 1000 + 0.5) / 10  # a una décima: el umbral queda exacto
+    return {"max": maximo, "caida": caida, "dias": dias} if caida >= umbral else None
+
+
+# Un movimiento: (fecha, id, tipo, monto, sats, extra)
+Movimiento = tuple[str, int, str, float, int, int]
+
+
+def _orden(movs: list[Movimiento]) -> list[Movimiento]:
+    return sorted(movs, key=lambda m: (m[0], m[2] == "venta", m[1]))
+
+
+def invertido_y_sats(movs: list[Movimiento]) -> tuple[float, int]:
+    """Invertido neto y saldo en sats (costo promedio ponderado: al vender, el costo base baja en proporción)."""
+    inv, sats = 0.0, 0
+    for _f, _i, tipo, monto, s, _e in _orden(movs):
+        if tipo == "venta":
+            base = min(inv, inv / sats * s) if sats > 0 else 0.0
+            inv -= base
+            sats -= s
+            if sats <= 0:
+                inv, sats = 0.0, 0
+        else:
+            inv += monto
+            sats += s
+    return inv, sats
+
+
+def monto_habitual(movs: list[Movimiento]) -> int | None:
+    """`lib.montoHabitual`: mediana en dólares de tus últimas 12 compras habituales (sin extra); None con menos de 3."""
+    habituales = [m for m in _orden(movs) if m[2] != "venta" and not m[5] and m[3] > 0]
+    ultimos = sorted(m[3] for m in habituales[-12:])
+    if len(ultimos) < 3:
+        return None
+    mid = len(ultimos) >> 1
+    monto = redondear(ultimos[mid] if len(ultimos) % 2 else (ultimos[mid - 1] + ultimos[mid]) / 2)
+    return monto if monto >= 1 else None
+
+
+def reposicion(movs: list[Movimiento], vivo: float) -> dict[str, float] | None:
+    """`lib.reposicion`: qué haría con tu costo promedio una compra como las tuyas al precio vivo (solo información)."""
+    monto = monto_habitual(movs)
+    inv, sats = invertido_y_sats(movs)
+    if not monto or not vivo > 0 or not (sats > 0 and inv > 0):
+        return None
+    nuevos = redondear(monto / vivo * 1e8)
+    if nuevos <= 0:
+        return None
+    antes = inv * 1e8 / sats
+    despues = (inv + monto) * 1e8 / (sats + nuevos)
+    return {"monto": monto, "antes": antes, "despues": despues}
+
+
+def _usd0(x: float) -> str:
+    return f"${redondear(x):,}"
+
+
+def texto_caida(c: dict[str, Any], r: dict[str, float] | None) -> str:
+    """El mismo texto de la tarjeta «Gran caída»: información, sin recomendar comprar."""
+    txt = f"BTC está {redondear(c['caida'])}% por debajo de su máximo de los últimos {c['dias']} días."
+    if r:
+        txt += (f" Si decides reponer con una compra como las tuyas ({_usd0(r['monto'])}), tu costo promedio "
+                f"{'bajaría' if r['despues'] < r['antes'] else 'subiría'} de {_usd0(r['antes'])} a {_usd0(r['despues'])}. Es opcional.")
+    return txt
+

@@ -43,7 +43,7 @@ async function servidor(escenario) {
 async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
   const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opts });
   const p = await ctx.newPage();
-  if (init) await p.addInitScript(init);
+  if (init) await (Array.isArray(init) ? p.addInitScript(init[0], init[1]) : p.addInitScript(init));
   const consola = [];
   p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
   p.on('pageerror', (e) => consola.push(`pageerror ${e.message}`));
@@ -246,12 +246,13 @@ try {
   const avisos = await servidor('hoy');
   try {
     // Un navegador de mentira con push: suscribirse devuelve un dispositivo propio; lo demás (clave, suscripción, categorías) es real.
-    const conPush = () => {
+    const conPush = (cfg) => {
       const est = { sub: false };
+      if (cfg?.brave) navigator.brave = { isBrave: async () => true };
       const ep = `https://fcm.googleapis.com/fcm/send/ui-${Math.random().toString(36).slice(2)}`;
       const sub = { endpoint: ep, options: {}, unsubscribe: async () => { est.sub = false; return true; },
         toJSON: () => ({ endpoint: ep, keys: { p256dh: `B${'x'.repeat(86)}`, auth: 'a'.repeat(22) } }) };
-      const reg = { pushManager: { getSubscription: async () => (est.sub ? sub : null), subscribe: async () => { est.sub = true; return sub; } }, unregister: async () => true };
+      const reg = { pushManager: { getSubscription: async () => (est.sub ? sub : null), subscribe: async () => { if (cfg?.falla) { const e = new Error('Registration failed - push service error'); e.name = 'AbortError'; throw e; } est.sub = true; return sub; } }, unregister: async () => true };
       Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: async () => reg, register: async () => reg, ready: Promise.resolve(reg) } });
       Object.defineProperty(Notification, 'permission', { configurable: true, get: () => (est.permiso ?? 'default') });
       Notification.requestPermission = async () => { est.permiso = 'granted'; return 'granted'; };
@@ -265,7 +266,7 @@ try {
       await p.click('#dc-avisos-btn');
       await p.waitForTimeout(500);
     };
-    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo']], [LECTOR, 'lector', ['movimiento', 'hito']]]) {
+    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'caida']], [LECTOR, 'lector', ['movimiento', 'hito']]]) {
       const { ctx, p, consola } = await entrar(navegador, avisos, cuenta, {}, conPush);
       await abrirAvisos(p);
       ok(await p.locator('#dc-avisos').isVisible() && !(await p.locator('#dc-menu').isVisible()), `${quien}: se abre la vista de avisos`);
@@ -329,6 +330,17 @@ try {
       await ctx.close();
     } finally {
       fresco.parar();
+    }
+    // Si el navegador no puede suscribirse (Brave lo trae apagado), se explica en español y qué hacer.
+    for (const [cfg, esperado, nombre] of [[{ falla: true, brave: true }, 'brave://settings/privacy', 'Brave'], [{ falla: true }, 'no pudo conectarse con su servicio de avisos', 'otro navegador']]) {
+      const { ctx, p } = await entrar(navegador, avisos, ADMIN, {}, [conPush, cfg]);
+      await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });
+      await p.click('#da-si');
+      await p.waitForTimeout(900);
+      const txt = (await p.textContent('#da-error')).trim();
+      ok(txt.includes(esperado) && !/Registration failed/.test(txt), `${nombre}: explica el fallo en español: «${txt.slice(0, 70)}…»`);
+      ok(await p.locator('#d-avisos').isVisible() && await p.locator('#da-si').isEnabled(), `${nombre}: la tarjeta sigue abierta para reintentar`);
+      await ctx.close();
     }
     // Sin soporte o con el permiso bloqueado (como en este Chromium sin interfaz) no se ofrece nada que no va a funcionar.
     {

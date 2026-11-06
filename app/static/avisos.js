@@ -18,9 +18,18 @@ const CLAVE_PREGUNTADO = 'libro.avisos.preguntado';
 const yaPreguntado = () => { try { return localStorage.getItem(CLAVE_PREGUNTADO) === '1'; } catch { return false; } };
 const marcarPreguntado = () => { try { localStorage.setItem(CLAVE_PREGUNTADO, '1'); } catch { /* sin almacenamiento: se vuelve a preguntar */ } };
 const TEXTO_OFERTA = {
-  admin: 'Te recordamos comprar unos días antes de que venza tu semana o quincena, y te avisamos si un TXID se confirma o si falla el respaldo. No suenan de noche. Puedes cambiarlo cuando quieras en «Tu cuenta».',
+  admin: 'Te recordamos comprar unos días antes de que venza tu semana o quincena, y te avisamos si un TXID se confirma, si falla el respaldo o si BTC tiene una gran caída. No suenan de noche. Puedes cambiarlo cuando quieras en «Tu cuenta».',
   lector: 'Te avisamos cuando se anote una compra, una venta o un gasto. No suenan de noche. Puedes cambiarlo cuando quieras en «Tu cuenta».',
 };
+
+/** El fallo del navegador al suscribirse llega en inglés y sin pistas: se cambia por algo que se pueda resolver. */
+async function explicarFallo() {
+  let brave = false;
+  try { brave = !!(navigator.brave && await navigator.brave.isBrave()); } catch { /* no es Brave */ }
+  return brave
+    ? 'Brave trae desactivados los avisos. Actívalos en brave://settings/privacy, opción «Usar servicios de Google para mensajes push» (en inglés, «Use Google services for push messaging»), reinicia Brave e inténtalo otra vez.'
+    : 'Tu navegador no pudo conectarse con su servicio de avisos. Revisa la conexión e inténtalo otra vez en un rato.';
+}
 
 const registroActual = () => navigator.serviceWorker.getRegistration('/');
 async function suscripcionActual() {
@@ -102,7 +111,11 @@ export function montarAvisos(api) {
     // Una suscripción hecha con otra clave del servidor ya no sirve: se renueva.
     const vieja = s?.options?.applicationServerKey;
     if (s && vieja && !igual(new Uint8Array(vieja), clave_b)) { await s.unsubscribe(); s = null; }
-    s ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: clave_b });
+    try {
+      s ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: clave_b });
+    } catch {
+      throw new Error(await explicarFallo());
+    }
     await api('/api/push/suscribir', { metodo: 'POST', cuerpo: { suscripcion: s.toJSON() } });
   }
 

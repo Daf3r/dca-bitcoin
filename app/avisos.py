@@ -8,7 +8,9 @@ En cada pasada:
   · saca lo que cayó de noche (los avisos no suenan fuera de 8:00 a 21:00, hora de El Salvador);
   · recordatorio de compra al admin (viernes a domingo, una vez al día, desde las 9:00) si el periodo se acaba y
     aún no compró; no avisa si ya compraste, aunque haya sido días antes;
-  · TXID vigilados: si uno que estaba pendiente ya se confirmó, avisa al admin una vez.
+  · TXID vigilados: si uno que estaba pendiente ya se confirmó, avisa al admin una vez;
+  · gran caída: si BTC está 15 % o más bajo su máximo de 30 días, avisa al admin una vez por caída (se reinicia cuando
+    BTC se recupera y queda a menos de 10 % de su máximo). Solo informa; solo de 8:00 a 21:00.
 """
 from __future__ import annotations
 
@@ -16,6 +18,7 @@ import os
 import sqlite3
 import sys
 import time
+from datetime import timedelta
 from typing import Any
 
 import push
@@ -26,6 +29,9 @@ HORA_RECORDATORIO = 9
 INTERVALO = int(os.environ.get("AVISOS_INTERVALO_SEGUNDOS", "120"))
 VIGILAR_DIAS = 14  # un TXID que no se confirma en dos semanas se deja de vigilar
 MAX_TX_POR_PASADA = 20
+CAIDA_CADA = 300  # el precio se consulta como mucho cada 5 minutos
+CAIDA_UMBRAL = 15.0
+CAIDA_RECUPERADA = 10.0  # la caída «termina» cuando BTC queda a menos de esto bajo su máximo
 
 
 def _recordatorio(conn: sqlite3.Connection) -> bool:
@@ -70,10 +76,44 @@ def _txid(conn: sqlite3.Connection) -> int:
     return avisos
 
 
+def _caida(conn: sqlite3.Connection, cada: int = CAIDA_CADA) -> bool:
+    """Gran caída (la misma regla que la tarjeta de la app). Una vez por caída; no suena de noche (si sigue por la mañana, sale entonces)."""
+    if not push.dentro_de_horario():
+        return False
+    if int(time.time()) - int(server._meta(conn, "aviso_caida_chequeo") or 0) < cada:
+        return False
+    server._meta_poner(conn, "aviso_caida_chequeo", str(int(time.time())))
+    conn.commit()
+    movs = [(r["fecha"], r["id"], r["tipo"], r["monto"], r["sats"], r["extra"]) for r in
+            conn.execute(f"SELECT fecha, id, tipo, monto, sats, extra FROM compras WHERE {server.VIGENTES}")]
+    if sum(1 for m in movs if m[2] == "compra") < 3:
+        return False
+    hoy = ritmo.hoy_sv(push.ahora())
+    cierres = [(r["fecha"], r["cierre"]) for r in conn.execute(
+        "SELECT fecha, cierre FROM precios WHERE fecha >= ? ORDER BY fecha", ((hoy - timedelta(days=31)).isoformat(),))]
+    vivo, _fuente = server.consultar_precio()
+    if not vivo:
+        return False
+    alta = server._meta(conn, "aviso_caida") == "1"
+    c = ritmo.caida_grande(cierres, vivo, hoy, umbral=CAIDA_UMBRAL)
+    if c is None:
+        # Recuperada: queda a menos de 10 % de su máximo (o ya no hay datos para decir que sigue la caída).
+        if alta and ritmo.caida_grande(cierres, vivo, hoy, umbral=CAIDA_RECUPERADA) is None:
+            server._meta_poner(conn, "aviso_caida", "0")
+            conn.commit()
+        return False
+    if alta:
+        return False
+    server._meta_poner(conn, "aviso_caida", "1")  # se marca antes de avisar: una caída, un aviso
+    conn.commit()
+    push.notificar(conn, "caida", "Libro DCA", ritmo.texto_caida(c, ritmo.reposicion(movs, vivo)), "caida")
+    return True
+
+
 def una_pasada() -> dict[str, Any]:
     conn = server.connect()
     try:
-        return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn)}
+        return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn), "caida": _caida(conn)}
     finally:
         conn.close()
 
