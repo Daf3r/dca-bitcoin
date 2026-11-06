@@ -258,6 +258,8 @@ try {
     };
     const abrirAvisos = async (p) => {
       if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); } // la bienvenida del lector
+      await p.waitForTimeout(700);
+      if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); } // la oferta de avisos de esta visita
       await p.click('#cuenta-btn');
       await p.waitForTimeout(250);
       await p.click('#dc-avisos-btn');
@@ -293,7 +295,50 @@ try {
       eq(consola, [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
       await ctx.close();
     }
+    // Al entrar se ofrece activar los avisos, una sola vez por dispositivo; el permiso se pide en el toque del botón.
+    {
+      const { ctx, p } = await entrar(navegador, avisos, ADMIN, {}, conPush);
+      await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });
+      ok((await p.textContent('#da-texto')).includes('recordamos comprar'), 'admin: la oferta habla de recordatorios');
+      ok(await p.evaluate(() => Notification.permission) === 'default', 'no se pidió el permiso por su cuenta: espera al toque');
+      await p.click('#da-no');
+      await p.waitForTimeout(300);
+      ok(!(await p.locator('#d-avisos').isVisible()), 'admin: «Ahora no» cierra la oferta');
+      await p.reload({ waitUntil: 'networkidle' });
+      await p.waitForTimeout(3500);
+      ok(!(await p.locator('#d-avisos').isVisible()), 'admin: después de decir que no, no se vuelve a ofrecer en ese dispositivo');
+      await ctx.close();
+    }
+    const fresco = await servidor('hoy'); // un lector que entra por primera vez (el servidor anterior ya le marcó su bienvenida)
+    try {
+      const { ctx, p, consola } = await entrar(navegador, fresco, LECTOR, {}, conPush);
+      ok(await p.locator('#d-novedades').isVisible() && !(await p.locator('#d-avisos').isVisible()), 'lector: primero su bienvenida, no la oferta');
+      await p.click('#nov-ok');
+      await p.waitForSelector('#d-avisos[open]', { timeout: 6000 });
+      ok((await p.textContent('#da-texto')).includes('una compra, una venta o un gasto'), 'lector: la oferta habla de movimientos');
+      await p.click('#da-si');
+      await p.waitForTimeout(1200);
+      ok(!(await p.locator('#d-avisos').isVisible()), 'lector: al activar se cierra la oferta');
+      ok((await p.textContent('#aviso-txt')).includes('Avisos activados'), 'lector: confirma que quedaron activados');
+      await p.click('#cuenta-btn');
+      await p.waitForTimeout(250);
+      await p.click('#dc-avisos-btn');
+      await p.waitForTimeout(600);
+      eq((await p.textContent('#av-estado')).trim(), 'Los avisos están activados en este dispositivo.', 'lector: «Tu cuenta» los muestra activados');
+      eq(consola, [], `lector: consola limpia con la oferta: ${consola.join(' | ')}`);
+      await ctx.close();
+    } finally {
+      fresco.parar();
+    }
+    // Sin soporte o con el permiso bloqueado (como en este Chromium sin interfaz) no se ofrece nada que no va a funcionar.
+    {
+      const { ctx, p } = await entrar(navegador, avisos, ADMIN, {});
+      await p.waitForTimeout(1500);
+      ok(!(await p.locator('#d-avisos').isVisible()), 'con el permiso bloqueado no se ofrece');
+      await ctx.close();
+    }
     // Un navegador sin push (o iPhone sin instalar) lo explica y no ofrece nada que no va a funcionar.
+
     const sin = await entrar(navegador, avisos, ADMIN, {}, () => { delete window.PushManager; });
     await abrirAvisos(sin.p);
     ok((await sin.p.textContent('#av-motivo')).includes('Añadir a pantalla de inicio') && !(await sin.p.locator('#av-interruptor').isVisible()),

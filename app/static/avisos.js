@@ -13,6 +13,15 @@ const aBytes = (s) => {
 };
 
 const igual = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+// Se pregunta una sola vez por dispositivo (después, siempre se puede en «Tu cuenta»).
+const CLAVE_PREGUNTADO = 'libro.avisos.preguntado';
+const yaPreguntado = () => { try { return localStorage.getItem(CLAVE_PREGUNTADO) === '1'; } catch { return false; } };
+const marcarPreguntado = () => { try { localStorage.setItem(CLAVE_PREGUNTADO, '1'); } catch { /* sin almacenamiento: se vuelve a preguntar */ } };
+const TEXTO_OFERTA = {
+  admin: 'Te recordamos comprar unos días antes de que venza tu semana o quincena, y te avisamos si un TXID se confirma o si falla el respaldo. No suenan de noche. Puedes cambiarlo cuando quieras en «Tu cuenta».',
+  lector: 'Te avisamos cuando se anote una compra, una venta o un gasto. No suenan de noche. Puedes cambiarlo cuando quieras en «Tu cuenta».',
+};
+
 const registroActual = () => navigator.serviceWorker.getRegistration('/');
 async function suscripcionActual() {
   const r = await registroActual();
@@ -107,6 +116,30 @@ export function montarAvisos(api) {
     await reg?.unregister();
   }
 
+  /**
+   * Pregunta, una sola vez por dispositivo, si quiere avisos. El permiso se pide en el toque de «Activar avisos»:
+   * iPhone y Safari no dejan pedirlo solos al entrar. Devuelve true si quedaron activados; false si no se preguntó
+   * (sin soporte, ya decidido o ya activados) o dijo que no.
+   */
+  async function ofrecer(rol) {
+    if (!soporta() || Notification.permission !== 'default' || yaPreguntado()) return false;
+    try { if (await suscripcionActual()) return false; } catch { return false; }
+    const d = $('d-avisos');
+    $('da-texto').textContent = TEXTO_OFERTA[rol] ?? TEXTO_OFERTA.lector;
+    $('da-error').textContent = '';
+    return new Promise((res) => {
+      let activado = false;
+      d.addEventListener('close', () => { marcarPreguntado(); res(activado); }, { once: true });
+      $('da-no').onclick = () => d.close();
+      $('da-si').onclick = async () => {
+        $('da-si').disabled = true;
+        try { await activar(); activado = true; d.close(); } catch (err) { $('da-error').textContent = err.message || 'No se pudo activar.'; }
+        $('da-si').disabled = false;
+      };
+      d.showModal();
+    });
+  }
+
   $('av-interruptor').addEventListener('click', async (e) => {
     const b = e.currentTarget;
     b.disabled = true;
@@ -132,5 +165,5 @@ export function montarAvisos(api) {
     }
   });
 
-  return { refrescar };
+  return { refrescar, ofrecer };
 }

@@ -137,6 +137,7 @@ function pintar({ montana = false, animar = false, desde = null, festejo = null 
   pintarReportes();
   pintarComienzo();
   pintarNovedades();
+  ofrecerAvisos();
 }
 
 function pintarPrecio() {
@@ -983,6 +984,7 @@ $('dc-previa').addEventListener('click', (e) => {
 // «Entendido» (o cerrar) lo marca como visto en el servidor, así que sale igual desde el móvil y el PC.
 const dNov = $('d-novedades');
 let novedadesMostradas = false;
+let avisosOfrecidos = false; // la oferta de avisos sale una sola vez por visita (y una por dispositivo, ver avisos.js)
 function pintarNovedades() {
   // Espera al precio (o a su error) para poder decir cuánto vale; pintar() vuelve a llamar cuando llega.
   if (novedadesMostradas || S.rol !== 'lector' || !S.cargado || S.visto === undefined || !(S.precio || S.errorPrecio) || dNov.open) return;
@@ -1020,6 +1022,7 @@ function pintarNovedades() {
 $('nov-ok').addEventListener('click', () => dNov.close());
 dNov.addEventListener('close', async () => {
   try { S.visto = (await api('/api/visto', { metodo: 'POST', cuerpo: {} })).visto; } catch { /* sin red: saldrá otra vez */ }
+  ofrecerAvisos(); // tras la bienvenida del lector
 });
 
 // -------------------------------------------------------------------- CSV
@@ -1138,6 +1141,13 @@ async function cargarHistorial(mas = false) {
 }
 $('hist-mas').addEventListener('click', () => cargarHistorial(true));
 const avisosUI = montarAvisos(api);
+// Tras entrar: una sola vez por dispositivo se ofrece activar los avisos. Los lectores primero ven su bienvenida.
+async function ofrecerAvisos() {
+  if (avisosOfrecidos || !S.rol || !S.cargado || document.querySelector('dialog[open]')) return;
+  if (S.rol === 'lector' && !novedadesMostradas) return;
+  avisosOfrecidos = true;
+  if (await avisosUI.ofrecer(S.rol)) avisar('Avisos activados en este dispositivo.', null, true);
+}
 
 dCuenta.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-cuenta]');
