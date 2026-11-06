@@ -22,6 +22,8 @@ from flask import Flask, Response, g, jsonify, redirect, request
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
+import push
+import ritmo
 
 DB_PATH = os.environ.get("DB_PATH", "/data/libro.db")
 PRICE_TTL = int(os.environ.get("PRICE_TTL", "30"))               # segundos entre consultas al exchange
@@ -94,7 +96,7 @@ MIGRACIONES = (
 VIGENTES = "anulada_ts IS NULL"
 
 CSP = (
-    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; manifest-src 'self'; "
+    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; "
     "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
@@ -118,6 +120,7 @@ def init_db() -> None:
     try:
         conn.executescript(SCHEMA)
         conn.executescript(auth.SCHEMA)
+        conn.executescript(push.SCHEMA)
         cols = {r["name"] for r in conn.execute("PRAGMA table_info(compras)")}
         for col, ddl in MIGRACIONES:
             if col not in cols:
@@ -133,6 +136,10 @@ def init_db() -> None:
         conn.commit()
     finally:
         conn.close()
+    try:
+        push.asegurar_clave()
+    except Exception as e:  # noqa: BLE001 — sin la librería o sin permisos, la app sigue; solo no hay avisos
+        print(f"push: sin clave VAPID, los avisos no estarán disponibles ({type(e).__name__}: {e})", flush=True)
 
 
 def db() -> sqlite3.Connection:
@@ -450,7 +457,8 @@ def exigir_sesion() -> Any:
     if not u:
         return (jsonify(error="Inicia sesión."), 401) if api else redirect("/login")
     g.usuario = u
-    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto"):
+    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto") \
+            and not ruta.startswith("/api/push/"):
         return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
 
@@ -615,6 +623,90 @@ def visto() -> Response:
     return jsonify(visto=ahora)
 
 
+# ----------------------------------------------------------------- avisos push
+# Cada persona (también un lector) activa o apaga los avisos de SU dispositivo: solo toca sus propias suscripciones.
+def _resp_push(prefs: dict[str, bool] | None, rol: str) -> Response:
+    cats = [{"id": c, "nombre": push.CATEGORIAS[c]["nombre"], "ayuda": push.CATEGORIAS[c]["ayuda"], "activo": prefs[c]}
+            for c in push.categorias_de(rol)] if prefs is not None else []
+    return jsonify(suscrito=prefs is not None, categorias=cats)
+
+
+def _cuerpo_push() -> dict[str, Any] | None:
+    body: Any = request.get_json(silent=True)
+    return body if isinstance(body, dict) else None
+
+
+@app.get("/api/push/clave")
+def push_clave() -> Any:
+    try:
+        return jsonify(clave=push.clave_publica())
+    except Exception:  # noqa: BLE001
+        return jsonify(error="Los avisos no están disponibles en este servidor."), 503
+
+
+@app.post("/api/push/estado")
+def push_estado() -> Any:
+    body = _cuerpo_push() or {}
+    u = g.usuario
+    return _resp_push(push.estado(db(), u["id"], u["rol"], body.get("endpoint")), u["rol"])
+
+
+@app.post("/api/push/suscribir")
+def push_suscribir() -> Any:
+    body = _cuerpo_push()
+    if body is None:
+        return jsonify(error="Datos inválidos."), 400
+    u = g.usuario
+    try:
+        return _resp_push(push.suscribir(db(), u["id"], u["rol"], body.get("suscripcion")), u["rol"])
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+
+
+@app.put("/api/push/prefs")
+def push_prefs() -> Any:
+    body = _cuerpo_push()
+    if body is None:
+        return jsonify(error="Datos inválidos."), 400
+    u = g.usuario
+    try:
+        return _resp_push(push.guardar_prefs(db(), u["id"], u["rol"], body.get("endpoint"), body.get("prefs")), u["rol"])
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    except LookupError as e:
+        return jsonify(error=str(e)), 404
+
+
+@app.post("/api/push/baja")
+def push_baja() -> Any:
+    body = _cuerpo_push() or {}
+    push.baja(db(), g.usuario["id"], body.get("endpoint"))
+    return "", 204
+
+
+def _avisar_movimiento(conn: sqlite3.Connection, antes: list[Mov], cid: int, nueva: dict[str, Any]) -> None:
+    """Avisa de un movimiento nuevo a quien tenga esa categoría (y, en una compra, de la etapa o constancia que cruce)."""
+    try:
+        sats, quien_ = nueva["sats"], quien()
+        if nueva["tipo"] == "venta":
+            if nueva.get("nota") != "Comisión de retiro":  # la comisión de un traslado no es una novedad para la familia
+                push.notificar(conn, "movimiento", "Libro DCA", f"{quien_} anotó una venta o gasto de {sats:,} sats", f"mov-{cid}")
+            return
+        extra = "extra " if nueva.get("extra") else ""
+        push.notificar(conn, "movimiento", "Libro DCA", f"{quien_} anotó una compra {extra}de {sats:,} sats", f"mov-{cid}")
+        saldo = sum(-s if tipo == "venta" else s for _f, _i, tipo, s in antes)
+        if cruzadas := ritmo.etapas_cruzadas(saldo, saldo + sats):
+            m = cruzadas[-1]  # la más alta si fueron varias
+            nombre = "Nuevo hito" if ritmo.es_hito_grande(m) else "Nueva etapa"
+            push.notificar(conn, "hito", "Libro DCA", f"{nombre}: ya son {ritmo.nombre_hito(m)} en el libro.", f"hito-{cid}")
+        fechas = [f for f, _i, tipo, _s in antes if tipo == "compra"]
+        for k, (clase, valor) in enumerate(ritmo.constancia_cruzada(fechas, [*fechas, nueva["fecha"]])):
+            que = f"{valor} compras" if clase == "compras" else ritmo.nombre_hito_meses(valor)
+            push.notificar(conn, "hito", "Libro DCA", f"Constancia: {que}.", f"constancia-{cid}-{k}")
+    except Exception as e:  # noqa: BLE001 — avisar es secundario: nunca debe romper la compra
+        print(f"push: no se pudo preparar el aviso ({type(e).__name__}: {e})", flush=True)
+
+
 @app.post("/api/clave")
 def nueva_clave() -> Any:
     body: Any = request.get_json(silent=True)
@@ -680,10 +772,13 @@ def crear() -> Any:
     conn = db()
     if tipo == "venta" and (falla := saldo_negativo(movimientos(conn) + [(c[0], 10**12, "venta", c[3])])):
         return jsonify(error=_error_saldo(falla)), 400
+    antes = movimientos(conn)
     cid = insertar(conn, c, txid, tipo, nota, extra)
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "alta", "compra", cid, None, nueva, auth.ip_resumida(ip_real()))
     conn.commit()
+    push.vigilar_tx(conn, txid)
+    _avisar_movimiento(conn, antes, cid, nueva)
     rep = txid_repetido(conn, txid, cid)
     return jsonify({**nueva, **({"txid_repetido": rep} if rep else {})}), 201
 
@@ -723,6 +818,7 @@ def editar(cid: int) -> Any:
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "edicion", "compra", cid, fila(previa), nueva, auth.ip_resumida(ip_real()))
     conn.commit()
+    push.vigilar_tx(conn, txid)
     rep = txid_repetido(conn, txid, cid)
     return jsonify({**nueva, **({"txid_repetido": rep} if rep else {})})
 
@@ -755,6 +851,7 @@ def crear_traslado() -> Any:
     nuevo = fila_traslado(conn.execute("SELECT id, fecha, sats, sentido, txid, nota, creado FROM traslados WHERE id = ?", (tid,)).fetchone())
     auth.auditar(conn, quien(), "alta", "traslado", tid, None, nuevo, auth.ip_resumida(ip_real()))
     conn.commit()
+    push.vigilar_tx(conn, txid)
     return jsonify(nuevo), 201
 
 

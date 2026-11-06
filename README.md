@@ -120,7 +120,7 @@ Quien entra con una cuenta de lector ve, la primera vez que abre la web, un resu
 ## Instalar en el iPhone (PWA)
 En Safari abre `https://dca.polarzero.dev`, toca **Compartir → Añadir a pantalla de inicio**. Queda con su icono y sin la barra de Safari. En Android (Chrome): menú → «Instalar app». Notas:
 - La app instalada en iPhone **no comparte las cookies de Safari**: la primera vez hay que entrar de nuevo. La sesión dura 90 días deslizantes.
-- No hay modo sin conexión a propósito (sin service worker): así nunca se sirve un `app.js` viejo tras actualizar.
+- No hay modo sin conexión a propósito: el único service worker (`sw.js`) solo recibe avisos, sin caché, así que nunca se sirve un `app.js` viejo tras actualizar.
 - El manifiesto (`/manifest.webmanifest`) y los iconos son públicos, porque el navegador los pide sin cookie. Los iconos PNG salen de `icon.svg` (el de Apple va a sangre completa y el «maskable» con margen).
 - La barra de estado es la opaca (`black`). Si se quiere que la montaña llegue hasta arriba, cambiar a `black-translucent` en `index.html` y añadir `env(safe-area-inset-top)` a la cabecera; probar en el iPhone antes.
 
@@ -148,4 +148,14 @@ Tu saldo cuenta cuántos sats tienes en total, sin importar dónde estén. Para 
 
 ## Revisión del código
 El CI revisa en cada PR el estilo y los errores latentes de Python con `ruff` y los tipos con `mypy` (versiones fijadas en `tests/requirements-dev.txt`), además de las pruebas. Para revisar todo el frontend a la vez (diez escenarios, varios tamaños, claro y oscuro) usa `node tests/barrido_ui.mjs`.
+
+## Avisos push
+Cada persona activa los avisos **en su dispositivo**: «Tu cuenta» → «Avisos en este dispositivo» → «Activar», y marca cuáles quiere.
+- **Al entrar:** la primera vez en cada dispositivo sale una tarjeta «¿Quieres recibir avisos?» (a tus papás, después de su bienvenida). Si dices «Ahora no», no vuelve a preguntar; siempre puedes activarlos en «Tu cuenta».
+- **Tus papás (lectores):** un aviso por cada compra, venta o gasto nuevo (encendido) y, si quieren, por etapas, hitos y constancia (apagado por defecto).
+- **Tú (admin):** recordatorio unos días antes de que venza tu semana o quincena (viernes a domingo, una vez al día, y solo si aún no compraste), TXID confirmado y fallo del respaldo.
+- **No suenan de noche** (solo de 8:00 a 21:00, hora de El Salvador): lo de la noche sale por la mañana.
+- **iPhone:** los avisos solo funcionan con la app instalada en la pantalla de inicio (iOS 16.4 o más). Ábrela desde ahí y actívalos.
+- **Al desplegar:** `docker compose up -d --build` crea el servicio nuevo `avisos` y la clave `data/vapid_private.pem`. **No borres esa clave**: si se pierde, cada dispositivo tiene que activar los avisos otra vez. Inclúyela en el respaldo de la carpeta `data`.
+- Si algo no llega: `docker compose logs avisos` y `docker compose logs app`; en el teléfono, revisa que la app tenga permiso de notificaciones.
 

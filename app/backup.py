@@ -19,6 +19,21 @@ KEEP = int(os.environ.get("BACKUP_KEEP", "30"))
 INTERVAL = int(os.environ.get("BACKUP_INTERVAL_HOURS", "24")) * 3600
 
 
+def avisar_fallo() -> None:
+    """Avisa por push al admin de que el respaldo falló. Es secundario: si no se puede avisar, solo se registra."""
+    try:
+        import push  # misma imagen que la app; sin suscripciones simplemente no hay a quién avisar
+
+        conn = sqlite3.connect(DB_PATH, timeout=15)
+        conn.row_factory = sqlite3.Row
+        try:
+            push.notificar(conn, "respaldo", "Libro DCA", "El respaldo diario falló. Revisa el servidor.", "respaldo")
+        finally:
+            conn.close()
+    except Exception as e:  # noqa: BLE001
+        print(f"backup: no se pudo avisar del fallo ({type(e).__name__}: {e})", file=sys.stderr, flush=True)
+
+
 def run() -> bool:
     if not os.path.exists(DB_PATH):
         print("backup: todavía no existe la base, nada que copiar", flush=True)
@@ -56,9 +71,14 @@ if __name__ == "__main__":
     if "--loop" in sys.argv:
         while True:
             try:
-                run()
+                if not run():
+                    avisar_fallo()
             except Exception as e:  # el ciclo no debe morir por un fallo puntual
                 print(f"backup: error: {e}", file=sys.stderr, flush=True)
+                avisar_fallo()
             time.sleep(INTERVAL)
     else:
-        sys.exit(0 if run() else 1)
+        ok = run()
+        if not ok:
+            avisar_fallo()
+        sys.exit(0 if ok else 1)

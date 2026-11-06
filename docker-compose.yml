@@ -1,6 +1,6 @@
-# Libro DCA: app + respaldos diarios.
+# Libro DCA: app + respaldos diarios + avisos push programados.
 # La app solo escucha en 127.0.0.1:18082; Caddy (en el host) la publica en dca.polarzero.dev
-# detrás de Cloudflare Access. No exponer este puerto a internet: la app no tiene login propio.
+# detrás de Cloudflare (proxy). No exponer este puerto a internet: la protección es el login propio de la app.
 x-endurecido: &endurecido
   restart: unless-stopped
   read_only: true
@@ -34,6 +34,21 @@ services:
       BACKUP_DIR: /data/backups
       BACKUP_KEEP: ${BACKUP_KEEP:-30}
       BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      TZ: America/El_Salvador
+    volumes:
+      - ./data:/data
+
+  # Avisos programados: recordatorio de compra, TXID confirmados y avisos que cayeron de noche.
+  # Misma imagen y misma carpeta de datos; sale a internet solo para hablar con mempool.space
+  # y con los servicios de push de Apple, Google y Mozilla.
+  avisos:
+    <<: *endurecido
+    build: ./app
+    image: libro-dca:local
+    depends_on: [app]
+    command: ["python", "avisos.py", "--loop"]
+    environment:
+      DB_PATH: /data/libro.db
       TZ: America/El_Salvador
     volumes:
       - ./data:/data

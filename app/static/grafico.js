@@ -62,11 +62,24 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   if (promedio) s += etiquetaCosto;
   if (enRango.length && enRango.length <= 2) {
     const c = enRango.at(-1), [cx, cy] = cxy.at(-1);
-    const izq = cx > W * 0.55;
-    const tx = izq ? cx - 12 : cx + 12, ty = cy - 46 < m.t + 10 ? cy + 46 : cy - 46;
+    const k = compras.length === 1 ? 'Tu primera compra' : 'Tu última compra';
+    const l2 = `a ${usd0(c.precio)} · ${fechaCorta(c.fecha)}`;
+    const ancho = Math.max(k.length * 7.6, l2.length * 7.2) + 8;
+    // Se prueban varias posiciones (a cada lado y a distintas alturas, incluida la pegada al fondo o al techo) y gana la que
+    // menos roza la línea del precio y no se sale del gráfico; a igualdad, la de siempre (arriba, hacia el lado con más sitio).
+    const lado0 = cx > W * 0.55;
+    const alturas = [cy - 46, cy + 40, cy - 90, m.t + 16, H - m.b - 22];
+    const candidatos = [lado0, !lado0].flatMap((izq0, l) => alturas.map((ty0, a) => {
+      const tx0 = izq0 ? cx - 12 : cx + 12;
+      const x0 = izq0 ? tx0 - ancho : tx0, x1 = izq0 ? tx0 : tx0 + ancho, y0 = ty0 - 15, y1 = ty0 + 22;
+      const fuera = x0 < m.l || x1 > W - m.r || y0 < m.t || y1 > H - m.b;
+      const roces = pts.filter((q) => { const px = x(q.fecha), py = y(q.p); return px >= x0 - 3 && px <= x1 + 3 && py >= y0 - 3 && py <= y1 + 3; }).length;
+      return { izq0, tx0, ty0, puntos: roces * 10 + (fuera ? 10000 : 0) + l * 5 + a };
+    }));
+    const { izq0: izq, tx0: tx, ty0: ty } = candidatos.reduce((a, b) => (b.puntos < a.puntos ? b : a));
     s += `<g class="g-nota"><line x1="${f1(cx)}" y1="${f1(cy)}" x2="${f1(tx)}" y2="${f1(ty + (ty > cy ? -12 : 10))}"/>` +
-      `<text x="${f1(tx)}" y="${f1(ty)}" text-anchor="${izq ? 'end' : 'start'}"><tspan class="gn-k" x="${f1(tx)}">${compras.length === 1 ? 'Tu primera compra' : 'Tu última compra'}</tspan>` +
-      `<tspan x="${f1(tx)}" dy="17">a ${usd0(c.precio)} · ${fechaCorta(c.fecha)}</tspan></text></g>`;
+      `<text x="${f1(tx)}" y="${f1(ty)}" text-anchor="${izq ? 'end' : 'start'}"><tspan class="gn-k" x="${f1(tx)}">${k}</tspan>` +
+      `<tspan x="${f1(tx)}" dy="17">${l2}</tspan></text></g>`;
   }
   const u = pts.at(-1);
   s += `<circle class="g-pulso" cx="${f1(x(u.fecha))}" cy="${f1(y(u.p))}" r="5"/><circle class="g-hoy" cx="${f1(x(u.fecha))}" cy="${f1(y(u.p))}" r="5"/>`;
