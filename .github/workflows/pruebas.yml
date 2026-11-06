@@ -31,12 +31,12 @@ jobs:
       - name: Revisión del código (ruff y tipos con mypy)
         run: |
           ruff check app --select E9,F,B,UP,SIM --ignore E501,SIM108,UP007
-          mypy app/server.py app/auth.py app/usuarios.py app/backup.py app/importar.py --ignore-missing-imports
-      - name: API (Flask con base temporal y exchanges simulados)
-        run: python tests/test_api.py
+          mypy app/server.py app/auth.py app/usuarios.py app/backup.py app/importar.py app/push.py app/ritmo.py app/avisos.py --ignore-missing-imports
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: API (Flask con base temporal y exchanges simulados; compara las reglas de los avisos con lib.js)
+        run: python tests/test_api.py
       - name: Cálculos del frontend
         run: node tests/test_lib.mjs
 

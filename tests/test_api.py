@@ -797,8 +797,279 @@ for x in adm.get("/api/traslados").get_json():
     adm.delete(f"/api/traslados/{x['id']}")
 adm.delete(f"/api/compras/{TB}")
 
+# --- Avisos push: suscripciones, categorías, horario, recordatorio, TXID confirmado, respaldo y service worker
+import base64 as _b64
+import random as _rnd
+import types as _types
+import push, ritmo, avisos
+from datetime import datetime as _dtm, timedelta as _td
+
+enviados = []
+class _Muerto(Exception):
+    response = _types.SimpleNamespace(status_code=410)
+def _enviar_falso(sub, payload):
+    if "muerto" in sub["endpoint"]:
+        raise _Muerto()
+    enviados.append((sub["endpoint"], json.loads(payload)))
+push._enviar_uno = _enviar_falso
+push.SINCRONO = True
+_de_dia = lambda: _dtm(2026, 11, 6, 12, 0, tzinfo=ritmo.ZONA)      # viernes, a mediodía
+_de_noche = lambda: _dtm(2026, 11, 6, 23, 0, tzinfo=ritmo.ZONA)
+_manana = lambda: _dtm(2026, 11, 7, 8, 30, tzinfo=ritmo.ZONA)
+push.ahora = _de_dia
+
+EP_LUZ = "https://fcm.googleapis.com/fcm/send/luz-telefono"
+EP_ANA = "https://web.push.apple.com/ana-iphone"
+EP_ADM = "https://updates.push.services.mozilla.com/wpush/v2/admin-pc"
+def _sus(ep):
+    return {"suscripcion": {"endpoint": ep, "keys": {"p256dh": "B" + "x" * 86, "auth": "a" * 22}}}
+def _a_quien():
+    return sorted(e for e, _ in enviados)
+
+# Sin sesión no hay clave ni suscripción
+anon = server.app.test_client(); anon.environ_base.update({"wsgi.url_scheme": "https", "HTTP_X_LIBRO": "1"})
+check(anon.get("/api/push/clave").status_code == 401 and anon.post("/api/push/suscribir", json=_sus(EP_LUZ)).status_code == 401, "los avisos exigen sesión")
+# La clave pública VAPID: punto sin comprimir de 65 bytes en base64url
+clave_v = adm.get("/api/push/clave").get_json()["clave"]
+_raw = _b64.urlsafe_b64decode(clave_v + "=" * (-len(clave_v) % 4))
+check(len(_raw) == 65 and _raw[0] == 4, "clave pública VAPID de 65 bytes")
+check(os.path.exists(push.ruta_clave()) and oct(os.stat(push.ruta_clave()).st_mode & 0o777) == "0o600", "la clave privada queda en la carpeta de datos, solo para la app")
+
+# Validación del endpoint (el servidor le habla a esa dirección: solo servicios de push conocidos)
+luz = cliente("Luz", "clave-de-luz-2026")
+ana = cliente("Ana", "otra-clave-larga-1")
+for malo in ("https://evil.example/x", "http://fcm.googleapis.com/x", "https://127.0.0.1/x", "https://fcm.googleapis.com.evil.com/x",
+             "https://usuario@fcm.googleapis.com/x", "https://fcm.googleapis.com:8443/x", "ftp://fcm.googleapis.com/x", "https://" + "a" * 700):
+    check(luz.post("/api/push/suscribir", json=_sus(malo)).status_code == 400, f"endpoint rechazado: {malo[:40]}")
+check(luz.post("/api/push/suscribir", json={"suscripcion": {"endpoint": EP_LUZ}}).status_code == 400, "sin claves, 400")
+check(luz.post("/api/push/suscribir", json={"suscripcion": {"endpoint": EP_LUZ, "keys": {"p256dh": "no valido!", "auth": "a" * 22}}}).status_code == 400, "claves mal formadas, 400")
+check(luz.post("/api/push/suscribir", json=[1]).status_code == 400, "cuerpo que no es objeto, 400")
+
+# Un lector sí puede suscribirse (su dispositivo, sus avisos) y ve solo sus categorías
+r = luz.post("/api/push/suscribir", json=_sus(EP_LUZ))
+check(r.status_code == 200 and r.get_json()["suscrito"] is True, f"un lector se suscribe {r.data}")
+cats = r.get_json()["categorias"]
+check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False)], f"categorías del lector y sus valores por defecto {cats}")
+check(all(c["nombre"] and c["ayuda"] for c in cats), "cada categoría trae nombre y ayuda")
+r = adm.post("/api/push/suscribir", json=_sus(EP_ADM))
+check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True)], "categorías del admin")
+check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "suscribirse no da permiso de escribir")
+
+# Estado por dispositivo: solo el dueño ve el suyo
+check(luz.post("/api/push/estado", json={"endpoint": EP_LUZ}).get_json()["suscrito"] is True, "estado: suscrito")
+check(luz.post("/api/push/estado", json={"endpoint": "https://fcm.googleapis.com/otro"}).get_json() == {"suscrito": False, "categorias": []}, "estado: otro dispositivo no")
+check(ana.post("/api/push/estado", json={"endpoint": EP_LUZ}).get_json()["suscrito"] is False, "estado: el dispositivo de otra cuenta no se ve")
+
+# Preferencias
+check(luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"recordatorio": True}}).status_code == 400, "un lector no elige categorías de admin")
+check(luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"movimiento": "si"}}).status_code == 400, "preferencia que no es booleana, 400")
+check(luz.put("/api/push/prefs", json={"endpoint": "https://fcm.googleapis.com/otro", "prefs": {"movimiento": False}}).status_code == 404, "prefs de un dispositivo sin avisos, 404")
+check(ana.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"movimiento": False}}).status_code == 404, "nadie cambia las prefs de otra cuenta")
+
+# Movimiento nuevo: avisa a los lectores, no al admin, y solo al crear
+enviados.clear()
+r = adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": 25000})
+CN = r.get_json()["id"]
+check(_a_quien() == [EP_LUZ] and enviados[0][1]["cuerpo"] == "Daf3r anotó una compra de 25,000 sats" and enviados[0][1]["etiqueta"] == f"mov-{CN}",
+      f"una compra avisa al lector {enviados}")
+check(enviados[0][1]["url"] == "/" and enviados[0][1]["titulo"] == "Libro DCA", "el aviso lleva título y a dónde abrir")
+enviados.clear()
+adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": 25000, "extra": True, "nota": "caída"})
+check(enviados and "compra extra de 25,000 sats" in enviados[0][1]["cuerpo"] and "caída" not in enviados[0][1]["cuerpo"], "una compra extra lo dice y no cuenta la nota")
+enviados.clear()
+VN = adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 700, "tipo": "venta"}).get_json()["id"]
+check(enviados and enviados[0][1]["cuerpo"] == "Daf3r anotó una venta o gasto de 700 sats", f"una venta o gasto avisa {enviados}")
+enviados.clear()
+adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 300, "tipo": "venta", "nota": "Comisión de retiro"})
+check(not enviados, "la comisión de un traslado no es una novedad para la familia")
+enviados.clear()
+adm.put(f"/api/compras/{CN}", json={"fecha": today, "monto": 11, "sats": 26000})
+adm.delete(f"/api/compras/{VN}")
+adm.post("/api/import", data="fecha,monto_usd,sats\n2016-05-05,5,50000\n", headers={"Content-Type": "text/csv"})
+check(not enviados, "editar, anular o importar no avisa")
+check(not any(e == EP_ADM for e, _ in enviados), "el admin no recibe avisos de lo que anota él")
+
+# Categorías apagadas no reciben; «hito» está apagada por defecto y se enciende por dispositivo
+r = luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"movimiento": False}})
+check(r.status_code == 200 and [c["activo"] for c in r.get_json()["categorias"]] == [False, False], "se apaga una categoría")
+enviados.clear()
+adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": 1000})
+check(not enviados, "con «movimiento» apagado no llega nada")
+luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"movimiento": True, "hito": True}})
+_saldo = sum(r_["sats"] if r_["tipo"] == "compra" else -r_["sats"] for r_ in adm.get("/api/compras").get_json())
+_sig = next(m for m in ritmo.etapas_hasta(10**12) if m > _saldo)
+enviados.clear()
+adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": _sig - _saldo})
+_txt = [p["cuerpo"] for e, p in enviados]
+check(any(("Nueva etapa" in t or "Nuevo hito" in t) and ritmo.nombre_hito(_sig) in t for t in _txt), f"cruzar una etapa avisa a quien lo encendió {_txt}")
+
+# Horario: de noche se guarda y sale por la mañana (varios de una categoría, en uno solo)
+push.ahora = _de_noche
+enviados.clear()
+adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 111})
+luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"hito": False}})
+_pend = sqlite3.connect(dbp).execute("SELECT COUNT(*) FROM avisos_pendientes").fetchone()[0]
+check(not enviados and _pend >= 1, f"de noche no suena: queda pendiente ({_pend})")
+push.ahora = _manana
+cx = server.connect(); n_env = push.vaciar_pendientes(cx); cx.close()
+check(n_env >= 1 and _a_quien() and set(_a_quien()) == {EP_LUZ}, "por la mañana salen los pendientes")
+check(sqlite3.connect(dbp).execute("SELECT COUNT(*) FROM avisos_pendientes").fetchone()[0] == 0, "los pendientes se vacían")
+push.ahora = _de_noche
+enviados.clear()
+for _ in range(3):
+    adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 112})
+push.ahora = _manana
+cx = server.connect(); push.vaciar_pendientes(cx); cx.close()
+check(len(enviados) == 1 and enviados[0][1]["cuerpo"] == "Tienes 3 avisos nuevos del libro.", f"varios de la noche salen juntos {enviados}")
+push.ahora = _de_dia
+
+# Un dispositivo que ya no existe (410) se borra solo
+EP_MUERTO = "https://fcm.googleapis.com/fcm/send/muerto-1"
+luz.post("/api/push/suscribir", json=_sus(EP_MUERTO))
+enviados.clear()
+adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 113})
+check(sqlite3.connect(dbp).execute("SELECT COUNT(*) FROM suscripciones WHERE endpoint = ?", (EP_MUERTO,)).fetchone()[0] == 0, "el 410 borra la suscripción")
+check(EP_LUZ in _a_quien(), "y un dispositivo roto no frena a los demás")
+
+# Cambiar de cuenta en el mismo dispositivo, límite por persona y baja
+r = ana.post("/api/push/suscribir", json=_sus(EP_LUZ))
+check(r.status_code == 200 and luz.post("/api/push/estado", json={"endpoint": EP_LUZ}).get_json()["suscrito"] is False, "el dispositivo pasa a la otra cuenta")
+push.MAX_POR_USUARIO = 2
+ana.post("/api/push/suscribir", json=_sus("https://fcm.googleapis.com/fcm/send/ana-2"))
+check(ana.post("/api/push/suscribir", json=_sus("https://fcm.googleapis.com/fcm/send/ana-3")).status_code == 400, "límite de dispositivos por persona")
+push.MAX_POR_USUARIO = 10
+check(luz.post("/api/push/baja", json={"endpoint": EP_LUZ}).status_code == 204 and ana.post("/api/push/estado", json={"endpoint": EP_LUZ}).get_json()["suscrito"] is True,
+      "nadie da de baja el dispositivo de otra cuenta")
+check(ana.post("/api/push/baja", json={"endpoint": EP_LUZ}).status_code == 204 and ana.post("/api/push/estado", json={"endpoint": EP_LUZ}).get_json()["suscrito"] is False, "baja propia")
+# Una cuenta desactivada deja de recibir
+luz.post("/api/push/suscribir", json=_sus(EP_LUZ))
+cx = server.connect(); cx.execute("UPDATE usuarios SET activo = 0 WHERE nombre = 'Luz'"); cx.commit()
+check(EP_LUZ not in [d["endpoint"] for d in push.destinatarios(cx, "movimiento")], "una cuenta desactivada no recibe avisos")
+cx.execute("UPDATE usuarios SET activo = 1 WHERE nombre = 'Luz'"); cx.commit(); cx.close()
+
+# Recordatorio: reglas puras (semana a semana, quincena, ya compraste, <3 compras)
+def _f(hoy_, dias):
+    return [(hoy_ - _td(days=d)).isoformat() for d in dias]
+vie = ritmo.hoy_sv(_dtm(2026, 11, 6, 12, tzinfo=ritmo.ZONA))        # viernes
+semanal = _f(vie, [7 * k + 11 for k in range(8)])                    # compras cada semana, la última el lunes de la semana pasada
+check(ritmo.recordatorio(semanal, vie)["estado"] == "toca" and ritmo.recordatorio(semanal, vie)["dias_restantes"] == 2, "viernes sin comprar esta semana: recordar")
+check(ritmo.recordatorio(semanal, vie - _td(days=1)) is None, "jueves aún no (faltan 3 días)")
+check(ritmo.recordatorio(semanal, vie + _td(days=2))["estado"] == "ultimo", "domingo: último día")
+check(ritmo.recordatorio(semanal + [vie.isoformat()], vie) is None and ritmo.recordatorio(semanal + [(vie - _td(days=4)).isoformat()], vie) is None,
+      "si ya compraste esta semana (aunque sea días antes) no se avisa")
+check(ritmo.recordatorio(semanal, vie + _td(days=3)) is None and ritmo.toca_comprar(semanal, vie + _td(days=3))["estado"] == "perdida", "pasada la semana ya no se recuerda (sin reproche)")
+check(ritmo.recordatorio(semanal[:2], vie) is None, "con menos de 3 compras no hay recordatorio")
+quincenal = _f(vie, [14 * k + 11 for k in range(8)])                 # cada 14 días, la última hace 11 días
+check(ritmo.toca_comprar(quincenal, vie)["paso"] == 2 and ritmo.recordatorio(quincenal, vie) is None, "quincenal con semana de margen: aún no")
+check(ritmo.recordatorio(quincenal, vie + _td(days=7))["estado"] == "toca", "quincenal: en la semana límite sí")
+check("Te quedan 2 días" in ritmo.texto_recordatorio(ritmo.recordatorio(semanal, vie)) and "racha de 8 semanas" in ritmo.texto_recordatorio(ritmo.recordatorio(semanal, vie)), "texto del recordatorio")
+check("Mañana domingo" in ritmo.texto_recordatorio(ritmo.recordatorio(semanal, vie + _td(days=1))) and "Hoy vence" in ritmo.texto_recordatorio(ritmo.recordatorio(semanal, vie + _td(days=2))), "textos del sábado y el domingo")
+
+# Paridad con lib.js (las mismas reglas en el navegador y en el servidor)
+import shutil as _sh
+if _sh.which("node"):
+    _r = _rnd.Random(7)
+    casos_toca = []
+    for _ in range(80):
+        base = date(2026, 3, 1) + _td(days=_r.randrange(0, 200))
+        paso_d = _r.choice([3, 5, 7, 7, 9, 14, 14, 21])
+        fechas_ = sorted({(base + _td(days=paso_d * k + _r.randrange(0, 3))).isoformat() for k in range(_r.randrange(0, 14))})
+        hoy_ = base + _td(days=_r.randrange(0, 120))
+        casos_toca.append({"fechas": fechas_, "hoy": hoy_.isoformat()})
+    for _ in range(60):  # compradores con la última compra en la semana anterior (o la anterior a esa): «toca», «aldia», «perdida»
+        hoy_ = date(2026, 6, 1) + _td(days=_r.randrange(0, 200))
+        lunes_pasado = hoy_ - _td(days=hoy_.weekday() + 7)
+        paso_d = _r.choice([7, 7, 14])
+        fechas_ = sorted({(lunes_pasado - _td(days=paso_d * k - _r.randrange(0, 3 if k else 1))).isoformat() for k in range(_r.randrange(2, 10))})
+        casos_toca.append({"fechas": fechas_, "hoy": hoy_.isoformat()})
+    casos_etapas = [[a, a + _r.choice([1, 500, 90000, 260000, 3000000, 90000000])] for a in (_r.randrange(0, 4 * 10**8) for _ in range(60))] + [[0, 100000], [99999, 100000], [5, 4]]
+    casos_const = []
+    for _ in range(60):
+        n = _r.randrange(0, 60)
+        ff = sorted({(date(2025, 1, 1) + _td(days=_r.randrange(0, 700))).isoformat() for _ in range(n)})
+        nueva = (date(2025, 1, 1) + _td(days=_r.randrange(0, 760))).isoformat()
+        casos_const.append({"antes": ff, "despues": sorted([*ff, nueva]) if _r.random() < 0.8 else [*ff, nueva]})
+    casos_const += [{"antes": [f"2026-01-{d:02d}" for d in range(1, 10)], "despues": [f"2026-01-{d:02d}" for d in range(1, 11)]}]
+    nombres = [100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000, 100000000, 250000000, 1000000000000]
+    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres}
+    p_ = subprocess.run(["node", os.path.join(os.path.dirname(os.path.abspath(__file__)), "paridad_ritmo.mjs")], input=json.dumps(entrada), capture_output=True, text=True)
+    check(p_.returncode == 0, f"node calcula la paridad: {p_.stderr[:200]}")
+    js = json.loads(p_.stdout)
+    mal = []
+    for caso, esperado in zip(casos_toca, js["toca"], strict=True):
+        t = ritmo.toca_comprar(caso["fechas"], date.fromisoformat(caso["hoy"]))
+        mio = {"estado": t["estado"], "racha": t["racha"], "paso": t["paso"]} if t else None
+        if mio != esperado:
+            mal.append((caso, mio, esperado))
+    check(not mal, f"«te toca comprar» igual que lib.js ({len(mal)} casos distintos de {len(casos_toca)}): {mal[:1]}")
+    check([ritmo.etapas_cruzadas(a, b) for a, b in casos_etapas] == js["etapas"], "etapas cruzadas igual que lib.js")
+    check([[list(x) for x in ritmo.constancia_cruzada(c["antes"], c["despues"])] for c in casos_const] == js["constancia"], "constancia cruzada igual que lib.js")
+    check([ritmo.nombre_hito(m).replace(" sats", "") for m in nombres] == js["nombres"], "nombre del hito igual que lib.js")
+    check(sum(1 for x in js["toca"] if x and x["estado"] in ("toca", "ultimo")) > 5, "la paridad prueba casos de «toca» de verdad")
+else:
+    print("(sin node: se omite la paridad con lib.js)")
+
+# El servicio de recordatorios: una vez al día, desde las 9:00, solo si toca
+cx = server.connect()
+_ori = ritmo.recordatorio
+ritmo.recordatorio = lambda f, h: {"estado": "toca", "racha": 8, "paso": 1, "dias_restantes": 2}
+push.ahora = lambda: _dtm(2026, 11, 6, 8, 30, tzinfo=ritmo.ZONA)
+enviados.clear()
+check(avisos._recordatorio(cx) is False and not enviados, "antes de las 9:00 no se avisa")
+push.ahora = lambda: _dtm(2026, 11, 6, 9, 5, tzinfo=ritmo.ZONA)
+check(avisos._recordatorio(cx) is True and _a_quien() == [EP_ADM] and enviados[0][1]["etiqueta"] == "recordatorio"
+      and "Te quedan 2 días" in enviados[0][1]["cuerpo"], f"el recordatorio llega al admin y a nadie más {enviados}")
+check(avisos._recordatorio(cx) is False and len(enviados) == 1, "una vez al día")
+push.ahora = lambda: _dtm(2026, 11, 7, 9, 5, tzinfo=ritmo.ZONA)
+check(avisos._recordatorio(cx) is True and len(enviados) == 2, "al día siguiente vuelve a avisar")
+ritmo.recordatorio = lambda f, h: None
+push.ahora = lambda: _dtm(2026, 11, 8, 9, 5, tzinfo=ritmo.ZONA)
+check(avisos._recordatorio(cx) is False and len(enviados) == 2, "si ya compraste (o no toca) no avisa")
+ritmo.recordatorio = _ori
+
+# TXID: solo avisa si se vio pendiente y luego se confirmó
+TXP, TXC = "a1" * 32, "b2" * 32
+adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 150, "txid": TXP})
+adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 151, "txid": TXC})
+check(sqlite3.connect(dbp).execute("SELECT COUNT(*) FROM tx_vigilados WHERE txid IN (?, ?)", (TXP, TXC)).fetchone()[0] == 2, "un TXID nuevo se vigila")
+estados = {TXP: "pendiente", TXC: "confirmada"}
+_ver = server.verificar_tx
+server.verificar_tx = lambda conn, txid: {"estado": estados.get(txid, "no_encontrada")}
+push.ahora = _de_dia
+enviados.clear()
+avisos._txid(cx)
+check(not enviados, "pendiente y confirmada-desde-el-inicio no avisan")
+estados[TXP] = "confirmada"
+avisos._txid(cx)
+check(_a_quien() == [EP_ADM] and "ya está confirmada" in enviados[0][1]["cuerpo"] and TXP[:6] in enviados[0][1]["cuerpo"], f"el pendiente que se confirma avisa al admin {enviados}")
+avisos._txid(cx)
+check(len(enviados) == 1, "y avisa una sola vez")
+cx.execute("INSERT OR REPLACE INTO tx_vigilados (txid, creado) VALUES (?, ?)", ("c3" * 32, int(_tt.time()) - 15 * 86400)); cx.commit()
+avisos._txid(cx)
+check(cx.execute("SELECT COUNT(*) FROM tx_vigilados WHERE txid = ?", ("c3" * 32,)).fetchone()[0] == 0, "tras dos semanas se deja de vigilar")
+server.verificar_tx = _ver
+cx.close()
+
+# Servicio de worker y archivos del navegador
+r = anon.get("/sw.js")
+check(r.status_code == 200 and "javascript" in r.content_type and r.headers["Cache-Control"] == "no-cache", "sw.js es público y se revalida siempre")
+check("worker-src 'self'" in r.headers["Content-Security-Policy"], "la CSP permite el service worker")
+cuerpo_sw = r.get_data(as_text=True)
+check("showNotification" in cuerpo_sw and "'push'" in cuerpo_sw and "notificationclick" in cuerpo_sw, "el service worker muestra avisos y atiende el toque")
+check("addEventListener('fetch'" not in cuerpo_sw and "caches." not in cuerpo_sw, "sin fetch ni caché: no puede servir JS viejo")
+check("./avisos.js?v=" in adm.get("/app.js").get_data(as_text=True), "app.js importa avisos.js con su versión")
+
 # backup
 os.environ["BACKUP_DIR"] = os.path.join(tmp, "bk")
 import backup; importlib.reload(backup)
 check(backup.run() and len(os.listdir(os.environ["BACKUP_DIR"])) == 1, "backup")
+# Si el respaldo falla, el admin se entera (por push, sin romper nada si no hay a quién avisar)
+push.ahora = _de_dia
+enviados.clear()
+backup.DB_PATH = dbp
+backup.avisar_fallo()
+check(_a_quien() == [EP_ADM] and enviados[0][1]["etiqueta"] == "respaldo" and "respaldo" in enviados[0][1]["cuerpo"], f"el fallo del respaldo avisa al admin {enviados}")
+backup.DB_PATH = "/no/existe/libro.db"
+backup.avisar_fallo()  # sin base no hay a quién avisar: solo se registra, no lanza
+check(len(enviados) == 1, "avisar_fallo nunca rompe el respaldo")
 print("OK", ok, "comprobaciones")

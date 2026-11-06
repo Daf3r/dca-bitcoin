@@ -17,6 +17,8 @@ let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
 const eq = (a, b, msg) => { assert.deepEqual(a, b, msg); n++; };
 const entero = (x) => Math.round(x).toLocaleString('en-US');
+// «Hoy» es el de El Salvador, como en la app (el día UTC cambia a las 18:00 allí).
+const hoySV = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date());
 
 const puertoLibre = () => new Promise((res) => {
   const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); });
@@ -38,9 +40,10 @@ async function servidor(escenario) {
 }
 
 /** Abre una página, entra con la cuenta dada y espera a que cargue. Recoge errores de consola. */
-async function entrar(browser, srv, [usuario, clave], opts = {}) {
+async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
   const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opts });
   const p = await ctx.newPage();
+  if (init) await p.addInitScript(init);
   const consola = [];
   p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
   p.on('pageerror', (e) => consola.push(`pageerror ${e.message}`));
@@ -95,7 +98,7 @@ try {
         const vivo = (await datos(p, '/api/precio')).precio;
         const desde = compras[0].fecha;
         const hist = (await datos(p, `/api/historico?desde=${desde}`)).precios.filter(([f]) => f >= desde).map(([f, c]) => [f, c]);
-        const hoyIso = new Date().toISOString().slice(0, 10);
+        const hoyIso = hoySV();
         if (hist.at(-1)[0] >= hoyIso) hist[hist.length - 1] = [hist.at(-1)[0], vivo];
         else hist.push([hoyIso, vivo]);
         const media = hist.reduce((a, [, c]) => a + c, 0) / hist.length;
@@ -124,9 +127,9 @@ try {
       const precio = (await datos(p, '/api/precio')).precio;
       const mediana = [...compras.map((c) => c.monto)].sort((a, b) => a - b)[Math.floor(compras.length / 2)];
       const satsDe = (d) => Math.round((d / precio) * 1e8);
-      const hoy = new Date().toISOString().slice(0, 10);
+      const hoy = hoySV();
       const usadas = new Set(compras.map((c) => c.fecha));
-      const libre = (() => { for (let d = new Date(); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f)) return f; } })();
+      const libre = (() => { for (let d = new Date(`${hoySV()}T12:00:00Z`); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f)) return f; } })();
       await p.click('#anotar');
       await p.waitForTimeout(400);
       await p.fill('#h-sats', String(satsDe(mediana)));
@@ -239,10 +242,83 @@ try {
     anio.parar();
   }
 
+  // ---------------------------------------------------------------- avisos push (el envío real a Apple o Google no se prueba aquí)
+  const avisos = await servidor('hoy');
+  try {
+    // Un navegador de mentira con push: suscribirse devuelve un dispositivo propio; lo demás (clave, suscripción, categorías) es real.
+    const conPush = () => {
+      const est = { sub: false };
+      const ep = `https://fcm.googleapis.com/fcm/send/ui-${Math.random().toString(36).slice(2)}`;
+      const sub = { endpoint: ep, options: {}, unsubscribe: async () => { est.sub = false; return true; },
+        toJSON: () => ({ endpoint: ep, keys: { p256dh: `B${'x'.repeat(86)}`, auth: 'a'.repeat(22) } }) };
+      const reg = { pushManager: { getSubscription: async () => (est.sub ? sub : null), subscribe: async () => { est.sub = true; return sub; } }, unregister: async () => true };
+      Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: async () => reg, register: async () => reg, ready: Promise.resolve(reg) } });
+      Object.defineProperty(Notification, 'permission', { configurable: true, get: () => (est.permiso ?? 'default') });
+      Notification.requestPermission = async () => { est.permiso = 'granted'; return 'granted'; };
+    };
+    const abrirAvisos = async (p) => {
+      if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); } // la bienvenida del lector
+      await p.click('#cuenta-btn');
+      await p.waitForTimeout(250);
+      await p.click('#dc-avisos-btn');
+      await p.waitForTimeout(500);
+    };
+    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo']], [LECTOR, 'lector', ['movimiento', 'hito']]]) {
+      const { ctx, p, consola } = await entrar(navegador, avisos, cuenta, {}, conPush);
+      await abrirAvisos(p);
+      ok(await p.locator('#dc-avisos').isVisible() && !(await p.locator('#dc-menu').isVisible()), `${quien}: se abre la vista de avisos`);
+      eq((await p.textContent('#av-estado')).trim(), 'Los avisos están apagados en este dispositivo.', `${quien}: empieza apagado`);
+      ok((await p.textContent('#av-interruptor')).includes('Activar') && !(await p.locator('#av-lista').isVisible()), `${quien}: ofrece activar y no muestra casillas`);
+      await p.click('#av-interruptor');
+      await p.waitForTimeout(900);
+      eq((await p.textContent('#av-estado')).trim(), 'Los avisos están activados en este dispositivo.', `${quien}: se activa`);
+      eq(await p.$$eval('#av-lista input', (xs) => xs.map((x) => x.dataset.cat)), esperadas, `${quien}: solo ve sus categorías`);
+      ok((await p.$$eval('#av-lista input', (xs) => xs.map((x) => x.checked))).length === esperadas.length, `${quien}: casillas`);
+      ok((await p.textContent('#av-interruptor')).includes('Desactivar'), `${quien}: ahora ofrece desactivar`);
+      // Cambiar una categoría se guarda en el servidor y sobrevive a cerrar y abrir la vista.
+      const cat = esperadas[esperadas.length - 1];
+      const antes = await p.isChecked(`#av-lista input[data-cat="${cat}"]`);
+      await p.click(`#av-lista input[data-cat="${cat}"]`);
+      await p.waitForTimeout(400);
+      await p.click('#dc-avisos [data-cuenta="volver"]');
+      await p.click('#dc-avisos-btn');
+      await p.waitForTimeout(500);
+      eq(await p.isChecked(`#av-lista input[data-cat="${cat}"]`), !antes, `${quien}: la preferencia se guardó`);
+      // Desactivar borra el dispositivo del servidor.
+      await p.click('#av-interruptor');
+      await p.waitForTimeout(700);
+      eq((await p.textContent('#av-estado')).trim(), 'Los avisos están apagados en este dispositivo.', `${quien}: se desactiva`);
+      ok(!(await p.locator('#av-lista').isVisible()), `${quien}: sin casillas al apagar`);
+      eq((await p.textContent('#av-error')).trim(), '', `${quien}: sin errores`);
+      eq(consola, [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
+      await ctx.close();
+    }
+    // Un navegador sin push (o iPhone sin instalar) lo explica y no ofrece nada que no va a funcionar.
+    const sin = await entrar(navegador, avisos, ADMIN, {}, () => { delete window.PushManager; });
+    await abrirAvisos(sin.p);
+    ok((await sin.p.textContent('#av-motivo')).includes('Añadir a pantalla de inicio') && !(await sin.p.locator('#av-interruptor').isVisible()),
+      'iPhone sin instalar: explica cómo instalar y no ofrece el botón');
+    eq(sin.consola, [], 'sin push: consola limpia');
+    await sin.ctx.close();
+  } finally {
+    avisos.parar();
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {
     const { ctx, p, consola } = await entrar(navegador, una, ADMIN);
+    // La etiqueta «Tu primera compra» no pisa la línea del precio (se coloca donde haya sitio).
+    await p.waitForSelector('.g-nota text', { timeout: 12000 }); // el gráfico sale cuando termina de cargar el histórico
+    const roces = await p.evaluate(() => {
+      const t = document.querySelector('.g-nota text'), l = document.querySelector('.g-linea');
+      if (!t || !l) return -1;
+      const bb = t.getBBox(), total = l.getTotalLength();
+      let n = 0;
+      for (let i = 0; i <= total; i += 2) { const q = l.getPointAtLength(i); if (q.x >= bb.x - 2 && q.x <= bb.x + bb.width + 2 && q.y >= bb.y - 2 && q.y <= bb.y + bb.height + 2) n++; }
+      return n;
+    });
+    eq(roces, 0, 'la etiqueta de la compra no roza la línea del precio');
     ok(!(await p.locator('#valor').isVisible()), 'con 1 compra no sale el gráfico de valor (pide 3)');
     ok(await p.locator('#comienzo').isVisible(), 'con 1 compra sale «Siguiente paso»');
     eq(consola, [], `consola limpia (1 compra): ${consola.join(' | ')}`);

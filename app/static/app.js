@@ -5,6 +5,7 @@ import {
 import { dibujarMontana, subir } from './montana.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
 import { dibujarValor, instalarLecturaValor } from './valor.js';
+import { montarAvisos } from './avisos.js';
 
 const $ = (id) => document.getElementById(id);
 const reducido = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1046,6 +1047,7 @@ function vistaCuenta(cual) {
   $('dc-menu').hidden = cual !== 'menu';
   $('f-clave').hidden = cual !== 'clave';
   $('dc-hist').hidden = cual !== 'historial';
+  $('dc-avisos').hidden = cual !== 'avisos';
 }
 async function cargarYo() {
   try {
@@ -1135,6 +1137,7 @@ async function cargarHistorial(mas = false) {
   }
 }
 $('hist-mas').addEventListener('click', () => cargarHistorial(true));
+const avisosUI = montarAvisos(api);
 
 dCuenta.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-cuenta]');
@@ -1145,6 +1148,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'volver') vistaCuenta('menu');
   else if (accion === 'clave') { vistaCuenta('clave'); $('fc-error').textContent = ''; $('fc-actual').focus(); }
   else if (accion === 'historial') { vistaCuenta('historial'); cargarHistorial(); }
+  else if (accion === 'avisos') { vistaCuenta('avisos'); avisosUI.refrescar(); }
   else if (accion === 'salir' || accion === 'salir-todas') {
     try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }
     location.replace('/login');

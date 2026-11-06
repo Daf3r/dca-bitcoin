@@ -545,6 +545,19 @@ div.fila:hover { background: none; }
 }
 .dc-clave input:focus-visible, .login-caja input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
 .dc-nota { font-size: 0.8125rem; color: var(--txt3); }
+/* Avisos push: interruptor del dispositivo y una casilla por categoría. */
+.dc-avisos { display: grid; gap: 10px; }
+.dc-avisos p { margin: 0; }
+.av-motivo { color: var(--naranja-txt); }
+.av-interruptor { min-height: 48px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.av-interruptor[data-activo="1"] { background: none; border: 1.5px solid var(--s3); color: var(--txt); }
+.av-interruptor:disabled { opacity: 0.5; cursor: wait; }
+.av-lista { display: grid; gap: 6px; }
+.av-fila { display: flex; align-items: flex-start; gap: 12px; min-height: 48px; padding: 10px 12px; border-radius: 14px; background: var(--s2); cursor: pointer; }
+.av-fila input { flex: none; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--naranja); }
+.av-fila span { display: grid; gap: 2px; }
+.av-fila b { font-size: 0.9375rem; }
+.av-fila small { color: var(--txt2); font-size: 0.8125rem; line-height: 1.35; }
 .d-bot .primario { border-color: var(--naranja); background: var(--naranja); color: var(--naranja-osc); }
 .hist { max-height: 60vh; overflow-y: auto; margin: 10px 0 14px; }
 .hist li { display: grid; gap: 1px; padding: 10px 0; border-bottom: 1px solid var(--s3); }

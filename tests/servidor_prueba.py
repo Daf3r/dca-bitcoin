@@ -17,6 +17,9 @@ from urllib.parse import parse_qs, urlparse
 
 APP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "libro.db")
+# «Hoy» como en producción (America/El_Salvador): si no, entre las 18:00 y las 24:00 allí el día UTC ya es el siguiente.
+os.environ["TZ"] = "America/El_Salvador"
+time.tzset()
 sys.path.insert(0, APP)
 import auth  # noqa: E402
 import server  # noqa: E402
