@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {
-  variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
+  tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
@@ -470,6 +470,26 @@ eq([walletNeto([tr(5), tr(2, 'a_exchange')]), walletNeto(null)], [3, 0], 'wallet
   eq(serieSatsPorDolar(largo.slice(0, 10), 105000, 30, '2026-11-20'), null, 'con menos de 14 cierres no hay serie');
   eq([usdSignoCorto(-78.77), usdSignoCorto(921.4), usdSignoCorto(1234.5), usdSignoCorto(1623456), usdSignoCorto(0)], ['−$79', '+$921', '+$1.2K', '+$1.6M', '$0'], 'dólares compactos con signo');
   eq([numCorto(1187072), numCorto(21500), numCorto(999)], ['1.2M', '21.5K', '999'], 'sats compactos');
+}
+
+// Tramos de gran caída (para las bandas del gráfico): la misma regla que la tarjeta
+{
+  const dia = (i) => new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10);
+  const serie = (ps) => ps.map((p, i) => ({ fecha: dia(i), p }));
+  // 10 días a 100, 5 días a 80 (−20 %), luego otra vez 100
+  const a = tramosCaida(serie([...Array(10).fill(100), ...Array(5).fill(80), ...Array(5).fill(100)]));
+  eq(a, [{ desde: dia(10), hasta: dia(14) }], 'un tramo de gran caída entre el día 10 y el 14');
+  // Exactamente −15 % cuenta; −14.9 % no
+  eq(tramosCaida(serie([...Array(5).fill(100), 85, 85, 85])).length, 1, 'justo 15 % bajo el máximo ya es gran caída');
+  eq(tramosCaida(serie([...Array(5).fill(100), 85.1, 85.1, 85.1])), [], '14.9 % no lo es');
+  // Un solo día de caída es ruido: no se marca
+  eq(tramosCaida(serie([...Array(5).fill(100), 70, 100, 100])), [], 'un tramo de un solo día se descarta');
+  // El máximo se olvida a los 30 días: una bajada lenta no es gran caída
+  eq(tramosCaida(serie(Array.from({ length: 120 }, (_, i) => 200 - i * 0.3))), [], 'una bajada lenta (−0.15 % por día) nunca pasa del 15 % en 30 días');
+  ok(tramosCaida(serie(Array.from({ length: 120 }, (_, i) => 200 - i))).length === 1, 'pero una bajada de 1 por día (−0.5 % diario) sí supera el 15 % en 30 días');
+  // Una caída que dura más de 30 días deja de serlo cuando el máximo viejo sale de la ventana
+  const larga = tramosCaida(serie([...Array(5).fill(100), ...Array(60).fill(80)]));
+  eq([larga.length, larga[0].desde, larga[0].hasta < dia(64)], [1, dia(5), true], 'a los 30 días el máximo viejo sale de la ventana y el tramo termina');
 }
 
 console.log(`OK ${n} comprobaciones`);

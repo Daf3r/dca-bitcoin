@@ -43,6 +43,9 @@ for (da, pa), (db_, pb) in zip(ANCLAS, ANCLAS[1:], strict=False):
         base = math.exp(math.log(pa) + (math.log(pb) - math.log(pa)) * f)
         PRECIOS[HOY + timedelta(days=da + i)] = base * (1 + ruido * math.sin(math.pi * f) * 1.6)
 PRECIOS[HOY] = PRECIO
+# Una caída brusca y corta (−38 % durante 16 días, hace ~3.5 meses) para que haya un tramo de «gran caída» en el gráfico.
+for i in range(-112, -96):
+    PRECIOS[HOY + timedelta(days=i)] *= 0.62
 
 
 def ts(d: date) -> int:

@@ -322,7 +322,22 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .ga-1 { stop-color: var(--linea); stop-opacity: 0.12; }
 .ga-2 { stop-color: var(--linea); stop-opacity: 0; }
 .g-area { fill: url(#g-area); }
-.g-linea { fill: none; stroke: var(--linea); stroke-width: 1.8; stroke-linejoin: round; }
+.g-linea { fill: none; stroke: var(--linea); stroke: url(#g-trend) var(--linea); stroke-width: 1.8; stroke-linejoin: round; }
+.gt { stop-color: var(--linea); }
+.lienzo { position: relative; }
+/* Entre el precio y tu costo promedio: lisa a tu favor, a rayas en contra (no depende del color); neutras, sin rojo ni verde. */
+.g-zona-g { fill: var(--naranja); opacity: 0.17; }
+.g-zona-p { fill: url(#g-rayas); opacity: 0.7; }
+.g-raya { stroke: var(--txt3); stroke-width: 1.3; }
+.g-banda { fill: var(--txt3); opacity: 0.13; }
+.g-max { stroke: var(--txt3); stroke-width: 1.2; stroke-dasharray: 2 5; stroke-linecap: round; }
+.g-max-t { fill: var(--txt3); font: 12px var(--sans); paint-order: stroke; stroke: var(--fondo); stroke-width: 4px; stroke-linejoin: round; }
+.g-extras { fill: none; stroke: var(--naranja); stroke-width: 1.6; }
+/* Cambio de rango: el dibujo anterior se desvanece mientras entra el nuevo. */
+.g-entra { animation: g-entra 0.35s ease-out; }
+.g-sale { position: absolute; left: 0; top: 0; pointer-events: none; animation: g-sale 0.35s ease-out forwards; }
+@keyframes g-entra { from { opacity: 0; } }
+@keyframes g-sale { to { opacity: 0; } }
 .g-t { fill: var(--txt3); font: 12px var(--sans); }
 .g-prom { stroke: var(--naranja); stroke-width: 1.5; stroke-dasharray: 5 5; }
 .g-prom-tag rect { fill: var(--naranja); }
@@ -358,6 +373,11 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .k-p::before { width: 16px; border-top: 2px solid var(--linea); }
 .k-c::before { width: 10px; height: 10px; border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 1.4px var(--compra-borde); }
 .k-a::before { width: 16px; border-top: 2px dashed var(--naranja); }
+.k-x::before { width: 14px; height: 14px; border-radius: 50%; border: 1.6px solid var(--naranja); }
+.k-g::before { width: 16px; height: 10px; background: color-mix(in srgb, var(--naranja) 30%, transparent); }
+.k-l::before { width: 16px; height: 10px; background: repeating-linear-gradient(45deg, var(--txt3) 0 1.3px, transparent 1.3px 4px); }
+.k-m::before { width: 16px; border-top: 2px dotted var(--txt3); }
+.k-b::before { width: 16px; height: 10px; background: color-mix(in srgb, var(--txt3) 25%, transparent); }
 
 /* ----------------------------------------------------------------- lista */
 .lista li + li { border-top: 1px solid var(--s3); }

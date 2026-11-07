@@ -1,6 +1,7 @@
 import { aFecha, costoVsPromedio, entero, hoyISO, satsPorDolar, serieGrafico, serieSatsPorDolar, serieValor, usd0 } from './lib.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
 import { dibujarValor, instalarLecturaValor } from './valor.js';
+import { caidaVisible } from './reportes.js';
 import { $, R, S } from './estado.js';
 
 // --------------------------------------------------------------- gráfico
@@ -25,7 +26,7 @@ export function pintarMercado() {
     return;
   }
   anchoGrafico = host.clientWidth;
-  dibujarGrafico(host, $('g-lectura'), { serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items.filter((c) => c.tipo !== 'venta'), ventas: R.items.filter((c) => c.tipo === 'venta'), promedio: R.promedio, rango: S.rango, hoy: hoyISO() });
+  dibujarGrafico(host, $('g-lectura'), { serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items.filter((c) => c.tipo !== 'venta'), ventas: R.items.filter((c) => c.tipo === 'venta'), promedio: R.promedio, rango: S.rango, hoy: hoyISO(), maximo30: caidaVisible() });
 }
 instalarLectura($('lienzo'));
 

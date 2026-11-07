@@ -156,8 +156,10 @@ function pintarIndicador() {
 // compra como las tuyas. Es solo información y opcional: «Ocultar hoy» la quita hasta mañana (por dispositivo).
 const CLAVE_CAIDA = 'libro.caida.oculta';
 const caidaOculta = () => { try { return localStorage.getItem(CLAVE_CAIDA); } catch { return null; } };
+/** La gran caída que la tarjeta enseña hoy (solo admin, con 3 compras y si no la ocultó): la usa también el gráfico para marcar el máximo. */
+export const caidaVisible = () => (esAdmin() && R.nCompras >= 3 && S.precio && caidaOculta() !== hoyISO() ? caidaGrande(S.historico, S.precio) : null);
 export function pintarCaida() {
-  const c = esAdmin() && R.nCompras >= 3 && S.precio && caidaOculta() !== hoyISO() ? caidaGrande(S.historico, S.precio) : null;
+  const c = caidaVisible();
   $('caida').hidden = !c;
   if (!c) return;
   const r = reposicion(R, S.precio);
