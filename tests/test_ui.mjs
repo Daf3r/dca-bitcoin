@@ -492,6 +492,72 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- atmósfera: parallax, nubes, niebla, aves, desenfoque, velo y logo
+  {
+    const srv = await servidor('anio');
+    try {
+      const fuerte = () => { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 }); };
+      const debil = () => { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 2 }); };
+      const estado = (p) => p.evaluate(() => {
+        const cs = (s) => getComputedStyle(document.querySelector(s));
+        return { cielo: cs('.par-cielo').transform, lejos: cs('.par-lejos').transform, medio: cs('.par-medio').transform, filtro: cs('.lejos').filter,
+          nube: cs('.nube.n1').display, nubeAnim: cs('.nube.n1').animationName, niebla: cs('.niebla').display, ave: cs('.ave').animationName, aveDisplay: cs('.ave').display,
+          velo: getComputedStyle(document.querySelector('.escena'), '::after').content === 'none' ? 0 : Number(getComputedStyle(document.querySelector('.escena'), '::after').opacity), marca: cs('.marca').animationName, ico: cs('.marca-ico path').animationName,
+          sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
+      });
+      // Todos los efectos, de día y en un teléfono potente
+      let r = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: 1280, height: 800 }, isMobile: false, hasTouch: false }, fuerte);
+      let e = await estado(r.p);
+      ok(e.cielo !== 'none' && e.lejos !== 'none' && e.medio !== 'none', 'atmósfera: con todos los efectos las tres capas llevan parallax');
+      ok(/url/.test(e.filtro), `atmósfera: desenfoque de la sierra lejana (${e.filtro})`);
+      eq([e.nube, e.nubeAnim, e.niebla], ['inline', 'nube', 'inline'], 'atmósfera: nubes que cruzan y niebla presentes');
+      eq(e.ave, 'none', 'atmósfera: de día no cruzan aves');
+      eq(e.velo, 0, 'atmósfera: arriba del todo el velo del scroll es 0');
+      const antes = await r.p.evaluate(() => getComputedStyle(document.querySelector('.par-cielo')).transform);
+      await r.p.evaluate(() => window.scrollTo(0, 400));
+      await r.p.waitForTimeout(700);
+      e = await estado(r.p);
+      ok(e.cielo !== antes && e.velo > 0.1 && e.velo <= 0.7, `atmósfera: al bajar, el cielo se mueve y el velo sube (${e.velo})`);
+      await r.p.evaluate(() => window.scrollTo(0, 0));
+      await r.p.mouse.move(60, 200);
+      await r.p.waitForTimeout(600);
+      const izq = (await estado(r.p)).lejos;
+      await r.p.mouse.move(1220, 200);
+      await r.p.waitForTimeout(600);
+      const der = (await estado(r.p)).lejos;
+      ok(izq !== der, `atmósfera: el puntero mueve las capas (${izq} → ${der})`);
+      eq(e.marca, 'marca-entra', 'atmósfera: el logo entra al abrir');
+      ok(e.sw <= e.cw, 'atmósfera: sin scroll horizontal');
+      await r.ctx.close();
+
+      // Al amanecer sí cruzan aves
+      r = await entrar(navegador, srv, ADMIN, { hora: 6 }, fuerte);
+      e = await estado(r.p);
+      eq(e.ave, 'ave', 'atmósfera: al amanecer cruzan aves');
+      await r.ctx.close();
+
+      // Esenciales: sin adornos (nubes, niebla, aves ni logo animado), sin parallax ni desenfoque ni velo
+      r = await entrar(navegador, srv, ADMIN, { hora: 6 }, fuerte);
+      await r.p.evaluate(() => window.libroEfectos.fijar('esenciales'));
+      await r.p.evaluate(() => window.scrollTo(0, 300));
+      await r.p.waitForTimeout(500);
+      e = await estado(r.p);
+      eq([e.cielo, e.lejos, e.medio, e.filtro], ['none', 'none', 'none', 'none'], 'atmósfera: con esenciales no hay parallax ni desenfoque');
+      eq([e.nube, e.niebla, e.aveDisplay], ['none', 'none', 'none'], 'atmósfera: con esenciales no hay nubes, niebla ni aves');
+      eq([e.velo, e.marca, e.ico], [0, 'none', 'none'], 'atmósfera: con esenciales no hay velo ni logo animado');
+      await r.ctx.close();
+
+      // Modo ligero (teléfono modesto): nada de desenfoque ni de ambiente
+      r = await entrar(navegador, srv, ADMIN, { hora: 12 }, debil);
+      e = await estado(r.p);
+      eq([e.filtro, e.nube, e.niebla], ['none', 'none', 'none'], 'atmósfera: en modo ligero no hay desenfoque ni nubes ni niebla');
+      eq(r.consola, [], 'atmósfera: consola limpia');
+      await r.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {

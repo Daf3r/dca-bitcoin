@@ -1,9 +1,11 @@
 import { dibujarMontana } from './montana.js';
+import { instalarParallax } from './parallax.js';
 
 const $ = (id) => document.getElementById(id);
 const host = $('montana');
 const pintar = () => dibujarMontana(host, { sats: 0, meta: 1e5, inicio: 0, techo: 40 });
 pintar();
+instalarParallax();
 let ancho = host.clientWidth;
 new ResizeObserver(() => { if (host.clientWidth !== ancho) { ancho = host.clientWidth; pintar(); } }).observe(host);
 
