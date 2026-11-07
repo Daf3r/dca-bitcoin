@@ -368,8 +368,48 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .g-cursor .vc-i { fill: var(--txt3); stroke: var(--fondo); stroke-width: 2; }
 .k-v::before { width: 16px; border-top: 3px solid var(--naranja-txt); }
 .k-i::before { width: 16px; border-top: 2px solid var(--txt3); }
-.leyenda { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 8px; font-size: 0.8125rem; color: var(--txt3); }
-.leyenda span::before { content: ""; display: inline-block; margin-right: 6px; vertical-align: middle; }
+.leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; margin-top: 8px; font-size: 0.8125rem; color: var(--txt3); }
+.leyenda > *::before { content: ""; display: inline-block; margin-right: 6px; vertical-align: middle; }
+/* Los elementos de la leyenda que son botones ocultan o muestran esa serie (siempre queda al menos una). */
+.leyenda button { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; cursor: pointer; touch-action: manipulation; }
+.leyenda button[aria-pressed="false"] { opacity: 0.5; text-decoration: line-through; }
+.leyenda button:focus-visible { outline: 2px solid var(--naranja); outline-offset: 0; }
+/* Series ocultas (data-ocultas en el contenedor). */
+[data-ocultas~="precio"] :is(.g-linea, .g-area, .g-hoy, .g-pulso, .g-zona-g, .g-zona-p),
+[data-ocultas~="compras"] :is(.g-compras, .g-extras, .g-ventas, .g-nota),
+[data-ocultas~="costo"] :is(.g-prom, .g-prom-tag, .g-zona-g, .g-zona-p),
+[data-ocultas~="max"] :is(.g-max, .g-max-t),
+[data-ocultas~="bandas"] .g-banda { display: none; }
+/* Opciones del gráfico: escala logarítmica (solo con «Todo») y pantalla completa. */
+.g-opciones { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 8px; margin: 2px 0 -4px; }
+.g-op { min-height: 44px; padding: 0 12px; border: 0; border-radius: 99px; background: none; color: var(--txt2); font: 600 0.8125rem var(--sans); cursor: pointer; touch-action: manipulation; }
+.g-op[aria-pressed="true"] { background: var(--s2); color: var(--txt); box-shadow: inset 0 0 0 1.5px var(--naranja); }
+.g-escala { fill: var(--txt3); font: italic 12px var(--sans); }
+/* Tarjeta flotante del gráfico (fuera del contenedor, que es role=img): por encima del dedo; fija, con Editar y Cerrar. */
+.g-caja { position: relative; }
+.g-tarjeta { position: absolute; z-index: 3; top: 2px; left: clamp(104px, var(--cx, 50%), calc(100% - 104px)); transform: translateX(-50%); width: 208px; padding: 8px 12px 10px;
+  border-radius: 14px; background: var(--s1); border: 1px solid var(--s3); box-shadow: 0 8px 24px rgb(0 0 0 / 0.28); font-size: 0.8125rem; line-height: 1.35; pointer-events: none; }
+.g-tarjeta[hidden] { display: none; }
+.g-tarjeta[data-modo="fija"] { pointer-events: auto; border-color: var(--naranja); }
+.g-tarjeta p { margin: 0; }
+.gt-fecha { color: var(--txt3); }
+.gt-precio { font: 650 1.0625rem var(--sans); color: var(--txt); }
+.gt-sub, .gt-nota { color: var(--txt2); }
+.gt-sub:empty, .gt-nota:empty { display: none; }
+.gt-acciones { display: none; gap: 8px; margin-top: 6px; }
+.g-tarjeta[data-modo="fija"] .gt-acciones { display: flex; }
+.gt-acciones button { flex: 1; min-height: 44px; border: 1.5px solid var(--s3); border-radius: 12px; background: none; color: var(--txt); font: 650 0.875rem var(--sans); cursor: pointer; touch-action: manipulation; }
+.gt-editar { border-color: var(--naranja) !important; }
+/* Pantalla completa. */
+.d-grafico { width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none; margin: 0; padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  border: 0; background: var(--fondo); color: var(--txt); flex-direction: column; gap: 8px; }
+.d-grafico[open] { display: flex; }
+.dg-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+.dg-cab h2 { font: 400 1.25rem var(--serif); }
+.dg-cerrar { min-width: 96px; min-height: 48px; padding: 0 18px; border: 0; border-radius: 99px; background: var(--s2); color: var(--txt); font: 650 1rem var(--sans); cursor: pointer; touch-action: manipulation; }
+.dg-caja { flex: 1 1 0; min-height: 0; }
+.dg-caja .lienzo { position: absolute; inset: 0; height: auto; overflow: hidden; }
+.d-grafico .lectura { margin: 0; }
 .k-p::before { width: 16px; border-top: 2px solid var(--linea); }
 .k-c::before { width: 10px; height: 10px; border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 1.4px var(--compra-borde); }
 .k-a::before { width: 16px; border-top: 2px dashed var(--naranja); }

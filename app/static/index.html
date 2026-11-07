@@ -93,8 +93,18 @@
       <div class="ind-pista"><i class="ind-costo"></i><i class="ind-hoy" id="ind-hoy"></i></div>
       <p class="ind-eti"><span id="ind-costo-t"></span><span id="ind-hoy-t"></span></p>
     </div>
-    <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo."></div>
-    <p class="leyenda" aria-hidden="true"><span class="k-p">Precio de BTC</span><span class="k-c">Tus compras, a su precio</span><span class="k-x" hidden>Compra extra</span><span class="k-a">Tu costo promedio</span><span class="k-g" hidden>Por encima de tu costo</span><span class="k-l" hidden>Por debajo de tu costo</span><span class="k-m" hidden>Máximo de 30 días</span><span class="k-b" hidden>Caída fuerte (15 %+)</span></p>
+    <div class="g-opciones">
+      <button type="button" class="g-op" id="g-log" aria-pressed="false" hidden>Escala logarítmica</button>
+      <button type="button" class="g-op" id="g-ampliar">Ampliar</button>
+    </div>
+    <div class="g-caja">
+      <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo y Intro para ver la compra de ese día."></div>
+      <div class="g-tarjeta" id="g-tarjeta" hidden>
+        <p class="gt-fecha"></p><p class="gt-precio"></p><p class="gt-sub"></p><p class="gt-nota"></p>
+        <div class="gt-acciones"><button type="button" class="gt-editar" hidden>Editar</button><button type="button" class="gt-cerrar">Cerrar</button></div>
+      </div>
+    </div>
+    <p class="leyenda" role="group" aria-label="Qué mostrar en el gráfico (toca para ocultar o mostrar)"><button type="button" class="k-p" data-serie="precio" aria-pressed="true">Precio de BTC</button><button type="button" class="k-c" data-serie="compras" aria-pressed="true">Tus compras, a su precio</button><span class="k-x" hidden>Compra extra</span><button type="button" class="k-a" data-serie="costo" aria-pressed="true">Tu costo promedio</button><span class="k-g" hidden>Por encima de tu costo</span><span class="k-l" hidden>Por debajo de tu costo</span><button type="button" class="k-m" data-serie="max" aria-pressed="true" hidden>Máximo de 30 días</button><button type="button" class="k-b" data-serie="bandas" aria-pressed="true" hidden>Caída fuerte (15 %+)</button></p>
   </section>
 
   <!-- Lo que pusiste (neto) frente a lo que vale tu saldo, día a día. Desde 3 compras y con histórico. -->
@@ -319,6 +329,25 @@
   <ul class="nov-lista" id="nov-lista"></ul>
   <dl class="nov-resumen" id="nov-resumen"></dl>
   <div class="d-bot"><button type="button" id="nov-ok" autofocus>Entendido</button></div>
+</dialog>
+
+<dialog id="d-grafico" class="d-grafico" aria-labelledby="dg-t">
+  <div class="dg-cab">
+    <h2 id="dg-t">El precio y tus compras</h2>
+    <div class="rangos" id="dg-rangos" role="group" aria-label="Rango del gráfico">
+      <button type="button" data-r="30">1M</button><button type="button" data-r="182">6M</button><button type="button" data-r="365">1A</button><button type="button" data-r="0">Todo</button>
+    </div>
+    <button type="button" class="dg-cerrar" id="dg-cerrar">Cerrar</button>
+  </div>
+  <p class="lectura" id="dg-lectura"></p>
+  <p class="sr" id="dg-sr" aria-live="polite"></p>
+  <div class="g-caja dg-caja">
+    <div class="lienzo" id="dg-lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas, a pantalla completa. Usa las flechas para recorrerlo."></div>
+    <div class="g-tarjeta" id="dg-tarjeta" hidden>
+      <p class="gt-fecha"></p><p class="gt-precio"></p><p class="gt-sub"></p><p class="gt-nota"></p>
+      <div class="gt-acciones"><button type="button" class="gt-editar" hidden>Editar</button><button type="button" class="gt-cerrar">Cerrar</button></div>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="d-borrar" aria-labelledby="d-titulo">

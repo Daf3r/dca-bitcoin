@@ -99,6 +99,20 @@ try {
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
       await auditar(p, `admin ${esquema}`);
+      // El gráfico: con una compra fijada (tarjeta con Editar y Cerrar), con la escala logarítmica y a pantalla completa
+      await p.evaluate(() => document.getElementById('lienzo').scrollIntoView({ block: 'center' }));
+      await p.waitForTimeout(700);
+      const pc = await p.evaluate(() => { const svg = document.querySelector('#lienzo svg'), m = /^M([\d.]+) ([\d.]+)a([\d.]+)/.exec(svg.querySelector('.g-compras').getAttribute('d')), r = svg.getBoundingClientRect(); return { x: r.left + Number(m[1]) + Number(m[3]), y: r.top + Number(m[2]) }; });
+      await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(300);
+      await auditar(p, `gráfico con una compra fijada ${esquema}`);
+      await p.keyboard.press('Escape');
+      await p.click('#rangos button[data-r="0"]'); await p.waitForTimeout(400);
+      await p.click('#g-log'); await p.waitForTimeout(400);
+      await auditar(p, `gráfico en escala logarítmica ${esquema}`);
+      await p.click('#g-ampliar'); await p.waitForTimeout(700);
+      await auditar(p, `gráfico a pantalla completa ${esquema}`);
+      await p.click('#dg-cerrar'); await p.waitForTimeout(400);
+      await p.evaluate(() => scrollTo(0, 0));
       await p.click('#anotar'); await p.waitForTimeout(500);
       await auditar(p, `hoja de compra ${esquema}`);
       await p.click('#h-avanzado summary'); await p.waitForTimeout(200);
