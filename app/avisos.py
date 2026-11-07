@@ -10,11 +10,15 @@ En cada pasada:
     aún no compró; no avisa si ya compraste, aunque haya sido días antes;
   · TXID vigilados: si uno que estaba pendiente ya se confirmó, avisa al admin una vez;
   · gran caída: si BTC está 15 % o más bajo su máximo de 30 días, avisa al admin una vez por caída (se reinicia cuando
-    BTC se recupera y queda a menos de 10 % de su máximo). Solo informa; solo de 8:00 a 21:00.
+    BTC se recupera y queda a menos de 10 % de su máximo). Solo informa; solo de 8:00 a 21:00;
+  · vigilantes: deja una marca de «sigo vivo»; avisa si pasan más de 36 horas sin respaldo nuevo, si la revisión semanal
+    de la base de datos encuentra un problema o si queda poco espacio en disco (cada aviso, una vez al día).
+  (el chequeo de salud de docker-compose vive en salud.py)
 """
 from __future__ import annotations
 
 import os
+import shutil
 import sqlite3
 import sys
 import time
@@ -23,6 +27,7 @@ from typing import Any
 
 import push
 import ritmo
+import salud
 import server  # abre la base y crea lo que falte; de aquí salen la verificación de TXID y las consultas
 
 HORA_RECORDATORIO = 9
@@ -32,6 +37,9 @@ MAX_TX_POR_PASADA = 20
 CAIDA_CADA = 300  # el precio se consulta como mucho cada 5 minutos
 CAIDA_UMBRAL = 15.0
 CAIDA_RECUPERADA = 10.0  # la caída «termina» cuando BTC queda a menos de esto bajo su máximo
+RESPALDO_MAX_HORAS = 36
+DISCO_MIN_BYTES = 1024**3  # menos de 1 GiB libre
+DISCO_MIN_PCT = 10.0       # o menos del 10 % libre
 
 
 def _recordatorio(conn: sqlite3.Connection) -> bool:
@@ -110,10 +118,74 @@ def _caida(conn: sqlite3.Connection, cada: int = CAIDA_CADA) -> bool:
     return True
 
 
+def _una_vez_al_dia(conn: sqlite3.Connection, clave: str) -> bool:
+    """True la primera vez que se pregunta cada día (y deja marcado el día)."""
+    hoy = ritmo.hoy_sv(push.ahora()).isoformat()
+    if server._meta(conn, clave) == hoy:
+        return False
+    server._meta_poner(conn, clave, hoy)
+    conn.commit()
+    return True
+
+
+def _respaldo_viejo(conn: sqlite3.Connection) -> bool:
+    """Avisa si el respaldo más reciente tiene más de 36 horas (o si nunca hubo uno desde que se vigila)."""
+    ahora = int(time.time())
+    if server._meta(conn, "avisos_primer_pase") is None:
+        server._meta_poner(conn, "avisos_primer_pase", str(ahora))
+        conn.commit()
+    ultimo = salud.ultimo_respaldo()
+    desde = ultimo if ultimo is not None else int(server._meta(conn, "avisos_primer_pase") or ahora)
+    if ahora - desde <= RESPALDO_MAX_HORAS * 3600 or not _una_vez_al_dia(conn, "aviso_respaldo_viejo_dia"):
+        return False
+    horas = round((ahora - desde) / 3600)
+    texto = (f"Hace {horas} horas que no hay un respaldo nuevo. Revisa el servicio de respaldos." if ultimo is not None
+             else "Todavía no hay ningún respaldo guardado. Revisa el servicio de respaldos.")
+    push.notificar(conn, "respaldo", "Libro DCA", texto, "respaldo-viejo")
+    return True
+
+
+def _resultado_integridad(conn: sqlite3.Connection) -> list[str]:
+    return [str(r[0]) for r in conn.execute("PRAGMA integrity_check")]
+
+
+def _integridad(conn: sqlite3.Connection) -> bool:
+    """Revisa la base real una vez por semana (o cada día mientras tenga un problema). Avisa si algo falla."""
+    hoy = ritmo.hoy_sv(push.ahora())
+    semana = f"{hoy.isocalendar().year}-S{hoy.isocalendar().week:02d}"
+    estado = server._meta(conn, "aviso_integridad") or ""
+    if estado == f"ok:{semana}" or estado == f"mal:{hoy.isoformat()}":
+        return False
+    res = _resultado_integridad(conn)
+    if res == ["ok"]:
+        server._meta_poner(conn, "aviso_integridad", f"ok:{semana}")
+        conn.commit()
+        return False
+    server._meta_poner(conn, "aviso_integridad", f"mal:{hoy.isoformat()}")
+    conn.commit()
+    push.notificar(conn, "respaldo", "Libro DCA", "La revisión de la base de datos encontró un problema. Restaura desde un respaldo antes de seguir.", "integridad")
+    return True
+
+
+def _disco(conn: sqlite3.Connection) -> bool:
+    """Avisa (una vez al día) si queda poco espacio libre en el volumen de los datos."""
+    uso = shutil.disk_usage(os.path.dirname(server.DB_PATH) or ".")
+    pct = uso.free / uso.total * 100 if uso.total else 100.0
+    if uso.free >= DISCO_MIN_BYTES and pct >= DISCO_MIN_PCT:
+        return False
+    if not _una_vez_al_dia(conn, "aviso_disco_dia"):
+        return False
+    push.notificar(conn, "respaldo", "Libro DCA", f"Queda poco espacio en el servidor: {uso.free / 1024**2:,.0f} MB libres ({pct:.0f} %).", "disco")
+    return True
+
+
 def una_pasada() -> dict[str, Any]:
     conn = server.connect()
     try:
-        return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn), "caida": _caida(conn)}
+        server._meta_poner(conn, "avisos_latido", str(int(time.time())))  # «sigo vivo»: lo lee el chequeo de salud
+        conn.commit()
+        return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn), "caida": _caida(conn),
+                "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn)}
     finally:
         conn.close()
 

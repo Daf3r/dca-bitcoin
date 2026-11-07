@@ -4,6 +4,11 @@
   "description": "Solo para las pruebas de navegador (tests/test_ui.mjs); la app no usa npm.",
   "type": "module",
   "devDependencies": {
-    "playwright": "1.63.0"
+    "@biomejs/biome": "2.6.6",
+    "axe-core": "4.14.0",
+    "lighthouse": "13.6.0",
+    "pixelmatch": "8.0.0",
+    "playwright": "1.63.0",
+    "pngjs": "7.0.0"
   }
 }

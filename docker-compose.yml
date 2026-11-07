@@ -29,6 +29,12 @@ services:
     image: libro-dca:local
     depends_on: [app]
     command: ["python", "backup.py", "--loop"]
+    healthcheck:   # sano mientras haya un respaldo reciente
+      test: ["CMD", "python", "salud.py", "respaldo"]
+      interval: 10m
+      timeout: 10s
+      retries: 2
+      start_period: 5m
     environment:
       DB_PATH: /data/libro.db
       BACKUP_DIR: /data/backups
@@ -47,8 +53,15 @@ services:
     image: libro-dca:local
     depends_on: [app]
     command: ["python", "avisos.py", "--loop"]
+    healthcheck:   # sano mientras el servicio deje su marca de «sigo vivo» cada pasada
+      test: ["CMD", "python", "salud.py", "avisos"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 2m
     environment:
       DB_PATH: /data/libro.db
+      BACKUP_DIR: /data/backups
       TZ: America/El_Salvador
     volumes:
       - ./data:/data

@@ -3,6 +3,7 @@
 Uso:
   python backup.py          una copia ahora
   python backup.py --loop   una copia cada BACKUP_INTERVAL_HOURS (por defecto 24)
+  (el chequeo de salud de docker-compose vive en salud.py)
 
 Usa la API de respaldo de SQLite, que produce una copia coherente aunque la
 app esté escribiendo, y verifica la copia antes de conservarla.
