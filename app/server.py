@@ -481,7 +481,7 @@ def _version() -> str:
 
 
 VERSION = _version()
-_REF_JS = re.compile(r"""(from\s+['"]\./[\w-]+\.js)(['"])""")
+_REF_JS = re.compile(r"""((?:from|import)\s*['"]\./[\w-]+\.js)(['"])""")
 _REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.woff2))(")""")
 _REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
 
