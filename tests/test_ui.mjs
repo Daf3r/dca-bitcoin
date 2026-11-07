@@ -620,8 +620,41 @@ try {
     ok(nodos < 3000, `el DOM no crece con las compras (${nodos} nodos)`);
     await p.waitForSelector('.g-linea', { timeout: 15000 });
     ok(await p.locator('#valor').isVisible(), 'con mil compras sale el gráfico de valor');
+    // Dibujo del precio: anillos de extras, máximo de 30 días (hay gran caída), degradado, zona entre precio y costo, bandas y leyenda.
+    await p.click('#rangos button[data-r="0"]');
+    await p.waitForTimeout(700);
+    const dib = await p.evaluate(() => {
+      const q = (s) => document.querySelectorAll(`#lienzo ${s}`).length;
+      const ley = (c) => !document.querySelector(`#lienzo`).parentElement.querySelector(`.leyenda ${c}`).hidden;
+      return { extras: q('.g-extras'), max: q('.g-max'), maxTxt: document.querySelector('#lienzo .g-max-t')?.textContent, trend: q('#g-trend stop'), zonaG: q('.g-zona-g'), zonaP: q('.g-zona-p'),
+        bandas: q('.g-banda'), stroke: getComputedStyle(document.querySelector('#lienzo .g-linea')).stroke, leyX: ley('.k-x'), leyG: ley('.k-g'), leyL: ley('.k-l'), leyM: ley('.k-m'), leyB: ley('.k-b') };
+    });
+    ok(dib.extras === 1 && dib.leyX, 'con compras extra el gráfico las rodea con un anillo y la leyenda lo explica');
+    ok(dib.max === 1 && /^Máx\. 30 días \$[\d,]+$/.test(dib.maxTxt) && dib.leyM, `con gran caída, el máximo de 30 días ${dib.maxTxt}`);
+    ok(dib.trend === 13 && /url\(/.test(dib.stroke), 'la línea usa el degradado de tendencia');
+    ok(dib.zonaG === 1 && dib.zonaP === 1 && dib.leyG && dib.leyL, 'zona entre el precio y tu costo: lisa a favor, a rayas en contra');
+    ok(dib.bandas >= 1 && dib.leyB, `bandas de caída fuerte (${dib.bandas})`);
+    // Al cambiar de rango el dibujo anterior se desvanece y se retira solo; sin cambio de rango no hay transición.
+    await p.click('#rangos button[data-r="182"]');
+    await p.waitForTimeout(80);
+    ok(await p.locator('#lienzo .g-sale').count() === 1 && await p.locator('#lienzo .g-entra').count() === 1, 'al cambiar de rango se funde el dibujo anterior con el nuevo');
+    await p.waitForTimeout(700);
+    ok(await p.locator('#lienzo .g-sale').count() === 0 && await p.locator('#lienzo svg').count() === 1, 'el dibujo anterior se retira solo');
+    await p.evaluate(() => window.libroEfectos.fijar('ninguno'));
+    await p.click('#rangos button[data-r="365"]');
+    await p.waitForTimeout(80);
+    ok(await p.locator('#lienzo .g-sale').count() === 0, 'sin movimiento no hay fundido');
+    await p.evaluate(() => window.libroEfectos.fijar('auto'));
     eq(consola.filter((c) => !/503/.test(c)), [], `con mil compras la consola queda limpia: ${consola.join(' | ')}`);
     await ctx.close();
+    // El lector ve el gráfico con sus bandas y zonas, pero no el máximo de 30 días (va con la tarjeta de gran caída, que es del admin).
+    const lec = await entrar(navegador, mil, LECTOR);
+    await lec.p.waitForSelector('#lienzo .g-linea', { timeout: 15000 });
+    if (await lec.p.locator('#nov-ok').isVisible()) { await lec.p.click('#nov-ok'); await lec.p.waitForTimeout(400); } // la bienvenida del lector
+    await lec.p.click('#rangos button[data-r="0"]');
+    await lec.p.waitForTimeout(500);
+    eq(await lec.p.evaluate(() => [document.querySelectorAll('#lienzo .g-max').length, document.querySelectorAll('#lienzo .g-banda').length > 0, document.querySelectorAll('#lienzo .g-extras').length]), [0, true, 1], 'el lector no ve el máximo de 30 días pero sí las bandas y los anillos');
+    await lec.ctx.close();
   } finally {
     mil.parar();
   }

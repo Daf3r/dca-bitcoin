@@ -168,6 +168,35 @@ export function caidaGrande(historico, vivo, hoy = hoyISO(), { dias = 30, umbral
   return caida >= umbral ? { max, caida, dias } : null;
 }
 
+/**
+ * Tramos de «gran caída» para marcarlos en el gráfico: los días en que el precio estuvo `umbral` % o más por debajo de su
+ * máximo de los últimos `dias` días (la misma regla que `caidaGrande`). `serie` es [{fecha, p}] ordenada por fecha; devuelve
+ * [{desde, hasta}] (fechas inclusive) y descarta los tramos de un solo día, que solo serían ruido.
+ */
+export function tramosCaida(serie, { dias = 30, umbral = 15 } = {}) {
+  const tramos = [];
+  let abierto = null;
+  let ini = 0;
+  for (let i = 0; i < serie.length; i++) {
+    const [y, m, d] = serie[i].fecha.split('-').map(Number);
+    const limite = new Date(Date.UTC(y, m - 1, d - dias)).toISOString().slice(0, 10);
+    while (serie[ini].fecha < limite) ini++;
+    let max = 0;
+    for (let j = ini; j <= i; j++) if (serie[j].p > max) max = serie[j].p;
+    const caida = max > 0 ? Math.round((1 - serie[i].p / max) * 1000) / 10 : 0;
+    if (caida >= umbral) {
+      if (!abierto) abierto = { desde: serie[i].fecha, hasta: serie[i].fecha, n: 0 };
+      abierto.hasta = serie[i].fecha;
+      abierto.n += 1;
+    } else if (abierto) {
+      tramos.push(abierto);
+      abierto = null;
+    }
+  }
+  if (abierto) tramos.push(abierto);
+  return tramos.filter((t) => t.n >= 2).map(({ desde, hasta }) => ({ desde, hasta }));
+}
+
 /** Monto en dólares de una compra «como las tuyas»: la mediana de tus últimas 12 compras habituales, sin las extra (null con menos de 3). */
 export function montoHabitual(items) {
   const montos = (items ?? []).filter((c) => c.tipo !== 'venta' && !c.extra && c.monto > 0).slice(-12).map((c) => c.monto).sort((a, b) => a - b);
