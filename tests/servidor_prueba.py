@@ -2,7 +2,8 @@
 
 Uso: python tests/servidor_prueba.py PUERTO [ESCENARIO]
 Escenarios: hoy (1 compra), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
-vacio (sin compras), sinprecio, sinhist (sin histórico de precios).
+mil (1,000 compras en casi seis años, con extras, ventas y traslados), vacio (sin compras), sinprecio,
+sinhist (sin histórico de precios).
 Cuentas: Daf3r / clave-de-prueba-12 (admin) y Ana / lectora-de-prueba (lector).
 """
 import math
@@ -99,6 +100,20 @@ elif esc == "tres":
     comprar(HOY - timedelta(days=17), 30.0)
     comprar(HOY - timedelta(days=10), 25.0)
     comprar(HOY - timedelta(days=3), 28.68, 36578)
+elif esc == "mil":
+    # 1,000 compras: una cada ~2 días durante casi seis años (el volumen que tendría la app tras mucho tiempo de uso).
+    r3 = random.Random(1000)
+    for k in range(1000):
+        d = HOY - timedelta(days=3 + round((999 - k) * 2.1))
+        monto = round(r3.choice([10, 15, 20, 25, 25, 30]) + r3.random() * 5, 2)
+        comprar(d, monto)
+        if k % 97 == 50:  # alguna compra extra por una caída, con su nota
+            conn.execute("UPDATE compras SET extra = 1, nota = 'Caída' WHERE id = (SELECT MAX(id) FROM compras)")
+    for k in range(6):  # unas ventas pequeñas y dos traslados
+        server.insertar(conn, ((HOY - timedelta(days=100 + k * 300)).isoformat(), 5.0, 60000.0, 8000), None, "venta", "Gasto", 0)
+    for fecha, sentido, sats in ((HOY - timedelta(days=500), "a_wallet", 3_000_000), (HOY - timedelta(days=60), "a_wallet", 1_500_000)):
+        conn.execute("INSERT INTO traslados (fecha, sats, sentido, creado) VALUES (?, ?, ?, ?)", (fecha.isoformat(), sats, sentido, 1))
+    conn.commit()
 elif esc in ("anio", "largo", "ballena"):
     semanas = {"anio": 52, "largo": 300, "ballena": 300}[esc]
     r2 = random.Random(len(esc) * 13)

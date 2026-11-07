@@ -17,7 +17,7 @@ const PYTHON = process.env.PYTHON || 'python3';
 const SALIDA = path.join(AQUI, 'barrido');
 fs.mkdirSync(SALIDA, { recursive: true });
 
-const ESCENARIOS = ['hoy', 'dos', 'tres', 'nueve', 'anio', 'largo', 'ballena', 'vacio', 'sinprecio', 'sinhist'];
+const ESCENARIOS = ['hoy', 'dos', 'tres', 'nueve', 'anio', 'largo', 'ballena', 'mil', 'vacio', 'sinprecio', 'sinhist'];
 const ANCHOS_TODOS = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080], [2560, 1300]];
 const ANCHOS_BREVE = [[320, 640], [768, 1024], [1280, 800]];
 const rapido = process.argv.includes('rapido');

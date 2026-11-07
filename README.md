@@ -160,6 +160,8 @@ node tests/barrido_ui.mjs rapido
 
 **Después de desplegar** (en el servidor): `bash scripts/verificar-despliegue.sh`. Comprueba en segundos que los tres servicios están en marcha, que la app responde, que la base pasa su revisión de integridad, que hay un respaldo reciente y que el servicio de avisos está vivo, y te dice qué falló si algo no está bien.
 
+**Restauración de prueba:** cada semana, el servicio de respaldos restaura el último respaldo en una carpeta temporal y lo compara con la base real (integridad, tablas, filas y la auditoría); si algo no cuadra, te avisa por push. Puedes pedirla cuando quieras con `docker compose exec backup python backup.py --probar`.
+
 **Vigilantes de los servicios:** el servicio `avisos` te avisa por push (categoría «Fallo del respaldo») si pasan más de 36 horas sin un respaldo nuevo, si la revisión semanal de la base encuentra un problema o si queda poco espacio en disco. Además, `docker compose ps` muestra si `backup` y `avisos` están `healthy`.
 
 ## Avisos push
