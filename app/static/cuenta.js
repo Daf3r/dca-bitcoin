@@ -1,0 +1,144 @@
+import { entero, fechaLarga, usd } from './lib.js';
+import { montarAvisos } from './avisos.js';
+import { avisar } from './avisar.js';
+import { $, S, api } from './estado.js';
+import { novedadesMostradas } from './novedades.js';
+import { pintar } from './pintar.js';
+
+let avisosOfrecidos = false; // la oferta de avisos sale una sola vez por visita (y una por dispositivo, ver avisos.js)
+// ---------------------------------------------------------------- arranque
+// ------------------------------------------------------------------ cuenta
+const dfAudit = new Intl.DateTimeFormat('es-SV', { timeZone: 'America/El_Salvador', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+export const dCuenta = $('d-cuenta');
+function vistaCuenta(cual) {
+  $('dc-menu').hidden = cual !== 'menu';
+  $('f-clave').hidden = cual !== 'clave';
+  $('dc-hist').hidden = cual !== 'historial';
+  $('dc-avisos').hidden = cual !== 'avisos';
+}
+export async function cargarYo() {
+  try {
+    const yo = await api('/api/yo');
+    Object.assign(S, { usuario: yo.usuario, rol: yo.rol, visto: yo.visto ?? null });
+    document.body.dataset.rol = yo.rol;
+    $('cuenta-btn').textContent = yo.usuario;
+    $('cuenta-btn').setAttribute('aria-label', `Tu cuenta: ${yo.usuario}`);
+    $('cuenta-btn').hidden = false;
+    $('dc-quien').textContent = `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`;
+    $('dc-historial').hidden = yo.rol !== 'admin';
+    $('dc-previa').hidden = yo.rol !== 'admin'; // vista previa temporal
+    $('fc-usuario').value = yo.usuario;
+    pintar();
+  } catch { /* el 401 ya redirige; si falla la red, la app sigue en solo lectura */ }
+}
+// Tema: automático (como el teléfono), claro u oscuro. `tema.js` lo aplica antes de pintar; aquí solo se elige.
+const NOMBRE_TEMA = { auto: 'automático', claro: 'claro', oscuro: 'oscuro' };
+const SIGUIENTE_TEMA = { auto: 'claro', claro: 'oscuro', oscuro: 'auto' };
+const etiquetaTema = () => { $('dc-tema').textContent = `Tema: ${NOMBRE_TEMA[window.libroTema?.preferencia() ?? 'auto']}`; };
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); dCuenta.showModal(); });
+
+const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
+/** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
+function textoMov(x) {
+  if (!x?.sats) return '';
+  return `${entero(x.sats)} sats (${usd(x.monto)}) del ${fechaLarga(x.fecha)}` +
+    (x.extra ? ' · compra extra' : '') + (x.txid ? ` · TXID ${txCorto(x.txid)}` : '') + (x.nota ? ` · «${x.nota}»` : '');
+}
+/** Qué cambió en una edición: solo los campos que difieren. */
+function cambiosEdicion(antes, despues) {
+  if (!antes || !despues) return '';
+  const c = [];
+  if (antes.sats !== despues.sats) c.push(`${entero(antes.sats)} → ${entero(despues.sats)} sats`);
+  if (antes.monto !== despues.monto) c.push(`${usd(antes.monto)} → ${usd(despues.monto)}`);
+  if (antes.fecha !== despues.fecha) c.push(`fecha ${fechaLarga(antes.fecha)} → ${fechaLarga(despues.fecha)}`);
+  if ((antes.txid ?? null) !== (despues.txid ?? null)) c.push(`TXID ${txCorto(antes.txid)} → ${txCorto(despues.txid)}`);
+  if (!!antes.extra !== !!despues.extra) c.push(despues.extra ? 'marcada como extra' : 'ya no es extra');
+  if ((antes.nota ?? null) !== (despues.nota ?? null)) c.push(`nota ${antes.nota ? `«${antes.nota}»` : 'vacía'} → ${despues.nota ? `«${despues.nota}»` : 'vacía'}`);
+  return c.join(' · ') || 'sin cambios visibles';
+}
+function textoAuditoria(a) {
+  const d = a.despues || a.antes || {};
+  if (a.entidad === 'traslado') {
+    const dir = d.sentido === 'a_exchange' ? 'de su wallet al exchange' : 'a su wallet';
+    return a.accion === 'alta' ? `anotó un traslado de ${entero(d.sats)} sats ${dir}` : `anuló el traslado de ${entero(d.sats)} sats ${dir}`;
+  }
+  const venta = d.tipo === 'venta';
+  const mov = venta ? 'la venta' : 'la compra';
+  return {
+    alta: venta ? `registró una venta de ${textoMov(d)}` : `anotó ${textoMov(d)}`,
+    edicion: `corrigió ${mov} del ${a.antes ? fechaLarga(a.antes.fecha) : ''}: ${cambiosEdicion(a.antes, a.despues)}`,
+    anulacion: `anuló ${mov} de ${textoMov(d)}`,
+    importacion: `importó ${d.nuevas} ${d.nuevas === 1 ? 'movimiento' : 'movimientos'}`,
+    login: 'entró', logout: 'salió', logout_todas: 'salió en todos los dispositivos',
+    login_fallido: a.entidad === 'ip' ? 'falló varias veces al entrar desde una misma red' : 'falló al entrar',
+    bloqueo: a.entidad === 'ip' ? 'quedó bloqueado desde una red por demasiados intentos' : 'quedó bloqueado unos minutos por demasiados intentos',
+    clave_cambiada: `cambió la contraseña de ${d.nombre}`,
+    cuenta_creada: `creó la cuenta ${d.nombre} (${d.rol})`,
+    cuenta_activada: `activó la cuenta ${d.nombre}`, cuenta_desactivada: `desactivó la cuenta ${d.nombre}`,
+    sesiones_cerradas: `cerró las sesiones de ${d.nombre}`, desbloqueo: `desbloqueó la cuenta ${d.nombre}`,
+  }[a.accion] ?? a.accion;
+}
+let histUltimo = null;
+async function cargarHistorial(mas = false) {
+  const lista = $('hist-lista');
+  if (!mas) { lista.textContent = ''; histUltimo = null; }
+  try {
+    const filas = await api(`/api/auditoria${histUltimo ? `?antes=${histUltimo}` : ''}`);
+    for (const a of filas) {
+      const li = document.createElement('li');
+      const t = document.createElement('time');
+      t.textContent = dfAudit.format(new Date(a.ts * 1000)).replace('.', '');
+      const p = document.createElement('p');
+      const b = document.createElement('b');
+      b.textContent = a.usuario === 'cli' ? 'Servidor' : a.usuario === '?' ? 'Alguien' : a.usuario;
+      p.append(b, ` ${textoAuditoria(a)}`);
+      li.append(t, p);
+      lista.append(li);
+    }
+    histUltimo = filas.at(-1)?.id ?? histUltimo;
+    $('hist-mas').hidden = filas.length < 100;
+    if (!lista.children.length) lista.innerHTML = '<li class="vacio">Aún no hay nada en el historial.</li>';
+  } catch (e) {
+    lista.innerHTML = '';
+    const li = document.createElement('li'); li.className = 'vacio'; li.textContent = e.message; lista.append(li);
+  }
+}
+$('hist-mas').addEventListener('click', () => cargarHistorial(true));
+const avisosUI = montarAvisos(api);
+// Tras entrar: una sola vez por dispositivo se ofrece activar los avisos. Los lectores primero ven su bienvenida.
+export async function ofrecerAvisos() {
+  if (avisosOfrecidos || !S.rol || !S.cargado || document.querySelector('dialog[open]')) return;
+  if (S.rol === 'lector' && !novedadesMostradas) return;
+  avisosOfrecidos = true;
+  if (await avisosUI.ofrecer(S.rol)) avisar('Avisos activados en este dispositivo.', null, true);
+}
+
+dCuenta.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-cuenta]');
+  if (!b) return;
+  const accion = b.dataset.cuenta;
+  if (accion === 'cerrar') dCuenta.close();
+  else if (accion === 'tema') { window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
+  else if (accion === 'volver') vistaCuenta('menu');
+  else if (accion === 'clave') { vistaCuenta('clave'); $('fc-error').textContent = ''; $('fc-actual').focus(); }
+  else if (accion === 'historial') { vistaCuenta('historial'); cargarHistorial(); }
+  else if (accion === 'avisos') { vistaCuenta('avisos'); avisosUI.refrescar(); }
+  else if (accion === 'salir' || accion === 'salir-todas') {
+    try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }
+    location.replace('/login');
+  }
+});
+$('f-clave').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const actual = $('fc-actual').value, nueva = $('fc-nueva').value;
+  if (nueva.length < 12) { $('fc-error').textContent = 'La nueva necesita al menos 12 caracteres.'; $('fc-nueva').focus(); return; }
+  if (nueva !== $('fc-nueva2').value) { $('fc-error').textContent = 'Las dos nuevas no coinciden.'; $('fc-nueva2').focus(); return; }
+  try {
+    await api('/api/clave', { metodo: 'POST', cuerpo: { actual, nueva } });
+    e.target.reset();
+    dCuenta.close();
+    avisar('Contraseña cambiada. Tus otras sesiones se cerraron.', null, true);
+  } catch (err) {
+    $('fc-error').textContent = err.message;
+  }
+});

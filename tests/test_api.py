@@ -2,7 +2,7 @@
 
 Uso (con Flask instalado): python tests/test_api.py
 """
-import os, sys, sqlite3, tempfile, importlib, json, subprocess, shutil
+import os, re, sys, sqlite3, tempfile, importlib, json, subprocess, shutil
 APP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 from datetime import date, timedelta
 tmp = tempfile.mkdtemp()
@@ -324,7 +324,7 @@ V = server.VERSION
 r = cl.get("/")
 html = r.get_data(as_text=True)
 check(r.headers["Cache-Control"] == "no-store" and f"/app.js?v={V}" in html and f"/styles.css?v={V}" in html and f"/fonts/bricolage.woff2?v={V}" in html, "index con versión y sin caché")
-r = cl.get("/app.js")
+r = cl.get("/pintar.js")
 t = r.get_data(as_text=True)
 check(r.mimetype == "text/javascript" and f"./lib.js?v={V}'" in t and f"./montana.js?v={V}'" in t and r.headers["Cache-Control"] == "no-cache", "módulos con imports versionados")
 check(f"./lib.js?v={V}'" in cl.get("/grafico.js").get_data(as_text=True), "también en los módulos importados")
@@ -1207,7 +1207,17 @@ check("worker-src 'self'" in r.headers["Content-Security-Policy"], "la CSP permi
 cuerpo_sw = r.get_data(as_text=True)
 check("showNotification" in cuerpo_sw and "'push'" in cuerpo_sw and "notificationclick" in cuerpo_sw, "el service worker muestra avisos y atiende el toque")
 check("addEventListener('fetch'" not in cuerpo_sw and "caches." not in cuerpo_sw, "sin fetch ni caché: no puede servir JS viejo")
-check("./avisos.js?v=" in adm.get("/app.js").get_data(as_text=True), "app.js importa avisos.js con su versión")
+check("./avisos.js?v=" in adm.get("/cuenta.js").get_data(as_text=True), "cuenta.js importa avisos.js con su versión")
+_app_js = adm.get("/app.js").get_data(as_text=True)
+check("import './avisar.js?v=" in _app_js and "from './estado.js?v=" in _app_js, "app.js (la entrada) versiona también las importaciones sin nombres")
+import glob as _glob
+for _f in sorted(_glob.glob(os.path.join(server.ESTATICOS, "*.js"))):
+    _n = os.path.basename(_f)
+    if _n in ("sw.js", "tema.js"):  # scripts clásicos, sin importaciones
+        continue
+    _txt = adm.get("/" + _n).get_data(as_text=True)
+    _sin = re.findall(r"(?:from|import)\s*['\"]\./[\w-]+\.js['\"]", _txt)
+    check(not _sin, f"{_n}: todas sus importaciones llevan ?v= ({_sin[:2]})")
 
 # backup
 os.environ["BACKUP_DIR"] = os.path.join(tmp, "bk")

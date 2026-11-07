@@ -120,7 +120,7 @@ Quien entra con una cuenta de lector ve, la primera vez que abre la web, un resu
 ## Instalar en el iPhone (PWA)
 En Safari abre `https://dca.polarzero.dev`, toca **Compartir → Añadir a pantalla de inicio**. Queda con su icono y sin la barra de Safari. En Android (Chrome): menú → «Instalar app». Notas:
 - La app instalada en iPhone **no comparte las cookies de Safari**: la primera vez hay que entrar de nuevo. La sesión dura 90 días deslizantes.
-- No hay modo sin conexión a propósito: el único service worker (`sw.js`) solo recibe avisos, sin caché, así que nunca se sirve un `app.js` viejo tras actualizar.
+- No hay modo sin conexión a propósito: el único service worker (`sw.js`) solo recibe avisos, sin caché, así que nunca se sirve un módulo (`app.js` y los que importa) viejo tras actualizar.
 - El manifiesto (`/manifest.webmanifest`) y los iconos son públicos, porque el navegador los pide sin cookie. Los iconos PNG salen de `icon.svg` (el de Apple va a sangre completa y el «maskable» con margen).
 - La barra de estado es la opaca (`black`). Si se quiere que la montaña llegue hasta arriba, cambiar a `black-translucent` en `index.html` y añadir `env(safe-area-inset-top)` a la cabecera; probar en el iPhone antes.
 
