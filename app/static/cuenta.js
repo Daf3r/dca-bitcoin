@@ -35,7 +35,19 @@ export async function cargarYo() {
 const NOMBRE_TEMA = { auto: 'automático', claro: 'claro', oscuro: 'oscuro' };
 const SIGUIENTE_TEMA = { auto: 'claro', claro: 'oscuro', oscuro: 'auto' };
 const etiquetaTema = () => { $('dc-tema').textContent = `Tema: ${NOMBRE_TEMA[window.libroTema?.preferencia() ?? 'auto']}`; };
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); dCuenta.showModal(); });
+// Efectos: automático (según el teléfono y el sistema), todos, esenciales o ninguno. `efectos.js` lo aplica antes de pintar.
+const SIGUIENTE_EFECTOS = { auto: 'todos', todos: 'esenciales', esenciales: 'ninguno', ninguno: 'auto' };
+function etiquetaEfectos() {
+  const ef = window.libroEfectos;
+  const pref = ef?.preferencia() ?? 'auto';
+  let txt = pref === 'auto' ? 'automático' : pref;
+  if (pref === 'auto' && ef) {
+    if (ef.efectivo() === 'ninguno') txt += ' (sin movimiento)';
+    else if (ef.efectivo() === 'esenciales') txt += ' (modo ligero)';
+  }
+  $('dc-efectos').textContent = `Efectos: ${txt}`;
+}
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -119,6 +131,7 @@ dCuenta.addEventListener('click', async (e) => {
   const accion = b.dataset.cuenta;
   if (accion === 'cerrar') dCuenta.close();
   else if (accion === 'tema') { window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
+  else if (accion === 'efectos') { window.libroEfectos?.fijar(SIGUIENTE_EFECTOS[window.libroEfectos.preferencia()]); etiquetaEfectos(); }
   else if (accion === 'volver') vistaCuenta('menu');
   else if (accion === 'clave') { vistaCuenta('clave'); $('fc-error').textContent = ''; $('fc-actual').focus(); }
   else if (accion === 'historial') { vistaCuenta('historial'); cargarHistorial(); }

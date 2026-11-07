@@ -1,7 +1,8 @@
 import { resumen } from './lib.js';
+import { sinMovimiento } from './movimiento.js';
 
 export const $ = (id) => document.getElementById(id);
-export const reducido = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const reducido = sinMovimiento; // sin animación (nivel «ninguno» de efectos.js, que también atiende el ajuste del sistema)
 
 export const S = {
   compras: [], cargado: false, errorCarga: false,

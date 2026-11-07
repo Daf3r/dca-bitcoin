@@ -120,6 +120,19 @@ try {
       eq(await tema(), 'oscuro', 'tema oscuro a mano');
       await p.click('#dc-tema');
       eq([await tema(), (await p.textContent('#dc-tema')).trim()], [inicial, 'Tema: automático'], 'vuelve a automático');
+      // Efectos: automático → todos → esenciales → ninguno → automático, y el estado queda en `html[data-efectos]`.
+      // (el diálogo de «Tu cuenta» sigue abierto del bloque del tema)
+      const efectos = () => p.evaluate(() => document.documentElement.dataset.efectos);
+      const autoEsperado = await p.evaluate(() => (window.libroEfectos.ligero() ? 'esenciales' : 'todos'));
+      eq(await efectos(), autoEsperado, 'efectos en automático según el teléfono');
+      for (const [nivel, etiqueta] of [['todos', 'Efectos: todos'], ['esenciales', 'Efectos: esenciales'], ['ninguno', 'Efectos: ninguno']]) {
+        await p.click('#dc-efectos');
+        eq([await efectos(), (await p.textContent('#dc-efectos')).trim()], [nivel, etiqueta], `efectos a mano: ${nivel}`);
+      }
+      eq(await p.evaluate(() => localStorage.getItem('libro.efectos')), 'ninguno', 'efectos: se recuerda en el dispositivo');
+      await p.click('#dc-efectos');
+      eq(await efectos(), autoEsperado, 'efectos: vuelve a automático');
+      ok(await p.evaluate(() => localStorage.getItem('libro.efectos')) === null, 'efectos: automático borra la preferencia');
       await p.keyboard.press('Escape');
       await p.waitForTimeout(250);
 
@@ -359,6 +372,71 @@ try {
     await sin.ctx.close();
   } finally {
     avisos.parar();
+  }
+
+  // ---------------------------------------------------------------- efectos: sistema, modo ligero y pausa
+  {
+    const srv = await servidor('anio');
+    try {
+      const fuerte = () => { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 }); };
+      const debil = () => { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 2 }); };
+      const nivel = (p) => p.evaluate(() => document.documentElement.dataset.efectos);
+      // Una animación de prueba: si el nivel es «ninguno», el CSS la anula; si no, corre.
+      const anima = (p) => p.evaluate(() => {
+        const el = document.createElement('div');
+        el.style.animation = 'barrido 5s linear infinite';
+        document.querySelector('.escena').append(el);
+        const s = getComputedStyle(el);
+        const r = { nombre: s.animationName, estado: s.animationPlayState };
+        el.remove();
+        return r;
+      });
+      // Sistema con movimiento reducido: ninguno (como siempre); una elección a mano «todos» manda sobre el sistema.
+      let r = await entrar(navegador, srv, ADMIN, { reducedMotion: 'reduce' }, fuerte);
+      eq([await nivel(r.p), (await anima(r.p)).nombre], ['ninguno', 'none'], 'efectos: movimiento reducido del sistema = ninguno y sin animaciones');
+      await r.p.evaluate(() => window.libroEfectos.fijar('todos'));
+      eq([await nivel(r.p), (await anima(r.p)).nombre], ['todos', 'barrido'], 'efectos: elegir «todos» a mano manda sobre el sistema');
+      await r.p.evaluate(() => window.libroEfectos.fijar('auto'));
+      await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(250);
+      ok((await r.p.textContent('#dc-efectos')).includes('sin movimiento'), 'efectos: la etiqueta explica por qué (sin movimiento)');
+      await r.ctx.close();
+
+      // Teléfono modesto: esenciales automáticos, con la marca de modo ligero; a mano se puede corregir.
+      r = await entrar(navegador, srv, ADMIN, { reducedMotion: 'no-preference' }, debil);
+      eq(await r.p.evaluate(() => [document.documentElement.dataset.efectos, document.documentElement.dataset.ligero]), ['esenciales', '1'], 'efectos: teléfono modesto = esenciales (modo ligero)');
+      eq((await anima(r.p)).nombre, 'barrido', 'efectos: los esenciales conservan las animaciones de las acciones');
+      await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(250);
+      ok((await r.p.textContent('#dc-efectos')).includes('modo ligero'), 'efectos: la etiqueta dice «modo ligero»');
+      await r.p.click('#dc-efectos');
+      eq(await nivel(r.p), 'todos', 'efectos: se puede corregir a «todos» a mano');
+      await r.p.evaluate(() => window.libroEfectos.fijar('auto'));
+      await r.ctx.close();
+
+      // Pausa: con la pestaña oculta, o con la escena fuera de la pantalla, las animaciones se detienen y luego retoman.
+      r = await entrar(navegador, srv, ADMIN, { reducedMotion: 'no-preference' }, fuerte);
+      eq((await anima(r.p)).estado, 'running', 'efectos: a la vista, la animación corre');
+      await r.p.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      eq((await anima(r.p)).estado, 'paused', 'efectos: con la pestaña oculta se pausa');
+      await r.p.evaluate(() => {
+        Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      eq((await anima(r.p)).estado, 'running', 'efectos: al volver, retoma');
+      await r.p.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await r.p.waitForTimeout(500);
+      eq(await r.p.evaluate(() => document.documentElement.dataset.escenaFuera), '1', 'efectos: con la escena fuera de la pantalla se pausa');
+      eq((await anima(r.p)).estado, 'paused', 'efectos: la animación de la escena queda en pausa');
+      await r.p.evaluate(() => window.scrollTo(0, 0));
+      await r.p.waitForTimeout(500);
+      eq((await anima(r.p)).estado, 'running', 'efectos: al volver a la escena, retoma');
+      eq(r.consola, [], 'efectos: consola limpia');
+      await r.ctx.close();
+    } finally {
+      srv.parar();
+    }
   }
 
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
