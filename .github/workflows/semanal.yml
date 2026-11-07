@@ -61,9 +61,6 @@ jobs:
       - name: Construir la imagen
         run: docker build -t libro-dca:semanal ./app
       - name: Vulnerabilidades en la imagen (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: libro-dca:semanal
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest
+          image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 libro-dca:semanal

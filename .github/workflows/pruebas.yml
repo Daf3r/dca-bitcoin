@@ -162,13 +162,10 @@ jobs:
           docker run --rm -e DB_PATH=/tmp/ci/libro.db libro-dca:ci sh -c 'python salud.py respaldo && echo "respaldo: sano sin base"'
           docker run --rm -e DB_PATH=/tmp/ci/libro.db libro-dca:ci sh -c 'python salud.py avisos; test $? -eq 1 && echo "avisos: sin marca, no sano (esperado)"'
       - name: Vulnerabilidades en la imagen (Trivy, informativo en los PR)
-        uses: aquasecurity/trivy-action@0.28.0
         continue-on-error: true
-        with:
-          image-ref: libro-dca:ci
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest
+          image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 libro-dca:ci
 
   dependencias:
     name: Dependencias (vulnerabilidades conocidas)
