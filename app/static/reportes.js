@@ -1,4 +1,5 @@
 import { aFecha, caidaGrande, compacto, entero, equilibrio, fechaLarga, hoyISO, nombreHito, nombreHitoMeses, pct, reposicion, textoMeses, tocaComprar, ubicacionSats, usd, usd0, usdSigno } from './lib.js';
+import { pintarAnillo } from './anillo.js';
 import { dual } from './cifras.js';
 import { $, R, S, esAdmin } from './estado.js';
 import { abrirHoja } from './hoja.js';
@@ -51,12 +52,22 @@ export function pintarReportes() {
   $('semanas').style.setProperty('--n', String(Math.max(ventana.length, 13)));
   const con = ventana.filter(Boolean).length;
   $('const-racha').textContent = R.racha;
+  // Anillo del año: cuántas de las semanas de la ventana tuvieron compra (mide constancia, no una meta).
+  pintarAnillo($('const-anillo-svg'), [{ clase: 'an-naranja', desde: 0, hasta: ventana.length ? con / ventana.length : 0 }]);
+  $('const-n').textContent = String(con);
+  $('const-de').textContent = `de ${ventana.length}`;
+  $('const-anillo').setAttribute('aria-label', `Compraste en ${con} de ${ventana.length === 52 ? 'las últimas 52 semanas' : `tus ${ventana.length} semanas`}`);
   $('const-unidad').textContent = R.paso === 2 ? (R.racha === 1 ? 'quincena seguida' : 'quincenas seguidas') : R.racha === 1 ? 'semana seguida' : 'semanas seguidas';
   const resumenSemanas = con === ventana.length && ventana.length < 52
     ? `Has comprado todas las semanas desde que empezaste (${ventana.length}). `
     : `Compraste en <b>${con}</b> de ${ventana.length === 52 ? 'las últimas 52 semanas' : `tus ${ventana.length} semanas`}. `;
   $('const-txt').innerHTML = resumenSemanas +
     (R.mejorRacha > R.racha ? `Tu mejor racha: <b>${rachaTxt(R.mejorRacha)}</b>.` : '') + (R.semanaEnCurso || !R.racha ? '' : ` Tu próxima compra, antes del ${domingo(R.venceSemanas)}, mantiene la racha.`);
+
+  // Cifras curiosas: pocas y bien elegidas.
+  const dias = Math.max(1, Math.round((aFecha(hoyISO()) - aFecha(R.items[0].fecha)) / 864e5));
+  $('curiosas').innerHTML = `<li><b>${entero(dias)} días</b> desde tu primera compra.</li>` +
+    (R.sats > 0 ? `<li>Tu saldo suma en promedio <b>${entero(R.sats / dias)} sats</b> por día.</li>` : '');
 
   const hc = R.constancia;
   const faltan = (n, uno, varios) => (n === 1 ? `falta 1 ${uno}` : `faltan ${n} ${varios}`);
@@ -101,7 +112,10 @@ export function pintarUbicacion() {
   $('ub-pista').hidden = u.hay;
   $('ub-anotar').hidden = u.hay;
   // La pista y el botón son para quien anota; un lector sin traslados no ve la tarjeta.
-  $('ub-barra').style.transform = `scaleX(${Math.max(0, Math.min(1, u.pctWallet / 100))})`;
+  const fw = Math.max(0, Math.min(1, u.pctWallet / 100));
+  pintarAnillo($('ub-dona-svg'), [{ clase: 'an-naranja', desde: 0, hasta: fw }]);
+  $('ub-pct').textContent = `${Math.round(u.pctWallet)}%`;
+  $('ub-dona').setAttribute('aria-label', `${Math.round(u.pctWallet)}% de tus sats en tu wallet y ${Math.round(100 - u.pctWallet)}% en el exchange`);
   for (const [id, sats, parte] of [['ub-w', u.wallet, u.pctWallet], ['ub-e', u.exchange, 100 - u.pctWallet]]) {
     const el = $(id);
     el.textContent = '';
@@ -117,10 +131,24 @@ export function pintarEquilibrio() {
   const e = S.precio ? equilibrio(R, S.precio) : null;
   const el = $('g-equilibrio');
   el.hidden = !e;
+  pintarIndicador();
   if (!e) return;
   el.textContent = e.enGanancia
     ? `Estarías en cero si BTC bajara ${Math.abs(e.cambio).toFixed(1)}% hasta ${usd0(e.precio)}.`
     : `Para estar en cero, BTC debe subir ${e.cambio.toFixed(1)}% hasta ${usd0(e.precio)}.`;
+}
+
+/** Una barra serena: la marca del centro es tu costo promedio y el punto, el precio de hoy (entre −30 % y +30 %). Sin colores de alarma. */
+function pintarIndicador() {
+  const ver = S.precio && R.sats > 0 && R.promedio > 0 && R.nCompras >= 2;
+  $('g-indicador').hidden = !ver;
+  if (!ver) return;
+  const dif = (S.precio / R.promedio - 1) * 100;
+  const x = 50 + (Math.max(-30, Math.min(30, dif)) / 30) * 46;
+  $('ind-hoy').style.left = `${x.toFixed(1)}%`;
+  $('ind-costo-t').textContent = `Tu costo promedio · ${usd0(R.promedio)}`;
+  $('ind-hoy-t').textContent = `Hoy · ${usd0(S.precio)} (${pct(dif)})`;
+  $('g-indicador').setAttribute('aria-label', `El precio de hoy, ${usd0(S.precio)}, está ${Math.abs(dif).toFixed(1)}% ${dif < 0 ? 'por debajo de' : 'por encima de'} tu costo promedio, ${usd0(R.promedio)}`);
 }
 
 // ------------------------------------------------------------ gran caída (opcional)

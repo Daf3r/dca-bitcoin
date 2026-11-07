@@ -42,6 +42,7 @@
     <p class="saldo-v" id="s-saldo-v" role="button" tabindex="0" aria-describedby="s-saldo-ayuda"><span class="cifra-grande" id="s-sats">—</span><em id="s-unidad">sats</em></p>
     <span class="sr" id="s-saldo-ayuda"></span>
     <p class="saldo-d" id="s-valor">Abriendo tu libro…</p>
+    <p class="prox" id="prox"></p>
   </div>
 </section>
 
@@ -62,8 +63,8 @@
     <h2 class="sr" id="t-tramo">Siguiente meta</h2>
     <p class="tr-k">Próximo campamento</p>
     <p class="tr-v"><b id="t-meta"></b><span id="t-falta"></span></p>
-    <div class="tr-barra" aria-hidden="true"><i id="t-barra"></i></div>
     <p class="tr-ritmo" id="t-ritmo"></p>
+    <div class="rueda tr-anillo" id="t-anillo" role="img" aria-label=""><svg id="t-anillo-svg"></svg><span class="an-centro" id="t-pct"></span></div>
   </section>
 
   <!-- Sats por dólar: cuántos sats compra $1 hoy y cómo ha cambiado en el último mes. Solo informa. -->
@@ -87,6 +88,11 @@
     <p class="lectura" id="g-lectura"></p>
     <p class="sr" id="g-sr" aria-live="polite"></p>
     <p class="equilibrio" id="g-equilibrio" hidden></p>
+    <!-- Dónde está el precio de hoy frente a tu costo promedio: una barra serena, sin colores de alarma. -->
+    <div class="indicador" id="g-indicador" role="img" aria-label="" hidden>
+      <div class="ind-pista"><i class="ind-costo"></i><i class="ind-hoy" id="ind-hoy"></i></div>
+      <p class="ind-eti"><span id="ind-costo-t"></span><span id="ind-hoy-t"></span></p>
+    </div>
     <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo."></div>
     <p class="leyenda" aria-hidden="true"><span class="k-p">Precio de BTC</span><span class="k-c">Tus compras, a su precio</span><span class="k-a">Tu costo promedio</span></p>
   </section>
@@ -105,10 +111,17 @@
     <h2 class="sr" id="t-rep">Reportes</h2>
     <article class="rep rep-const">
       <h3>Constancia</h3>
-      <p class="const-cifra"><b id="const-racha"></b><span id="const-unidad"></span></p>
+      <div class="const-cab">
+        <p class="const-cifra"><b id="const-racha"></b><span id="const-unidad"></span></p>
+        <div class="rueda const-anillo" id="const-anillo" role="img" aria-label=""><svg id="const-anillo-svg"></svg><span class="an-centro"><b id="const-n"></b><small id="const-de"></small></span></div>
+      </div>
       <p class="rep-txt" id="const-txt"></p>
       <p class="rep-txt" id="const-hito"></p>
       <div class="semanas" id="semanas" aria-hidden="true"></div>
+    </article>
+    <article class="rep rep-curiosas" id="rep-curiosas">
+      <h3>Cifras curiosas</h3>
+      <ul class="curiosas" id="curiosas"></ul>
     </article>
     <article class="rep rep-hitos">
       <h3>Campamentos</h3>
@@ -142,7 +155,7 @@
   <section class="ubicacion" id="ubicacion" aria-labelledby="t-ubic" hidden>
     <h2 id="t-ubic">Dónde están tus sats</h2>
     <div id="ub-datos" hidden>
-      <div class="ub-barra" aria-hidden="true"><i id="ub-barra"></i></div>
+      <div class="rueda ub-dona" id="ub-dona" role="img" aria-label=""><svg id="ub-dona-svg"></svg><span class="an-centro"><b id="ub-pct"></b><small>wallet</small></span></div>
       <dl class="ub-lista">
         <div><dt><i class="ub-w" aria-hidden="true"></i> En tu wallet</dt><dd id="ub-w"></dd></div>
         <div><dt><i class="ub-e" aria-hidden="true"></i> En el exchange</dt><dd id="ub-e"></dd></div>

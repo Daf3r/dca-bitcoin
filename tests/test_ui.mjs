@@ -108,6 +108,26 @@ try {
       ok(await p.locator('#toca').isVisible(), 'sale «te toca comprar»');
       ok(/^Para estar en cero, BTC debe subir/.test((await p.textContent('#g-equilibrio')).trim()), 'línea del equilibrio');
       ok(/^Coinbase · (ahora mismo|hace \d+ s)$/.test((await p.textContent('#precio-meta')).trim()), 'precio con «hace X s»');
+      // Tarjetas: anillo de la etapa, indicador del costo, mini línea, cifras curiosas, línea de próxima compra y anillo de constancia.
+      {
+        const compras = await datos(p, '/api/compras');
+        const pcTramo = await p.evaluate(() => ({ txt: document.getElementById('t-pct').textContent, label: document.getElementById('t-anillo').getAttribute('aria-label'),
+          arco: getComputedStyle(document.querySelector('#t-anillo-svg .an-arco')).strokeDasharray, barra: !!document.querySelector('.tr-barra') }));
+        ok(/^\d+%$|^<1%$/.test(pcTramo.txt) && /^Vas en \d+\.\d% del camino a /.test(pcTramo.label) && !pcTramo.barra, `anillo de la etapa: ${pcTramo.txt} · «${pcTramo.label}»`);
+        const ind = await p.evaluate(() => ({ vis: !document.getElementById('g-indicador').hidden, left: document.getElementById('ind-hoy').style.left, label: document.getElementById('g-indicador').getAttribute('aria-label'),
+          t1: document.getElementById('ind-costo-t').textContent, t2: document.getElementById('ind-hoy-t').textContent }));
+        ok(ind.vis && /^\d+(\.\d)?%$/.test(ind.left) && /por (debajo de|encima de) tu costo promedio/.test(ind.label) && /^Tu costo promedio · \$/.test(ind.t1) && /^Hoy · \$/.test(ind.t2), `indicador del costo: ${ind.left} · ${ind.t2}`);
+        ok(await p.locator('#s-valor svg.mini polyline').count() === 1 && (await p.getAttribute('#s-valor svg.mini', 'aria-label')).startsWith('Valor de tu saldo en los últimos'), 'mini línea del valor junto a la ganancia');
+        const dias = Math.round((Date.parse(`${hoySV()}T00:00:00Z`) - Date.parse(`${compras[0].fecha}T00:00:00Z`)) / 864e5);
+        const cur = (await p.innerText('#curiosas')).replace(/\s+/g, ' ');
+        ok(cur.includes(`${dias.toLocaleString('en-US')} días desde tu primera compra`) && /Tu saldo suma en promedio [\d,]+ sats por día/.test(cur), `cifras curiosas: «${cur.slice(0, 80)}»`);
+        const prox = (await p.textContent('#prox')).trim();
+        ok(/^Última compra: (hoy|ayer|hace \d+ días)( · próxima(, en \d+ días|: (hoy|mañana) es el último día))?$/.test(prox), `línea de próxima compra: «${prox}»`);
+        const altoProx = await p.evaluate(() => document.getElementById('prox').getBoundingClientRect().height);
+        ok(altoProx < 26, `la línea de próxima compra cabe en una línea (${altoProx.toFixed(0)} px)`);
+        const an = await p.evaluate(() => ({ n: document.getElementById('const-n').textContent, de: document.getElementById('const-de').textContent, label: document.getElementById('const-anillo').getAttribute('aria-label') }));
+        ok(/^\d+$/.test(an.n) && /^de \d+$/.test(an.de) && /^Compraste en \d+ de (las últimas 52 semanas|tus \d+ semanas)$/.test(an.label), `anillo de constancia: ${an.n} ${an.de}`);
+      }
       // Variación desde ayer junto al precio, y la tarjeta de sats por dólar con su línea del mes.
       const var24 = (await p.textContent('#precio-24')).trim();
       ok(await p.locator('#precio-24').isVisible() && /^[▲▼•] [+−]?\d+\.\d% vs ayer$/.test(var24), `variación desde ayer: «${var24}»`);
@@ -226,7 +246,8 @@ try {
       await p.waitForTimeout(1500);
       eq((await datos(p, '/api/traslados')).length, 1, 'el traslado se guarda');
       eq((await datos(p, '/api/compras')).length, antesT.length, 'un traslado sin comisión no crea ningún gasto');
-      ok(await p.locator('#ub-datos').isVisible(), 'con un traslado sale la barra');
+      ok(await p.locator('#ub-datos').isVisible(), 'con un traslado sale la dona');
+      eq(await p.evaluate(() => [/^\d+%$/.test(document.getElementById('ub-pct').textContent), /de tus sats en tu wallet y \d+% en el exchange/.test(document.getElementById('ub-dona').getAttribute('aria-label')), document.querySelectorAll('#ub-dona-svg circle').length]), [true, true, 2], 'dona de wallet y exchange con su texto accesible');
       ok(/300,000 sats · \d+%/.test(await p.innerText('#ub-w')), 'la tarjeta dice cuánto hay en la wallet');
       ok((await p.locator('#lista .fila[data-tras]').count()) === 1, 'la lista muestra el traslado');
       // Sobrepasar lo que tienes en total se rechaza en la hoja
@@ -269,6 +290,8 @@ try {
       await p.waitForTimeout(400);
       ok(!(await p.locator('#anotar').isVisible()), 'el lector no ve «Anotar compra»');
       ok(!(await p.locator('#toca').isVisible()), 'el lector no ve «te toca comprar»');
+      eq((await p.textContent('#prox')).trim(), '', 'el lector no ve la línea de última y próxima compra');
+      ok(await p.locator('#t-anillo').isVisible() && await p.locator('#g-indicador').isVisible() && await p.locator('#rep-curiosas').isVisible(), 'el lector sí ve el anillo, el indicador del costo y las cifras curiosas');
       ok(await p.locator('#valor').isVisible(), 'el lector sí ve el gráfico de valor');
       ok(await p.locator('#ub-datos').isVisible() && !(await p.locator('#ub-anotar').isVisible()), 'el lector ve dónde están los sats pero no el botón de anotar');
       eq(await p.locator('#lista .fila[data-tras]').evaluate((el) => el.tagName), 'DIV', 'el traslado es solo lectura para el lector (no es un botón)');

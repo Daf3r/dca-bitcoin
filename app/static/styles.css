@@ -218,8 +218,25 @@ html[data-efectos="todos"] .saldo-v em[data-vivo="1"]::before { animation: latid
 .saldo-v[role="button"] em::after { content: " ⇄"; font-style: normal; font-size: 0.6em; opacity: 0.55; }
 .equilibrio { margin-top: -4px; color: var(--txt2); font-size: 0.9375rem; }
 .equilibrio[hidden] { display: none; }
+/* Indicador del precio frente a tu costo promedio: la marca de arriba es tu costo; el punto, el precio de hoy. Neutro: es información. */
+.indicador { margin: 6px 0 4px; }
+.indicador[hidden] { display: none; }
+.ind-pista { position: relative; height: 6px; margin: 12px 8px 8px; border-radius: 99px; background: var(--s3); }
+.ind-costo { position: absolute; left: 50%; top: -5px; width: 2px; height: 16px; margin-left: -1px; border-radius: 1px; background: var(--txt2); }
+.ind-hoy { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--naranja); border: 2px solid var(--fondo); transform: translate(-50%, -50%); transition: left 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.ind-eti { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--txt2); font-size: 0.8125rem; }
 .saldo-v em { font: italic 400 clamp(1.3rem, 5vw, 2.1rem) var(--serif); color: var(--cielo-txt2); }
 .saldo-d { margin-top: 8px; font-size: 1.0625rem; color: var(--cielo-txt2); }
+/* Última compra y cuánto falta para la próxima (solo admin). La altura se reserva siempre para que nada se mueva al aparecer. */
+.prox { min-height: 1.35rem; margin-top: 2px; font-size: 0.875rem; line-height: 1.35rem; color: var(--cielo-txt2); }
+.mini { display: inline-block; width: 58px; height: 18px; margin-left: 8px; vertical-align: -3px; overflow: visible; }
+.mini polyline { fill: none; stroke: var(--cielo-txt2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.mini circle { fill: var(--naranja); }
+@media (max-width: 359px) { .mini { display: none; } }
+.curiosas { display: grid; gap: 10px; margin-top: 10px; }
+.curiosas li { color: var(--txt2); }
+.curiosas b { font: 400 1.5rem/1.1 var(--serif); color: var(--txt); margin-right: 2px; white-space: nowrap; }
+.rep-curiosas { padding: 20px; border-radius: 24px; background: var(--s1); align-self: start; }
 .saldo-d b, .saldo-d span { white-space: nowrap; }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
 .saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
@@ -255,13 +272,24 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .caida[hidden] { display: none; }
 .caida p { margin: 0; }
 .caida .enlace { flex: none; }
-.tramo { padding: 4px 0; }
+.tramo { padding: 4px 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; }
+.tramo > .tr-k, .tramo > .tr-v, .tramo > .tr-ritmo { grid-column: 1; }
+.tramo > .tr-anillo { grid-column: 2; grid-row: 1 / span 3; }
+.tramo[hidden] { display: none; }
+/* Anillos y donas (anillo.js, clase `.rueda`; `.anillo` es el de la celebración): arcos sobre una pista; el número va en el centro. */
+.rueda { position: relative; width: 92px; aspect-ratio: 1; flex: none; }
+.rueda svg { display: block; width: 100%; height: 100%; }
+.an-pista { fill: none; stroke: var(--s3); stroke-width: 11; }
+.an-arco { fill: none; stroke-width: 11; stroke-linecap: round; transform-box: view-box; transform-origin: 50% 50%; transform: rotate(-90deg);
+  transition: stroke-dasharray 1.4s cubic-bezier(0.5, 0, 0.1, 1), stroke-dashoffset 1.4s cubic-bezier(0.5, 0, 0.1, 1); }
+.an-naranja { stroke: var(--naranja); }
+.an-centro { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font: 600 1.0625rem/1.1 var(--sans); color: var(--txt); }
+.an-centro b { font: 600 1.125rem/1.05 var(--sans); }
+.an-centro small { font-size: 0.6875rem; color: var(--txt3); font-weight: 400; }
 .tr-k { color: var(--txt3); font-size: 0.9375rem; }
 .tr-v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
 .tr-v b { font: 400 clamp(2.3rem, 10vw, 3.3rem)/1.05 var(--serif); letter-spacing: -0.02em; }
 .tr-v span { color: var(--txt2); }
-.tr-barra { height: 10px; margin-top: 14px; border-radius: 99px; background: var(--s3); overflow: hidden; }
-.tr-barra i { display: block; height: 100%; border-radius: 99px; background: var(--naranja); transform: scaleX(0); transform-origin: left; transition: transform 1.4s cubic-bezier(0.5, 0, 0.1, 1); }
 .tr-ritmo { margin-top: 10px; color: var(--txt2); }
 /* Sats por dólar: una cifra y su línea del mes, sin colores de alarma (es información, no una alerta). */
 .spd { display: grid; grid-template-columns: 1fr minmax(96px, 38%); align-items: center; gap: 4px 16px; padding: 14px 16px; border-radius: 18px; background: var(--s1); border: 1px solid var(--s3); }
@@ -376,6 +404,8 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .rep { min-width: 0; }
 .rep h3 { font: 600 1.375rem var(--serif); }
 .rep-const { padding: 20px; border-radius: 24px; background: var(--s1); align-self: start; }
+.const-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.const-anillo { width: 78px; }
 .const-cifra { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; }
 .const-cifra b { font: 300 clamp(3rem, 14vw, 4.2rem)/0.95 var(--serif); color: var(--naranja-txt); }
 .const-cifra span { font: italic 400 1.125rem var(--serif); color: var(--txt2); }
@@ -464,12 +494,13 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .ubicacion { padding: 18px 20px; border-radius: 24px; background: var(--s1); }
 .ubicacion h2 { font-size: 1.25rem; }
 .ubicacion[hidden], #ub-datos[hidden] { display: none; }
-.ub-barra { height: 12px; margin-top: 14px; border-radius: 6px; background: var(--s3); overflow: hidden; }
-.ub-barra i { display: block; height: 100%; border-radius: 6px; background: var(--naranja); transform-origin: left; transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.ub-lista { display: grid; gap: 8px; margin-top: 14px; }
-.ub-lista > div { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+#ub-datos { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
+#ub-datos[hidden] { display: none; }
+.ub-dona { width: 96px; }
+.ub-lista { display: grid; gap: 8px; flex: 1; min-width: 0; }
+.ub-lista > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; align-items: baseline; }
 .ub-lista dt { display: flex; align-items: center; gap: 8px; color: var(--txt2); font-size: 0.9375rem; }
-.ub-lista dd { font-weight: 650; text-align: right; }
+.ub-lista dd { font-weight: 650; text-align: right; margin-left: auto; }
 .ub-lista dt i { flex: none; width: 10px; height: 10px; border-radius: 50%; }
 .ub-w { background: var(--naranja); }
 .ub-e { background: var(--s3); box-shadow: inset 0 0 0 1.5px var(--txt3); }
@@ -518,6 +549,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .cifra-grande { font-size: clamp(2.25rem, 94cqi / (var(--n, 7) * 0.575), 4.4rem); }
   .saldo-v em { font-size: 1.25rem; }
   .saldo-d { margin-top: 4px; font-size: 0.9375rem; }
+  .prox { font-size: 0.8125rem; }
 }
 
 /* ------------------------------------------------------------------ tablet */
@@ -584,13 +616,8 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 .luz-1 { stop-color: var(--luz); stop-opacity: 0; }
 .luz-cima { transform-box: fill-box; transform-origin: center; animation: luz-cima 2.8s ease-in-out both; }
 @keyframes luz-cima { 0% { opacity: 0; transform: scale(0.5); } 45% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.25); } }
-.tr-barra { position: relative; }
-.tr-barra.destello::after {
-  content: ""; position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
-  animation: barrido 0.9s ease-out both;
-}
-@keyframes barrido { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.tr-anillo.destello { animation: anillo-destello 0.9s ease-out; }
+@keyframes anillo-destello { 40% { transform: scale(1.1); filter: drop-shadow(0 0 10px var(--naranja)); } }
 
 /* Efectos (efectos.js deja `html[data-efectos]` en todos, esenciales o ninguno; atiende también el movimiento reducido del sistema). */
 html[data-efectos="ninguno"] *, html[data-efectos="ninguno"] *::before, html[data-efectos="ninguno"] *::after { animation: none !important; transition: none !important; }

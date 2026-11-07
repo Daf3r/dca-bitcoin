@@ -1,9 +1,10 @@
-import { btc, entero, etapasCruzadas, haceCuanto, hora, nombreHito, pct, resumen, numCorto, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
-import { dual } from './cifras.js';
+import { aFecha, btc, entero, etapasCruzadas, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { pintarAnillo } from './anillo.js';
+import { dual, miniLinea } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
 import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos } from './cuenta.js';
-import { $, R, S, fijarR } from './estado.js';
+import { $, R, S, esAdmin, fijarR } from './estado.js';
 import { pintarLista } from './lista.js';
 import { pintarMercado, pintarSatsDolar, pintarValor } from './mercado.js';
 import { pintarNovedades } from './novedades.js';
@@ -121,9 +122,10 @@ function pintarSaldo(desde) {
   }
   etiquetaUnidad();
   pintarLinea();
+  pintarProx();
 }
 /** La línea bajo el saldo: lo que valen tus sats (con su propio odómetro) y la ganancia, con formas cortas en pantallas muy pequeñas. */
-function pintarLinea() {
+export function pintarLinea() {
   const linea = $('s-valor');
   if (!R.n) { linea.textContent = 'Tu montaña te espera. Anota tu primera compra para empezar a subir.'; return; }
   if (R.valor == null) { linea.textContent = `${btc(R.sats)} BTC · invertiste ${usd(R.inv)}`; return; }
@@ -147,6 +149,27 @@ function pintarLinea() {
     dual(real, usdSigno(R.realizada), usdSignoCorto(R.realizada));
     linea.append(' · ya realizaste ', real);
   }
+  // Mini línea del valor de tu saldo en los últimos 30 días (solo con histórico; en pantallas muy pequeñas se oculta).
+  if (R.nCompras >= 3 && S.histEstado === 'ok' && S.precio) {
+    const serie = serieValor(R.items, S.historico, S.precio, hoyISO()).slice(-30);
+    const mini = miniLinea(serie.map((d) => d.valor), serie.length ? `Valor de tu saldo en los últimos ${serie.length} días: de ${usd0(serie[0].valor)} a ${usd0(serie.at(-1).valor)}` : '');
+    if (mini) linea.append(mini);
+  }
+}
+
+/** «Última compra: hace 3 días · próxima, en 8 días» (solo admin, con 3 compras o más; la próxima es el último día que mantiene tu racha). */
+function pintarProx() {
+  const el = $('prox');
+  const toca = S.cargado && esAdmin() && R.nCompras >= 3 ? tocaComprar(R) : null;
+  const ultima = toca ? R.items.filter((c) => c.tipo !== 'venta').at(-1) : null;
+  if (!ultima) { el.textContent = ''; return; }
+  const dias = Math.max(0, Math.round((aFecha(hoyISO()) - aFecha(ultima.fecha)) / 864e5));
+  let txt = `Última compra: ${dias === 0 ? 'hoy' : dias === 1 ? 'ayer' : `hace ${dias} días`}`;
+  if (toca.estado !== 'perdida') {
+    const faltan = ((7 - aFecha(hoyISO()).getDay()) % 7) + 7 * R.venceSemanas; // hasta el domingo que mantiene la racha
+    txt += faltan === 0 ? ' · próxima: hoy es el último día' : faltan === 1 ? ' · próxima: mañana es el último día' : ` · próxima, en ${faltan} días`;
+  }
+  el.textContent = txt;
 }
 
 let anchoMontana = 0;
@@ -181,7 +204,10 @@ function pintarTramo() {
   const falta = $('t-falta');
   falta.textContent = 'faltan ';
   dual(falta, entero(R.etapa - R.sats), numCorto(R.etapa - R.sats));
-  requestAnimationFrame(() => { $('t-barra').style.transform = `scaleX(${Math.max(0, Math.min(1, prog))})`; });
+  const p = Math.max(0, Math.min(1, prog));
+  requestAnimationFrame(() => pintarAnillo($('t-anillo-svg'), [{ clase: 'an-naranja', desde: 0, hasta: p }]));
+  $('t-pct').textContent = `${p > 0 && p < 0.01 ? '<1' : Math.floor(p * 100)}%`;
+  $('t-anillo').setAttribute('aria-label', `Vas en ${(p * 100).toFixed(1)}% del camino a ${nombreHito(R.etapa)}${R.etapa >= 1e8 ? '' : ' sats'}`);
   $('t-ritmo').textContent = R.proyeccion
     ? `Al ritmo de los últimos 6 meses${R.nExtra ? ', sin contar tus compras extra,' : ''} (${entero(R.satsMes)} sats al mes) llegas en ${plazo(R.proyeccion)}.`
     : R.n ? `Vas en ${(prog * 100).toFixed(1)}% de este tramo.` : 'El primer campamento está en 100k sats.';
