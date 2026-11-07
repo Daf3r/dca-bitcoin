@@ -50,6 +50,8 @@ const ESTABLE = `*, *::before, *::after { animation: none !important; transition
 async function capturar(navegador, srv, cuenta, [w, h], esquema, acciones, nombre) {
   const ctx = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: w, height: h }, isMobile: false, hasTouch: false, colorScheme: esquema, reducedMotion: 'reduce', bypassCSP: true });
   const p = await ctx.newPage();
+  // El cielo depende de la hora: de noche en oscuro y al amanecer en claro (como era el tema claro), para que dos corridas den lo mismo.
+  await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 6 : 22);
   await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
   if (cuenta) {
     await p.fill('input[autocomplete="username"]', cuenta[0]);

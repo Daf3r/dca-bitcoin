@@ -71,6 +71,7 @@ try {
         for (const esquema of ['light', 'dark']) {
           const ctx = await navegador.newContext({ viewport: { width: w, height: h }, colorScheme: esquema });
           const p = await ctx.newPage();
+          await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 6 : 22);
           const consola = [];
           p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
           p.on('pageerror', (e) => consola.push(`pageerror ${e.message}`));

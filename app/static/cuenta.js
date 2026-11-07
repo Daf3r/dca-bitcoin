@@ -24,6 +24,7 @@ export async function cargarYo() {
     $('cuenta-btn').textContent = yo.usuario;
     $('cuenta-btn').setAttribute('aria-label', `Tu cuenta: ${yo.usuario}`);
     $('cuenta-btn').hidden = false;
+    pintarSaludo(yo.usuario);
     $('dc-quien').textContent = `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`;
     $('dc-historial').hidden = yo.rol !== 'admin';
     $('dc-previa').hidden = yo.rol !== 'admin'; // vista previa temporal
@@ -31,6 +32,17 @@ export async function cargarYo() {
     pintar();
   } catch { /* el 401 ya redirige; si falla la red, la app sigue en solo lectura */ }
 }
+/** «Buenas noches, Daf3r»: según la hora de El Salvador (cielo.js). Se renueva cada 5 minutos y al volver a la pestaña. */
+let nombreSaludo = '';
+function pintarSaludo(nombre = nombreSaludo) {
+  nombreSaludo = nombre;
+  const cielo = window.libroCielo;
+  if (!cielo || !nombre) return;
+  $('saludo').textContent = `${cielo.saludo(cielo.hora())}, ${nombre}`;
+}
+setInterval(() => document.visibilityState === 'visible' && pintarSaludo(), 300_000);
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && pintarSaludo());
+
 // Tema: automático (como el teléfono), claro u oscuro. `tema.js` lo aplica antes de pintar; aquí solo se elige.
 const NOMBRE_TEMA = { auto: 'automático', claro: 'claro', oscuro: 'oscuro' };
 const SIGUIENTE_TEMA = { auto: 'claro', claro: 'oscuro', oscuro: 'auto' };

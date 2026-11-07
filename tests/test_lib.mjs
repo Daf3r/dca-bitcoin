@@ -1,5 +1,7 @@
 // Pruebas de los cálculos puros del frontend. Uso: node tests/test_lib.mjs
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
 import {
   escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
@@ -387,5 +389,67 @@ eq([u2.wallet, u2.exchange, u2.pctWallet], [1000, 0, 100], 'la wallet nunca supe
 eq(ubicacionSats([tr(100, 'a_exchange')], 1000).wallet, 0, 'la wallet nunca es negativa');
 eq(ubicacionSats([tr(600)], 0).pctWallet, 0, 'con saldo cero no se divide');
 eq([walletNeto([tr(5), tr(2, 'a_exchange')]), walletNeto(null)], [3, 0], 'walletNeto suma con signo y tolera null');
+
+// El cielo según la hora (cielo.js es un script clásico: se carga en un contexto con un `document` de mentira)
+{
+  const estilos = {};
+  const almacen = {};
+  const ctx = {
+    document: { documentElement: { dataset: {}, style: { setProperty: (k, v) => { estilos[k] = v; } } }, addEventListener() {}, visibilityState: 'visible' },
+    localStorage: { getItem: (k) => almacen[k] ?? null }, setInterval() {}, Intl, Date, Math, Number, Object,
+  };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo;
+  eq(['2', '4.9', '5', '6.9', '7', '12', '16.4', '16.5', '18.9', '19', '23.9'].map((h) => C.franja(Number(h))),
+    ['noche', 'noche', 'amanecer', 'amanecer', 'dia', 'dia', 'dia', 'atardecer', 'atardecer', 'noche', 'noche'], 'franjas del cielo por hora');
+  // Un instante fijo: 2026-11-07 12:00 UTC = 06:00 en El Salvador
+  eq(C.hora(new Date('2026-11-07T12:00:00Z')), 6, 'hora de El Salvador (UTC−6, sin horario de verano)');
+  eq(C.hora(new Date('2026-11-07T05:30:00Z')), 23.5, 'la hora cruza el día hacia atrás');
+  almacen['libro.hora'] = '14.5';
+  eq(C.hora(), 14.5, 'libro.hora fuerza la hora (para probar)');
+  delete almacen['libro.hora'];
+  // Colores: en el centro de cada franja salen exactamente los de su paleta; a medio camino son una mezcla
+  const hexRgb = (h) => `rgb(${[1, 3, 5].map((i) => Number.parseInt(h.slice(i, i + 2), 16)).join(' ')})`;
+  eq(C.colores(2)['--c0'], hexRgb('#0a1322'), 'noche: arriba del cielo');
+  eq(C.colores(6)['--c0'], hexRgb('#fbe8cc'), 'amanecer: arriba del cielo');
+  eq(C.colores(12)['--c0'], hexRgb('#7fb8ea'), 'día: arriba del cielo');
+  eq(C.colores(17.5)['--c0'], hexRgb('#241b4a'), 'atardecer: arriba del cielo');
+  const medio = C.colores(5)['--c0'];
+  ok(medio !== hexRgb('#0a1322') && medio !== hexRgb('#fbe8cc'), 'a las 5:00 el cielo es una mezcla entre noche y amanecer');
+  eq([C.colores(2)['--estrellas'], C.colores(12)['--estrellas']], ['0.75', '0.00'], 'las estrellas solo de noche');
+  // Tinta de los textos: clara sobre cielo oscuro, oscura sobre cielo claro
+  eq([2, 6, 12, 17.5, 21].map((h) => C.tinta(h)), ['clara', 'oscura', 'oscura', 'clara', 'clara'], 'tinta del texto por franja');
+  // Contraste del texto con las tres bandas de arriba (donde va el saldo), a lo largo de todo el día
+  const lum = (rgb) => {
+    const [r, g, b] = rgb.match(/\d+/g).slice(0, 3).map((x) => { const v = Number(x) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const contraste = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  // Con el cielo en reposo el contraste es siempre ≥ 4.5; solo a mitad de las dos mezclas de claro a oscuro (hacia las 5:00 y las
+  // 16:30) baja unos minutos, y ahí ayuda el halo del texto. Se cuenta cuántos minutos del día pasa.
+  let peorFirme = 99, bajo45 = 0, bajo3 = 0;
+  for (let h = 0; h < 24; h += 0.05) {
+    const col = C.colores(h), ti = C.tintas[C.tinta(h)];
+    const pura = Object.values(C.paletas).some((p) => p.c.every((x, i) => col[`--c${i}`] === hexRgb(x)));
+    let peor = 99;
+    for (const banda of ['--c0', '--c1', '--c2']) peor = Math.min(peor, contraste(hexRgb(ti.txt), col[banda]), contraste(hexRgb(ti.txt2), col[banda]));
+    if (pura) peorFirme = Math.min(peorFirme, peor);
+    if (peor < 4.5) bajo45 += 0.05;
+    if (peor < 3) bajo3 += 0.05;
+  }
+  ok(peorFirme >= 4.5, `texto legible (≥ 4.5:1) con el cielo en reposo: peor ${peorFirme.toFixed(2)}`);
+  ok(bajo45 <= 0.6 && bajo3 <= 0.25, `solo unos minutos de crepúsculo bajo 4.5:1 (${(bajo45 * 60).toFixed(0)} min) y bajo 3:1 (${(bajo3 * 60).toFixed(0)} min)`);
+  // Luna: fase real
+  const cerca = (a, b, tol) => Math.abs(((a - b + 1.5) % 1) - 0.5) < tol;
+  ok(cerca(C.faseLunar(new Date('2025-11-20T06:47:00Z')), 0, 0.03), 'luna nueva del 20 nov 2025');
+  ok(cerca(C.faseLunar(new Date('2025-12-04T23:14:00Z')), 0.5, 0.03), 'luna llena del 4 dic 2025');
+  ok(cerca(C.faseLunar(new Date('2025-11-28T00:00:00Z')), 0.25, 0.04), 'cuarto creciente hacia el 28 nov 2025');
+  const f = C.faseLunar(new Date('2030-03-15T12:00:00Z'));
+  ok(f >= 0 && f < 1, 'la fase siempre está entre 0 y 1');
+  // Saludo
+  eq([4, 5, 11.9, 12, 18.9, 19, 23].map((h) => C.saludo(h)),
+    ['Buenas noches', 'Buenos días', 'Buenos días', 'Buenas tardes', 'Buenas tardes', 'Buenas noches', 'Buenas noches'], 'saludo según la hora');
+}
 
 console.log(`OK ${n} comprobaciones`);

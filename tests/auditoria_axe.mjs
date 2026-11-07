@@ -70,9 +70,10 @@ const anio = await servidor('anio');
 const hoy = await servidor('hoy');
 try {
   for (const esquema of ['light', 'dark']) {
-    const nuevo = async (srv, cuenta, init = null) => {
+    const nuevo = async (srv, cuenta, init = null, hora = esquema === 'light' ? 12 : 22) => {
       const ctx = await navegador.newContext({ ...devices['iPhone 13'], colorScheme: esquema, bypassCSP: true });
       const p = await ctx.newPage();
+      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, hora);
       if (init) await p.addInitScript(init);
       if (cuenta) await entrar(p, srv.url, cuenta);
       return { ctx, p };
@@ -82,6 +83,17 @@ try {
       await p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
       await auditar(p, `entrada ${esquema}`);
       await ctx.close();
+    }
+    // El cielo cambia con la hora: la entrada y la app se revisan en cada franja y a mitad de las dos mezclas de claro a oscuro.
+    for (const hora of [2, 5, 6, 12, 16.5, 17.5]) {
+      let r = await nuevo(anio, null, null, hora);
+      await r.p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
+      await auditar(r.p, `entrada ${esquema} a las ${hora}`);
+      await r.ctx.close();
+      r = await nuevo(anio, ADMIN, conPush, hora);
+      await cerrarOferta(r.p);
+      await auditar(r.p, `admin ${esquema} a las ${hora}`);
+      await r.ctx.close();
     }
     { // admin con un año de compras: página, hoja (tres tipos), cuenta y avisos
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);

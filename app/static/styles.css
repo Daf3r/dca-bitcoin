@@ -89,6 +89,20 @@ button, input { font: inherit; color: inherit; }
 .cielo-0 { fill: var(--c0); } .cielo-1 { fill: var(--c1); } .cielo-2 { fill: var(--c2); } .cielo-3 { fill: var(--c3); } .cielo-4 { fill: var(--c4); }
 .estrella { fill: var(--astro); opacity: var(--estrellas); }
 .astro { fill: var(--astro); } .halo { fill: var(--halo); }
+/* Sol de día (amanecer, día, atardecer) y luna de noche; las estrellas ya van con --estrellas, que sube y baja con la hora. */
+html[data-cielo="noche"] .sol, html:not([data-cielo="noche"]) .luna { display: none; }
+.luna-sombra { fill: var(--astro); opacity: 0.16; }
+/* Brillo tenue detrás de la cumbre que es tu próxima gran meta. */
+.brillo-cima { opacity: 0.32; pointer-events: none; }
+/* Ambiente (solo con todos los efectos): las estrellas titilan a ritmos distintos y, de vez en cuando, cruza una fugaz. */
+@keyframes titila { 0%, 100% { opacity: var(--estrellas); } 50% { opacity: calc(var(--estrellas) * 0.3); } }
+html[data-efectos="todos"] .estrella.t1 { animation: titila 5.5s ease-in-out infinite; }
+html[data-efectos="todos"] .estrella.t2 { animation: titila 7s ease-in-out -2s infinite; }
+html[data-efectos="todos"] .estrella.t3 { animation: titila 4.2s ease-in-out -1s infinite; }
+html[data-efectos="todos"] .estrella.t4 { animation: titila 8.5s ease-in-out -4s infinite; }
+.fugaz { stroke: var(--astro); stroke-width: 1.6; stroke-linecap: round; opacity: 0; }
+@keyframes fugaz { 0%, 94% { opacity: 0; transform: translate(0, 0); } 95% { opacity: 0.9; } 100% { opacity: 0; transform: translate(190px, 84px); } }
+html[data-efectos="todos"][data-cielo="noche"] .fugaz { animation: fugaz 34s linear 9s infinite; }
 .lejos { fill: var(--lejos); } .medio { fill: var(--medio); }
 .monte { fill: var(--monte); } .monte-sombra { fill: var(--monte-sombra); } .nieve { fill: var(--nieve); }
 .pino-0 { fill: var(--pino0); } .pino-1 { fill: var(--pino1); }
@@ -112,18 +126,18 @@ button, input { font: inherit; color: inherit; }
   color: var(--cielo-txt);
 }
 .marca { font: 400 1.125rem var(--serif); }
-.marca b { font-weight: 650; color: var(--naranja-txt); }
+.cima, .saldo { text-shadow: 0 0 10px var(--cielo-sombra, transparent); }
+.marca b { font-weight: 650; color: var(--cielo-marca, var(--naranja-txt)); }
 .cotizacion { display: grid; justify-items: end; line-height: 1.2; text-align: right; }
 .cot-k { font-size: 0.75rem; color: var(--cielo-txt2); }
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
 .cotizacion[data-estado="viejo"] .cot-meta, .cotizacion[data-estado="error"] .cot-meta { color: var(--baja); }
-:root[data-tema="claro"] .marca b { color: #9c4a05; }
 
 /* La caja del saldo se coloca con left/right y nunca con un relleno que crezca con la ventana:
    así su ancho útil no puede llegar a 0 (era la causa del saldo invisible con zoom pequeño). */
 .saldo {
-  position: absolute; z-index: 1; top: 66px;
+  position: absolute; z-index: 1; top: 86px;
   left: max(20px, env(safe-area-inset-left)); right: max(20px, env(safe-area-inset-right));
   min-width: 16rem;
   color: var(--cielo-txt); container-type: inline-size;
@@ -151,8 +165,10 @@ button, input { font: inherit; color: inherit; }
 .saldo-d { margin-top: 8px; font-size: 1.0625rem; color: var(--cielo-txt2); }
 .saldo-d b, .saldo-d span { white-space: nowrap; }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
-:root[data-tema="claro"] .saldo-d [data-tono="sube"] { color: #10592f; }
-:root[data-tema="claro"] .saldo-d [data-tono="baja"] { color: #93231a; }
+.saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
+.saldo-d [data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
+/* Saludo según la hora, en una línea bajo la marca: discreto, no compite con la cifra. Su altura se reserva siempre para que no mueva nada al aparecer. */
+.saludo { flex-basis: 100%; min-height: 1.25rem; margin-top: -8px; font-size: 0.8125rem; line-height: 1.25rem; color: var(--cielo-txt2); }
 
 /* ------------------------------------------------------------- cuerpo */
 .col-principal, .col-lateral { display: contents; }
