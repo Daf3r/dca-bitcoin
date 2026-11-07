@@ -48,6 +48,10 @@ jobs:
             coverage report
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Envío push real contra un servicio de push falso (cifrado y firma VAPID)
+        run: python tests/test_push_real.py
+      - name: Reglas del dinero con miles de operaciones aleatorias (y comparadas con lib.js)
+        run: python tests/test_aleatorio.py
       - name: Cálculos del frontend
         run: node tests/test_lib.mjs
 

@@ -361,6 +361,26 @@ try {
     avisos.parar();
   }
 
+  // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
+  const mil = await servidor('mil');
+  try {
+    const { ctx, p, consola } = await entrar(navegador, mil, ADMIN);
+    const compras = await datos(p, '/api/compras');
+    ok(compras.length >= 1000, `el escenario trae mil compras o más (${compras.length})`);
+    const satsMil = compras.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+    const sm = await saldo(p);
+    eq(sm.txt, entero(satsMil), 'con mil compras el saldo es el real');
+    ok(sm.w > 0 && sm.h > 0, 'con mil compras el saldo se ve');
+    const nodos = await p.evaluate(() => document.getElementsByTagName('*').length);
+    ok(nodos < 3000, `el DOM no crece con las compras (${nodos} nodos)`);
+    await p.waitForSelector('.g-linea', { timeout: 15000 });
+    ok(await p.locator('#valor').isVisible(), 'con mil compras sale el gráfico de valor');
+    eq(consola.filter((c) => !/503/.test(c)), [], `con mil compras la consola queda limpia: ${consola.join(' | ')}`);
+    await ctx.close();
+  } finally {
+    mil.parar();
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {

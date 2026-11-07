@@ -2,7 +2,7 @@
 
 Uso (con Flask instalado): python tests/test_api.py
 """
-import os, sys, sqlite3, tempfile, importlib, json, subprocess
+import os, sys, sqlite3, tempfile, importlib, json, subprocess, shutil
 APP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 from datetime import date, timedelta
 tmp = tempfile.mkdtemp()
@@ -1222,4 +1222,51 @@ check(_a_quien() == [EP_ADM] and enviados[0][1]["etiqueta"] == "respaldo" and "r
 backup.DB_PATH = "/no/existe/libro.db"
 backup.avisar_fallo()  # sin base no hay a quién avisar: solo se registra, no lanza
 check(len(enviados) == 1, "avisar_fallo nunca rompe el respaldo")
+# Prueba de restauración del respaldo (la que corre cada semana en el servicio de respaldos)
+backup.DB_PATH = dbp
+backup.DEST = os.environ["BACKUP_DIR"]
+check(backup.probar_restauracion() == [], f"un respaldo recién hecho se restaura bien {backup.probar_restauracion()}")
+adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 777})
+check(backup.probar_restauracion() == [], "con la base real más nueva que el respaldo, también está bien")
+_ultimo = sorted(os.listdir(backup.DEST))[-1]
+_ruta_bk = os.path.join(backup.DEST, _ultimo)
+def _copia(nombre):
+    d = os.path.join(tmp, "rest-" + nombre); shutil.copy2(_ruta_bk, d); return d
+# 1) auditoría alterada en el respaldo (se le quitan los triggers para poder cambiarla)
+_c1 = _copia("auditoria"); _cx = sqlite3.connect(_c1)
+for (_n,) in _cx.execute("SELECT name FROM sqlite_master WHERE type = 'trigger'").fetchall():
+    _cx.execute(f"DROP TRIGGER {_n}")
+_cx.execute("UPDATE auditoria SET accion = 'alterada' WHERE id = (SELECT MIN(id) FROM auditoria)"); _cx.commit(); _cx.close()
+_pr = backup.probar_restauracion(respaldo=_c1)
+check(len(_pr) == 1 and "auditoría" in _pr[0], f"una auditoría alterada en el respaldo se detecta {_pr}")
+# 2) le falta una tabla
+_c2 = _copia("sintabla"); _cx = sqlite3.connect(_c2); _cx.execute("DROP TABLE traslados"); _cx.commit(); _cx.close()
+_pr = backup.probar_restauracion(respaldo=_c2)
+check(any("faltan tablas: traslados" in x for x in _pr), f"una tabla que falta se detecta {_pr}")
+# 3) archivo dañado
+_c3 = os.path.join(tmp, "rest-dañada"); open(_c3, "wb").write(b"esto no es una base de datos" * 50)
+_pr = backup.probar_restauracion(respaldo=_c3)
+check(len(_pr) == 1 and "dañada" in _pr[0], f"un archivo dañado se detecta {_pr}")
+# 4) el respaldo tiene filas que la base real no tiene
+_c4 = _copia("masfilas"); _cx = sqlite3.connect(_c4)
+_cx.execute("INSERT INTO compras (fecha, monto, precio, sats, creado, tipo, extra) VALUES ('2020-01-01', 1, 50000, 2000, 1, 'compra', 0)"); _cx.commit(); _cx.close()
+_vivo_n = sqlite3.connect(dbp).execute("SELECT COUNT(*) FROM compras").fetchone()[0]
+_cx = sqlite3.connect(_c4); _cx.execute("INSERT INTO compras (fecha, monto, precio, sats, creado, tipo, extra) VALUES ('2020-01-02', 1, 50000, 2000, 1, 'compra', 0)")
+for _i in range(5):
+    _cx.execute("INSERT INTO compras (fecha, monto, precio, sats, creado, tipo, extra) VALUES ('2020-01-03', 1, 50000, 2000, 1, 'compra', 0)")
+_cx.commit(); _cx.close()
+_pr = backup.probar_restauracion(respaldo=_c4)
+check(any("más filas de compras" in x for x in _pr), f"un respaldo con filas que la base real no tiene se detecta {_pr}")
+# 5) sin respaldos
+_dest_ori = backup.DEST
+backup.DEST = os.path.join(tmp, "vacio"); os.makedirs(backup.DEST)
+check(backup.probar_restauracion() == ["No hay ningún respaldo que probar."], "sin ningún respaldo, la prueba lo dice")
+# 6) la marca semanal
+check(backup.prueba_semanal() == ["No hay ningún respaldo que probar."] and os.path.exists(os.path.join(backup.DEST, backup.MARCA_PRUEBA)), "la primera vez corre y deja su marca")
+check(backup.prueba_semanal() is None, "pasado menos de una semana no vuelve a correr")
+check(backup.prueba_semanal(ahora=_tt.time() + 8 * 86400) is not None, "pasada una semana vuelve a correr")
+backup.DEST = _dest_ori
+check(subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "backup.py"), "--probar"],
+                     env={**os.environ, "DB_PATH": dbp, "BACKUP_DIR": backup.DEST}, capture_output=True, text=True).returncode == 0, "backup.py --probar sale con 0 cuando todo está bien")
+
 print("OK", ok, "comprobaciones")
