@@ -42,9 +42,9 @@ export function celebrar(antes, constancia = []) {
   celebrar.t = setTimeout(() => mostrar(0), reducido() ? 0 : MS_SUBIDA);
 }
 
-/** La barra del tramo se llena con un destello cuando tu punto llega. */
+/** El anillo del tramo da un destello cuando tu punto llega. */
 export function destello() {
-  const b = document.querySelector('.tr-barra');
+  const b = document.querySelector('.tr-anillo');
   if (!b) return;
   b.classList.remove('destello'); void b.offsetWidth; b.classList.add('destello');
   setTimeout(() => b.classList.remove('destello'), 1000);
