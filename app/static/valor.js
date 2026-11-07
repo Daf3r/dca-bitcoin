@@ -1,5 +1,6 @@
 // Gráfico «lo que pusiste y lo que vale»: el invertido neto frente al saldo de sats valorado a cada día.
 import { usd0, usdSigno, pct, fechaLarga, muestrear, aFecha, ticksDolares } from './lib.js';
+import { sinMovimiento } from './movimiento.js';
 
 const f1 = (n) => n.toFixed(1);
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'short', year: 'numeric' });
@@ -46,7 +47,7 @@ export function dibujarValor(host, lectura, { serie }) {
   V = { host, lectura, pts, x, y, W, defecto, sel: null };
   lectura.innerHTML = defecto;
   // La primera vez, la línea del valor se dibuja de izquierda a derecha (sin movimiento reducido).
-  if (primeraVez && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (primeraVez && !sinMovimiento()) {
     const l = host.querySelector('.v-valor');
     const L = l.getTotalLength();
     l.style.strokeDasharray = `${L} ${L}`;

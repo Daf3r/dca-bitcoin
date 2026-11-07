@@ -509,9 +509,13 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 }
 @keyframes barrido { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
-}
+/* Efectos (efectos.js deja `html[data-efectos]` en todos, esenciales o ninguno; atiende también el movimiento reducido del sistema). */
+html[data-efectos="ninguno"] *, html[data-efectos="ninguno"] *::before, html[data-efectos="ninguno"] *::after { animation: none !important; transition: none !important; }
+/* Los adornos de ambiente (clase `efecto-ambiente`) solo existen con «todos». */
+html:not([data-efectos="todos"]) .efecto-ambiente { display: none !important; }
+/* Pausar lo que no se ve: pestaña oculta o escena fuera de la pantalla; al volver retoman donde iban. */
+html[data-oculta] *, html[data-oculta] *::before, html[data-oculta] *::after,
+html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, html[data-escena-fuera] .escena *::after { animation-play-state: paused !important; }
 
 /* ------------------------------------------------------------ cuenta y roles */
 /* Mientras no se sabe el rol (o si es lector), no se muestra nada que escriba. */

@@ -1,5 +1,6 @@
 // Gráfico del precio de BTC con tus compras encima y tu costo promedio.
 import { usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha } from './lib.js';
+import { sinMovimiento } from './movimiento.js';
 
 const f1 = (n) => n.toFixed(1);
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'short', year: 'numeric' });
@@ -92,7 +93,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
     (enRango.length ? ` <span class="lec-tuya">${enRango.length} ${enRango.length === 1 ? 'compra tuya' : 'compras tuyas'} aquí.</span>` : '');
   G = { host, lectura, pts, x, y, W, visible, enRango, defecto, sel: null };
   lectura.innerHTML = defecto;
-  if (primeraVez && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (primeraVez && !sinMovimiento()) {
     const p = host.querySelector('.g-linea');
     const L = p.getTotalLength();
     p.style.strokeDasharray = `${L} ${L}`;

@@ -1,5 +1,6 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { escalaMontana, altitud, nombreHito, entero } from './lib.js';
+import { sinMovimiento } from './movimiento.js';
 
 const f1 = (n) => n.toFixed(1);
 
@@ -161,7 +162,7 @@ function colocar(sats, animado) {
 export function subir(desde, hasta, ms = 2000, festejo = null) {
   if (!estado) return;
   estado.sats = hasta;
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || desde === hasta) { colocar(hasta, false); return; }
+  if (sinMovimiento() || desde === hasta) { colocar(hasta, false); return; }
   estado.host.querySelector('#m-etiquetas').innerHTML = '';
   const { esc, enAltura, L, host } = estado;
   const a0 = altitud(desde, esc), a1 = altitud(hasta, esc);
