@@ -11,7 +11,9 @@ import './celebracion.js';
 import './novedades.js';
 import './csv.js';
 import { cargarYo } from './cuenta.js';
+import { instalarParallax } from './parallax.js';
 
+instalarParallax();
 cargarYo();
 cargarCompras();
 consultarPrecio();

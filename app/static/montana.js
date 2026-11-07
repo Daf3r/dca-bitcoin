@@ -35,6 +35,22 @@ export function luna(cx, cy, r, fase) {
   return `<circle class="luna-sombra" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}"/><path class="astro" d="${luz}"${espejo}/>`;
 }
 
+/** Tres nubes que cruzan despacio (solo con todos los efectos): van detrás de la montaña y por debajo del texto del saldo. */
+function nubes(H) {
+  const una = (x, y, k, clase) => `<g class="efecto-ambiente nube ${clase}"><ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(46 * k)}" ry="${f1(11 * k)}"/><ellipse cx="${f1(x + 22 * k)}" cy="${f1(y - 8 * k)}" rx="${f1(28 * k)}" ry="${f1(10 * k)}"/><ellipse cx="${f1(x - 20 * k)}" cy="${f1(y - 5 * k)}" rx="${f1(24 * k)}" ry="${f1(9 * k)}"/></g>`;
+  return una(0, H * 0.33, 1, 'n1') + una(0, H * 0.4, 1.4, 'n2') + una(0, H * 0.46, 0.8, 'n3');
+}
+/** Dos bandas de niebla entre la sierra y la montaña (solo con todos los efectos). */
+function niebla(W, H, y) {
+  return `<g class="efecto-ambiente niebla"><ellipse class="niebla-a" cx="${f1(W * 0.45)}" cy="${f1(y * H)}" rx="${f1(W * 0.7)}" ry="${f1(H * 0.028)}"/><ellipse class="niebla-b" cx="${f1(W * 0.6)}" cy="${f1(y * H + H * 0.07)}" rx="${f1(W * 0.6)}" ry="${f1(H * 0.024)}"/></g>`;
+}
+/** Un pequeño vuelo de aves al amanecer (solo con todos los efectos): siluetas en «v» que aletean mientras cruzan. */
+function aves(H) {
+  // La posición va en grupos con atributo `transform`; el CSS anima las clases (un transform de CSS reemplaza al del atributo).
+  const ave = (dx, dy, clase) => `<g transform="translate(${dx} ${dy})"><path class="ave-ala ${clase}" d="M0 0q4-5 8 0q4-5 8 0"/></g>`;
+  return `<g transform="translate(0 ${f1(H * 0.37)})"><g class="efecto-ambiente ave">${ave(0, 0, 'a1')}${ave(-18, 9, 'a2')}${ave(-30, -4, 'a3')}</g></g>`;
+}
+
 let estado = null;
 
 /**
@@ -46,7 +62,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const c = composicion(W, H, techo);
   const esc = escalaMontana(sats, c.campos);
   const rnd = azar(42);
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient></defs><g aria-hidden="true">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter></defs><g aria-hidden="true">`;
+  host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
+  // Capa del cielo (parallax): cielo, estrellas, fugaz, sol, luna, nubes y aves.
+  s += '<g class="par par-cielo">';
   [0, 0.17, 0.31, 0.43, 0.53].forEach((b, i) => { s += `<rect class="cielo-${i}" x="0" y="${f1(b * H)}" width="${W}" height="${f1(H - b * H)}"/>`; });
   for (let i = 0; i < 46; i++) s += `<circle class="estrella t${i % 5}" cx="${f1(rnd() * W)}" cy="${f1(rnd() * H * 0.5)}" r="${f1(0.5 + rnd() * 1.1)}"/>`;
   // Estrella fugaz (muy esporádica, solo de noche y con todos los efectos): una raya corta que cruza el cielo alto.
@@ -54,6 +73,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // Sol (amanecer, día y atardecer) y luna con su fase real (noche): el CSS muestra uno u otro según `html[data-cielo]`.
   s += `<g class="sol"><circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 1.7)}"/><circle class="astro" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs)}"/></g>`;
   s += `<g class="luna"><circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 1.7)}"/>${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}</g>`;
+  s += nubes(H) + aves(H) + '</g>';
   // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
   s += `<rect class="alba" id="m-alba" x="0" y="0" width="${W}" height="${H}"/>`;
   const sierra = (base, amp, paso, clase) => {
@@ -61,8 +81,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     for (let x = 0; x <= W + paso; x += paso) d += `L${f1(x)} ${f1(base * H - (Math.sin(x / (W / 3.3) + base * 9) * 0.5 + rnd() * 0.6) * amp * H)}`;
     s += `<path class="${clase}" d="${d}L${W} ${H}Z"/>`;
   };
+  s += '<g class="par par-lejos">';
   sierra(c.sy / H + 0.2, 0.1, Math.max(24, W / 18), 'lejos');
+  s += '</g><g class="par par-medio">';
   sierra(c.sy / H + 0.32, 0.09, Math.max(30, W / 14), 'medio');
+  s += '</g>' + niebla(W, H, c.sy / H + 0.3);
 
   // Montaña: ladera izquierda larga (el sendero) y cara derecha en sombra.
   const piso = H * 0.99;
