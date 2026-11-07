@@ -41,8 +41,10 @@ async function servidor(escenario) {
 
 /** Abre una página, entra con la cuenta dada y espera a que cargue. Recoge errores de consola. */
 async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
-  const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opts });
+  const { hora = 22, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche)
+  const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opcionesContexto });
   const p = await ctx.newPage();
+  await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, hora);
   if (init) await (Array.isArray(init) ? p.addInitScript(init[0], init[1]) : p.addInitScript(init));
   const consola = [];
   p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
@@ -434,6 +436,57 @@ try {
       eq((await anima(r.p)).estado, 'running', 'efectos: al volver a la escena, retoma');
       eq(r.consola, [], 'efectos: consola limpia');
       await r.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
+  // ---------------------------------------------------------------- el cielo según la hora
+  {
+    const srv = await servidor('anio');
+    try {
+      const FRANJAS = [[2, 'noche', 'Buenas noches', 'clara'], [6, 'amanecer', 'Buenos días', 'oscura'], [12, 'dia', 'Buenas tardes', 'oscura'], [17.5, 'atardecer', 'Buenas tardes', 'clara']];
+      for (const [hora, franja, saludo, tinta] of FRANJAS) {
+        const r = await entrar(navegador, srv, ADMIN, { hora, viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+        const est = await r.p.evaluate(() => {
+          const cs = (sel) => getComputedStyle(document.querySelector(sel));
+          const vis = (sel) => cs(sel).display !== 'none';
+          return { franja: document.documentElement.dataset.cielo, tinta: document.documentElement.dataset.tinta, saludo: document.getElementById('saludo').textContent,
+            sol: vis('.sol'), luna: vis('.luna'), fondo: cs('.cielo-0').fill, texto: cs('#t-saldo').color, estrellas: Number(cs('.estrella').opacity),
+            brillo: !!document.querySelector('.brillo-cima'), sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
+        });
+        eq([est.franja, est.tinta], [franja, tinta], `cielo ${hora} h: franja y tinta`);
+        eq(est.saludo, `${saludo}, Daf3r`, `cielo ${hora} h: saludo`);
+        eq([est.sol, est.luna], franja === 'noche' ? [false, true] : [true, false], `cielo ${hora} h: ${franja === 'noche' ? 'luna' : 'sol'}`);
+        ok(franja === 'noche' ? est.estrellas > 0.5 : franja === 'atardecer' ? est.estrellas > 0 && est.estrellas < 0.5 : est.estrellas === 0, `cielo ${hora} h: estrellas ${est.estrellas}`);
+        ok(est.brillo, `cielo ${hora} h: brillo detrás de la cumbre meta`);
+        ok(est.sw <= est.cw, `cielo ${hora} h: sin scroll horizontal`);
+        const sat = await saldo(r.p);
+        ok(sat.w > 100 && /\d/.test(sat.txt), `cielo ${hora} h: el saldo se ve (${sat.w} px)`);
+        eq(r.consola, [], `cielo ${hora} h: consola limpia`);
+        await r.ctx.close();
+      }
+      // La entrada también cambia con la hora y no muestra nada personal (ni saludo ni nombre).
+      for (const [hora, franja] of [[2, 'noche'], [12, 'dia']]) {
+        const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+        const p = await ctx.newPage();
+        await p.addInitScript((h) => localStorage.setItem('libro.hora', String(h)), hora);
+        await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+        eq(await p.evaluate(() => [document.documentElement.dataset.cielo, !!document.getElementById('saludo')]), [franja, false], `entrada ${hora} h: cielo ${franja} y sin saludo`);
+        await ctx.close();
+      }
+      // Estrellas que titilan: solo con todos los efectos (con esenciales siguen ahí, quietas).
+      {
+        const r = await entrar(navegador, srv, ADMIN, { hora: 2 });
+        const anim = () => r.p.evaluate(() => ({ t1: getComputedStyle(document.querySelector('.estrella.t1')).animationName, t0: getComputedStyle(document.querySelector('.estrella.t0')).animationName,
+          fugaz: getComputedStyle(document.querySelector('.fugaz')).animationName }));
+        await r.p.evaluate(() => window.libroEfectos.fijar('todos'));
+        eq(await anim(), { t1: 'titila', t0: 'none', fugaz: 'fugaz' }, 'estrellas: con todos los efectos titilan y pasa una fugaz');
+        await r.p.evaluate(() => window.libroEfectos.fijar('esenciales'));
+        eq(await anim(), { t1: 'none', t0: 'none', fugaz: 'none' }, 'estrellas: con esenciales quedan quietas');
+        eq(await r.p.evaluate(() => Number(getComputedStyle(document.querySelector('.estrella')).opacity) > 0.5), true, 'estrellas: siguen visibles aunque quietas');
+        await r.ctx.close();
+      }
     } finally {
       srv.parar();
     }
