@@ -1137,6 +1137,69 @@ adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
 server.consultar_precio = _cp
 cx.close()
 
+# Vigilantes: «sigo vivo», respaldo atrasado, integridad de la base y espacio en disco
+import salud, collections as _col
+cx = server.connect()
+push.ahora = _de_dia
+cx.execute("DELETE FROM meta WHERE clave IN ('avisos_latido', 'avisos_primer_pase', 'aviso_respaldo_viejo_dia', 'aviso_integridad', 'aviso_disco_dia')"); cx.commit()
+check(salud.avisos(db_path=dbp) is False, "sin marca de «sigo vivo», el servicio no está sano")
+_t_ori, _c_ori = avisos._txid, avisos._caida
+avisos._txid, avisos._caida = (lambda conn: 0), (lambda conn: False)
+_bk = os.path.join(tmp, "bk-vigilantes"); os.makedirs(_bk, exist_ok=True)
+os.environ["BACKUP_DIR"] = _bk
+_pasada = avisos.una_pasada()
+check(set(_pasada) >= {"pendientes", "recordatorio", "txid", "caida", "respaldo", "integridad", "disco"}, f"la pasada incluye los vigilantes {_pasada}")
+check(salud.avisos(db_path=dbp) is True and salud.avisos(ahora=_tt.time() + 700, db_path=dbp) is False, "la marca de «sigo vivo» dice sano y, pasados 10 minutos, no")
+avisos._txid, avisos._caida = _t_ori, _c_ori
+
+# Respaldo atrasado
+enviados.clear()
+_viejo = os.path.join(_bk, "libro-20260101-000000.db"); open(_viejo, "wb").close()
+os.utime(_viejo, (_tt.time() - 40 * 3600, _tt.time() - 40 * 3600))
+check(avisos._respaldo_viejo(cx) is True and _a_quien() == [EP_ADM] and enviados[0][1]["etiqueta"] == "respaldo-viejo" and "Hace 40 horas" in enviados[0][1]["cuerpo"], f"respaldo de hace 40 h avisa al admin {enviados}")
+check(avisos._respaldo_viejo(cx) is False and len(enviados) == 1, "el aviso del respaldo atrasado sale una vez al día")
+cx.execute("DELETE FROM meta WHERE clave = 'aviso_respaldo_viejo_dia'"); cx.commit()
+_nuevo = os.path.join(_bk, "libro-20260106-000000.db"); open(_nuevo, "wb").close()
+check(avisos._respaldo_viejo(cx) is False and len(enviados) == 1, "con un respaldo reciente no avisa")
+check(salud.ultimo_respaldo(_bk) == os.path.getmtime(_nuevo), "el último respaldo es el más reciente")
+check(salud.respaldo(db_path=dbp) is True, "con un respaldo reciente, el servicio de respaldos está sano")
+for _f in (_viejo, _nuevo):
+    os.utime(_f, (_tt.time() - 50 * 3600, _tt.time() - 50 * 3600))
+check(salud.respaldo(db_path=dbp) is False, "con el último respaldo de hace 50 h (más de 1.5 intervalos), no está sano")
+check(salud.respaldo(db_path="/no/existe.db") is True, "mientras no exista la base, no se exige respaldo")
+# Sin ningún respaldo: avisa pasadas 36 horas desde que se empezó a vigilar
+os.remove(_viejo); os.remove(_nuevo)
+cx.execute("DELETE FROM meta WHERE clave = 'aviso_respaldo_viejo_dia'"); cx.execute("INSERT OR REPLACE INTO meta (clave, valor) VALUES ('avisos_primer_pase', ?)", (str(int(_tt.time()) - 40 * 3600),)); cx.commit()
+enviados.clear()
+check(avisos._respaldo_viejo(cx) is True and "Todavía no hay ningún respaldo" in enviados[0][1]["cuerpo"], "sin ningún respaldo desde hace más de 36 h, avisa")
+
+# Integridad de la base
+check(avisos._resultado_integridad(cx) == ["ok"], "la base de las pruebas pasa su revisión de integridad")
+enviados.clear()
+check(avisos._integridad(cx) is False and not enviados, "una base sana no avisa")
+_llamadas = []
+_res_ori = avisos._resultado_integridad
+avisos._resultado_integridad = lambda conn: _llamadas.append(1) or ["ok"]
+check(avisos._integridad(cx) is False and not _llamadas, "ya revisada esta semana, no se vuelve a revisar")
+cx.execute("DELETE FROM meta WHERE clave = 'aviso_integridad'"); cx.commit()
+avisos._resultado_integridad = lambda conn: ["*** in database main ***", "Page 3: never used"]
+check(avisos._integridad(cx) is True and enviados[-1][1]["etiqueta"] == "integridad" and _a_quien() == [EP_ADM], f"una base con problemas avisa al admin {enviados}")
+check(avisos._integridad(cx) is False, "el mismo día no vuelve a revisar ni a avisar")
+avisos._resultado_integridad = _res_ori
+
+# Espacio en disco
+_du = _col.namedtuple("uso", "total used free")
+_disco_ori = avisos.shutil.disk_usage
+enviados.clear()
+avisos.shutil.disk_usage = lambda ruta: _du(100 * 1024**3, 50 * 1024**3, 50 * 1024**3)
+check(avisos._disco(cx) is False and not enviados, "con espacio de sobra no avisa")
+avisos.shutil.disk_usage = lambda ruta: _du(100 * 1024**3, 100 * 1024**3 - 500 * 1024**2, 500 * 1024**2)
+check(avisos._disco(cx) is True and enviados[0][1]["etiqueta"] == "disco" and "500 MB" in enviados[0][1]["cuerpo"], f"con 500 MB libres avisa {enviados}")
+check(avisos._disco(cx) is False and len(enviados) == 1, "el aviso de disco sale una vez al día")
+avisos.shutil.disk_usage = _disco_ori
+cx.close()
+os.environ["BACKUP_DIR"] = os.path.join(tmp, "bk")
+
 # Servicio de worker y archivos del navegador
 r = anon.get("/sw.js")
 check(r.status_code == 200 and "javascript" in r.content_type and r.headers["Cache-Control"] == "no-cache", "sw.js es público y se revalida siempre")

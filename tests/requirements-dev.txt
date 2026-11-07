@@ -1,3 +1,4 @@
 # Solo para revisar el código (CI y desarrollo). La imagen de Docker usa app/requirements.txt.
 ruff==0.17.3
 mypy==2.4.1
+coverage==7.17.2

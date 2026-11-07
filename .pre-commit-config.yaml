@@ -1,0 +1,23 @@
+# Revisiones locales antes de cada commit (opcional). Instalar una vez:  pip install pre-commit && pre-commit install
+# Son las mismas revisiones rápidas del CI; las pruebas largas (navegador, axe, barrido) solo corren en el CI.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff (Python)
+        entry: ruff check app --select E9,F,B,UP,SIM --ignore E501,SIM108,UP007
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: biome
+        name: Biome (JavaScript)
+        entry: npx --prefix tests biome lint
+        language: system
+        files: '\.(js|mjs)$'
+        pass_filenames: false
+      - id: calculos
+        name: Cálculos del frontend (lib.js)
+        entry: node tests/test_lib.mjs
+        language: system
+        files: 'app/static/lib\.js$|tests/test_lib\.mjs$'
+        pass_filenames: false

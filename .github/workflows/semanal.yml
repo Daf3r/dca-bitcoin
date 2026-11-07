@@ -1,0 +1,66 @@
+name: Revisión semanal
+
+# Cada lunes corre lo que tarda demasiado para cada PR (el barrido visual completo) y las revisiones de seguridad SIN
+# tolerancia: si algo falla, GitHub avisa por correo al dueño del repositorio, sin esperar a que alguien abra un PR.
+on:
+  schedule:
+    - cron: "17 11 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  barrido:
+    name: Barrido visual completo
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: app/requirements.txt
+      - run: pip install -r app/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci --prefix tests
+      - run: npx --prefix tests playwright install --with-deps chromium
+      - name: Barrido de los diez escenarios, varios tamaños, claro y oscuro
+        run: node tests/barrido_ui.mjs
+      - name: Subir las capturas de lo que falló
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: barrido-fallos
+          path: tests/barrido/
+          if-no-files-found: ignore
+
+  seguridad:
+    name: Vulnerabilidades (dependencias e imagen)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Librerías de Python de la app
+        run: |
+          pip install pip-audit==2.10.1
+          pip-audit -r app/requirements.txt
+      - name: Herramientas de pruebas de JavaScript
+        run: npm audit --prefix tests --audit-level=high
+      - name: Construir la imagen
+        run: docker build -t libro-dca:semanal ./app
+      - name: Vulnerabilidades en la imagen (Trivy)
+        run: >
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest
+          image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 libro-dca:semanal

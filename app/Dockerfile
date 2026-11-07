@@ -1,10 +1,11 @@
-FROM python:3.12-slim
+# Imagen base fijada por huella digital: cada construcción usa exactamente lo mismo. Dependabot propone actualizarla cada mes.
+FROM python:3.12-slim@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN useradd --uid 1000 --no-create-home --shell /usr/sbin/nologin app
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY server.py auth.py usuarios.py backup.py importar.py push.py ritmo.py avisos.py ./
+COPY server.py auth.py usuarios.py backup.py importar.py push.py ritmo.py avisos.py salud.py ./
 COPY static ./static
 USER app
 EXPOSE 8000

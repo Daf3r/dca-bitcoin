@@ -147,7 +147,20 @@ Tu saldo cuenta cuántos sats tienes en total, sin importar dónde estén. Para 
 - Los traslados no van en el CSV; sí van en los respaldos de la base. La tabla se crea sola al desplegar: haz antes el respaldo de siempre.
 
 ## Revisión del código
-El CI revisa en cada PR el estilo y los errores latentes de Python con `ruff` y los tipos con `mypy` (versiones fijadas en `tests/requirements-dev.txt`), además de las pruebas. Para revisar todo el frontend a la vez (diez escenarios, varios tamaños, claro y oscuro) usa `node tests/barrido_ui.mjs`.
+El CI revisa en cada PR: Python con `ruff` y `mypy`, el JavaScript con Biome, la **accesibilidad** con axe (falla ante cualquier violación), el **rendimiento** con Lighthouse, que la **imagen de Docker** se construye y arranca, y, de forma informativa, vulnerabilidades conocidas (pip-audit, npm audit, Trivy) y cambios visuales contra una referencia de `main`. Cada lunes, `semanal.yml` corre el barrido visual completo y las revisiones de seguridad sin tolerancia: si algo falla, GitHub te avisa por correo.
+
+En tu computadora, antes de subir algo:
+```bash
+python tests/test_api.py && node tests/test_lib.mjs
+npx --prefix tests biome lint
+node tests/auditoria_axe.mjs
+node tests/barrido_ui.mjs rapido
+```
+(`pre-commit install` hace las revisiones rápidas solas en cada commit.)
+
+**Después de desplegar** (en el servidor): `bash scripts/verificar-despliegue.sh`. Comprueba en segundos que los tres servicios están en marcha, que la app responde, que la base pasa su revisión de integridad, que hay un respaldo reciente y que el servicio de avisos está vivo, y te dice qué falló si algo no está bien.
+
+**Vigilantes de los servicios:** el servicio `avisos` te avisa por push (categoría «Fallo del respaldo») si pasan más de 36 horas sin un respaldo nuevo, si la revisión semanal de la base encuentra un problema o si queda poco espacio en disco. Además, `docker compose ps` muestra si `backup` y `avisos` están `healthy`.
 
 ## Avisos push
 Cada persona activa los avisos **en su dispositivo**: «Tu cuenta» → «Avisos en este dispositivo» → «Activar», y marca cuáles quiere.
