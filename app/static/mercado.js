@@ -2,7 +2,8 @@ import { aFecha, costoVsPromedio, entero, hoyISO, satsPorDolar, serieGrafico, se
 import { dibujarGrafico, instalarLectura } from './grafico.js';
 import { dibujarValor, instalarLecturaValor } from './valor.js';
 import { caidaVisible } from './reportes.js';
-import { $, R, S } from './estado.js';
+import { abrirHoja } from './hoja.js';
+import { $, R, S, esAdmin } from './estado.js';
 
 // --------------------------------------------------------------- gráfico
 const RANGOS = [30, 182, 365, 0];
@@ -14,10 +15,25 @@ function rangoPorDefecto() {
   return RANGOS.find((r) => r >= 182 && dias <= r) ?? 0;
 }
 let anchoGrafico = 0;
+// Lo que se ve en el gráfico y la escala se recuerdan por dispositivo (con try/catch: sin almacenamiento valen para esta visita).
+const CLAVE_OCULTAS = 'libro.grafico.ocultas';
+const CLAVE_LOG = 'libro.grafico.log';
+const SERIES_BASE = ['precio', 'compras', 'costo']; // siempre queda al menos una de estas tres a la vista
+const leer = (clave) => { try { return localStorage.getItem(clave); } catch { return null; } };
+const guardar = (clave, v) => { try { if (v) localStorage.setItem(clave, v); else localStorage.removeItem(clave); } catch { /* sin almacenamiento */ } };
+let ocultas = (leer(CLAVE_OCULTAS) ?? '').split(',').filter(Boolean);
+let escalaLog = leer(CLAVE_LOG) === '1';
+const editar = (id) => { if (esAdmin()) { if ($('d-grafico').open) $('d-grafico').close(); abrirHoja(id); } };
+
+/** Lo que el dibujo necesita, igual para el gráfico de la página y el de pantalla completa. */
+const datosGrafico = () => ({
+  serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items.filter((c) => c.tipo !== 'venta'), ventas: R.items.filter((c) => c.tipo === 'venta'),
+  promedio: R.promedio, rango: S.rango, hoy: hoyISO(), maximo30: caidaVisible(), log: S.rango === 0 && escalaLog, editar: esAdmin() ? editar : null,
+});
 export function pintarMercado() {
   const host = $('lienzo');
   if (S.rango === null && S.cargado) S.rango = rangoPorDefecto();
-  document.querySelectorAll('#rangos button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.r) === S.rango)));
+  document.querySelectorAll('#rangos button, #dg-rangos button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.r) === S.rango)));
   const listo = S.histEstado === 'ok' && S.cargado;
   host.classList.toggle('esqueleto', S.histEstado === 'cargando' || !S.cargado);
   if (!listo) {
@@ -26,9 +42,40 @@ export function pintarMercado() {
     return;
   }
   anchoGrafico = host.clientWidth;
-  dibujarGrafico(host, $('g-lectura'), { serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items.filter((c) => c.tipo !== 'venta'), ventas: R.items.filter((c) => c.tipo === 'venta'), promedio: R.promedio, rango: S.rango, hoy: hoyISO(), maximo30: caidaVisible() });
+  host.dataset.ocultas = ocultas.join(' ');
+  dibujarGrafico(host, $('g-lectura'), { ...datosGrafico(), tarjeta: $('g-tarjeta'), sr: $('g-sr') });
+  // Opciones: la escala logarítmica solo tiene sentido con «Todo»; la leyenda refleja lo que está oculto.
+  $('g-log').hidden = S.rango !== 0;
+  $('g-log').setAttribute('aria-pressed', String(escalaLog));
+  document.querySelectorAll('.mercado .leyenda button[data-serie]').forEach((b) => b.setAttribute('aria-pressed', String(!ocultas.includes(b.dataset.serie))));
+  if ($('d-grafico').open) pintarCompleto();
 }
 instalarLectura($('lienzo'));
+instalarLectura($('dg-lienzo'));
+
+/** El gráfico a pantalla completa: el mismo dibujo con todo el alto de la pantalla (también en horizontal). */
+function pintarCompleto() {
+  const h = $('dg-lienzo');
+  h.dataset.ocultas = ocultas.join(' ');
+  dibujarGrafico(h, $('dg-lectura'), { ...datosGrafico(), alto: h.clientHeight, tarjeta: $('dg-tarjeta'), sr: $('dg-sr') });
+}
+$('g-ampliar').addEventListener('click', () => { $('d-grafico').showModal(); pintarCompleto(); $('dg-lienzo').focus({ preventScroll: true }); });
+$('dg-cerrar').addEventListener('click', () => $('d-grafico').close());
+new ResizeObserver(() => { if ($('d-grafico').open) pintarCompleto(); }).observe($('dg-lienzo'));
+$('d-grafico').addEventListener('close', () => $('g-ampliar').focus({ preventScroll: true }));
+
+// Escala logarítmica y series ocultables (leyenda interactiva).
+$('g-log').addEventListener('click', () => { escalaLog = !escalaLog; guardar(CLAVE_LOG, escalaLog ? '1' : ''); pintarMercado(); });
+document.querySelector('.mercado .leyenda').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-serie]');
+  if (!b) return;
+  const serie = b.dataset.serie;
+  const nuevas = ocultas.includes(serie) ? ocultas.filter((x) => x !== serie) : [...ocultas, serie];
+  if (SERIES_BASE.every((s) => nuevas.includes(s))) return; // siempre al menos una línea visible
+  ocultas = nuevas;
+  guardar(CLAVE_OCULTAS, ocultas.join(','));
+  pintarMercado();
+});
 
 // Lo que pusiste y lo que vale: desde 3 compras y con histórico y precio; si falta algo, la sección no sale.
 let anchoValor = 0;
@@ -56,10 +103,12 @@ function textoVs(c) {
 }
 instalarLecturaValor($('v-lienzo'));
 new ResizeObserver(() => { if ($('v-lienzo').clientWidth && $('v-lienzo').clientWidth !== anchoValor) pintarValor(); }).observe($('v-lienzo'));
-$('rangos').addEventListener('click', (e) => {
-  const b = e.target.closest('button');
-  if (b) { S.rango = Number(b.dataset.r); pintarMercado(); }
-});
+for (const id of ['rangos', 'dg-rangos']) {
+  $(id).addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b) { S.rango = Number(b.dataset.r); pintarMercado(); }
+  });
+}
 new ResizeObserver(() => { if ($('lienzo').clientWidth !== anchoGrafico) pintarMercado(); }).observe($('lienzo'));
 
 // ----------------------------------------------------- sats por dólar

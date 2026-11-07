@@ -1,25 +1,29 @@
 // Gráfico del precio de BTC con tus compras encima y tu costo promedio.
-import { usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha, tramosCaida } from './lib.js';
+import { usd, usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha, tramosCaida } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 
 const f1 = (n) => n.toFixed(1);
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'short', year: 'numeric' });
 const mes = (f) => dfMes.format(aFecha(f)).replace('.', '');
-let G = null;
+// Cada gráfico (el de la página y el de pantalla completa) guarda su propio estado, asociado a su contenedor.
+const EST = new WeakMap();
 let primeraVez = true;
 
 /**
  * serie: [{fecha, p}] con el precio en vivo al final; compras: items de resumen();
- * rango: días visibles (0 = todo).
+ * rango: días visibles (0 = todo). `log`: escala logarítmica. `alto`: alto fijo (pantalla completa). `tarjeta` y `sr`: la tarjeta
+ * flotante y la zona que anuncia a los lectores de pantalla (fuera del contenedor, que es `role="img"`). `editar(id)`: abrir una
+ * compra para editarla (solo el admin).
  */
-export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], promedio, rango, hoy, maximo30 = null }) {
+export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], promedio, rango, hoy, maximo30 = null, log = false, alto = null, tarjeta = null, sr = null, editar = null }) {
   const W = Math.max(280, host.clientWidth);
-  const H = W < 560 ? 250 : W < 900 ? 300 : 340;
+  const H = alto ? Math.max(200, Math.round(alto)) : W < 560 ? 250 : W < 900 ? 300 : 340;
+  const previo = EST.get(host) ?? null;
   const corte = rango ? new Date(aFecha(hoy).getTime() - rango * 864e5) : null;
   const desde = corte ? serie.findIndex((x) => aFecha(x.fecha) >= corte) : 0;
   const visible = serie.slice(Math.max(0, desde));
   const bandas = serie.length > 1 ? tramosCaida(serie) : [];
-  if (visible.length < 2) { host.innerHTML = '<p class="g-vacio">Aún no hay suficiente histórico para este rango.</p>'; G = null; return; }
+  if (visible.length < 2) { host.innerHTML = '<p class="g-vacio">Aún no hay suficiente histórico para este rango.</p>'; EST.delete(host); if (tarjeta) tarjeta.hidden = true; return; }
   // Con años de datos diarios, ~2 puntos por cada 3 px bastan y el móvil va fluido.
   const pts = muestrear(visible, Math.min(300, Math.round(W / 3)));
   const enRango = compras.filter((c) => ubicar(c.fecha, visible) >= 0);
@@ -29,17 +33,20 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   const promDentro = promedio && promedio > lo * 0.7 && promedio < hi * 1.3;
   if (promDentro) { lo = Math.min(lo, promedio); hi = Math.max(hi, promedio); }
   if (maximo30 && maximo30.max > lo) hi = Math.max(hi, maximo30.max); // el máximo de 30 días, si hay gran caída, siempre cabe
+  // Escala logarítmica (opcional, para «Todo»): las subidas grandes dejan de aplastar los movimientos antiguos.
+  const f = log ? (v) => Math.log(Math.max(v, 1)) : (v) => v;
+  lo = f(lo); hi = f(hi);
   const pad = (hi - lo) * 0.1 || hi * 0.05;
   lo -= pad; hi += pad * 1.4;
   const m = { t: 22, r: 12, b: 28, l: 10 };
   const t0 = aFecha(pts[0].fecha).getTime(), t1 = aFecha(pts.at(-1).fecha).getTime();
   const x = (f) => m.l + ((aFecha(f).getTime() - t0) / Math.max(1, t1 - t0)) * (W - m.l - m.r);
-  const y = (p) => m.t + (1 - (p - lo) / (hi - lo)) * (H - m.t - m.b);
+  const y = (p) => m.t + (1 - (f(p) - lo) / (hi - lo)) * (H - m.t - m.b);
   const linea = pts.map((s, i) => `${i ? 'L' : 'M'}${f1(x(s.fecha))} ${f1(y(s.p))}`).join('');
 
   // Al cambiar de rango (no en cada repintado) el dibujo anterior se desvanece mientras entra el nuevo.
   const viejo = host.querySelector('svg');
-  const cambioRango = Boolean(viejo && G && G.rango !== rango && !sinMovimiento());
+  const cambioRango = Boolean(viejo && previo && previo.rango !== rango && !sinMovimiento());
   const fantasma = cambioRango ? viejo.cloneNode(true) : null;
   let s = `<svg${cambioRango ? ' class="g-entra"' : ''} viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">`;
   // El brillo de la línea sigue la tendencia (más apagada donde baja, plena donde sube): no depende del color.
@@ -62,6 +69,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   const primera = pts[0].fecha, ultima = pts.at(-1).fecha;
   const bandasVis = bandas.map((b) => [b.desde > primera ? b.desde : primera, b.hasta < ultima ? b.hasta : ultima]).filter(([d, h]) => d <= h);
   for (const [d, h] of bandasVis) s += `<rect class="g-banda" x="${f1(x(d))}" y="${m.t}" width="${f1(Math.max(2, x(h) - x(d)))}" height="${H - m.t - m.b}"/>`;
+  if (log) s += `<text class="g-escala" x="${m.l}" y="${m.t - 8}">Escala logarítmica</text>`;
   const n = W < 560 ? 3 : 5;
   for (let k = 0; k < n; k++) {
     const p = pts[Math.round((k / (n - 1)) * (pts.length - 1))];
@@ -82,10 +90,10 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   }
   let etiquetaCosto = '';
   if (promedio) {
-    const yp = promDentro ? y(promedio) : promedio < lo ? H - m.b - 4 : m.t + 4;
+    const yp = promDentro ? y(promedio) : f(promedio) < lo ? H - m.b - 4 : m.t + 4;
     if (promDentro) s += `<line class="g-prom" x1="${m.l}" x2="${W - m.r}" y1="${f1(yp)}" y2="${f1(yp)}"/>`;
-    const txt = `Tu costo ${usd0(promedio)}${promDentro ? '' : promedio < lo ? ' ↓' : ' ↑'}`;
-    const ty = promDentro ? yp - 24 : promedio < lo ? yp - 22 : yp;
+    const txt = `Tu costo ${usd0(promedio)}${promDentro ? '' : f(promedio) < lo ? ' ↓' : ' ↑'}`;
+    const ty = promDentro ? yp - 24 : f(promedio) < lo ? yp - 22 : yp;
     etiquetaCosto = `<g class="g-prom-tag"><rect x="${m.l}" y="${f1(ty)}" width="${f1(txt.length * 7 + 16)}" height="20" rx="10"/><text x="${m.l + 8}" y="${f1(ty + 14)}">${txt}</text></g>`;
   }
   // Las compras van a su propio precio: un único path de círculos, ligero aunque sean cientos.
@@ -99,6 +107,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   // Las ventas van como rombos huecos a su precio de venta.
   const vxy = ventasRango.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
   const rv = r + 1.5;
+  const puntos = [...enRango.map((c, i) => ({ c, x: cxy[i][0], y: cxy[i][1] })), ...ventasRango.map((c, i) => ({ c, x: vxy[i][0], y: vxy[i][1] }))];
   if (vxy.length) s += `<path class="g-ventas" d="${vxy.map(([cx, cy]) => `M${f1(cx)} ${f1(cy - rv)}L${f1(cx + rv)} ${f1(cy)}L${f1(cx)} ${f1(cy + rv)}L${f1(cx - rv)} ${f1(cy)}Z`).join('')}"/>`;
   // La etiqueta del costo va encima de los puntos para que siempre se lea.
   if (promedio) s += etiquetaCosto;
@@ -134,7 +143,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
     setTimeout(() => fantasma.remove(), 450);
   }
   // La leyenda enseña solo lo que hay dibujado.
-  const ley = host.parentElement.querySelector('.leyenda');
+  const ley = host.closest('section')?.querySelector('.leyenda');
   const mostrar = (clase, si) => { const el = ley?.querySelector(clase); if (el) el.hidden = !si; };
   mostrar('.k-x', extras.length > 0);
   mostrar('.k-g', promDentro);
@@ -146,8 +155,13 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   const periodo = { 30: 'en el último mes', 182: 'en los últimos 6 meses', 365: 'en el último año' }[rango] ?? `desde ${mes(pts[0].fecha)}`;
   const defecto = `BTC <b>${usd0(u.p)}</b> hoy, <b data-tono="${cambio >= 0 ? 'sube' : 'baja'}">${pct(cambio)}</b> ${periodo}.` +
     (enRango.length ? ` <span class="lec-tuya">${enRango.length} ${enRango.length === 1 ? 'compra tuya' : 'compras tuyas'} aquí.</span>` : '');
-  G = { host, lectura, pts, x, y, W, visible, enRango, defecto, sel: null, rango };
+  const est = { host, lectura, pts, x, y, W, H, visible, enRango, defecto, sel: null, rango, puntos, tarjeta, sr, editar, fijada: null };
+  EST.set(host, est);
   lectura.innerHTML = defecto;
+  // Si había una compra fijada y sigue ahí tras repintar (el precio se refresca cada 30 s), se conserva su tarjeta.
+  const idFijada = previo?.fijada?.id;
+  const punto = idFijada ? puntos.find((q) => q.c.id === idFijada) : null;
+  if (punto) fijar(est, punto, false); else if (tarjeta) { tarjeta.hidden = true; tarjeta.dataset.modo = ''; }
   if (primeraVez && !sinMovimiento()) {
     const p = host.querySelector('.g-linea');
     const L = p.getTotalLength();
@@ -160,51 +174,158 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   primeraVez = false;
 }
 
-function marcar(i, anunciar = false) {
-  if (!G) return;
-  G.sel = i;
-  const cur = G.host.querySelector('.g-cursor');
-  if (i == null) { cur.setAttribute('visibility', 'hidden'); G.lectura.innerHTML = G.defecto; return; }
-  const p = G.pts[i];
-  const px = G.x(p.fecha);
+
+// ---------------------------------------------------------------- lectura: tarjeta flotante y compra fijada
+// La tarjeta (`.g-tarjeta`) vive FUERA del contenedor del gráfico, que es `role="img"`: dentro no podría llevar botones.
+// Hay dos modos: «lectura» (sigue al dedo o al ratón, no se toca) y «fija» (una compra tocada, con «Editar» para el admin).
+const tx = (t, clase, texto) => { const el = t.querySelector(clase); if (el) el.textContent = texto; };
+
+function posicionar(t, px) {
+  t.style.setProperty('--cx', `${f1(px)}px`); // el CSS la mantiene dentro del gráfico (clamp) y por encima del dedo
+}
+
+function tarjetaLectura(g, p, compra, desde) {
+  const t = g.tarjeta;
+  if (!t || g.fijada) return;
+  t.dataset.modo = 'lectura';
+  t.removeAttribute('role');
+  t.removeAttribute('aria-label');
+  t.setAttribute('aria-hidden', 'true');
+  tx(t, '.gt-fecha', p.vivo ? 'Ahora' : fechaLarga(p.fecha));
+  tx(t, '.gt-precio', `BTC ${usd0(p.p)}`);
+  tx(t, '.gt-sub', p.vivo ? '' : `Desde entonces ${pct(desde)}`);
+  tx(t, '.gt-nota', compra ? `Compraste ${entero(compra.sats)} sats a ${usd0(compra.precio)}` : '');
+  posicionar(t, g.x(p.fecha));
+  t.hidden = false;
+}
+
+/** Fija la tarjeta en una compra (o venta): sus datos, y «Editar» si quien mira puede (`opciones.editar`). */
+function fijar(g, punto, anunciar = true) {
+  const t = g.tarjeta;
+  const c = punto.c;
+  g.fijada = c;
+  if (!t) return;
+  const venta = c.tipo === 'venta';
+  t.dataset.modo = 'fija';
+  t.removeAttribute('aria-hidden');
+  t.setAttribute('role', 'group');
+  t.setAttribute('aria-label', venta ? 'Detalle de la venta o gasto' : 'Detalle de la compra');
+  tx(t, '.gt-fecha', `${venta ? 'Venta o gasto' : c.extra ? 'Compra extra' : 'Compra'} · ${fechaLarga(c.fecha)}`);
+  tx(t, '.gt-precio', `${venta ? '−' : '+'}${entero(c.sats)} sats`);
+  const hoy = g.pts.at(-1).p;
+  const valorHoy = (c.sats / 1e8) * hoy;
+  tx(t, '.gt-sub', `${usd(c.monto)} a ${usd0(c.precio)}`);
+  tx(t, '.gt-nota', [venta ? '' : `Hoy ${usdSigno(valorHoy - c.monto)} (${pct((valorHoy / c.monto - 1) * 100)})`, c.nota ? `«${c.nota}»` : ''].filter(Boolean).join(' · '));
+  const editar = t.querySelector('.gt-editar');
+  if (editar) { editar.hidden = !g.editar; editar.dataset.id = String(c.id ?? ''); }
+  posicionar(t, punto.x);
+  t.hidden = false;
+  if (anunciar && g.sr) g.sr.textContent = `${t.querySelector('.gt-fecha').textContent}. ${t.querySelector('.gt-precio').textContent}. ${t.querySelector('.gt-sub').textContent}. ${t.querySelector('.gt-nota').textContent}`;
+}
+
+function desfijar(g) {
+  g.fijada = null;
+  if (g.tarjeta) { g.tarjeta.hidden = true; g.tarjeta.dataset.modo = ''; }
+}
+
+/** `teclado`: la lectura viene de las flechas (además de la tarjeta, se anuncia a los lectores de pantalla). */
+function marcar(host, i, teclado = false) {
+  const g = EST.get(host);
+  if (!g) return;
+  g.sel = i;
+  const cur = host.querySelector('.g-cursor');
+  if (i == null) {
+    cur.setAttribute('visibility', 'hidden');
+    if (!g.tarjeta) g.lectura.innerHTML = g.defecto;
+    if (g.tarjeta && !g.fijada) g.tarjeta.hidden = true;
+    return;
+  }
+  const p = g.pts[i];
+  const px = g.x(p.fecha);
   cur.setAttribute('visibility', 'visible');
   const [ln, cp, cc] = cur.children;
   ln.setAttribute('x1', f1(px)); ln.setAttribute('x2', f1(px));
-  cp.setAttribute('cx', f1(px)); cp.setAttribute('cy', f1(G.y(p.p)));
+  cp.setAttribute('cx', f1(px)); cp.setAttribute('cy', f1(g.y(p.p)));
   // ¿Hubo compra cerca de ese punto? (la serie está decimada: se mira el tramo que representa)
-  const ini = i ? G.pts[i - 1].fecha : p.fecha, fin = i < G.pts.length - 1 ? G.pts[i + 1].fecha : p.fecha;
-  const compra = G.enRango.filter((c) => c.fecha > ini && c.fecha < fin || c.fecha === p.fecha).at(-1);
+  const ini = i ? g.pts[i - 1].fecha : p.fecha, fin = i < g.pts.length - 1 ? g.pts[i + 1].fecha : p.fecha;
+  const compra = g.enRango.filter((c) => c.fecha > ini && c.fecha < fin || c.fecha === p.fecha).at(-1);
   cc.setAttribute('visibility', compra ? 'visible' : 'hidden');
-  if (compra) { cc.setAttribute('cx', f1(px)); cc.setAttribute('cy', f1(G.y(compra.precio))); }
-  const desde = (G.pts.at(-1).p / p.p - 1) * 100;
-  G.lectura.innerHTML = `${p.vivo ? 'Ahora' : fechaLarga(p.fecha)} · BTC <b>${usd0(p.p)}</b>` +
-    (p.vivo ? '' : ` · desde entonces <b data-tono="${desde >= 0 ? 'sube' : 'baja'}">${pct(desde)}</b>`) +
-    (compra ? `<br><span class="lec-tuya">Compraste ${entero(compra.sats)} sats a ${usd0(compra.precio)} el ${fechaCorta(compra.fecha)}` +
-      ` (hoy ${usdSigno((compra.sats / 1e8) * G.pts.at(-1).p - compra.monto)})</span>` : '');
-  if (anunciar) document.getElementById('g-sr').textContent = G.lectura.textContent;
+  if (compra) { cc.setAttribute('cx', f1(px)); cc.setAttribute('cy', f1(g.y(compra.precio))); }
+  const desde = (g.pts.at(-1).p / p.p - 1) * 100;
+  // El dato va en la tarjeta y se anuncia a los lectores de pantalla; el texto de arriba NO cambia (si cambiara de alto, el gráfico
+  // y la leyenda se correrían bajo el dedo y el toque caería en otro sitio). Sin tarjeta, se escribe ahí como antes.
+  const texto = `${p.vivo ? 'Ahora' : fechaLarga(p.fecha)} · BTC ${usd0(p.p)}${p.vivo ? '' : ` · desde entonces ${pct(desde)}`}` +
+    (compra ? `. Compraste ${entero(compra.sats)} sats a ${usd0(compra.precio)} el ${fechaCorta(compra.fecha)} (hoy ${usdSigno((compra.sats / 1e8) * g.pts.at(-1).p - compra.monto)})` : '');
+  if (!g.tarjeta) g.lectura.textContent = texto;
+  tarjetaLectura(g, p, compra, desde);
+  if (teclado && g.sr) g.sr.textContent = texto;
 }
 
-function cercano(ev) {
-  const caja = G.host.querySelector('svg').getBoundingClientRect();
-  const px = ((ev.clientX - caja.left) / caja.width) * G.W;
-  let lo = 0, hi = G.pts.length - 1;
-  while (lo < hi) { const md = (lo + hi) >> 1; if (G.x(G.pts[md].fecha) < px) lo = md + 1; else hi = md; }
-  return lo > 0 && Math.abs(G.x(G.pts[lo - 1].fecha) - px) < Math.abs(G.x(G.pts[lo].fecha) - px) ? lo - 1 : lo;
+function aSvg(g, ev) {
+  const caja = g.host.querySelector('svg').getBoundingClientRect();
+  return { px: ((ev.clientX - caja.left) / caja.width) * g.W, py: ((ev.clientY - caja.top) / caja.height) * g.H };
 }
 
-/** Lectura con puntero (dedo o ratón) y con teclado (flechas, Inicio, Fin). */
+function cercano(g, ev) {
+  const { px } = aSvg(g, ev);
+  let lo = 0, hi = g.pts.length - 1;
+  while (lo < hi) { const md = (lo + hi) >> 1; if (g.x(g.pts[md].fecha) < px) lo = md + 1; else hi = md; }
+  return lo > 0 && Math.abs(g.x(g.pts[lo - 1].fecha) - px) < Math.abs(g.x(g.pts[lo].fecha) - px) ? lo - 1 : lo;
+}
+
+/** El punto de compra o venta más cercano al toque, si cae dentro de la zona táctil (24 px de radio, 48 de diámetro). */
+function puntoTocado(g, ev) {
+  const { px, py } = aSvg(g, ev);
+  let mejor = null, d2 = 24 * 24;
+  for (const q of g.puntos) {
+    const d = (q.x - px) ** 2 + (q.y - py) ** 2;
+    if (d <= d2) { d2 = d; mejor = q; }
+  }
+  return mejor;
+}
+
+/**
+ * Lectura con puntero (dedo o ratón) y con teclado (flechas, Inicio, Fin; Intro fija la compra de ese día). Tocar un punto de compra
+ * fija su tarjeta; tocar en otro sitio, Esc o «Cerrar» la quita. El botón «Editar» sale si el dibujo recibió `editar(id)` (solo el admin).
+ */
 export function instalarLectura(host) {
-  host.addEventListener('pointermove', (e) => G && marcar(cercano(e)));
-  host.addEventListener('pointerdown', (e) => G && marcar(cercano(e)));
-  host.addEventListener('pointerleave', () => G && document.activeElement !== host && marcar(null));
-  host.addEventListener('blur', () => G && marcar(null));
+  const dueno = () => EST.get(host);
+  host.addEventListener('pointermove', (e) => { const g = dueno(); if (g) marcar(host, cercano(g, e)); });
+  // El punto tocado se decide al bajar el dedo (antes de que nada se mueva) y se usa en el `click`.
+  host.addEventListener('pointerdown', (e) => { const g = dueno(); if (g) { g.alBajar = puntoTocado(g, e); marcar(host, cercano(g, e)); } });
+  host.addEventListener('pointerleave', () => dueno() && document.activeElement !== host && marcar(host, null));
+  host.addEventListener('blur', () => dueno() && marcar(host, null));
+  host.addEventListener('click', (e) => {
+    const g = dueno();
+    if (!g) return;
+    const q = g.alBajar ?? puntoTocado(g, e);
+    g.alBajar = null;
+    if (q) fijar(g, q); else if (g.fijada) desfijar(g);
+  });
   host.addEventListener('keydown', (e) => {
-    if (!G) return;
-    const ult = G.pts.length - 1, act = G.sel ?? ult;
-    const paso = Math.max(1, Math.round(G.pts.length / 60));
+    const g = dueno();
+    if (!g) return;
+    if (e.key === 'Escape' && g.fijada) { e.preventDefault(); desfijar(g); return; }
+    const ult = g.pts.length - 1, act = g.sel ?? ult;
+    if (e.key === 'Enter' && g.sel != null) {
+      const p = g.pts[g.sel];
+      const ini = g.sel ? g.pts[g.sel - 1].fecha : p.fecha, fin = g.sel < ult ? g.pts[g.sel + 1].fecha : p.fecha;
+      const q = g.puntos.find((z) => z.c.fecha > ini && z.c.fecha < fin || z.c.fecha === p.fecha);
+      if (q) { e.preventDefault(); fijar(g, q); }
+      return;
+    }
+    const paso = Math.max(1, Math.round(g.pts.length / 60));
     const sig = { ArrowLeft: act - paso, ArrowRight: act + paso, Home: 0, End: ult }[e.key];
     if (sig == null) return;
     e.preventDefault();
-    marcar(Math.max(0, Math.min(ult, sig)), true);
+    marcar(host, Math.max(0, Math.min(ult, sig)), true);
+  });
+  // Los botones de la tarjeta (editar y cerrar) se atienden desde el contenedor de la tarjeta, que no es hijo del gráfico.
+  document.addEventListener('click', (e) => {
+    const g = dueno();
+    const card = g?.tarjeta;
+    if (!card?.contains(e.target)) return;
+    if (e.target.closest('.gt-cerrar')) { desfijar(g); host.focus({ preventScroll: true }); }
+    else if (e.target.closest('.gt-editar')) { const id = Number(card.querySelector('.gt-editar').dataset.id); desfijar(g); g.editar?.(id); }
   });
 }

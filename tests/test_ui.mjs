@@ -625,7 +625,7 @@ try {
     await p.waitForTimeout(700);
     const dib = await p.evaluate(() => {
       const q = (s) => document.querySelectorAll(`#lienzo ${s}`).length;
-      const ley = (c) => !document.querySelector(`#lienzo`).parentElement.querySelector(`.leyenda ${c}`).hidden;
+      const ley = (c) => !document.querySelector(`.mercado .leyenda ${c}`).hidden;
       return { extras: q('.g-extras'), max: q('.g-max'), maxTxt: document.querySelector('#lienzo .g-max-t')?.textContent, trend: q('#g-trend stop'), zonaG: q('.g-zona-g'), zonaP: q('.g-zona-p'),
         bandas: q('.g-banda'), stroke: getComputedStyle(document.querySelector('#lienzo .g-linea')).stroke, leyX: ley('.k-x'), leyG: ley('.k-g'), leyL: ley('.k-l'), leyM: ley('.k-m'), leyB: ley('.k-b') };
     });
@@ -645,6 +645,103 @@ try {
     await p.waitForTimeout(80);
     ok(await p.locator('#lienzo .g-sale').count() === 0, 'sin movimiento no hay fundido');
     await p.evaluate(() => window.libroEfectos.fijar('auto'));
+    // ---- Leer el gráfico: tarjeta flotante, tocar una compra, teclado, leyenda interactiva, escala logarítmica y pantalla completa.
+    await p.click('#rangos button[data-r="182"]');
+    await p.evaluate(() => document.getElementById('lienzo').scrollIntoView({ block: 'center' })); // el ratón solo actúa dentro de la pantalla
+    await p.waitForTimeout(700);
+    const caja = async (sel) => p.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }, sel);
+    // Dónde está (en pantalla) la primera compra dibujada: el primer subtrazado de `.g-compras` empieza en (cx − r, cy).
+    const primeraCompra = async (host = '#lienzo') => p.evaluate((h) => {
+      const svg = document.querySelector(`${h} svg`), d = svg.querySelector('.g-compras').getAttribute('d');
+      const m = /^M([\d.]+) ([\d.]+)a([\d.]+)/.exec(d), r = svg.getBoundingClientRect();
+      return { x: r.left + Number(m[1]) + Number(m[3]), y: r.top + Number(m[2]) };
+    }, host);
+    let lc = await caja('#lienzo');
+    await p.mouse.move(lc.x + lc.w * 0.5, lc.y + lc.h * 0.5);
+    await p.waitForTimeout(150);
+    const flot = await p.evaluate(() => { const t = document.getElementById('g-tarjeta'); return { vis: !t.hidden, modo: t.dataset.modo, txt: t.innerText, eventos: getComputedStyle(t).pointerEvents, oculta: t.getAttribute('aria-hidden') }; });
+    ok(flot.vis && flot.modo === 'lectura' && /BTC \$[\d,]+/.test(flot.txt) && flot.eventos === 'none' && flot.oculta === 'true', `tarjeta flotante al recorrer el gráfico: «${flot.txt.replace(/\s+/g, ' ').slice(0, 60)}»`);
+    await p.mouse.move(5, 5);
+    await p.waitForTimeout(150);
+    ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'al salir del gráfico la tarjeta se va');
+    // Tocar una compra la fija, con sus datos, «Editar» (admin) y «Cerrar»
+    const pc = await primeraCompra();
+    await p.mouse.click(pc.x, pc.y);
+    await p.waitForTimeout(200);
+    const fija = await p.evaluate(() => { const t = document.getElementById('g-tarjeta'); return { vis: !t.hidden, modo: t.dataset.modo, role: t.getAttribute('role'), txt: t.innerText.replace(/\s+/g, ' '), editar: !t.querySelector('.gt-editar').hidden, sr: document.getElementById('g-sr').textContent }; });
+    ok(fija.vis && fija.modo === 'fija' && fija.role === 'group' && /^(Compra|Compra extra|Venta o gasto) · /.test(fija.txt) && /[+−][\d,]+ sats/.test(fija.txt) && fija.editar, `tocar un punto fija su compra: «${fija.txt.slice(0, 90)}»`);
+    ok(fija.sr.length > 20, 'y se anuncia a los lectores de pantalla');
+    const botones = await p.evaluate(() => [...document.querySelectorAll('#g-tarjeta .gt-acciones button:not([hidden])')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
+    ok(botones.length === 2 && botones.every(([w, h]) => w >= 44 && h >= 44), `Editar y Cerrar con zona de toque de 44 px (${JSON.stringify(botones)})`);
+    // Cerrar con el botón, con Esc, y tocando en otro sitio
+    await p.click('#g-tarjeta .gt-cerrar');
+    ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), '«Cerrar» quita la tarjeta fija');
+    await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
+    await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+    ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'Esc quita la tarjeta fija');
+    await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
+    lc = await caja('#lienzo');
+    await p.mouse.click(lc.x + lc.w - 3, lc.y + 8); await p.waitForTimeout(150);
+    ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'tocar en otro sitio del gráfico quita la tarjeta fija');
+    // «Editar» abre esa compra en la hoja
+    await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
+    await p.click('#g-tarjeta .gt-editar');
+    await p.waitForTimeout(500);
+    ok(await p.evaluate(() => document.getElementById('hoja').hidden === false && /Editar/i.test(document.getElementById('h-titulo')?.textContent ?? 'Editar')), '«Editar» abre la compra en la hoja');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+    // Con teclado: flechas para recorrer y Intro para fijar la compra de ese día (si la hay)
+    await p.focus('#lienzo');
+    await p.keyboard.press('End');
+    let fijadaTeclado = false;
+    for (let k = 0; k < 120 && !fijadaTeclado; k++) {
+      await p.keyboard.press('ArrowLeft');
+      await p.keyboard.press('Enter');
+      fijadaTeclado = await p.evaluate(() => document.getElementById('g-tarjeta').dataset.modo === 'fija');
+    }
+    ok(fijadaTeclado, 'con el teclado: flechas para recorrer e Intro para fijar la compra de ese día');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(100);
+    // Leyenda interactiva: ocultar series y que siempre quede una a la vista
+    const oculto = (cls) => p.evaluate((c) => getComputedStyle(document.querySelector(`#lienzo ${c}`)).display === 'none', cls);
+    await p.click('.leyenda button[data-serie="compras"]');
+    eq([await p.getAttribute('.leyenda button[data-serie="compras"]', 'aria-pressed'), await oculto('.g-compras'), await p.evaluate(() => document.getElementById('lienzo').dataset.ocultas)], ['false', true, 'compras'], 'la leyenda oculta las compras');
+    await p.click('.leyenda button[data-serie="precio"]');
+    eq([await oculto('.g-linea'), await oculto('.g-prom-tag')], [true, false], 'y también el precio, pero el costo sigue a la vista');
+    await p.click('.leyenda button[data-serie="costo"]');
+    eq([await p.getAttribute('.leyenda button[data-serie="costo"]', 'aria-pressed'), await oculto('.g-prom-tag')], ['true', false], 'la última línea no se puede ocultar: siempre queda al menos una');
+    ok(await p.evaluate(() => (localStorage.getItem('libro.grafico.ocultas') ?? '').split(',').sort().join()) === 'compras,precio', 'lo oculto se recuerda en el dispositivo');
+    const alto = await p.evaluate(() => [...document.querySelectorAll('.leyenda button:not([hidden])')].every((b) => b.getBoundingClientRect().height >= 44));
+    ok(alto, 'los botones de la leyenda miden al menos 44 px');
+    await p.click('.leyenda button[data-serie="precio"]');
+    await p.click('.leyenda button[data-serie="compras"]');
+    eq(await p.evaluate(() => document.getElementById('lienzo').dataset.ocultas), '', 'volver a tocar los muestra otra vez');
+    // Escala logarítmica: solo con «Todo»
+    ok(await p.locator('#g-log').isHidden(), 'la escala logarítmica no se ofrece con 6M');
+    await p.click('#rangos button[data-r="0"]'); await p.waitForTimeout(500);
+    const yLineal = await p.evaluate(() => document.querySelector('#lienzo .g-linea').getAttribute('d').slice(0, 60));
+    ok(await p.locator('#g-log').isVisible() && await p.locator('#lienzo .g-escala').count() === 0, 'con «Todo» se ofrece la escala logarítmica (apagada)');
+    await p.click('#g-log'); await p.waitForTimeout(500);
+    const yLog = await p.evaluate(() => document.querySelector('#lienzo .g-linea').getAttribute('d').slice(0, 60));
+    ok(yLineal !== yLog && await p.getAttribute('#g-log', 'aria-pressed') === 'true' && (await p.textContent('#lienzo .g-escala')) === 'Escala logarítmica', 'la escala logarítmica cambia el dibujo y lo dice con una etiqueta');
+    eq(await p.evaluate(() => localStorage.getItem('libro.grafico.log')), '1', 'y se recuerda');
+    await p.click('#g-log'); await p.waitForTimeout(300);
+    ok(await p.locator('#lienzo .g-escala').count() === 0, 'se vuelve a lineal');
+    // Pantalla completa
+    await p.click('#g-ampliar'); await p.waitForTimeout(700);
+    const pant = await p.evaluate(() => { const d = document.getElementById('d-grafico'), l = document.getElementById('dg-lienzo'), s = l.querySelector('svg'); return { abierto: d.open, w: d.getBoundingClientRect().width, vw: innerWidth, hs: s ? s.getBoundingClientRect().height : 0, hl: l.clientHeight, linea: !!l.querySelector('.g-linea') }; });
+    ok(pant.abierto && Math.abs(pant.w - pant.vw) < 2 && pant.linea && pant.hs > 300 && Math.abs(pant.hs - pant.hl) < 4, `el gráfico a pantalla completa ocupa el alto disponible (${Math.round(pant.hs)} px de ${pant.hl})`);
+    const cerrar = await caja('#dg-cerrar');
+    ok(cerrar.w >= 44 && cerrar.h >= 44, `el botón de cerrar es grande (${Math.round(cerrar.w)}×${Math.round(cerrar.h)})`);
+    const pcg = await primeraCompra('#dg-lienzo');
+    await p.mouse.click(pcg.x, pcg.y); await p.waitForTimeout(200);
+    ok(await p.evaluate(() => document.getElementById('dg-tarjeta').dataset.modo === 'fija'), 'a pantalla completa también se puede tocar una compra');
+    await p.click('#dg-rangos button[data-r="365"]'); await p.waitForTimeout(500);
+    eq(await p.getAttribute('#rangos button[data-r="365"]', 'aria-pressed'), 'true', 'el rango se cambia también desde la pantalla completa');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(100);
+    await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+    ok(await p.evaluate(() => !document.getElementById('d-grafico').open), 'Esc cierra la pantalla completa');
+    await p.click('#g-ampliar'); await p.waitForTimeout(400);
+    await p.click('#dg-cerrar'); await p.waitForTimeout(300);
+    ok(await p.evaluate(() => !document.getElementById('d-grafico').open), 'el botón Cerrar también');
     eq(consola.filter((c) => !/503/.test(c)), [], `con mil compras la consola queda limpia: ${consola.join(' | ')}`);
     await ctx.close();
     // El lector ve el gráfico con sus bandas y zonas, pero no el máximo de 30 días (va con la tarjeta de gran caída, que es del admin).
