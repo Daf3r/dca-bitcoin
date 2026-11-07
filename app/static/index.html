@@ -33,6 +33,7 @@
     </div>
     <p class="cotizacion" id="cotizacion" data-estado="cargando">
       <span class="cot-k">1 BTC</span> <b class="cot-v" id="precio">—</b>
+      <span class="cot-24" id="precio-24" hidden></span>
       <span class="cot-meta" id="precio-meta">consultando…</span>
     </p>
   </header>
@@ -63,6 +64,17 @@
     <p class="tr-v"><b id="t-meta"></b><span id="t-falta"></span></p>
     <div class="tr-barra" aria-hidden="true"><i id="t-barra"></i></div>
     <p class="tr-ritmo" id="t-ritmo"></p>
+  </section>
+
+  <!-- Sats por dólar: cuántos sats compra $1 hoy y cómo ha cambiado en el último mes. Solo informa. -->
+  <section class="spd" id="spd" aria-labelledby="t-spd" hidden>
+    <h2 class="sr" id="t-spd">Sats por dólar</h2>
+    <div class="spd-txt">
+      <p class="spd-k">Hoy, con $1 compras</p>
+      <p class="spd-v"><b id="spd-v">—</b> <span>sats</span></p>
+      <p class="spd-t" id="spd-t"></p>
+    </div>
+    <svg class="spd-l" id="spd-l" viewBox="0 0 120 40" role="img" aria-label="" preserveAspectRatio="none"></svg>
   </section>
 
   <section class="mercado" id="mercado" aria-labelledby="t-mercado">

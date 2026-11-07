@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {
+  variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
@@ -450,6 +451,25 @@ eq([walletNeto([tr(5), tr(2, 'a_exchange')]), walletNeto(null)], [3, 0], 'wallet
   // Saludo
   eq([4, 5, 11.9, 12, 18.9, 19, 23].map((h) => C.saludo(h)),
     ['Buenas noches', 'Buenos días', 'Buenos días', 'Buenas tardes', 'Buenas tardes', 'Buenas noches', 'Buenas noches'], 'saludo según la hora');
+}
+
+// Variación desde ayer, sats por dólar y formas compactas
+{
+  const h = [['2026-11-03', 100000], ['2026-11-04', 101000], ['2026-11-05', 99000], ['2026-11-06', 100000]];
+  const v = variacionAyer(h, 101000, '2026-11-07');
+  eq([Math.round(v.pct * 1e6) / 1e6, v.cierre, v.fecha], [1, 100000, '2026-11-06'], 'variación desde el cierre de ayer');
+  eq(variacionAyer(h, 101000, '2026-11-06').fecha, '2026-11-05', 'si hoy ya tiene vela, ayer es la anterior');
+  eq(variacionAyer(h.slice(0, 2), 101000, '2026-11-07'), null, 'con menos de 3 cierres no se muestra');
+  eq(variacionAyer(h, null, '2026-11-07'), null, 'sin precio no hay variación');
+  eq(variacionAyer(h, 101000, '2026-11-03'), null, 'sin ningún cierre anterior no hay variación');
+  eq(Math.round(satsPorDolar(77598)), 1289, '$77,598 por BTC son 1,289 sats por dólar');
+  eq(satsPorDolar(0), null, 'sin precio no hay sats por dólar');
+  const largo = Array.from({ length: 40 }, (_, i) => [new Date(Date.UTC(2026, 9, 1 + i)).toISOString().slice(0, 10), 100000 + i * 100]);
+  const serie = serieSatsPorDolar(largo, 105000, 30, '2026-11-20');
+  eq([serie.length, serie.at(-1).fecha, Math.round(serie.at(-1).spd)], [31, '2026-11-20', Math.round(1e8 / 105000)], '30 días más el precio vivo');
+  eq(serieSatsPorDolar(largo.slice(0, 10), 105000, 30, '2026-11-20'), null, 'con menos de 14 cierres no hay serie');
+  eq([usdSignoCorto(-78.77), usdSignoCorto(921.4), usdSignoCorto(1234.5), usdSignoCorto(1623456), usdSignoCorto(0)], ['−$79', '+$921', '+$1.2K', '+$1.6M', '$0'], 'dólares compactos con signo');
+  eq([numCorto(1187072), numCorto(21500), numCorto(999)], ['1.2M', '21.5K', '999'], 'sats compactos');
 }
 
 console.log(`OK ${n} comprobaciones`);

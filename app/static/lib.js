@@ -17,6 +17,9 @@ const nfComp = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFrac
 export const compacto = (n) => nfComp.format(n);
 export const btc = (sats) => (sats / 1e8).toFixed(8);
 export const hora = (ts) => dfHora.format(new Date(ts));
+/** Formas compactas (con signo, como usdSigno) para pantallas muy pequeñas (320 px): «+$1.2K», «−$79», «1.2M». Solo para cifras secundarias; el saldo nunca se abrevia. */
+export const usdSignoCorto = (n) => { const a = Math.abs(n); return signo(n) + (a < 1000 ? nfUSD0.format(a) : `$${nfComp.format(a)}`); };
+export const numCorto = (n) => nfComp.format(Math.round(n));
 
 // «Hoy» es siempre el de El Salvador, como en el servidor (TZ del contenedor): así la fecha
 // por defecto, la validación y la racha coinciden aunque el navegador esté en otra zona.
@@ -496,4 +499,33 @@ export function muestrear(serie, n) {
   }
   if (out.at(-1) !== serie.at(-1)) out.push(serie.at(-1));
   return out;
+}
+
+/**
+ * Cuánto subió o bajó el precio desde el cierre de ayer (UTC, que es como se guardan los cierres diarios): { pct, cierre, fecha }.
+ * Con menos de 3 cierres, sin precio o sin ningún cierre anterior a hoy, no hay dato (null).
+ */
+export function variacionAyer(historico, vivo, hoyUtc = new Date().toISOString().slice(0, 10)) {
+  if (!vivo || !historico || historico.length < 3) return null;
+  const previos = historico.filter(([f]) => f < hoyUtc);
+  if (!previos.length) return null;
+  const [fecha, cierre] = previos[previos.length - 1];
+  if (!(cierre > 0)) return null;
+  return { pct: (vivo / cierre - 1) * 100, cierre, fecha };
+}
+
+/** Cuántos sats compra un dólar a ese precio. */
+export const satsPorDolar = (precio) => (precio > 0 ? 1e8 / precio : null);
+
+/**
+ * Sats por dólar de los últimos `dias` días (cierres diarios), con el precio vivo como último punto: [{ fecha, spd }].
+ * Con menos de 14 cierres no hay serie (null): una línea de pocos días no dice nada.
+ */
+export function serieSatsPorDolar(historico, vivo, dias = 30, hoyUtc = new Date().toISOString().slice(0, 10)) {
+  if (!vivo || !historico) return null;
+  const previos = historico.filter(([f, c]) => f < hoyUtc && c > 0).slice(-dias);
+  if (previos.length < 14) return null;
+  const serie = previos.map(([fecha, c]) => ({ fecha, spd: 1e8 / c }));
+  serie.push({ fecha: hoyUtc, spd: 1e8 / vivo });
+  return serie;
 }

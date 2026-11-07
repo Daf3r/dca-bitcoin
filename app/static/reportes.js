@@ -1,4 +1,5 @@
 import { aFecha, caidaGrande, compacto, entero, equilibrio, fechaLarga, hoyISO, nombreHito, nombreHitoMeses, pct, reposicion, textoMeses, tocaComprar, ubicacionSats, usd, usd0, usdSigno } from './lib.js';
+import { dual } from './cifras.js';
 import { $, R, S, esAdmin } from './estado.js';
 import { abrirHoja } from './hoja.js';
 import { plazo } from './pintar.js';
@@ -101,8 +102,12 @@ export function pintarUbicacion() {
   $('ub-anotar').hidden = u.hay;
   // La pista y el botón son para quien anota; un lector sin traslados no ve la tarjeta.
   $('ub-barra').style.transform = `scaleX(${Math.max(0, Math.min(1, u.pctWallet / 100))})`;
-  $('ub-w').textContent = `${entero(u.wallet)} sats · ${Math.round(u.pctWallet)}%`;
-  $('ub-e').textContent = `${entero(u.exchange)} sats · ${Math.round(100 - u.pctWallet)}%`;
+  for (const [id, sats, parte] of [['ub-w', u.wallet, u.pctWallet], ['ub-e', u.exchange, 100 - u.pctWallet]]) {
+    const el = $(id);
+    el.textContent = '';
+    dual(el, `${entero(sats)} sats`, satsCorto(sats));
+    el.append(` · ${Math.round(parte)}%`);
+  }
 }
 $('ub-anotar').addEventListener('click', () => abrirHoja(null, 'traslado'));
 

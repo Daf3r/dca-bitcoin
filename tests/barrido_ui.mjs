@@ -41,8 +41,8 @@ async function servidor(escenario) {
 const medir = () => {
   const vw = document.documentElement.clientWidth;
   const out = { scrollX: document.documentElement.scrollWidth > vw, saldo: null, fuera: [], toque: [] };
-  const s = document.querySelector('#s-sats .cg-vivo');
-  if (s) { const r = s.getBoundingClientRect(); out.saldo = { txt: s.textContent, w: Math.round(r.width), h: Math.round(r.height) }; }
+  const s = document.querySelector('#s-sats .od-num');
+  if (s) { const r = s.getBoundingClientRect(); out.saldo = { txt: document.querySelector('#s-sats .sr').textContent, w: Math.round(r.width), h: Math.round(r.height) }; }
   const visible = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
   // Contenido del cuerpo que se sale por la derecha o por la izquierda (los SVG de las escenas y gráficos se recortan a propósito).
   for (const el of document.querySelectorAll('.cuerpo *')) {

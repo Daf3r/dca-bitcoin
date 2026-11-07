@@ -170,6 +170,16 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .cot-k { font-size: 0.75rem; color: var(--cielo-txt2); }
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
+.cot-24 { font-size: 0.75rem; font-weight: 600; color: var(--cielo-txt2); white-space: nowrap; }
+.cot-24[data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
+.cot-24[data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
+/* Cifras secundarias con forma corta (cifras.js): en teléfonos de menos de 360 px se ve la corta. */
+.c-c { display: none; }
+@media (max-width: 359px) { .c-l { display: none; } .c-c { display: inline; } }
+/* «En vivo» junto a USD: el valor sigue al precio. */
+.saldo-v em[data-vivo="1"]::before { content: ""; display: inline-block; width: 0.32em; height: 0.32em; margin-right: 0.3em; border-radius: 50%; background: var(--cielo-sube, var(--sube)); vertical-align: 0.12em; }
+html[data-efectos="todos"] .saldo-v em[data-vivo="1"]::before { animation: latido 2.4s ease-in-out infinite; }
+@keyframes latido { 50% { opacity: 0.3; } }
 .cotizacion[data-estado="viejo"] .cot-meta, .cotizacion[data-estado="error"] .cot-meta { color: var(--baja); }
 
 /* La caja del saldo se coloca con left/right y nunca con un relleno que crezca con la ventana:
@@ -191,8 +201,17 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
   letter-spacing: -0.035em;
   white-space: nowrap;
 }
-.cifra-grande > span:not(.sr) { grid-area: 1 / 1; }
-.cg-reserva { visibility: hidden; }
+.cifra-grande { --od-lh: 0.95; }
+/* Odómetro (odometro.js): cada dígito es una caja del ancho de su cifra final (invisible, en flujo normal) con una columna de
+   30 filas (0–9 tres veces) que se desliza con transform. El recorte no cambia la línea base, así que «sats» sigue alineado. */
+.od-num { display: inline-flex; }
+.od { position: relative; display: inline-block; line-height: var(--od-lh, 1.5); clip-path: inset(0 -0.05em); }
+.od-r { visibility: hidden; }
+.od-col { position: absolute; left: 0; top: 0; display: flex; flex-direction: column;
+  transform: translateY(calc(var(--fila, 10) * var(--od-lh, 1.5) * -1em));
+  transition: transform var(--od-ms, 1.2s) cubic-bezier(0.16, 0.84, 0.3, 1) var(--od-retraso, 0ms); }
+.od-col.od-quieta { transition: none; }
+.od-col > i { display: block; height: calc(var(--od-lh, 1.5) * 1em); font-style: normal; line-height: var(--od-lh, 1.5); }
 /* Tocar el saldo alterna entre sats y BTC. */
 .saldo-v[role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 12px; }
 .saldo-v[role="button"]:focus-visible { outline: 2px solid var(--naranja); outline-offset: 6px; }
@@ -244,6 +263,16 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .tr-barra { height: 10px; margin-top: 14px; border-radius: 99px; background: var(--s3); overflow: hidden; }
 .tr-barra i { display: block; height: 100%; border-radius: 99px; background: var(--naranja); transform: scaleX(0); transform-origin: left; transition: transform 1.4s cubic-bezier(0.5, 0, 0.1, 1); }
 .tr-ritmo { margin-top: 10px; color: var(--txt2); }
+/* Sats por dólar: una cifra y su línea del mes, sin colores de alarma (es información, no una alerta). */
+.spd { display: grid; grid-template-columns: 1fr minmax(96px, 38%); align-items: center; gap: 4px 16px; padding: 14px 16px; border-radius: 18px; background: var(--s1); border: 1px solid var(--s3); }
+.spd[hidden] { display: none; }
+.spd-k { color: var(--txt3); font-size: 0.9375rem; }
+.spd-v b { font: 400 clamp(2rem, 9vw, 2.8rem)/1.05 var(--serif); letter-spacing: -0.02em; }
+.spd-v span { color: var(--txt2); }
+.spd-t { margin-top: 2px; color: var(--txt2); font-size: 0.9375rem; }
+.spd-l { width: 100%; height: 48px; overflow: visible; }
+.spd-l polyline { fill: none; stroke: var(--naranja); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.spd-l circle { fill: var(--naranja); }
 
 /* --------------------------------------------------------------- gráfico */
 .mercado { min-width: 0; }
@@ -484,7 +513,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 
 /* Pantallas bajas (320×568 y similares): el saldo encoge para que la montaña respire. */
 @media (max-height: 680px) and (max-width: 699px) {
-  .saldo { top: 52px; }
+  .saldo { top: 80px; } /* el saludo termina hacia los 76 px */
   .saldo-k { font-size: 0.875rem; }
   .cifra-grande { font-size: clamp(2.25rem, 94cqi / (var(--n, 7) * 0.575), 4.4rem); }
   .saldo-v em { font-size: 1.25rem; }

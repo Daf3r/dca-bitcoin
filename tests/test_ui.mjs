@@ -58,9 +58,9 @@ async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
 }
 const datos = (p, ruta) => p.evaluate((r) => fetch(r).then((x) => x.json()), ruta);
 const saldo = (p) => p.evaluate(() => {
-  const el = document.querySelector('#s-sats .cg-vivo');
+  const el = document.querySelector('#s-sats .od-num');
   const r = el.getBoundingClientRect();
-  return { txt: el.textContent, w: Math.round(r.width), h: Math.round(r.height), unidad: document.getElementById('s-unidad').textContent, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
+  return { txt: document.querySelector('#s-sats .sr').textContent, w: Math.round(r.width), h: Math.round(r.height), unidad: document.getElementById('s-unidad').textContent, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
 });
 
 const navegador = await chromium.launch();
@@ -69,17 +69,34 @@ try {
   const anio = await servidor('anio');
   try {
     // El saldo se ve, con la cifra real, en sats y en BTC, sin scroll horizontal, en varios anchos.
-    for (const [w, h] of [[320, 640], [375, 812], [768, 1024], [1280, 800], [2560, 1300]]) {
+    for (const [w, h] of [[320, 568], [320, 640], [390, 560], [375, 812], [768, 1024], [1280, 800], [2560, 1300]]) {
       const { ctx, p, consola } = await entrar(navegador, anio, ADMIN, { viewport: { width: w, height: h }, isMobile: false, hasTouch: false });
       const sats = (await datos(p, '/api/compras')).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
       let s = await saldo(p);
       eq(s.txt, entero(sats), `saldo real a ${w} px`);
       ok(s.w > 0 && s.h > 0, `saldo visible a ${w} px`);
+      // El saludo y «Tu saldo» no se pisan (en pantallas bajas el saldo sube y es fácil que choquen).
+      const cajas = await p.evaluate(() => ({ saludoAbajo: document.getElementById('saludo').getBoundingClientRect().bottom, saldoArriba: document.getElementById('t-saldo').getBoundingClientRect().top }));
+      ok(cajas.saludoAbajo <= cajas.saldoArriba + 1, `el saludo no pisa «Tu saldo» a ${w}×${h} (${cajas.saludoAbajo.toFixed(0)} ≤ ${cajas.saldoArriba.toFixed(0)})`);
       await p.click('#s-saldo-v');
       await p.waitForTimeout(150);
       s = await saldo(p);
       eq([s.txt, s.unidad], [(sats / 1e8).toFixed(8), 'BTC'], `saldo en BTC a ${w} px`);
       ok(s.sw <= s.cw, `sin scroll horizontal a ${w} px`);
+      // Tercera vista: dólares, al precio en vivo (el valor que ya dice la línea de abajo).
+      const valorDeAbajo = (await p.innerText('#s-valor')).match(/valen\s+(\$[\d,]+\.\d\d)/)?.[1];
+      await p.click('#s-saldo-v');
+      await p.waitForTimeout(150);
+      s = await saldo(p);
+      eq([s.txt, s.unidad.trim()], [valorDeAbajo, 'USD'], `saldo en dólares a ${w} px`);
+      ok(s.w > 0 && s.h > 0 && s.sw <= s.cw, `saldo en dólares visible y sin scroll horizontal a ${w} px`);
+      ok(/ sats/.test(await p.innerText('#s-valor')) && !/valen/.test(await p.innerText('#s-valor')), `en dólares, la línea de abajo dice los sats a ${w} px`);
+      await p.click('#s-saldo-v');
+      await p.waitForTimeout(150);
+      eq((await saldo(p)).txt, entero(sats), `el ciclo vuelve a sats a ${w} px`);
+      // Cifras secundarias: a 320 px salen en forma corta; desde 360 px, enteras.
+      const falta = (await p.innerText('#t-falta')).trim();
+      ok(w < 360 ? /^faltan [\d.]+[KM]?$/.test(falta) && !falta.includes(',') : /^faltan [\d,]+$/.test(falta), `«${falta}» a ${w} px`);
       eq(consola, [], `consola limpia a ${w} px: ${consola.join(' | ')}`);
       await ctx.close();
     }
@@ -91,6 +108,14 @@ try {
       ok(await p.locator('#toca').isVisible(), 'sale «te toca comprar»');
       ok(/^Para estar en cero, BTC debe subir/.test((await p.textContent('#g-equilibrio')).trim()), 'línea del equilibrio');
       ok(/^Coinbase · (ahora mismo|hace \d+ s)$/.test((await p.textContent('#precio-meta')).trim()), 'precio con «hace X s»');
+      // Variación desde ayer junto al precio, y la tarjeta de sats por dólar con su línea del mes.
+      const var24 = (await p.textContent('#precio-24')).trim();
+      ok(await p.locator('#precio-24').isVisible() && /^[▲▼•] [+−]?\d+\.\d% vs ayer$/.test(var24), `variación desde ayer: «${var24}»`);
+      const precioVivo = (await datos(p, '/api/precio')).precio;
+      ok(await p.locator('#spd').isVisible(), 'sale la tarjeta de sats por dólar');
+      eq((await p.textContent('#spd-v')).trim(), entero(1e8 / precioVivo), 'sats por dólar = 100,000,000 ÷ precio');
+      ok(/^Hace \d+ días eran [\d,]+ sats: hoy son un \d+\.\d% (más|menos)\.$|^Casi igual/.test((await p.textContent('#spd-t')).trim()), 'sats por dólar: texto del mes, sin recomendar nada');
+      ok((await p.getAttribute('#spd-l', 'aria-label')).startsWith('Sats por dólar en los últimos') && (await p.locator('#spd-l polyline').count()) === 1, 'sats por dólar: línea con su descripción');
       const compras = await datos(p, '/api/compras');
       const inv = compras.reduce((a, c) => a + c.monto, 0);
       ok((await p.textContent('#v-lectura')).includes(`pusiste $${entero(inv)}`), 'el gráfico de valor coincide con el cálculo');
@@ -202,7 +227,7 @@ try {
       eq((await datos(p, '/api/traslados')).length, 1, 'el traslado se guarda');
       eq((await datos(p, '/api/compras')).length, antesT.length, 'un traslado sin comisión no crea ningún gasto');
       ok(await p.locator('#ub-datos').isVisible(), 'con un traslado sale la barra');
-      ok(/300,000 sats · \d+%/.test(await p.textContent('#ub-w')), 'la tarjeta dice cuánto hay en la wallet');
+      ok(/300,000 sats · \d+%/.test(await p.innerText('#ub-w')), 'la tarjeta dice cuánto hay en la wallet');
       ok((await p.locator('#lista .fila[data-tras]').count()) === 1, 'la lista muestra el traslado');
       // Sobrepasar lo que tienes en total se rechaza en la hoja
       await p.waitForTimeout(6000);
