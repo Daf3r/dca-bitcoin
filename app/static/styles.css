@@ -354,6 +354,19 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .g-cursor .gc-c { fill: var(--naranja); stroke: var(--fondo); stroke-width: 2; }
 /* Gráfico «lo que pusiste y lo que vale». */
 .valor { padding-top: 6px; }
+/* Qué gráfico se ve (el selector #vistas pone `data-vista` en .cuerpo): solo uno a la vez. */
+.vistas { align-self: start; min-width: 0; max-width: 100%; margin-bottom: 4px; }
+.vistas button { min-width: 0; padding: 0 clamp(8px, 3.4vw, 14px); font-size: 0.9375rem; }
+.vistas[hidden] { display: none; }
+.cuerpo:not([data-vista="valor"]) #valor, .cuerpo:not([data-vista="costo"]) #costo-prom, .cuerpo:not([data-vista="sats"]) #sats-acum,
+.cuerpo[data-vista="valor"] #mercado, .cuerpo[data-vista="costo"] #mercado, .cuerpo[data-vista="sats"] #mercado { display: none; }
+/* Costo promedio y sats: línea o escalera naranja con sus puntos. */
+.sa-1 { stop-color: var(--naranja-txt); stop-opacity: 0.2; }
+.sa-2 { stop-color: var(--naranja-txt); stop-opacity: 0; }
+.s-area { fill: url(#s-grad); }
+.s-linea { fill: none; stroke: var(--naranja-txt); stroke-width: 2.2; stroke-linejoin: round; }
+.s-puntos { fill: var(--naranja); stroke: var(--compra-borde); stroke-width: 1.2; }
+.s-hoy { fill: var(--fondo); stroke: var(--naranja-txt); stroke-width: 2.5; }
 .valor .rep-txt { margin-top: 12px; }
 .va-1 { stop-color: var(--naranja-txt); stop-opacity: 0.2; }
 .va-2 { stop-color: var(--naranja-txt); stop-opacity: 0; }
@@ -498,6 +511,13 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .semanas i:nth-child(odd) { transform: rotate(-8deg); }
 .semanas i:nth-child(even) { transform: translateY(35%) rotate(8deg); }
 .semanas i.con { background: var(--naranja); }
+.semanas { cursor: pointer; }
+.semanas i.sel { outline: 2px solid var(--naranja-txt); outline-offset: 2px; }
+.semanas:focus-visible { outline-offset: 6px; }
+.sem-det { min-height: 3em; }
+/* Entrada escalonada de la tira (solo con todos los efectos y la primera vez): cada semana aparece creciendo, una tras otra. */
+@keyframes sem-entra { from { opacity: 0; scale: 0.3; } }
+html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-out backwards; animation-delay: calc(var(--i, 0) * 14ms); }
 .extremos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .extremos > p { grid-column: 1 / -1; color: var(--txt2); }
 .ext { display: grid; gap: 2px; padding: 4px 0 4px 14px; border-left: 3px solid var(--s3); }

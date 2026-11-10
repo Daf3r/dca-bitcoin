@@ -78,6 +78,11 @@
     <svg class="spd-l" id="spd-l" viewBox="0 0 120 40" role="img" aria-label="" preserveAspectRatio="none"></svg>
   </section>
 
+  <!-- Qué gráfico ver: Precio, Valor, Costo promedio o Sats. Solo salen las vistas con datos; se recuerda la última por dispositivo. -->
+  <div class="rangos vistas" id="vistas" role="group" aria-label="Qué gráfico ver" hidden>
+    <button type="button" data-vista="precio" aria-pressed="true">Precio</button><button type="button" data-vista="valor" aria-pressed="false">Valor</button><button type="button" data-vista="costo" aria-pressed="false">Costo</button><button type="button" data-vista="sats" aria-pressed="false">Sats</button>
+  </div>
+
   <section class="mercado" id="mercado" aria-labelledby="t-mercado">
     <div class="sec-cab">
       <h2 id="t-mercado">El precio y tus compras</h2>
@@ -117,6 +122,23 @@
     <p class="rep-txt" id="v-vs" hidden></p>
   </section>
 
+  <!-- Cómo ha ido cambiando tu costo promedio con cada compra (desde 3 compras). -->
+  <section class="valor" id="costo-prom" aria-labelledby="t-costo" hidden>
+    <div class="sec-cab"><h2 id="t-costo">Cómo cambia tu costo promedio</h2></div>
+    <p class="lectura fija" id="c-lectura"></p>
+    <p class="sr" id="c-sr" aria-live="polite"></p>
+    <div class="lienzo" id="c-lienzo" tabindex="0" role="img" aria-label="Tu costo promedio con cada compra. Usa las flechas para recorrerlo."></div>
+    <p class="rep-txt" id="c-mov"></p>
+  </section>
+
+  <!-- La escalera de tus sats: sube con cada compra y baja con cada venta (desde 2 movimientos). -->
+  <section class="valor" id="sats-acum" aria-labelledby="t-sats" hidden>
+    <div class="sec-cab"><h2 id="t-sats">Tus sats, compra a compra</h2></div>
+    <p class="lectura fija" id="s-lectura"></p>
+    <p class="sr" id="s-sr" aria-live="polite"></p>
+    <div class="lienzo" id="s-lienzo" tabindex="0" role="img" aria-label="Tus sats acumulados con cada compra. Usa las flechas para recorrerlo."></div>
+  </section>
+
   <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>
     <h2 class="sr" id="t-rep">Reportes</h2>
     <article class="rep rep-const">
@@ -127,7 +149,8 @@
       </div>
       <p class="rep-txt" id="const-txt"></p>
       <p class="rep-txt" id="const-hito"></p>
-      <div class="semanas" id="semanas" aria-hidden="true"></div>
+      <div class="semanas" id="semanas" tabindex="0" role="img" aria-label="Tus últimas semanas: las naranjas tuvieron compra. Toca una o usa las flechas para ver sus compras."></div>
+      <p class="rep-txt sem-det" id="sem-det">Toca una semana para ver sus compras.</p>
     </article>
     <article class="rep rep-curiosas" id="rep-curiosas">
       <h3>Cifras curiosas</h3>

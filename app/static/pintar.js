@@ -6,7 +6,7 @@ import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos } from './cuenta.js';
 import { $, R, S, esAdmin, fijarR } from './estado.js';
 import { pintarLista } from './lista.js';
-import { pintarMercado, pintarSatsDolar, pintarValor } from './mercado.js';
+import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
 import { pintarNovedades } from './novedades.js';
 import { pintarCaida, pintarComienzo, pintarEquilibrio, pintarReportes, pintarToca, pintarUbicacion } from './reportes.js';
 
@@ -22,6 +22,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   pintarSatsDolar();
   pintarMercado();
   pintarValor();
+  pintarVistas();
   pintarEquilibrio();
   pintarLista();
   pintarUbicacion();

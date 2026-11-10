@@ -99,6 +99,16 @@ try {
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
       await auditar(p, `admin ${esquema}`);
+      // Las vistas del gráfico (Valor, Costo, Sats) y la tira de semanas con una semana marcada
+      for (const v of ['valor', 'costo', 'sats']) {
+        await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(500);
+        await auditar(p, `vista ${v} ${esquema}`);
+      }
+      await p.click('#vistas button[data-vista="precio"]'); await p.waitForTimeout(400);
+      await p.evaluate(() => document.getElementById('semanas').scrollIntoView({ block: 'center' }));
+      const sem = await p.locator('#semanas i').first().boundingBox();
+      await p.mouse.click(sem.x + sem.width / 2, sem.y + sem.height / 2); await p.waitForTimeout(300);
+      await auditar(p, `tira de semanas con una semana marcada ${esquema}`);
       // El gráfico: con una compra fijada (tarjeta con Editar y Cerrar), con la escala logarítmica y a pantalla completa
       await p.evaluate(() => document.getElementById('lienzo').scrollIntoView({ block: 'center' }));
       await p.waitForTimeout(700);

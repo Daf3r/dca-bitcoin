@@ -1,6 +1,6 @@
 import { avisar } from './avisar.js';
 import { R, S, api, normalizar } from './estado.js';
-import { pintarMercado, pintarSatsDolar, pintarValor } from './mercado.js';
+import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
 import { pintar, pintarLinea, pintarPrecio } from './pintar.js';
 import { pintarCaida } from './reportes.js';
 
@@ -44,6 +44,7 @@ export async function cargarHistorico(intento = 0) {
   }
   pintarMercado();
   pintarValor();
+  pintarVistas();
   pintarPrecio(); // la variación desde ayer sale del histórico
   if (S.cargado && !(S.errorCarga && !R.n)) pintarLinea(); // y la mini línea del valor
   pintarSatsDolar();

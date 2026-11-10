@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {
-  tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
+  serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
@@ -490,6 +490,36 @@ eq([walletNeto([tr(5), tr(2, 'a_exchange')]), walletNeto(null)], [3, 0], 'wallet
   // Una caída que dura más de 30 días deja de serlo cuando el máximo viejo sale de la ventana
   const larga = tramosCaida(serie([...Array(5).fill(100), ...Array(60).fill(80)]));
   eq([larga.length, larga[0].desde, larga[0].hasta < dia(64)], [1, dia(5), true], 'a los 30 días el máximo viejo sale de la ventana y el tramo termina');
+}
+
+// Vistas del gráfico: costo promedio, sats acumulados y semanas
+const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
+{
+  const compra = (fecha, monto, sats, extra = {}) => ({ fecha, monto, sats, ...extra });
+  const R0 = resumen([
+    { id: 1, fecha: '2026-01-05', monto: 100, sats: 200000, tipo: 'compra' },
+    { id: 2, fecha: '2026-01-12', monto: 100, sats: 100000, tipo: 'compra' },
+    { id: 3, fecha: '2026-01-19', monto: 50, sats: 100000, tipo: 'compra' },
+    { id: 4, fecha: '2026-01-20', monto: 60, sats: 100000, tipo: 'venta' },
+    { id: 5, fecha: '2026-02-02', monto: 30, sats: 100000, tipo: 'compra' },
+  ].map((c) => ({ precio: (c.monto * 1e8) / c.sats, ...c })), 60000);
+  const sc = serieCostoPromedio(R0.items);
+  eq(sc.length, 4, 'un punto por compra (la venta no mueve el costo)');
+  ok(Math.abs(sc[0].costo - 50000) < 1e-6 && sc[0].cambio === null, 'el primer costo es el precio de la primera compra');
+  ok(Math.abs(sc[1].costo - 66666.67) < 0.01 && sc[1].cambio > 0 && sc[1].pct > 33, 'una compra más cara sube el costo promedio');
+  ok(Math.abs(sc.at(-1).costo - R0.promedio) < 1e-6, 'el último costo es el de resumen (paridad con lib.resumen)');
+  eq(masMovieron(sc, 2).map((p) => p.id), [2, 5], 'las compras que más lo movieron (la 2 lo subió 33 %, la 5 lo bajó 13 %)');
+  const ss = serieSatsAcum(R0.items, '2026-03-01');
+  eq([ss.length, ss.at(-1).hoy, ss.at(-1).sats, ss[3].delta, ss[2].sats], [6, true, R0.sats, -100000, 400000], 'sats acumulados: la venta baja la escalera y se añade un punto hoy');
+  eq(serieSatsAcum(R0.items, '2026-02-02').length, 5, 'si el último movimiento es de hoy no se repite el punto');
+  eq(serieSatsAcum([], '2026-03-01'), [], 'sin movimientos no hay escalera');
+  // Semanas: el monto de cada semana coincide con R.ultimas52 y hay sats y fechas
+  const R1 = resumen(Array.from({ length: 30 }, (_, i) => ({ id: i + 1, fecha: new Date(Date.UTC(2026, 0, 5 + i * 7)).toISOString().slice(0, 10), monto: 10 + i, sats: 20000 + i, precio: 50000, tipo: 'compra' })), 60000);
+  const sd = semanasDetalle(R1.items, R1.semanaRef);
+  eq([sd.length, sd.map((s) => s.monto)], [52, R1.ultimas52], 'semanasDetalle: 52 semanas con los mismos montos que R.ultimas52');
+  ok(sd.every((s) => aFechaTest(s.hasta) - aFechaTest(s.desde) === 6 * 864e5 && new Date(`${s.desde}T00:00:00Z`).getUTCDay() === 1), 'cada semana va de lunes a domingo');
+  eq(sd.filter((s) => s.compras.length).length, R1.semanasConCompra, 'las semanas con compras son las que cuenta resumen');
+  void compra;
 }
 
 console.log(`OK ${n} comprobaciones`);

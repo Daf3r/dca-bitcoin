@@ -1,4 +1,4 @@
-import { aFecha, caidaGrande, compacto, entero, equilibrio, fechaLarga, hoyISO, nombreHito, nombreHitoMeses, pct, reposicion, textoMeses, tocaComprar, ubicacionSats, usd, usd0, usdSigno } from './lib.js';
+import { aFecha, semanasDetalle, caidaGrande, compacto, entero, equilibrio, fechaLarga, hoyISO, nombreHito, nombreHitoMeses, pct, reposicion, textoMeses, tocaComprar, ubicacionSats, usd, usd0, usdSigno } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { dual } from './cifras.js';
 import { $, R, S, esAdmin } from './estado.js';
@@ -50,6 +50,11 @@ export function pintarReportes() {
   const ventana = R.ultimas52.slice(-Math.min(52, Math.max(R.semanasDesdePrimera - (R.semanaEnCurso ? 0 : 1), 1)));
   $('semanas').innerHTML = ventana.map((v) => `<i${v ? ' class="con"' : ''}></i>`).join('');
   $('semanas').style.setProperty('--n', String(Math.max(ventana.length, 13)));
+  // Detalle por semana (al tocar o con flechas) y entrada escalonada la primera vez.
+  detalleSemanas = semanasDetalle(R.items, R.semanaRef).slice(-ventana.length);
+  [...$('semanas').children].forEach((h, i) => h.style.setProperty('--i', String(i)));
+  if (!semanasAnimadas) { semanasAnimadas = true; $('semanas').classList.add('entra'); }
+  marcarSemana(semSel != null && detalleSemanas[semSel] ? semSel : null, false);
   const con = ventana.filter(Boolean).length;
   $('const-racha').textContent = R.racha;
   // Anillo del año: cuántas de las semanas de la ventana tuvieron compra (mide constancia, no una meta).
@@ -82,6 +87,47 @@ export function pintarReportes() {
   };
   ext.innerHTML = tarjeta(R.mejor, 'Mejor precio') + tarjeta(R.peor, 'Precio más alto');
 }
+
+// ------------------------------------------------------- tira de semanas: detalle al tocar
+let detalleSemanas = [];
+let semSel = null;
+let semanasAnimadas = false;
+const dfSem = new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short' });
+const diaCorto = (f) => dfSem.format(aFecha(f)).replace('.', '');
+function textoSemana(s) {
+  const rango = `${diaCorto(s.desde)} al ${diaCorto(s.hasta)}`;
+  return s.compras.length
+    ? `Semana del ${rango}: ${s.compras.length} ${s.compras.length === 1 ? 'compra' : 'compras'}, +${entero(s.sats)} sats (${usd0(s.monto)}).`
+    : `Semana del ${rango}: sin compras.`;
+}
+/** Marca una semana de la tira y dice qué compras tuvo; `anunciar` la anuncia a los lectores de pantalla (solo con teclado). */
+function marcarSemana(i, anunciar) {
+  const hijos = $('semanas').children;
+  for (const h of hijos) h.classList.remove('sel');
+  semSel = i;
+  const det = $('sem-det');
+  det.setAttribute('aria-live', anunciar ? 'polite' : 'off');
+  if (i == null || !detalleSemanas[i] || !hijos[i]) { semSel = null; det.textContent = 'Toca una semana para ver sus compras.'; return; }
+  hijos[i].classList.add('sel');
+  det.textContent = textoSemana(detalleSemanas[i]);
+}
+function semanaCercana(ev) {
+  let mejor = 0, d2 = Number.POSITIVE_INFINITY;
+  [...$('semanas').children].forEach((h, i) => {
+    const r = h.getBoundingClientRect();
+    const d = (r.left + r.width / 2 - ev.clientX) ** 2 + (r.top + r.height / 2 - ev.clientY) ** 2;
+    if (d < d2) { d2 = d; mejor = i; }
+  });
+  return mejor;
+}
+$('semanas').addEventListener('click', (e) => marcarSemana(semanaCercana(e), false));
+$('semanas').addEventListener('keydown', (e) => {
+  const ult = detalleSemanas.length - 1;
+  const sig = { ArrowLeft: (semSel ?? ult + 1) - 1, ArrowRight: (semSel ?? -1) + 1, Home: 0, End: ult }[e.key];
+  if (sig == null || ult < 0) return;
+  e.preventDefault();
+  marcarSemana(Math.max(0, Math.min(ult, sig)), true);
+});
 
 // ------------------------------------------------------------- te toca comprar
 function textoToca(t) {
