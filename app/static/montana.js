@@ -482,7 +482,7 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
     a.style.animationDelay = `${i * 260}ms`;
     retirar(a, 2000);
   }
-  cometa(fx, W, estado.H, c);
+  cometa(fx, estado.H, c);
   if (!grande) return;
 
   // Hito grande (1M, 10M, 1 BTC): amanecer completo con luz sobre la cumbre.
@@ -497,7 +497,7 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
  * Cometa (idea 114): al cruzar una etapa, una raya con estela cruza el cielo de lado a lado (solo transform y opacity,
  * en CSS con la anchura de la escena). Pasa por debajo del saldo, que es HTML y va encima.
  */
-function cometa(fx, W, H, c) {
+function cometa(fx, H, c) {
   const y = Math.max(c.sy * 0.55, H * 0.24);
   const g = nodo('g', { class: 'cometa', transform: `translate(-60 ${f1(y)})` }, fx);
   const mover = nodo('g', { class: 'cometa-mueve' }, g);
