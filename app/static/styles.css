@@ -993,6 +993,9 @@ html[data-efectos="ninguno"] .minicab { transition: none; }
 /* Con la franja a la vista, lo que se enfoca o se lleva a la vista no queda debajo de ella. */
 html { scroll-padding-top: 60px; }
 
+/* Los avisos con botón («Deshacer») no se aprietan contra la mitad de la pantalla. */
+.aviso { width: max-content; }
+
 /* «Compra de siempre» y la estimación. */
 .h-habitual { justify-self: start; min-height: 44px; text-align: left; }
 .h-habitual[hidden] { display: none; }

@@ -191,7 +191,7 @@ function pintarHoja() {
   const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
   const habitual = !venta && S.precio ? montoHabitual(R.items) : null;
   const referencia = habitual ? ` Hoy ${usd0(habitual)} son ≈ ${entero((habitual / S.precio) * 1e8)} sats ($1 = ${entero(1e8 / S.precio)} sats).` : '';
-  const estimado = H.estimado ? 'Es una estimación con el precio de hoy: cámbiala por los sats que te dio el exchange. ' : '';
+  const estimado = H.estimado ? 'Estimación con el precio de hoy: cámbiala por lo que recibiste. ' : '';
   $('hoja-calc').textContent = estimado + (!d ? (venta ? 'Escribe los sats que salieron; los dólares se calculan solos con el precio del día.' : `Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.${referencia}`)
     : d.sinPrecio ? 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares.'
       : sinSaldo ? `No tienes tantos sats: tu saldo es ${entero(saldo)}.`
