@@ -163,7 +163,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const campos = esc.campos.map((m) => ({ m, p: camino.getPointAtLength(enAltura(altitud(m, esc))), cima: m === esc.cima }));
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima }) =>
     `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-24" r="46" fill="url(#m-luz)"/>' : ''}<line y2="-28"/><path class="banderin" d="M0 -28L20 -22L0 -16Z"/>${icono(cima ? 3 : esc.campos.indexOf(m))}${humoYFogata()}</g>`).join('');
-  estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras, caja: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -212,10 +212,11 @@ const TOQUE = 48;
 let abierta = null;
 function banderas(host, campos, W, H) {
   const { sats, fechas } = estado;
-  const caja = document.createElement('div');
-  caja.className = 'm-banderas';
-  caja.id = 'm-banderas';
-  const botones = campos.map(({ m, p, cima }) => {
+  const caja = host.parentElement?.querySelector('#m-banderas');
+  if (!caja) return;
+  estado.caja = caja;
+  // De arriba abajo: el orden de tabulación es el visual.
+  const botones = [...campos].sort((a, b) => a.p.y - b.p.y).map(({ m, p, cima }) => {
     const t = textoCampamento(m, sats, fechas[m] ?? null, cima);
     const b = document.createElement('button');
     b.type = 'button';
@@ -237,15 +238,14 @@ function banderas(host, campos, W, H) {
   tarjeta.hidden = true;
   tarjeta.innerHTML = '<b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><button type="button" class="m-tarjeta-x">Cerrar</button>';
   tarjeta.querySelector('button').addEventListener('click', () => cerrarTarjeta(true));
-  caja.append(...botones, tarjeta);
-  host.append(caja);
+  caja.replaceChildren(...botones, tarjeta);
   abierta = null;
 }
 
 function abrirTarjeta(m) {
-  const { host, campos, sats, fechas, H } = estado;
+  const { caja, campos, sats, fechas, H } = estado;
   const campo = campos.find((x) => x.m === m);
-  const tarjeta = host.querySelector('#m-tarjeta');
+  const tarjeta = caja?.querySelector('#m-tarjeta');
   if (!campo || !tarjeta) return;
   const t = textoCampamento(m, sats, fechas[m] ?? null, campo.cima);
   tarjeta.querySelector('#m-tarjeta-t').textContent = t.titulo;
@@ -256,19 +256,19 @@ function abrirTarjeta(m) {
   tarjeta.style.top = abajo ? `${f1(campo.p.y + 18)}px` : 'auto';
   tarjeta.style.bottom = abajo ? 'auto' : `${f1(H - campo.p.y + 46)}px`;
   tarjeta.hidden = false;
-  host.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', String(Number(b.dataset.m) === m)));
+  caja.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', String(Number(b.dataset.m) === m)));
   abierta = m;
 }
 
 function cerrarTarjeta(devolverFoco = false) {
-  const host = estado?.host;
-  if (abierta === null || !host) return;
+  const caja = estado?.caja;
+  if (abierta === null || !caja) return;
   const m = abierta;
   abierta = null;
-  const tarjeta = host.querySelector('#m-tarjeta');
+  const tarjeta = caja.querySelector('#m-tarjeta');
   if (tarjeta) tarjeta.hidden = true;
-  host.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', 'false'));
-  if (devolverFoco) host.querySelector(`.m-bandera[data-m="${m}"]`)?.focus();
+  caja.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  if (devolverFoco) caja.querySelector(`.m-bandera[data-m="${m}"]`)?.focus();
 }
 
 // Se cierra con Esc o tocando en otro sitio. Se instala una sola vez (los botones sí se rehacen con cada dibujo).
