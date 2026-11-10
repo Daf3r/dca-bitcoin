@@ -9,8 +9,26 @@ import { nombreMeta } from './reportes.js';
 
 // ------------------------------------------------------------- hoja de anotar
 export const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '' };
+const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false };
 export const hoja = $('hoja');
+
+// «Deshacer» tras guardar, corregir o anular (8 s): deshacer una compra nueva la anula, deshacer una anulación la vuelve a anotar con los mismos
+// datos y deshacer una corrección devuelve los valores de antes. Todo pasa por las rutas de siempre, así que queda en el Historial
+// (la app sigue sin «desanular» de verdad: se vuelve a anotar).
+const ESPERA_DESHACER = 8000;
+function conDeshacer(texto, deshacer, retraso = 0) {
+  const mostrar = () => avisar(texto, async () => {
+    avisar('');
+    try { await deshacer(); } catch (err) { avisar(err.message || 'No se pudo deshacer.', null, true); }
+  }, true, { etiqueta: 'Deshacer', ms: ESPERA_DESHACER });
+  if (retraso) setTimeout(mostrar, retraso); else mostrar();
+}
+const cuerpoDe = (c) => ({ fecha: c.fecha, monto: c.monto, sats: c.sats, txid: c.txid ?? '', tipo: c.tipo, nota: c.nota ?? '', extra: c.tipo === 'compra' && !!c.extra });
+/** Pinta tras deshacer: la montaña baja o sube desde donde estaba, sin celebración. */
+function repintarTrasDeshacer(mensaje) {
+  pintar({ montana: true, desde: R.sats });
+  avisar(mensaje, null, true);
+}
 
 // Borrador: si cierras la hoja a medias (o suena el teléfono), lo escrito vuelve al abrirla. Va en el navegador, con control de errores,
 // se borra al guardar y caduca a la semana. Nunca guarda la fecha: siempre se propone la de hoy.
@@ -37,7 +55,7 @@ hoja.addEventListener('click', (e) => { if (e.target.closest('#h-tipo, #h-sentid
 
 export function abrirHoja(id = null, tipoInicial = 'compra') {
   const c = id ? S.compras.find((x) => x.id === id) : null;
-  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement, confirmadoPara: '' });
+  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement, confirmadoPara: '', estimado: false });
   H.sats = c ? String(c.sats) : '';
   H.usd = c ? String(c.monto) : '';
   H.txid = c?.txid ?? '';
@@ -94,6 +112,25 @@ function datosHoja() {
   if (!p) return { sats, sinPrecio: true };
   return { sats, monto: estimarMonto(sats, p.precio), precio: p.precio, fuente: p.fuente, dia: p.dia };
 }
+/** «Compra de siempre»: tu monto habitual en dólares convertido a sats con el precio de hoy. Solo una estimación hasta que escribas lo real. */
+function compraDeSiempre() {
+  const usdHabitual = S.precio ? montoHabitual(R.items) : null;
+  return usdHabitual ? { usd: usdHabitual, sats: Math.round((usdHabitual / S.precio) * 1e8) } : null;
+}
+$('h-habitual').addEventListener('click', () => {
+  const h = compraDeSiempre();
+  if (!h) return;
+  Object.assign(H, { sats: String(h.sats), usd: '', usdTocado: false, estimado: true });
+  $('h-sats').value = entero(h.sats);
+  $('h-usd').value = '';
+  $('h-fecha').value = hoyISO(); // la compra de siempre es la de hoy
+  limpiarError();
+  pintarHoja();
+  guardarBorrador();
+  $('h-sats').focus();
+  $('h-sats').select();
+});
+
 /** Lo que se va a guardar, para saber si el aviso ya confirmado sigue valiendo (si cambias algo, vuelve a avisar). */
 const claveHoja = () => `${H.tipo}|${H.sats}|${$('h-fecha').value}|${H.extra}`;
 const confirmando = () => H.confirmadoPara !== '' && H.confirmadoPara === claveHoja();
@@ -139,6 +176,10 @@ function pintarHojaTraslado() {
 function pintarHoja() {
   const d = datosHoja();
   camposSegunTipo();
+  const h = H.tipo === 'compra' && !H.editando ? compraDeSiempre() : null;
+  $('h-habitual').hidden = !h;
+  if (h) $('h-habitual').textContent = `Compra de siempre: ${usd0(h.usd)} ≈ ${entero(h.sats)} sats`;
+  $('h-sats').dataset.estimado = H.estimado ? '1' : '';
   if (H.tipo === 'traslado') return pintarHojaTraslado();
   const venta = H.tipo === 'venta';
   const previa = H.editando ? S.compras.find((x) => x.id === H.editando) : null;
@@ -150,10 +191,11 @@ function pintarHoja() {
   const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
   const habitual = !venta && S.precio ? montoHabitual(R.items) : null;
   const referencia = habitual ? ` Hoy ${usd0(habitual)} son ≈ ${entero((habitual / S.precio) * 1e8)} sats ($1 = ${entero(1e8 / S.precio)} sats).` : '';
-  $('hoja-calc').textContent = !d ? (venta ? 'Escribe los sats que salieron; los dólares se calculan solos con el precio del día.' : `Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.${referencia}`)
+  const estimado = H.estimado ? 'Estimación con el precio de hoy: cámbiala por lo que recibiste. ' : '';
+  $('hoja-calc').textContent = estimado + (!d ? (venta ? 'Escribe los sats que salieron; los dólares se calculan solos con el precio del día.' : `Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.${referencia}`)
     : d.sinPrecio ? 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares.'
       : sinSaldo ? `No tienes tantos sats: tu saldo es ${entero(saldo)}.`
-        : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(resto)} sats`;
+        : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(resto)} sats`);
   // El «ajuste» del DCA: cómo mueve esta compra tu costo promedio (solo al crear una compra con precio).
   const c = d && !d.sinPrecio && !venta && !H.editando ? costoTrasCompra(R, d.monto, d.sats) : null;
   if (c) {
@@ -196,6 +238,7 @@ function formatearSats(inp) {
 }
 $('h-sats').addEventListener('input', (e) => {
   formatearSats(e.target);
+  H.estimado = false;
   // Si corriges los sats de una compra y no tocaste los dólares, se recalculan con el precio del día.
   if (H.editando && !H.usdTocado && H.usd) { H.usd = ''; $('h-usd').value = ''; }
   limpiarError();
@@ -286,7 +329,13 @@ async function guardarTraslado(d, fecha) {
     H.guardando = false;
     cerrarHoja();
     pintar({ montana: true, desde: antes.sats });
-    avisar(`Traslado anotado: ${entero(d.sats)} sats ${H.sentido === 'a_wallet' ? 'a tu wallet' : 'al exchange'}.${nota}`, null, true);
+    const textoT = `Traslado anotado: ${entero(d.sats)} sats ${H.sentido === 'a_wallet' ? 'a tu wallet' : 'al exchange'}.${nota}`;
+    if (nota) avisar(textoT, null, true); // con comisión anotada aparte, deshacer solo el traslado dejaría el gasto: no se ofrece
+    else conDeshacer(textoT, async () => {
+      await api(`/api/traslados/${t.id}`, { metodo: 'DELETE' });
+      S.traslados = S.traslados.filter((x) => x.id !== t.id);
+      repintarTrasDeshacer('Deshecho: el traslado quedó anulado. Queda en el historial.');
+    });
   } catch (err) {
     H.guardando = false;
     $('hoja-error').classList.remove('hoja-aviso');
@@ -301,6 +350,15 @@ $('guardar').addEventListener('click', async () => {
   if (!d || H.guardando) return;
   if (!fecha || fecha > hoyISO()) { $('hoja-error').textContent = 'Elige una fecha de hoy o anterior.'; return; }
   if (H.tipo === 'traslado') return guardarTraslado(d, fecha);
+  // Una estimación no se guarda como si fuera lo real: se pide un segundo toque (o corregir los sats).
+  if (H.estimado && !confirmando()) {
+    const e = $('hoja-error');
+    e.textContent = 'Estos sats son una estimación con el precio de hoy, no lo que te dio el exchange. Cámbialos por los reales, o toca «Sí, guardar así» si coinciden.';
+    e.classList.add('hoja-aviso');
+    H.confirmadoPara = claveHoja();
+    pintarHoja();
+    return;
+  }
   // Antes de guardar: si algo se ve raro (cifra 10 veces fuera de lo normal, compra repetida ese día), se avisa
   // una vez y se pide confirmar con un segundo toque. No bloquea: tú decides.
   if (!confirmando()) {
@@ -339,8 +397,19 @@ $('guardar').addEventListener('click', async () => {
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
     const texto = (editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : '');
     // Con celebración, el aviso de abajo espera a que acabe para no tapar el sendero.
-    if (festejo && !reducido()) setTimeout(() => avisar(texto, null, true), MS_SUBIDA + 1300);
-    else avisar(texto, null, true);
+    const previa = editando ? comprasAntes.find((x) => x.id === editando) : null;
+    const deshacer = editando
+      ? async () => {
+        const v = normalizar(await api(`/api/compras/${editando}`, { metodo: 'PUT', cuerpo: cuerpoDe(previa) }));
+        S.compras = S.compras.map((x) => (x.id === v.id ? v : x));
+        repintarTrasDeshacer('Cambio deshecho: vuelven los datos de antes.');
+      }
+      : async () => {
+        await api(`/api/compras/${g.id}`, { metodo: 'DELETE' });
+        S.compras = S.compras.filter((x) => x.id !== g.id);
+        repintarTrasDeshacer('Deshecho: lo que anotaste quedó anulado. Queda en el historial.');
+      };
+    conDeshacer(texto, deshacer, festejo && !reducido() ? MS_SUBIDA + 1300 : 0);
     celebrar(antes, constancia);
   } catch (err) {
     H.guardando = false;
@@ -380,14 +449,22 @@ dialogo.addEventListener('close', async () => {
     } catch (err) {
       if (err.status !== 404) { avisar(err.message, null, true); return; }
     }
+    const anulado = S.traslados.find((x) => x.id === tid);
     S.traslados = S.traslados.filter((x) => x.id !== tid);
     pintar();
-    avisar('Traslado anulado. Queda en el historial.', null, true);
+    if (!anulado) { avisar('Traslado anulado. Queda en el historial.', null, true); return; }
+    conDeshacer('Traslado anulado. Queda en el historial.', async () => {
+      const t = await api('/api/traslados', { metodo: 'POST', cuerpo: { fecha: anulado.fecha, sats: anulado.sats, sentido: anulado.sentido, txid: anulado.txid ?? '', nota: anulado.nota ?? '' } });
+      S.traslados = [...S.traslados, t];
+      resaltar(`t${t.id}`);
+      repintarTrasDeshacer('Vuelve a estar anotado el traslado.');
+    });
     return;
   }
   const id = H.editando;
   if (dialogo.returnValue !== 'si' || !id) return;
   const antes = R;
+  const anulada = S.compras.find((x) => x.id === id);
   try {
     await api(`/api/compras/${id}`, { metodo: 'DELETE' });
   } catch (err) {
@@ -397,5 +474,11 @@ dialogo.addEventListener('close', async () => {
   H.origen = $('t-compras');
   cerrarHoja();
   pintar({ montana: true, desde: antes.sats });
-  avisar('Compra anulada. Queda en el historial.', null, true);
+  if (!anulada) { avisar('Compra anulada. Queda en el historial.', null, true); return; }
+  conDeshacer(`${anulada.tipo === 'venta' ? 'Venta' : 'Compra'} anulada. Queda en el historial.`, async () => {
+    const g = normalizar(await api('/api/compras', { metodo: 'POST', cuerpo: cuerpoDe(anulada) }));
+    S.compras = [...S.compras, g];
+    resaltar(`c${g.id}`);
+    repintarTrasDeshacer('Vuelve a estar anotada. En el historial queda como una anotación nueva.');
+  });
 });

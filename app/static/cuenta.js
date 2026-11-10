@@ -4,7 +4,7 @@ import { avisar } from './avisar.js';
 import { $, S, api } from './estado.js';
 import { conTransicion, sinMovimiento } from './movimiento.js';
 import { novedadesMostradas } from './novedades.js';
-import { pintar } from './pintar.js';
+import { fijarTituloConSaldo, pintar, tituloConSaldo } from './pintar.js';
 
 let avisosOfrecidos = false; // la oferta de avisos sale una sola vez por visita (y una por dispositivo, ver avisos.js)
 // ---------------------------------------------------------------- arranque
@@ -58,6 +58,7 @@ function fundirTema() {
   clearTimeout(fundidoTimer);
   fundidoTimer = setTimeout(() => raiz.classList.remove('tema-fundido'), 450);
 }
+const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'con saldo y precio' : 'sin saldo'}`; };
 const etiquetaTema = () => { $('dc-tema').textContent = `Tema: ${NOMBRE_TEMA[window.libroTema?.preferencia() ?? 'auto']}`; };
 // Efectos: automático (según el teléfono y el sistema), todos, esenciales o ninguno. `efectos.js` lo aplica antes de pintar.
 const SIGUIENTE_EFECTOS = { auto: 'todos', todos: 'esenciales', esenciales: 'ninguno', ninguno: 'auto' };
@@ -71,7 +72,7 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); dCuenta.showModal(); });
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -154,6 +155,7 @@ dCuenta.addEventListener('click', async (e) => {
   if (!b) return;
   const accion = b.dataset.cuenta;
   if (accion === 'cerrar') dCuenta.close();
+  else if (accion === 'titulo') { fijarTituloConSaldo(!tituloConSaldo()); etiquetaTitulo(); }
   else if (accion === 'tema') { fundirTema(); window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
   else if (accion === 'efectos') { window.libroEfectos?.fijar(SIGUIENTE_EFECTOS[window.libroEfectos.preferencia()]); etiquetaEfectos(); }
   else if (accion === 'volver') irA('menu');

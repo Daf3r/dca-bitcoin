@@ -1279,4 +1279,23 @@ backup.DEST = _dest_ori
 check(subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "backup.py"), "--probar"],
                      env={**os.environ, "DB_PATH": dbp, "BACKUP_DIR": backup.DEST}, capture_output=True, text=True).returncode == 0, "backup.py --probar sale con 0 cuando todo está bien")
 
+# --- ETag en las lecturas grandes (idea 165): «304 sin cambios» y la API sigue en no-store
+ce = cliente()
+for ruta in ("/api/compras", "/api/traslados"):
+    r1 = ce.get(ruta)
+    et = r1.headers.get("ETag")
+    check(r1.status_code == 200 and et and et.startswith('"') and r1.headers["Cache-Control"] == "no-store", f"{ruta}: trae ETag y sigue en no-store")
+    r2 = ce.get(ruta, headers={"If-None-Match": et})
+    check(r2.status_code == 304 and r2.data == b"" and r2.headers["ETag"] == et and r2.headers["Cache-Control"] == "no-store", f"{ruta}: con el mismo ETag contesta 304 sin cuerpo")
+    check(ce.get(ruta, headers={"If-None-Match": '"otro"'}).status_code == 200, f"{ruta}: con otro ETag manda todo")
+    check(ce.get(ruta, headers={"If-None-Match": f"W/{et}"}).status_code == 304, f"{ruta}: acepta el ETag débil")
+r1 = ce.get("/api/compras")
+nuevo = ce.post("/api/compras", json={"fecha": "2026-01-05", "monto": 10, "sats": 10000})
+check(nuevo.status_code == 201, "ETag: una compra nueva se guarda")
+r3 = ce.get("/api/compras", headers={"If-None-Match": r1.headers["ETag"]})
+check(r3.status_code == 200 and r3.headers["ETag"] != r1.headers["ETag"] and any(x["id"] == nuevo.get_json()["id"] for x in r3.get_json()), "ETag: tras un cambio el ETag viejo ya no vale y llega la lista nueva")
+ce.delete(f"/api/compras/{nuevo.get_json()['id']}")
+check(ce.get("/api/estado").headers.get("ETag") is None, "ETag: solo las lecturas grandes lo llevan")
+check(anon.get("/api/compras", headers={"If-None-Match": r1.headers["ETag"]}).status_code in (401, 503), "ETag: sin sesión no se saca nada con el ETag de otro")
+
 print("OK", ok, "comprobaciones")
