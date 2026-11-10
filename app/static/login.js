@@ -26,6 +26,11 @@ vv?.addEventListener('resize', encajar);
 form.addEventListener('focusin', () => setTimeout(encajar, 60));
 form.addEventListener('focusout', () => setTimeout(() => { if (!form.contains(document.activeElement)) document.body.style.paddingBottom = ''; }, 120));
 
+// La montaña reacciona a lo que haces (idea 35): el campo enfocado deja una marca en <html> que el CSS aprovecha.
+const marcar = (v) => { document.documentElement.dataset.entrada = v; };
+form.addEventListener('focusin', (e) => marcar(e.target.id === 'l-usuario' ? 'usuario' : e.target.id === 'l-clave' ? 'clave' : ''));
+form.addEventListener('focusout', () => setTimeout(() => { if (!form.contains(document.activeElement)) marcar(''); }, 60));
+
 const boton = $('l-entrar');
 const error = (t) => { $('l-error').textContent = t; if (t) encajar(); };
 

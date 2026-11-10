@@ -1,5 +1,6 @@
 import { aFecha, acentoDe, btc, cruzo1Btc, entero, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
+import { ico } from './iconos.js';
 import { dual, miniLinea } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
 import { pintarOdometro } from './odometro.js';
@@ -76,7 +77,7 @@ export function pintarPrecio() {
   el24.hidden = !v;
   if (v) {
     const plano = Math.abs(v.pct) < 0.05; // casi igual: sin flecha ni color
-    el24.textContent = `${plano ? '•' : v.pct > 0 ? '▲' : '▼'} ${pct(v.pct)} vs ayer`;
+    el24.innerHTML = `${plano ? '•' : ico(v.pct > 0 ? 'sube' : 'baja')} ${pct(v.pct)} vs ayer`;
     el24.dataset.tono = plano ? '' : v.pct > 0 ? 'sube' : 'baja';
   }
 }

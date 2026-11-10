@@ -1,6 +1,7 @@
 // Dos vistas del gráfico que comparten dibujo: «cómo cambia tu costo promedio» (línea entre compras) y «tus sats» (escalera
 // que sube con cada compra y baja con cada venta). Cada una es una serie de puntos con fecha; se lee con puntero y teclado.
 import { aFecha } from './lib.js';
+import { ilustracion } from './iconos.js';
 
 const f1 = (n) => n.toFixed(1);
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'short', year: 'numeric' });
@@ -26,7 +27,7 @@ function marcas(lo, hi) {
 export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero, fmtEje, texto, defecto, aria }) {
   const W = Math.max(280, host.clientWidth);
   const H = W < 560 ? 220 : W < 900 ? 260 : 280;
-  if (puntos.length < 2) { host.innerHTML = '<p class="g-vacio">Aún no hay suficientes compras para este gráfico.</p>'; EST.delete(host); lectura.textContent = ''; return; }
+  if (puntos.length < 2) { host.innerHTML = `<p class="g-vacio">${ilustracion('grafico')}Aún no hay suficientes compras para este gráfico.</p>`; EST.delete(host); lectura.textContent = ''; return; }
   const vs = puntos.map((p) => p.v);
   let lo = desdeCero ? 0 : Math.min(...vs), hi = Math.max(...vs);
   const pad = (hi - lo) * 0.12 || hi * 0.1 || 1;

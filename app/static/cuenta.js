@@ -1,5 +1,6 @@
 import { entero, fechaLarga, usd } from './lib.js';
 import { montarAvisos } from './avisos.js';
+import { avatar, ilustracion } from './iconos.js';
 import { avisar } from './avisar.js';
 import { $, S, api } from './estado.js';
 import { conTransicion, sinMovimiento } from './movimiento.js';
@@ -20,16 +21,23 @@ function vistaCuenta(cual) {
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
 const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
+/** El avatar de la persona y su texto (con `textContent`: el nombre nunca se interpreta como HTML). */
+function conAvatar(el, nombre, texto, opciones) {
+  el.innerHTML = avatar(nombre, opciones);
+  const t = document.createElement('span');
+  t.textContent = texto;
+  el.append(t);
+}
 export async function cargarYo() {
   try {
     const yo = await api('/api/yo');
     Object.assign(S, { usuario: yo.usuario, rol: yo.rol, visto: yo.visto ?? null });
     document.body.dataset.rol = yo.rol;
-    $('cuenta-btn').textContent = yo.usuario;
+    conAvatar($('cuenta-btn'), yo.usuario, yo.usuario);
     $('cuenta-btn').setAttribute('aria-label', `Tu cuenta: ${yo.usuario}`);
     $('cuenta-btn').hidden = false;
     pintarSaludo(yo.usuario);
-    $('dc-quien').textContent = `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`;
+    conAvatar($('dc-quien'), yo.usuario, `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`, { grande: true });
     $('dc-historial').hidden = yo.rol !== 'admin';
     $('dc-previa').hidden = yo.rol !== 'admin'; // vista previa temporal
     $('fc-usuario').value = yo.usuario;
@@ -145,14 +153,16 @@ async function cargarHistorial(mas = false) {
       t.textContent = dfAudit.format(new Date(a.ts * 1000)).replace('.', '');
       const p = document.createElement('p');
       const b = document.createElement('b');
+      const neutro = a.usuario === 'cli' || a.usuario === '?';
       b.textContent = a.usuario === 'cli' ? 'Servidor' : a.usuario === '?' ? 'Alguien' : a.usuario;
       p.append(b, ` ${textoAuditoria(a)}`);
+      li.insertAdjacentHTML('beforeend', avatar(b.textContent, { neutro }));
       li.append(t, p);
       lista.append(li);
     }
     histUltimo = filas.at(-1)?.id ?? histUltimo;
     $('hist-mas').hidden = filas.length < 100;
-    if (!lista.children.length) lista.innerHTML = '<li class="vacio">Aún no hay nada en el historial.</li>';
+    if (!lista.children.length) lista.innerHTML = `<li class="vacio con-ilu">${ilustracion('montana')}Aún no hay nada en el historial.</li>`;
   } catch (e) {
     lista.innerHTML = '';
     const li = document.createElement('li'); li.className = 'vacio'; li.textContent = e.message; lista.append(li);
