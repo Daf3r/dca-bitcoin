@@ -6,8 +6,8 @@ const host = $('montana');
 const pintar = () => dibujarMontana(host, { sats: 0, meta: 1e5, inicio: 0, techo: 40 });
 pintar();
 instalarParallax();
-let ancho = host.clientWidth;
-new ResizeObserver(() => { if (host.clientWidth !== ancho) { ancho = host.clientWidth; pintar(); } }).observe(host);
+let ancho = host.clientWidth, alto = host.clientHeight;
+new ResizeObserver(() => { if (host.clientWidth !== ancho || Math.abs(host.clientHeight - alto) > 2) { ancho = host.clientWidth; alto = host.clientHeight; pintar(); } }).observe(host);
 
 const form = $('f-login');
 

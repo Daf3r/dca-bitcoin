@@ -209,6 +209,15 @@ try {
       await auditar(p, `hoja con acento dorado ${esquema}`);
       await ctx.close();
     }
+    { // pantalla muy ancha: el índice lateral
+      const ctx = await navegador.newContext({ viewport: { width: 1700, height: 900 }, colorScheme: esquema, bypassCSP: true });
+      const p = await ctx.newPage();
+      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+      await entrar(p, anio.url, ADMIN);
+      await cerrarOferta(p);
+      await auditar(p, `índice lateral (pantalla ancha) ${esquema}`);
+      await ctx.close();
+    }
     { // la oferta de avisos al entrar
       const { ctx, p } = await nuevo(hoy, ADMIN, conPush);
       await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });

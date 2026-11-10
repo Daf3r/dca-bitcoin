@@ -895,6 +895,7 @@ html[data-efectos="todos"] dialog[open]::backdrop, html[data-efectos="esenciales
 .d-cuenta > * { view-transition-name: dc-cuerpo; }
 ::view-transition-group(grafico), ::view-transition-group(dc-cuerpo) { animation-duration: 0.28s; animation-timing-function: cubic-bezier(0.2, 0.9, 0.2, 1); }
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-group(indice), ::view-transition-old(indice), ::view-transition-new(indice) { animation: none; }
 html[data-efectos="ninguno"] ::view-transition-group(*), html[data-efectos="ninguno"] ::view-transition-old(*), html[data-efectos="ninguno"] ::view-transition-new(*) { animation: none !important; }
 
 /* Entrada escalonada de las tarjetas al abrir (entrada.js): de «un poco apagado» a «tal cual»; nunca deja nada oculto. */
@@ -1050,7 +1051,9 @@ html[data-contraste="alto"] :is(button, summary, a, input, select, [tabindex="0"
 /* Índice de secciones al lado (solo en pantallas muy anchas, donde sobra margen a los lados del contenido). */
 .indice { display: none; }
 @media (min-width: 1500px) {
-  .indice { display: grid; gap: 2px; position: fixed; z-index: 6; left: max(16px, calc(50vw - 780px)); top: 50%; transform: translateY(-50%); width: 120px; }
+  /* Con fondo propio: se lee sobre cualquier color del cielo y de la montaña (de día, de noche y en las celebraciones), y con nombre de
+     transición para que no desaparezca cuando la página cambia de vista. */
+  .indice { display: grid; gap: 2px; position: fixed; z-index: 6; left: max(16px, calc(50vw - 780px)); top: 50%; transform: translateY(-50%); width: 132px; padding: 6px 6px 6px 0; border-radius: 14px; background: var(--s1); background: color-mix(in srgb, var(--s1) 92%, transparent); box-shadow: 0 4px 18px rgb(0 0 0 / 0.25); view-transition-name: indice; }
   .indice a { display: flex; align-items: center; min-height: var(--toque); padding: 0 12px; border-left: 3px solid var(--s3); color: var(--txt2); font-weight: 600; font-size: 0.9375rem; text-decoration: none; }
   .indice a[hidden] { display: none; }
   .indice a:hover { color: var(--txt); }

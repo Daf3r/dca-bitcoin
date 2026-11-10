@@ -203,7 +203,7 @@ function pintarProx() {
   el.textContent = txt;
 }
 
-let anchoMontana = 0;
+let anchoMontana = 0, altoMontana = 0;
 // Idea 32: desde 1 BTC el acento de la app es dorado (variables de color en el CSS, `html[data-acento="oro"]`). Con la celebración
 // de 1 BTC en marcha se retiene el cambio hasta que acabe.
 let acentoRetenido = false;
@@ -217,6 +217,7 @@ export const MS_SUBIDA = 1400;
 export function pintarMontana(animar, desde, festejo = null) {
   const host = $('montana');
   anchoMontana = host.clientWidth;
+  altoMontana = host.clientHeight;
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
@@ -231,7 +232,10 @@ export function pintarMontana(animar, desde, festejo = null) {
   if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : f ? MS_SUBIDA : 1600, f);
 }
 new ResizeObserver(() => {
-  if (S.cargado && $('montana').clientWidth !== anchoMontana) pintarMontana(false);
+  // Se redibuja si cambia el ancho **o el alto** (una barra del navegador que aparece, las herramientas de desarrollo, un cambio de
+  // ventana): el SVG se dibuja a la medida de la caja y, si solo cambiara el alto, se vería cortado y con una franja de cielo.
+  const m = $('montana');
+  if (S.cargado && (m.clientWidth !== anchoMontana || Math.abs(m.clientHeight - altoMontana) > 2)) pintarMontana(false);
 }).observe($('montana'));
 
 /** Avance de 0 a 1 entre la etapa anterior y la siguiente. */

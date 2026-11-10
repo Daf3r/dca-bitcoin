@@ -1537,6 +1537,58 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- la montaña sigue a la caja (también en alto) y el índice lateral se lee
+  {
+    const srv = await servidor('anio');
+    try {
+      const ctx = await navegador.newContext({ viewport: { width: 1983, height: 967 } });
+      const p = await ctx.newPage();
+      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+      await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+      await p.fill('input[autocomplete="username"]', ADMIN[0]);
+      await p.fill('input[autocomplete="current-password"]', ADMIN[1]);
+      await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+      await p.waitForTimeout(2800);
+      const medir = () => p.evaluate(() => ({ caja: Math.round(document.getElementById('montana').getBoundingClientRect().height), vb: Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]) }));
+      const antes = await medir();
+      ok(Math.abs(antes.caja - antes.vb) <= 2, `montaña: el dibujo mide lo que la caja al cargar (${antes.vb} / ${antes.caja})`);
+      // Cambia solo el alto de la ventana (una barra del navegador, las herramientas de desarrollo…): el dibujo se rehace
+      for (const alto of [760, 1100]) {
+        await p.setViewportSize({ width: 1983, height: alto });
+        await p.waitForFunction(() => { const c = document.getElementById('montana').getBoundingClientRect().height; return Math.abs(Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]) - c) <= 2; }, null, { timeout: 4000 });
+        const m = await medir();
+        ok(Math.abs(m.caja - m.vb) <= 2 && m.caja !== antes.caja, `montaña: al cambiar solo el alto de la ventana a ${alto} px se redibuja (${m.vb} / ${m.caja})`);
+      }
+      // Índice lateral: con fondo propio, legible y con su nombre de transición
+      for (const tema of ['oscuro', 'claro']) {
+        await p.evaluate((t) => window.libroTema.fijar(t), tema);
+        await p.waitForTimeout(600);
+        const ind = await p.evaluate(() => {
+          const el = document.getElementById('indice'), cs = getComputedStyle(el);
+          const lum = (c) => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+          const tmp = document.createElement('i'); document.body.append(tmp);
+          const fondo = (() => { tmp.style.color = getComputedStyle(document.documentElement).getPropertyValue('--s1'); return getComputedStyle(tmp).color; })();
+          tmp.remove();
+          const a = lum(getComputedStyle(el.querySelector('a:not([hidden])')).color), f = lum(fondo);
+          return { visible: cs.display !== 'none', vt: cs.viewTransitionName, alfa: Number((/\/\s*([\d.]+)\)/.exec(cs.backgroundColor) ?? [0, 1])[1]), contraste: (Math.max(a, f) + 0.05) / (Math.min(a, f) + 0.05) };
+        });
+        ok(ind.visible && ind.vt === 'indice' && ind.alfa >= 0.85 && ind.contraste >= 4.5, `índice lateral (${tema}): visible, con fondo propio (${ind.alfa}) y letra a ${ind.contraste.toFixed(1)}:1 sobre él`);
+      }
+      await ctx.close();
+      // La entrada también sigue a su caja
+      const ctxL = await navegador.newContext({ viewport: { width: 1280, height: 900 } });
+      const pl = await ctxL.newPage();
+      await pl.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+      const h0 = await pl.evaluate(() => Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]));
+      await pl.setViewportSize({ width: 1280, height: 700 });
+      await pl.waitForFunction((h) => Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]) !== h, h0, { timeout: 4000 });
+      ok(true, 'entrada: la montaña también se redibuja si cambia solo el alto');
+      await ctxL.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {
