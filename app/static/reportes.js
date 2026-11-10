@@ -4,6 +4,7 @@ import { dual } from './cifras.js';
 import { $, R, S, esAdmin } from './estado.js';
 import { abrirHoja } from './hoja.js';
 import { plazo } from './pintar.js';
+import { ilustracion } from './iconos.js';
 
 // --------------------------------------------------------------- reportes
 const MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
@@ -156,6 +157,7 @@ export function pintarUbicacion() {
   if (!ver) return;
   $('ub-datos').hidden = !u.hay;
   $('ub-pista').hidden = u.hay;
+  if (!u.hay && !$('ub-pista').querySelector('.ilu')) $('ub-pista').insertAdjacentHTML('afterbegin', ilustracion('traslado'));
   $('ub-anotar').hidden = u.hay;
   // La pista y el botón son para quien anota; un lector sin traslados no ve la tarjeta.
   const fw = Math.max(0, Math.min(1, u.pctWallet / 100));

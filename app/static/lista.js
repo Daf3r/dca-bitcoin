@@ -1,6 +1,7 @@
 import { agruparPorMes, entero, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
 import { avisar } from './avisar.js';
 import { copiarTexto } from './copiar.js';
+import { ico, ilustracion } from './iconos.js';
 import { $, R, S, api, esAdmin, normalizar, reducido } from './estado.js';
 import { abrirAnularTraslado, abrirHoja, esc } from './hoja.js';
 import { pintar } from './pintar.js';
@@ -27,10 +28,10 @@ function quitarFiltros() {
 function htmlExtras(m) {
   const partes = [];
   if (mempoolUrl(m.txid)) {
-    partes.push(`<a class="f-tx" href="${mempoolUrl(m.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space <span aria-hidden="true">↗</span><span class="sr"> (se abre en otra pestaña)</span></a><span class="f-est" data-txid="${m.txid}"></span>`);
-    partes.push(`<button type="button" class="f-copiar" data-txid="${m.txid}">Copiar TXID</button>`);
+    partes.push(`<a class="f-tx" href="${mempoolUrl(m.txid)}" target="_blank" rel="noopener noreferrer">Ver en mempool.space ${ico('externo')}<span class="sr"> (se abre en otra pestaña)</span></a><span class="f-est" data-txid="${m.txid}"></span>`);
+    partes.push(`<button type="button" class="f-copiar" data-txid="${m.txid}">${ico('copiar')} Copiar TXID</button>`);
   }
-  if (esAdmin() && m.tipo !== 'traslado' && m.nota) partes.push(`<button type="button" class="f-nota-b" data-id="${m.id}">Editar nota</button>`);
+  if (esAdmin() && m.tipo !== 'traslado' && m.nota) partes.push(`<button type="button" class="f-nota-b" data-id="${m.id}">${ico('lapiz')} Editar nota</button>`);
   return partes.length ? `<div class="f-txw">${partes.join('')}</div>` : '';
 }
 /** Una fila de traslado: no es compra ni venta, solo mueve sats entre el exchange y tu wallet. */
@@ -41,7 +42,7 @@ function htmlTraslado(m) {
   const cierre = esAdmin() ? 'button' : 'div';
   return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-tras="${t.id}" data-tipo="traslado">` +
     (esAdmin() ? '<span class="sr">Ver el traslado del </span>' : '') + `<span class="f-fecha">${fechaCorta(t.fecha)}</span>` +
-    `<span class="f-sats">⇄ ${entero(t.sats)} <small>sats</small></span>` +
+    `<span class="f-sats">${ico('traslado')} ${entero(t.sats)} <small>sats</small></span>` +
     `<span class="f-det">${aW ? 'Traslado a tu wallet' : 'Traslado de tu wallet al exchange'}${t.nota ? ` · ${esc(t.nota)}` : ''}</span>` +
     `<span class="f-var"></span></${cierre}>${htmlExtras(m)}</li>`;
 }
@@ -56,7 +57,7 @@ function htmlFila(m) {
   return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}">` +
     (esAdmin() ? `<span class="sr">Editar la ${venta ? 'venta' : 'compra'} del </span>` : '') + `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
     `<span class="f-sats">${venta ? '−' : '+'}${entero(c.sats)} <small>sats</small></span>` +
-    `<span class="f-det">${venta ? 'Venta · ' : ''}${c.extra ? '<b class="f-extra">Extra</b> · ' : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</span>` +
+    `<span class="f-det">${venta ? 'Venta · ' : ''}${c.extra ? `<b class="f-extra">${ico('rayo')} Extra</b> · ` : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</span>` +
     `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${textoV}</span></${esAdmin() ? 'button' : 'div'}>${htmlExtras(m)}</li>`;
 }
 
@@ -119,7 +120,8 @@ export function pintarLista() {
   $('l-tabla').hidden = !R.n;
   if (host.querySelector('.f-notaed')) return; // se está editando una nota: no se la quitamos de debajo del dedo
   if (!R.n) {
-    host.innerHTML = `<li class="vacio">${!S.cargado ? 'Cargando compras…' : S.errorCarga ? 'No se pudieron cargar tus compras.' : 'Aún no hay compras. Anota la primera o importa un CSV.'}</li>`;
+    const sinCompras = S.cargado && !S.errorCarga; // solo el estado vacío de verdad lleva dibujo
+    host.innerHTML = `<li class="vacio${sinCompras ? ' con-ilu' : ''}">${sinCompras ? ilustracion('montana') : ''}${!S.cargado ? 'Cargando compras…' : S.errorCarga ? 'No se pudieron cargar tus compras.' : 'Aún no hay compras. Anota la primera o importa un CSV.'}</li>`;
     $('ver-todas').hidden = true;
     $('l-ctl').hidden = true;
     previas = null;
@@ -290,7 +292,7 @@ function pintarTabla() {
     const v = trasl ? null : venta ? c.realizada : S.precio ? (S.precio / c.precio - 1) * 100 : null;
     const fecha = esAdmin() && !trasl ? `<button type="button" class="enlace dt-edit" data-id="${c.id}">${fechaLarga(m.fecha)}<span class="sr"> (editar)</span></button>` : fechaLarga(m.fecha);
     const tipo = trasl ? (c.sentido === 'a_wallet' ? 'Traslado a wallet' : 'Traslado al exchange') : venta ? 'Venta o gasto' : c.extra ? 'Compra extra' : 'Compra';
-    return `<tr><th scope="row">${fecha}</th><td>${tipo}</td><td class="num">${venta ? '−' : trasl ? '⇄ ' : '+'}${entero(m.sats)}</td>` +
+    return `<tr><th scope="row">${fecha}</th><td>${tipo}</td><td class="num">${venta ? '−' : trasl ? `${ico('traslado')} ` : '+'}${entero(m.sats)}</td>` +
       `<td class="num">${trasl ? '' : usd(m.monto)}</td><td class="num">${trasl ? '' : usd0(c.precio)}</td>` +
       `<td class="num"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : venta ? usdSigno(v) : pct(v)}</td>` +
       `<td>${esc(m.nota)}</td><td>${mempoolUrl(m.txid) ? `<a href="${mempoolUrl(m.txid)}" target="_blank" rel="noopener noreferrer">${txCorto(m.txid)}<span class="sr"> (se abre en otra pestaña)</span></a>` : ''}</td></tr>`;

@@ -6,8 +6,8 @@ const host = $('montana');
 const pintar = () => dibujarMontana(host, { sats: 0, meta: 1e5, inicio: 0, techo: 40 });
 pintar();
 instalarParallax();
-let ancho = host.clientWidth;
-new ResizeObserver(() => { if (host.clientWidth !== ancho) { ancho = host.clientWidth; pintar(); } }).observe(host);
+let ancho = host.clientWidth, alto = host.clientHeight;
+new ResizeObserver(() => { if (host.clientWidth !== ancho || Math.abs(host.clientHeight - alto) > 2) { ancho = host.clientWidth; alto = host.clientHeight; pintar(); } }).observe(host);
 
 const form = $('f-login');
 
@@ -25,6 +25,11 @@ function encajar() {
 vv?.addEventListener('resize', encajar);
 form.addEventListener('focusin', () => setTimeout(encajar, 60));
 form.addEventListener('focusout', () => setTimeout(() => { if (!form.contains(document.activeElement)) document.body.style.paddingBottom = ''; }, 120));
+
+// La montaña reacciona a lo que haces (idea 35): el campo enfocado deja una marca en <html> que el CSS aprovecha.
+const marcar = (v) => { document.documentElement.dataset.entrada = v; };
+form.addEventListener('focusin', (e) => marcar(e.target.id === 'l-usuario' ? 'usuario' : e.target.id === 'l-clave' ? 'clave' : ''));
+form.addEventListener('focusout', () => setTimeout(() => { if (!form.contains(document.activeElement)) marcar(''); }, 60));
 
 const boton = $('l-entrar');
 const error = (t) => { $('l-error').textContent = t; if (t) encajar(); };

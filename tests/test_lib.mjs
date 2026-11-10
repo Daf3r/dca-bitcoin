@@ -591,4 +591,19 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Math.abs(iluminacionLunar(0.25) - 0.5) < 1e-9 && iluminacionLunar(0.75) > 0.49, 'luna: iluminación 0 en nueva, 1 en llena, 0.5 en cuartos');
 }
 
+// Color y avatar por persona (campamento 6, idea 157)
+{
+  const { tonoPersona, inicialPersona, avatar } = await import('../app/static/iconos.js');
+  const t1 = tonoPersona('Daf3r'), t2 = tonoPersona(`Daf${3}r`);
+  ok(t1 === t2 && tonoPersona('Ana') >= 0 && tonoPersona('Ana') < 36, 'avatar: el tono sale del nombre y es siempre el mismo');
+  ok(new Set(['Daf3r', 'Ana', 'Mamá', 'Papá', 'Luis', 'Sofía', 'Carlos', 'María'].map(tonoPersona)).size >= 5, 'avatar: nombres distintos suelen tener tonos distintos');
+  ok(inicialPersona('daf3r') === 'D' && inicialPersona('  ana') === 'A' && inicialPersona('') === '?' && inicialPersona('éric') === 'É', 'avatar: la inicial va en mayúscula');
+  ok(!avatar('<b>x</b>').includes('<b>x'), 'avatar: la inicial nunca se interpreta como HTML');
+  // Contraste de la inicial blanca sobre hsl(tono, 52%, 28%) para los 36 tonos: mínimo 4.5:1
+  const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const hsl = (h, s, l) => { s /= 100; l /= 100; const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))); return [f(0) * 255, f(8) * 255, f(4) * 255]; };
+  let peor = 99;
+  for (let i = 0; i < 36; i++) peor = Math.min(peor, 1.05 / (lum(hsl(i * 10, 52, 28)) + 0.05));
+  ok(peor >= 4.5, `avatar: la inicial blanca llega a 4.5:1 con los 36 tonos (peor ${peor.toFixed(2)})`);
+}
 console.log(`OK ${n} comprobaciones`);

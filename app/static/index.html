@@ -33,6 +33,17 @@
 </nav>
 <!-- Mini-cabecera: al bajar y perder de vista el saldo, queda una franja con el saldo y el precio; tocarla sube (minicab.js). -->
 <button type="button" class="minicab" id="minicab"><b id="minicab-saldo"></b> <span id="minicab-precio"></span><span class="sr"> Volver arriba</span></button>
+<!-- Sprite de iconos (iconos.js): un solo trazo para todo. -->
+<svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="i-traslado" viewBox="0 0 24 24"><path d="M4 8h14m-4-4 4 4-4 4M20 16H6m4-4-4 4 4 4"/></symbol>
+  <symbol id="i-externo" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4 10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-rayo" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
+  <symbol id="i-copiar" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15V4h11"/></symbol>
+  <symbol id="i-campana" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></symbol>
+  <symbol id="i-lapiz" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
+  <symbol id="i-sube" viewBox="0 0 24 24"><path d="M12 6 4 18h16z" fill="currentColor"/></symbol>
+  <symbol id="i-baja" viewBox="0 0 24 24"><path d="M12 18 4 6h16z" fill="currentColor"/></symbol>
+</svg>
 <section class="escena" aria-labelledby="t-saldo">
   <div class="montana" id="montana"></div>
   <header class="cima">
@@ -338,7 +349,7 @@
     <div class="dc-lista">
       <button type="button" data-cuenta="clave">Cambiar contraseña</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
-      <button type="button" data-cuenta="avisos" id="dc-avisos-btn">Avisos en este dispositivo</button>
+      <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
       <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>

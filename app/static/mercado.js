@@ -6,6 +6,7 @@ import { caidaVisible } from './reportes.js';
 import { conTransicion } from './movimiento.js';
 import { abrirHoja } from './hoja.js';
 import { $, R, S, esAdmin } from './estado.js';
+import { ilustracion } from './iconos.js';
 
 // --------------------------------------------------------------- gráfico
 const RANGOS = [30, 182, 365, 0];
@@ -39,7 +40,7 @@ export function pintarMercado() {
   const listo = S.histEstado === 'ok' && S.cargado;
   host.classList.toggle('esqueleto', S.histEstado === 'cargando' || !S.cargado);
   if (!listo) {
-    host.innerHTML = S.histEstado === 'error' ? '<p class="g-vacio">El histórico de precios no está disponible ahora. Lo demás funciona igual.</p>' : '';
+    host.innerHTML = S.histEstado === 'error' ? `<p class="g-vacio">${ilustracion('grafico')}El histórico de precios no está disponible ahora. Lo demás funciona igual.</p>` : '';
     $('g-lectura').textContent = S.histEstado === 'error' ? '' : 'Cargando el histórico de precios…';
     return;
   }

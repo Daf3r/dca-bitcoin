@@ -1,6 +1,7 @@
 // Gráfico del precio de BTC con tus compras encima y tu costo promedio.
 import { usd, usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha, tramosCaida } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
+import { ilustracion } from './iconos.js';
 
 const f1 = (n) => n.toFixed(1);
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'short', year: 'numeric' });
@@ -23,7 +24,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   const desde = corte ? serie.findIndex((x) => aFecha(x.fecha) >= corte) : 0;
   const visible = serie.slice(Math.max(0, desde));
   const bandas = serie.length > 1 ? tramosCaida(serie) : [];
-  if (visible.length < 2) { host.innerHTML = '<p class="g-vacio">Aún no hay suficiente histórico para este rango.</p>'; EST.delete(host); if (tarjeta) tarjeta.hidden = true; return; }
+  if (visible.length < 2) { host.innerHTML = `<p class="g-vacio">${ilustracion('grafico')}Aún no hay suficiente histórico para este rango.</p>`; EST.delete(host); if (tarjeta) tarjeta.hidden = true; return; }
   // Con años de datos diarios, ~2 puntos por cada 3 px bastan y el móvil va fluido.
   const pts = muestrear(visible, Math.min(300, Math.round(W / 3)));
   const enRango = compras.filter((c) => ubicar(c.fecha, visible) >= 0);

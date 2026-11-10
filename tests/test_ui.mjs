@@ -133,8 +133,8 @@ try {
         ok(/^\d+$/.test(an.n) && /^de \d+$/.test(an.de) && /^Compraste en \d+ de (las últimas 52 semanas|tus \d+ semanas)$/.test(an.label), `anillo de constancia: ${an.n} ${an.de}`);
       }
       // Variación desde ayer junto al precio, y la tarjeta de sats por dólar con su línea del mes.
-      const var24 = (await p.textContent('#precio-24')).trim();
-      ok(await p.locator('#precio-24').isVisible() && /^[▲▼•] [+−]?\d+\.\d% vs ayer$/.test(var24), `variación desde ayer: «${var24}»`);
+      const var24 = (await p.innerText('#precio-24')).trim(); // la flecha es un icono SVG (sin texto): queda «−0.2% vs ayer» o «• +0.0% vs ayer»
+      ok(await p.locator('#precio-24').isVisible() && /^(• )?[+−]?\d+\.\d% vs ayer$/.test(var24) && (var24.startsWith('•') || await p.locator('#precio-24 .ico').count() === 1), `variación desde ayer: «${var24}»`);
       const precioVivo = (await datos(p, '/api/precio')).precio;
       ok(await p.locator('#spd').isVisible(), 'sale la tarjeta de sats por dólar');
       eq((await p.textContent('#spd-v')).trim(), entero(1e8 / precioVivo), 'sats por dólar = 100,000,000 ÷ precio');
@@ -1441,6 +1441,154 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- identidad: iconos, avatares, estados vacíos y entrada viva (campamento 6, 1/3)
+  {
+    const srv = await servidor('mil');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 22 });
+      // Una compra con TXID (en el escenario no hay ninguna) para ver «Copiar TXID» y el enlace a mempool.space
+      await p.evaluate(async () => { await fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), monto: 10, sats: 12000, tipo: 'compra', txid: 'cd'.repeat(32) }) }); });
+      await p.reload({ waitUntil: 'networkidle' });
+      await p.waitForTimeout(2500);
+      // Las últimas 8 filas no traen de todo: se filtra por cada tipo para ver sus iconos
+      const contar = async (f, sel) => { await p.click(`#l-chips button[data-f="${f}"]`); await p.waitForTimeout(300); return p.locator(`#lista ${sel}`).count(); };
+      const nTras = await contar('traslado', '.f-sats .ico'), nExtra = await contar('extra', '.f-extra .ico'), nTx = await contar('txid', '.f-copiar .ico');
+      const nExt = await p.locator('#lista .f-tx .ico').count(); // (queda filtrado por «Con TXID»)
+      await p.click('#l-chips button[data-f="todos"]');
+      const info = await p.evaluate(() => ({
+        simbolos: ['traslado', 'externo', 'rayo', 'copiar', 'campana', 'lapiz', 'sube', 'baja'].map((n) => !!document.getElementById(`i-${n}`)),
+        texto: document.getElementById('lista').innerText,
+        avatarBtn: document.querySelector('#cuenta-btn .avatar')?.textContent,
+        tonoBtn: [...(document.querySelector('#cuenta-btn .avatar')?.classList ?? [])].find((c) => /^av-\d+$/.test(c)),
+        iconoAvisos: !!document.querySelector('#dc-avisos-btn .ico'),
+      }));
+      ok(info.simbolos.every(Boolean), 'iconos: el sprite trae todos los símbolos');
+      ok(nTras > 0 && nExtra > 0 && nTx > 0 && nExt > 0, `iconos: traslados (${nTras}), compras extra (${nExtra}), copiar TXID (${nTx}) y enlace externo (${nExt}) llevan su icono`);
+      ok(!/[⇄↗▲▼]/.test(info.texto), 'iconos: ya no quedan caracteres sueltos (⇄ ↗ ▲ ▼) en la lista');
+      eq([info.avatarBtn, info.iconoAvisos], ['D', true], 'avatar: el botón de la cuenta lleva la inicial; el botón de avisos, su icono');
+      // Cada símbolo se dibuja de verdad (el <use> resuelve): tiene caja
+      ok(await p.evaluate(() => [...document.querySelectorAll('#lista .ico')].slice(0, 5).every((e) => { const r = e.getBoundingClientRect(); return r.width > 8 && r.height > 8; })), 'iconos: se dibujan con tamaño');
+      // Historial: avatar por persona (el mismo nombre, siempre el mismo tono) y neutro para el servidor
+      await p.click('#cuenta-btn');
+      await p.waitForTimeout(500);
+      const quien = await p.evaluate(() => ({ grande: !!document.querySelector('#dc-quien .avatar.grande'), txt: document.getElementById('dc-quien').innerText }));
+      ok(quien.grande && /Daf3r · administrador/.test(quien.txt), `avatar: «Tu cuenta» lleva el suyo («${quien.txt.replace(/\s+/g, ' ')}»)`);
+      await p.click('#dc-historial');
+      await p.waitForSelector('#hist-lista li .avatar', { timeout: 5000 });
+      const hist = await p.evaluate(() => [...document.querySelectorAll('#hist-lista li')].map((li) => ({ quien: li.querySelector('b')?.textContent, av: li.querySelector('.avatar')?.textContent, cls: [...(li.querySelector('.avatar')?.classList ?? [])].join(' ') })));
+      const porNombre = new Map();
+      for (const h of hist) porNombre.set(h.quien, new Set([...(porNombre.get(h.quien) ?? []), h.cls]));
+      ok(hist.length > 0 && hist.every((h) => h.av && h.av === h.quien[0].toUpperCase()) && [...porNombre.values()].every((v) => v.size === 1), `avatar: el Historial muestra la inicial de cada persona y su tono no cambia (${hist.length} filas)`);
+      eq(await p.evaluate(() => { const l = document.querySelector('#hist-lista li'); const a = l.querySelector('.avatar').getBoundingClientRect(), t = l.querySelector('time').getBoundingClientRect(); return a.right <= t.left + 1; }), true, 'avatar: queda a la izquierda del texto, sin taparlo');
+      // Color del avatar con contraste suficiente para la inicial blanca
+      const c = await p.evaluate(() => { const e = document.querySelector('#hist-lista .avatar'); const cs = getComputedStyle(e); return [cs.backgroundColor, cs.color]; });
+      eq(consola, [], `consola limpia (identidad): ${consola.join(' | ')}`);
+      void c;
+      await ctx.close();
+    } finally {
+      srv.parar();
+    }
+    // Estados vacíos con dibujo: sin compras y sin histórico
+    const vac = await servidor('vacio');
+    try {
+      const { ctx, p } = await entrar(navegador, vac, ADMIN, { hora: 22 });
+      const r = await p.evaluate(() => { const i = document.querySelector('#lista .vacio.con-ilu .ilu'); const b = i?.getBoundingClientRect(); return { hay: !!i, w: b && Math.round(b.width), txt: document.querySelector('#lista .vacio')?.innerText }; });
+      ok(r.hay && r.w === 64 && /Aún no hay compras/.test(r.txt), `estado vacío: la lista sin compras lleva su dibujo (${r.w}px)`);
+      await ctx.close();
+    } finally {
+      vac.parar();
+    }
+    const sh = await servidor('sinhist');
+    try {
+      const { ctx, p } = await entrar(navegador, sh, ADMIN, { hora: 22 });
+      await p.waitForSelector('#lienzo .g-vacio .ilu', { state: 'attached', timeout: 8000 });
+      const r = await p.evaluate(() => { const i = document.querySelector('#lienzo .g-vacio .ilu'); const b = i?.getBoundingClientRect(); return { hay: !!i, w: b && Math.round(b.width), h: b && Math.round(b.height), sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }; });
+      ok(r.hay && r.w === 64 && r.h === 64 && r.sw <= r.cw, `estado vacío: el gráfico sin histórico lleva su dibujo de 64 px y no ensancha la página (${r.w}×${r.h})`);
+      await ctx.close();
+    } finally {
+      sh.parar();
+    }
+    // Entrada que reacciona: el campo enfocado marca <html> y la montaña responde
+    const ent = await servidor('hoy');
+    try {
+      const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+      const p = await ctx.newPage();
+      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '22'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      const consola = [];
+      p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
+      await p.goto(`${ent.url}/login`, { waitUntil: 'networkidle' });
+      const estado = () => p.evaluate(() => ({ marca: document.documentElement.dataset.entrada ?? '', halo: new DOMMatrix(getComputedStyle(document.querySelector('.luna .halo')).transform).a, banderin: getComputedStyle(document.querySelector('.campo .banderin')).fill }));
+      const reposo = await estado();
+      await p.focus('#l-usuario');
+      await p.waitForFunction(() => new DOMMatrix(getComputedStyle(document.querySelector('.luna .halo')).transform).a > 1.2, null, { timeout: 4000 });
+      const u = await estado();
+      ok(u.marca === 'usuario' && u.halo > reposo.halo, `entrada: al enfocar el usuario la luna se agranda (${reposo.halo.toFixed(2)} → ${u.halo.toFixed(2)})`);
+      await p.focus('#l-clave');
+      await p.waitForFunction(() => getComputedStyle(document.querySelector('.campo .banderin')).fill !== 'rgb(214, 220, 230)' && document.documentElement.dataset.entrada === 'clave', null, { timeout: 4000 });
+      const c = await estado();
+      ok(c.marca === 'clave' && c.banderin !== reposo.banderin, `entrada: al enfocar la contraseña la bandera de la cumbre se alza (${reposo.banderin} → ${c.banderin})`);
+      await p.evaluate(() => document.activeElement.blur());
+      await p.waitForFunction(() => !document.documentElement.dataset.entrada, null, { timeout: 4000 });
+      ok(true, 'entrada: al salir del formulario todo vuelve a su sitio');
+      eq(consola, [], `consola limpia (entrada viva): ${consola.join(' | ')}`);
+      await ctx.close();
+    } finally {
+      ent.parar();
+    }
+  }
+
+  // ---------------------------------------------------------------- la montaña sigue a la caja (también en alto) y el índice lateral se lee
+  {
+    const srv = await servidor('anio');
+    try {
+      const ctx = await navegador.newContext({ viewport: { width: 1983, height: 967 } });
+      const p = await ctx.newPage();
+      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+      await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+      await p.fill('input[autocomplete="username"]', ADMIN[0]);
+      await p.fill('input[autocomplete="current-password"]', ADMIN[1]);
+      await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+      await p.waitForTimeout(2800);
+      const medir = () => p.evaluate(() => ({ caja: Math.round(document.getElementById('montana').getBoundingClientRect().height), vb: Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]) }));
+      const antes = await medir();
+      ok(Math.abs(antes.caja - antes.vb) <= 2, `montaña: el dibujo mide lo que la caja al cargar (${antes.vb} / ${antes.caja})`);
+      // Cambia solo el alto de la ventana (una barra del navegador, las herramientas de desarrollo…): el dibujo se rehace
+      for (const alto of [760, 1100]) {
+        await p.setViewportSize({ width: 1983, height: alto });
+        await p.waitForFunction(() => { const c = document.getElementById('montana').getBoundingClientRect().height; return Math.abs(Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]) - c) <= 2; }, null, { timeout: 4000 });
+        const m = await medir();
+        ok(Math.abs(m.caja - m.vb) <= 2 && m.caja !== antes.caja, `montaña: al cambiar solo el alto de la ventana a ${alto} px se redibuja (${m.vb} / ${m.caja})`);
+      }
+      // Índice lateral: con fondo propio, legible y con su nombre de transición
+      for (const tema of ['oscuro', 'claro']) {
+        await p.evaluate((t) => window.libroTema.fijar(t), tema);
+        await p.waitForTimeout(600);
+        const ind = await p.evaluate(() => {
+          const el = document.getElementById('indice'), cs = getComputedStyle(el);
+          const lum = (c) => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+          const tmp = document.createElement('i'); document.body.append(tmp);
+          const fondo = (() => { tmp.style.color = getComputedStyle(document.documentElement).getPropertyValue('--s1'); return getComputedStyle(tmp).color; })();
+          tmp.remove();
+          const a = lum(getComputedStyle(el.querySelector('a:not([hidden])')).color), f = lum(fondo);
+          return { visible: cs.display !== 'none', vt: cs.viewTransitionName, alfa: Number((/\/\s*([\d.]+)\)/.exec(cs.backgroundColor) ?? [0, 1])[1]), contraste: (Math.max(a, f) + 0.05) / (Math.min(a, f) + 0.05) };
+        });
+        ok(ind.visible && ind.vt === 'indice' && ind.alfa >= 0.85 && ind.contraste >= 4.5, `índice lateral (${tema}): visible, con fondo propio (${ind.alfa}) y letra a ${ind.contraste.toFixed(1)}:1 sobre él`);
+      }
+      await ctx.close();
+      // La entrada también sigue a su caja
+      const ctxL = await navegador.newContext({ viewport: { width: 1280, height: 900 } });
+      const pl = await ctxL.newPage();
+      await pl.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+      const h0 = await pl.evaluate(() => Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]));
+      await pl.setViewportSize({ width: 1280, height: 700 });
+      await pl.waitForFunction((h) => Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]) !== h, h0, { timeout: 4000 });
+      ok(true, 'entrada: la montaña también se redibuja si cambia solo el alto');
+      await ctxL.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {
@@ -1476,8 +1624,11 @@ try {
     ok(sa.visible && sa.svg && sa.area, 'la vista «Sats» enseña la escalera de tus sats');
     eq(sa.defecto, `Hoy tienes ${entero(satsMil)} sats.`, 'la escalera dice los mismos sats que el saldo');
     await p.evaluate(() => document.getElementById('s-lienzo').scrollIntoView({ block: 'center' }));
+    // Con el desplazamiento suave la caja se mueve un rato: se espera a que la página quede quieta antes de apuntar con el ratón
+    await p.evaluate(() => new Promise((listo) => { let ultimo = -1, quietos = 0; const t = () => { if (scrollY === ultimo) { if (++quietos >= 5) return listo(); } else { quietos = 0; ultimo = scrollY; } requestAnimationFrame(t); }; t(); }));
     const sb = await p.locator('#s-lienzo').boundingBox();
     await p.mouse.move(sb.x + sb.width * 0.4, sb.y + sb.height * 0.5);
+    await p.mouse.move(sb.x + sb.width * 0.42, sb.y + sb.height * 0.5);
     await p.waitForFunction(() => /sats · .* en total/.test(document.getElementById('s-lectura').textContent), null, { timeout: 4000 }).catch(() => {}); // sin espera fija: bajo carga tarda más
     ok(/sats · .* en total/.test(await p.textContent('#s-lectura')), 'al recorrer la escalera se lee cuánto sumó cada movimiento');
     await p.mouse.move(5, 5);
