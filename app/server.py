@@ -635,7 +635,7 @@ _ID_CAMBIOS = re.compile(r"[0-9a-z.\-]{1,40}")
 
 
 @app.post("/api/cambios-visto")
-def cambios_visto() -> Response:
+def cambios_visto() -> Response | tuple[Response, int]:
     """Marca que esta persona ya vio el aviso «Qué hay de nuevo» con ese `id` (el de la última entrada de `cambios.js`).
     Cualquiera puede, también un lector; no se audita (solo evita mostrar dos veces lo mismo)."""
     datos = request.get_json(silent=True) or {}
