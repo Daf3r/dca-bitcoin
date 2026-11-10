@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#0a1322" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#fbe8cc" media="(prefers-color-scheme: light)">
 <script src="/tema.js"></script>
+<script src="/accesibilidad.js"></script>
 <script src="/efectos.js"></script>
 <script src="/cielo.js"></script>
 <title>Libro DCA</title>
@@ -23,8 +24,13 @@
 <script type="module" src="/app.js"></script>
 </head>
 <body>
+<a class="saltar" href="#principal">Saltar al contenido</a>
 <!-- Sol de «arrastra para actualizar»: solo lo ve quien tira de la página desde arriba (refrescar.js). -->
 <div class="recarga" id="recarga" aria-hidden="true"><i></i></div>
+<!-- Índice de secciones (solo en pantallas muy anchas, a un lado): resalta la que se ve y salta a ella (indice.js). -->
+<nav class="indice" id="indice" aria-label="Secciones de la página">
+  <a href="#t-saldo" data-s="escena">Saldo</a><a href="#mercado" data-s="grafico">Gráfico</a><a href="#reportes" data-s="reportes">Reportes</a><a href="#compras" data-s="compras">Compras</a>
+</nav>
 <!-- Mini-cabecera: al bajar y perder de vista el saldo, queda una franja con el saldo y el precio; tocarla sube (minicab.js). -->
 <button type="button" class="minicab" id="minicab"><b id="minicab-saldo"></b> <span id="minicab-precio"></span><span class="sr"> Volver arriba</span></button>
 <section class="escena" aria-labelledby="t-saldo">
@@ -50,7 +56,7 @@
   </div>
 </section>
 
-<main class="cuerpo">
+<main class="cuerpo" id="principal" tabindex="-1">
   <!-- Dos columnas en escritorio; en móvil y tablet los contenedores no cuentan (display: contents)
        y el orden visual es el del documento, igual que el de tabulación. -->
   <div class="col-principal">
@@ -176,7 +182,7 @@
   <div class="col-lateral">
   <button class="anotar" type="button" id="anotar">Anotar compra</button>
 
-  <section class="compras" aria-labelledby="t-compras">
+  <section class="compras" id="compras" aria-labelledby="t-compras">
     <div class="sec-cab">
       <h2 id="t-compras" tabindex="-1">Últimas compras</h2>
       <p class="csv">
@@ -333,10 +339,14 @@
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
       <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
+      <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
+      <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
+      <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
       <button type="button" data-cuenta="salir">Salir</button>
       <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
       <button type="button" data-cuenta="cerrar">Cerrar</button>
     </div>
+    <p class="dc-atajos" id="dc-atajos-lista">Atajos con el teclado: <kbd>A</kbd> anotar · <kbd>T</kbd> tema · <kbd>U</kbd> unidad del saldo · <kbd>/</kbd> buscar en la lista.</p>
   </div>
   <form class="dc-clave" id="f-clave" novalidate hidden>
     <h2>Cambiar contraseña</h2>

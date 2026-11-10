@@ -163,6 +163,29 @@ try {
       await auditar(p, `avisos activados ${esquema}`);
       await ctx.close();
     }
+    { // alto contraste y letra muy grande: la app, la hoja y «Tu cuenta» (axe además mide el contraste de los colores reforzados)
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.evaluate(() => { localStorage.setItem('libro.contraste', 'alto'); localStorage.setItem('libro.letra', 'muy-grande'); });
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(3000); await cerrarOferta(p);
+      await auditar(p, `alto contraste y letra muy grande ${esquema}`);
+      await p.evaluate(() => document.querySelector('.compras').scrollIntoView({ block: 'start' })); await p.waitForTimeout(500);
+      await auditar(p, `alto contraste: lista y mini-cabecera ${esquema}`);
+      await p.evaluate(() => scrollTo(0, 0));
+      await p.click('#anotar'); await p.waitForTimeout(500);
+      await auditar(p, `alto contraste: hoja ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await auditar(p, `alto contraste: cuenta ${esquema}`);
+      await ctx.close();
+    }
+    { // el enlace para saltar al contenido, enfocado
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.keyboard.press('Tab'); await p.waitForTimeout(200);
+      await auditar(p, `enlace para saltar al contenido ${esquema}`);
+      await ctx.close();
+    }
     { // la tabla de movimientos (solo en pantalla ancha)
       const ctx = await navegador.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: esquema, bypassCSP: true });
       const p = await ctx.newPage();

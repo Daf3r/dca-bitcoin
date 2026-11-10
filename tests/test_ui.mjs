@@ -824,6 +824,7 @@ try {
       ok((await p.locator('#lista .f-notaed input').boundingBox()).width > 120, 'nota: el campo se ve (no queda recortado)');
       await p.keyboard.press('Escape');
       eq(await p.locator('#lista .f-notaed').count(), 0, 'nota: Esc cancela');
+      eq(await p.evaluate(() => [...document.querySelectorAll('dialog:not([open])')].filter((d) => getComputedStyle(d).display !== 'none').map((d) => d.id)), [], 'diálogos: ninguno cerrado se ve en la página');
       await p.locator('#lista .f-nota-b').first().click();
       await p.fill('#lista .f-notaed input', 'Gasto en renta');
       await p.keyboard.press('Enter');
@@ -1041,6 +1042,140 @@ try {
       eq(consola.filter((c) => !/ERR_FAILED/.test(c)), [], `consola limpia (anotar y datos vivos): ${consola.join(' | ')}`);
       eq(consola.filter((c) => /ERR_FAILED/.test(c)).length, 2, 'consola: solo las dos lecturas abortadas a propósito');
       await ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
+  // ---------------------------------------------------------------- accesibilidad y teclado: saltar al contenido, índice, atajos, letra grande, alto contraste, foco
+  {
+    const srv = await servidor('anio');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: 1600, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
+      const html = (f) => p.evaluate(f);
+
+      // Enlace para saltar al contenido: el primer Tab lo muestra y Enter lleva el foco al contenido principal
+      await p.keyboard.press('Tab');
+      eq(await html(() => document.activeElement?.className), 'saltar', 'saltar: el primer Tab cae en el enlace');
+      ok((await p.locator('.saltar').boundingBox()).y >= 0, 'saltar: al enfocarlo se ve');
+      await p.keyboard.press('Enter');
+      eq(await html(() => document.activeElement?.id), 'principal', 'saltar: Enter deja el foco en el contenido principal');
+      await p.evaluate(() => window.scrollTo(0, 0));
+
+      // Índice de secciones: solo en pantallas muy anchas, salta a la sección y resalta la que se ve
+      ok(await p.locator('#indice').isVisible(), 'índice: a 1600 px sale al lado');
+      eq(await p.locator('#indice a:visible').count(), 4, 'índice: Saldo, Gráfico, Reportes y Compras');
+      await p.click('#indice a[data-s="compras"]');
+      await p.waitForTimeout(900);
+      ok((await p.locator('#t-compras').boundingBox()).y < 200, 'índice: «Compras» lleva a esa sección');
+      eq(await html(() => document.querySelector('#indice a[aria-current="true"]')?.dataset.s), 'compras', 'índice: resalta la sección que se ve');
+      await p.click('#indice a[data-s="escena"]');
+      await p.waitForTimeout(900);
+      ok(await html(() => scrollY < 200), 'índice: «Saldo» sube');
+      await p.setViewportSize({ width: 1280, height: 900 });
+      ok(!(await p.locator('#indice').isVisible()), 'índice: a 1280 px no sale (no roba espacio)');
+      await p.setViewportSize({ width: 1600, height: 900 });
+
+      // Atajos de teclado
+      const tema = () => html(() => document.documentElement.dataset.tema);
+      const pref = () => html(() => localStorage.getItem('libro.tema'));
+      await p.keyboard.press('t');
+      eq(await pref(), 'claro', 'atajos: T pasa de automático a claro');
+      await p.keyboard.press('t');
+      eq([await pref(), await tema()], ['oscuro', 'oscuro'], 'atajos: T pasa a oscuro');
+      await p.keyboard.press('t');
+      eq(await pref(), null, 'atajos: T vuelve a automático');
+      await p.keyboard.press('Control+t');
+      await p.keyboard.press('u');
+      eq((await p.textContent('#s-unidad')).trim(), 'BTC', 'atajos: U cambia la unidad del saldo');
+      await p.keyboard.press('u'); await p.keyboard.press('u');
+      await p.keyboard.press('/');
+      eq(await html(() => document.activeElement?.id), 'l-buscar', 'atajos: / lleva al buscador de la lista');
+      await p.keyboard.type('a');
+      ok(await html(() => document.getElementById('hoja').hidden), 'atajos: dentro de un campo las letras no disparan nada');
+      await p.fill('#l-buscar', '');
+      await p.evaluate(() => document.activeElement?.blur());
+      await p.keyboard.press('a');
+      await p.waitForSelector('#hoja:not([hidden])', { timeout: 2000 });
+      ok(true, 'atajos: A abre la hoja de anotar');
+      await p.keyboard.press('t');
+      eq(await pref(), null, 'atajos: con la hoja abierta no cambian nada');
+      await p.keyboard.press('Escape');
+      await p.waitForTimeout(500);
+      await p.click('#cuenta-btn');
+      ok((await p.textContent('#dc-atajos-lista')).includes('anotar'), 'atajos: la lista está en «Tu cuenta»');
+      await p.click('#dc-atajos');
+      await p.keyboard.press('Escape');
+      await p.waitForTimeout(400);
+      await p.keyboard.press('a');
+      await p.waitForTimeout(400);
+      ok(await html(() => document.getElementById('hoja').hidden), 'atajos: apagados en «Tu cuenta» no hacen nada');
+      await p.click('#cuenta-btn'); await p.click('#dc-atajos');
+
+      // Letra grande: normal → grande → muy grande → normal
+      const letra = () => html(() => [document.documentElement.dataset.letra ?? '', getComputedStyle(document.documentElement).fontSize, getComputedStyle(document.documentElement).getPropertyValue('--toque')]);
+      eq(await letra(), ['', '16px', '48px'], 'letra: normal y zonas de toque de 48 px');
+      await p.click('#dc-letra');
+      eq(await letra(), ['grande', '18px', '52px'], 'letra: grande (112 %) con zonas de 52 px');
+      ok((await p.textContent('#dc-letra')).includes('grande'), 'letra: la etiqueta lo dice');
+      await p.click('#dc-letra');
+      eq(await letra(), ['muy-grande', '20px', '56px'], 'letra: muy grande (125 %) con zonas de 56 px');
+      eq(await html(() => localStorage.getItem('libro.letra')), 'muy-grande', 'letra: se recuerda en el dispositivo');
+      await p.click('#dc-letra');
+      eq(await letra(), ['', '16px', '48px'], 'letra: vuelve a normal');
+      ok(await html(() => localStorage.getItem('libro.letra') === null), 'letra: normal borra la preferencia');
+
+      // Alto contraste: automático → alto → normal → automático
+      const contraste = () => html(() => [document.documentElement.dataset.contraste ?? '', getComputedStyle(document.documentElement).getPropertyValue('--txt2').trim()]);
+      eq((await contraste())[0], '', 'contraste: automático sin pedido del sistema = normal');
+      await p.click('#dc-contraste');
+      const alto = await contraste();
+      ok(alto[0] === 'alto' && (alto[1] === '#e3e8f1' || alto[1] === '#2b251d'), `contraste: alto refuerza los colores de texto (${alto})`);
+      await p.click('#dc-contraste');
+      eq((await contraste())[0], '', 'contraste: «normal» lo apaga aunque el sistema lo pida');
+      await p.click('#dc-contraste');
+      ok((await p.textContent('#dc-contraste')).includes('automático'), 'contraste: vuelve a automático');
+      await p.keyboard.press('Escape');
+
+      // Montaña: descripción para lectores con dónde estás, campamentos y cumbre
+      const desc = await html(() => document.getElementById('m-desc').textContent);
+      ok(/Estás a [\d,]+ sats de altitud/.test(desc) && /(Ya pasaste \d+ de \d+ campamentos|Aún no llegas)/.test(desc) && desc.includes('Siguiente meta') && desc.includes('La cumbre es'), `montaña: descripción completa («${desc}»)`);
+      eq(consola, [], `consola limpia (accesibilidad): ${consola.join(' | ')}`);
+      await ctx.close();
+
+      // El sistema pide más contraste: la app lo sigue sola
+      const sis = await entrar(navegador, srv, ADMIN, { hora: 12, contrast: 'more' });
+      eq(await sis.p.evaluate(() => document.documentElement.dataset.contraste), 'alto', 'contraste: sigue a `prefers-contrast: more` del sistema');
+      await sis.p.click('#cuenta-btn');
+      ok((await sis.p.textContent('#dc-contraste')).includes('como pide el sistema'), 'contraste: la etiqueta explica por qué');
+      await sis.ctx.close();
+
+      // Orden de tabulación y foco: de arriba abajo, siempre visible, con indicador y sin quedar bajo la mini-cabecera
+      const tab = await entrar(navegador, srv, ADMIN, { hora: 12 });
+      const pasos = [];
+      for (let i = 0; i < 70; i++) {
+        await tab.p.keyboard.press('Tab');
+        const paso = await tab.p.evaluate(() => {
+          const el = document.activeElement;
+          if (!el || el === document.body) return null;
+          const r = el.getBoundingClientRect();
+          const cs = getComputedStyle(el);
+          const mc = document.getElementById('minicab');
+          const bajoMini = mc && getComputedStyle(mc).visibility === 'visible' && r.top < mc.getBoundingClientRect().bottom - 1 && r.bottom > mc.getBoundingClientRect().top;
+          return { id: el.id || el.className || el.tagName, y: Math.round(r.top + scrollY), h: Math.round(r.height), indicador: (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) || cs.boxShadow !== 'none', bajoMini: !!bajoMini, cerca: el.closest('dialog,.hoja') !== null, fijo: cs.position === 'fixed' || el.closest('.anotar') !== null };
+        });
+        if (paso?.id === 'saltar' && pasos.length) break; // dio la vuelta completa
+        pasos.push(paso);
+      }
+      const hechos = pasos.filter(Boolean);
+      ok(hechos.length > 30, `foco: se recorren ${hechos.length} elementos con Tab`);
+      eq(hechos.filter((x) => x.h <= 0).map((x) => x.id), [], 'foco: todo lo que recibe el foco se ve');
+      eq(hechos.filter((x) => !x.indicador).map((x) => x.id), [], 'foco: todo lo enfocado muestra su indicador');
+      eq(hechos.filter((x) => x.bajoMini).map((x) => x.id), [], 'foco: nada queda debajo de la mini-cabecera');
+      const fluyen = hechos.filter((x) => !x.fijo); // el botón «Anotar» flota fijo abajo: no cuenta como posición en la página
+      const desorden = fluyen.slice(1).map((x, i) => [fluyen[i], x]).filter(([a, b]) => b.y < a.y - 8 && !a.cerca && !b.cerca).map(([a, b]) => `${a.id}(${a.y}) → ${b.id}(${b.y})`);
+      eq(desorden, [], 'foco: el orden de tabulación sigue el orden visual, de arriba abajo');
+      await tab.ctx.close();
     } finally {
       srv.parar();
     }

@@ -5,6 +5,7 @@ import { dibujarMontana, subir } from './montana.js';
 import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos } from './cuenta.js';
 import { $, R, S, esAdmin, fijarR } from './estado.js';
+import { actualizarIndice } from './indice.js';
 import { pintarLista } from './lista.js';
 import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
 import { pintarNovedades } from './novedades.js';
@@ -33,6 +34,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   ofrecerAvisos();
   pintarMinicab();
   pintarTitulo();
+  actualizarIndice();
 }
 
 // Título de la pestaña con el saldo y el precio («121,567 sats · $75,928»): útil en la computadora con otra pestaña a la vista.

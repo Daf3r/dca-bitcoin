@@ -4,6 +4,7 @@ import { avisar } from './avisar.js';
 import { $, S, api } from './estado.js';
 import { conTransicion, sinMovimiento } from './movimiento.js';
 import { novedadesMostradas } from './novedades.js';
+import { atajosActivos, fijarAtajos } from './atajos.js';
 import { fijarTituloConSaldo, pintar, tituloConSaldo } from './pintar.js';
 
 let avisosOfrecidos = false; // la oferta de avisos sale una sola vez por visita (y una por dispositivo, ver avisos.js)
@@ -59,6 +60,23 @@ function fundirTema() {
   fundidoTimer = setTimeout(() => raiz.classList.remove('tema-fundido'), 450);
 }
 const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'con saldo y precio' : 'sin saldo'}`; };
+// Tamaño de letra (normal → grande → muy grande) y contraste (automático → alto → normal): `accesibilidad.js` los aplica antes de pintar.
+const NOMBRE_LETRA = { '': 'normal', grande: 'grande', 'muy-grande': 'muy grande' };
+const SIGUIENTE_LETRA = { '': 'grande', grande: 'muy-grande', 'muy-grande': '' };
+const NOMBRE_CONTRASTE = { auto: 'automático', alto: 'alto', normal: 'normal' };
+const SIGUIENTE_CONTRASTE = { auto: 'alto', alto: 'normal', normal: 'auto' };
+function etiquetasAccesibilidad() {
+  const acc = window.libroAcc;
+  $('dc-letra').textContent = `Tamaño de letra: ${NOMBRE_LETRA[acc?.letra() ?? '']}`;
+  const c = acc?.contraste() ?? 'auto';
+  $('dc-contraste').textContent = `Contraste: ${NOMBRE_CONTRASTE[c]}${c === 'auto' && acc?.contrasteAlto() ? ' (alto, como pide el sistema)' : ''}`;
+  $('dc-atajos').textContent = `Atajos de teclado: ${atajosActivos() ? 'activados' : 'apagados'}`;
+}
+/** El cambio de tema con la tecla T (atajos.js) pasa por aquí para tener el mismo fundido. */
+export function siguienteTema() {
+  fundirTema();
+  window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]);
+}
 const etiquetaTema = () => { $('dc-tema').textContent = `Tema: ${NOMBRE_TEMA[window.libroTema?.preferencia() ?? 'auto']}`; };
 // Efectos: automático (según el teléfono y el sistema), todos, esenciales o ninguno. `efectos.js` lo aplica antes de pintar.
 const SIGUIENTE_EFECTOS = { auto: 'todos', todos: 'esenciales', esenciales: 'ninguno', ninguno: 'auto' };
@@ -72,7 +90,7 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); dCuenta.showModal(); });
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -155,6 +173,9 @@ dCuenta.addEventListener('click', async (e) => {
   if (!b) return;
   const accion = b.dataset.cuenta;
   if (accion === 'cerrar') dCuenta.close();
+  else if (accion === 'letra') { window.libroAcc?.fijarLetra(SIGUIENTE_LETRA[window.libroAcc.letra()]); etiquetasAccesibilidad(); }
+  else if (accion === 'contraste') { window.libroAcc?.fijarContraste(SIGUIENTE_CONTRASTE[window.libroAcc.contraste()]); etiquetasAccesibilidad(); }
+  else if (accion === 'atajos') { fijarAtajos(!atajosActivos()); etiquetasAccesibilidad(); }
   else if (accion === 'titulo') { fijarTituloConSaldo(!tituloConSaldo()); etiquetaTitulo(); }
   else if (accion === 'tema') { fundirTema(); window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
   else if (accion === 'efectos') { window.libroEfectos?.fijar(SIGUIENTE_EFECTOS[window.libroEfectos.preferencia()]); etiquetaEfectos(); }
