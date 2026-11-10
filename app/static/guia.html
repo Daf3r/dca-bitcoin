@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<script src="/tema.js"></script>
+<script src="/accesibilidad.js"></script>
+<script src="/efectos.js"></script>
+<script src="/cielo.js"></script>
+<title>Guía de estilo · Libro DCA</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+<script type="module" src="/guia.js"></script>
+</head>
+<body class="pag-guia">
+<svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  <symbol id="i-traslado" viewBox="0 0 24 24"><path d="M4 8h14m-4-4 4 4-4 4M20 16H6m4-4-4 4 4 4"/></symbol>
+  <symbol id="i-externo" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4 10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-rayo" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></symbol>
+  <symbol id="i-copiar" viewBox="0 0 24 24"><path d="M9 9h11v11H9zM5 15V4h11"/></symbol>
+  <symbol id="i-campana" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></symbol>
+  <symbol id="i-lapiz" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
+  <symbol id="i-sube" viewBox="0 0 24 24"><path d="M12 6 4 18h16z" fill="currentColor"/></symbol>
+  <symbol id="i-baja" viewBox="0 0 24 24"><path d="M12 18 4 6h16z" fill="currentColor"/></symbol>
+</svg>
+<a class="saltar" href="#guia-principal">Saltar al contenido</a>
+<!-- Guía de estilo viva (idea 90): una página para el que mantiene la app. No está enlazada en ningún sitio; solo el admin la abre en /guia.
+     Muestra los colores, la letra, los botones, las tarjetas y los iconos con los estilos reales (styles.css), en claro y oscuro, con
+     todos los niveles de efectos y de letra. Si algo se sale del estilo, se ve aquí. El sprite de arriba debe ser idéntico al de index.html
+     (lo comprueba test_api). -->
+<main class="guia" id="guia-principal" tabindex="-1">
+  <header class="guia-cab">
+    <h1>Guía de estilo</h1>
+    <p>Los estilos reales de la app. Cambia el tema, los efectos y la letra para ver cada estado.</p>
+    <div class="guia-ctl" id="guia-ctl" role="group" aria-label="Estados de la página"></div>
+  </header>
+
+  <section aria-labelledby="g-colores">
+    <h2 id="g-colores">Colores</h2>
+    <p class="guia-nota">Cada muestra dice su valor y, en los de texto, el contraste sobre una tarjeta (<code>--s1</code>): mínimo 4.5:1.</p>
+    <ul class="guia-col" id="guia-col"></ul>
+  </section>
+
+  <section aria-labelledby="g-letra">
+    <h2 id="g-letra">Letra</h2>
+    <p class="guia-fr" id="guia-fr-titulo">Fraunces para títulos y palabras</p>
+    <p class="guia-cifra" id="guia-cifra">1,211,769 sats · $77,598.24</p>
+    <p class="guia-nota">Bricolage Grotesque para todas las cifras (tabulares y alineadas). Texto normal: <b>negrita</b>, <span class="guia-t2">texto secundario</span>, <span class="guia-t3">texto terciario</span>.</p>
+  </section>
+
+  <section aria-labelledby="g-botones">
+    <h2 id="g-botones">Botones y controles</h2>
+    <div class="guia-fila d-bot">
+      <button type="button" class="primario">Primario</button>
+      <button type="button">Secundario</button>
+      <button type="button" class="peligro">Peligro</button>
+      <button type="button" disabled>Desactivado</button>
+      <button type="button" class="enlace">Enlace</button>
+    </div>
+    <div class="guia-fila">
+      <div class="rangos" role="group" aria-label="Ejemplo de rangos"><button type="button" aria-pressed="false">1M</button><button type="button" aria-pressed="true">6M</button><button type="button" aria-pressed="false">1A</button><button type="button" aria-pressed="false">Todo</button></div>
+      <div class="l-chips" role="group" aria-label="Ejemplo de chips"><button type="button" data-f="todos" aria-pressed="true">Todo</button><button type="button" data-f="compra" aria-pressed="false">Compras</button><button type="button" data-f="extra" aria-pressed="false">Extra</button></div>
+    </div>
+    <div class="guia-fila guia-anotar"><button type="button" class="anotar-ej">Anotar compra</button><small class="guia-nota">El botón «Anotar» real es fijo en la app; este es solo su aspecto.</small></div>
+  </section>
+
+  <section aria-labelledby="g-tarjetas">
+    <h2 id="g-tarjetas">Tarjetas y avisos</h2>
+    <p class="toca" data-estado="hecho"><i aria-hidden="true"></i><span>Al día: ya compraste esta semana.</span></p>
+    <p class="toca" data-estado="toca"><i aria-hidden="true"></i><span>Te toca comprar esta semana para mantener tu racha de 12.</span></p>
+    <p class="toca" data-estado="perdida"><i aria-hidden="true"></i><span>Tu racha se reinició; empieza otra cuando quieras.</span></p>
+    <div class="caida"><p>BTC está 22% por debajo de su máximo de los últimos 30 días. Es opcional.</p><button type="button" class="enlace">Ocultar hoy</button></div>
+    <div class="rep-curiosas"><b>Una tarjeta de reporte</b><p class="guia-nota">Fondo <code>--s1</code>, esquinas de 24 px.</p></div>
+    <p class="vacio con-ilu" id="guia-vacio"></p>
+  </section>
+
+  <section aria-labelledby="g-iconos">
+    <h2 id="g-iconos">Iconos, avatares y medallas</h2>
+    <ul class="guia-iconos" id="guia-iconos"></ul>
+    <div class="guia-fila" id="guia-av"></div>
+    <ul class="medallas" id="guia-med"></ul>
+    <div class="guia-fila" id="guia-ilu"></div>
+  </section>
+</main>
+</body>
+</html>

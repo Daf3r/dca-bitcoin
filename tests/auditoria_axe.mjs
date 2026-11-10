@@ -198,6 +198,17 @@ try {
       await p.click('#cam-ok'); await p.waitForFunction(() => fetch('/api/yo').then((r) => r.json()).then((j) => j.cambios !== '0'), null, { timeout: 5000 }); // queda visto: los demás estados no lo ven
       await ctx.close();
     }
+    { // la guía de estilo (solo admin) y el modo pantalla grande
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.goto(`${anio.url}/guia`, { waitUntil: 'networkidle' }); await p.waitForTimeout(500);
+      await auditar(p, `guía de estilo ${esquema}`);
+      await p.goto(`${anio.url}/#tv`, { waitUntil: 'networkidle' }); await p.waitForTimeout(3000);
+      await auditar(p, `pantalla grande ${esquema}`);
+      await p.mouse.move(300, 300); await p.waitForTimeout(500);
+      await auditar(p, `pantalla grande con el botón de salir ${esquema}`);
+      await ctx.close();
+    }
     { // el enlace para saltar al contenido, enfocado
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

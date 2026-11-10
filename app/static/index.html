@@ -67,6 +67,9 @@
   </div>
   <!-- Banderas tocables de la montaña y su tarjeta (montana.js): van aquí, después del saldo, para que el orden de tabulación siga el visual. -->
   <div class="m-banderas" id="m-banderas"></div>
+  <!-- Modo pantalla grande (tv.js): solo se ve con html[data-tv]. -->
+  <p class="tv-pie" id="tv-ultimo" aria-live="polite"></p>
+  <button type="button" class="tv-salir" id="tv-salir">Salir de pantalla grande</button>
 </section>
 
 <main class="cuerpo" id="principal" tabindex="-1">
@@ -353,6 +356,8 @@
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
+      <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
+      <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
       <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
       <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
       <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>

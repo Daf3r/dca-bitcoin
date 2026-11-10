@@ -10,9 +10,10 @@ export const CAMBIOS = [
     id: '2026-11-b', fecha: '2026-11-10',
     items: [
       'La montaña ahora tiene una cima más cercana: la siguiente potencia de 10 (100k, 1M, 10M…). Al llegar, se rehace con la siguiente.',
-      'Toca una bandera de la montaña para ver cuándo la alcanzaste.',
-      'Cada compra planta un pino al pie de la montaña.',
+      'Toca una bandera de la montaña para ver cuándo la alcanzaste; cada compra planta un pino al pie.',
       'En «Tu cuenta» está «Tu historia»: tus medallas de constancia y la línea de tiempo de cómo llegaste hasta aquí.',
+      'Modo pantalla grande (también en «Tu cuenta»): la montaña, el saldo y el último movimiento para dejar el libro en un televisor.',
+      'Sonido opcional al guardar una compra (apagado: se enciende en «Tu cuenta»).',
       'Iconos nuevos, colores por persona y una entrada que reacciona al escribir.',
     ],
   },

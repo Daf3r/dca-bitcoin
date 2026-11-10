@@ -533,6 +533,14 @@ def pantalla_login() -> Any:
     return _servir_versionado("login.html", "text/html", _REF_HTML, "no-store")
 
 
+@app.get("/guia")
+def pantalla_guia() -> Any:
+    """La guía de estilo viva (idea 90): una página para quien mantiene la app. No está enlazada; solo el admin la abre."""
+    if g.usuario["rol"] != "admin":
+        return Response("No existe.", status=404, mimetype="text/plain")
+    return _servir_versionado("guia.html", "text/html", _REF_HTML, "no-store")
+
+
 @app.get("/api/estado")
 def estado() -> Response:
     # Lo único público: si ya hay cuentas. No dice cuántas ni cuáles.
