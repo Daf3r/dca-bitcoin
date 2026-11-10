@@ -2034,6 +2034,76 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- teléfono acostado y pantallas muy anchas (campamento 7, 2/2)
+  {
+    const srv = await servidor('anio');
+    try {
+      const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      // --- Teléfono acostado (idea 64): la escena mide la pantalla, el saldo a la izquierda y la montaña a la derecha.
+      for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
+        const r = await entrar(navegador, srv, ADMIN, { viewport: { width: w, height: h }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 }, sinAvisos);
+        const m = await r.p.evaluate(() => {
+          const b = (s) => { const e = document.querySelector(s); return e ? e.getBoundingClientRect() : null; };
+          const esc = b('.escena'), saldo = b('.saldo'), yo = b('.yo'), btn = b('.anotar'), saludo = b('#saludo'), k = b('.saldo-k'), prox = b('#prox');
+          return { alto: innerHeight, esc: esc.height, saldoR: saldo.right, saldoB: saldo.bottom, yoX: yo ? yo.left : null, btnT: btn.top, btnL: btn.left, btnR: btn.right,
+            saludoB: saludo.bottom, kT: k.top, proxB: prox.bottom, scrollX: document.documentElement.scrollWidth > innerWidth };
+        });
+        ok(Math.abs(m.esc - m.alto) <= 2, `${w}×${h} acostado: la escena mide la pantalla (${m.esc} de ${m.alto})`);
+        ok(m.yoX > m.saldoR, `${w}×${h}: «Tú» (x=${Math.round(m.yoX)}) queda a la derecha del saldo (${Math.round(m.saldoR)})`);
+        ok(m.btnL < 60 && m.btnR < w * 0.5, `${w}×${h}: «Anotar» baja a la esquina izquierda`);
+        ok(m.proxB <= m.btnT + 2, `${w}×${h}: el saldo no pisa el botón (${Math.round(m.proxB)} ≤ ${Math.round(m.btnT)})`);
+        ok(m.kT >= m.saludoB - 4, `${w}×${h}: el saludo no pisa «Tu saldo»`);
+        ok(!m.scrollX, `${w}×${h} acostado: sin scroll horizontal`);
+        eq(r.consola, [], `consola limpia acostado ${w}×${h}: ${r.consola.join(' | ')}`);
+        await r.ctx.close();
+      }
+      // La entrada acostada: el formulario a la izquierda, entero a la vista y con zonas de toque de 48 px.
+      for (const [w, h] of [[844, 390], [568, 320]]) {
+        const ctx = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: w, height: h }, isMobile: true, hasTouch: true });
+        const p = await ctx.newPage();
+        await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '22'); } catch { /* sin almacenamiento */ } });
+        await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+        const e = await p.evaluate(() => {
+          const r = (s) => document.querySelector(s).getBoundingClientRect();
+          const caja = r('.login-caja'), boton = r('.login-caja .guardar'), marca = r('.cima .marca');
+          return { alto: innerHeight, cajaB: caja.bottom, cajaT: caja.top, cajaR: caja.right, botonH: boton.height, botonB: boton.bottom, marcaB: marca.bottom,
+            scrollY: document.documentElement.scrollHeight > innerHeight + 1, montanaX: r('.montana').left };
+        });
+        ok(e.botonB <= e.alto && e.cajaT >= 0 && e.botonH >= 47.5, `entrada acostada ${w}×${h}: el botón «Entrar» se ve entero y mide ${Math.round(e.botonH)} px`);
+        ok(!e.scrollY, `entrada acostada ${w}×${h}: cabe sin bajar la página`);
+        ok(e.cajaT >= e.marcaB - 2, `entrada acostada ${w}×${h}: la tarjeta no tapa la marca`);
+        await ctx.close();
+      }
+      // --- Pantallas muy anchas (idea 88): la raíz y el marco de contenido crecen; el índice no se encima al contenido.
+      for (const [w, h, zoom] of [[1920, 1080, 1], [2560, 1440, 1.25], [3440, 1440, 1.5], [3840, 2160, 1.5]]) {
+        const r = await entrar(navegador, srv, ADMIN, { viewport: { width: w, height: h }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, sinAvisos);
+        const m = await r.p.evaluate(() => {
+          const b = (s) => document.querySelector(s).getBoundingClientRect();
+          const cuerpo = b('.cuerpo'), idx = b('.indice'), saldo = document.querySelector('#s-sats .od-num').getBoundingClientRect();
+          return { fs: parseFloat(getComputedStyle(document.documentElement).fontSize), cuerpoW: cuerpo.width, cuerpoL: cuerpo.left, idxR: idx.right, idxW: idx.width,
+            saldoW: saldo.width, scrollX: document.documentElement.scrollWidth > innerWidth };
+        });
+        eq(m.fs, 16 * zoom, `${w}×${h}: la raíz vale ${16 * zoom} px`);
+        ok(m.saldoW > 0, `${w}×${h}: el saldo se ve`);
+        ok(!m.scrollX, `${w}×${h}: sin scroll horizontal`);
+        ok(w < 1500 || m.idxR <= m.cuerpoL, `${w}×${h}: el índice (hasta ${Math.round(m.idxR)}) no se encima al contenido (desde ${Math.round(m.cuerpoL)})`);
+        if (zoom > 1) ok(m.cuerpoW > 1240 * zoom * 0.9, `${w}×${h}: el contenido crece con la pantalla (${Math.round(m.cuerpoW)} px)`);
+        else ok(m.cuerpoW <= 1240, `1920×1080: el contenido sigue en 1240 px como siempre (${Math.round(m.cuerpoW)})`);
+        eq(r.consola, [], `consola limpia ${w}×${h}: ${r.consola.join(' | ')}`);
+        await r.ctx.close();
+      }
+      // Con letra muy grande el zoom de la pantalla ancha se compone (125 % × 1.25).
+      {
+        const r = await entrar(navegador, srv, ADMIN, { viewport: { width: 2560, height: 1440 }, isMobile: false, hasTouch: false }, () => { try { localStorage.setItem('libro.letra', 'muy-grande'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+        eq(await r.p.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize)), 16 * 1.5625, 'letra muy grande a 2560 px: 125 % × 1.25');
+        ok(!(await r.p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'letra muy grande a 2560 px: sin scroll horizontal');
+        await r.ctx.close();
+      }
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {

@@ -19,8 +19,9 @@ fs.mkdirSync(SALIDA, { recursive: true });
 
 const TODOS = ['hoy', 'dos', 'tres', 'nueve', 'anio', 'largo', 'ballena', 'mil', 'vacio', 'sinprecio', 'sinhist'];
 const ESCENARIOS = process.env.SOLO ? TODOS.filter((e) => process.env.SOLO.split(',').includes(e)) : TODOS; // SOLO=hoy,mil para revisar unos pocos
-const ANCHOS_TODOS = [[320, 640], [375, 812], [768, 1024], [1024, 768], [1280, 800], [1920, 1080], [2560, 1300]];
-const ANCHOS_BREVE = [[320, 640], [768, 1024], [1280, 800]];
+// Incluye teléfonos acostados (568×320, 667×375, 844×390) y un monitor ultra ancho (3440×1440).
+const ANCHOS_TODOS = [[320, 640], [375, 812], [568, 320], [667, 375], [768, 1024], [844, 390], [1024, 768], [1280, 800], [1920, 1080], [2560, 1300], [3440, 1440]];
+const ANCHOS_BREVE = [[320, 640], [768, 1024], [844, 390], [1280, 800]];
 const rapido = process.argv.includes('rapido');
 const CON_LETRA = ['hoy', 'anio', 'mil']; // escenarios que también se revisan con letra muy grande y alto contraste
 
