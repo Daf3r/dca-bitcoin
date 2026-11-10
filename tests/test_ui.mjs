@@ -1294,21 +1294,21 @@ try {
       eq(info.pinos, Math.ceil(nCompras / Math.ceil(nCompras / 60)), `bosque: un pino por compra (${info.pinos} de ${nCompras})`);
       ok(info.desc.includes(`un pino por compra (${nCompras})`), 'bosque: la descripción de la montaña lo menciona');
       // Abrir con el ratón y cerrar con «Cerrar» (el foco vuelve a la bandera)
-      await p.click('.m-bandera >> nth=0');
-      let t = await p.evaluate(() => { const c = document.getElementById('m-tarjeta'); return { visible: !c.hidden && getComputedStyle(c).display !== 'none', rol: c.getAttribute('role'), txt: c.innerText, exp: document.querySelector('.m-bandera').getAttribute('aria-expanded'), dentro: (() => { const r = c.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0; })() }; });
+      await p.click('.m-bandera >> nth=-1');
+      let t = await p.evaluate(() => { const c = document.getElementById('m-tarjeta'); return { visible: !c.hidden && getComputedStyle(c).display !== 'none', rol: c.getAttribute('role'), txt: c.innerText, exp: document.querySelector('.m-bandera:last-of-type').getAttribute('aria-expanded'), dentro: (() => { const r = c.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0; })() }; });
       ok(t.visible && t.rol === 'group' && /Lo alcanzaste el \d+ \w+ \d{4}/.test(t.txt) && t.exp === 'true' && t.dentro, `bandera: la tarjeta dice cuándo la alcanzaste («${t.txt.replace(/\n+/g, ' · ')}»)`);
       const x = await p.evaluate(() => { const b = document.querySelector('#m-tarjeta .m-tarjeta-x'); return [b.offsetWidth, b.offsetHeight]; }); // sin transformaciones: la tarjeta entra con un ligero zoom
       ok(x[0] >= 47.5 && x[1] >= 47.5, `bandera: «Cerrar» de 48 px (${x})`);
       await p.click('#m-tarjeta .m-tarjeta-x');
       eq(await p.evaluate(() => [document.getElementById('m-tarjeta').hidden, document.activeElement?.classList.contains('m-bandera')]), [true, true], 'bandera: Cerrar la oculta y devuelve el foco a la bandera');
-      // Teclado: Enter abre, Esc cierra; tocar otro sitio también cierra
-      await p.focus('.m-bandera >> nth=0');
+      // Los botones van de arriba abajo (la cumbre primero, como en el orden visual). Teclado: Enter abre, Esc cierra; tocar otro sitio también cierra
+      await p.focus('.m-bandera >> nth=-1');
       await p.keyboard.press('Enter');
       eq(await p.evaluate(() => document.getElementById('m-tarjeta').hidden), false, 'bandera: Enter abre la tarjeta');
       await p.keyboard.press('Escape');
       eq(await p.evaluate(() => document.getElementById('m-tarjeta').hidden), true, 'bandera: Esc la cierra');
       // Una bandera futura dice cuánto falta
-      await p.click('.m-bandera >> nth=-1');
+      await p.click('.m-bandera >> nth=0');
       ok(/Te faltan [\d,]+ sats/.test(await p.innerText('#m-tarjeta')), 'bandera: la meta futura dice cuánto falta');
       await p.mouse.click(5, 5);
       eq(await p.evaluate(() => document.getElementById('m-tarjeta').hidden), true, 'bandera: tocar en otro sitio la cierra');
