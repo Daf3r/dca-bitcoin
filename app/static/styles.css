@@ -1246,7 +1246,7 @@ html[data-entrada="clave"] .pag-login .campo .banderin { fill: var(--naranja); o
 .medalla { display: grid; justify-items: center; gap: 2px; text-align: center; }
 .medalla b { font-size: 0.8125rem; line-height: 1.2; }
 .medalla small { font-size: 0.75rem; line-height: 1.25; color: var(--txt2); }
-.medalla.bloq { opacity: 0.8; }
+.medalla.bloq .med { opacity: 0.8; } /* solo el dibujo: el texto conserva su contraste */
 .med { width: 56px; height: 66px; }
 .med-cinta { fill: var(--s3); }
 .med-disco { fill: var(--s2); stroke: var(--s3); stroke-width: 2; }
