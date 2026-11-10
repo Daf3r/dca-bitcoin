@@ -8,7 +8,6 @@ export const S = {
   compras: [], cargado: false, errorCarga: false,
   precio: null, precioTs: 0, fuente: '', viejo: false, errorPrecio: false,
   historico: [], histEstado: 'cargando', histDesde: null, rango: null,
-  verTodas: false,
   traslados: [],
   usuario: null, rol: null,
 };

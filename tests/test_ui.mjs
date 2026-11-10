@@ -742,6 +742,180 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- la lista: meses, «Ver más», buscar, filtrar, ordenar, tabla, nota, borrador, copiar
+  {
+    const srv = await servidor('mil');
+    try {
+      const permisos = ['clipboard-read', 'clipboard-write'];
+      const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 12, permissions: permisos });
+      const filas = () => p.locator('#lista .fila').count();
+      const res = () => p.evaluate(() => document.getElementById('l-res').textContent);
+      const quitar = async () => { if (await p.locator('#l-limpiar').isVisible()) await p.click('#l-limpiar'); };
+      const hoy = hoySV();
+      const compras = await datos(p, '/api/compras');
+      const traslados = await datos(p, '/api/traslados');
+      const total = compras.length + traslados.length;
+      await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+
+      // Meses y «Ver más»
+      const cab = await p.locator('#lista .mes-cab h3').first().innerText();
+      ok(/^[A-ZÁÉÍÓÚ][a-záéíóú]+ \d{4} · \d+ (compra|compras)/.test(cab.replace(/\s+/g, ' ')), `lista: encabezado por mes con su resumen («${cab}»)`);
+      eq(await filas(), 8, 'lista: arranca con las 8 más recientes');
+      eq((await p.textContent('#ver-todas')).trim(), `Ver más (${(total - 8).toLocaleString('en-US')} más)`, 'lista: «Ver más» dice cuántas faltan');
+      await p.click('#ver-todas');
+      eq(await filas(), 33, 'lista: «Ver más» trae 25 más');
+      ok(await p.evaluate(() => document.activeElement?.classList.contains('fila')), 'lista: el foco pasa a la primera fila nueva');
+      ok(await p.locator('#l-ctl').isVisible(), 'lista: con muchos movimientos salen el buscador y los filtros');
+
+      // Buscar y filtrar por tipo
+      await p.fill('#l-buscar', 'caída');
+      await p.waitForTimeout(150);
+      const extras = compras.filter((c) => c.extra).length;
+      eq(await filas(), Math.min(8, extras), 'búsqueda: sin acentos ni mayúsculas, vuelve al primer tramo');
+      ok((await res()).startsWith(`${extras} de `), `búsqueda: dice cuántos de cuántos (${await res()})`);
+      eq(await p.locator('#lista .fila:not(:has(.f-extra))').count(), 0, 'búsqueda: todas son compras extra');
+      await p.click('#l-limpiar');
+      eq([await p.inputValue('#l-buscar'), await res()], ['', ''], 'filtros: «Quitar filtros» limpia todo');
+      await p.click('#l-chips button[data-f="venta"]');
+      eq(await filas(), compras.filter((c) => c.tipo === 'venta').length, 'filtro: ventas y gastos');
+      await p.click('#l-chips button[data-f="traslado"]');
+      eq([await filas(), await p.evaluate(() => document.querySelector('#l-chips [data-f="traslado"]').getAttribute('aria-pressed'))], [traslados.length, 'true'], 'filtro: traslados');
+      await p.click('#l-chips button[data-f="txid"]');
+      eq(await filas(), 0, 'filtro: «Con TXID» sin ninguno dice que nada coincide');
+      ok((await p.textContent('#lista .vacio')).includes('Nada coincide'), 'filtro: mensaje de que nada coincide');
+      await quitar();
+
+      // Rango de fechas y totales intactos
+      const desde = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
+      await p.click('#l-mas summary');
+      await p.fill('#l-desde', desde);
+      await p.waitForTimeout(150);
+      const esperadas = compras.filter((c) => c.fecha >= desde).length + traslados.filter((t) => t.fecha >= desde).length;
+      while (await p.locator('#ver-todas').isVisible()) await p.click('#ver-todas');
+      eq(await filas(), esperadas, `rango: desde ${desde} deja ${esperadas} movimientos`);
+      const saldoAntes = await p.evaluate(() => document.querySelector('#s-sats .sr').textContent);
+      eq(saldoAntes, entero(compras.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0)), 'rango: el saldo de arriba sigue siendo el de todo');
+      await p.fill('#l-hasta', desde);
+      await p.waitForTimeout(150);
+      ok((await filas()) <= 2, 'rango: con «hasta» igual a «desde» queda un día');
+      await quitar();
+
+      // Orden: más antiguas, mayor monto (sin meses) y se recuerda
+      await p.selectOption('#l-orden', 'antiguas');
+      const primero = compras.map((c) => c.fecha).sort()[0];
+      ok((await p.locator('#lista .mes-cab h3').first().innerText()).includes(primero.slice(0, 4)), 'orden: las más antiguas primero (empieza por el primer año)');
+      await p.selectOption('#l-orden', 'monto');
+      eq(await p.locator('#lista .mes-cab').count(), 0, 'orden por monto: lista plana, sin meses');
+      const mayor = Math.max(...compras.map((c) => c.monto));
+      ok((await p.locator('#lista .f-det').first().innerText()).includes(`$${mayor.toFixed(2)}`), 'orden: la compra de mayor monto va primero');
+      await p.reload({ waitUntil: 'networkidle' });
+      await p.waitForTimeout(2500);
+      eq(await p.inputValue('#l-orden'), 'monto', 'orden: se recuerda en el dispositivo');
+      await p.selectOption('#l-orden', 'recientes');
+      ok(await p.evaluate(() => localStorage.getItem('libro.lista.orden')) === null, 'orden: el de siempre borra la preferencia');
+
+      // Nota editable en la fila (solo admin)
+      await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+      await p.fill('#l-buscar', 'gasto');
+      await p.waitForTimeout(150);
+      await p.locator('#lista .f-nota-b').first().click();
+      ok(await p.evaluate(() => document.activeElement?.closest('.f-notaed') !== null), 'nota: «Editar nota» abre el campo con el foco');
+      await p.keyboard.press('Escape');
+      eq(await p.locator('#lista .f-notaed').count(), 0, 'nota: Esc cancela');
+      await p.locator('#lista .f-nota-b').first().click();
+      await p.fill('#lista .f-notaed input', 'Gasto en renta');
+      await p.keyboard.press('Enter');
+      await p.waitForFunction(() => document.getElementById('aviso-txt').textContent === 'Nota guardada.', null, { timeout: 5000 });
+      ok((await datos(p, '/api/compras')).some((c) => c.nota === 'Gasto en renta'), 'nota: se guardó en el servidor por la ruta de edición');
+      ok((await p.locator('#lista .f-det').allInnerTexts()).some((t) => t.includes('Gasto en renta')), 'nota: la fila muestra la nota nueva');
+      await quitar();
+
+      // Borrador de la hoja: lo escrito vuelve; «Empezar de cero» lo descarta; guardar lo borra
+      await p.evaluate(() => window.scrollTo(0, 0));
+      await p.click('#anotar');
+      await p.waitForTimeout(400);
+      await p.fill('#h-sats', '12345');
+      await p.click('#hoja [data-cerrar].cerrar');
+      await p.waitForTimeout(500);
+      await p.click('#anotar');
+      await p.waitForTimeout(400);
+      eq([await p.inputValue('#h-sats'), await p.locator('#h-borrador').isVisible(), await p.inputValue('#h-fecha')], ['12,345', true, hoy], 'borrador: lo escrito vuelve, avisa y la fecha es la de hoy');
+      await p.click('#h-borrador-no');
+      await p.waitForTimeout(400);
+      eq([await p.inputValue('#h-sats'), await p.locator('#h-borrador').isVisible()], ['', false], 'borrador: «Empezar de cero» lo descarta');
+      await p.fill('#h-sats', '12345');
+      await p.click('#guardar');
+      await p.waitForFunction(() => /^Anotado/.test(document.getElementById('aviso-txt').textContent), null, { timeout: 8000 });
+      await p.waitForTimeout(2500);
+      await p.click('#anotar');
+      await p.waitForTimeout(400);
+      eq([await p.inputValue('#h-sats'), await p.locator('#h-borrador').isVisible()], ['', false], 'borrador: al guardar se borra');
+      await p.keyboard.press('Escape');
+      await p.waitForTimeout(500);
+
+      // Lo recién guardado brilla cuando se ve la fila
+      await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'center' }));
+      await p.waitForSelector('#lista li.resalte', { timeout: 3000 });
+      ok(true, 'resalte: la compra recién guardada brilla al verse en la lista');
+
+      // Anular: la fila sale con su animación (queda un instante) y desaparece
+      await p.locator('#lista .fila').first().click();
+      await p.waitForTimeout(400);
+      await p.click('#h-borrar');
+      await p.click('#d-borrar button[value="si"]');
+      await p.waitForSelector('#lista li.sale', { state: 'attached', timeout: 2000 });
+      await p.waitForFunction(() => !document.querySelector('#lista li.sale'), null, { timeout: 3000 });
+      ok(true, 'filas: al anular, la fila se va con animación y se retira sola');
+      await p.waitForTimeout(500);
+
+      // Copiar: TXID con un toque y el saldo manteniendo pulsado (sin cambiar de unidad)
+      const txid = 'ab'.repeat(32);
+      await p.evaluate(async (t) => { await fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), monto: 20, sats: 25000, txid: t, tipo: 'compra' }) }); }, txid);
+      await p.reload({ waitUntil: 'networkidle' });
+      await p.waitForTimeout(2500);
+      await p.locator('#lista .f-copiar').first().click();
+      await p.waitForFunction(() => document.getElementById('aviso-txt').textContent === 'TXID copiado', null, { timeout: 3000 });
+      eq(await p.evaluate(() => navigator.clipboard.readText()), txid, 'copiar: el TXID queda en el portapapeles');
+      await p.evaluate(() => window.scrollTo(0, 0));
+      const cs = await p.locator('#s-saldo-v').boundingBox();
+      await p.mouse.move(cs.x + 40, cs.y + cs.height / 2);
+      await p.mouse.down();
+      await p.waitForTimeout(900);
+      await p.mouse.up();
+      await p.waitForFunction(() => document.getElementById('aviso-txt').textContent.startsWith('Saldo copiado'), null, { timeout: 3000 });
+      const [copia, saldoTxt, unidad] = await p.evaluate(async () => [await navigator.clipboard.readText(), document.querySelector('#s-sats .sr').textContent, document.getElementById('s-unidad').textContent]);
+      eq([copia, unidad], [saldoTxt.replace(/[^\d.]/g, ''), 'sats'], 'copiar: mantener pulsado el saldo copia solo los números y no cambia de unidad');
+      eq(consola, [], `consola limpia (lista): ${consola.join(' | ')}`);
+      await ctx.close();
+
+      // Tabla compacta: solo en pantallas anchas
+      const ancho = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: 1280, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
+      ok(await ancho.p.locator('#l-tabla').isVisible(), 'tabla: en pantalla ancha sale «Ver como tabla»');
+      await ancho.p.click('#l-tabla');
+      await ancho.p.waitForSelector('#d-tabla[open]');
+      eq(await ancho.p.locator('#dt tbody tr').count(), 600, 'tabla: máximo 600 filas y lo dice');
+      ok((await ancho.p.textContent('#dt-nota')).includes('primeros 600'), 'tabla: la nota explica el tope');
+      eq(await ancho.p.locator('#dt thead th[scope="col"]').count(), 8, 'tabla: ocho columnas con encabezado');
+      await ancho.p.locator('#dt .dt-edit').first().click();
+      await ancho.p.waitForSelector('#hoja:not([hidden])');
+      ok(!(await ancho.p.locator('#d-tabla[open]').count()), 'tabla: tocar una fecha cierra la tabla y abre la edición');
+      eq(await ancho.consola, [], 'consola limpia (tabla)');
+      await ancho.ctx.close();
+      const movil = await entrar(navegador, srv, ADMIN, { hora: 12 });
+      ok(!(await movil.p.locator('#l-tabla').isVisible()), 'tabla: en el teléfono no sale');
+      await movil.ctx.close();
+
+      // Lectores: buscan y copian, pero no editan notas
+      const lector = await entrar(navegador, srv, LECTOR, { hora: 12 });
+      if (await lector.p.locator('#nov-ok').isVisible()) await lector.p.click('#nov-ok');
+      ok(await lector.p.locator('#l-ctl').isVisible(), 'lectores: ven el buscador y los filtros');
+      eq(await lector.p.locator('#lista .f-nota-b').count(), 0, 'lectores: no editan notas');
+      await lector.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {

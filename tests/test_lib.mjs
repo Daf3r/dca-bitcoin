@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {
-  serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
+  movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
@@ -520,6 +520,45 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(sd.every((s) => aFechaTest(s.hasta) - aFechaTest(s.desde) === 6 * 864e5 && new Date(`${s.desde}T00:00:00Z`).getUTCDay() === 1), 'cada semana va de lunes a domingo');
   eq(sd.filter((s) => s.compras.length).length, R1.semanasConCompra, 'las semanas con compras son las que cuenta resumen');
   void compra;
+}
+
+// ---- La lista de movimientos: buscar, filtrar, ordenar y agrupar por mes
+{
+  const items = [
+    { id: 1, fecha: '2026-09-28', creado: 1, sats: 30000, monto: 20, tipo: 'compra', nota: '', txid: '' },
+    { id: 2, fecha: '2026-10-05', creado: 2, sats: 40000, monto: 30, tipo: 'compra', nota: 'Quincena de octubre', txid: 'a'.repeat(64) },
+    { id: 3, fecha: '2026-10-05', creado: 5, sats: 90000, monto: 70, tipo: 'compra', nota: 'por la caída', extra: 1, txid: '' },
+    { id: 4, fecha: '2026-10-20', creado: 4, sats: 15000, monto: 12, tipo: 'venta', nota: 'gasté en renta', txid: '' },
+    { id: 5, fecha: '2026-11-02', creado: 6, sats: 25000, monto: 19, tipo: 'compra', nota: '', txid: '' },
+  ];
+  const tras = [{ id: 1, fecha: '2026-10-21', creado: 7, sats: 80000, sentido: 'a_wallet', nota: 'a mi Ledger', txid: '' }];
+  const m = movimientosLista(items, tras);
+  eq(m.map((x) => x.clave), ['c5', 't1', 'c4', 'c3', 'c2', 'c1'], 'lista: lo más reciente primero; a igual fecha, lo último que anotaste');
+  eq(ordenarMovimientos(m, 'antiguas').map((x) => x.clave), ['c1', 'c2', 'c3', 'c4', 't1', 'c5'], 'orden: más antiguas primero (a igual fecha, lo primero que anotaste)');
+  eq(ordenarMovimientos(m, 'monto').map((x) => x.clave), ['c3', 'c2', 'c1', 'c5', 'c4', 't1'], 'orden: por monto en dólares, el traslado (sin monto) al final');
+  eq(ordenarMovimientos(m, 'sats').map((x) => x.clave).slice(0, 3), ['c3', 't1', 'c2'], 'orden: por sats');
+  const claves = (f) => filtrarMovimientos(m, f).map((x) => x.clave);
+  eq(claves({ filtro: 'compra' }), ['c5', 'c3', 'c2', 'c1'], 'filtro: compras');
+  eq(claves({ filtro: 'venta' }), ['c4'], 'filtro: ventas y gastos');
+  eq(claves({ filtro: 'traslado' }), ['t1'], 'filtro: traslados');
+  eq(claves({ filtro: 'extra' }), ['c3'], 'filtro: compras extra');
+  eq(claves({ filtro: 'txid' }), ['c2'], 'filtro: con TXID');
+  eq(claves({ texto: 'CAÍDA' }), ['c3'], 'búsqueda: sin acentos ni mayúsculas');
+  eq(claves({ texto: 'octubre' }), ['t1', 'c4', 'c3', 'c2'], 'búsqueda: por el nombre del mes');
+  eq(claves({ texto: '90,000' }), ['c3'], 'búsqueda: sats con comas');
+  eq(claves({ texto: 'renta gaste' }), ['c4'], 'búsqueda: todas las palabras deben aparecer');
+  eq(claves({ texto: 'gasto' }), ['c4'], 'búsqueda: «gasto» encuentra las ventas');
+  eq(claves({ texto: 'ledger' }), ['t1'], 'búsqueda: la nota de un traslado');
+  eq(claves({ texto: 'aaaaaaaa' }), ['c2'], 'búsqueda: por TXID');
+  eq(claves({ desde: '2026-10-05', hasta: '2026-10-20' }), ['c4', 'c3', 'c2'], 'rango: inclusivo en ambos extremos');
+  eq(claves({ desde: '2026-11-01' }), ['c5'], 'rango: solo desde');
+  eq(claves({ hasta: '2026-09-30' }), ['c1'], 'rango: solo hasta');
+  eq(claves({ filtro: 'compra', desde: '2026-10-01', hasta: '2026-10-31', texto: 'quincena' }), ['c2'], 'filtros combinados');
+  eq(claves({ texto: 'zzz' }), [], 'sin coincidencias');
+  const g = agruparPorMes(m);
+  eq(g.map((x) => [x.etiqueta, x.resumen]), [['Noviembre 2026', '1 compra'], ['Octubre 2026', '2 compras · 1 venta · 1 traslado'], ['Septiembre 2026', '1 compra']], 'meses: etiqueta y resumen de cada uno');
+  eq(agruparPorMes(ordenarMovimientos(m, 'antiguas')).map((x) => x.mes), ['2026-09', '2026-10', '2026-11'], 'meses: respetan el orden dado');
+  eq(agruparPorMes([]), [], 'sin movimientos no hay meses');
 }
 
 console.log(`OK ${n} comprobaciones`);

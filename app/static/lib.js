@@ -611,3 +611,63 @@ export function semanasDetalle(items, ref, n = 52) {
     return { desde: dia(idx, 0), hasta: dia(idx, 6), compras, sats: compras.reduce((a, c) => a + c.sats, 0), monto: compras.reduce((a, c) => a + c.monto, 0) };
   });
 }
+
+// ------------------------------------------------------- la lista de movimientos: buscar, filtrar, ordenar y agrupar por mes
+const sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const PALABRA_TIPO = { compra: 'compra', venta: 'venta gasto', traslado: 'traslado' };
+/** Compras, ventas y traslados en una sola forma, lo más reciente primero (a igual fecha, lo último que anotaste). */
+export function movimientosLista(items, traslados = []) {
+  const m = [
+    ...items.map((c) => ({ clave: `c${c.id}`, tipo: c.tipo === 'venta' ? 'venta' : 'compra', fecha: c.fecha, creado: c.creado ?? 0, id: c.id, sats: c.sats, monto: c.monto, nota: c.nota ?? '', txid: c.txid ?? '', extra: !!c.extra, ref: c })),
+    ...traslados.map((t) => ({ clave: `t${t.id}`, tipo: 'traslado', fecha: t.fecha, creado: t.creado ?? 0, id: t.id, sats: t.sats, monto: null, nota: t.nota ?? '', txid: t.txid ?? '', extra: false, ref: t })),
+  ];
+  return ordenarMovimientos(m, 'recientes');
+}
+/** `orden`: recientes | antiguas | monto (dólares, de mayor a menor; los traslados al final) | sats. Las fechas se comparan como texto. */
+export function ordenarMovimientos(movs, orden = 'recientes') {
+  const porFecha = (a, b) => (a.fecha === b.fecha ? 0 : a.fecha < b.fecha ? -1 : 1);
+  const cmp = {
+    recientes: (a, b) => -porFecha(a, b) || b.creado - a.creado || 0,
+    antiguas: (a, b) => porFecha(a, b) || a.creado - b.creado || 0,
+    monto: (a, b) => (b.monto ?? -1) - (a.monto ?? -1) || b.sats - a.sats,
+    sats: (a, b) => b.sats - a.sats,
+  }[orden] ?? ((a, b) => -porFecha(a, b));
+  return [...movs].sort(cmp);
+}
+/** Lo que se puede buscar de un movimiento: nota, fecha, nombre del mes, tipo, sats, dólares y TXID (sin acentos ni mayúsculas). */
+function pajar(m) {
+  const mes = MESES[Number(m.fecha.slice(5, 7)) - 1] ?? '';
+  return sinAcentos([m.nota, m.fecha, mes, mes.slice(0, 3), PALABRA_TIPO[m.tipo], m.extra ? 'extra' : '', m.sats, m.monto != null ? m.monto.toFixed(2) : '', m.txid].join(' '));
+}
+/**
+ * Filtra: `texto` (todas las palabras deben aparecer), `filtro` (todos | compra | venta | traslado | extra | txid) y un rango de
+ * fechas AAAA-MM-DD (`desde`, `hasta`, ambos inclusivos). Los totales de la pantalla no dependen de esto: solo es lo que se ve en la lista.
+ */
+export function filtrarMovimientos(movs, { texto = '', filtro = 'todos', desde = '', hasta = '' } = {}) {
+  const palabras = sinAcentos(texto).split(/\s+/).map((p) => (/^[\d,.$]+$/.test(p) ? p.replace(/[,$]/g, '') : p)).filter(Boolean);
+  return movs.filter((m) => {
+    if (filtro === 'extra' ? !m.extra : filtro === 'txid' ? !m.txid : filtro !== 'todos' && m.tipo !== filtro) return false;
+    if (desde && m.fecha < desde) return false;
+    if (hasta && m.fecha > hasta) return false;
+    if (!palabras.length) return true;
+    const h = pajar(m);
+    return palabras.every((p) => h.includes(p));
+  });
+}
+/** Encabezados por mes, en el orden que ya traen los movimientos: [{ mes: '2026-11', etiqueta: 'Noviembre 2026', resumen: '4 compras · 1 venta', movs }]. */
+export function agruparPorMes(movs) {
+  const grupos = [];
+  for (const m of movs) {
+    const mes = m.fecha.slice(0, 7);
+    let g = grupos.at(-1);
+    if (!g || g.mes !== mes) { g = { mes, etiqueta: `${MESES[Number(mes.slice(5)) - 1].replace(/^./, (c) => c.toUpperCase())} ${mes.slice(0, 4)}`, movs: [] }; grupos.push(g); }
+    g.movs.push(m);
+  }
+  for (const g of grupos) {
+    const cuenta = (t) => g.movs.filter((m) => m.tipo === t).length;
+    const nombre = { compra: ['compra', 'compras'], venta: ['venta', 'ventas'], traslado: ['traslado', 'traslados'] };
+    g.resumen = ['compra', 'venta', 'traslado'].filter(cuenta).map((t) => `${cuenta(t)} ${nombre[t][cuenta(t) === 1 ? 0 : 1]}`).join(' · ');
+  }
+  return grupos;
+}
