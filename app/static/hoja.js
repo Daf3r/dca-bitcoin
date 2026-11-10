@@ -4,12 +4,36 @@ import { celebrar, destello } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
 import { $, R, S, api, normalizar, reducido } from './estado.js';
 import { MS_SUBIDA, pintar, progresoEtapa } from './pintar.js';
+import { resaltar } from './lista.js';
 import { nombreMeta } from './reportes.js';
 
 // ------------------------------------------------------------- hoja de anotar
 export const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '' };
 export const hoja = $('hoja');
+
+// Borrador: si cierras la hoja a medias (o suena el teléfono), lo escrito vuelve al abrirla. Va en el navegador, con control de errores,
+// se borra al guardar y caduca a la semana. Nunca guarda la fecha: siempre se propone la de hoy.
+const CLAVE_BORRADOR = 'libro.borrador';
+const SEMANA_MS = 7 * 864e5;
+function leerBorrador() {
+  try {
+    const b = JSON.parse(localStorage.getItem(CLAVE_BORRADOR) ?? 'null');
+    return b && Date.now() - b.t < SEMANA_MS ? b : null;
+  } catch { return null; }
+}
+function borrarBorrador() { try { localStorage.removeItem(CLAVE_BORRADOR); } catch { /* sin almacenamiento */ } }
+function guardarBorrador() {
+  if (H.editando || hoja.hidden) return;
+  const { tipo, sats, usd, nota, txid, extra, sentido, comision } = H;
+  try {
+    if (!sats && !usd && !nota && !txid && !comision) localStorage.removeItem(CLAVE_BORRADOR);
+    else localStorage.setItem(CLAVE_BORRADOR, JSON.stringify({ t: Date.now(), tipo, sats, usd, nota, txid, extra, sentido, comision }));
+  } catch { /* sin almacenamiento: no hay borrador */ }
+}
+hoja.addEventListener('input', guardarBorrador);
+hoja.addEventListener('change', guardarBorrador);
+hoja.addEventListener('click', (e) => { if (e.target.closest('#h-tipo, #h-sentido')) guardarBorrador(); });
 
 export function abrirHoja(id = null, tipoInicial = 'compra') {
   const c = id ? S.compras.find((x) => x.id === id) : null;
@@ -22,7 +46,10 @@ export function abrirHoja(id = null, tipoInicial = 'compra') {
   H.extra = !!c?.extra;
   H.sentido = 'a_wallet';
   H.comision = '';
-  $('h-comision').value = '';
+  const b = !c && tipoInicial === 'compra' ? leerBorrador() : null;
+  if (b) Object.assign(H, { tipo: b.tipo, sats: b.sats ?? '', usd: b.usd ?? '', usdTocado: !!b.usd, nota: b.nota ?? '', txid: b.txid ?? '', extra: !!b.extra, sentido: b.sentido ?? 'a_wallet', comision: b.comision ?? '' });
+  $('h-borrador').hidden = !b;
+  $('h-comision').value = H.comision ? entero(Number(H.comision)) : '';
   $('h-nota').value = H.nota;
   $('h-nota-c').value = H.nota;
   $('h-extra').checked = H.extra;
@@ -30,7 +57,7 @@ export function abrirHoja(id = null, tipoInicial = 'compra') {
   $('h-txid').value = H.txid;
   $('h-sats').value = H.sats ? entero(Number(H.sats)) : '';
   $('h-usd').value = H.usd;
-  $('h-avanzado').open = !!c;
+  $('h-avanzado').open = !!c || !!(b && (b.usd || b.txid || b.extra || b.comision));
   $('h-fecha').value = c?.fecha ?? hoyISO();
   $('h-fecha').max = hoyISO();
   $('hoja-t').textContent = c ? 'Editar compra' : 'Anotar compra';
@@ -189,6 +216,7 @@ hoja.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'date') { e.preventDefault(); $('guardar').click(); }
 });
 $('anotar').addEventListener('click', () => abrirHoja());
+$('h-borrador-no').addEventListener('click', () => { borrarBorrador(); abrirHoja(); $('h-sats').focus(); });
 document.querySelectorAll('[data-cerrar]').forEach((b) => b.addEventListener('click', cerrarHoja));
 
 // Cerrar arrastrando: el dedo toma el asa o la cabecera y baja la hoja; si pasa de cierto tramo (o va rápido) se cierra,
@@ -239,6 +267,8 @@ async function guardarTraslado(d, fecha) {
   try {
     const t = await api('/api/traslados', { metodo: 'POST', cuerpo: { fecha, sats: d.sats, sentido: H.sentido, txid: extraerTxid(H.txid), nota: H.nota.trim() } });
     S.traslados = [...S.traslados, t];
+    borrarBorrador();
+    resaltar(`t${t.id}`);
     const com = Number(H.comision) || 0;
     if (H.sentido === 'a_wallet' && com > 0) {
       const p = precioDelDia(fecha, S.historico, S.precio);
@@ -292,6 +322,8 @@ $('guardar').addEventListener('click', async () => {
     const comprasAntes = S.compras;
     S.compras = H.editando ? S.compras.map((x) => (x.id === g.id ? g : x)) : [...S.compras, g];
     const editando = H.editando;
+    borrarBorrador();
+    resaltar(`c${g.id}`, { desplazar: !!editando });
     // Hitos de constancia (10 compras, 6 meses…): solo por una compra nueva, nunca al editar ni en ventas.
     const constancia = !editando && g.tipo === 'compra' ? constanciaCruzada(comprasAntes, S.compras) : [];
     H.guardando = false;

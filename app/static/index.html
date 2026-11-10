@@ -178,10 +178,28 @@
     <div class="sec-cab">
       <h2 id="t-compras" tabindex="-1">Últimas compras</h2>
       <p class="csv">
+        <button type="button" class="enlace" id="l-tabla" hidden>Ver como tabla</button>
         <a class="enlace" id="csv-out" href="/api/export.csv" download>Exportar CSV</a>
         <label class="enlace" for="csv-in">Importar CSV</label>
         <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
       </p>
+    </div>
+    <!-- Buscar, filtrar y ordenar (sale cuando hay más movimientos de los que caben en la primera pantalla). Solo cambia lo que se ve en la lista: los totales son siempre los de todo. -->
+    <div class="l-ctl" id="l-ctl" hidden>
+      <label class="l-busca"><span class="sr">Buscar en tus movimientos</span><input type="search" id="l-buscar" placeholder="Buscar: nota, mes, monto, TXID…" autocomplete="off" autocapitalize="none" enterkeyhint="search"></label>
+      <div class="l-chips" id="l-chips" role="group" aria-label="Filtrar por tipo">
+        <button type="button" data-f="todos" aria-pressed="true">Todo</button><button type="button" data-f="compra" aria-pressed="false">Compras</button><button type="button" data-f="venta" aria-pressed="false">Ventas</button><button type="button" data-f="traslado" aria-pressed="false">Traslados</button><button type="button" data-f="extra" aria-pressed="false">Extra</button><button type="button" data-f="txid" aria-pressed="false">Con TXID</button>
+      </div>
+      <details class="l-mas" id="l-mas">
+        <summary>Fechas y orden</summary>
+        <div class="l-mas-c">
+          <label>Desde <input type="date" id="l-desde"></label>
+          <label>Hasta <input type="date" id="l-hasta"></label>
+          <label>Orden <select id="l-orden"><option value="recientes">Más recientes primero</option><option value="antiguas">Más antiguas primero</option><option value="monto">Mayor monto primero</option><option value="sats">Más sats primero</option></select></label>
+        </div>
+      </details>
+      <p class="l-res" id="l-res" role="status"></p>
+      <button type="button" class="enlace" id="l-limpiar" hidden>Quitar filtros</button>
     </div>
     <ul class="lista" id="lista"><li class="vacio">Cargando compras…</li></ul>
     <button type="button" class="ver-todas" id="ver-todas" hidden></button>
@@ -241,6 +259,7 @@
       <h2 id="hoja-t">Anotar compra</h2>
       <button type="button" class="cerrar" data-cerrar>Cerrar</button>
     </div>
+    <p class="h-borrador" id="h-borrador" hidden>Recuperé lo que estabas escribiendo. <button type="button" class="enlace" id="h-borrador-no">Empezar de cero</button></p>
     <div class="h-tipo" id="h-tipo" role="group" aria-label="Tipo de movimiento">
       <button type="button" data-tipo="compra" aria-pressed="true">Compra</button>
       <button type="button" data-tipo="venta" aria-pressed="false">Venta o gasto</button>
@@ -376,6 +395,13 @@
       <div class="gt-acciones"><button type="button" class="gt-editar" hidden>Editar</button><button type="button" class="gt-cerrar">Cerrar</button></div>
     </div>
   </div>
+</dialog>
+
+<!-- La lista como tabla (solo en pantallas anchas): los mismos movimientos, con los filtros y el orden de ahora. -->
+<dialog id="d-tabla" class="d-tabla" aria-labelledby="dt-t">
+  <div class="dt-cab"><h2 id="dt-t">Tus movimientos</h2><button type="button" class="cerrar" id="dt-cerrar">Cerrar</button></div>
+  <p class="dt-nota" id="dt-nota"></p>
+  <div class="dt-caja"><table class="dt" id="dt"></table></div>
 </dialog>
 
 <dialog id="d-borrar" aria-labelledby="d-titulo">

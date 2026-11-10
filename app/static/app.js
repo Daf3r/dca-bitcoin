@@ -13,6 +13,7 @@ import './csv.js';
 import { cargarYo } from './cuenta.js';
 import { instalarParallax } from './parallax.js';
 import './refrescar.js';
+import './copiar.js';
 
 instalarParallax();
 cargarYo();

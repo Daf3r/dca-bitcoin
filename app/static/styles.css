@@ -904,3 +904,72 @@ html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efe
   .fila { transition: background-color 0.15s, transform 0.15s; }
   .fila:hover { transform: translateX(2px); }
 }
+
+/* ======================================================= Campamento 4 (2/4): la lista */
+/* Buscar, filtrar y ordenar. */
+.l-ctl { display: grid; gap: 8px; margin: 0 0 10px; }
+.l-ctl[hidden] { display: none; }
+.l-busca input { width: 100%; min-height: 48px; padding: 0 14px; border: 0; border-radius: 14px; background: var(--s2); color: var(--txt); font-size: 1rem; }
+.l-busca input:focus-visible, .l-mas-c :is(input, select):focus-visible, .f-notaed input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+.l-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.l-chips button { min-height: 44px; padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; color: var(--txt2); font-weight: 650; font-size: 0.9375rem; cursor: pointer; touch-action: manipulation; }
+.l-chips button[aria-pressed="true"] { background: var(--txt); border-color: var(--txt); color: var(--fondo); }
+.l-mas summary { display: flex; align-items: center; min-height: 44px; color: var(--naranja-txt); font-weight: 650; font-size: 0.9375rem; cursor: pointer; }
+.l-mas-c { display: grid; gap: 8px; padding-bottom: 4px; }
+.l-mas-c label { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--txt2); font-size: 0.875rem; }
+.l-mas-c :is(input, select) { min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; max-width: 65%; }
+.l-res { min-height: 1.2em; color: var(--txt2); font-size: 0.875rem; }
+.l-res:empty { display: none; }
+#l-limpiar { justify-self: start; min-height: 44px; }
+#l-limpiar[hidden] { display: none; }
+
+/* Encabezado de cada mes. */
+.lista li.mes-cab { border-top: 0; padding: 14px 4px 2px; }
+.lista li.mes-cab:first-child { padding-top: 2px; }
+.lista li.mes-cab + li { border-top: 0; }
+.mes-cab h3 { margin: 0; font: 650 0.9375rem var(--sans); color: var(--txt); }
+.mes-cab small { color: var(--txt3); font-weight: 500; font-size: 0.8125rem; }
+
+/* Botones dentro de cada fila: copiar TXID y editar la nota (hermanos del botón de editar, no anidados). */
+.f-copiar, .f-nota-b { min-height: 32px; padding: 0; border: 0; background: none; color: var(--naranja-txt); font: 600 0.8125rem var(--sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; touch-action: manipulation; }
+.f-copiar:focus-visible, .f-nota-b:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; border-radius: 4px; }
+@media (pointer: coarse) { .f-copiar, .f-nota-b { min-height: 44px; padding: 0 4px; } }
+.f-notaed { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px calc(4.6rem + 16px); }
+.f-notaed input { flex: 1 1 12rem; min-width: 0; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }
+.f-notaed button { min-height: 44px; padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 650; cursor: pointer; }
+.f-notaed button[type="submit"] { background: var(--naranja); border-color: var(--naranja); color: var(--naranja-osc); }
+
+/* Lo recién guardado brilla un momento; las filas que entran o salen se acomodan en vez de saltar. */
+.lista li.resalte { animation: fila-resalte 2.4s ease-out; border-radius: 10px; }
+@keyframes fila-resalte { 0%, 35% { background-color: color-mix(in srgb, var(--naranja) 22%, transparent); } 100% { background-color: transparent; } }
+.lista li.entra { animation: fila-entra 0.35s cubic-bezier(0.2, 0.9, 0.2, 1) both; overflow: hidden; }
+@keyframes fila-entra { from { max-height: 0; opacity: 0; } to { max-height: 240px; opacity: 1; } }
+.lista li.sale { animation: fila-sale 0.3s ease-in forwards; overflow: hidden; pointer-events: none; }
+@keyframes fila-sale { from { max-height: 240px; opacity: 1; } to { max-height: 0; opacity: 0; } }
+html[data-efectos="ninguno"] .lista li.sale { display: none; }
+
+/* Tabla compacta (solo en pantallas anchas). */
+#l-tabla { display: none; }
+@media (min-width: 1100px) { #l-tabla:not([hidden]) { display: inline; } }
+.d-tabla { width: min(1100px, calc(100vw - 48px)); max-height: calc(100vh - 48px); display: flex; flex-direction: column; padding: 22px 24px; }
+.d-tabla[open] { display: flex; }
+.dt-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dt-nota { margin: 4px 0 12px; font-size: 0.875rem; }
+.dt-caja { overflow: auto; min-height: 0; border-radius: 12px; border: 1px solid var(--s3); }
+.dt { width: 100%; border-collapse: collapse; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.dt th, .dt td { padding: 8px 12px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--s3); }
+.dt thead th { position: sticky; top: 0; background: var(--s2); color: var(--txt2); font-weight: 650; }
+.dt tbody th { font-weight: 600; color: var(--txt); }
+.dt .num { text-align: right; }
+.dt td:nth-last-child(2) { white-space: normal; min-width: 10rem; color: var(--txt2); }
+.dt [data-tono="sube"] { color: var(--sube); }
+.dt [data-tono="baja"] { color: var(--baja); }
+.dt a, .dt .dt-edit { color: var(--naranja-txt); }
+.dt .dt-edit { min-height: 32px; text-align: left; }
+.dt tbody tr:hover { background: var(--s1); }
+
+/* Borrador de la hoja y copiar el saldo. */
+.h-borrador { font-size: 0.875rem; color: var(--naranja-txt); }
+.h-borrador[hidden] { display: none; }
+.copia-tmp { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.saldo-v[role="button"] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
