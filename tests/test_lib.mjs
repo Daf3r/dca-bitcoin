@@ -594,7 +594,8 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
 // Color y avatar por persona (campamento 6, idea 157)
 {
   const { tonoPersona, inicialPersona, avatar } = await import('../app/static/iconos.js');
-  ok(tonoPersona('Daf3r') === tonoPersona('Daf3r') && tonoPersona('Ana') >= 0 && tonoPersona('Ana') < 36, 'avatar: el tono sale del nombre y es siempre el mismo');
+  const t1 = tonoPersona('Daf3r'), t2 = tonoPersona(`Daf${3}r`);
+  ok(t1 === t2 && tonoPersona('Ana') >= 0 && tonoPersona('Ana') < 36, 'avatar: el tono sale del nombre y es siempre el mismo');
   ok(new Set(['Daf3r', 'Ana', 'Mamá', 'Papá', 'Luis', 'Sofía', 'Carlos', 'María'].map(tonoPersona)).size >= 5, 'avatar: nombres distintos suelen tener tonos distintos');
   ok(inicialPersona('daf3r') === 'D' && inicialPersona('  ana') === 'A' && inicialPersona('') === '?' && inicialPersona('éric') === 'É', 'avatar: la inicial va en mayúscula');
   ok(!avatar('<b>x</b>').includes('<b>x'), 'avatar: la inicial nunca se interpreta como HTML');
