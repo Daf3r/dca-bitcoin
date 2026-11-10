@@ -1215,6 +1215,7 @@ html[data-acento="oro"][data-tinta="oscura"] .marca-ico { stroke: #7a5600; }
 .av-35 { --h: 350; }
 .cuenta-btn { display: inline-flex; align-items: center; gap: 6px; }
 .cuenta-btn .avatar { font-size: 0.7rem; }
+@media (max-width: 359px) { .cuenta-btn .avatar { display: none; } } /* en 320 px el saludo y «Tu saldo» no tienen sitio de sobra */
 .dc-quien { display: flex; align-items: center; gap: 10px; }
 .hist li:has(> .avatar) { grid-template-columns: 1.7rem 1fr; column-gap: 10px; }
 .hist li > .avatar { grid-row: 1 / span 2; align-self: start; margin-top: 2px; font-size: 0.8rem; }

@@ -28,13 +28,16 @@ function conAvatar(el, nombre, texto, opciones) {
   t.textContent = texto;
   el.append(t);
 }
+// El nombre accesible del botón de la cuenta es su texto visible más una aclaración en `.sr` (con `aria-label` axe marca
+// `label-content-name-mismatch`).
+const aclararCuenta = () => $('cuenta-btn').insertAdjacentHTML('beforeend', '<span class="sr"> (tu cuenta)</span>');
 export async function cargarYo() {
   try {
     const yo = await api('/api/yo');
     Object.assign(S, { usuario: yo.usuario, rol: yo.rol, visto: yo.visto ?? null });
     document.body.dataset.rol = yo.rol;
     conAvatar($('cuenta-btn'), yo.usuario, yo.usuario);
-    $('cuenta-btn').setAttribute('aria-label', `Tu cuenta: ${yo.usuario}`);
+    aclararCuenta();
     $('cuenta-btn').hidden = false;
     pintarSaludo(yo.usuario);
     conAvatar($('dc-quien'), yo.usuario, `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`, { grande: true });
