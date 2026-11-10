@@ -1,6 +1,7 @@
-import { aFecha, costoVsPromedio, entero, hoyISO, satsPorDolar, serieGrafico, serieSatsPorDolar, serieValor, usd0 } from './lib.js';
+import { aFecha, costoVsPromedio, entero, fechaLarga, hoyISO, masMovieron, numCorto, pct, satsPorDolar, serieCostoPromedio, serieGrafico, serieSatsAcum, serieSatsPorDolar, serieValor, usd0, usdSigno } from './lib.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
 import { dibujarValor, instalarLecturaValor } from './valor.js';
+import { dibujarEscalera, instalarEscalera } from './escalera.js';
 import { caidaVisible } from './reportes.js';
 import { abrirHoja } from './hoja.js';
 import { $, R, S, esAdmin } from './estado.js';
@@ -139,3 +140,71 @@ export function pintarSatsDolar() {
   punto.setAttribute('r', '3');
   lin.replaceChildren(poly, punto);
 }
+
+// ----------------------------------------------------- vistas: Precio, Valor, Costo promedio y Sats
+// Un selector decide qué gráfico se ve (los demás se ocultan con CSS: `.cuerpo[data-vista]`); solo salen las vistas con datos.
+const CLAVE_VISTA = 'libro.grafico.vista';
+let vista = leer(CLAVE_VISTA) ?? 'precio';
+const disponibles = () => ({
+  precio: true,
+  valor: R.nCompras >= 3 && S.cargado && S.histEstado === 'ok' && Boolean(S.precio),
+  costo: R.nCompras >= 3,
+  sats: R.nCompras >= 2,
+});
+let anchoCosto = 0, anchoSats = 0;
+
+function pintarCosto() {
+  const serie = R.nCompras >= 3 ? serieCostoPromedio(R.items) : [];
+  const h = $('c-lienzo');
+  anchoCosto = h.clientWidth;
+  const u = serie.at(-1), p0 = serie[0];
+  const dif = u && p0 ? (u.costo / p0.costo - 1) * 100 : 0;
+  const mov = masMovieron(serie, 3);
+  dibujarEscalera(h, $('c-lectura'), $('c-sr'), {
+    puntos: serie.map((p) => ({ ...p, v: p.costo })), escalon: false, desdeCero: false, fmtEje: usd0,
+    defecto: u ? `Tu costo promedio empezó en <b>${usd0(p0.costo)}</b> y hoy es <b>${usd0(u.costo)}</b> (${pct(dif)}).` : '',
+    texto: (p) => `${fechaLarga(p.fecha)} · costo promedio <b>${usd0(p.costo)}</b>` +
+      (p.cambio == null ? ' (tu primera compra)' : ` · esta compra lo ${p.cambio <= 0 ? 'bajó' : 'subió'} <b>${usdSigno(Math.abs(p.cambio)).replace('+', '')}</b> (${pct(p.pct)})`),
+    aria: 'Tu costo promedio con cada compra. Usa las flechas para recorrerlo.',
+  });
+  $('c-mov').textContent = mov.length ? `Las compras que más lo movieron: ${mov.map((p) => `${fechaLarga(p.fecha)} (${pct(p.pct)})`).join(' · ')}.` : '';
+}
+
+function pintarSatsAcum() {
+  const serie = R.nCompras >= 2 ? serieSatsAcum(R.items, hoyISO()) : [];
+  const h = $('s-lienzo');
+  anchoSats = h.clientWidth;
+  dibujarEscalera(h, $('s-lectura'), $('s-sr'), {
+    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, fmtEje: (v) => `${numCorto(v)} sats`,
+    defecto: `Hoy tienes <b>${entero(R.sats)} sats</b>.`,
+    texto: (p) => (p.hoy ? `Hoy · <b>${entero(p.sats)} sats</b>` : `${fechaLarga(p.fecha)} · ${p.delta >= 0 ? '+' : '−'}${entero(Math.abs(p.delta))} sats · <b>${entero(p.sats)}</b> en total${p.tipo === 'venta' ? ' (venta o gasto)' : ''}`),
+    aria: 'Tus sats acumulados con cada compra. Usa las flechas para recorrerlo.',
+  });
+}
+
+/** Pone el selector y deja visible solo la vista elegida (si ya no tiene datos, vuelve a Precio). */
+export function pintarVistas() {
+  const d = disponibles();
+  const hay = d.valor || d.costo || d.sats;
+  $('vistas').hidden = !(S.cargado && hay);
+  if (!d[vista]) vista = 'precio';
+  document.querySelector('.cuerpo').dataset.vista = vista;
+  document.querySelectorAll('#vistas button').forEach((b) => { b.hidden = !d[b.dataset.vista]; b.setAttribute('aria-pressed', String(b.dataset.vista === vista)); });
+  if (d.costo) pintarCosto();
+  if (d.sats) pintarSatsAcum();
+  $('costo-prom').hidden = !d.costo;
+  $('sats-acum').hidden = !d.sats;
+}
+$('vistas').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-vista]');
+  if (!b) return;
+  vista = b.dataset.vista;
+  guardar(CLAVE_VISTA, vista === 'precio' ? '' : vista);
+  pintarVistas();
+  pintarValor();
+  pintarMercado();
+});
+instalarEscalera($('c-lienzo'));
+instalarEscalera($('s-lienzo'));
+new ResizeObserver(() => { if ($('c-lienzo').clientWidth && $('c-lienzo').clientWidth !== anchoCosto) pintarCosto(); }).observe($('c-lienzo'));
+new ResizeObserver(() => { if ($('s-lienzo').clientWidth && $('s-lienzo').clientWidth !== anchoSats) pintarSatsAcum(); }).observe($('s-lienzo'));

@@ -364,7 +364,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     proyeccion: meses != null && meses > 0 && meses <= 60 ? meses : null,
     anios: [...anios.values()],
     constancia: proximosHitosConstancia(comprasItems, hoy),
-    racha, mejorRacha, paso, venceSemanas, ultimas52, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
+    racha, mejorRacha, paso, venceSemanas, ultimas52, semanaRef: ref, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
     mejor: porPrecio[0] ?? null, peor: porPrecio.at(-1) ?? null,
   };
 }
@@ -557,4 +557,57 @@ export function serieSatsPorDolar(historico, vivo, dias = 30, hoyUtc = new Date(
   const serie = previos.map(([fecha, c]) => ({ fecha, spd: 1e8 / c }));
   serie.push({ fecha: hoyUtc, spd: 1e8 / vivo });
   return serie;
+}
+
+// ------------------------------------------------------- vistas del gráfico: costo promedio, sats y semanas
+/**
+ * Cómo ha ido cambiando tu costo promedio con cada compra (el mismo costo ponderado de `resumen`: invertido neto ÷ sats).
+ * Una venta no lo mueve (baja el costo base en proporción), así que solo hay un punto por compra:
+ * [{ fecha, costo, cambio, pct, id, sats, precio }]; `cambio` y `pct` son respecto a la compra anterior (null en la primera).
+ */
+export function serieCostoPromedio(items) {
+  const out = [];
+  let previo = null;
+  for (const it of items) {
+    if (it.tipo === 'venta' || !(it.satsAcum > 0)) continue;
+    const costo = (it.inv * 1e8) / it.satsAcum;
+    out.push({ fecha: it.fecha, costo, cambio: previo == null ? null : costo - previo, pct: previo ? (costo / previo - 1) * 100 : null, id: it.id, sats: it.sats, precio: it.precio });
+    previo = costo;
+  }
+  return out;
+}
+
+/** Las `k` compras que más movieron tu costo promedio (por porcentaje, hacia abajo o hacia arriba). */
+export const masMovieron = (serie, k = 3) => serie.filter((p) => p.pct != null).sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct)).slice(0, k);
+
+/**
+ * La escalera de tus sats: el saldo tras cada movimiento (las ventas la bajan) y, si hace falta, un último punto hoy:
+ * [{ fecha, sats, delta, tipo, id, hoy? }].
+ */
+export function serieSatsAcum(items, hoy = hoyISO()) {
+  if (!items.length) return [];
+  const out = items.map((it, i) => ({ fecha: it.fecha, sats: it.satsAcum, delta: it.tipo === 'venta' ? -it.sats : it.sats, tipo: it.tipo, id: it.id, i }));
+  const u = out.at(-1);
+  if (u.fecha < hoy) out.push({ fecha: hoy, sats: u.sats, delta: 0, tipo: null, id: null, hoy: true });
+  return out;
+}
+
+/**
+ * Las últimas `n` semanas (lunes a domingo) que terminan en la semana `ref` (`R.semanaRef`), cada una con sus compras:
+ * [{ desde, hasta, compras, sats, monto }]. `monto` coincide con `R.ultimas52`.
+ */
+export function semanasDetalle(items, ref, n = 52) {
+  const dia = (idx, k) => new Date(SEMANA0 + (idx * 7 + k) * 864e5).toISOString().slice(0, 10);
+  const mapa = new Map();
+  for (const c of items) {
+    if (c.tipo === 'venta') continue;
+    const s = semana(c.fecha);
+    if (!mapa.has(s)) mapa.set(s, []);
+    mapa.get(s).push(c);
+  }
+  return Array.from({ length: n }, (_, i) => {
+    const idx = ref - (n - 1) + i;
+    const compras = mapa.get(idx) ?? [];
+    return { desde: dia(idx, 0), hasta: dia(idx, 6), compras, sats: compras.reduce((a, c) => a + c.sats, 0), monto: compras.reduce((a, c) => a + c.monto, 0) };
+  });
 }

@@ -56,6 +56,7 @@ async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
   await p.waitForTimeout(2800);
   return { ctx, p, consola };
 }
+const verVista = async (p, v) => { await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(400); };
 const datos = (p, ruta) => p.evaluate((r) => fetch(r).then((x) => x.json()), ruta);
 const saldo = (p) => p.evaluate(() => {
   const el = document.querySelector('#s-sats .od-num');
@@ -104,7 +105,10 @@ try {
     // Admin en móvil: lo que debe verse con un año de compras.
     {
       const { ctx, p, consola } = await entrar(navegador, anio, ADMIN);
-      ok(await p.locator('#valor').isVisible(), 'sale «Lo que pusiste y lo que vale»');
+      await verVista(p, 'valor');
+      ok(await p.locator('#valor').isVisible() && !(await p.locator('#mercado').isVisible()), 'la vista «Valor» enseña «Lo que pusiste y lo que vale» y esconde el precio');
+      await verVista(p, 'precio');
+      ok(await p.locator('#mercado').isVisible() && !(await p.locator('#valor').isVisible()), 'la vista «Precio» es la de siempre');
       ok(await p.locator('#toca').isVisible(), 'sale «te toca comprar»');
       ok(/^Para estar en cero, BTC debe subir/.test((await p.textContent('#g-equilibrio')).trim()), 'línea del equilibrio');
       ok(/^Coinbase · (ahora mismo|hace \d+ s)$/.test((await p.textContent('#precio-meta')).trim()), 'precio con «hace X s»');
@@ -140,6 +144,29 @@ try {
       const inv = compras.reduce((a, c) => a + c.monto, 0);
       ok((await p.textContent('#v-lectura')).includes(`pusiste $${entero(inv)}`), 'el gráfico de valor coincide con el cálculo');
 
+      // Tira de 52 semanas: entra escalonada (con todos los efectos) y al tocar una semana dice sus compras.
+      {
+        await p.evaluate(() => document.getElementById('semanas').scrollIntoView({ block: 'center' }));
+        await p.waitForTimeout(600);
+        const entra = await p.evaluate(() => { const i = document.querySelectorAll('#semanas i')[5]; return { clase: document.getElementById('semanas').classList.contains('entra'), anim: getComputedStyle(i).animationName, retraso: getComputedStyle(i).animationDelay, n: document.querySelectorAll('#semanas i').length }; });
+        ok(entra.clase && entra.anim === 'sem-entra' && entra.retraso !== '0s' && entra.n >= 40, `la tira de semanas entra escalonada (${entra.anim}, retraso ${entra.retraso})`);
+        const conCompra = await p.locator('#semanas i.con').first().boundingBox();
+        await p.mouse.click(conCompra.x + conCompra.width / 2, conCompra.y + conCompra.height / 2);
+        await p.waitForTimeout(150);
+        const det = (await p.textContent('#sem-det')).trim();
+        ok(/^Semana del \d+ \w+ al \d+ \w+: \d+ compras?, \+[\d,]+ sats \(\$[\d,]+\)\.$/.test(det) && await p.locator('#semanas i.sel').count() === 1, `tocar una semana con compra dice sus compras: «${det}»`);
+        const sinCompra = await p.locator('#semanas i:not(.con)').count() ? await p.locator('#semanas i:not(.con)').first().boundingBox() : null; // (con compras todas las semanas no hay ninguna vacía)
+        if (sinCompra) {
+          await p.mouse.click(sinCompra.x + sinCompra.width / 2, sinCompra.y + sinCompra.height / 2);
+          await p.waitForTimeout(150);
+          ok(/: sin compras\.$/.test((await p.textContent('#sem-det')).trim()), 'una semana sin compras lo dice');
+        }
+        await p.focus('#semanas');
+        await p.keyboard.press('End');
+        await p.keyboard.press('ArrowLeft');
+        ok(await p.getAttribute('#sem-det', 'aria-live') === 'polite' && /^Semana del /.test(await p.textContent('#sem-det')), 'con el teclado se recorren las semanas y se anuncian');
+        await p.mouse.move(5, 5);
+      }
       // Tu costo contra el precio promedio del período: la cifra sale del histórico y del precio vivo.
       {
         const vivo = (await datos(p, '/api/precio')).precio;
@@ -292,7 +319,9 @@ try {
       ok(!(await p.locator('#toca').isVisible()), 'el lector no ve «te toca comprar»');
       eq((await p.textContent('#prox')).trim(), '', 'el lector no ve la línea de última y próxima compra');
       ok(await p.locator('#t-anillo').isVisible() && await p.locator('#g-indicador').isVisible() && await p.locator('#rep-curiosas').isVisible(), 'el lector sí ve el anillo, el indicador del costo y las cifras curiosas');
+      await verVista(p, 'valor');
       ok(await p.locator('#valor').isVisible(), 'el lector sí ve el gráfico de valor');
+      await verVista(p, 'precio');
       ok(await p.locator('#ub-datos').isVisible() && !(await p.locator('#ub-anotar').isVisible()), 'el lector ve dónde están los sats pero no el botón de anotar');
       eq(await p.locator('#lista .fila[data-tras]').evaluate((el) => el.tagName), 'DIV', 'el traslado es solo lectura para el lector (no es un botón)');
       const r = await p.evaluate(() => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: '{}' }).then((x) => x.status));
@@ -619,7 +648,33 @@ try {
     const nodos = await p.evaluate(() => document.getElementsByTagName('*').length);
     ok(nodos < 3000, `el DOM no crece con las compras (${nodos} nodos)`);
     await p.waitForSelector('.g-linea', { timeout: 15000 });
+    await verVista(p, 'valor');
     ok(await p.locator('#valor').isVisible(), 'con mil compras sale el gráfico de valor');
+    // Vistas nuevas: costo promedio y sats acumulados
+    await verVista(p, 'costo');
+    const cp = await p.evaluate(() => ({ visible: !document.getElementById('costo-prom').hidden, mercado: getComputedStyle(document.getElementById('mercado')).display, svg: !!document.querySelector('#c-lienzo .s-linea'), puntos: document.querySelectorAll('#c-lienzo .s-puntos').length,
+      defecto: document.getElementById('c-lectura').textContent, mov: document.getElementById('c-mov').textContent, vista: document.querySelector('.cuerpo').dataset.vista, guardada: localStorage.getItem('libro.grafico.vista') }));
+    ok(cp.visible && cp.mercado === 'none' && cp.svg && cp.vista === 'costo' && cp.guardada === 'costo', 'la vista «Costo» enseña el costo promedio y esconde el precio; se recuerda');
+    ok(/^Tu costo promedio empezó en \$[\d,]+ y hoy es \$[\d,]+ \([+−]?\d+\.\d%\)\.$/.test(cp.defecto) && /^Las compras que más lo movieron: .+\(/.test(cp.mov), `costo promedio: «${cp.defecto}» · «${cp.mov.slice(0, 60)}…»`);
+    const cc = await p.locator('#c-lienzo').boundingBox();
+    await p.evaluate(() => document.getElementById('c-lienzo').scrollIntoView({ block: 'center' }));
+    const cc2 = await p.locator('#c-lienzo').boundingBox();
+    await p.mouse.move(cc2.x + cc2.width * 0.5, cc2.y + cc2.height * 0.5); await p.waitForTimeout(200);
+    ok(/costo promedio \$[\d,]+/.test(await p.textContent('#c-lectura')), 'al recorrer el gráfico del costo se lee cada compra');
+    await p.mouse.move(5, 5);
+    await p.focus('#c-lienzo'); await p.keyboard.press('Home');
+    ok(/primera compra/.test(await p.textContent('#c-sr')) && /primera compra/.test(await p.textContent('#c-lectura')), 'con el teclado (Inicio) se lee la primera compra y se anuncia');
+    void cc;
+    await verVista(p, 'sats');
+    const sa = await p.evaluate(() => ({ visible: !document.getElementById('sats-acum').hidden, svg: !!document.querySelector('#s-lienzo .s-linea'), area: !!document.querySelector('#s-lienzo .s-area'), defecto: document.getElementById('s-lectura').textContent }));
+    ok(sa.visible && sa.svg && sa.area, 'la vista «Sats» enseña la escalera de tus sats');
+    eq(sa.defecto, `Hoy tienes ${entero(satsMil)} sats.`, 'la escalera dice los mismos sats que el saldo');
+    await p.evaluate(() => document.getElementById('s-lienzo').scrollIntoView({ block: 'center' }));
+    const sb = await p.locator('#s-lienzo').boundingBox();
+    await p.mouse.move(sb.x + sb.width * 0.4, sb.y + sb.height * 0.5); await p.waitForTimeout(200);
+    ok(/sats · .* en total/.test(await p.textContent('#s-lectura')), 'al recorrer la escalera se lee cuánto sumó cada movimiento');
+    await p.mouse.move(5, 5);
+    await verVista(p, 'precio');
     // Dibujo del precio: anillos de extras, máximo de 30 días (hay gran caída), degradado, zona entre precio y costo, bandas y leyenda.
     await p.click('#rangos button[data-r="0"]');
     await p.waitForTimeout(700);
@@ -771,7 +826,7 @@ try {
       return n;
     });
     eq(roces, 0, 'la etiqueta de la compra no roza la línea del precio');
-    ok(!(await p.locator('#valor').isVisible()), 'con 1 compra no sale el gráfico de valor (pide 3)');
+    ok(!(await p.locator('#vistas').isVisible()), 'con 1 compra no hay selector de vistas (solo Precio)');
     ok(await p.locator('#comienzo').isVisible(), 'con 1 compra sale «Siguiente paso»');
     eq(consola, [], `consola limpia (1 compra): ${consola.join(' | ')}`);
     await ctx.close();
@@ -783,7 +838,7 @@ try {
   const sinhist = await servidor('sinhist');
   try {
     const { ctx, p, consola } = await entrar(navegador, sinhist, ADMIN);
-    ok(!(await p.locator('#valor').isVisible()), 'sin histórico no sale el gráfico de valor');
+    ok(!(await p.locator('#vistas button[data-vista="valor"]').isVisible()), 'sin histórico no sale la vista de valor');
     const s = await saldo(p);
     ok(s.w > 0 && s.txt.length > 0, 'el saldo se ve aunque falle el histórico');
     // El 503 del histórico es lo esperado en este escenario; cualquier otro mensaje no.
