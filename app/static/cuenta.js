@@ -1,6 +1,8 @@
 import { entero, fechaLarga, usd } from './lib.js';
 import { montarAvisos } from './avisos.js';
 import { cambiosPendientes, mostrarCambios } from './cambios.js';
+import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
+import { enTV, entrarTV } from './tv.js';
 import { pintarHistoria } from './historia.js';
 import { avatar, ilustracion } from './iconos.js';
 import { avisar } from './avisar.js';
@@ -73,6 +75,7 @@ function fundirTema() {
   clearTimeout(fundidoTimer);
   fundidoTimer = setTimeout(() => raiz.classList.remove('tema-fundido'), 450);
 }
+const etiquetaSonido = () => { $('dc-sonido').textContent = `Sonido al guardar: ${sonidoActivo() ? 'encendido' : 'apagado'}`; };
 const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'con saldo y precio' : 'sin saldo'}`; };
 // Tamaño de letra (normal → grande → muy grande) y contraste (automático → alto → normal): `accesibilidad.js` los aplica antes de pintar.
 const NOMBRE_LETRA = { '': 'normal', grande: 'grande', 'muy-grande': 'muy grande' };
@@ -104,7 +107,7 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetasAccesibilidad(); dCuenta.showModal(); });
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -178,7 +181,7 @@ $('hist-mas').addEventListener('click', () => cargarHistorial(true));
 const avisosUI = montarAvisos(api);
 // Tras entrar: una sola vez por dispositivo se ofrece activar los avisos. Los lectores primero ven su bienvenida.
 export async function ofrecerAvisos() {
-  if (avisosOfrecidos || !S.rol || !S.cargado || document.querySelector('dialog[open]')) return;
+  if (avisosOfrecidos || !S.rol || !S.cargado || document.querySelector('dialog[open]') || enTV()) return;
   if (S.rol === 'lector' && !novedadesMostradas) return;
   if (cambiosPendientes()) { mostrarCambios(); return; } // «Qué hay de nuevo»: antes de la oferta de avisos
   avisosOfrecidos = true;
@@ -193,6 +196,8 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'letra') { window.libroAcc?.fijarLetra(SIGUIENTE_LETRA[window.libroAcc.letra()]); etiquetasAccesibilidad(); }
   else if (accion === 'contraste') { window.libroAcc?.fijarContraste(SIGUIENTE_CONTRASTE[window.libroAcc.contraste()]); etiquetasAccesibilidad(); }
   else if (accion === 'atajos') { fijarAtajos(!atajosActivos()); etiquetasAccesibilidad(); }
+  else if (accion === 'sonido') { fijarSonido(!sonidoActivo()); etiquetaSonido(); if (sonidoActivo()) sonar('compra'); } // al encenderlo suena una muestra
+  else if (accion === 'tv') { dCuenta.close(); entrarTV(); }
   else if (accion === 'titulo') { fijarTituloConSaldo(!tituloConSaldo()); etiquetaTitulo(); }
   else if (accion === 'tema') { fundirTema(); window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
   else if (accion === 'efectos') { window.libroEfectos?.fijar(SIGUIENTE_EFECTOS[window.libroEfectos.preferencia()]); etiquetaEfectos(); }

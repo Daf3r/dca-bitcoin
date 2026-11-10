@@ -639,6 +639,19 @@ check(luz.get("/api/yo").get_json()["cambios"] == "0", "yo lo refleja tras migra
 server.init_db()
 check({r[0] for r in sql("SELECT cambios_visto FROM usuarios")} == {"0"}, "la migración no se repite")
 
+# --- Guía de estilo (solo admin) y paridad del sprite de iconos con index.html
+import re as _re
+r = adm.get("/guia")
+check(r.status_code == 200 and "Guía de estilo" in r.get_data(as_text=True), f"el admin abre la guía de estilo {r.status_code}")
+check(all(f"?v={server.VERSION}" in r.get_data(as_text=True) for _ in [0]) and r.headers["Cache-Control"] == "no-store", "la guía va versionada y sin caché")
+check(luz.get("/guia").status_code == 404, "un lector no ve la guía de estilo")
+check(anon.get("/guia", follow_redirects=False).status_code == 302, "sin sesión la guía lleva a la entrada")
+def _simbolos(nombre):
+    with open(os.path.join(server.ESTATICOS, nombre), encoding="utf-8") as f:
+        return _re.findall(r'<symbol id="(i-[\w-]+)"[^>]*>(.*?)</symbol>', f.read(), _re.S)
+check(_simbolos("guia.html") == _simbolos("index.html") and len(_simbolos("index.html")) >= 8, "el sprite de la guía es idéntico al de index.html")
+check(not _re.search(r'/guia', open(os.path.join(server.ESTATICOS, "index.html"), encoding="utf-8").read()), "la guía no está enlazada desde la app")
+
 # --- Verificación de TXID contra mempool.space (con la red simulada)
 import urllib.error as _ue
 TXV, TXP, TXN, TXE = "1" * 64, "2" * 64, "3" * 64, "4" * 64

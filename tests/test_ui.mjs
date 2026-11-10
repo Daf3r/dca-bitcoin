@@ -1678,6 +1678,116 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- modo pantalla grande, sonido al guardar y guía de estilo (campamento 6, 3/3)
+  {
+    const srv = await servidor('anio');
+    try {
+      const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      // --- Modo pantalla grande (una lectora: no tiene nada que anotar)
+      const l = await entrar(navegador, srv, LECTOR, { hora: 22, viewport: { width: 1280, height: 720 } }, sinAvisos);
+      if (await l.p.locator('#d-novedades[open]').count()) await l.p.click('#nov-ok');
+      await l.p.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 5000 });
+      await l.p.click('#cuenta-btn');
+      await l.p.click('#dc-tv');
+      await l.p.waitForFunction(() => document.documentElement.dataset.tv === '1');
+      await l.p.mouse.move(400, 300);
+      await l.p.waitForTimeout(700);
+      const tv = await l.p.evaluate(() => {
+        const vis = (sel) => { const e = document.querySelector(sel); return !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0; };
+        const esc = document.querySelector('.escena').getBoundingClientRect();
+        return {
+          escenaAlto: Math.round(esc.height), ventana: innerHeight, cuerpo: vis('.cuerpo'), cuenta: vis('#cuenta-btn'), anotar: vis('.anotar'), minicab: vis('#minicab'), indice: vis('#indice'),
+          saldo: vis('#s-sats'), precio: vis('#precio'), ultimo: document.getElementById('tv-ultimo').innerText, salir: vis('#tv-salir'), hash: location.hash,
+          scroll: document.documentElement.scrollHeight <= innerHeight + 1, vb: Number(document.querySelector('#montana > svg').getAttribute('viewBox').split(' ')[3]),
+          letra: getComputedStyle(document.documentElement).fontSize,
+        };
+      });
+      ok(Math.abs(tv.escenaAlto - tv.ventana) <= 2 && Math.abs(tv.vb - tv.ventana) <= 3, `pantalla grande: la escena ocupa toda la ventana (${tv.escenaAlto} / ${tv.ventana}, dibujo ${tv.vb})`);
+      ok(!tv.cuerpo && !tv.cuenta && !tv.anotar && !tv.minicab && !tv.indice && tv.saldo && tv.precio, 'pantalla grande: solo saldo, precio y montaña; sin controles ni el resto de la página');
+      ok(/^Último movimiento: .+ · \+[\d,]+ sats \(\$[\d.,]+\)$/.test(tv.ultimo) && tv.hash === '#tv' && tv.scroll, `pantalla grande: último movimiento («${tv.ultimo}»), dirección #tv y sin desplazamiento`);
+      ok(parseFloat(tv.letra) > 18 && tv.salir, `pantalla grande: letra más grande (${tv.letra}) y botón de salir a la vista tras mover el ratón`);
+      // Los avisos y diálogos no se atraviesan en la pantalla grande (recarga: la dirección con #tv entra directo)
+      await l.p.evaluate(async () => { await fetch('/api/cambios-visto', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ id: '0' }) }); });
+      await l.p.reload({ waitUntil: 'networkidle' });
+      await l.p.waitForTimeout(3000);
+      const tras = await l.p.evaluate(() => ({ tv: document.documentElement.dataset.tv, dialogo: !!document.querySelector('dialog[open]') }));
+      ok(tras.tv === '1' && !tras.dialogo, 'pantalla grande: al abrir con #tv entra directo y no salen diálogos (ni bienvenida ni cambios)');
+      await l.p.mouse.move(500, 350);
+      await l.p.click('#tv-salir');
+      const fuera = await l.p.evaluate(() => ({ tv: document.documentElement.dataset.tv ?? null, cuerpo: getComputedStyle(document.querySelector('.cuerpo')).display !== 'none', hash: location.hash }));
+      ok(fuera.tv === null && fuera.cuerpo && fuera.hash === '', 'pantalla grande: «Salir» devuelve la página completa y quita #tv');
+      await l.ctx.close();
+
+      // --- Sonido al guardar: apagado por defecto, se enciende en «Tu cuenta», solo suena al guardar una compra
+      const a = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* */ } window.__osc = 0; const C = window.AudioContext ?? window.webkitAudioContext; if (C) { const f = C.prototype.createOscillator; C.prototype.createOscillator = function (...x) { window.__osc++; return f.apply(this, x); }; } });
+      const guardar = async (sats) => {
+        await a.p.click('#anotar');
+        await a.p.fill('#h-sats', String(sats));
+        await a.p.click('#guardar');
+        await a.p.waitForTimeout(400);
+        if (await a.p.locator('#guardar', { hasText: 'Sí, guardar así' }).count()) await a.p.click('#guardar');
+        await a.p.waitForFunction(() => document.getElementById('hoja').hidden, null, { timeout: 6000 });
+        await a.p.waitForTimeout(500);
+      };
+      const osc = () => a.p.evaluate(() => window.__osc);
+      eq(await osc(), 0, 'sonido: al entrar no suena nada');
+      await guardar(11111);
+      eq(await osc(), 0, 'sonido: apagado por defecto, guardar una compra no suena');
+      await a.p.waitForTimeout(3600);
+      await a.p.click('#cuenta-btn');
+      eq((await a.p.textContent('#dc-sonido')).trim(), 'Sonido al guardar: apagado', 'sonido: «Tu cuenta» dice que está apagado');
+      await a.p.click('#dc-sonido');
+      eq([(await a.p.textContent('#dc-sonido')).trim(), await a.p.evaluate(() => localStorage.getItem('libro.sonido'))], ['Sonido al guardar: encendido', '1'], 'sonido: se enciende y se recuerda');
+      ok((await osc()) >= 2, `sonido: al encenderlo suena una muestra (${await osc()} notas)`);
+      await a.p.keyboard.press('Escape');
+      await a.p.waitForTimeout(300);
+      const antes = await osc();
+      await guardar(12222);
+      const despues = await osc();
+      ok(despues - antes >= 2 && despues - antes <= 4, `sonido: al guardar una compra suenan ${despues - antes} notas`);
+      await a.p.waitForTimeout(3600);
+      // Una venta no suena (solo las compras)
+      await a.p.click('#anotar');
+      await a.p.click('#h-tipo button[data-tipo="venta"]');
+      await a.p.fill('#h-sats', '1000');
+      await a.p.click('#guardar');
+      await a.p.waitForFunction(() => document.getElementById('hoja').hidden, null, { timeout: 6000 });
+      await a.p.waitForTimeout(500);
+      eq(await osc(), despues, 'sonido: guardar una venta no suena');
+      await a.p.waitForTimeout(3600);
+      await a.p.click('#cuenta-btn');
+      await a.p.click('#dc-sonido');
+      eq((await a.p.textContent('#dc-sonido')).trim(), 'Sonido al guardar: apagado', 'sonido: se apaga');
+      await a.ctx.close();
+
+      // --- Guía de estilo: solo el admin; colores con contraste, iconos y sin desbordes
+      const g = await entrar(navegador, srv, ADMIN, { hora: 22 }, sinAvisos);
+      const resp = await g.p.goto(`${srv.url}/guia`, { waitUntil: 'networkidle' });
+      ok(resp.status() === 200 && (await g.p.textContent('h1')) === 'Guía de estilo', 'guía: el admin la abre');
+      for (const [tema, contraste] of [['oscuro', 'normal'], ['claro', 'normal'], ['oscuro', 'alto'], ['claro', 'alto']]) {
+        await g.p.evaluate(([t, c]) => { window.libroTema.fijar(t); window.libroAcc.fijarContraste(c); }, [tema, contraste]);
+        await g.p.waitForTimeout(400);
+        await g.p.evaluate(() => document.querySelector('.guia-ctl .rangos button')?.click()); // repinta los colores con el estado actual
+        await g.p.waitForTimeout(300);
+        const c = await g.p.evaluate(() => ({ muestras: document.querySelectorAll('#guia-col li').length, malos: [...document.querySelectorAll('.guia-mal')].map((e) => e.closest('li').dataset.token), buenos: document.querySelectorAll('.guia-ok').length }));
+        ok(c.muestras >= 20 && c.buenos === 6 && c.malos.length === 0, `guía (${tema}, contraste ${contraste}): ${c.muestras} colores, los 6 de texto con 4.5:1 o más${c.malos.length ? ` (mal: ${c.malos})` : ''}`);
+      }
+      const ic = await g.p.evaluate(() => ({ iconos: [...document.querySelectorAll('#guia-iconos .ico')].map((e) => { const r = e.getBoundingClientRect(); return r.width > 8 && r.height > 8; }), avatares: document.querySelectorAll('#guia-av .avatar').length, medallas: document.querySelectorAll('#guia-med .med').length, ilus: document.querySelectorAll('#guia-ilu .ilu').length }));
+      ok(ic.iconos.length === 8 && ic.iconos.every(Boolean) && ic.avatares === 8 && ic.medallas === 4 && ic.ilus === 3, 'guía: muestra los 8 iconos, los avatares, las medallas y las ilustraciones');
+      for (const w of [320, 768, 1280]) {
+        await g.p.setViewportSize({ width: w, height: 800 });
+        await g.p.waitForTimeout(200);
+        ok(await g.p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1), `guía: sin scroll horizontal a ${w} px`);
+      }
+      await g.ctx.close();
+      const lec = await entrar(navegador, srv, LECTOR, { hora: 22 }, sinAvisos);
+      eq((await lec.p.goto(`${srv.url}/guia`)).status(), 404, 'guía: un lector no la ve');
+      await lec.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {

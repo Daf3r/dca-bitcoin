@@ -6,6 +6,7 @@ import { $, R, S, api, normalizar, reducido } from './estado.js';
 import { MS_SUBIDA, pintar, progresoEtapa } from './pintar.js';
 import { resaltar } from './lista.js';
 import { nombreMeta } from './reportes.js';
+import { sonarGuardado } from './sonido.js';
 
 // ------------------------------------------------------------- hoja de anotar
 export const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -393,6 +394,7 @@ $('guardar').addEventListener('click', async () => {
       await new Promise((ok) => setTimeout(ok, 480));
     }
     pintar({ montana: true, desde: antes.sats, festejo });
+    if (festejo) sonarGuardado(antes.sats, R.sats); // solo si lo activaste en «Tu cuenta»
     if (festejo && !reducido()) setTimeout(() => destello(), MS_SUBIDA);
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
     const texto = (editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : '');

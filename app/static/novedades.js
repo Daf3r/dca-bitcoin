@@ -1,5 +1,6 @@
 import { btc, entero, fechaCorta, novedades, pct, usd, usdSigno } from './lib.js';
 import { ofrecerAvisos } from './cuenta.js';
+import { enTV } from './tv.js';
 import { $, R, S, api } from './estado.js';
 import { progresoEtapa } from './pintar.js';
 import { nombreMeta, rachaTxt } from './reportes.js';
@@ -11,7 +12,7 @@ const dNov = $('d-novedades');
 export let novedadesMostradas = false;
 export function pintarNovedades() {
   // Espera al precio (o a su error) para poder decir cuánto vale; pintar() vuelve a llamar cuando llega.
-  if (novedadesMostradas || S.rol !== 'lector' || !S.cargado || S.visto === undefined || !(S.precio || S.errorPrecio) || dNov.open) return;
+  if (novedadesMostradas || S.rol !== 'lector' || !S.cargado || S.visto === undefined || !(S.precio || S.errorPrecio) || dNov.open || enTV()) return;
   novedadesMostradas = true;
   const n = novedades(R.items, S.visto);
   if (!n) return;
