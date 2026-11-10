@@ -754,6 +754,13 @@ div.fila:hover { background: none; }
 .av-interruptor[data-activo="1"] { background: none; border: 1.5px solid var(--s3); color: var(--txt); }
 .av-interruptor:disabled { opacity: 0.5; cursor: wait; }
 .av-lista { display: grid; gap: 6px; }
+.av-horario { display: grid; gap: 8px; margin: 6px 0 0; padding: 14px; border-radius: 14px; background: var(--s2); }
+.av-horario[hidden] { display: none; }
+.av-horario h3 { margin: 0; font: 650 1rem var(--sans); }
+.av-horario label { display: grid; grid-template-columns: 1fr 9.5rem; align-items: center; gap: 12px; color: var(--txt2); font-size: 0.9375rem; font-weight: 600; }
+.av-horario label[hidden] { display: none; }
+.av-horario select { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
+.av-horario select:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
 .av-fila { display: flex; align-items: flex-start; gap: 12px; min-height: var(--toque); padding: 10px 12px; border-radius: 14px; background: var(--s2); cursor: pointer; }
 .av-fila input { flex: none; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--naranja); }
 .av-fila span { display: grid; gap: 2px; }

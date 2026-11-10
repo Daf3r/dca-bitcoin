@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS avisos_pendientes (
   titulo    TEXT    NOT NULL,
   cuerpo    TEXT    NOT NULL,
   etiqueta  TEXT    NOT NULL,
-  creado    INTEGER NOT NULL
+  creado    INTEGER NOT NULL,
+  sus_id    INTEGER  -- el dispositivo al que le toca (cada uno tiene su horario); NULL = de antes de los horarios propios
 );
 -- TXID de compras y traslados nuevos: se vigilan hasta que se confirmen (solo se avisa si se vio pendiente).
 CREATE TABLE IF NOT EXISTS tx_vigilados (
@@ -94,7 +95,70 @@ def ahora() -> datetime:
 
 
 def dentro_de_horario() -> bool:
+    """El horario de siempre (8:00 a 21:00); cada dispositivo puede tener el suyo (ver `horario_de`)."""
     return HORA_DESDE <= ahora().hour < HORA_HASTA
+
+
+# ------------------------------------------------------------------ horario propio de cada dispositivo
+# Cada dispositivo puede elegir desde qué hora y hasta cuál quiere recibir avisos y a qué hora le llega el recordatorio de compra
+# (hora de El Salvador). Va en el mismo JSON de `prefs`, bajo la clave «horario»; sin elegir, vale el de siempre.
+HORA_RECORDATORIO = 9
+MIN_HORAS_VENTANA = 2  # una ventana de cero horas dejaría el dispositivo sin avisos para siempre: se pide al menos esto
+
+
+def horario_defecto() -> dict[str, int]:
+    return {"desde": HORA_DESDE, "hasta": HORA_HASTA, "recordatorio": HORA_RECORDATORIO}
+
+
+def limpiar_horario(h: Any) -> dict[str, int]:
+    """Valida un horario pedido: enteros, `desde` 0–22, `hasta` 1–24, al menos 2 horas entre ambos y el recordatorio dentro de la ventana."""
+    if not isinstance(h, dict):
+        raise ValueError("Horario inválido.")
+    base = horario_defecto()
+    try:
+        desde = int(h.get("desde", base["desde"]))
+        hasta = int(h.get("hasta", base["hasta"]))
+        raw = h.get("recordatorio")
+        recordatorio = int(raw) if raw is not None else min(max(base["recordatorio"], desde), hasta - 1)
+    except (TypeError, ValueError) as e:
+        raise ValueError("Horario inválido.") from e
+    if any(isinstance(h.get(k), bool) for k in ("desde", "hasta", "recordatorio")):
+        raise ValueError("Horario inválido.")
+    if not (0 <= desde <= 22 and 1 <= hasta <= 24):
+        raise ValueError("Las horas van de 0 a 24.")
+    if hasta - desde < MIN_HORAS_VENTANA:
+        raise ValueError(f"Los avisos necesitan al menos {MIN_HORAS_VENTANA} horas entre «desde» y «hasta».")
+    if not (desde <= recordatorio < hasta):
+        raise ValueError("El recordatorio tiene que caer dentro del horario de los avisos.")
+    return {"desde": desde, "hasta": hasta, "recordatorio": recordatorio}
+
+
+def horario_de(prefs_json: str | None) -> dict[str, int]:
+    """El horario guardado en las preferencias de un dispositivo (o el de siempre si no hay uno válido)."""
+    try:
+        crudas = json.loads(prefs_json or "{}")
+        return limpiar_horario(crudas["horario"]) if isinstance(crudas, dict) and "horario" in crudas else horario_defecto()
+    except (ValueError, KeyError):
+        return horario_defecto()
+
+
+def en_horario(h: dict[str, int], hora: int) -> bool:
+    return h["desde"] <= hora < h["hasta"]
+
+
+def alguien_despierto(conn: sqlite3.Connection) -> bool:
+    """True si ahora cae dentro del horario de siempre o del de algún dispositivo (para no vigilar de más cuando todos duermen)."""
+    hora = ahora().hour
+    if HORA_DESDE <= hora < HORA_HASTA:
+        return True
+    return any(en_horario(horario_de(r[0]), hora) for r in conn.execute("SELECT prefs FROM suscripciones"))
+
+
+def horario_dispositivo(conn: sqlite3.Connection, usuario_id: int, endpoint: Any) -> dict[str, int] | None:
+    if not isinstance(endpoint, str):
+        return None
+    f = conn.execute("SELECT prefs FROM suscripciones WHERE endpoint = ? AND usuario_id = ?", (endpoint, usuario_id)).fetchone()
+    return horario_de(f[0]) if f else None
 
 
 # ------------------------------------------------------------------ claves VAPID
@@ -207,9 +271,32 @@ def guardar_prefs(conn: sqlite3.Connection, usuario_id: int, rol: str, endpoint:
     if not f:
         raise LookupError("Este dispositivo no tiene los avisos activados.")
     todas = {**prefs_efectivas(f["prefs"], rol), **nuevas}
-    conn.execute("UPDATE suscripciones SET prefs = ? WHERE endpoint = ?", (json.dumps(todas), endpoint))
+    guardado = json.loads(f["prefs"] or "{}")
+    contenido: dict[str, Any] = dict(todas)
+    if isinstance(guardado, dict) and "horario" in guardado:
+        contenido["horario"] = guardado["horario"]  # elegir categorías no borra el horario
+    conn.execute("UPDATE suscripciones SET prefs = ? WHERE endpoint = ?", (json.dumps(contenido), endpoint))
     conn.commit()
     return todas
+
+
+def guardar_horario(conn: sqlite3.Connection, usuario_id: int, endpoint: Any, horario: Any) -> dict[str, int]:
+    """Guarda el horario de este dispositivo (validado). Lanza ValueError si no vale y LookupError si el dispositivo no está suscrito."""
+    nuevo = limpiar_horario(horario)
+    f = conn.execute("SELECT prefs FROM suscripciones WHERE endpoint = ? AND usuario_id = ?", (endpoint, usuario_id)).fetchone() \
+        if isinstance(endpoint, str) else None
+    if not f:
+        raise LookupError("Este dispositivo no tiene los avisos activados.")
+    try:
+        contenido = json.loads(f["prefs"] or "{}")
+    except ValueError:
+        contenido = {}
+    if not isinstance(contenido, dict):
+        contenido = {}
+    contenido["horario"] = nuevo
+    conn.execute("UPDATE suscripciones SET prefs = ? WHERE endpoint = ?", (json.dumps(contenido), endpoint))
+    conn.commit()
+    return nuevo
 
 
 def baja(conn: sqlite3.Connection, usuario_id: int, endpoint: Any) -> None:
@@ -264,17 +351,25 @@ def destinatarios(conn: sqlite3.Connection, categoria: str) -> list[dict[str, An
             "SELECT s.id, s.endpoint, s.p256dh, s.auth, s.prefs FROM suscripciones s "
             "JOIN usuarios u ON u.id = s.usuario_id WHERE u.activo = 1 AND u.rol = ?", (rol,)):
         if prefs_efectivas(r["prefs"], rol).get(categoria):
-            out.append({"id": r["id"], "endpoint": r["endpoint"], "p256dh": r["p256dh"], "auth": r["auth"]})
+            out.append({"id": r["id"], "endpoint": r["endpoint"], "p256dh": r["p256dh"], "auth": r["auth"], "horario": horario_de(r["prefs"])})
     return out
+
+
+def destinatario(conn: sqlite3.Connection, sus_id: int, categoria: str) -> dict[str, Any] | None:
+    """Un dispositivo concreto si sigue suscrito, su cuenta está activa y tiene esa categoría encendida."""
+    return next((d for d in destinatarios(conn, categoria) if d["id"] == sus_id), None)
 
 
 def _db_path(conn: sqlite3.Connection) -> str:
     return next(r[2] for r in conn.execute("PRAGMA database_list") if r[1] == "main")
 
 
-def enviar_ahora(conn: sqlite3.Connection, categoria: str, titulo: str, cuerpo: str, etiqueta: str) -> int:
+def enviar_ahora(conn: sqlite3.Connection, categoria: str, titulo: str, cuerpo: str, etiqueta: str,
+                 destinos: list[dict[str, Any]] | None = None) -> int:
+    """Manda el aviso ya. Sin `destinos`, a todos los que tengan esa categoría; con ellos, solo a esos dispositivos."""
     conn.commit()  # el envío abre su propia conexión: sin una escritura a medias aquí, la base no se bloquea
-    destinos = destinatarios(conn, categoria)
+    if destinos is None:
+        destinos = destinatarios(conn, categoria)
     if not destinos:
         return 0
     payload = json.dumps({"titulo": titulo, "cuerpo": cuerpo, "etiqueta": etiqueta, "url": "/"}, ensure_ascii=False)
@@ -287,38 +382,60 @@ def enviar_ahora(conn: sqlite3.Connection, categoria: str, titulo: str, cuerpo: 
 
 
 def notificar(conn: sqlite3.Connection, categoria: str, titulo: str, cuerpo: str, etiqueta: str) -> int:
-    """Avisa a quien tenga esa categoría encendida; de noche lo deja para la mañana. Nunca lanza: avisar es secundario."""
+    """
+    Avisa a quien tenga esa categoría encendida y esté dentro de su horario; a quien duerme se lo deja guardado para cuando despierte
+    (cada dispositivo tiene su horario, por defecto de 8:00 a 21:00). Nunca lanza: avisar es secundario.
+    """
     try:
         conn.row_factory = sqlite3.Row
-        if not dentro_de_horario():
-            conn.execute("INSERT INTO avisos_pendientes (categoria, titulo, cuerpo, etiqueta, creado) VALUES (?, ?, ?, ?, ?)",
-                         (categoria, titulo, cuerpo, etiqueta, int(time.time())))
-            conn.commit()
-            return 0
-        return enviar_ahora(conn, categoria, titulo, cuerpo, etiqueta)
+        hora = ahora().hour
+        todos = destinatarios(conn, categoria)
+        despiertos = [d for d in todos if en_horario(d["horario"], hora)]
+        for d in todos:
+            if d not in despiertos:
+                conn.execute("INSERT INTO avisos_pendientes (categoria, titulo, cuerpo, etiqueta, creado, sus_id) VALUES (?, ?, ?, ?, ?, ?)",
+                             (categoria, titulo, cuerpo, etiqueta, int(time.time()), d["id"]))
+        conn.commit()
+        return enviar_ahora(conn, categoria, titulo, cuerpo, etiqueta, destinos=despiertos) if despiertos else 0
     except Exception as e:  # noqa: BLE001
         print(f"push: no se pudo avisar ({type(e).__name__}: {e})", flush=True)
         return 0
 
 
 def vaciar_pendientes(conn: sqlite3.Connection) -> int:
-    """Manda lo que cayó de noche (si ya es de día). Varios avisos de una categoría salen como uno solo."""
-    if not dentro_de_horario():
-        return 0
+    """
+    Manda lo guardado a cada dispositivo cuando ya está dentro de su horario. Varios avisos de una categoría para un mismo dispositivo
+    salen como uno solo. Los de antes de los horarios propios (sin dispositivo) salen con el horario de siempre.
+    """
     conn.row_factory = sqlite3.Row
-    filas = conn.execute("SELECT id, categoria, titulo, cuerpo, etiqueta FROM avisos_pendientes ORDER BY id").fetchall()
-    enviados = 0
-    por_cat: dict[str, list[sqlite3.Row]] = {}
+    filas = conn.execute("SELECT id, categoria, titulo, cuerpo, etiqueta, sus_id FROM avisos_pendientes ORDER BY id").fetchall()
+    if not filas:
+        return 0
+    hora = ahora().hour
+    grupos: dict[tuple[str, int | None], list[sqlite3.Row]] = {}
     for f in filas:
-        por_cat.setdefault(f["categoria"], []).append(f)
-    for cat, lista in por_cat.items():
-        if len(lista) == 1:
-            enviados += enviar_ahora(conn, cat, lista[0]["titulo"], lista[0]["cuerpo"], lista[0]["etiqueta"])
+        grupos.setdefault((f["categoria"], f["sus_id"]), []).append(f)
+    enviados = 0
+    borrar: list[int] = []
+    for (cat, sus_id), lista in grupos.items():
+        if sus_id is None:  # de antes de los horarios propios: el horario de siempre y quien tenga la categoría ahora
+            if not dentro_de_horario():
+                continue
+            destinos = destinatarios(conn, cat)
         else:
-            cuerpo = f"Tienes {len(lista)} avisos nuevos del libro."
-            enviados += enviar_ahora(conn, cat, lista[0]["titulo"], cuerpo, f"resumen-{cat}")
-    if filas:
-        conn.execute("DELETE FROM avisos_pendientes WHERE id <= ?", (filas[-1]["id"],))
+            d = destinatario(conn, sus_id, cat)
+            if d is not None and not en_horario(d["horario"], hora):
+                continue  # todavía duerme: sigue guardado
+            destinos = [d] if d is not None else []  # si el dispositivo ya no existe o apagó la categoría, el aviso se descarta
+        if destinos:
+            if len(lista) == 1:
+                enviados += enviar_ahora(conn, cat, lista[0]["titulo"], lista[0]["cuerpo"], lista[0]["etiqueta"], destinos=destinos)
+            else:
+                cuerpo = f"Tienes {len(lista)} avisos nuevos del libro."
+                enviados += enviar_ahora(conn, cat, lista[0]["titulo"], cuerpo, f"resumen-{cat}", destinos=destinos)
+        borrar.extend(f["id"] for f in lista)
+    if borrar:
+        conn.executemany("DELETE FROM avisos_pendientes WHERE id = ?", [(i,) for i in borrar])
         conn.commit()
     return enviados
 

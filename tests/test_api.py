@@ -1064,6 +1064,111 @@ push.ahora = lambda: _dtm(2026, 11, 8, 9, 5, tzinfo=ritmo.ZONA)
 check(avisos._recordatorio(cx) is False and len(enviados) == 2, "si ya compraste (o no toca) no avisa")
 ritmo.recordatorio = _ori
 
+# --- Horario propio de cada dispositivo (idea 103): desde, hasta y hora del recordatorio
+_HDEF = {"desde": 8, "hasta": 21, "recordatorio": 9}
+r = adm.post("/api/push/estado", json={"endpoint": EP_ADM}).get_json()
+check(r["horario"] == _HDEF and r["horario_defecto"] == _HDEF, f"el horario por defecto es el de siempre {r}")
+check(luz.post("/api/push/estado", json={"endpoint": "https://fcm.googleapis.com/otro"}).get_json() == {"suscrito": False, "categorias": []}, "sin suscribir no hay horario")
+r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
+check(r.status_code == 200 and r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, f"se guarda el horario del dispositivo {r.data}")
+check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida"], "guardar el horario no cambia las categorías")
+r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
+check(r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, "elegir categorías no borra el horario")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
+check(adm.post("/api/push/estado", json={"endpoint": EP_ADM}).get_json()["horario"]["desde"] == 6, "el horario se recuerda")
+# Validación: ventana de al menos 2 horas, horas de 0 a 24, recordatorio dentro de la ventana, enteros
+for malo in ({"desde": 10, "hasta": 11, "recordatorio": 10}, {"desde": 10, "hasta": 10}, {"desde": 12, "hasta": 8}, {"desde": -1, "hasta": 20, "recordatorio": 9},
+             {"desde": 8, "hasta": 25}, {"desde": 23, "hasta": 24}, {"desde": 8, "hasta": 21, "recordatorio": 21}, {"desde": 8, "hasta": 21, "recordatorio": 7},
+             {"desde": "ocho", "hasta": 21}, {"desde": True, "hasta": 21}, {"desde": None, "hasta": None}, [8, 21], "8-21"):
+    check(adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": malo}).status_code == 400, f"horario inválido rechazado: {malo}")
+check(adm.post("/api/push/estado", json={"endpoint": EP_ADM}).get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, "un horario inválido no cambia el guardado")
+check(adm.put("/api/push/prefs", json={"endpoint": "https://fcm.googleapis.com/otro", "horario": _HDEF}).status_code == 404, "horario de un dispositivo sin avisos, 404")
+check(ana.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": _HDEF}).status_code == 404, "nadie cambia el horario de otra cuenta")
+check(adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 7, "hasta": 22}}).get_json()["horario"] == {"desde": 7, "hasta": 22, "recordatorio": 9},
+      "sin recordatorio se toma el de siempre ajustado a la ventana")
+check(adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 11, "hasta": 22}}).get_json()["horario"]["recordatorio"] == 11,
+      "y si el de siempre queda antes de la ventana, empieza con ella")
+# Sin horario guardado (o con el JSON roto) vale el de siempre
+check(push.horario_de(None) == _HDEF and push.horario_de("no es json") == _HDEF and push.horario_de('{"horario": {"desde": 20, "hasta": 3}}') == _HDEF
+      and push.horario_de('{"horario": 7}') == _HDEF, "un horario ausente o dañado vuelve al de siempre")
+
+# El recordatorio sale a la hora de cada dispositivo: uno que lo quiere a las 7:00 no espera al de las 9:00
+EP_ADM2 = "https://updates.push.services.mozilla.com/wpush/v2/admin-telefono"
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
+check(adm.post("/api/push/suscribir", json=_sus(EP_ADM2)).status_code == 200, "el admin suma un segundo dispositivo")
+check(adm.post("/api/push/estado", json={"endpoint": EP_ADM2}).get_json()["horario"] == _HDEF, "el dispositivo nuevo arranca con el horario de siempre")
+cxh = server.connect()
+ritmo.recordatorio = lambda f, h: {"estado": "toca", "racha": 8, "paso": 1, "dias_restantes": 2}
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 9, 6, 30, tzinfo=ritmo.ZONA)
+check(avisos._recordatorio(cxh) is False and not enviados, "6:30: ninguno de los dos quiere aún el recordatorio")
+push.ahora = lambda: _dtm(2026, 11, 9, 7, 5, tzinfo=ritmo.ZONA)
+check(avisos._recordatorio(cxh) is True and _a_quien() == [EP_ADM], f"7:05: llega al que lo quiere a las 7:00 (aunque el horario de siempre empiece a las 8:00) {_a_quien()}")
+check(avisos._recordatorio(cxh) is False and len(enviados) == 1, "7:10: una vez al día por dispositivo")
+push.ahora = lambda: _dtm(2026, 11, 9, 9, 5, tzinfo=ritmo.ZONA)
+check(avisos._recordatorio(cxh) is True and _a_quien() == sorted([EP_ADM, EP_ADM2]) and len(enviados) == 2, f"9:05: llega al otro, que no lo había recibido {_a_quien()}")
+check(avisos._recordatorio(cxh) is False, "9:10: los dos ya lo recibieron hoy")
+push.ahora = lambda: _dtm(2026, 11, 10, 23, 30, tzinfo=ritmo.ZONA)
+enviados.clear()
+check(avisos._recordatorio(cxh) is False and not enviados, "23:30: fuera del horario de los dos no suena")
+push.ahora = lambda: _dtm(2026, 11, 10, 9, 5, tzinfo=ritmo.ZONA)
+check(avisos._recordatorio(cxh) is True and _a_quien() == sorted([EP_ADM, EP_ADM2]), "al día siguiente vuelve a avisar a los dos")
+ritmo.recordatorio = _ori
+
+# De noche cada dispositivo espera su hora: lo que cae mientras duerme queda guardado solo para él
+EP_ANA2 = "https://web.push.apple.com/ana-horario"
+luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "horario": {"desde": 10, "hasta": 20, "recordatorio": 10}})
+check(ana.post("/api/push/suscribir", json=_sus(EP_ANA2)).status_code == 200, "Ana suma un dispositivo con el horario de siempre")
+cxh.execute("DELETE FROM avisos_pendientes"); cxh.commit()
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 10, 20, 30, tzinfo=ritmo.ZONA)
+push.notificar(cxh, "movimiento", "Libro DCA", "Daf3r anotó una compra de 25,000 sats", "mov-horario")
+check(EP_ANA2 in _a_quien() and EP_LUZ not in _a_quien(), f"20:30: le llega a quien está despierto y no al que duerme desde las 20:00 {_a_quien()}")
+_luz_id = cxh.execute("SELECT id FROM suscripciones WHERE endpoint = ?", (EP_LUZ,)).fetchone()[0]
+check(cxh.execute("SELECT COUNT(*) FROM avisos_pendientes WHERE sus_id = ?", (_luz_id,)).fetchone()[0] == 1, "para el que duerme queda uno guardado, a su nombre")
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 11, 9, 30, tzinfo=ritmo.ZONA)
+check(push.vaciar_pendientes(cxh) == 0 and not enviados and cxh.execute("SELECT COUNT(*) FROM avisos_pendientes").fetchone()[0] == 1, "9:30: todavía duerme, sigue guardado")
+push.ahora = lambda: _dtm(2026, 11, 11, 10, 30, tzinfo=ritmo.ZONA)
+check(push.vaciar_pendientes(cxh) == 1 and _a_quien() == [EP_LUZ] and cxh.execute("SELECT COUNT(*) FROM avisos_pendientes").fetchone()[0] == 0, f"10:30: sale solo a su dueño {_a_quien()}")
+# Varios para el mismo dispositivo salen juntos; un dispositivo dado de baja pierde los suyos sin errores
+push.ahora = lambda: _dtm(2026, 11, 11, 20, 30, tzinfo=ritmo.ZONA)
+enviados.clear()
+for _i in range(3):
+    push.notificar(cxh, "movimiento", "Libro DCA", f"aviso {_i}", f"mov-h{_i}")
+push.ahora = lambda: _dtm(2026, 11, 12, 10, 30, tzinfo=ritmo.ZONA)
+enviados.clear()
+push.vaciar_pendientes(cxh)
+check([(e, p["cuerpo"]) for e, p in enviados] == [(EP_LUZ, "Tienes 3 avisos nuevos del libro.")], f"varios guardados salen como uno {enviados}")
+push.ahora = lambda: _dtm(2026, 11, 12, 20, 30, tzinfo=ritmo.ZONA)
+push.notificar(cxh, "movimiento", "Libro DCA", "para un dispositivo que se irá", "mov-baja")
+luz.post("/api/push/baja", json={"endpoint": EP_LUZ})
+push.ahora = lambda: _dtm(2026, 11, 13, 10, 30, tzinfo=ritmo.ZONA)
+enviados.clear()
+check(push.vaciar_pendientes(cxh) == 0 and not enviados and cxh.execute("SELECT COUNT(*) FROM avisos_pendientes").fetchone()[0] == 0, "los avisos de un dispositivo dado de baja se descartan")
+luz.post("/api/push/suscribir", json=_sus(EP_LUZ))
+# Los avisos guardados de antes de los horarios propios (sin dispositivo) salen con el horario de siempre
+cxh.execute("INSERT INTO avisos_pendientes (categoria, titulo, cuerpo, etiqueta, creado) VALUES ('movimiento', 'Libro DCA', 'de antes', 'viejo', 1)")
+cxh.commit()
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 13, 7, 30, tzinfo=ritmo.ZONA)
+check(push.vaciar_pendientes(cxh) == 0 and cxh.execute("SELECT COUNT(*) FROM avisos_pendientes").fetchone()[0] == 1, "los de antes esperan al horario de siempre (7:30 aún no)")
+push.ahora = lambda: _dtm(2026, 11, 13, 8, 30, tzinfo=ritmo.ZONA)
+check(push.vaciar_pendientes(cxh) >= 1 and cxh.execute("SELECT COUNT(*) FROM avisos_pendientes").fetchone()[0] == 0, "y salen a las 8:30")
+# «Alguien despierto»: ni una consulta de precio de más cuando todos duermen
+push.ahora = lambda: _dtm(2026, 11, 13, 5, 0, tzinfo=ritmo.ZONA)
+check(push.alguien_despierto(cxh) is False, "5:00 con todos dormidos")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 4, "hasta": 23, "recordatorio": 5}})
+check(push.alguien_despierto(cxh) is True, "5:00 con un dispositivo que despierta a las 4:00")
+# Dejamos los dispositivos como estaban
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": _HDEF})
+luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "horario": _HDEF})
+adm.post("/api/push/baja", json={"endpoint": EP_ADM2})
+ana.post("/api/push/baja", json={"endpoint": EP_ANA2})
+cxh.close()
+push.ahora = _de_dia
+enviados.clear()
+
 # TXID: solo avisa si se vio pendiente y luego se confirmó
 TXP, TXC = "a1" * 32, "b2" * 32
 adm.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 150, "txid": TXP})
