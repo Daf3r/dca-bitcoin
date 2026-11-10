@@ -1303,7 +1303,8 @@ try {
     eq(sa.defecto, `Hoy tienes ${entero(satsMil)} sats.`, 'la escalera dice los mismos sats que el saldo');
     await p.evaluate(() => document.getElementById('s-lienzo').scrollIntoView({ block: 'center' }));
     const sb = await p.locator('#s-lienzo').boundingBox();
-    await p.mouse.move(sb.x + sb.width * 0.4, sb.y + sb.height * 0.5); await p.waitForTimeout(200);
+    await p.mouse.move(sb.x + sb.width * 0.4, sb.y + sb.height * 0.5);
+    await p.waitForFunction(() => /sats · .* en total/.test(document.getElementById('s-lectura').textContent), null, { timeout: 4000 }).catch(() => {}); // sin espera fija: bajo carga tarda más
     ok(/sats · .* en total/.test(await p.textContent('#s-lectura')), 'al recorrer la escalera se lee cuánto sumó cada movimiento');
     await p.mouse.move(5, 5);
     await verVista(p, 'precio');
