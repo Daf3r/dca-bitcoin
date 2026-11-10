@@ -348,6 +348,7 @@
     </div>
     <div class="dc-lista">
       <button type="button" data-cuenta="clave">Cambiar contraseña</button>
+      <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
@@ -361,6 +362,17 @@
       <button type="button" data-cuenta="cerrar">Cerrar</button>
     </div>
     <p class="dc-atajos" id="dc-atajos-lista">Atajos con el teclado: <kbd>A</kbd> anotar · <kbd>T</kbd> tema · <kbd>U</kbd> unidad del saldo · <kbd>/</kbd> buscar en la lista.</p>
+  </div>
+  <div class="dc-historia" id="dc-historia" hidden>
+    <h2>Tu historia</h2>
+    <p class="vacio con-ilu" id="dh-vacio" hidden></p>
+    <div id="dh-cuerpo">
+      <h3>Medallas</h3>
+      <ul class="medallas" id="dh-medallas"></ul>
+      <h3>Cómo llegaste hasta aquí</h3>
+      <ol class="historia" id="dh-linea"></ol>
+    </div>
+    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <form class="dc-clave" id="f-clave" novalidate hidden>
     <h2>Cambiar contraseña</h2>
@@ -411,6 +423,13 @@
   <ul class="nov-lista" id="nov-lista"></ul>
   <dl class="nov-resumen" id="nov-resumen"></dl>
   <div class="d-bot"><button type="button" id="nov-ok" autofocus>Entendido</button></div>
+</dialog>
+
+<dialog id="d-cambios" aria-labelledby="cam-t">
+  <h2 id="cam-t">Qué hay de nuevo</h2>
+  <p>Cambios recientes en el libro:</p>
+  <ul class="nov-lista" id="cam-lista"></ul>
+  <div class="d-bot"><button type="button" id="cam-ok" autofocus>Entendido</button></div>
 </dialog>
 
 <dialog id="d-grafico" class="d-grafico" aria-labelledby="dg-t">

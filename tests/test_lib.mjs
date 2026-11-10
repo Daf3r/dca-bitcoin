@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -589,6 +589,40 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(acentoDe(99_999_999) === 'naranja' && acentoDe(1e8) === 'oro' && acentoDe(2.5e8) === 'oro', 'acento: dorado desde 1 BTC');
   ok(cruzo1Btc(99_990_000, 1e8) && cruzo1Btc(0, 3e8) && !cruzo1Btc(1e8, 1.1e8) && !cruzo1Btc(1.2e8, 9e7) && !cruzo1Btc(5e7, 9e7), 'celebración de 1 BTC: solo al cruzar hacia arriba');
   ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Math.abs(iluminacionLunar(0.25) - 0.5) < 1e-9 && iluminacionLunar(0.75) > 0.49, 'luna: iluminación 0 en nueva, 1 en llena, 0.5 en cuartos');
+}
+
+// «Tu historia» y medallas (campamento 6, ideas 37 y 38)
+{
+  // 30 semanas de compras de lunes a martes (la semana 12 se salta) para tener una racha rota y una mejor racha con fechas
+  const cs = []; let id = 1;
+  for (let w = 0; w < 30; w++) {
+    if (w === 12) continue;
+    const d = new Date(Date.UTC(2025, 0, 6 + w * 7)); // lunes
+    const f = d.toISOString().slice(0, 10);
+    cs.push({ id: id++, fecha: f, tipo: 'compra', monto: 20, sats: 25_000, precio: 80000, extra: w === 5 || w === 20 || w === 25, nota: w === 5 ? 'caída' : '' });
+  }
+  const hoyH = '2025-08-15';
+  const Rh = resumen(cs, 80000, hoyH);
+  ok(Rh.mejorRacha >= 4 && Rh.mejorRachaDesde && Rh.mejorRachaHasta && Rh.mejorRachaDesde <= Rh.mejorRachaHasta, `mejor racha con fechas (${Rh.mejorRacha}: ${Rh.mejorRachaDesde} → ${Rh.mejorRachaHasta})`);
+  eq(Rh.mejorRacha, 17, 'mejor racha: 17 semanas seguidas tras el salto');
+  const { eventos, extrasOcultas } = historia(Rh, hoyH);
+  eq(eventos[0].clase, 'primera', 'la historia empieza con la primera compra');
+  eq(eventos.at(-1).clase, 'hoy', 'y acaba con hoy');
+  ok(eventos.every((e, i) => i === 0 || eventos[i - 1].fecha <= e.fecha), 'los eventos van de más viejo a más nuevo');
+  ok(eventos.some((e) => e.clase === 'racha') && eventos.some((e) => e.clase === 'constancia' && e.titulo === '10 compras') && eventos.some((e) => e.titulo === '6 meses comprando'), 'trae racha, 10 compras y 6 meses');
+  eq(eventos.filter((e) => e.clase === 'extra').length, 3, 'las compras extra salen una por una');
+  eq(extrasOcultas, 0, 'sin extras ocultas con pocas');
+  eq(historia(Rh, hoyH, { maxExtras: 1 }).extrasOcultas, 2, 'con tope de extras, el resto se cuenta');
+  ok(eventos.find((e) => e.clase === 'extra' && e.detalle.includes('caída')), 'la nota de la compra extra va en su detalle');
+  eq(historia(resumen([], null)).eventos, [], 'sin compras no hay historia');
+  const md = medallas(Rh, hoyH);
+  eq(md.filter((m) => m.ganada && m.tipo === 'compras').map((m) => m.valor), [10, 25], 'medallas de compras ganadas: 10 y 25');
+  eq(md.filter((m) => !m.ganada).map((m) => `${m.tipo}${m.valor}:${m.falta}`), ['compras50:' + (50 - cs.length), 'tiempo12:' + 5], 'solo la siguiente de cada tipo, con lo que falta');
+  eq(md.filter((m) => m.ganada && m.tipo === 'tiempo').map((m) => [m.valor, m.fecha]), [[6, '2025-07-06']], 'medalla de 6 meses con su fecha');
+  eq(medallas(resumen([], null)), [], 'sin compras no hay medallas');
+  // Fin de mes: 6 meses desde el 31 de agosto es el 28 de febrero
+  const fm = historia(resumen([{ id: 1, fecha: '2025-08-31', tipo: 'compra', monto: 1, sats: 1000, precio: 1e5 }], 1e5, '2026-03-05'), '2026-03-05').eventos;
+  ok(fm.some((e) => e.titulo === '6 meses comprando' && e.fecha === '2026-02-28'), 'seis meses desde el 31 de agosto caen el 28 de febrero');
 }
 
 // Color y avatar por persona (campamento 6, idea 157)

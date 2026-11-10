@@ -185,6 +185,18 @@ try {
       await auditar(p, `alto contraste: cuenta ${esquema}`);
       await ctx.close();
     }
+    { // «Tu historia» (medallas y línea de tiempo) y «Qué hay de nuevo»
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-historia-btn'); await p.waitForTimeout(700);
+      await auditar(p, `tu historia ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await p.evaluate(async () => { await fetch('/api/cambios-visto', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ id: '0' }) }); });
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForSelector('#d-cambios[open]', { timeout: 8000 }); await p.waitForTimeout(400);
+      await auditar(p, `qué hay de nuevo ${esquema}`);
+      await ctx.close();
+    }
     { // el enlace para saltar al contenido, enfocado
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

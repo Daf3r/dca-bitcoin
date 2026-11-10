@@ -130,6 +130,11 @@ def init_db() -> None:
         # «Novedades»: cuándo vio cada persona el resumen por última vez (en bases anteriores, se añade aquí)
         if "visto_ts" not in {r["name"] for r in conn.execute("PRAGMA table_info(usuarios)")}:
             conn.execute("ALTER TABLE usuarios ADD COLUMN visto_ts INTEGER")
+        # «Qué hay de nuevo»: el último aviso de cambios que vio cada persona. Las cuentas que ya existen al añadir la columna
+        # quedan en '0' (verán el primero); las nuevas empiezan en NULL (no han visto nada que haya cambiado: se marca en silencio).
+        if "cambios_visto" not in {r["name"] for r in conn.execute("PRAGMA table_info(usuarios)")}:
+            conn.execute("ALTER TABLE usuarios ADD COLUMN cambios_visto TEXT")
+            conn.execute("UPDATE usuarios SET cambios_visto = '0'")
         conn.execute("CREATE INDEX IF NOT EXISTS compras_txid ON compras (txid) WHERE txid IS NOT NULL")
         # filas de antes de guardar sats: se estiman con monto y precio
         conn.execute(
@@ -459,7 +464,7 @@ def exigir_sesion() -> Any:
     if not u:
         return (jsonify(error="Inicia sesión."), 401) if api else redirect("/login")
     g.usuario = u
-    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto") \
+    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto", "/api/cambios-visto") \
             and not ruta.startswith("/api/push/"):
         return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
@@ -610,8 +615,9 @@ def logout() -> Any:
 
 @app.get("/api/yo")
 def yo() -> Response:
-    visto = db().execute("SELECT visto_ts FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
-    return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"], visto=visto["visto_ts"] if visto else None)
+    fila = db().execute("SELECT visto_ts, cambios_visto FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
+    return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"], visto=fila["visto_ts"] if fila else None,
+                   cambios=fila["cambios_visto"] if fila else None)
 
 
 @app.post("/api/visto")
@@ -623,6 +629,23 @@ def visto() -> Response:
     conn.execute("UPDATE usuarios SET visto_ts = ? WHERE id = ?", (ahora, g.usuario["id"]))
     conn.commit()
     return jsonify(visto=ahora)
+
+
+_ID_CAMBIOS = re.compile(r"[0-9a-z.\-]{1,40}")
+
+
+@app.post("/api/cambios-visto")
+def cambios_visto() -> Response:
+    """Marca que esta persona ya vio el aviso «Qué hay de nuevo» con ese `id` (el de la última entrada de `cambios.js`).
+    Cualquiera puede, también un lector; no se audita (solo evita mostrar dos veces lo mismo)."""
+    datos = request.get_json(silent=True) or {}
+    ident = datos.get("id") if isinstance(datos, dict) else None
+    if not isinstance(ident, str) or not _ID_CAMBIOS.fullmatch(ident):
+        return jsonify(error="Identificador de cambios no válido."), 400
+    conn = db()
+    conn.execute("UPDATE usuarios SET cambios_visto = ? WHERE id = ?", (ident, g.usuario["id"]))
+    conn.commit()
+    return jsonify(cambios=ident)
 
 
 # ----------------------------------------------------------------- avisos push

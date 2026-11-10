@@ -1589,6 +1589,95 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- Tu historia, medallas y qué hay de nuevo (campamento 6, 2/3)
+  {
+    const srv = await servidor('anio');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+      // Una cuenta nueva no ve «Qué hay de nuevo» (no ha visto nada que haya cambiado): se marca sin avisar
+      ok(!(await p.locator('#d-cambios[open]').count()), 'qué hay de nuevo: una cuenta nueva no ve el aviso');
+      await p.waitForFunction(() => fetch('/api/yo').then((r) => r.json()).then((j) => /^2026-/.test(j.cambios ?? '')), null, { timeout: 5000 });
+      ok(true, 'qué hay de nuevo: y queda marcado como visto en silencio');
+      await p.click('#cuenta-btn');
+      await p.click('#dc-historia-btn');
+      await p.waitForSelector('#dc-historia:not([hidden])');
+      const h = await p.evaluate(() => ({
+        medallas: document.querySelectorAll('#dh-medallas .medalla').length,
+        ganadas: document.querySelectorAll('#dh-medallas .medalla.ganada').length,
+        bloq: document.querySelectorAll('#dh-medallas .medalla.bloq').length,
+        eventos: [...document.querySelectorAll('#dh-linea .h-ev')].map((li) => ({ c: li.className, t: li.querySelector('time').dateTime })),
+        primera: document.querySelector('#dh-linea .h-primera strong')?.textContent,
+        hoy: document.querySelector('#dh-linea li:last-child strong')?.textContent,
+        desborda: document.getElementById('d-cuenta').scrollWidth > document.getElementById('d-cuenta').clientWidth + 1,
+        svgsDecor: [...document.querySelectorAll('#dc-historia svg')].every((s) => s.getAttribute('aria-hidden') === 'true'),
+        textoMedalla: document.querySelector('#dh-medallas .medalla.bloq')?.innerText.replace(/\s+/g, ' '),
+      }));
+      ok(h.ganadas >= 3 && h.bloq >= 1 && h.bloq <= 2 && h.medallas === h.ganadas + h.bloq, `medallas: las ganadas (${h.ganadas}) y solo la siguiente de cada tipo (${h.bloq})`);
+      ok(/Próxima: te faltan? \d+ (compras?|mes(es)?)/.test(h.textoMedalla), `medallas: la que falta dice cuánto («${h.textoMedalla}»)`);
+      ok(h.primera === 'Tu primera compra' && h.hoy === 'Hoy' && h.eventos.length >= 8 && h.eventos.every((e, i) => i === 0 || h.eventos[i - 1].t <= e.t), `historia: de la primera compra a hoy, en orden (${h.eventos.length} eventos)`);
+      ok(h.eventos.some((e) => e.c.includes('h-hito')) && h.eventos.some((e) => e.c.includes('h-constancia')), 'historia: trae campamentos y constancia');
+      ok(!h.desborda && h.svgsDecor, 'historia: sin desbordes y con las medallas como decoración (el texto las dice)');
+      await p.keyboard.press('Escape');
+      eq(consola, [], `consola limpia (tu historia): ${consola.join(' | ')}`);
+      // «Qué hay de nuevo»: con una versión vista anterior sale una vez, se cierra con «Entendido» y no vuelve
+      await p.evaluate(async () => { await fetch('/api/cambios-visto', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ id: '0' }) }); });
+      await p.reload({ waitUntil: 'networkidle' });
+      await p.waitForSelector('#d-cambios[open]', { timeout: 8000 });
+      const cam = await p.evaluate(() => ({ items: document.querySelectorAll('#cam-lista li').length, titulo: document.getElementById('cam-t').textContent }));
+      ok(cam.items >= 3 && cam.titulo === 'Qué hay de nuevo', `qué hay de nuevo: con una versión anterior sale con sus cambios (${cam.items})`);
+      await p.click('#cam-ok');
+      await p.waitForFunction(() => !document.getElementById('d-cambios').open, null, { timeout: 3000 });
+      await p.waitForFunction(() => fetch('/api/yo').then((r) => r.json()).then((j) => /^2026-/.test(j.cambios ?? '')), null, { timeout: 5000 });
+      await p.reload({ waitUntil: 'networkidle' });
+      await p.waitForTimeout(2500);
+      ok(!(await p.locator('#d-cambios[open]').count()), 'qué hay de nuevo: una vez visto no vuelve');
+      await ctx.close();
+      // Un lector: primero su bienvenida, después los cambios, y puede abrir «Tu historia»
+      const l = await entrar(navegador, srv, LECTOR, { hora: 22 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+      await l.p.evaluate(async () => { await fetch('/api/cambios-visto', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ id: '0' }) }); });
+      await l.p.reload({ waitUntil: 'networkidle' });
+      await l.p.waitForSelector('#d-novedades[open]', { timeout: 8000 });
+      ok(!(await l.p.evaluate(() => document.getElementById('d-cambios').open)), 'lector: la bienvenida va primero');
+      await l.p.click('#nov-ok');
+      await l.p.waitForSelector('#d-cambios[open]', { timeout: 5000 });
+      ok(true, 'lector: tras la bienvenida salen los cambios');
+      await l.p.click('#cam-ok');
+      await l.p.waitForFunction(() => !document.getElementById('d-cambios').open, null, { timeout: 3000 });
+      await l.p.click('#cuenta-btn');
+      await l.p.click('#dc-historia-btn');
+      await l.p.waitForSelector('#dh-linea .h-ev', { timeout: 4000 });
+      ok(await l.p.locator('#dh-linea .h-ev').count() >= 8, 'lector: también ve «Tu historia»');
+      await l.ctx.close();
+    } finally {
+      srv.parar();
+    }
+    const mil = await servidor('mil');
+    try {
+      const { ctx, p } = await entrar(navegador, mil, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+      await p.click('#cuenta-btn');
+      await p.click('#dc-historia-btn');
+      await p.waitForSelector('#dc-historia:not([hidden])');
+      const m = await p.evaluate(() => ({ extras: document.querySelectorAll('#dh-linea .h-extra').length, mas: document.querySelector('#dh-linea .h-mas')?.textContent, ganadas: document.querySelectorAll('#dh-medallas .medalla.ganada').length, total: document.querySelectorAll('#dh-linea li').length }));
+      ok(m.extras > 0 && m.extras <= 8 && /^Y \d+ compras extra más/.test(m.mas ?? ''), `historia: con muchas extra salen las 8 más recientes y se cuenta el resto (${m.extras} · «${m.mas}»)`);
+      ok(m.ganadas >= 8 && m.total < 80, `historia con mil compras: ${m.ganadas} medallas y ${m.total} eventos (no crece con cada compra)`);
+      await ctx.close();
+    } finally {
+      mil.parar();
+    }
+    const vac = await servidor('vacio');
+    try {
+      const { ctx, p } = await entrar(navegador, vac, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+      await p.click('#cuenta-btn');
+      await p.click('#dc-historia-btn');
+      await p.waitForSelector('#dc-historia:not([hidden])');
+      const v = await p.evaluate(() => ({ vacio: !document.getElementById('dh-vacio').hidden && !!document.querySelector('#dh-vacio .ilu'), cuerpo: document.getElementById('dh-cuerpo').hidden, txt: document.getElementById('dh-vacio').innerText }));
+      ok(v.vacio && v.cuerpo && /primera compra/.test(v.txt), 'historia: sin compras dice que empieza con la primera, con su dibujo');
+      await ctx.close();
+    } finally {
+      vac.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {
