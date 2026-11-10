@@ -25,6 +25,8 @@
 <body>
 <!-- Sol de «arrastra para actualizar»: solo lo ve quien tira de la página desde arriba (refrescar.js). -->
 <div class="recarga" id="recarga" aria-hidden="true"><i></i></div>
+<!-- Mini-cabecera: al bajar y perder de vista el saldo, queda una franja con el saldo y el precio; tocarla sube (minicab.js). -->
+<button type="button" class="minicab" id="minicab" aria-label="Volver arriba"><b id="minicab-saldo"></b><span id="minicab-precio"></span></button>
 <section class="escena" aria-labelledby="t-saldo">
   <div class="montana" id="montana"></div>
   <header class="cima">
@@ -273,6 +275,7 @@
     <label class="h-sats"><span id="h-sats-l">Sats que recibiste</span>
       <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hoja-calc">
     </label>
+    <button type="button" class="enlace h-habitual" id="h-habitual" hidden></button>
     <p class="hoja-calc" id="hoja-calc" aria-live="polite"></p>
     <p class="hoja-error" id="hoja-error" role="alert"></p>
     <label class="h-fecha">Fecha <input type="date" id="h-fecha" required></label>
@@ -329,6 +332,7 @@
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn">Avisos en este dispositivo</button>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
+      <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
       <button type="button" data-cuenta="salir">Salir</button>
       <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
       <button type="button" data-cuenta="cerrar">Cerrar</button>

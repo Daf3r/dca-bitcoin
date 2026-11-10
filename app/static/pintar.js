@@ -31,6 +31,31 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   pintarComienzo();
   pintarNovedades();
   ofrecerAvisos();
+  pintarMinicab();
+  pintarTitulo();
+}
+
+// Título de la pestaña con el saldo y el precio («121,567 sats · $75,928»): útil en la computadora con otra pestaña a la vista.
+// Con una pantalla compartida el saldo quedaría a la vista, así que se puede apagar en «Tu cuenta» (por dispositivo).
+const CLAVE_TITULO = 'libro.titulo';
+export const tituloConSaldo = () => { try { return localStorage.getItem(CLAVE_TITULO) !== '0'; } catch { return true; } };
+export function fijarTituloConSaldo(si) {
+  try { if (si) localStorage.removeItem(CLAVE_TITULO); else localStorage.setItem(CLAVE_TITULO, '0'); } catch { /* vale para esta visita */ }
+  pintarTitulo();
+}
+export function pintarTitulo() {
+  const hay = S.cargado && R.n && !(S.errorCarga && !R.n);
+  document.title = tituloConSaldo() && hay ? `${entero(R.sats)} sats · ${S.precio ? usd0(S.precio) : 'Libro DCA'}` : 'Libro DCA';
+}
+/** El texto de la mini-cabecera: el saldo en la unidad que elegiste y el precio de BTC. */
+export function pintarMinicab() {
+  const u = unidadVista();
+  const hay = S.cargado && R.n && !(S.errorCarga && !R.n);
+  const saldo = hay ? `${fmtUnidad[u](valorSaldo(u))} ${ETIQUETA_UNIDAD[u]}` : '';
+  const precio = S.precio ? usd0(S.precio) : '';
+  $('minicab-saldo').textContent = saldo;
+  $('minicab-precio').textContent = precio;
+  $('minicab').setAttribute('aria-label', `Volver arriba.${saldo ? ` Tu saldo: ${saldo}.` : ''}${precio ? ` Bitcoin: ${precio}.` : ''}`);
 }
 
 export function pintarPrecio() {
@@ -97,6 +122,7 @@ function alternarUnidad() {
     pintarCifraGrande($('s-sats'), null, valorSaldo(u), 0, fmtUnidad[u]);
     mostrado = valorSaldo(u);
     unidadPintada = u;
+    pintarMinicab();
     pintarLinea();
   }
   etiquetaUnidad();

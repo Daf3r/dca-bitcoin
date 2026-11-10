@@ -109,6 +109,9 @@ try {
       const sem = await p.locator('#semanas i').first().boundingBox();
       await p.mouse.click(sem.x + sem.width / 2, sem.y + sem.height / 2); await p.waitForTimeout(300);
       await auditar(p, `tira de semanas con una semana marcada ${esquema}`);
+      // La mini-cabecera fija (al bajar, con el saldo y el precio)
+      await p.evaluate(() => document.querySelector('.compras').scrollIntoView({ block: 'start' })); await p.waitForTimeout(500);
+      await auditar(p, `mini-cabecera a la vista ${esquema}`);
       // La lista: controles de búsqueda y filtros abiertos, con una búsqueda activa
       await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
       await p.click('#l-mas summary'); await p.fill('#l-buscar', '2'); await p.click('#l-chips button[data-f="compra"]'); await p.waitForTimeout(300);
@@ -136,6 +139,13 @@ try {
         await p.click(`#h-tipo button[data-tipo="${tipo}"]`); await p.waitForTimeout(200);
         await auditar(p, `hoja de ${tipo} ${esquema}`);
       }
+      await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+      // «Compra de siempre»: sats estimados, con su aviso
+      await p.click('#anotar'); await p.waitForTimeout(400);
+      await p.click('#h-habitual'); await p.waitForTimeout(300);
+      await auditar(p, `hoja con la compra de siempre estimada ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+      await p.click('#anotar'); await p.waitForTimeout(300); await p.click('#h-borrador-no'); await p.waitForTimeout(300);
       await p.keyboard.press('Escape'); await p.waitForTimeout(400);
       // El borrador: se escribe a medias, se cierra y al abrir otra vez avisa que lo recuperó
       await p.click('#anotar'); await p.waitForTimeout(400);

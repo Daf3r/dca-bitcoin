@@ -1221,8 +1221,24 @@ def error_http(e: Any) -> Any:
     return jsonify(error=mensajes.get(codigo, "Error.")), codigo
 
 
+_CON_ETAG = {"/api/compras", "/api/traslados", "/api/historico"}  # lecturas grandes que casi nunca cambian entre dos consultas
+
+
+def _etag_condicional(resp: Response) -> None:
+    """ETag del cuerpo y «304 sin cambios» si el navegador ya lo tiene (la app lo manda a mano: la API sigue en `no-store`)."""
+    etag = '"' + hashlib.sha1(resp.get_data(), usedforsecurity=False).hexdigest()[:20] + '"'
+    resp.headers["ETag"] = etag
+    previos = [x.strip().removeprefix("W/") for x in request.headers.get("If-None-Match", "").split(",")]
+    if etag in previos:
+        resp.status_code = 304
+        resp.set_data(b"")
+        resp.headers.pop("Content-Length", None)
+
+
 @app.after_request
 def cabeceras(resp: Response) -> Response:
+    if request.method == "GET" and request.path in _CON_ETAG and resp.status_code == 200 and not resp.direct_passthrough:
+        _etag_condicional(resp)
     resp.headers["Content-Security-Policy"] = CSP
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["X-Frame-Options"] = "DENY"

@@ -5,6 +5,22 @@ import { pintar, pintarLinea, pintarPrecio } from './pintar.js';
 import { entradaTarjetas } from './entrada.js';
 import { pintarCaida } from './reportes.js';
 
+/**
+ * Cada minuto, con la app abierta y a la vista, mira si hay movimientos nuevos (los de otra persona, o los tuyos desde otro dispositivo)
+ * y solo repinta si algo cambió. No toca los avisos ni muestra errores: si falla, lo reintenta el minuto siguiente.
+ */
+export async function actualizarSuave() {
+  if (!S.cargado || S.errorCarga) return;
+  try {
+    const compras = (await api('/api/compras')).map(normalizar);
+    const traslados = await api('/api/traslados');
+    if (JSON.stringify(compras) === JSON.stringify(S.compras) && JSON.stringify(traslados) === JSON.stringify(S.traslados)) return;
+    S.compras = compras;
+    S.traslados = traslados;
+    pintar({ montana: true });
+  } catch { /* en silencio */ }
+}
+
 export async function cargarCompras() {
   try {
     S.compras = (await api('/api/compras')).map(normalizar);

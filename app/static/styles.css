@@ -859,7 +859,7 @@ html[data-efectos="todos"] .sk, html[data-efectos="todos"] .sk-cards i { animati
 .sk-cards i:last-child { height: 220px; }
 
 /* Aviso temporal: una barra fina que se agota. */
-.aviso[data-temporal]::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 5px; height: 2px; border-radius: 2px; background: currentColor; opacity: 0.4; transform-origin: left; animation: aviso-barra 3.5s linear forwards; }
+.aviso[data-temporal]::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 5px; height: 2px; border-radius: 2px; background: currentColor; opacity: 0.4; transform-origin: left; animation: aviso-barra var(--aviso-ms, 3.5s) linear forwards; }
 @keyframes aviso-barra { to { transform: scaleX(0); } }
 html[data-efectos="ninguno"] .aviso::after { display: none; }
 
@@ -973,3 +973,27 @@ html[data-efectos="ninguno"] .lista li.sale { display: none; }
 .h-borrador[hidden] { display: none; }
 .copia-tmp { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .saldo-v[role="button"] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* ======================================================= Campamento 4 (3/4): anotar y datos vivos */
+/* Mini-cabecera fija con el saldo y el precio; aparece cuando el saldo grande sale por arriba. Cristal con respaldo sólido. */
+.minicab { position: fixed; z-index: 8; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: calc(44px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  border: 0; border-bottom: 1px solid var(--s3); background: var(--fondo); color: var(--txt); font: inherit; text-align: left; cursor: pointer;
+  transform: translateY(-100%); visibility: hidden; transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.2, 1), visibility 0s 0.25s; }
+.minicab b { font: 650 1.0625rem var(--sans); font-variant-numeric: tabular-nums; }
+.minicab span { color: var(--txt2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.minicab:empty, .minicab:has(#minicab-saldo:empty) { display: none; }
+html[data-minicab] .minicab { transform: none; visibility: visible; transition-delay: 0s; }
+html[data-minicab] .minicab:has(#minicab-saldo:empty) { display: none; }
+html[data-efectos="ninguno"] .minicab { transition: none; }
+@supports (backdrop-filter: blur(1px)) {
+  html:not([data-ligero]) .minicab { background: color-mix(in srgb, var(--fondo) 86%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
+}
+.minicab:focus-visible { outline: 2px solid var(--naranja); outline-offset: -4px; }
+/* Con la franja a la vista, lo que se enfoca o se lleva a la vista no queda debajo de ella. */
+html { scroll-padding-top: 60px; }
+
+/* «Compra de siempre» y la estimación. */
+.h-habitual { justify-self: start; min-height: 44px; text-align: left; }
+.h-habitual[hidden] { display: none; }
+.h-sats input[data-estimado="1"] { color: var(--naranja-txt); font-style: italic; }
