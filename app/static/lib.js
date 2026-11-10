@@ -145,6 +145,68 @@ function medidasConstancia(compras) {
   return { n: f.length, primera: f[0] ?? null, meses: f.length ? mesesEntre(f[0], f[f.length - 1]) : 0 };
 }
 
+/** Suma meses a una fecha AAAA-MM-DD (sin pasar al mes siguiente: el 31 + 1 mes es el último día del mes). */
+function sumarMeses(f, n) {
+  const [y, m, d] = f.split('-').map(Number);
+  const t = Date.UTC(y, m - 1 + n, 1);
+  const ult = new Date(Date.UTC(new Date(t).getUTCFullYear(), new Date(t).getUTCMonth() + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(new Date(t).getUTCFullYear(), new Date(t).getUTCMonth(), Math.min(d, ult))).toISOString().slice(0, 10);
+}
+const metaTxt = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`);
+
+/**
+ * «Tu historia» (idea 37): la línea de tiempo de cómo llegaste hasta aquí, de lo más viejo a lo más nuevo. Sale de datos que ya
+ * existen: la primera compra, cada etapa y campamento con su fecha (`R.camino`), los hitos de constancia, tu mejor racha y las
+ * compras extra (las hechas en caídas). De las extra se cuentan las `maxExtras` más recientes y el resto va en `extrasOcultas`.
+ */
+export function historia(R, hoy = hoyISO(), { maxExtras = 8 } = {}) {
+  if (!R || !R.nCompras) return { eventos: [], extrasOcultas: 0 };
+  const ev = [];
+  const compras = R.items.filter((c) => c.tipo !== 'venta');
+  const p = compras[0];
+  ev.push({ fecha: p.fecha, clase: 'primera', orden: 0, titulo: 'Tu primera compra', detalle: `${entero(p.sats)} sats${p.precio ? ` a ${usd0(p.precio)}` : ''}` });
+  for (const h of R.camino ?? []) {
+    if (!h.fecha) continue;
+    ev.push({ fecha: h.fecha, clase: h.mayor ? 'hito' : 'etapa', orden: 1, titulo: h.mayor ? `Campamento ${nombreHito(h.m)}` : `Llegaste a ${metaTxt(h.m)}`, detalle: h.mayor ? `Llegaste a ${metaTxt(h.m)}` : '' });
+  }
+  for (const h of HITOS_COMPRAS) if (h <= compras.length) ev.push({ fecha: compras[h - 1].fecha, clase: 'constancia', orden: 2, titulo: `${h} compras`, detalle: 'Constancia' });
+  for (const m of HITOS_MESES) {
+    const f = sumarMeses(p.fecha, m);
+    if (f <= hoy) ev.push({ fecha: f, clase: 'constancia', orden: 3, titulo: `${nombreHitoMeses(m)} comprando`, detalle: 'Constancia' });
+  }
+  if (R.mejorRacha >= 4 && R.mejorRachaDesde) {
+    ev.push({ fecha: R.mejorRachaHasta, clase: 'racha', orden: 4, titulo: `Tu mejor racha: ${R.mejorRacha} ${R.paso === 2 ? 'quincenas' : 'semanas'}`, detalle: `Del ${fechaCorta(R.mejorRachaDesde)} al ${fechaCorta(R.mejorRachaHasta)}` });
+  }
+  const extras = compras.filter((c) => c.extra).sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
+  for (const c of extras.slice(0, maxExtras)) ev.push({ fecha: c.fecha, clase: 'extra', orden: 5, titulo: 'Compra extra en una caída', detalle: `${entero(c.sats)} sats${c.precio ? ` a ${usd0(c.precio)}` : ''}${c.nota ? ` · ${c.nota}` : ''}` });
+  ev.push({ fecha: hoy, clase: 'hoy', orden: 9, titulo: 'Hoy', detalle: `${entero(R.sats)} sats${R.valor != null ? ` · valen ${usd(R.valor)}` : ''}` });
+  ev.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.orden - b.orden));
+  return { eventos: ev, extrasOcultas: Math.max(0, extras.length - maxExtras) };
+}
+
+/**
+ * Medallas de constancia (idea 38): las que ya tienes (con su fecha) y, de cada tipo, la siguiente. No se muestran todas las
+ * demás: es un reconocimiento por lo que ya hiciste, no una lista de pendientes.
+ */
+export function medallas(R, hoy = hoyISO()) {
+  if (!R || !R.nCompras) return [];
+  const compras = R.items.filter((c) => c.tipo !== 'venta');
+  const primera = compras[0].fecha, meses = mesesEntre(primera, hoy);
+  const out = [];
+  let proxima = false;
+  for (const h of HITOS_COMPRAS) {
+    if (h <= compras.length) out.push({ clave: `c${h}`, tipo: 'compras', valor: h, ganada: true, fecha: compras[h - 1].fecha, titulo: `${h} compras` });
+    else if (!proxima) { out.push({ clave: `c${h}`, tipo: 'compras', valor: h, ganada: false, falta: h - compras.length, titulo: `${h} compras` }); proxima = true; }
+  }
+  proxima = false;
+  for (const m of HITOS_MESES) {
+    const f = sumarMeses(primera, m);
+    if (f <= hoy) out.push({ clave: `t${m}`, tipo: 'tiempo', valor: m, ganada: true, fecha: f, titulo: `${nombreHitoMeses(m)} comprando` });
+    else if (!proxima) { out.push({ clave: `t${m}`, tipo: 'tiempo', valor: m, ganada: false, falta: Math.max(1, m - meses), titulo: `${nombreHitoMeses(m)} comprando` }); proxima = true; }
+  }
+  return out;
+}
+
 /** Hitos de constancia que cruza una compra nueva: de cantidad (10, 25…) y de tiempo (6 meses, 1 año…). */
 export function constanciaCruzada(antes, despues) {
   const a = medidasConstancia(antes), d = medidasConstancia(despues);
@@ -359,12 +421,16 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   // corrida de compras con no más de `paso` semanas entre una y otra; sigue viva mientras la última
   // compra no quede a más de `paso` semanas de hoy (la semana en curso aún no la rompe).
   const paso = pasoSemanas(comprasItems);
-  let mejorRacha = 0, corrida = 0, previa = null;
+  let mejorRacha = 0, corrida = 0, previa = null, ini = null, mejorIni = null, mejorFin = null;
   for (const s of [...porSemana.keys()].sort((a, b) => a - b)) {
-    corrida = previa !== null && s - previa <= paso ? corrida + 1 : 1;
-    mejorRacha = Math.max(mejorRacha, corrida);
+    if (previa !== null && s - previa <= paso) corrida++;
+    else { corrida = 1; ini = s; }
+    if (corrida > mejorRacha) { mejorRacha = corrida; mejorIni = ini; mejorFin = s; }
     previa = s;
   }
+  // Cuándo empezó y acabó la mejor racha (primera compra de su primera semana y última de la última): «Tu historia».
+  const fechasDe = (sem) => comprasItems.filter((c) => semana(c.fecha) === sem).map((c) => c.fecha).sort();
+  const mejorRachaDesde = mejorIni === null ? null : fechasDe(mejorIni)[0], mejorRachaHasta = mejorFin === null ? null : fechasDe(mejorFin).at(-1);
   const racha = previa !== null && actual - previa <= paso ? corrida : 0;
   const venceSemanas = previa !== null ? previa + paso - actual : 0;
   const ultimas52 = Array.from({ length: 52 }, (_, i) => porSemana.get(ref - 51 + i) ?? 0);
@@ -386,7 +452,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     proyeccion: meses != null && meses > 0 && meses <= 60 ? meses : null,
     anios: [...anios.values()],
     constancia: proximosHitosConstancia(comprasItems, hoy),
-    racha, mejorRacha, paso, venceSemanas, ultimas52, semanaRef: ref, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
+    racha, mejorRacha, mejorRachaDesde, mejorRachaHasta, paso, venceSemanas, ultimas52, semanaRef: ref, semanasConCompra: porSemana.size, semanaEnCurso: enCurso, semanasDesdePrimera,
     mejor: porPrecio[0] ?? null, peor: porPrecio.at(-1) ?? null,
   };
 }

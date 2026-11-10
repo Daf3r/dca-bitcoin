@@ -1237,3 +1237,42 @@ html[data-entrada="usuario"] .pag-login .halo { transform: scale(1.35); }
 html[data-entrada="usuario"] .pag-login .estrella { opacity: calc(var(--estrellas) * 1.35); }
 html[data-entrada="clave"] .pag-login .brillo-cima { opacity: 1; transform: scale(1.3); transform-box: fill-box; transform-origin: center; }
 html[data-entrada="clave"] .pag-login .campo .banderin { fill: var(--naranja); opacity: 1; animation: ondea 2.6s ease-in-out infinite; }
+
+/* ---------------------------------------------------------------- Campamento 6 (2/3): Tu historia, medallas y qué hay de nuevo */
+.dc-historia h3 { margin: 18px 0 8px; font: 650 0.9375rem var(--sans); color: var(--txt2); letter-spacing: 0.02em; }
+.dc-historia .vacio { text-align: center; color: var(--txt2); font: italic 400 1.0625rem var(--serif); }
+/* Medallas: con color las que ya tienes; de cada tipo solo se enseña la siguiente, en contorno. */
+.medallas { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: 12px 8px; margin: 0; padding: 0; list-style: none; }
+.medalla { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.medalla b { font-size: 0.8125rem; line-height: 1.2; }
+.medalla small { font-size: 0.75rem; line-height: 1.25; color: var(--txt2); }
+.medalla.bloq { opacity: 0.8; }
+.med { width: 56px; height: 66px; }
+.med-cinta { fill: var(--s3); }
+.med-disco { fill: var(--s2); stroke: var(--s3); stroke-width: 2; }
+.med-aro { fill: none; stroke: var(--s3); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.med-n { fill: var(--txt2); font: 700 17px var(--sans); }
+.med-n.m4 { font-size: 13px; }
+.med.compras:not(.bloq) .med-disco { fill: var(--naranja); stroke: var(--naranja-txt); }
+.med.compras:not(.bloq) .med-cinta { fill: var(--naranja-txt); }
+.med.tiempo:not(.bloq) .med-disco { fill: #d9b44a; stroke: #f3d98a; }
+.med.tiempo:not(.bloq) .med-cinta { fill: #b08a22; }
+.med:not(.bloq) .med-aro { stroke: var(--naranja-osc); stroke-dasharray: none; opacity: 0.55; }
+.med:not(.bloq) .med-n { fill: var(--naranja-osc); }
+:root[data-tema="claro"] .med.tiempo:not(.bloq) .med-n { fill: #3a2a05; }
+/* Línea de tiempo vertical: lo más viejo arriba, «Hoy» al final. */
+.historia { position: relative; margin: 0; padding: 0 0 0 22px; list-style: none; }
+.historia::before { content: ""; position: absolute; left: 6px; top: 6px; bottom: 6px; width: 2px; background: var(--s3); }
+.h-ev { position: relative; display: grid; grid-template-columns: 5.6rem 1fr; gap: 0 10px; padding: 6px 0 12px; }
+.h-ev::before { content: ""; position: absolute; left: -22px; top: 10px; width: 14px; height: 14px; box-sizing: border-box; border: 2px solid var(--s3); border-radius: 50%; background: var(--s1); }
+.h-ev time { padding-top: 1px; font-size: 0.8125rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
+.h-ev strong { font-size: 0.9375rem; font-weight: 650; }
+.h-ev strong .ico { width: 0.9em; height: 0.9em; color: var(--naranja-txt); }
+.h-ev p { margin: 1px 0 0; font-size: 0.8125rem; color: var(--txt2); }
+.h-primera::before, .h-hoy::before { border-color: var(--naranja); background: var(--naranja); }
+.h-hito::before, .h-racha::before { border-color: var(--naranja); }
+.h-etapa::before { border-color: var(--txt3); }
+.h-constancia::before { border-color: #d9b44a; }
+.h-extra::before { border-color: var(--naranja-txt); background: var(--s2); }
+.h-mas { padding: 0 0 10px; font-size: 0.8125rem; color: var(--txt2); font-style: italic; }
+#d-cambios .nov-lista { margin-top: 4px; }

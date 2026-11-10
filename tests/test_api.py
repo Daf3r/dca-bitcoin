@@ -607,7 +607,7 @@ check(any(x["accion"] == "alta" and '"venta"' in (x["despues"] or "") for x in a
 # --- Novedades: cuándo vio cada persona el resumen (un lector también puede marcarlo)
 _c = server.connect(); auth.crear_usuario(_c, "Luz", "clave-de-luz-2026", "lector", "prueba"); _c.close()
 luz = cliente("Luz", "clave-de-luz-2026")
-check(luz.get("/api/yo").get_json() == {"usuario": "Luz", "rol": "lector", "visto": None}, "sin visita registrada al principio")
+check(luz.get("/api/yo").get_json() == {"usuario": "Luz", "rol": "lector", "visto": None, "cambios": None}, "sin visita ni cambios vistos al principio")
 check("visto_ts" in [r[1] for r in sql("PRAGMA table_info(usuarios)")], "columna visto_ts")
 r = luz.post("/api/visto"); v1 = r.get_json()["visto"]
 check(r.status_code == 200 and isinstance(v1, int) and abs(v1 - _tt.time() * 1000) < 5000, f"un lector puede marcar que vio las novedades {r.data}")
@@ -618,6 +618,26 @@ check(anon.post("/api/visto", headers={"X-Libro": "1"}).status_code == 401, "sin
 check(not [x for x in audit() if x["accion"] == "visto"], "no se audita cada visita")
 nolibro = server.app.test_client(); nolibro.set_cookie("__Host-sesion", luz.get_cookie("__Host-sesion").value)
 check(nolibro.post("/api/visto").status_code == 403, "sin X-Libro se rechaza")
+
+# --- «Qué hay de nuevo»: el último aviso de cambios que vio cada persona (un lector también puede marcarlo)
+check("cambios_visto" in [r[1] for r in sql("PRAGMA table_info(usuarios)")], "columna cambios_visto")
+r = luz.post("/api/cambios-visto", json={"id": "2026-11-b"})
+check(r.status_code == 200 and r.get_json() == {"cambios": "2026-11-b"}, f"un lector marca los cambios vistos {r.data}")
+check(luz.get("/api/yo").get_json()["cambios"] == "2026-11-b", "yo devuelve el último aviso de cambios visto")
+check(adm.get("/api/yo").get_json()["cambios"] is None, "los cambios vistos son por persona")
+for malo in ({}, {"id": ""}, {"id": 5}, {"id": "a b"}, {"id": "x" * 41}, {"id": "Mayus"}, {"id": "<b>"}):
+    check(luz.post("/api/cambios-visto", json=malo).status_code == 400, f"id de cambios no válido {malo}")
+check(luz.get("/api/yo").get_json()["cambios"] == "2026-11-b", "un id inválido no cambia lo guardado")
+check(anon.post("/api/cambios-visto", json={"id": "x"}, headers={"X-Libro": "1"}).status_code == 401, "sin sesión no se marcan cambios")
+check(nolibro.post("/api/cambios-visto", json={"id": "x"}).status_code == 403, "sin X-Libro se rechaza")
+check(not [x for x in audit() if "cambios" in x["accion"]], "no se audita")
+# Migración: una base anterior (sin la columna) deja a las cuentas que ya existen en '0' (verán el primer aviso)
+sql("ALTER TABLE usuarios DROP COLUMN cambios_visto")
+server.init_db()
+check({r[0] for r in sql("SELECT cambios_visto FROM usuarios")} == {"0"}, "la migración deja las cuentas existentes en '0'")
+check(luz.get("/api/yo").get_json()["cambios"] == "0", "yo lo refleja tras migrar")
+server.init_db()
+check({r[0] for r in sql("SELECT cambios_visto FROM usuarios")} == {"0"}, "la migración no se repite")
 
 # --- Verificación de TXID contra mempool.space (con la red simulada)
 import urllib.error as _ue

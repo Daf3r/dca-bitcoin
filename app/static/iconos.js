@@ -27,3 +27,9 @@ const ILU = {
   traslado: '<rect x="5" y="22" width="20" height="20" rx="4"/><rect x="39" y="22" width="20" height="20" rx="4"/><path d="M28 28h8m-3-3 3 3-3 3M36 38h-8m3-3-3 3 3 3"/>',
 };
 export const ilustracion = (nombre) => `<svg class="ilu" viewBox="0 0 64 64" aria-hidden="true" focusable="false">${ILU[nombre] ?? ''}</svg>`;
+
+// Medallas de constancia (idea 38): un disco con cinta y el número dentro. `ganada` la pinta con color; sin ganar es solo el contorno.
+export function medalla({ tipo, valor, ganada }) {
+  const txt = tipo === 'compras' ? String(valor) : valor < 12 ? `${valor}m` : `${valor / 12}a`;
+  return `<svg class="med ${tipo}${ganada ? '' : ' bloq'}" viewBox="0 0 64 76" aria-hidden="true" focusable="false"><path class="med-cinta" d="M20 48 12 72l11-5 7 8 4-26z"/><path class="med-cinta" d="M44 48l8 24-11-5-7 8-4-26z"/><circle class="med-disco" cx="32" cy="29" r="24"/><circle class="med-aro" cx="32" cy="29" r="19"/><text class="med-n${txt.length >= 4 ? ' m4' : ''}" x="32" y="35.5" text-anchor="middle">${txt}</text></svg>`;
+}

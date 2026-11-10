@@ -1,5 +1,7 @@
 import { entero, fechaLarga, usd } from './lib.js';
 import { montarAvisos } from './avisos.js';
+import { cambiosPendientes, mostrarCambios } from './cambios.js';
+import { pintarHistoria } from './historia.js';
 import { avatar, ilustracion } from './iconos.js';
 import { avisar } from './avisar.js';
 import { $, S, api } from './estado.js';
@@ -18,6 +20,7 @@ function vistaCuenta(cual) {
   $('f-clave').hidden = cual !== 'clave';
   $('dc-hist').hidden = cual !== 'historial';
   $('dc-avisos').hidden = cual !== 'avisos';
+  $('dc-historia').hidden = cual !== 'historia';
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
 const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
@@ -34,7 +37,7 @@ const aclararCuenta = () => $('cuenta-btn').insertAdjacentHTML('beforeend', '<sp
 export async function cargarYo() {
   try {
     const yo = await api('/api/yo');
-    Object.assign(S, { usuario: yo.usuario, rol: yo.rol, visto: yo.visto ?? null });
+    Object.assign(S, { usuario: yo.usuario, rol: yo.rol, visto: yo.visto ?? null, cambios: yo.cambios ?? null });
     document.body.dataset.rol = yo.rol;
     conAvatar($('cuenta-btn'), yo.usuario, yo.usuario);
     aclararCuenta();
@@ -177,6 +180,7 @@ const avisosUI = montarAvisos(api);
 export async function ofrecerAvisos() {
   if (avisosOfrecidos || !S.rol || !S.cargado || document.querySelector('dialog[open]')) return;
   if (S.rol === 'lector' && !novedadesMostradas) return;
+  if (cambiosPendientes()) { mostrarCambios(); return; } // «Qué hay de nuevo»: antes de la oferta de avisos
   avisosOfrecidos = true;
   if (await avisosUI.ofrecer(S.rol)) avisar('Avisos activados en este dispositivo.', null, true);
 }
@@ -195,6 +199,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'volver') irA('menu');
   else if (accion === 'clave') irA('clave', () => { $('fc-error').textContent = ''; $('fc-actual').focus(); });
   else if (accion === 'historial') irA('historial', cargarHistorial);
+  else if (accion === 'historia') irA('historia', pintarHistoria);
   else if (accion === 'avisos') irA('avisos', () => avisosUI.refrescar());
   else if (accion === 'salir' || accion === 'salir-todas') {
     try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }

@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   activo         INTEGER NOT NULL DEFAULT 1,
   creado         INTEGER NOT NULL,
   clave_cambiada INTEGER NOT NULL,
-  visto_ts       INTEGER
+  visto_ts       INTEGER,
+  cambios_visto  TEXT
 );
 CREATE TABLE IF NOT EXISTS sesiones (
   hash       TEXT    PRIMARY KEY,
