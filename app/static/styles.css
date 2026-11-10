@@ -424,7 +424,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .d-grafico[open] { display: flex; }
 .dg-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
 .dg-cab h2 { font: 400 1.25rem var(--serif); }
-.dg-cerrar { min-width: 96px; min-height: 48px; padding: 0 18px; border: 0; border-radius: 99px; background: var(--s2); color: var(--txt); font: 650 1rem var(--sans); cursor: pointer; touch-action: manipulation; }
+.dg-cerrar { min-width: 96px; min-height: var(--toque); padding: 0 18px; border: 0; border-radius: 99px; background: var(--s2); color: var(--txt); font: 650 1rem var(--sans); cursor: pointer; touch-action: manipulation; }
 .dg-caja { flex: 1 1 0; min-height: 0; }
 .dg-caja .lienzo { position: absolute; inset: 0; height: auto; overflow: hidden; }
 .d-grafico .lectura { margin: 0; }
@@ -471,7 +471,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .com-datos b { font: 500 1.375rem/1.15 var(--serif); }
 .com-datos small { font-size: 0.8125rem; color: var(--txt2); }
 .com-boton {
-  margin-top: 18px; min-height: 48px; padding: 0 20px; border: 1.5px solid var(--naranja); border-radius: 999px;
+  margin-top: 18px; min-height: var(--toque); padding: 0 20px; border: 1.5px solid var(--naranja); border-radius: 999px;
   background: none; color: var(--txt); font-weight: 650; cursor: pointer;
 }
 .com-boton:hover { background: color-mix(in srgb, var(--naranja) 14%, transparent); }
@@ -568,7 +568,7 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 .h-avanzado summary::before { content: '+'; margin-right: 8px; font-weight: 700; color: var(--naranja-txt, var(--naranja)); }
 .h-avanzado[open] summary::before { content: '−'; }
 .h-usd { display: grid; gap: 4px; margin-top: 4px; }
-.h-usd input { min-height: 48px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1.125rem; }
+.h-usd input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1.125rem; }
 .h-nota { margin-top: 6px; font-size: 0.8125rem; }
 .hoja-calc { min-height: 2.6em; font-size: 0.875rem; color: var(--txt2); }
 .hoja-calc .costo { display: block; margin-top: 2px; }
@@ -733,7 +733,7 @@ div.fila:hover { background: none; }
 .dc-quien { margin: 4px 0 14px; }
 .dc-lista { display: grid; gap: 6px; }
 .dc-lista button {
-  min-height: 48px; padding: 0 16px; border: 0; border-radius: 14px; background: var(--s2);
+  min-height: var(--toque); padding: 10px 16px; border: 0; border-radius: 14px; background: var(--s2);
   text-align: left; font-weight: 600; cursor: pointer;
 }
 .dc-lista button:hover { background: var(--s3); }
@@ -741,7 +741,7 @@ div.fila:hover { background: none; }
 .dc-clave { display: grid; gap: 6px; }
 .dc-clave label, .login-caja .campo-l { margin-top: 6px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
 .dc-clave input, .login-caja input {
-  min-height: 48px; padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 12px;
+  min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 12px;
   background: var(--s2); color: var(--txt); font: 400 1rem var(--sans);
 }
 .dc-clave input:focus-visible, .login-caja input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
@@ -750,11 +750,11 @@ div.fila:hover { background: none; }
 .dc-avisos { display: grid; gap: 10px; }
 .dc-avisos p { margin: 0; }
 .av-motivo { color: var(--naranja-txt); }
-.av-interruptor { min-height: 48px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.av-interruptor { min-height: var(--toque); padding: 0 18px; border: 0; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font-weight: 700; cursor: pointer; touch-action: manipulation; }
 .av-interruptor[data-activo="1"] { background: none; border: 1.5px solid var(--s3); color: var(--txt); }
 .av-interruptor:disabled { opacity: 0.5; cursor: wait; }
 .av-lista { display: grid; gap: 6px; }
-.av-fila { display: flex; align-items: flex-start; gap: 12px; min-height: 48px; padding: 10px 12px; border-radius: 14px; background: var(--s2); cursor: pointer; }
+.av-fila { display: flex; align-items: flex-start; gap: 12px; min-height: var(--toque); padding: 10px 12px; border-radius: 14px; background: var(--s2); cursor: pointer; }
 .av-fila input { flex: none; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--naranja); }
 .av-fila span { display: grid; gap: 2px; }
 .av-fila b { font-size: 0.9375rem; }
@@ -813,7 +813,7 @@ div.fila:hover { background: none; }
 .h-tipo button { min-height: var(--toque); padding: 0 4px; border: 0; border-radius: 10px; background: none; font-size: 0.875rem; font-weight: 650; cursor: pointer; touch-action: manipulation; }
 .h-tipo button[aria-pressed="true"] { background: var(--s1); box-shadow: inset 0 0 0 2px var(--naranja); }
 .h-nota-campo { display: grid; gap: 4px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
-.h-nota-campo input { min-height: 48px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }
+.h-nota-campo input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }
 .fila[data-tipo="venta"] .f-sats { color: var(--txt2); }
 .gan-lista { display: grid; gap: 8px; margin: 10px 0 6px; }
 .gan-lista > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
@@ -911,7 +911,7 @@ html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efe
 /* Buscar, filtrar y ordenar. */
 .l-ctl { display: grid; gap: 8px; margin: 0 0 10px; }
 .l-ctl[hidden] { display: none; }
-.l-busca input { width: 100%; min-height: 48px; padding: 0 14px; border: 0; border-radius: 14px; background: var(--s2); color: var(--txt); font-size: 1rem; }
+.l-busca input { width: 100%; min-height: var(--toque); padding: 0 14px; border: 0; border-radius: 14px; background: var(--s2); color: var(--txt); font-size: 1rem; }
 .l-busca input:focus-visible, .l-mas-c :is(input, select):focus-visible, .f-notaed input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
 .l-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .l-chips button { min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; color: var(--txt2); font-weight: 650; font-size: 0.9375rem; cursor: pointer; touch-action: manipulation; }
