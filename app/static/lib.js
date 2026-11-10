@@ -671,3 +671,18 @@ export function agruparPorMes(movs) {
   }
   return grupos;
 }
+
+/**
+ * Lo que dice la montaña a un lector de pantalla: dónde estás, cuántos campamentos pasaste, cuál es el siguiente y la cumbre.
+ * `campos` son los campamentos que se ven en la escena (en sats) y `cima` la cumbre; `meta` es la siguiente etapa.
+ */
+export function descripcionMontana(sats, meta, campos, cima) {
+  const hechos = campos.filter((m) => m <= sats);
+  const pct = Math.min(100, (sats / meta) * 100);
+  const pasados = hechos.length
+    ? `Ya pasaste ${hechos.length} de ${campos.length} campamentos (el último, ${nombreHito(hechos.at(-1))}).`
+    : `Aún no llegas al primer campamento (${nombreHito(campos[0])}).`;
+  const falta = meta > sats ? ` te faltan ${entero(meta - sats)} sats` : '';
+  return `Estás a ${entero(sats)} sats de altitud, subiendo por un sendero con campamentos en la montaña. ${pasados} `
+    + `Siguiente meta: ${nombreHito(meta)}, al ${pct < 10 ? pct.toFixed(1) : Math.floor(pct)} %;${falta}. La cumbre es ${nombreHito(cima)}.`;
+}

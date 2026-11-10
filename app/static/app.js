@@ -15,6 +15,8 @@ import { instalarParallax } from './parallax.js';
 import './refrescar.js';
 import './copiar.js';
 import './minicab.js';
+import './atajos.js';
+import './indice.js';
 
 instalarParallax();
 cargarYo();

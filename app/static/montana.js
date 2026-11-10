@@ -1,5 +1,5 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { escalaMontana, altitud, nombreHito, entero } from './lib.js';
+import { escalaMontana, altitud, descripcionMontana, nombreHito, entero } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 
 const f1 = (n) => n.toFixed(1);
@@ -307,7 +307,5 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
 }
 
 function describir(sats, meta) {
-  const pct = Math.min(100, (sats / meta) * 100);
-  estado.host.querySelector('#m-desc').textContent =
-    `Saldo ${entero(sats)} sats; siguiente meta ${nombreHito(meta)}, al ${pct < 10 ? pct.toFixed(1) : Math.floor(pct)} %.`;
+  estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima);
 }
