@@ -195,6 +195,7 @@ try {
       await p.evaluate(async () => { await fetch('/api/cambios-visto', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ id: '0' }) }); });
       await p.reload({ waitUntil: 'networkidle' }); await p.waitForSelector('#d-cambios[open]', { timeout: 8000 }); await p.waitForTimeout(400);
       await auditar(p, `qué hay de nuevo ${esquema}`);
+      await p.click('#cam-ok'); await p.waitForFunction(() => fetch('/api/yo').then((r) => r.json()).then((j) => j.cambios !== '0'), null, { timeout: 5000 }); // queda visto: los demás estados no lo ven
       await ctx.close();
     }
     { // el enlace para saltar al contenido, enfocado
