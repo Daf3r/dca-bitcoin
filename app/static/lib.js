@@ -62,6 +62,17 @@ export function textoCampamento(m, sats, fecha, cima = false) {
   return { titulo, texto: `Te faltan ${entero(falta)} sats${cima ? ' para la cumbre' : ''}. Vas al ${Math.min(99, Math.floor((sats / m) * 100))}%.`, alcanzado: false };
 }
 
+// Detalles de la montaña que siguen a tus datos (campamento 5, 3/3).
+/** Racha a partir de la cual el cielo nocturno muestra una aurora suave (12 semanas o quincenas seguidas). */
+export const RACHA_AURORA = 12;
+export const hayAurora = (racha) => racha >= RACHA_AURORA;
+/** Al llegar a 1 BTC el acento de la app pasa de naranja a dorado. */
+export const acentoDe = (sats) => (sats >= 1e8 ? 'oro' : 'naranja');
+/** ¿Esta compra te lleva de menos de 1 BTC a 1 BTC o más? (la celebración épica; hacia arriba, nunca al bajar) */
+export const cruzo1Btc = (antes, despues) => antes < 1e8 && despues >= 1e8;
+/** Fracción iluminada de la luna (0 nueva, 1 llena) a partir de su fase (fracción del ciclo, 0–1). */
+export const iluminacionLunar = (fase) => (1 - Math.cos(2 * Math.PI * fase)) / 2;
+
 // Etapas: además de los hitos grandes (potencias de 10, los campamentos de la montaña), metas intermedias
 // a 2.5 y 5 de cada potencia (100k, 250k, 500k, 1M, 2.5M, 5M, 10M…) para sentir el avance cada pocas compras.
 const PASOS = [1, 2.5, 5];

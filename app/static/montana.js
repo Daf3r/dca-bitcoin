@@ -1,5 +1,5 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento } from './lib.js';
+import { escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, iluminacionLunar } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 
 const f1 = (n) => n.toFixed(1);
@@ -65,15 +65,44 @@ function trazoNieve({ sx, sy, ancho, nv }, alt) {
 }
 
 /**
+ * Aurora (idea 110): tres cintas suaves en el cielo nocturno mientras tu racha sea larga. Solo ambiente (`efecto-ambiente`,
+ * y el CSS la muestra de noche). Va entre el cielo y la montaña, por debajo del saldo (`techo`), y es muy tenue: es un
+ * premio, no un adorno que compita con las cifras. Sin llamadas a `rnd()`.
+ */
+function cintaD(W, y, amp, alto) {
+  let d = `M${f1(-W * 0.1)} ${f1(y)}`;
+  for (let i = 0; i < 6; i++) d += `Q${f1((W * (i + 0.5)) / 6)} ${f1(y + (i % 2 ? amp : -amp))} ${f1((W * (i + 1)) / 6)} ${f1(y)}`;
+  return `${d}L${f1(W * 1.1)} ${f1(y)}L${f1(W * 1.1)} ${f1(y + alto)}L${f1(-W * 0.1)} ${f1(y + alto)}Z`;
+}
+function auroraBoreal(W, H, techo) {
+  const y0 = Math.max(techo + 12, H * 0.2), alto = H * 0.14;
+  const cinta = (k, dy, amp) => `<path class="aurora-cinta a${k}" d="${cintaD(W, y0 + dy, amp, alto)}"/>`;
+  return `<g class="efecto-ambiente aurora">${cinta(0, 0, alto * 0.35)}${cinta(1, alto * 0.45, alto * 0.28)}${cinta(2, alto * 0.9, alto * 0.22)}</g>`;
+}
+
+/**
+ * Lago al pie de la montaña (idea 113): un estanque que refleja el cielo y, de noche, la luna con su fase (el brillo del
+ * reflejo sigue a `--luna-ilum`) y unas estrellas; con todos los efectos una ondulación leve. Se coloca bajo la luna,
+ * por debajo del arranque del sendero y a un lado, así que nunca empuja el camino ni las etiquetas.
+ */
+function lago(c, W, H) {
+  const cx = Math.min(Math.max(c.sol[0], W * 0.2), W * 0.8), cy = Math.min(H * 0.845, c.base[1] - 24);
+  const rx = Math.min(W * 0.16, 150), ry = Math.max(8, H * 0.016);
+  const reflejo = [0, 1, 2, 3].map((i) => `<ellipse class="lago-reflejo" cx="${f1(cx + (i % 2 ? 3 : -3))}" cy="${f1(cy - ry * 0.35 + i * ry * 0.42)}" rx="${f1(rx * (0.26 - i * 0.045))}" ry="${f1(Math.max(1.1, ry * 0.12))}"/>`).join('');
+  const estrellas = [[-0.5, -0.2], [-0.2, 0.25], [0.45, -0.1], [0.62, 0.3], [-0.68, 0.2]].map(([x, y]) => `<circle class="lago-estrella" cx="${f1(cx + rx * x)}" cy="${f1(cy + ry * y)}" r="0.9"/>`).join('');
+  return `<g class="lago" aria-hidden="true"><ellipse class="lago-agua" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx)}" ry="${f1(ry)}"/><g class="lago-luna">${reflejo}${estrellas}</g><ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><ellipse class="lago-borde" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx)}" ry="${f1(ry)}"/></g>`;
+}
+
+/**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
   const esc = escalaMontana(sats, c.campos);
   const rnd = azar(42);
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter></defs><g aria-hidden="true">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter></defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
   // Capa del cielo (parallax): cielo, estrellas, fugaz, sol, luna, nubes y aves.
   s += '<g class="par par-cielo">';
@@ -84,7 +113,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // Sol (amanecer, día y atardecer) y luna con su fase real (noche): el CSS muestra uno u otro según `html[data-cielo]`.
   s += `<g class="sol"><circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 1.7)}"/><circle class="astro" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs)}"/></g>`;
   s += `<g class="luna"><circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 1.7)}"/>${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}</g>`;
-  s += nubes(H) + aves(H) + '</g>';
+  s += (aurora ? auroraBoreal(W, H, techo) : '') + nubes(H) + aves(H) + '</g>';
   // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
   s += `<rect class="alba" id="m-alba" x="0" y="0" width="${W}" height="${H}"/>`;
   const sierra = (base, amp, paso, clase) => {
@@ -121,6 +150,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const nieveMedidas = { sx: c.sx, sy: c.sy, ancho: Math.max(W * 0.12, 140), nv: H * 0.075 };
   s += `<path class="nieve" clip-path="url(#m-silueta)" d="${trazoNieve(nieveMedidas, altitud(inicio, esc))}"/>`;
 
+  s += lago(c, W, H);
+
   // Sendero en zigzag: siempre sube, así que la altura recorrida es monótona.
   const [bx, by] = c.base;
   const pts = [[bx, by]];
@@ -151,6 +182,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   }
   s += bosque(W, H, bx, compras, plantar);
   host.innerHTML = s + '</g></svg>';
+  host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
 
   const camino = host.querySelector('#m-sendero');
   const L = camino.getTotalLength();
@@ -431,7 +463,8 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
   // Etapa: la bandera de la etapa se iza con un anillo de luz y el cielo respira.
   const alba = host.querySelector('#m-alba');
   alba.classList.remove('respira', 'amanece'); void alba.getBBox();
-  alba.classList.add(nivel === 'hito' ? 'amanece' : 'respira');
+  const grande = nivel === 'hito' || nivel === 'epico';
+  alba.classList.add(grande ? 'amanece' : 'respira');
   setTimeout(() => alba.classList.remove('respira', 'amanece'), 3000);
   let bandera = host.querySelector(`.campo[data-m="${etapa}"]`);
   const pe = bandera ? campos.find((x) => x.m === etapa).p : camino.getPointAtLength(enAltura(altitud(etapa, esc)));
@@ -449,13 +482,43 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
     a.style.animationDelay = `${i * 260}ms`;
     retirar(a, 2000);
   }
-  if (nivel !== 'hito') return;
+  cometa(fx, W, estado.H, c);
+  if (!grande) return;
 
   // Hito grande (1M, 10M, 1 BTC): amanecer completo con luz sobre la cumbre.
   const rl = Math.min(W, estado.H) * 0.22;
   const luz = nodo('circle', { class: 'luz-cima', cx: f1(c.sx), cy: f1(c.sy), r: f1(rl), fill: 'url(#m-luz)' }, fx);
   retirar(luz, 3000);
   brasas(fx, c.sx, c.sy + 6, 10, rl * 0.9, 500);
+  if (nivel === 'epico') epico(fx, c, W, estado.H);
+}
+
+/**
+ * Cometa (idea 114): al cruzar una etapa, una raya con estela cruza el cielo de lado a lado (solo transform y opacity,
+ * en CSS con la anchura de la escena). Pasa por debajo del saldo, que es HTML y va encima.
+ */
+function cometa(fx, W, H, c) {
+  const y = Math.max(c.sy * 0.55, H * 0.24);
+  const g = nodo('g', { class: 'cometa', transform: `translate(-60 ${f1(y)})` }, fx);
+  const mover = nodo('g', { class: 'cometa-mueve' }, g);
+  nodo('line', { class: 'cometa-cola', x1: -86, y1: -30, x2: 0, y2: 0 }, mover);
+  nodo('circle', { class: 'cometa-cabeza', r: 3.2 }, mover);
+  retirar(g, 2400);
+}
+
+/**
+ * Llegar a 1 BTC (idea 8): sobre un hito grande, una aurora que ilumina todo el cielo y una lluvia de luz sobre la cumbre.
+ * Ocurre una sola vez en la vida de la cuenta; todo en transform y opacity y se retira solo.
+ */
+function epico(fx, c, W, H) {
+  const g = nodo('g', { class: 'epico' }, fx);
+  [[0.1, 0.05], [0.2, 0.04], [0.3, 0.035]].forEach(([dy, amp], k) => nodo('path', { class: `aurora-epica e${k}`, d: cintaD(W, H * dy, H * amp, H * 0.2) }, g));
+  for (let i = 0; i < 34; i++) {
+    const gota = nodo('circle', { class: 'luz-gota', cx: f1(c.sx + (Math.random() - 0.5) * W * 0.46), cy: f1(c.sy - H * (0.1 + Math.random() * 0.12)), r: f1(1.2 + Math.random() * 1.8) }, g);
+    gota.style.setProperty('--cae', `${f1(H * (0.16 + Math.random() * 0.14))}px`);
+    gota.style.animationDelay = `${300 + Math.round(Math.random() * 2600)}ms`;
+  }
+  retirar(g, 6500);
 }
 
 function describir(sats, meta) {

@@ -1345,6 +1345,102 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- aurora, lago, acento dorado, cometa y 1 BTC (campamento 5, 3/3)
+  {
+    const todos = () => { try { localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } };
+    const medir = (p) => p.evaluate(() => {
+      const vis = (el) => !!el && getComputedStyle(el).display !== 'none';
+      const caja = (sel) => { const e = document.querySelector(sel); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; };
+      const lum = (c) => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+      const raiz = getComputedStyle(document.documentElement);
+      const tmp = document.createElement('i'); document.body.append(tmp);
+      const color = (v) => { tmp.style.color = raiz.getPropertyValue(v); return getComputedStyle(tmp).color; };
+      const a = lum(color('--naranja-txt')), f = lum(color('--s1'));
+      tmp.remove();
+      return {
+        cintas: document.querySelectorAll('.aurora-cinta').length,
+        auroraVisible: vis(document.querySelector('.aurora')),
+        lago: caja('.lago-agua'), reflejoVisible: vis(document.querySelector('.lago-luna')),
+        ilum: Number(getComputedStyle(document.getElementById('montana')).getPropertyValue('--luna-ilum')),
+        sendero: caja('#m-sendero'), etiquetas: [...document.querySelectorAll('#m-etiquetas text')].map((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }),
+        acento: document.documentElement.dataset.acento, naranja: raiz.getPropertyValue('--naranja').trim(),
+        contraste: (Math.max(a, f) + 0.05) / (Math.min(a, f) + 0.05), svg: caja('#montana svg'),
+      };
+    });
+    const cruza = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    const srv = await servidor('anio');
+    try {
+      let r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
+      let m = await medir(r.p);
+      ok(m.cintas === 3 && m.auroraVisible, `aurora: con racha larga y de noche se ve (${m.cintas} cintas)`);
+      ok(m.lago && m.lago.w > 40 && m.reflejoVisible && m.ilum >= 0 && m.ilum <= 1, `lago: de noche refleja la luna (iluminación ${m.ilum})`);
+      ok(m.lago.x >= m.svg.x && m.lago.x + m.lago.w <= m.svg.x + m.svg.w && m.lago.y + m.lago.h <= m.svg.y + m.svg.h, 'lago: cabe dentro de la escena');
+      ok(m.etiquetas.every((t) => !cruza(t, m.lago)), 'lago: no tapa ninguna etiqueta de la montaña');
+      eq(m.acento, 'naranja', 'acento: por debajo de 1 BTC sigue el naranja');
+      await r.ctx.close();
+      r = await entrar(navegador, srv, ADMIN, { hora: 12 }, todos);
+      m = await medir(r.p);
+      ok(!m.auroraVisible && !m.reflejoVisible && m.lago, 'aurora y reflejo de luna: solo de noche (el lago sigue de día)');
+      await r.ctx.close();
+      r = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } });
+      m = await medir(r.p);
+      ok(!m.auroraVisible && m.lago, 'aurora: con efectos esenciales desaparece (es ambiente); el lago se queda');
+      await r.ctx.close();
+      // La vista previa de la celebración de 1 BTC: aurora por todo el cielo, lluvia de luz, tarjeta propia y, al final, acento dorado
+      r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
+      await r.p.click('#cuenta-btn');
+      await r.p.click('[data-previa="epico"]');
+      await r.p.waitForSelector('.aurora-epica', { timeout: 6000 });
+      const ep = await r.p.evaluate(() => ({ bandas: document.querySelectorAll('.aurora-epica').length, gotas: document.querySelectorAll('.luz-gota').length, cometa: document.querySelectorAll('.cometa').length }));
+      ok(ep.bandas === 3 && ep.gotas === 34 && ep.cometa === 1, `1 BTC: aurora (${ep.bandas}), lluvia de luz (${ep.gotas}) y cometa (${ep.cometa})`);
+      ok(/Llegaste a la cumbre/.test(await r.p.innerText('#hito-cel')) && /1 BTC/.test(await r.p.innerText('#hito-cel')), '1 BTC: su tarjeta propia');
+      eq(await r.p.evaluate(() => document.documentElement.dataset.acento), 'naranja', '1 BTC: el acento dorado espera a que acabe la celebración');
+      await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'oro', null, { timeout: 8000 });
+      m = await medir(r.p);
+      eq(m.naranja, '#f0b429', 'acento: tras llegar a 1 BTC es dorado');
+      ok(m.contraste >= 4.5, `acento dorado: el texto de acento sobre las tarjetas llega a 4.5:1 (${m.contraste.toFixed(1)})`);
+      await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'naranja', null, { timeout: 12000 }); // la vista previa devuelve el estado real
+      eq(await r.p.evaluate(() => document.querySelectorAll('.aurora-epica, .luz-gota').length), 0, '1 BTC: los efectos se retiran solos');
+      await r.ctx.close();
+      // El cometa: al cruzar una etapa
+      r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
+      await r.p.click('#cuenta-btn');
+      await r.p.click('[data-previa="etapa"]');
+      await r.p.waitForSelector('.cometa', { timeout: 6000 });
+      ok(await r.p.evaluate(() => !!document.querySelector('.cometa .cometa-cola') && document.querySelectorAll('.aurora-epica').length === 0), 'cometa: una etapa lo lanza (y no la celebración de 1 BTC)');
+      await r.ctx.close();
+    } finally {
+      srv.parar();
+    }
+    const bal = await servidor('ballena');
+    try {
+      for (const tema of ['oscuro', 'claro']) {
+        const r = await entrar(navegador, bal, ADMIN, { hora: 22 }, [(t) => { try { localStorage.setItem('libro.tema', t); } catch { /* sin almacenamiento */ } }, tema]);
+        await r.p.waitForTimeout(800);
+        const m = await medir(r.p);
+        eq(m.acento, 'oro', `acento: con más de 1 BTC es dorado (${tema})`);
+        ok(m.contraste >= 4.5, `acento dorado (${tema}): texto de acento a ${m.contraste.toFixed(1)}:1 sobre las tarjetas`);
+        await r.ctx.close();
+      }
+    } finally {
+      bal.parar();
+    }
+    const hoy = await servidor('hoy');
+    try {
+      const r = await entrar(navegador, hoy, ADMIN, { hora: 22 }, todos);
+      const m = await medir(r.p);
+      ok(m.cintas === 0 && !m.auroraVisible, 'aurora: sin racha larga no hay aurora');
+      await r.ctx.close();
+      const ctx = await navegador.newContext();
+      const p = await ctx.newPage();
+      await p.goto(`${hoy.url}/login`, { waitUntil: 'networkidle' });
+      eq(await p.evaluate(() => [document.querySelectorAll('.aurora-cinta').length, !!document.querySelector('.lago-agua'), document.documentElement.dataset.acento ?? null]), [0, true, null], 'la entrada: lago sí, sin aurora ni acento dorado (sin dato personal)');
+      await ctx.close();
+    } finally {
+      hoy.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {

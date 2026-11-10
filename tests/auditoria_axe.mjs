@@ -68,6 +68,7 @@ const cerrarOferta = async (p) => { if (await p.locator('#d-avisos').isVisible()
 const navegador = await chromium.launch();
 const anio = await servidor('anio');
 const hoy = await servidor('hoy');
+const ballena = await servidor('ballena');
 try {
   for (const esquema of ['light', 'dark']) {
     const nuevo = async (srv, cuenta, init = null, hora = esquema === 'light' ? 12 : 22) => {
@@ -200,6 +201,14 @@ try {
       await auditar(p, `tabla de movimientos ${esquema}`);
       await ctx.close();
     }
+    { // más de 1 BTC: acento dorado en la app y su vista de cuenta
+      const { ctx, p } = await nuevo(ballena, ADMIN, conPush);
+      await cerrarOferta(p);
+      await auditar(p, `acento dorado (más de 1 BTC) ${esquema}`);
+      await p.click('#anotar'); await p.waitForTimeout(500);
+      await auditar(p, `hoja con acento dorado ${esquema}`);
+      await ctx.close();
+    }
     { // la oferta de avisos al entrar
       const { ctx, p } = await nuevo(hoy, ADMIN, conPush);
       await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });
@@ -218,7 +227,7 @@ try {
     }
   }
 } finally {
-  anio.parar(); hoy.parar(); await navegador.close();
+  anio.parar(); hoy.parar(); ballena.parar(); await navegador.close();
 }
 console.log(`${estados} estados revisados con axe.`);
 if (hallazgos.length) {

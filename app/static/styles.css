@@ -1111,3 +1111,54 @@ html:not([data-efectos="ninguno"]) .pino-nuevo { transform-box: fill-box; transf
 .m-tarjeta-x { min-height: var(--toque); min-width: var(--toque); padding: 0 12px; margin-left: -8px; border: 0; background: transparent; color: var(--naranja-txt, var(--naranja)); font: 600 0.9375rem var(--sans, inherit); cursor: pointer; }
 .m-tarjeta-x:focus-visible { outline: 3px solid var(--naranja); border-radius: 10px; }
 html:not([data-efectos="ninguno"]) .m-tarjeta:not([hidden]) { animation: dlg-entra 0.22s ease-out; }
+
+/* ---------------------------------------------------------------- Campamento 5 (3/3) */
+/* Acento dorado desde 1 BTC (pintar.js: pintarAcento). Texto de acento con contraste calculado en cada tema. */
+html[data-acento="oro"] { --naranja: #f0b429; --naranja-txt: #f7c95a; --naranja-osc: #2b2108; }
+html[data-acento="oro"][data-tema="claro"] { --naranja-txt: #7a5600; --compra-borde: #7a5600; }
+html[data-acento="oro"][data-contraste="alto"] { --naranja-txt: #ffd98a; }
+html[data-acento="oro"][data-contraste="alto"][data-tema="claro"] { --naranja-txt: #5e4100; }
+
+/* Aurora (racha larga): solo de noche y con todos los efectos; muy tenue, bajo el saldo. */
+.aurora { display: none; }
+html[data-cielo="noche"] .aurora { display: inline; }
+#m-aurora .au-0 { stop-color: #5cf2b0; stop-opacity: 0; } #m-aurora .au-1 { stop-color: #6fe0c8; stop-opacity: 0.26; } #m-aurora .au-2 { stop-color: #8b7bff; stop-opacity: 0; }
+.aurora-cinta { fill: url(#m-aurora); opacity: 0.8; transform-box: fill-box; transform-origin: center; }
+html[data-efectos="todos"] .aurora-cinta.a0 { animation: aurora-mece 18s ease-in-out infinite alternate; }
+html[data-efectos="todos"] .aurora-cinta.a1 { animation: aurora-mece 23s -6s ease-in-out infinite alternate-reverse; }
+html[data-efectos="todos"] .aurora-cinta.a2 { animation: aurora-mece 29s -11s ease-in-out infinite alternate; }
+@keyframes aurora-mece { from { transform: translateX(-3%) scaleY(0.9); opacity: 0.45; } to { transform: translateX(3%) scaleY(1.12); opacity: 0.9; } }
+.pag-login .aurora { display: none; }
+
+/* Lago con el reflejo de la luna (su brillo sigue la fase: --luna-ilum la fija montana.js). */
+.lago-agua { fill: var(--c4); fill: color-mix(in srgb, var(--c4) 78%, var(--medio)); opacity: 0.94; }
+.lago-borde { fill: none; stroke: var(--nieve); stroke-opacity: 0.22; stroke-width: 1; }
+.lago-luna { display: none; }
+html[data-cielo="noche"] .lago-luna { display: inline; }
+.lago-reflejo { fill: var(--astro); opacity: calc(0.12 + var(--luna-ilum, 0.5) * 0.6); }
+.lago-estrella { fill: var(--astro); opacity: 0.55; }
+.lago-onda { fill: none; stroke: var(--astro); stroke-opacity: 0.35; stroke-width: 1; transform-box: fill-box; transform-origin: center; display: none; }
+html[data-efectos="todos"] .lago-onda { display: inline; animation: onda-lago 7s ease-out infinite; }
+html[data-efectos="todos"] .lago-reflejo { animation: brillo-lago 5s ease-in-out infinite alternate; }
+@keyframes onda-lago { 0% { transform: scale(0.3); opacity: 0.9; } 100% { transform: scale(1.1); opacity: 0; } }
+@keyframes brillo-lago { to { transform: translateX(2px) scaleX(0.9); } }
+
+/* Cometa al cruzar una etapa: una raya con estela de lado a lado (transform y opacity). */
+.cometa-cola { stroke: var(--nieve); stroke-width: 2; stroke-linecap: round; opacity: 0.75; }
+.cometa-cabeza { fill: var(--nieve); }
+.cometa-mueve { animation: cometa 1.9s cubic-bezier(0.4, 0.1, 0.6, 1) both; }
+@keyframes cometa { 0% { transform: translate(0, 0); opacity: 0; } 12% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translate(calc(var(--escena-w, 400px) + 160px), 110px); opacity: 0; } }
+
+/* Llegar a 1 BTC: aurora por todo el cielo y lluvia de luz sobre la cumbre. */
+.aurora-epica { fill: url(#m-aurora); transform-box: fill-box; transform-origin: center; animation: aurora-epica 6s ease-in-out both; }
+.aurora-epica.e1 { animation-delay: 0.3s; } .aurora-epica.e2 { animation-delay: 0.6s; }
+@keyframes aurora-epica { 0% { opacity: 0; transform: translateX(-6%) scaleY(0.8); } 35% { opacity: 1; } 70% { opacity: 0.85; } 100% { opacity: 0; transform: translateX(6%) scaleY(1.2); } }
+.luz-gota { fill: var(--nieve); opacity: 0; animation: luz-gota 1.9s ease-in both; }
+@keyframes luz-gota { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(var(--cae, 120px)); } }
+html[data-acento="oro"] { --brasa: #ffd36b; --luz: #fff0c0; }
+html[data-acento="oro"][data-tema="claro"] { --brasa: #c98f00; --luz: #fff3cf; }
+/* La marca de la cabecera usa la tinta del cielo (cielo.js la fija en línea): con el acento dorado se cambia donde se usa. */
+html[data-acento="oro"][data-tinta="clara"] .marca b { color: #f7c95a; }
+html[data-acento="oro"][data-tinta="clara"] .marca-ico { stroke: #f7c95a; }
+html[data-acento="oro"][data-tinta="oscura"] .marca b { color: #7a5600; }
+html[data-acento="oro"][data-tinta="oscura"] .marca-ico { stroke: #7a5600; }

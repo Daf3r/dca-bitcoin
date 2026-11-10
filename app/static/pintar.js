@@ -1,10 +1,10 @@
-import { aFecha, btc, entero, etapasCruzadas, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, btc, cruzo1Btc, entero, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { dual, miniLinea } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
 import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos } from './cuenta.js';
-import { $, R, S, esAdmin, fijarR } from './estado.js';
+import { $, R, S, esAdmin, fijarR, reducido } from './estado.js';
 import { actualizarIndice } from './indice.js';
 import { pintarLista } from './lista.js';
 import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
@@ -18,6 +18,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   pintarPrecio();
   pintarSaldo(desde);
   if (montana) pintarMontana(animar, desde, festejo);
+  if (!acentoRetenido) pintarAcento();
   pintarToca();
   pintarCaida();
   pintarTramo();
@@ -202,6 +203,12 @@ function pintarProx() {
 }
 
 let anchoMontana = 0;
+// Idea 32: desde 1 BTC el acento de la app es dorado (variables de color en el CSS, `html[data-acento="oro"]`). Con la celebración
+// de 1 BTC en marcha se retiene el cambio hasta que acabe.
+let acentoRetenido = false;
+export function pintarAcento() {
+  document.documentElement.dataset.acento = acentoDe(R.sats);
+}
 // Una etapa que sea potencia de 10 desde 1M (1M, 10M, 1 BTC…) es un hito grande.
 export const esHito = (m) => m >= 1e6 && Math.abs(Math.log10(m) - Math.round(Math.log10(m))) < 1e-9;
 export const MS_SUBIDA = 1400;
@@ -212,11 +219,13 @@ export function pintarMontana(animar, desde, festejo = null) {
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true });
+  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true, aurora: hayAurora(R.racha) });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     const m = etapasCruzadas(festejo.antes, R.sats).at(-1);
-    f = { delta: festejo.delta, etapa: m, nivel: !m ? 'compra' : esHito(m) ? 'hito' : 'etapa' };
+    f = { delta: festejo.delta, etapa: m, nivel: cruzo1Btc(festejo.antes, R.sats) ? 'epico' : !m ? 'compra' : esHito(m) ? 'hito' : 'etapa' };
+    // El acento dorado llega cuando acaba la celebración de 1 BTC, no antes.
+    if (f.nivel === 'epico') { acentoRetenido = true; setTimeout(() => { acentoRetenido = false; pintarAcento(); }, reducido() ? 0 : MS_SUBIDA + 1800); }
   }
   if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : f ? MS_SUBIDA : 1600, f);
 }
