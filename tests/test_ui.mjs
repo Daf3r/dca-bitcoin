@@ -635,6 +635,113 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- se siente como app: recargar al arrastrar, hoja arrastrable, carga, avisos, tema
+  {
+    const srv = await servidor('nueve');
+    try {
+      const toque = (p, tipo, y, sel = 'body') => p.evaluate(([t, yy, q]) => {
+        const el = document.querySelector(q);
+        const to = new Touch({ identifier: 1, target: el, clientX: 100, clientY: yy });
+        el.dispatchEvent(new TouchEvent(t, { bubbles: true, cancelable: true, touches: t === 'touchend' ? [] : [to], targetTouches: [], changedTouches: [to] }));
+      }, [tipo, y, sel]);
+      const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 12 });
+      const pedidos = [];
+      p.on('request', (q) => /\/api\/compras$/.test(q.url()) && pedidos.push(q.url()));
+      const sol = () => p.evaluate(() => document.getElementById('recarga').dataset.estado || '');
+
+      // Arrastrar para actualizar: un tirón corto no hace nada; uno largo muestra el sol «lista» y, al soltar, actualiza.
+      await toque(p, 'touchstart', 100); await toque(p, 'touchmove', 160);
+      eq(await sol(), 'tirando', 'recarga: tirón corto = tirando');
+      await toque(p, 'touchend', 160);
+      await p.waitForTimeout(300);
+      eq([await sol(), pedidos.length], ['', 0], 'recarga: un tirón corto no actualiza');
+      await toque(p, 'touchstart', 100, '#lienzo'); await toque(p, 'touchmove', 400, '#lienzo'); await toque(p, 'touchend', 400, '#lienzo');
+      eq([await sol(), pedidos.length], ['', 0], 'recarga: arrastrar sobre el gráfico no recarga la página');
+      await toque(p, 'touchstart', 100); await toque(p, 'touchmove', 330);
+      eq(await sol(), 'lista', 'recarga: pasado el umbral dice «lista»');
+      await toque(p, 'touchend', 330);
+      await p.waitForFunction(() => document.getElementById('aviso-txt').textContent === 'Actualizado', null, { timeout: 5000 });
+      ok(pedidos.length >= 1, 'recarga: al soltar vuelve a pedir las compras');
+      const barra = await p.evaluate(() => [document.getElementById('aviso').dataset.temporal, getComputedStyle(document.getElementById('aviso'), '::after').animationName]);
+      eq(barra, ['1', 'aviso-barra'], 'avisos temporales: llevan su barra de tiempo');
+      await p.waitForTimeout(4000);
+      ok(await p.evaluate(() => document.getElementById('aviso').hidden), 'avisos temporales: desaparecen solos');
+      await p.waitForTimeout(500);
+
+      // Entrada escalonada: dejó su marca en las tarjetas y ya se retiró (nada queda oculto).
+      const entrada = await p.evaluate(() => ({ marcadas: document.querySelectorAll('[style*="--entra"]').length, clase: document.querySelector('.cuerpo').classList.contains('entra'),
+        apagadas: [...document.querySelectorAll('.cuerpo > *:not([hidden]), .col-principal > *:not([hidden])')].filter((e) => getComputedStyle(e).opacity !== '1' && e.offsetParent).length }));
+      ok(entrada.marcadas >= 3 && !entrada.clase && entrada.apagadas === 0, `entrada escalonada: marca y se retira sin dejar nada apagado (${JSON.stringify(entrada)})`);
+      ok(await p.evaluate(() => document.getElementById('sk-cards').hidden && !document.querySelector('#s-valor .sk')), 'carga: las formas grises se van al llegar los datos');
+
+      // Pulsación suave: al tener el dedo abajo el botón se hunde.
+      const caja = await p.locator('#cuenta-btn').boundingBox();
+      await p.mouse.move(caja.x + caja.width / 2, caja.y + caja.height / 2);
+      await p.mouse.down();
+      await p.waitForTimeout(250);
+      ok((await p.evaluate(() => getComputedStyle(document.getElementById('cuenta-btn')).transform)).startsWith('matrix(0.97'), 'pulsación suave: el botón se hunde al tocarlo');
+      await p.mouse.up();
+      await p.waitForTimeout(300);
+
+      // Tu cuenta: fundido de tema solo al cambiarlo a mano.
+      ok(!(await p.evaluate(() => document.documentElement.classList.contains('tema-fundido'))), 'tema: sin fundido en la carga');
+      if (!(await p.locator('#d-cuenta[open]').count())) await p.click('#cuenta-btn');
+      await p.click('#dc-tema');
+      ok(await p.evaluate(() => document.documentElement.classList.contains('tema-fundido')), 'tema: al cambiarlo a mano los colores se funden');
+      await p.waitForTimeout(700);
+      ok(!(await p.evaluate(() => document.documentElement.classList.contains('tema-fundido'))), 'tema: el fundido se retira solo');
+      await p.click('#dc-tema'); await p.click('#dc-tema'); // vuelve a automático
+      // Cambiar de vista dentro de «Tu cuenta» (transición nativa) deja la vista pedida y el foco donde toca.
+      await p.click('button[data-cuenta="clave"]');
+      await p.waitForSelector('#f-clave:not([hidden])');
+      ok(await p.evaluate(() => document.activeElement?.id === 'fc-actual' && document.getElementById('dc-menu').hidden), 'cuenta: «Cambiar contraseña» muestra su vista con el foco en el campo');
+      await p.keyboard.press('Escape');
+
+      // Hoja de anotar: se cierra arrastrando el asa hacia abajo; un arrastre corto rebota y queda abierta.
+      await p.waitForTimeout(300);
+      await p.click('#anotar');
+      await p.waitForTimeout(500);
+      const asa = await p.locator('#hoja-asa').boundingBox();
+      ok(asa && asa.width > 0, 'hoja: en móvil tiene asa para arrastrar');
+      const cx = asa.x + asa.width / 2, cy = asa.y + asa.height / 2;
+      await p.mouse.move(cx, cy); await p.mouse.down(); await p.mouse.move(cx, cy + 40, { steps: 4 });
+      ok((await p.evaluate(() => document.querySelector('.hoja-panel').style.transform)).includes('translateY(40'), 'hoja: sigue al dedo mientras se arrastra');
+      await p.mouse.up();
+      await p.waitForTimeout(600);
+      ok(!(await p.evaluate(() => document.getElementById('hoja').hidden)) && (await p.evaluate(() => document.querySelector('.hoja-panel').style.transform)) === '', 'hoja: un arrastre corto rebota y sigue abierta');
+      const asa2 = await p.locator('#hoja-asa').boundingBox();
+      await p.mouse.move(asa2.x + asa2.width / 2, asa2.y + 2); await p.mouse.down(); await p.mouse.move(asa2.x + asa2.width / 2, asa2.y + 260, { steps: 8 }); await p.mouse.up();
+      await p.waitForFunction(() => document.getElementById('hoja').hidden, null, { timeout: 3000 });
+      ok(true, 'hoja: arrastrada hacia abajo se cierra');
+      eq(consola, [], `consola limpia (se siente como app): ${consola.join(' | ')}`);
+      await ctx.close();
+
+      // Formas grises mientras llegan las compras (con la respuesta retenida) y texto para lectores.
+      const retenida = await entrar(navegador, srv, ADMIN, { hora: 12 });
+      const p2 = await retenida.ctx.newPage();
+      await p2.route('**/api/compras', async (r) => { await new Promise((x) => setTimeout(x, 1500)); await r.continue(); });
+      await p2.goto(`${srv.url}/`, { waitUntil: 'commit' });
+      await p2.waitForSelector('#s-valor .sk-linea', { timeout: 4000 });
+      const gris = await p2.evaluate(() => ({ cards: !document.getElementById('sk-cards').hidden, sr: document.querySelector('#s-valor .sr').textContent, oculto: document.querySelector('#s-valor .sk').getAttribute('aria-hidden') }));
+      eq(gris, { cards: true, sr: 'Abriendo tu libro…', oculto: 'true' }, 'carga: formas grises y «Abriendo tu libro…» para lectores');
+      await p2.waitForFunction(() => document.getElementById('sk-cards').hidden, null, { timeout: 8000 });
+      await retenida.ctx.close();
+
+      // Sin movimiento no hay entrada escalonada; en modo ligero no hay cristal.
+      const quieto = await entrar(navegador, srv, ADMIN, { hora: 12, reducedMotion: 'reduce' });
+      eq(await quieto.p.evaluate(() => document.querySelectorAll('[style*="--entra"]').length), 0, 'entrada escalonada: con movimiento reducido no se aplica');
+      await quieto.ctx.close();
+      const ligero = await entrar(navegador, srv, ADMIN, { hora: 12 }, () => { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 2 }); });
+      eq(await ligero.p.evaluate(() => getComputedStyle(document.querySelector('.hoja-fondo')).backdropFilter), 'none', 'cristal: apagado en modo ligero');
+      await ligero.ctx.close();
+      const normal = await entrar(navegador, srv, ADMIN, { hora: 12 }, () => { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 }); });
+      ok((await normal.p.evaluate(() => getComputedStyle(document.querySelector('.hoja-fondo')).backdropFilter)).includes('blur'), 'cristal: la hoja desenfoca lo de atrás');
+      await normal.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {

@@ -191,6 +191,45 @@ hoja.addEventListener('keydown', (e) => {
 $('anotar').addEventListener('click', () => abrirHoja());
 document.querySelectorAll('[data-cerrar]').forEach((b) => b.addEventListener('click', cerrarHoja));
 
+// Cerrar arrastrando: el dedo toma el asa o la cabecera y baja la hoja; si pasa de cierto tramo (o va rápido) se cierra,
+// y si no, rebota a su sitio con un resorte. Solo cuando la hoja sube desde abajo (móvil y tablet pequeña).
+const ARRASTRE_CIERRA = 110; // px
+const ARRASTRE_VELOCIDAD = 0.7; // px/ms
+const desdeAbajo = matchMedia('(max-width: 699px)');
+{
+  const panel = hoja.querySelector('.hoja-panel');
+  let arrastre = null;
+  const zona = (t) => t.closest('.hoja-asa, .hoja-cab') && !t.closest('button, a, input');
+  panel.addEventListener('pointerdown', (e) => {
+    if (!desdeAbajo.matches || !zona(e.target) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    arrastre = { id: e.pointerId, y0: e.clientY, dy: 0, t0: e.timeStamp, y1: e.clientY, t1: e.timeStamp };
+    panel.setPointerCapture(e.pointerId);
+    panel.style.transition = 'none';
+  });
+  panel.addEventListener('pointermove', (e) => {
+    if (!arrastre || e.pointerId !== arrastre.id) return;
+    arrastre.dy = Math.max(0, e.clientY - arrastre.y0);
+    arrastre.y1 = e.clientY; arrastre.t1 = e.timeStamp;
+    panel.style.transform = `translateY(${arrastre.dy}px)`;
+  });
+  const soltar = (e) => {
+    if (!arrastre || e.pointerId !== arrastre.id) return;
+    const { dy, t0 } = arrastre;
+    const v = dy / Math.max(1, e.timeStamp - t0);
+    arrastre = null;
+    panel.style.removeProperty('transition');
+    if (e.type === 'pointercancel' || (dy < ARRASTRE_CIERRA && v < ARRASTRE_VELOCIDAD)) {
+      panel.style.removeProperty('transform');
+      if (dy > 2 && !reducido()) panel.animate([{ transform: `translateY(${dy}px)` }, { transform: 'translateY(0)' }], { duration: 380, easing: 'cubic-bezier(0.2, 1.5, 0.4, 1)' });
+      return;
+    }
+    panel.style.removeProperty('transform');
+    cerrarHoja();
+  };
+  panel.addEventListener('pointerup', soltar);
+  panel.addEventListener('pointercancel', soltar);
+}
+
 /** Guarda un traslado. Si pagaste comisión de red, se anota también como un gasto (baja tu saldo). */
 async function guardarTraslado(d, fecha) {
   H.guardando = true;

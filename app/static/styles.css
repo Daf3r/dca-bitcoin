@@ -73,6 +73,11 @@ body { margin: 0; background: var(--fondo); color: var(--txt); font: 400 16px/1.
 h1, h2, h3, p, ul, ol, dl, dd { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
 button, input { font: inherit; color: inherit; }
+
+/* Pulsación suave: el botón se hunde un poco y deja una luz tenue (sin JS). `:where` da especificidad cero: lo que ya tiene su
+   propio :active (p. ej. «Anotar») manda; esta regla va antes de los transform propios para no pisarlos. */
+:where(button:not(:disabled), [role="button"], summary):active { transform: scale(0.97); background-image: radial-gradient(circle at 50% 50%, color-mix(in srgb, currentColor 13%, transparent) 0 62%, transparent 64%); }
+:where(button, [role="button"], summary) { transition: transform 0.12s ease-out; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--naranja); outline-offset: 3px; }
 [data-tono="sube"] { color: var(--sube); }
@@ -828,3 +833,73 @@ div.fila:hover { background: none; }
 .dc-previa p { margin: 0 0 8px; font-size: 0.8125rem; color: var(--txt2); }
 .dc-previa div { display: flex; flex-wrap: wrap; gap: 8px; }
 .dc-previa button { min-height: 44px; padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 650; cursor: pointer; touch-action: manipulation; }
+
+/* ======================================================= Campamento 4 (1/4): se siente como app */
+/* Arrastra para actualizar (refrescar.js): un sol naranja baja desde arriba según el tirón. */
+.recarga { position: fixed; z-index: 12; top: 0; left: 50%; width: 44px; height: 44px; margin-left: -22px; pointer-events: none; opacity: 0;
+  transform: translateY(calc(var(--tira, 0px) - 52px + env(safe-area-inset-top))); transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.2s; }
+.recarga i { display: block; width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle, #ffd98a 0 38%, var(--naranja) 40% 62%, transparent 64%); box-shadow: 0 0 0 3px color-mix(in srgb, var(--naranja) 35%, transparent), 0 6px 18px -4px rgb(0 0 0 / 0.5); }
+.recarga:is([data-estado="tirando"], [data-estado="lista"], [data-estado="cargando"]) { opacity: 1; }
+.recarga[data-estado="tirando"], .recarga[data-estado="lista"] { transition: opacity 0.2s; }
+.recarga[data-estado="lista"] i { transform: scale(1.12); }
+.recarga[data-estado="cargando"] i { animation: recarga-late 0.9s ease-in-out infinite; }
+@keyframes recarga-late { 50% { transform: scale(1.18); } }
+html { overscroll-behavior-y: contain; } /* sin el «recargar» propio de Chrome: lo hace la app */
+
+/* Formas grises mientras abre (en lugar de «Abriendo tu libro…»; el texto va en .sr para lectores). */
+.sk { display: inline-block; vertical-align: middle; border-radius: 999px; background: linear-gradient(90deg, var(--s2), var(--s3), var(--s2)); background-size: 220% 100%; }
+.sk-linea { width: min(12em, 60vw); height: 1em; }
+html[data-efectos="todos"] .sk, html[data-efectos="todos"] .sk-cards i { animation: sk-brillo 1.6s ease-in-out infinite; }
+@keyframes sk-brillo { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.sk-cards { display: grid; gap: 14px; }
+.sk-cards[hidden] { display: none; }
+.sk-cards i { display: block; height: 96px; border-radius: 22px; background: linear-gradient(90deg, var(--s1), var(--s2), var(--s1)); background-size: 220% 100%; }
+.sk-cards i:first-child { height: 128px; }
+.sk-cards i:last-child { height: 220px; }
+
+/* Aviso temporal: una barra fina que se agota. */
+.aviso[data-temporal]::after { content: ""; position: absolute; left: 18px; right: 18px; bottom: 5px; height: 2px; border-radius: 2px; background: currentColor; opacity: 0.4; transform-origin: left; animation: aviso-barra 3.5s linear forwards; }
+@keyframes aviso-barra { to { transform: scaleX(0); } }
+html[data-efectos="ninguno"] .aviso::after { display: none; }
+
+/* Hoja: asa para arrastrar (solo cuando sube desde abajo) y cristal esmerilado detrás. */
+.hoja-asa { display: none; justify-self: center; width: 44px; height: 5px; margin: -6px 0 2px; border-radius: 3px; background: var(--s3); }
+@media (max-width: 699px) {
+  .hoja-asa { display: block; }
+  .hoja-asa, .hoja-cab { touch-action: none; }
+  .hoja-asa { position: relative; }
+  .hoja-asa::before { content: ""; position: absolute; inset: -18px -40px; } /* zona de agarre de 40 px de alto */
+}
+@supports (backdrop-filter: blur(1px)) {
+  html:not([data-ligero]) .hoja-fondo, html:not([data-ligero]) dialog::backdrop { backdrop-filter: blur(5px); }
+  html:not([data-ligero]) .hoja-panel { background: color-mix(in srgb, var(--s1) 94%, transparent); backdrop-filter: blur(18px) saturate(1.15); }
+}
+/* Los diálogos entran con un breve ascenso y fundido. */
+html[data-efectos="todos"] dialog[open], html[data-efectos="esenciales"] dialog[open] { animation: dlg-entra 0.24s cubic-bezier(0.2, 0.9, 0.2, 1); }
+html[data-efectos="todos"] dialog[open]::backdrop, html[data-efectos="esenciales"] dialog[open]::backdrop { animation: dlg-fondo 0.24s ease-out; }
+@keyframes dlg-entra { from { opacity: 0; transform: translateY(14px) scale(0.98); } }
+@keyframes dlg-fondo { from { opacity: 0; } }
+
+/* Transiciones nativas (View Transitions): el gráfico que cambia de vista y el cuerpo de «Tu cuenta» se funden y se acomodan. */
+#mercado, #valor, #costo-prom, #sats-acum { view-transition-name: grafico; }
+.d-cuenta > * { view-transition-name: dc-cuerpo; }
+::view-transition-group(grafico), ::view-transition-group(dc-cuerpo) { animation-duration: 0.28s; animation-timing-function: cubic-bezier(0.2, 0.9, 0.2, 1); }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+html[data-efectos="ninguno"] ::view-transition-group(*), html[data-efectos="ninguno"] ::view-transition-old(*), html[data-efectos="ninguno"] ::view-transition-new(*) { animation: none !important; }
+
+/* Entrada escalonada de las tarjetas al abrir (entrada.js): de «un poco apagado» a «tal cual»; nunca deja nada oculto. */
+html[data-efectos="todos"] .cuerpo.entra > [style*="--entra"], html[data-efectos="todos"] .cuerpo.entra > :is(.col-principal, .col-lateral) > [style*="--entra"] { animation: tarjeta-entra 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) backwards; animation-delay: calc(var(--entra, 0) * 55ms); }
+@keyframes tarjeta-entra { from { opacity: 0.001; translate: 0 12px; } }
+
+/* Cambio de tema a mano: los colores se funden (la clase la pone y la quita cuenta.js; nunca en la carga). */
+html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efectos="ninguno"]) *, html.tema-fundido:not([data-efectos="ninguno"]) *::before, html.tema-fundido:not([data-efectos="ninguno"]) *::after {
+  transition: background-color 0.35s, color 0.35s, border-color 0.35s, fill 0.35s, stroke 0.35s, box-shadow 0.35s !important; }
+
+/* Mouse: respuesta sutil solo donde hay puntero fino (nunca en el toque). */
+@media (hover: hover) and (pointer: fine) {
+  .anotar:hover { filter: brightness(1.07); box-shadow: 0 16px 34px -12px rgb(0 0 0 / 0.65); }
+  .cuenta-btn:hover, .rangos button:hover, .leyenda button:hover, .g-op:hover, .h-tipo button:hover, .d-bot button:hover, .cerrar:hover { background-color: color-mix(in srgb, var(--naranja) 12%, transparent); }
+  .saldo-v[role="button"]:hover em { opacity: 1; }
+  .fila { transition: background-color 0.15s, transform 0.15s; }
+  .fila:hover { transform: translateX(2px); }
+}

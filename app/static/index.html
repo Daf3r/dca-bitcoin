@@ -23,6 +23,8 @@
 <script type="module" src="/app.js"></script>
 </head>
 <body>
+<!-- Sol de «arrastra para actualizar»: solo lo ve quien tira de la página desde arriba (refrescar.js). -->
+<div class="recarga" id="recarga" aria-hidden="true"><i></i></div>
 <section class="escena" aria-labelledby="t-saldo">
   <div class="montana" id="montana"></div>
   <header class="cima">
@@ -41,7 +43,7 @@
     <h1 class="saldo-k" id="t-saldo">Tu saldo</h1>
     <p class="saldo-v" id="s-saldo-v" role="button" tabindex="0" aria-describedby="s-saldo-ayuda"><span class="cifra-grande" id="s-sats">—</span><em id="s-unidad">sats</em></p>
     <span class="sr" id="s-saldo-ayuda"></span>
-    <p class="saldo-d" id="s-valor">Abriendo tu libro…</p>
+    <p class="saldo-d" id="s-valor"><span class="sk sk-linea" aria-hidden="true"></span><span class="sr">Abriendo tu libro…</span></p>
     <p class="prox" id="prox"></p>
   </div>
 </section>
@@ -50,6 +52,8 @@
   <!-- Dos columnas en escritorio; en móvil y tablet los contenedores no cuentan (display: contents)
        y el orden visual es el del documento, igual que el de tabulación. -->
   <div class="col-principal">
+  <!-- Formas grises donde irá cada cosa mientras llegan los datos (pintar.js las quita). -->
+  <div class="sk-cards" id="sk-cards" aria-hidden="true"><i></i><i></i><i></i></div>
   <!-- Recordatorio según tu ritmo (solo admin): al día, te toca, último día o racha reiniciada. -->
   <p class="toca" id="toca" role="status" hidden><i aria-hidden="true"></i><span id="toca-txt"></span></p>
   <!-- Gran caída (opcional, solo admin): dice cuánto cayó el precio y qué haría reponer con una compra como las tuyas.
@@ -232,6 +236,7 @@
 <div class="hoja" id="hoja" hidden>
   <div class="hoja-fondo" data-cerrar></div>
   <div class="hoja-panel" role="dialog" aria-modal="true" aria-labelledby="hoja-t">
+    <i class="hoja-asa" id="hoja-asa" aria-hidden="true"></i>
     <div class="hoja-cab">
       <h2 id="hoja-t">Anotar compra</h2>
       <button type="button" class="cerrar" data-cerrar>Cerrar</button>

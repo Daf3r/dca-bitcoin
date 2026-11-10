@@ -3,6 +3,7 @@ import { dibujarGrafico, instalarLectura } from './grafico.js';
 import { dibujarValor, instalarLecturaValor } from './valor.js';
 import { dibujarEscalera, instalarEscalera } from './escalera.js';
 import { caidaVisible } from './reportes.js';
+import { conTransicion } from './movimiento.js';
 import { abrirHoja } from './hoja.js';
 import { $, R, S, esAdmin } from './estado.js';
 
@@ -200,9 +201,7 @@ $('vistas').addEventListener('click', (e) => {
   if (!b) return;
   vista = b.dataset.vista;
   guardar(CLAVE_VISTA, vista === 'precio' ? '' : vista);
-  pintarVistas();
-  pintarValor();
-  pintarMercado();
+  conTransicion(() => { pintarVistas(); pintarValor(); pintarMercado(); });
 });
 instalarEscalera($('c-lienzo'));
 instalarEscalera($('s-lienzo'));
