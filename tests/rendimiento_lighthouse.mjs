@@ -41,10 +41,17 @@ try {
 
   for (const [nombre, ruta, cabeceras] of [['la entrada', '/login', {}], ['la app', '/', { Cookie: cookie }]]) {
     const salida = path.join(os.tmpdir(), `lh-${process.pid}-${nombre.replace(/\W/g, '')}.json`);
-    const p = spawnSync(process.execPath, [LIGHTHOUSE, `${url}${ruta}`, '--quiet', '--output=json', `--output-path=${salida}`,
+    const correr = () => spawnSync(process.execPath, [LIGHTHOUSE, `${url}${ruta}`, '--quiet', '--output=json', `--output-path=${salida}`,
       `--only-categories=${Object.keys(UMBRALES).join(',')}`, '--form-factor=mobile',
       `--extra-headers=${JSON.stringify(cabeceras)}`, '--chrome-flags=--headless=new --no-sandbox --disable-gpu'],
     { env: { ...process.env, CHROME_PATH: chromium.executablePath() }, encoding: 'utf8', timeout: 240000 });
+    // En los corredores del CI Chrome a veces no logra grabar la traza de la carga (NO_NAVSTART) antes de medir nada: no es un
+    // resultado de la página. Se reintenta hasta 3 veces solo por ese error; cualquier otro fallo o puntaje bajo cuenta de inmediato.
+    let p = correr();
+    for (let intento = 1; intento < 3 && p.status !== 0 && /NO_NAVSTART/.test(`${p.stderr}${p.stdout}`); intento++) {
+      console.log(`Lighthouse no pudo grabar la carga de ${nombre} (NO_NAVSTART); reintento ${intento}`);
+      p = correr();
+    }
     if (p.status !== 0 || !fs.existsSync(salida)) { console.log(`Lighthouse falló en ${nombre}: ${(p.stderr || p.stdout || '').slice(0, 400)}`); fallos++; continue; }
     const lh = JSON.parse(fs.readFileSync(salida, 'utf8'));
     for (const [cat, minimo] of Object.entries(UMBRALES)) {
