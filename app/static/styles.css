@@ -1064,3 +1064,22 @@ html[data-efectos="todos"], html[data-efectos="esenciales"] { scroll-behavior: s
 .dc-atajos { display: none; margin-top: 12px; color: var(--txt2); font-size: 0.8125rem; }
 @media (hover: hover) and (pointer: fine) { .dc-atajos { display: block; } }
 .dc-atajos kbd { display: inline-block; min-width: 1.6em; padding: 0 6px; border: 1.5px solid var(--s3); border-radius: 6px; background: var(--s2); color: var(--txt); font: 650 0.8125rem var(--sans); text-align: center; }
+
+/* ======================================================= Campamento 5 (1/3): la montaña vive */
+/* Humo en los campamentos alcanzados y fogata en el siguiente (solo con todos los efectos: llevan `efecto-ambiente`). */
+.campo .humo, .campo .fogata { display: none; }
+html[data-efectos="todos"] .campo.alcanzado .humo { display: inline; }
+html[data-efectos="todos"] .campo.sig .fogata { display: inline; }
+.humo-bola { fill: var(--nieve); opacity: 0; transform-box: fill-box; transform-origin: center; animation: humo 4.2s ease-out infinite; }
+.humo-bola:nth-child(2) { animation-delay: 1.4s; }
+.humo-bola:nth-child(3) { animation-delay: 2.8s; }
+@keyframes humo { 0% { opacity: 0; transform: translate(0, 0) scale(0.6); } 18% { opacity: 0.75; } 100% { opacity: 0; transform: translate(6px, -26px) scale(2.3); } }
+.llama { fill: #ff9a2e; transform-box: fill-box; transform-origin: 50% 100%; animation: llama 1.1s ease-in-out infinite alternate; }
+.llama-i { fill: #ffe08a; transform-box: fill-box; transform-origin: 50% 100%; animation: llama 0.8s ease-in-out infinite alternate-reverse; }
+@keyframes llama { from { transform: scale(1, 1); opacity: 0.85; } to { transform: scale(0.82, 1.18); opacity: 1; } }
+/* Huellas del tramo recorrido y linterna de «Tú» (de noche, y a medias al atardecer). */
+.huellas circle { fill: var(--nieve); opacity: 0.6; }
+.linterna { opacity: 0; transition: opacity 1.5s; pointer-events: none; }
+html[data-cielo="noche"] .linterna { opacity: 0.5; }
+html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { opacity: 0.22; }
+.pag-login .huellas, .pag-login .linterna { display: none; }
