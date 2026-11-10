@@ -353,6 +353,17 @@ check(r.status_code == 200 and _struct.unpack(">II", r.data[16:24]) == (180, 180
 for pagina in ("/", "/login"):
     h = cl.get(pagina).get_data(as_text=True) if pagina == "/" else anon.get(pagina).get_data(as_text=True)
     check('rel="manifest" href="/manifest.webmanifest"' in h and 'rel="apple-touch-icon"' in h and 'apple-mobile-web-app-capable' in h, f"{pagina} enlaza manifiesto e icono de Apple")
+# --- Imágenes de arranque del iPhone (campamento 7): cada <link> apunta a un PNG público con las medidas de su nombre y su media query
+for pagina in ("/", "/login"):
+    h = cl.get(pagina).get_data(as_text=True) if pagina == "/" else anon.get(pagina).get_data(as_text=True)
+    arr = re.findall(r'<link rel="apple-touch-startup-image" href="(/arranque-(\d+)x(\d+)\.png)" media="\(device-width: (\d+)px\) and \(device-height: (\d+)px\) and \(-webkit-device-pixel-ratio: (\d)\)', h)
+    check(len(arr) == 12, f"{pagina}: 12 imágenes de arranque enlazadas")
+    for href, w, a, dw, dh, d in arr:
+        r = anon.get(href)
+        check(r.status_code == 200 and r.mimetype == "image/png" and _struct.unpack(">II", r.data[16:24]) == (int(w), int(a))
+              and int(dw) * int(d) == int(w) and int(dh) * int(d) == int(a), f"{href} público, mide lo que dice y coincide con su media query")
+r = anon.get("/icon.svg")
+check(r.status_code == 200 and "prefers-color-scheme:light" in r.get_data(as_text=True), "icon.svg cambia de colores con el tema del sistema")
 # --- Tema claro/oscuro: tema.js público (lo piden también la entrada y el HTML), bloqueante en <head> y sin inline
 r = anon.get("/tema.js")
 check(r.status_code == 200 and r.mimetype == "text/javascript" and "libro.tema" in r.get_data(as_text=True), "tema.js público")

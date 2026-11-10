@@ -7,13 +7,16 @@ self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = {}; }
   const titulo = typeof d.titulo === 'string' && d.titulo ? d.titulo : 'Libro DCA';
-  e.waitUntil(self.registration.showNotification(titulo, {
+  // El recordatorio de compra enciende el punto del icono (idea 41); la app lo quita al abrirse si ya compraste.
+  const insignia = d.etiqueta === 'recordatorio' && typeof self.navigator?.setAppBadge === 'function'
+    ? self.navigator.setAppBadge(1).catch(() => {}) : null;
+  e.waitUntil(Promise.all([insignia, self.registration.showNotification(titulo, {
     body: typeof d.cuerpo === 'string' ? d.cuerpo : '',
     tag: typeof d.etiqueta === 'string' ? d.etiqueta : undefined, // la misma etiqueta reemplaza el aviso anterior
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     data: { url: '/' },
-  }));
+  })]));
 });
 
 self.addEventListener('notificationclick', (e) => {
