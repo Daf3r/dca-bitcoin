@@ -367,13 +367,13 @@
     <p class="dc-nota av-motivo" id="av-motivo" hidden></p>
     <button type="button" class="av-interruptor" id="av-interruptor" hidden></button>
     <div class="av-lista" id="av-lista" hidden></div>
-    <fieldset class="av-horario" id="av-horario" hidden>
-      <legend>Horario de los avisos</legend>
+    <div class="av-horario" id="av-horario" role="group" aria-labelledby="av-h-t" hidden>
+      <h3 id="av-h-t">Horario de los avisos</h3>
       <p class="dc-nota">Solo suenan dentro de este horario (hora de El Salvador); lo que cae fuera espera a que empiece.</p>
       <label>Desde <select id="av-desde"></select></label>
       <label>Hasta <select id="av-hasta"></select></label>
       <label id="av-rec-l">Recordatorio de compra <select id="av-rec"></select></label>
-    </fieldset>
+    </div>
     <p class="hoja-error" id="av-error" role="alert"></p>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
