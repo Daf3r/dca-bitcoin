@@ -1010,10 +1010,16 @@ try {
       await p.waitForFunction(() => document.getElementById('aviso').hidden, null, { timeout: 6000 }); // el aviso anterior no se pisa
       let fallos = 0;
       await p.route('**/api/precio', (r) => (fallos++ < 2 ? r.abort() : r.continue()));
-      await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-      await p.waitForFunction(() => document.getElementById('aviso-txt').textContent === 'Reconectando…', null, { timeout: 3000 });
-      for (let i = 0; i < 40 && fallos < 3; i++) await p.waitForTimeout(250); // otras lecturas que sí llegan también limpian el aviso: lo que importa es el reintento
+      // Se vigila el aviso con un observador (un sondeo podría perderse el instante en que sale).
+      await p.evaluate(() => {
+        window.__reconectando = false;
+        new MutationObserver(() => { if (document.getElementById('aviso-txt').textContent === 'Reconectando…') window.__reconectando = true; })
+          .observe(document.getElementById('aviso-txt'), { childList: true, characterData: true, subtree: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      for (let i = 0; i < 60 && fallos < 3; i++) await p.waitForTimeout(250);
       await p.waitForFunction(() => document.getElementById('aviso').hidden, null, { timeout: 9000 });
+      ok(await p.evaluate(() => window.__reconectando), 'reconexión: avisó «Reconectando…»');
       ok(fallos === 3, `reconexión: dos fallos y al tercero llega (${fallos} intentos) y el aviso se va solo`);
       await p.unroute('**/api/precio');
 

@@ -22,11 +22,12 @@ export async function actualizarSuave() {
 }
 
 export async function cargarCompras() {
+  const teniaError = S.errorCarga;
   try {
     S.compras = (await api('/api/compras')).map(normalizar);
     S.traslados = await api('/api/traslados').catch(() => S.traslados); // dónde están los sats; si falla, lo demás sigue
     S.errorCarga = false;
-    avisar('');
+    if (teniaError) avisar(''); // solo se quita el aviso de error propio: un «Deshacer» o un «Reconectando…» a la vista se quedan
   } catch (e) {
     S.errorCarga = true;
     avisar(`No se pudieron cargar tus compras. ${e.status === 0 ? e.message : ''}`.trim(), cargarCompras);
