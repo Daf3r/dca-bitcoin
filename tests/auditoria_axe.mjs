@@ -109,6 +109,11 @@ try {
       const sem = await p.locator('#semanas i').first().boundingBox();
       await p.mouse.click(sem.x + sem.width / 2, sem.y + sem.height / 2); await p.waitForTimeout(300);
       await auditar(p, `tira de semanas con una semana marcada ${esquema}`);
+      // La montaña: una bandera tocada con su tarjeta (botones fuera del SVG, tarjeta con «Cerrar»)
+      await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(300);
+      await p.click('.m-bandera >> nth=0'); await p.waitForTimeout(400);
+      await auditar(p, `montaña con una bandera abierta ${esquema}`);
+      await p.keyboard.press('Escape');
       // La mini-cabecera fija (al bajar, con el saldo y el precio)
       await p.evaluate(() => document.querySelector('.compras').scrollIntoView({ block: 'start' })); await p.waitForTimeout(500);
       await auditar(p, `mini-cabecera a la vista ${esquema}`);

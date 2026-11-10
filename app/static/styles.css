@@ -1083,3 +1083,31 @@ html[data-efectos="todos"] .campo.sig .fogata { display: inline; }
 html[data-cielo="noche"] .linterna { opacity: 0.5; }
 html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { opacity: 0.22; }
 .pag-login .huellas, .pag-login .linterna { display: none; }
+
+/* ---------------------------------------------------------------- Campamento 5 (2/3) */
+/* Un dibujo por campamento (tienda, cabaña, refugio, mojón): apagado hasta alcanzarlo. */
+.campo-ico { fill: var(--nieve); opacity: 0.5; }
+.campo-ico-d { fill: var(--monte); opacity: 0.9; }
+.campo.alcanzado .campo-ico { opacity: 0.95; }
+.pag-login .campo-ico, .pag-login .campo-ico-d { display: none; }
+/* El bosque: un pino por compra, con un toque cálido para distinguirlo de los pinos de adorno. */
+.pino-2 { fill: var(--pino0); fill: color-mix(in srgb, var(--pino0) 72%, #3f8f55); }
+@keyframes planta { from { transform: scale(0); opacity: 0; } 70% { transform: scale(1.12); opacity: 1; } to { transform: scale(1); opacity: 1; } }
+html:not([data-efectos="ninguno"]) .pino-nuevo { transform-box: fill-box; transform-origin: 50% 100%; animation: planta 0.9s 0.5s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+/* Zonas de toque de las banderas (fuera del SVG, que es una imagen) y su tarjeta. */
+.m-banderas { position: absolute; inset: 0; pointer-events: none; }
+.m-bandera { position: absolute; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 12px; background: transparent; color: inherit; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
+.m-bandera:focus-visible { outline: 3px solid var(--naranja); outline-offset: 0; }
+@media (hover: hover) and (pointer: fine) { .m-bandera:hover { background: rgb(255 255 255 / 0.1); } }
+.m-tarjeta {
+  position: absolute; z-index: 2; pointer-events: auto;
+  width: min(17rem, calc(100% - 16px)); left: clamp(8px, calc(var(--cx, 50%) - 8.5rem), calc(100% - min(17rem, 100% - 16px) - 8px));
+  padding: 12px 14px 8px; border-radius: 14px; border: 1px solid var(--naranja); background: var(--s1); color: var(--txt);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+}
+.m-tarjeta[hidden] { display: none; }
+.m-tarjeta b { display: block; font: 600 1.0625rem var(--serif); }
+.m-tarjeta p { margin: 4px 0 6px; font-size: 0.9375rem; line-height: 1.4; color: var(--txt2); }
+.m-tarjeta-x { min-height: var(--toque); min-width: var(--toque); padding: 0 12px; margin-left: -8px; border: 0; background: transparent; color: var(--naranja-txt, var(--naranja)); font: 600 0.9375rem var(--sans, inherit); cursor: pointer; }
+.m-tarjeta-x:focus-visible { outline: 3px solid var(--naranja); border-radius: 10px; }
+html:not([data-efectos="ninguno"]) .m-tarjeta:not([hidden]) { animation: dlg-entra 0.22s ease-out; }

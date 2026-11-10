@@ -1,5 +1,5 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { escalaMontana, altitud, descripcionMontana, nombreHito, entero } from './lib.js';
+import { escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 
 const f1 = (n) => n.toFixed(1);
@@ -67,7 +67,7 @@ function trazoNieve({ sx, sy, ancho, nv }, alt) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0 }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
@@ -149,6 +149,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
       s += `<path class="pino-${fila}" d="M${f1(x)} ${f1(yb - a)}L${f1(x + an)} ${f1(yb)}L${f1(x - an)} ${f1(yb)}Z"/>`;
     }
   }
+  s += bosque(W, H, bx, compras, plantar);
   host.innerHTML = s + '</g></svg>';
 
   const camino = host.querySelector('#m-sendero');
@@ -161,10 +162,122 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   };
   const campos = esc.campos.map((m) => ({ m, p: camino.getPointAtLength(enAltura(altitud(m, esc))), cima: m === esc.cima }));
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima }) =>
-    `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-24" r="46" fill="url(#m-luz)"/>' : ''}<line y2="-28"/><path class="banderin" d="M0 -28L20 -22L0 -16Z"/>${humoYFogata()}</g>`).join('');
-  estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas };
+    `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-24" r="46" fill="url(#m-luz)"/>' : ''}<line y2="-28"/><path class="banderin" d="M0 -28L20 -22L0 -16Z"/>${icono(cima ? 3 : esc.campos.indexOf(m))}${humoYFogata()}</g>`).join('');
+  estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras };
+  if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
+}
+
+/**
+ * Un dibujo distinto por campamento (idea 63), al pie de la bandera y a su derecha, bajo la etiqueta (ocupa de y −13 a 0):
+ * tienda, cabaña, refugio con almenas y, en la cumbre, un mojón de piedras. Se elige por el orden del campamento en la montaña.
+ */
+function icono(i) {
+  const formas = [
+    '<path class="campo-ico" d="M5 0L13 -12L21 0Z"/><path class="campo-ico-d" d="M11.4 0L13 -5.5L14.6 0Z"/>',
+    '<path class="campo-ico" d="M6 0V-7H20V0ZM4 -7L13 -13.5L22 -7Z"/><path class="campo-ico-d" d="M11.6 0V-4.5H14.4V0Z"/>',
+    '<path class="campo-ico" d="M7 0V-9H19V0ZM7 -9V-13H9.6V-11H11.7V-13H14.3V-11H16.4V-13H19V-9Z"/><path class="campo-ico-d" d="M11.6 0V-4.5Q13 -6.4 14.4 -4.5V0Z"/>',
+    '<ellipse class="campo-ico" cx="13" cy="-2.3" rx="8.4" ry="2.6"/><ellipse class="campo-ico" cx="13" cy="-6.2" rx="5.8" ry="2.3"/><ellipse class="campo-ico" cx="13" cy="-9.6" rx="3.2" ry="1.9"/>',
+  ];
+  return formas[Math.min(Math.max(i, 0), 3)];
+}
+
+/**
+ * El bosque (idea 109): un pino por compra al pie de la montaña, por delante de los pinos de adorno. Con muchas compras cada
+ * pino vale por varias (tope de 60). Usa su propio azar: la forma de la montaña no cambia. El último se planta con una
+ * animación corta si la compra es de esta sesión (`plantar`).
+ */
+const MAX_PINOS = 60;
+function bosque(W, H, bx, compras, plantar) {
+  if (!(compras > 0)) return '';
+  const por = Math.ceil(compras / MAX_PINOS), n = Math.ceil(compras / por);
+  const rnd = azar(7);
+  let s = '<g class="bosque" id="m-bosque">';
+  for (let i = 0; i < n; i++) {
+    // Se reparten por todo el ancho salvo la marca de salida (un pino encima la taparía): el hueco se salta, no se pierde ningún pino.
+    const u = ((i + 0.5) / n) * (W - 60) + (rnd() - 0.5) * ((W - 60) / n) * 0.5;
+    const x = u < bx - 30 ? u : u + 60;
+    const a = H * (0.075 + rnd() * 0.035), an = a * 0.4;
+    const yb = H * 1.01;
+    const nuevo = plantar && i === n - 1 ? ' pino-nuevo' : '';
+    s += `<path class="pino-2${nuevo}" d="M${f1(x)} ${f1(yb - a)}L${f1(x + an * 0.55)} ${f1(yb - a * 0.5)}L${f1(x + an * 0.25)} ${f1(yb - a * 0.5)}L${f1(x + an)} ${f1(yb)}L${f1(x - an)} ${f1(yb)}L${f1(x - an * 0.25)} ${f1(yb - a * 0.5)}L${f1(x - an * 0.55)} ${f1(yb - a * 0.5)}Z"/>`;
+  }
+  return `${s}</g>`;
+}
+
+// Tarjeta de cada campamento (idea 72). Los botones son transparentes, de 48 px, y viven FUERA del SVG (que es role="img"):
+// dentro de una imagen no podrían tener nombre ni foco. La tarjeta y los botones se rehacen con cada dibujo.
+const TOQUE = 48;
+let abierta = null;
+function banderas(host, campos, W, H) {
+  const { sats, fechas } = estado;
+  const caja = document.createElement('div');
+  caja.className = 'm-banderas';
+  caja.id = 'm-banderas';
+  const botones = campos.map(({ m, p, cima }) => {
+    const t = textoCampamento(m, sats, fechas[m] ?? null, cima);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'm-bandera';
+    b.dataset.m = String(m);
+    b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-controls', 'm-tarjeta');
+    b.setAttribute('aria-label', `${t.titulo}. ${t.texto}`);
+    b.style.left = `${f1(Math.min(Math.max(p.x - TOQUE / 2 + 6, 0), W - TOQUE))}px`;
+    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - 12, 0), H - TOQUE))}px`;
+    b.addEventListener('click', () => (abierta === m ? cerrarTarjeta() : abrirTarjeta(m)));
+    return b;
+  });
+  const tarjeta = document.createElement('div');
+  tarjeta.className = 'm-tarjeta';
+  tarjeta.id = 'm-tarjeta';
+  tarjeta.setAttribute('role', 'group');
+  tarjeta.setAttribute('aria-labelledby', 'm-tarjeta-t');
+  tarjeta.hidden = true;
+  tarjeta.innerHTML = '<b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><button type="button" class="m-tarjeta-x">Cerrar</button>';
+  tarjeta.querySelector('button').addEventListener('click', () => cerrarTarjeta(true));
+  caja.append(...botones, tarjeta);
+  host.append(caja);
+  abierta = null;
+}
+
+function abrirTarjeta(m) {
+  const { host, campos, sats, fechas, H } = estado;
+  const campo = campos.find((x) => x.m === m);
+  const tarjeta = host.querySelector('#m-tarjeta');
+  if (!campo || !tarjeta) return;
+  const t = textoCampamento(m, sats, fechas[m] ?? null, campo.cima);
+  tarjeta.querySelector('#m-tarjeta-t').textContent = t.titulo;
+  tarjeta.querySelector('#m-tarjeta-p').textContent = t.texto;
+  tarjeta.dataset.estado = t.alcanzado ? 'alcanzado' : 'futuro';
+  tarjeta.style.setProperty('--cx', `${f1(campo.p.x)}px`);
+  const abajo = campo.p.y < H * 0.62;
+  tarjeta.style.top = abajo ? `${f1(campo.p.y + 18)}px` : 'auto';
+  tarjeta.style.bottom = abajo ? 'auto' : `${f1(H - campo.p.y + 46)}px`;
+  tarjeta.hidden = false;
+  host.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', String(Number(b.dataset.m) === m)));
+  abierta = m;
+}
+
+function cerrarTarjeta(devolverFoco = false) {
+  const host = estado?.host;
+  if (abierta === null || !host) return;
+  const m = abierta;
+  abierta = null;
+  const tarjeta = host.querySelector('#m-tarjeta');
+  if (tarjeta) tarjeta.hidden = true;
+  host.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+  if (devolverFoco) host.querySelector(`.m-bandera[data-m="${m}"]`)?.focus();
+}
+
+// Se cierra con Esc o tocando en otro sitio. Se instala una sola vez (los botones sí se rehacen con cada dibujo).
+let cierreInstalado = false;
+function instalarCierre() {
+  if (cierreInstalado) return;
+  cierreInstalado = true;
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && abierta !== null) { e.preventDefault(); cerrarTarjeta(true); } });
+  document.addEventListener('pointerdown', (e) => { if (abierta !== null && !e.target.closest?.('.m-bandera, .m-tarjeta')) cerrarTarjeta(); });
 }
 
 /**
@@ -346,5 +459,5 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
 }
 
 function describir(sats, meta) {
-  estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima);
+  estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima) + (estado.compras ? ` Al pie crece tu bosque: un pino por compra (${estado.compras}).` : '');
 }

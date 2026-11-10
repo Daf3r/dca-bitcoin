@@ -1267,6 +1267,84 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- banderas con historia, iconos por etapa y bosque (campamento 5, 2/3)
+  {
+    const srv = await servidor('anio');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      const compras = await datos(p, '/api/compras');
+      const nCompras = compras.filter((c) => c.tipo !== 'venta').length;
+      const info = await p.evaluate(() => {
+        const bs = [...document.querySelectorAll('.m-bandera')];
+        return {
+          n: bs.length, campos: document.querySelectorAll('.campo').length,
+          tam: bs.map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }),
+          nombres: bs.map((b) => b.getAttribute('aria-label')),
+          dentroDelSvg: document.querySelectorAll('#montana svg button, #montana svg [tabindex]').length,
+          iconos: [...document.querySelectorAll('.campo')].map((c) => [...c.querySelectorAll('.campo-ico')].map((e) => e.outerHTML).join('')),
+          pinos: document.querySelectorAll('#m-bosque path').length,
+          desc: document.getElementById('m-desc').textContent,
+        };
+      });
+      ok(info.n === info.campos && info.n >= 2, `banderas: un botón por campamento (${info.n})`);
+      ok(info.tam.every(([w, h]) => w >= 47.5 && h >= 47.5), `banderas: zonas de toque de 48 px (${JSON.stringify(info.tam)})`);
+      ok(info.nombres.every((t) => /^(Campamento|Cumbre) .+\. (Lo alcanzaste|Ya lo pasaste|Te faltan)/.test(t)), `banderas: cada botón dice su campamento («${info.nombres[0]}»)`);
+      eq(info.dentroDelSvg, 0, 'banderas: ningún control dentro del SVG (es una imagen)');
+      eq(new Set(info.iconos).size, info.campos, 'iconos: cada campamento tiene su propio dibujo');
+      eq(info.pinos, Math.ceil(nCompras / Math.ceil(nCompras / 60)), `bosque: un pino por compra (${info.pinos} de ${nCompras})`);
+      ok(info.desc.includes(`un pino por compra (${nCompras})`), 'bosque: la descripción de la montaña lo menciona');
+      // Abrir con el ratón y cerrar con «Cerrar» (el foco vuelve a la bandera)
+      await p.click('.m-bandera >> nth=0');
+      let t = await p.evaluate(() => { const c = document.getElementById('m-tarjeta'); return { visible: !c.hidden && getComputedStyle(c).display !== 'none', rol: c.getAttribute('role'), txt: c.innerText, exp: document.querySelector('.m-bandera').getAttribute('aria-expanded'), dentro: (() => { const r = c.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0; })() }; });
+      ok(t.visible && t.rol === 'group' && /Lo alcanzaste el \d+ \w+ \d{4}/.test(t.txt) && t.exp === 'true' && t.dentro, `bandera: la tarjeta dice cuándo la alcanzaste («${t.txt.replace(/\n+/g, ' · ')}»)`);
+      const x = await p.evaluate(() => { const b = document.querySelector('#m-tarjeta .m-tarjeta-x'); return [b.offsetWidth, b.offsetHeight]; }); // sin transformaciones: la tarjeta entra con un ligero zoom
+      ok(x[0] >= 47.5 && x[1] >= 47.5, `bandera: «Cerrar» de 48 px (${x})`);
+      await p.click('#m-tarjeta .m-tarjeta-x');
+      eq(await p.evaluate(() => [document.getElementById('m-tarjeta').hidden, document.activeElement?.classList.contains('m-bandera')]), [true, true], 'bandera: Cerrar la oculta y devuelve el foco a la bandera');
+      // Teclado: Enter abre, Esc cierra; tocar otro sitio también cierra
+      await p.focus('.m-bandera >> nth=0');
+      await p.keyboard.press('Enter');
+      eq(await p.evaluate(() => document.getElementById('m-tarjeta').hidden), false, 'bandera: Enter abre la tarjeta');
+      await p.keyboard.press('Escape');
+      eq(await p.evaluate(() => document.getElementById('m-tarjeta').hidden), true, 'bandera: Esc la cierra');
+      // Una bandera futura dice cuánto falta
+      await p.click('.m-bandera >> nth=-1');
+      ok(/Te faltan [\d,]+ sats/.test(await p.innerText('#m-tarjeta')), 'bandera: la meta futura dice cuánto falta');
+      await p.mouse.click(5, 5);
+      eq(await p.evaluate(() => document.getElementById('m-tarjeta').hidden), true, 'bandera: tocar en otro sitio la cierra');
+      eq(consola, [], `consola limpia (banderas): ${consola.join(' | ')}`);
+      // El pino nuevo: una compra de esta sesión planta el último con una animación; la entrada no tiene bosque
+      await p.waitForTimeout(6000);
+      await p.click('#anotar');
+      await p.fill('#h-sats', '25000');
+      await p.click('#guardar');
+      await p.waitForFunction((n) => document.querySelectorAll('#m-bosque path').length === Math.ceil((n + 1) / Math.ceil((n + 1) / 60)), nCompras, { timeout: 8000 });
+      eq(await p.locator('#m-bosque .pino-nuevo').count(), 1, 'bosque: la compra nueva planta un pino con animación');
+      await ctx.close();
+    } finally {
+      srv.parar();
+    }
+    const lector = await servidor('mil');
+    try {
+      const { ctx, p } = await entrar(navegador, lector, ADMIN, { hora: 12 });
+      const pinos = await p.evaluate(() => document.querySelectorAll('#m-bosque path').length);
+      ok(pinos > 20 && pinos <= 60, `bosque: con mil compras se agrupa (${pinos} pinos, máximo 60)`);
+      await ctx.close();
+    } finally {
+      lector.parar();
+    }
+    const entrada = await servidor('hoy');
+    try {
+      const ctx = await navegador.newContext();
+      const p = await ctx.newPage();
+      await p.goto(`${entrada.url}/login`, { waitUntil: 'networkidle' });
+      eq(await p.evaluate(() => [document.querySelectorAll('.m-bandera').length, document.querySelectorAll('#m-bosque').length]), [0, 0], 'la entrada no tiene banderas tocables ni bosque (sin dato personal)');
+      await ctx.close();
+    } finally {
+      entrada.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {
