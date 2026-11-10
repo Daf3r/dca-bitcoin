@@ -967,7 +967,7 @@ try {
       ok(!(await p.locator('#minicab').isVisible()), 'mini-cabecera: arriba del todo no se ve');
       await p.evaluate(() => document.querySelector('.compras').scrollIntoView({ block: 'start' }));
       await p.waitForSelector('#minicab', { state: 'visible', timeout: 3000 });
-      const mc = await p.locator('#minicab').boundingBox();
+      const mc = { height: await p.locator('#minicab').evaluate((el) => el.offsetHeight) }; // sin transformaciones: la franja entra deslizándose
       const txtMc = await p.locator('#minicab').innerText();
       ok(mc.height >= 44 && /sats/.test(txtMc) && /\$[\d,]+/.test(txtMc), `mini-cabecera: franja de ${Math.round(mc.height)} px con saldo y precio («${txtMc.replace(/\s+/g, ' ')}»)`);
       ok((await p.locator('#minicab').textContent()).includes('Volver arriba'), 'mini-cabecera: su nombre accesible incluye lo visible y «Volver arriba»');
