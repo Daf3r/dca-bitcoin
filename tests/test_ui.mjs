@@ -1968,6 +1968,72 @@ try {
     mil.parar();
   }
 
+  // ---------------------------------------------------------------- iPhone: arranque, insignia del icono e icono por tema (campamento 7, 1/2)
+  {
+    const srv = await servidor('anio');
+    try {
+      const espia = () => {
+        try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ }
+        window.__ins = [];
+        navigator.setAppBadge = (x) => { window.__ins.push(['set', x]); return Promise.resolve(); };
+        navigator.clearAppBadge = () => { window.__ins.push(['clear']); return Promise.resolve(); };
+      };
+      // Imágenes de arranque (idea 40): doce tamaños, enlazados en la entrada y en la app, y públicos (iOS las pide sin sesión).
+      const enlaces = (html) => [...html.matchAll(/<link rel="apple-touch-startup-image" href="([^"]+)" media="([^"]+)">/g)].map((m) => ({ href: m[1], media: m[2] }));
+      const login = enlaces(await (await fetch(`${srv.url}/login`)).text());
+      eq(login.length, 12, 'la entrada enlaza 12 imágenes de arranque');
+      ok(login.every((e) => /device-width: \d+px\) and \(device-height: \d+px\) and \(-webkit-device-pixel-ratio: [23]\) and \(orientation: portrait\)/.test(e.media)), 'cada arranque lleva su media query exacta');
+      for (const e of login) {
+        const r = await fetch(`${srv.url}${e.href}`);
+        const dim = e.href.match(/arranque-(\d+)x(\d+)\.png/);
+        const png = Buffer.from(await r.arrayBuffer());
+        const [w, h, d] = [Number(dim[1]), Number(dim[2]), Number(e.media.match(/pixel-ratio: (\d)/)[1])];
+        ok(r.status === 200 && /image\/png/.test(r.headers.get('content-type')) && png.readUInt32BE(16) === w && png.readUInt32BE(20) === h, `${e.href} se sirve sin sesión con sus medidas`);
+        ok(e.media.includes(`device-width: ${w / d}px`) && e.media.includes(`device-height: ${h / d}px`), `${e.href} corresponde a su media query`);
+      }
+      // Insignia (idea 41): solo el admin y solo cuando toca comprar.
+      const a = await entrar(navegador, srv, ADMIN, {}, espia);
+      const estado = await a.p.evaluate(() => document.getElementById('toca').dataset.estado);
+      const toca = ['toca', 'ultimo'].includes(estado);
+      const ult = await a.p.evaluate(() => window.__ins.at(-1));
+      eq(ult, toca ? ['set', 1] : ['clear'], `la insignia sigue a «te toca» (${estado})`);
+      await a.p.evaluate(async (f) => {
+        await fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: f, monto: 25, sats: 30000 }) });
+      }, hoySV());
+      await a.p.reload({ waitUntil: 'networkidle' });
+      await a.p.waitForTimeout(1500);
+      eq(await a.p.evaluate(() => window.__ins.at(-1)), ['clear'], 'tras comprar hoy la insignia se quita');
+      eq(await a.p.evaluate(() => document.getElementById('toca').dataset.estado), 'hecho', 'y «te toca» dice que estás al día');
+      eq(a.consola, [], `consola limpia (insignia): ${a.consola.join(' | ')}`);
+      await a.ctx.close();
+      const l = await entrar(navegador, srv, LECTOR, {}, espia);
+      ok(!(await l.p.evaluate(() => window.__ins.some((x) => x[0] === 'set'))), 'una lectora nunca recibe la insignia');
+      await l.ctx.close();
+      // El servicio de avisos la enciende con el recordatorio.
+      const sw = await (await fetch(`${srv.url}/sw.js`)).text();
+      ok(/setAppBadge\(1\)/.test(sw) && /etiqueta === 'recordatorio'/.test(sw), 'sw.js enciende la insignia solo con el recordatorio');
+      // Icono por tema (idea 89): el SVG cambia de colores con el tema del sistema.
+      const ctx = await navegador.newContext();
+      const pg = await ctx.newPage();
+      // Como favicon el SVG es una imagen (sin la CSP del documento): se dibuja en un canvas y se lee el pixel del fondo.
+      const fondo = async (esquema) => {
+        await pg.emulateMedia({ colorScheme: esquema });
+        await pg.goto(`${srv.url}/login`);
+        return pg.evaluate(() => new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); g.drawImage(im, 0, 0, 32, 32); res(Array.from(g.getImageData(3, 16, 1, 1).data).slice(0, 3)); };
+          im.onerror = () => rej(new Error('no cargó el icono'));
+          im.src = `/icon.svg?${Date.now()}`;
+        }));
+      };
+      eq(await fondo('dark'), [14, 26, 46], 'icono oscuro con el sistema oscuro');
+      eq(await fondo('light'), [251, 232, 204], 'icono claro con el sistema claro');
+      await ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {

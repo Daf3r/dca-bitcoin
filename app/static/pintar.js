@@ -1,6 +1,7 @@
 import { aFecha, acentoDe, btc, cruzo1Btc, entero, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { ico } from './iconos.js';
+import { pintarInsignia } from './insignia.js';
 import { pintarTV } from './tv.js';
 import { dual, miniLinea } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
@@ -37,6 +38,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   ofrecerAvisos();
   pintarMinicab();
   pintarTitulo();
+  pintarInsignia();
   actualizarIndice();
   pintarTV();
 }
