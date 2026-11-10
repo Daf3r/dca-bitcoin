@@ -78,6 +78,28 @@ export function montarAvisos(api) {
     caja.hidden = !categorias.length;
   }
 
+  // Horario de este dispositivo: desde qué hora, hasta cuál y (solo admin) a qué hora llega el recordatorio. Lo valida el servidor.
+  const hora = (h) => (h === 24 ? '24:00 (medianoche)' : `${h}:00`);
+  function llenar(sel, desde, hasta) {
+    sel.replaceChildren(...Array.from({ length: hasta - desde + 1 }, (_, i) => {
+      const o = document.createElement('option');
+      o.value = String(desde + i);
+      o.textContent = hora(desde + i);
+      return o;
+    }));
+  }
+  let horario = null;
+  function pintarHorario(h, conRecordatorio) {
+    horario = h;
+    if (!$('av-desde').options.length) { llenar($('av-desde'), 0, 22); llenar($('av-hasta'), 1, 24); llenar($('av-rec'), 0, 23); }
+    $('av-horario').hidden = !h;
+    if (!h) return;
+    $('av-desde').value = String(h.desde);
+    $('av-hasta').value = String(h.hasta);
+    $('av-rec').value = String(h.recordatorio);
+    $('av-rec-l').hidden = !conRecordatorio;
+  }
+
   async function refrescar() {
     error();
     const motivo = motivoNoDisponible();
@@ -97,6 +119,7 @@ export function montarAvisos(api) {
     $('av-interruptor').dataset.activo = activo ? '1' : '0';
     $('av-estado').textContent = activo ? 'Los avisos están activados en este dispositivo.' : 'Los avisos están apagados en este dispositivo.';
     pintarCategorias(activo ? estado.categorias : []);
+    pintarHorario(activo ? estado.horario : null, activo && estado.categorias.some((c) => c.id === 'recordatorio'));
   }
 
   async function activar() {
@@ -175,6 +198,22 @@ export function montarAvisos(api) {
     } catch (err) {
       cb.checked = !cb.checked;
       error(err.message || 'No se pudo guardar.');
+    }
+  });
+
+  $('av-horario').addEventListener('change', async () => {
+    if (!sub || !horario) return;
+    error();
+    const nuevo = { desde: Number($('av-desde').value), hasta: Number($('av-hasta').value), recordatorio: Number($('av-rec').value) };
+    // Si el recordatorio se queda fuera de la ventana nueva, se acomoda solo dentro de ella.
+    if (nuevo.recordatorio < nuevo.desde) nuevo.recordatorio = nuevo.desde;
+    if (nuevo.recordatorio >= nuevo.hasta) nuevo.recordatorio = Math.max(nuevo.desde, nuevo.hasta - 1);
+    try {
+      const r = await api('/api/push/prefs', { metodo: 'PUT', cuerpo: { endpoint: sub.endpoint, horario: nuevo } });
+      pintarHorario(r.horario, $('av-rec-l').hidden === false);
+    } catch (err) {
+      pintarHorario(horario, $('av-rec-l').hidden === false); // se vuelve a lo guardado
+      error(err.message || 'No se pudo guardar el horario.');
     }
   });
 

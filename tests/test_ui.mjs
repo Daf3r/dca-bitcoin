@@ -379,13 +379,35 @@ try {
       await p.click('#dc-avisos-btn');
       await p.waitForTimeout(500);
       eq(await p.isChecked(`#av-lista input[data-cat="${cat}"]`), !antes, `${quien}: la preferencia se guardó`);
+      // Horario propio: se muestra el de siempre, se cambia, se valida en el servidor (vuelve a lo guardado) y se recuerda.
+      ok(await p.locator('#av-horario').isVisible(), `${quien}: con los avisos activados sale el horario`);
+      eq(await p.$$eval('#av-desde, #av-hasta, #av-rec', (xs) => xs.map((x) => x.value)), ['8', '21', '9'], `${quien}: empieza con el horario de siempre`);
+      eq(await p.locator('#av-rec-l').isVisible(), quien === 'admin', `${quien}: el recordatorio de compra solo lo ve el admin`);
+      await p.selectOption('#av-desde', '6');
+      await p.waitForTimeout(400);
+      await p.click('#dc-avisos [data-cuenta="volver"]');
+      await p.click('#dc-avisos-btn');
+      await p.waitForTimeout(500);
+      eq(await p.inputValue('#av-desde'), '6', `${quien}: el horario se guardó y se recuerda`);
+      await p.selectOption('#av-hasta', '7');
+      await p.waitForTimeout(500);
+      ok((await p.textContent('#av-error')).includes('al menos 2 horas'), `${quien}: una ventana de menos de 2 horas se rechaza con su motivo («${(await p.textContent('#av-error')).trim()}»)`);
+      eq(await p.inputValue('#av-hasta'), '21', `${quien}: y el campo vuelve a lo guardado`);
+      if (quien === 'admin') {
+        await p.selectOption('#av-desde', '12');
+        await p.waitForTimeout(400);
+        eq(await p.inputValue('#av-rec'), '12', `${quien}: si el recordatorio queda antes de la ventana, se acomoda solo`);
+      }
+      await p.selectOption('#av-desde', '8');
+      await p.waitForTimeout(300);
       // Desactivar borra el dispositivo del servidor.
       await p.click('#av-interruptor');
       await p.waitForTimeout(700);
       eq((await p.textContent('#av-estado')).trim(), 'Los avisos están apagados en este dispositivo.', `${quien}: se desactiva`);
       ok(!(await p.locator('#av-lista').isVisible()), `${quien}: sin casillas al apagar`);
       eq((await p.textContent('#av-error')).trim(), '', `${quien}: sin errores`);
-      eq(consola, [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
+      // El 400 es el horario inválido que se probó a propósito (una ventana de una hora).
+      eq(consola.filter((c) => !/400 \(BAD REQUEST\)/.test(c)), [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
       await ctx.close();
     }
     // Al entrar se ofrece activar los avisos, una sola vez por dispositivo; el permiso se pide en el toque del botón.

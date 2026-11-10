@@ -30,7 +30,6 @@ import ritmo
 import salud
 import server  # abre la base y crea lo que falte; de aquí salen la verificación de TXID y las consultas
 
-HORA_RECORDATORIO = 9
 INTERVALO = int(os.environ.get("AVISOS_INTERVALO_SEGUNDOS", "120"))
 VIGILAR_DIAS = 14  # un TXID que no se confirma en dos semanas se deja de vigilar
 MAX_TX_POR_PASADA = 20
@@ -43,20 +42,32 @@ DISCO_MIN_PCT = 10.0       # o menos del 10 % libre
 
 
 def _recordatorio(conn: sqlite3.Connection) -> bool:
+    """
+    Recordatorio de compra: una vez al día por dispositivo, desde SU hora de recordatorio (por defecto las 9:00) y solo dentro de
+    su horario. Cada dispositivo lleva su propia marca del día (`aviso_recordatorio_dia:<id>`), así que uno que elige las 7:00 no
+    espera al que prefiere las 18:00. Devuelve True si avisó a alguno.
+    """
     ahora = push.ahora()
-    if not push.dentro_de_horario() or ahora.hour < HORA_RECORDATORIO:
-        return False
     hoy = ritmo.hoy_sv(ahora)
     if server._meta(conn, "aviso_recordatorio_dia") == hoy.isoformat():
+        return False  # marca de antes de los horarios propios: ya se avisó hoy
+    pendientes = [d for d in push.destinatarios(conn, "recordatorio")
+                  if push.en_horario(d["horario"], ahora.hour) and ahora.hour >= d["horario"]["recordatorio"]
+                  and server._meta(conn, f"aviso_recordatorio_dia:{d['id']}") != hoy.isoformat()]
+    if not pendientes:
         return False
     fechas = [r["fecha"] for r in conn.execute(f"SELECT fecha FROM compras WHERE tipo = 'compra' AND {server.VIGENTES}")]
     t = ritmo.recordatorio(fechas, hoy)
     if t is None:
         return False
-    # Se marca el día aunque no haya nadie suscrito: no se reintenta cada dos minutos.
-    server._meta_poner(conn, "aviso_recordatorio_dia", hoy.isoformat())
+    # Se marca el día de cada dispositivo antes de avisar: no se reintenta cada dos minutos.
+    for d in pendientes:
+        server._meta_poner(conn, f"aviso_recordatorio_dia:{d['id']}", hoy.isoformat())
     conn.commit()
-    push.notificar(conn, "recordatorio", "Libro DCA", ritmo.texto_recordatorio(t), "recordatorio")
+    try:
+        push.enviar_ahora(conn, "recordatorio", "Libro DCA", ritmo.texto_recordatorio(t), "recordatorio", destinos=pendientes)
+    except Exception as e:  # noqa: BLE001 — avisar es secundario
+        print(f"avisos: no se pudo mandar el recordatorio ({type(e).__name__}: {e})", flush=True)
     return True
 
 
@@ -86,7 +97,7 @@ def _txid(conn: sqlite3.Connection) -> int:
 
 def _caida(conn: sqlite3.Connection, cada: int = CAIDA_CADA) -> bool:
     """Gran caída (la misma regla que la tarjeta de la app). Una vez por caída; no suena de noche (si sigue por la mañana, sale entonces)."""
-    if not push.dentro_de_horario():
+    if not push.alguien_despierto(conn):  # de noche, con todos dormidos, no se gasta ni una consulta de precio
         return False
     if int(time.time()) - int(server._meta(conn, "aviso_caida_chequeo") or 0) < cada:
         return False

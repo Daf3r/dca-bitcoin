@@ -121,6 +121,8 @@ def init_db() -> None:
         conn.executescript(SCHEMA)
         conn.executescript(auth.SCHEMA)
         conn.executescript(push.SCHEMA)
+        if "sus_id" not in {r["name"] for r in conn.execute("PRAGMA table_info(avisos_pendientes)")}:
+            conn.execute("ALTER TABLE avisos_pendientes ADD COLUMN sus_id INTEGER")
         cols = {r["name"] for r in conn.execute("PRAGMA table_info(compras)")}
         for col, ddl in MIGRACIONES:
             if col not in cols:
@@ -625,10 +627,12 @@ def visto() -> Response:
 
 # ----------------------------------------------------------------- avisos push
 # Cada persona (también un lector) activa o apaga los avisos de SU dispositivo: solo toca sus propias suscripciones.
-def _resp_push(prefs: dict[str, bool] | None, rol: str) -> Response:
+def _resp_push(prefs: dict[str, bool] | None, rol: str, horario: dict[str, int] | None = None) -> Response:
     cats = [{"id": c, "nombre": push.CATEGORIAS[c]["nombre"], "ayuda": push.CATEGORIAS[c]["ayuda"], "activo": prefs[c]}
             for c in push.categorias_de(rol)] if prefs is not None else []
-    return jsonify(suscrito=prefs is not None, categorias=cats)
+    if prefs is None:
+        return jsonify(suscrito=False, categorias=[])
+    return jsonify(suscrito=True, categorias=cats, horario=horario or push.horario_defecto(), horario_defecto=push.horario_defecto())
 
 
 def _cuerpo_push() -> dict[str, Any] | None:
@@ -648,7 +652,8 @@ def push_clave() -> Any:
 def push_estado() -> Any:
     body = _cuerpo_push() or {}
     u = g.usuario
-    return _resp_push(push.estado(db(), u["id"], u["rol"], body.get("endpoint")), u["rol"])
+    return _resp_push(push.estado(db(), u["id"], u["rol"], body.get("endpoint")), u["rol"],
+                      push.horario_dispositivo(db(), u["id"], body.get("endpoint")))
 
 
 @app.post("/api/push/suscribir")
@@ -658,7 +663,9 @@ def push_suscribir() -> Any:
         return jsonify(error="Datos inválidos."), 400
     u = g.usuario
     try:
-        return _resp_push(push.suscribir(db(), u["id"], u["rol"], body.get("suscripcion")), u["rol"])
+        prefs = push.suscribir(db(), u["id"], u["rol"], body.get("suscripcion"))
+        s = body.get("suscripcion")
+        return _resp_push(prefs, u["rol"], push.horario_dispositivo(db(), u["id"], s.get("endpoint") if isinstance(s, dict) else None))
     except ValueError as e:
         return jsonify(error=str(e)), 400
 
@@ -670,7 +677,12 @@ def push_prefs() -> Any:
         return jsonify(error="Datos inválidos."), 400
     u = g.usuario
     try:
-        return _resp_push(push.guardar_prefs(db(), u["id"], u["rol"], body.get("endpoint"), body.get("prefs")), u["rol"])
+        endpoint = body.get("endpoint")
+        if "horario" in body:  # el horario de este dispositivo (y, si vienen, también las categorías)
+            push.guardar_horario(db(), u["id"], endpoint, body.get("horario"))
+        prefs = push.guardar_prefs(db(), u["id"], u["rol"], endpoint, body["prefs"]) if "prefs" in body \
+            else push.estado(db(), u["id"], u["rol"], endpoint)
+        return _resp_push(prefs, u["rol"], push.horario_dispositivo(db(), u["id"], endpoint))
     except ValueError as e:
         return jsonify(error=str(e)), 400
     except LookupError as e:
