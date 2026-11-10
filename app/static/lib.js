@@ -62,6 +62,17 @@ export function textoCampamento(m, sats, fecha, cima = false) {
   return { titulo, texto: `Te faltan ${entero(falta)} sats${cima ? ' para la cumbre' : ''}. Vas al ${Math.min(99, Math.floor((sats / m) * 100))}%.`, alcanzado: false };
 }
 
+// Detalles de la montaña que siguen a tus datos (campamento 5, 3/3).
+/** Racha a partir de la cual el cielo nocturno muestra una aurora suave (12 semanas o quincenas seguidas). */
+export const RACHA_AURORA = 12;
+export const hayAurora = (racha) => racha >= RACHA_AURORA;
+/** Al llegar a 1 BTC el acento de la app pasa de naranja a dorado. */
+export const acentoDe = (sats) => (sats >= 1e8 ? 'oro' : 'naranja');
+/** ¿Esta compra te lleva de menos de 1 BTC a 1 BTC o más? (la celebración épica; hacia arriba, nunca al bajar) */
+export const cruzo1Btc = (antes, despues) => antes < 1e8 && despues >= 1e8;
+/** Fracción iluminada de la luna (0 nueva, 1 llena) a partir de su fase (fracción del ciclo, 0–1). */
+export const iluminacionLunar = (fase) => (1 - Math.cos(2 * Math.PI * fase)) / 2;
+
 // Etapas: además de los hitos grandes (potencias de 10, los campamentos de la montaña), metas intermedias
 // a 2.5 y 5 de cada potencia (100k, 250k, 500k, 1M, 2.5M, 5M, 10M…) para sentir el avance cada pocas compras.
 const PASOS = [1, 2.5, 5];
@@ -76,12 +87,12 @@ export const etapaAnterior = (sats) => { let prev = 0; for (let d = 1e5; ; d *= 
 export const etapasCruzadas = (desde, hasta) => (hasta > desde ? etapasHasta(Math.max(hasta, 1e5)).filter((m) => m > desde && m <= hasta) : []);
 
 /**
- * Qué campamentos dibujar. La cumbre es la siguiente meta, nunca menos de 1 BTC.
+ * Qué campamentos dibujar. Cimas progresivas: la cumbre es la siguiente potencia de 10 (con 1.2M sats, 10M; al llegar, 100M…).
  * Con poco sitio se priorizan cumbre, siguiente meta y último hito alcanzado.
  */
 export function escalaMontana(sats, maxCampos = 4) {
   const sig = metaSiguiente(sats);
-  const cima = Math.max(1e8, sig);
+  const cima = sig; // cimas progresivas: la cumbre es la siguiente potencia de 10 (1.2M → 10M); al llegar, la montaña se rehace con la siguiente
   const todos = hitosHasta(cima);
   const iSig = todos.indexOf(sig);
   const prioridad = [cima, sig, sig / 10, ...todos.slice(iSig + 1), ...todos.slice(0, Math.max(0, iSig - 1)).reverse()];

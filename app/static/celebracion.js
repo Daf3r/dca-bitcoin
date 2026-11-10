@@ -1,4 +1,4 @@
-import { etapaAnterior, etapaSiguiente, etapasCruzadas, metaSiguiente, nombreHito, nombreHitoMeses } from './lib.js';
+import { cruzo1Btc, etapaAnterior, etapaSiguiente, etapasCruzadas, metaSiguiente, nombreHito, nombreHitoMeses } from './lib.js';
 import { avisar } from './avisar.js';
 import { dCuenta } from './cuenta.js';
 import { $, R, fijarR, reducido } from './estado.js';
@@ -15,7 +15,8 @@ export function celebrar(antes, constancia = []) {
   const m = etapasCruzadas(antes.sats, R.sats).at(-1);
   if (m) {
     const hito = esHito(m);
-    tarjetas.push({ k: hito ? 'Nuevo hito' : 'Nueva etapa', txt: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, grande: hito });
+    if (cruzo1Btc(antes.sats, R.sats)) tarjetas.push({ k: 'Llegaste a la cumbre', txt: '1 BTC', grande: true, larga: true });
+    else tarjetas.push({ k: hito ? 'Nuevo hito' : 'Nueva etapa', txt: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, grande: hito });
   }
   for (const c of constancia.slice(-2)) tarjetas.push({ k: 'Constancia', txt: c.tipo === 'compras' ? `${c.valor} compras` : nombreHitoMeses(c.valor), grande: false });
   if (!tarjetas.length) return;
@@ -36,7 +37,7 @@ export function celebrar(antes, constancia = []) {
     else { el.style.removeProperty('justify-items'); el.style.removeProperty('padding-left'); }
     el.hidden = false;
     el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
-    celebrar.t = setTimeout(() => { el.hidden = true; celebrar.t = setTimeout(() => mostrar(i + 1), 250); }, t.grande ? 2600 : 2000);
+    celebrar.t = setTimeout(() => { el.hidden = true; celebrar.t = setTimeout(() => mostrar(i + 1), 250); }, t.larga ? 4200 : t.grande ? 2600 : 2000);
   };
   // La primera aparece cuando tu punto llega a la bandera, no antes.
   celebrar.t = setTimeout(() => mostrar(0), reducido() ? 0 : MS_SUBIDA);
@@ -62,6 +63,7 @@ async function vistaPrevia(nivel) {
   const base = Math.max(0, R.sats);
   let antes, despues;
   if (nivel === 'etapa') { const m = etapaSiguiente(base); antes = Math.max(0, m - 20_000); despues = m + 10_000; }
+  else if (nivel === 'epico') { antes = 1e8 - 30_000; despues = 1e8 + 5_000; }
   else if (nivel === 'hito') { let m = 1e6; while (m <= base) m *= 10; antes = m - 30_000; despues = m + 5_000; }
   else { antes = base; despues = base + Math.max(1000, Math.min(30_000, Math.floor((etapaSiguiente(base) - base) / 2))); } // «compra» y «constancia»
   fijarR({ ...R, sats: despues, meta: metaSiguiente(despues), etapa: etapaSiguiente(despues), etapaPrev: etapaAnterior(despues) });
@@ -70,7 +72,7 @@ async function vistaPrevia(nivel) {
   pintarMontana(false, antes, { antes, delta: despues - antes });
   if (!reducido()) setTimeout(() => destello(), MS_SUBIDA);
   celebrar({ sats: antes }, nivel === 'constancia' ? [{ tipo: 'compras', valor: R.constancia?.compras?.valor ?? 25 }] : []);
-  await pausa(nivel === 'hito' ? 6500 : 5200);
+  await pausa(nivel === 'epico' ? 9000 : nivel === 'hito' ? 6500 : 5200);
   pintar({ montana: true }); // vuelve al estado real
   previaActiva = false;
 }

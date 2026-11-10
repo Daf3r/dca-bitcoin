@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -14,16 +14,19 @@ const eq = (a, b, msg) => { assert.deepEqual(a, b, msg); n++; };
 // Escala de hitos de la montaña
 eq(metaSiguiente(36578), 1e5, 'meta con una compra');
 eq(metaSiguiente(1e5), 1e6, 'al cruzar 100k la meta pasa a 1M');
-eq(escalaMontana(36578).campos, [1e5, 1e6, 1e7, 1e8], 'hoy en escritorio');
-eq(escalaMontana(36578, 3).campos, [1e5, 1e6, 1e8], 'hoy en móvil: siguiente meta, otro y cumbre');
-eq(escalaMontana(1_058_553, 3).campos, [1e6, 1e7, 1e8], '1M: último alcanzado, siguiente y cumbre');
+// Cimas progresivas: la cumbre es la siguiente potencia de 10, no siempre 1 BTC.
+eq([escalaMontana(36578).cima, escalaMontana(36578).campos], [1e5, [1e5]], 'con 36,578 sats la cima es 100k');
+eq(escalaMontana(36578, 3).campos, [1e5], 'con 36,578 sats en móvil: solo la cima');
+eq([escalaMontana(1_058_553, 3).cima, escalaMontana(1_058_553, 3).campos], [1e7, [1e5, 1e6, 1e7]], '1M: la cima es 10M y se ven los campamentos de abajo');
+eq([escalaMontana(1_211_769).cima, escalaMontana(99_999_999).cima, escalaMontana(1e8).cima], [1e7, 1e8, 1e9], 'la cima sube al cruzar cada potencia de 10 (y 1 BTC no es el techo)');
+ok(altitud(1_211_769, escalaMontana(1_211_769)) < 0.8 && altitud(99_999_999, escalaMontana(99_999_999)) > 0.999, 'cerca de la cima la altitud se acerca a 1');
 eq(escalaMontana(16_735_348).campos, [1e5, 1e6, 1e7, 1e8], '16.7M en escritorio');
 eq(escalaMontana(16_735_348, 3).campos, [1e6, 1e7, 1e8], '16.7M en móvil');
 const ballena = escalaMontana(2.05e10);
 eq([ballena.cima, ballena.campos], [1e11, [1e8, 1e9, 1e10, 1e11]], 'más de 200 BTC: cumbre 1,000 BTC');
 eq(escalaMontana(2.05e10, 3).campos, [1e9, 1e10, 1e11], 'más de 200 BTC en móvil');
 eq(nombreHito(1e11), '1,000 BTC', 'nombre de 1,000 BTC');
-ok(altitud(36578, escalaMontana(36578)) > 0 && altitud(36578, escalaMontana(36578)) < 0.25, 'altitud baja al empezar');
+ok(altitud(36578, escalaMontana(36578)) > 0.4 && altitud(36578, escalaMontana(36578)) < 0.7, 'con 36,578 sats vas a media subida de la primera cima (100k)');
 eq(altitud(1e8, escalaMontana(5e7)), 1, 'la cumbre es altitud 1');
 eq(altitud(0, escalaMontana(0)), 0, 'sin sats, al pie');
 
@@ -578,6 +581,14 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   const f = textoCampamento(1e8, 1211769, null, true);
   ok(!f.alcanzado && f.titulo === 'Cumbre · 1 BTC' && f.texto === 'Te faltan 98,788,231 sats para la cumbre. Vas al 1%.', `bandera futura: «${f.texto}»`);
   ok(textoCampamento(1e7, 9999999, null).texto.endsWith('Vas al 99%.'), 'bandera futura: nunca dice 100% sin haberla alcanzado');
+}
+
+// Aurora, acento dorado, celebración de 1 BTC y lago (campamento 5, 3/3)
+{
+  ok(!hayAurora(11) && hayAurora(12) && hayAurora(40), 'aurora: desde una racha de 12');
+  ok(acentoDe(99_999_999) === 'naranja' && acentoDe(1e8) === 'oro' && acentoDe(2.5e8) === 'oro', 'acento: dorado desde 1 BTC');
+  ok(cruzo1Btc(99_990_000, 1e8) && cruzo1Btc(0, 3e8) && !cruzo1Btc(1e8, 1.1e8) && !cruzo1Btc(1.2e8, 9e7) && !cruzo1Btc(5e7, 9e7), 'celebración de 1 BTC: solo al cruzar hacia arriba');
+  ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Math.abs(iluminacionLunar(0.25) - 0.5) < 1e-9 && iluminacionLunar(0.75) > 0.49, 'luna: iluminación 0 en nueva, 1 en llena, 0.5 en cuartos');
 }
 
 console.log(`OK ${n} comprobaciones`);
