@@ -2,6 +2,7 @@ import { entero, fechaLarga, usd } from './lib.js';
 import { montarAvisos } from './avisos.js';
 import { avisar } from './avisar.js';
 import { $, S, api } from './estado.js';
+import { conTransicion, sinMovimiento } from './movimiento.js';
 import { novedadesMostradas } from './novedades.js';
 import { pintar } from './pintar.js';
 
@@ -16,6 +17,8 @@ function vistaCuenta(cual) {
   $('dc-hist').hidden = cual !== 'historial';
   $('dc-avisos').hidden = cual !== 'avisos';
 }
+/** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
+const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
 export async function cargarYo() {
   try {
     const yo = await api('/api/yo');
@@ -46,6 +49,15 @@ document.addEventListener('visibilitychange', () => document.visibilityState ===
 // Tema: automático (como el teléfono), claro u oscuro. `tema.js` lo aplica antes de pintar; aquí solo se elige.
 const NOMBRE_TEMA = { auto: 'automático', claro: 'claro', oscuro: 'oscuro' };
 const SIGUIENTE_TEMA = { auto: 'claro', claro: 'oscuro', oscuro: 'auto' };
+/** Los colores se funden (0.35 s) solo al cambiar el tema a mano; nunca en la carga, para no tener parpadeo. */
+let fundidoTimer = 0;
+function fundirTema() {
+  if (sinMovimiento()) return;
+  const raiz = document.documentElement;
+  raiz.classList.add('tema-fundido');
+  clearTimeout(fundidoTimer);
+  fundidoTimer = setTimeout(() => raiz.classList.remove('tema-fundido'), 450);
+}
 const etiquetaTema = () => { $('dc-tema').textContent = `Tema: ${NOMBRE_TEMA[window.libroTema?.preferencia() ?? 'auto']}`; };
 // Efectos: automático (según el teléfono y el sistema), todos, esenciales o ninguno. `efectos.js` lo aplica antes de pintar.
 const SIGUIENTE_EFECTOS = { auto: 'todos', todos: 'esenciales', esenciales: 'ninguno', ninguno: 'auto' };
@@ -142,12 +154,12 @@ dCuenta.addEventListener('click', async (e) => {
   if (!b) return;
   const accion = b.dataset.cuenta;
   if (accion === 'cerrar') dCuenta.close();
-  else if (accion === 'tema') { window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
+  else if (accion === 'tema') { fundirTema(); window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
   else if (accion === 'efectos') { window.libroEfectos?.fijar(SIGUIENTE_EFECTOS[window.libroEfectos.preferencia()]); etiquetaEfectos(); }
-  else if (accion === 'volver') vistaCuenta('menu');
-  else if (accion === 'clave') { vistaCuenta('clave'); $('fc-error').textContent = ''; $('fc-actual').focus(); }
-  else if (accion === 'historial') { vistaCuenta('historial'); cargarHistorial(); }
-  else if (accion === 'avisos') { vistaCuenta('avisos'); avisosUI.refrescar(); }
+  else if (accion === 'volver') irA('menu');
+  else if (accion === 'clave') irA('clave', () => { $('fc-error').textContent = ''; $('fc-actual').focus(); });
+  else if (accion === 'historial') irA('historial', cargarHistorial);
+  else if (accion === 'avisos') irA('avisos', () => avisosUI.refrescar());
   else if (accion === 'salir' || accion === 'salir-todas') {
     try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }
     location.replace('/login');

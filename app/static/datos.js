@@ -2,6 +2,7 @@ import { avisar } from './avisar.js';
 import { R, S, api, normalizar } from './estado.js';
 import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
 import { pintar, pintarLinea, pintarPrecio } from './pintar.js';
+import { entradaTarjetas } from './entrada.js';
 import { pintarCaida } from './reportes.js';
 
 export async function cargarCompras() {
@@ -17,7 +18,7 @@ export async function cargarCompras() {
   const primeraVez = !S.cargado;
   S.cargado = true;
   pintar({ montana: true, animar: primeraVez });
-  if (primeraVez) cargarHistorico();
+  if (primeraVez) { entradaTarjetas(); cargarHistorico(); }
 }
 
 /** Desde la primera compra (o un año, si es más reciente), con el tope de 10 años del servidor. */

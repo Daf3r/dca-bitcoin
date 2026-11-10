@@ -13,6 +13,7 @@ import { pintarCaida, pintarComienzo, pintarEquilibrio, pintarReportes, pintarTo
 // ---------------------------------------------------------------- pintar
 export function pintar({ montana = false, animar = false, desde = null, festejo = null } = {}) {
   fijarR(resumen(S.compras, S.precio));
+  $('sk-cards').hidden = S.cargado; // las formas grises de carga se van cuando llegan los datos
   pintarPrecio();
   pintarSaldo(desde);
   if (montana) pintarMontana(animar, desde, festejo);
