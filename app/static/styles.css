@@ -982,7 +982,6 @@ html[data-efectos="ninguno"] .lista li.sale { display: none; }
   transform: translateY(-100%); visibility: hidden; transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.2, 1), visibility 0s 0.25s; }
 .minicab b { font: 650 1.0625rem var(--sans); font-variant-numeric: tabular-nums; }
 .minicab span { color: var(--txt2); font-weight: 600; font-variant-numeric: tabular-nums; }
-.minicab:empty, .minicab:has(#minicab-saldo:empty) { display: none; }
 html[data-minicab] .minicab { transform: none; visibility: visible; transition-delay: 0s; }
 html[data-minicab] .minicab:has(#minicab-saldo:empty) { display: none; }
 html[data-efectos="ninguno"] .minicab { transition: none; }

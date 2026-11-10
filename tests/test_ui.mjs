@@ -947,7 +947,7 @@ try {
       const mc = await p.locator('#minicab').boundingBox();
       const txtMc = await p.locator('#minicab').innerText();
       ok(mc.height >= 44 && /sats/.test(txtMc) && /\$[\d,]+/.test(txtMc), `mini-cabecera: franja de ${Math.round(mc.height)} px con saldo y precio («${txtMc.replace(/\s+/g, ' ')}»)`);
-      eq(await p.locator('#minicab').getAttribute('aria-label') !== null, true, 'mini-cabecera: tiene nombre accesible');
+      ok((await p.locator('#minicab').textContent()).includes('Volver arriba'), 'mini-cabecera: su nombre accesible incluye lo visible y «Volver arriba»');
       await p.click('#minicab');
       await p.waitForFunction(() => scrollY < 5, null, { timeout: 4000 });
       await p.waitForSelector('#minicab', { state: 'hidden', timeout: 3000 });

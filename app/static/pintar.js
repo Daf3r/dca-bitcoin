@@ -55,7 +55,6 @@ export function pintarMinicab() {
   const precio = S.precio ? usd0(S.precio) : '';
   $('minicab-saldo').textContent = saldo;
   $('minicab-precio').textContent = precio;
-  $('minicab').setAttribute('aria-label', `Volver arriba.${saldo ? ` Tu saldo: ${saldo}.` : ''}${precio ? ` Bitcoin: ${precio}.` : ''}`);
 }
 
 export function pintarPrecio() {
