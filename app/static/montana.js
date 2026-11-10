@@ -53,6 +53,17 @@ function aves(H) {
 
 let estado = null;
 
+/** La franja de nieve de la cumbre: más honda cuanto más cerca de la meta (la altitud va de 0 a 1 hasta la cumbre). */
+const DIENTES = [0.95, 0.7, 1.1, 0.8, 1.15, 0.75, 1.05, 0.9];
+const NIEVE_MIN = 0.55; // con la altitud en cero: una capa fina
+const NIEVE_MAX = 1.5;  // llegando a la cumbre: la cumbre bien cubierta
+function trazoNieve({ sx, sy, ancho, nv }, alt) {
+  const hondo = nv * (NIEVE_MIN + (NIEVE_MAX - NIEVE_MIN) * Math.min(1, Math.max(0, alt)));
+  let d = `M${f1(sx - ancho)} ${f1(sy - 20)}L${f1(sx + ancho)} ${f1(sy - 20)}`;
+  DIENTES.forEach((k, i) => { d += `L${f1(sx + ancho - (2 * ancho * (i + 0.5)) / DIENTES.length)} ${f1(sy + hondo * k)}`; });
+  return `${d}Z`;
+}
+
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
@@ -106,11 +117,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s += `<path class="monte-sombra" d="M${f1(c.sx)} ${f1(c.sy)}${der.map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}L${f1(c.sx + W * 0.07)} ${H}L${f1(c.sx + W * 0.02)} ${f1(c.sy + H * 0.3)}Z"/>`;
   // Nieve: una franja irregular mucho más ancha que el pico, recortada por la silueta, para que
   // nunca sobresalga de las laderas.
-  const nv = H * 0.075, ancho = Math.max(W * 0.12, 140);
-  const dientes = [0.95, 0.7, 1.1, 0.8, 1.15, 0.75, 1.05, 0.9];
-  let nieve = `M${f1(c.sx - ancho)} ${f1(c.sy - 20)}L${f1(c.sx + ancho)} ${f1(c.sy - 20)}`;
-  dientes.forEach((k, i) => { nieve += `L${f1(c.sx + ancho - (2 * ancho * (i + 0.5)) / dientes.length)} ${f1(c.sy + nv * k)}`; });
-  s += `<path class="nieve" clip-path="url(#m-silueta)" d="${nieve}Z"/>`;
+  // Su profundidad sigue a tu altitud (`colocar` la actualiza), así que la cumbre se va cubriendo a medida que subes.
+  const nieveMedidas = { sx: c.sx, sy: c.sy, ancho: Math.max(W * 0.12, 140), nv: H * 0.075 };
+  s += `<path class="nieve" clip-path="url(#m-silueta)" d="${trazoNieve(nieveMedidas, altitud(inicio, esc))}"/>`;
 
   // Sendero en zigzag: siempre sube, así que la altura recorrida es monótona.
   const [bx, by] = c.base;
@@ -131,7 +140,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   }
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
-  s += `<g id="m-campos"></g><g class="yo" id="m-yo"><circle class="yo-halo" r="15"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
+  s += `<g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   for (let fila = 0; fila < 2; fila++) {
     const yb = H * (fila ? 1.005 : 0.975), alto = H * (fila ? 0.07 : 0.05);
     for (let x = -10; x < W + 20; x += alto * (0.55 + rnd() * 0.4)) {
@@ -152,10 +161,35 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   };
   const campos = esc.campos.map((m) => ({ m, p: camino.getPointAtLength(enAltura(altitud(m, esc))), cima: m === esc.cima }));
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima }) =>
-    `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-24" r="46" fill="url(#m-luz)"/>' : ''}<line y2="-28"/><path class="banderin" d="M0 -28L20 -22L0 -16Z"/></g>`).join('');
-  estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c };
+    `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-24" r="46" fill="url(#m-luz)"/>' : ''}<line y2="-28"/><path class="banderin" d="M0 -28L20 -22L0 -16Z"/>${humoYFogata()}</g>`).join('');
+  estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas };
   colocar(inicio, false);
   describir(sats, etapa);
+}
+
+/**
+ * Dos detalles de ambiente por campamento (solo con todos los efectos; el CSS decide cuál se ve):
+ * humo en los ya alcanzados y una fogata que parpadea en el siguiente. Pequeños y al pie de la bandera, lejos de la etiqueta.
+ */
+function humoYFogata() {
+  const humo = [[-7, -2], [-9, -3], [-6, -2]].map(([x, y]) => `<circle class="humo-bola" cx="${x}" cy="${y}" r="3.2"/>`).join(''); // sin `style` en línea (CSP): los retrasos van en el CSS
+  return `<g class="efecto-ambiente humo">${humo}</g>`
+    + '<g class="efecto-ambiente fogata" transform="scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g>';
+}
+
+/** Huellas del tramo recorrido: puntitos que alternan a cada lado del sendero, hasta donde estás. Solo con todos los efectos. */
+function huellas(l) {
+  const { camino, host } = estado;
+  const caja = host.querySelector('#m-huellas');
+  if (!caja) return;
+  const pasos = [];
+  for (let d = 16, i = 0; d < l - 14; d += 10, i++) {
+    const a = camino.getPointAtLength(d), b = camino.getPointAtLength(d + 1.5);
+    const dx = b.x - a.x, dy = b.y - a.y, n = Math.hypot(dx, dy) || 1;
+    const lado = i % 2 ? 1 : -1;
+    pasos.push(`<circle cx="${f1(a.x - (dy / n) * 3.4 * lado)}" cy="${f1(a.y + (dx / n) * 3.4 * lado)}" r="1.5"/>`);
+  }
+  caja.innerHTML = pasos.join('');
 }
 
 /** Etiquetas sin choques: a la derecha de la bandera; si choca o se sale, a la izquierda; si sigue, se oculta. */
@@ -190,7 +224,11 @@ function colocar(sats, animado) {
   const p = camino.getPointAtLength(l);
   host.querySelector('#m-yo').setAttribute('transform', `translate(${f1(p.x)} ${f1(p.y)})`);
   host.querySelectorAll('.campo').forEach((g) => g.classList.toggle('alcanzado', Number(g.dataset.m) <= sats));
-  if (!animado) etiquetar(p);
+  // La fogata y el humo: el siguiente campamento es el primero que aún no alcanzaste.
+  const sig = estado.campos.find((x) => x.m > sats)?.m;
+  host.querySelectorAll('.campo').forEach((g) => g.classList.toggle('sig', Number(g.dataset.m) === sig));
+  host.querySelector('.nieve')?.setAttribute('d', trazoNieve(estado.nieveMedidas, altitud(sats, esc)));
+  if (!animado) { etiquetar(p); huellas(l); }
   return p;
 }
 
@@ -205,6 +243,7 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
   if (sinMovimiento() || desde === hasta) { colocar(hasta, false); return; }
   estado.host.querySelector('#m-etiquetas').innerHTML = '';
   const { esc, enAltura, L, host } = estado;
+  host.querySelector('#m-huellas').innerHTML = ''; // se vuelven a poner al llegar
   const a0 = altitud(desde, esc), a1 = altitud(hasta, esc);
   const estela = festejo && host.querySelector('#m-estela');
   const l0 = estela ? enAltura(a0) : 0;

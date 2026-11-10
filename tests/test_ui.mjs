@@ -1203,6 +1203,70 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- la montaña viva: humo, fogata, huellas, linterna y nieve que crece
+  {
+    const medir = (p) => p.evaluate(() => {
+      const vis = (el) => getComputedStyle(el).display;
+      const camp = [...document.querySelectorAll('.campo')];
+      return {
+        nieveAlto: document.querySelector('.nieve').getBBox().height,
+        alcanzados: camp.filter((c) => c.classList.contains('alcanzado')).length,
+        siguientes: camp.filter((c) => c.classList.contains('sig')).length,
+        humoVisible: camp.filter((c) => vis(c.querySelector('.humo')) !== 'none').length,
+        humoEnAlcanzados: camp.filter((c) => c.classList.contains('alcanzado')).every((c) => vis(c.querySelector('.humo')) !== 'none'),
+        fogataVisible: camp.filter((c) => vis(c.querySelector('.fogata')) !== 'none').map((c) => c.classList.contains('sig')),
+        huellas: document.querySelectorAll('#m-huellas circle').length,
+        largo: document.getElementById('m-sendero').getTotalLength(),
+        linterna: getComputedStyle(document.querySelector('.linterna')).opacity,
+        huellasDisplay: vis(document.getElementById('m-huellas')),
+        linternaDisplay: vis(document.querySelector('.linterna')),
+      };
+    });
+    const alturas = {};
+    for (const esc of ['hoy', 'anio', 'ballena']) {
+      const srv = await servidor(esc);
+      try {
+        const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+        const m = await medir(p);
+        alturas[esc] = m.nieveAlto;
+        if (esc === 'anio') {
+          ok(m.alcanzados >= 1 && m.siguientes === 1, `montaña: hay campamentos alcanzados (${m.alcanzados}) y uno solo es el siguiente`);
+          ok(m.humoEnAlcanzados && m.humoVisible === m.alcanzados, 'montaña: el humo sale solo en los campamentos alcanzados');
+          eq(m.fogataVisible, [true], 'montaña: la fogata está solo en el siguiente campamento');
+          ok(m.huellas > 5 && m.huellas <= Math.ceil(m.largo / 10), `montaña: huellas a lo largo del tramo recorrido (${m.huellas})`);
+          eq(m.linterna, '0.5', 'montaña: de noche «Tú» lleva su linterna');
+        }
+        eq(consola, [], `consola limpia (montaña viva ${esc}): ${consola.join(' | ')}`);
+        await ctx.close();
+      } finally {
+        srv.parar();
+      }
+    }
+    ok(alturas.hoy < alturas.anio && alturas.anio < alturas.ballena, `montaña: la nieve crece con tu avance (${Math.round(alturas.hoy)} < ${Math.round(alturas.anio)} < ${Math.round(alturas.ballena)})`);
+    const srv = await servidor('anio');
+    try {
+      // De día no hay linterna; con efectos «esenciales» los adornos de ambiente desaparecen, pero la nieve (que son datos) sigue.
+      let r = await entrar(navegador, srv, ADMIN, { hora: 12 }, () => { try { localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      eq((await medir(r.p)).linterna, '0', 'montaña: de día no hay linterna');
+      await r.ctx.close();
+      r = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } });
+      const m = await medir(r.p);
+      eq([m.humoVisible, m.fogataVisible.length, m.huellasDisplay, m.linternaDisplay], [0, 0, 'none', 'none'], 'montaña: con efectos esenciales no hay humo, fogata, huellas ni linterna');
+      ok(m.nieveAlto > 0, 'montaña: la nieve sigue (es parte de los datos)');
+      // Al subir de altitud, aparecen más huellas y la nieve crece
+      await r.ctx.close();
+      r = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      const antes = await medir(r.p);
+      await r.p.evaluate(async () => { await fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), monto: 3000, sats: 4_000_000, tipo: 'compra' }) }); document.dispatchEvent(new Event('visibilitychange')); });
+      await r.p.waitForTimeout(4000);
+      const despues = await medir(r.p);
+      ok(despues.huellas > antes.huellas && despues.nieveAlto > antes.nieveAlto, `montaña: al subir aparecen más huellas (${antes.huellas} → ${despues.huellas}) y más nieve`);
+      await r.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
   const mil = await servidor('mil');
   try {
@@ -1239,7 +1303,8 @@ try {
     eq(sa.defecto, `Hoy tienes ${entero(satsMil)} sats.`, 'la escalera dice los mismos sats que el saldo');
     await p.evaluate(() => document.getElementById('s-lienzo').scrollIntoView({ block: 'center' }));
     const sb = await p.locator('#s-lienzo').boundingBox();
-    await p.mouse.move(sb.x + sb.width * 0.4, sb.y + sb.height * 0.5); await p.waitForTimeout(200);
+    await p.mouse.move(sb.x + sb.width * 0.4, sb.y + sb.height * 0.5);
+    await p.waitForFunction(() => /sats · .* en total/.test(document.getElementById('s-lectura').textContent), null, { timeout: 4000 }).catch(() => {}); // sin espera fija: bajo carga tarda más
     ok(/sats · .* en total/.test(await p.textContent('#s-lectura')), 'al recorrer la escalera se lee cuánto sumó cada movimiento');
     await p.mouse.move(5, 5);
     await verVista(p, 'precio');
