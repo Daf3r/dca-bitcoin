@@ -51,6 +51,17 @@ export const metaSiguiente = (sats) => {
 const num = (n) => (Number.isInteger(n) ? entero(n) : n.toFixed(1));
 export const nombreHito = (m) => (m >= 1e8 ? `${num(m / 1e8)} BTC` : m >= 1e6 ? `${num(m / 1e6)}M` : `${num(m / 1e3)}k`);
 
+/**
+ * Lo que dice la tarjeta al tocar la bandera de un campamento (idea 72): alcanzado (con su fecha, si se conoce)
+ * o cuánto falta. `cima` es la meta de la montaña. Solo informa.
+ */
+export function textoCampamento(m, sats, fecha, cima = false) {
+  const titulo = cima ? `Cumbre · ${nombreHito(m)}` : `Campamento ${nombreHito(m)}`;
+  if (sats >= m) return { titulo, texto: fecha ? `Lo alcanzaste el ${fechaLarga(fecha)}.` : 'Ya lo pasaste.', alcanzado: true };
+  const falta = Math.ceil(m - sats);
+  return { titulo, texto: `Te faltan ${entero(falta)} sats${cima ? ' para la cumbre' : ''}. Vas al ${Math.min(99, Math.floor((sats / m) * 100))}%.`, alcanzado: false };
+}
+
 // Etapas: además de los hitos grandes (potencias de 10, los campamentos de la montaña), metas intermedias
 // a 2.5 y 5 de cada potencia (100k, 250k, 500k, 1M, 2.5M, 5M, 10M…) para sentir el avance cada pocas compras.
 const PASOS = [1, 2.5, 5];

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -568,6 +568,16 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   const d2 = descripcionMontana(1_211_769, 2_500_000, [1e5, 1e6, 1e8], 1e8);
   ok(d2.includes('Ya pasaste 2 de 3 campamentos (el último, 1M)') && d2.includes('Siguiente meta: 2.5M, al 48 %') && d2.includes('te faltan 1,288,231 sats'), `montaña: pasó dos campamentos («${d2}»)`);
   ok(descripcionMontana(5, 100000, [1e5], 1e8).includes('al 0.0 %'), 'montaña: con muy pocos sats el porcentaje lleva decimal');
+}
+
+// Tarjeta de una bandera (idea 72)
+{
+  const a = textoCampamento(1e6, 1211769, '2026-09-04');
+  ok(a.alcanzado && a.titulo === 'Campamento 1M' && /^Lo alcanzaste el 4 sep/.test(a.texto), `bandera alcanzada: «${a.texto}»`);
+  ok(textoCampamento(1e6, 1211769, null).texto === 'Ya lo pasaste.', 'bandera alcanzada sin fecha conocida');
+  const f = textoCampamento(1e8, 1211769, null, true);
+  ok(!f.alcanzado && f.titulo === 'Cumbre · 1 BTC' && f.texto === 'Te faltan 98,788,231 sats para la cumbre. Vas al 1%.', `bandera futura: «${f.texto}»`);
+  ok(textoCampamento(1e7, 9999999, null).texto.endsWith('Vas al 99%.'), 'bandera futura: nunca dice 100% sin haberla alcanzado');
 }
 
 console.log(`OK ${n} comprobaciones`);

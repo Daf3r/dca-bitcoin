@@ -211,7 +211,8 @@ export function pintarMontana(animar, desde, festejo = null) {
   anchoMontana = host.clientWidth;
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo });
+  const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
+  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     const m = etapasCruzadas(festejo.antes, R.sats).at(-1);
