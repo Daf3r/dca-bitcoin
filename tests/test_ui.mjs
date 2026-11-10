@@ -811,6 +811,7 @@ try {
       await p.reload({ waitUntil: 'networkidle' });
       await p.waitForTimeout(2500);
       eq(await p.inputValue('#l-orden'), 'monto', 'orden: se recuerda en el dispositivo');
+      await p.click('#l-mas summary');
       await p.selectOption('#l-orden', 'recientes');
       ok(await p.evaluate(() => localStorage.getItem('libro.lista.orden')) === null, 'orden: el de siempre borra la preferencia');
 
@@ -820,6 +821,7 @@ try {
       await p.waitForTimeout(150);
       await p.locator('#lista .f-nota-b').first().click();
       ok(await p.evaluate(() => document.activeElement?.closest('.f-notaed') !== null), 'nota: «Editar nota» abre el campo con el foco');
+      ok((await p.locator('#lista .f-notaed input').boundingBox()).width > 120, 'nota: el campo se ve (no queda recortado)');
       await p.keyboard.press('Escape');
       eq(await p.locator('#lista .f-notaed').count(), 0, 'nota: Esc cancela');
       await p.locator('#lista .f-nota-b').first().click();

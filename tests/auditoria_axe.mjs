@@ -109,6 +109,11 @@ try {
       const sem = await p.locator('#semanas i').first().boundingBox();
       await p.mouse.click(sem.x + sem.width / 2, sem.y + sem.height / 2); await p.waitForTimeout(300);
       await auditar(p, `tira de semanas con una semana marcada ${esquema}`);
+      // La lista: controles de búsqueda y filtros abiertos, con una búsqueda activa
+      await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+      await p.click('#l-mas summary'); await p.fill('#l-buscar', '2'); await p.click('#l-chips button[data-f="compra"]'); await p.waitForTimeout(300);
+      await auditar(p, `lista con búsqueda y filtros ${esquema}`);
+      await p.click('#l-limpiar'); await p.click('#l-mas summary');
       // El gráfico: con una compra fijada (tarjeta con Editar y Cerrar), con la escala logarítmica y a pantalla completa
       await p.evaluate(() => document.getElementById('lienzo').scrollIntoView({ block: 'center' }));
       await p.waitForTimeout(700);
@@ -132,12 +137,29 @@ try {
         await auditar(p, `hoja de ${tipo} ${esquema}`);
       }
       await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+      // El borrador: se escribe a medias, se cierra y al abrir otra vez avisa que lo recuperó
+      await p.click('#anotar'); await p.waitForTimeout(400);
+      await p.fill('#h-sats', '1500');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+      await p.click('#anotar'); await p.waitForTimeout(400);
+      await auditar(p, `hoja con borrador recuperado ${esquema}`);
+      await p.click('#h-borrador-no'); await p.waitForTimeout(300);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(400);
       await p.click('#cuenta-btn'); await p.waitForTimeout(300);
       await auditar(p, `cuenta ${esquema}`);
       await p.click('#dc-avisos-btn'); await p.waitForTimeout(500);
       await auditar(p, `avisos apagados ${esquema}`);
       await p.click('#av-interruptor'); await p.waitForTimeout(900);
       await auditar(p, `avisos activados ${esquema}`);
+      await ctx.close();
+    }
+    { // la tabla de movimientos (solo en pantalla ancha)
+      const ctx = await navegador.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: esquema, bypassCSP: true });
+      const p = await ctx.newPage();
+      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+      await entrar(p, anio.url, ADMIN);
+      await p.click('#l-tabla'); await p.waitForSelector('#d-tabla[open]'); await p.waitForTimeout(300);
+      await auditar(p, `tabla de movimientos ${esquema}`);
       await ctx.close();
     }
     { // la oferta de avisos al entrar

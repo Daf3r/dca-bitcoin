@@ -935,8 +935,7 @@ html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efe
 .f-copiar:focus-visible, .f-nota-b:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; border-radius: 4px; }
 @media (pointer: coarse) { .f-copiar, .f-nota-b { min-height: 44px; padding: 0 4px; } }
 .f-notaed { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px calc(4.6rem + 16px); }
-.f-notaed label { flex: 1 1 12rem; min-width: 0; }
-.f-notaed input { width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }
+.f-notaed input { flex: 1 1 12rem; min-width: 0; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }
 .f-notaed button { min-height: 44px; padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 650; cursor: pointer; }
 .f-notaed button[type="submit"] { background: var(--naranja); border-color: var(--naranja); color: var(--naranja-osc); }
 
