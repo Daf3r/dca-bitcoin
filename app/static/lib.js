@@ -87,12 +87,12 @@ export const etapaAnterior = (sats) => { let prev = 0; for (let d = 1e5; ; d *= 
 export const etapasCruzadas = (desde, hasta) => (hasta > desde ? etapasHasta(Math.max(hasta, 1e5)).filter((m) => m > desde && m <= hasta) : []);
 
 /**
- * Qué campamentos dibujar. La cumbre es la siguiente meta, nunca menos de 1 BTC.
+ * Qué campamentos dibujar. Cimas progresivas: la cumbre es la siguiente potencia de 10 (con 1.2M sats, 10M; al llegar, 100M…).
  * Con poco sitio se priorizan cumbre, siguiente meta y último hito alcanzado.
  */
 export function escalaMontana(sats, maxCampos = 4) {
   const sig = metaSiguiente(sats);
-  const cima = Math.max(1e8, sig);
+  const cima = sig; // cimas progresivas: la cumbre es la siguiente potencia de 10 (1.2M → 10M); al llegar, la montaña se rehace con la siguiente
   const todos = hitosHasta(cima);
   const iSig = todos.indexOf(sig);
   const prioridad = [cima, sig, sig / 10, ...todos.slice(iSig + 1), ...todos.slice(0, Math.max(0, iSig - 1)).reverse()];
