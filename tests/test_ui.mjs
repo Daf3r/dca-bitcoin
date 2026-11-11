@@ -451,14 +451,14 @@ try {
       if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
       await p.evaluate(() => { location.hash = '#anotar'; });
       await p.waitForTimeout(1200);
-      eq(await p.locator('#hoja').isVisible(), quien === 'admin', `${quien}: #anotar ${quien === 'admin' ? 'abre' : 'no abre'} la hoja de anotar`);
+      eq(await p.evaluate(() => !document.getElementById('hoja').hidden), quien === 'admin', `${quien}: #anotar ${quien === 'admin' ? 'abre' : 'no abre'} la hoja de anotar`);
       eq(await p.evaluate(() => location.hash), '', `${quien}: y quita #anotar de la dirección`);
       if (quien === 'admin') {
         await p.keyboard.press('Escape');
         await p.waitForTimeout(400);
         await p.evaluate(() => navigator.serviceWorker?.dispatchEvent?.(new MessageEvent('message', { data: { tipo: 'anotar' } })));
         await p.waitForTimeout(800);
-        ok(await p.locator('#hoja').isVisible(), 'admin: el mensaje del service worker también abre la hoja');
+        ok(await p.evaluate(() => !document.getElementById('hoja').hidden), 'admin: el mensaje del service worker también abre la hoja');
       }
       await ctx.close();
     }

@@ -115,6 +115,9 @@ Los respaldos locales llevan los hashes de las contraseñas; restic ya cifra lo 
 ## Modo solo lectura de emergencia
 Para un mantenimiento, o si sospechas de un problema y quieres revisarlo sin que nadie escriba: pon `SOLO_LECTURA=1` en el `.env` y `docker compose up -d app`. Todo se sigue viendo (saldo, gráficos, lista, estado del sistema), la gente puede entrar y salir, pero **ninguna escritura entra** (responde 503) y arriba sale «Mantenimiento: por ahora solo se puede mirar». Para volver a la normalidad quita la línea (o ponla en 0) y `docker compose up -d app`. El servicio `avisos` y los respaldos no se detienen.
 
+## Enlace de solo lectura para una hoja de cálculo
+«Tu cuenta → Enlace para tu hoja de cálculo» (solo el admin) crea un enlace que Google Sheets (`=IMPORTDATA("…")`) o Excel leen **sin iniciar sesión**: da solo las compras y los traslados en CSV, nunca escribe ni ve cuentas. El enlace se muestra **una sola vez** (en la base solo queda su huella), puedes tener hasta 5 y revocar cualquiera al instante. **Es una llave:** la dirección completa viaja en la petición, así que puede quedar en los registros de Caddy o de Cloudflare; no la pegues en chats ni en documentos que otros vean. Si Cloudflare tiene reglas de bots muy estrictas, Google Sheets puede no llegar: prueba el enlace en la hoja tras crearlo.
+
 ## Importar y exportar
 *Exportar CSV* descarga todas las compras (`fecha,monto_usd,precio_btc_usd,sats,btc`). *Importar CSV* acepta ese mismo formato o uno viejo sin `sats` (usa `precio_btc_usd`). Salta filas repetidas e inválidas y dice cuáles, así que puedes importar el mismo archivo dos veces sin duplicar.
 
@@ -192,7 +195,8 @@ Tu saldo cuenta cuántos sats tienes en total, sin importar dónde estén. Para 
 - Si pagaste comisión de red, escríbela en «Más detalles»: se anota además como un gasto («Comisión de retiro») y baja tu saldo en esa cantidad.
 - Si algún día vendes o gastas desde la wallet, antes anota un traslado «De mi wallet al exchange».
 - Un traslado no se edita: tócalo para anularlo (queda en el historial) y vuelve a anotarlo bien.
-- Los traslados no van en el CSV; sí van en los respaldos de la base. La tabla se crea sola al desplegar: haz antes el respaldo de siempre.
+- **Varias wallets:** al anotar un traslado, «Usar otra wallet…» (o el selector, si ya tienes más de una) crea y elige la wallet; la tarjeta las reparte con sus nombres (hasta 5 además de «Mi wallet»). Cada wallet se valida por separado: no se saca de una lo que hay en otra. En «Tu cuenta → Tus datos» puedes archivar las que ya no uses (solo si están vacías; sus traslados se conservan).
+- Los traslados van en `traslados.csv` (con una columna `wallet`; vacía = «Mi wallet») y en los respaldos de la base. Las tablas nuevas se crean solas al desplegar: haz antes el respaldo de siempre.
 
 ## Revisión del código
 El CI revisa en cada PR: Python con `ruff` y `mypy`, el JavaScript con Biome, la **accesibilidad** con axe (falla ante cualquier violación), el **rendimiento** con Lighthouse, que la **imagen de Docker** se construye y arranca, y, de forma informativa, vulnerabilidades conocidas (pip-audit, npm audit, Trivy) y cambios visuales contra una referencia de `main`. Cada lunes, `semanal.yml` corre el barrido visual completo y las revisiones de seguridad sin tolerancia: si algo falla, GitHub te avisa por correo.
@@ -218,6 +222,9 @@ Cada persona activa los avisos **en su dispositivo**: «Tu cuenta» → «Avisos
 - **Tus papás (lectores):** un aviso por cada compra, venta o gasto nuevo (encendido) y, si quieren, por etapas, hitos y constancia (apagado por defecto).
 - **Tú (admin):** recordatorio unos días antes de que venza tu semana o quincena (viernes a domingo, una vez al día, y solo si aún no compraste), TXID confirmado, fallo del respaldo y **gran caída** (BTC 15 % o más bajo su máximo de 30 días: un aviso por caída, solo informa; se reinicia cuando BTC queda a menos de 10 % de su máximo).
 - **No suenan de noche** (solo de 8:00 a 21:00, hora de El Salvador): lo de la noche sale por la mañana.
+- **Aviso de prueba:** el botón «Enviarme un aviso de prueba» manda uno solo a ese dispositivo y te dice en palabras si algo falló (máximo uno cada 30 s).
+- **Botón «Anotar compra»** en el recordatorio (Android y computadora; en iPhone la notificación solo abre la app).
+- **Retirar a tu wallet (opcional, apagado):** elige un monto en sats y te recordamos una vez cuando en el exchange haya más de ese monto. Solo es un recordatorio; la app no sugiere cuánto.
 - **iPhone:** los avisos solo funcionan con la app instalada en la pantalla de inicio (iOS 16.4 o más). Ábrela desde ahí y actívalos.
 - **Al desplegar:** `docker compose up -d --build` crea el servicio nuevo `avisos` y la clave `data/vapid_private.pem`. **No borres esa clave**: si se pierde, cada dispositivo tiene que activar los avisos otra vez. Inclúyela en el respaldo de la carpeta `data`.
 - **Brave:** trae los avisos apagados. En `brave://settings/privacy` activa «Usar servicios de Google para mensajes push» (en inglés, «Use Google services for push messaging»), reinicia Brave y vuelve a activar los avisos. En Chrome, Edge, Firefox y Safari no hace falta.
