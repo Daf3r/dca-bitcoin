@@ -133,7 +133,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-nube', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'nb-0'], [1, 'nb-1']])
     + grad('m-niebla', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'nl-0'], [0.5, 'nl-1'], [1, 'nl-0']])
     + grad('m-lago', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'lg-0'], [1, 'lg-1']])
-    + grad('m-suelo', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'sl-0'], [1, 'sl-1']]);
+    + grad('m-suelo', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'sl-0'], [1, 'sl-1']])
+    + grad('m-humo', 'x1="0" y1="1" x2="0" y2="0"', [[0, 'hm-0'], [1, 'hm-1']]);
   let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
   // Capa del cielo (parallax): cielo, estrellas, fugaz, sol, luna, nubes y aves.
@@ -200,7 +201,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // Su profundidad sigue a tu altitud (`colocar` la actualiza), así que la cumbre se va cubriendo a medida que subes.
   const nieveMedidas = { sx: c.sx, sy: c.sy, ancho: Math.max(W * 0.12, 140), nv: H * 0.075 };
   const dNieve = trazoNieve(nieveMedidas, altitud(inicio, esc));
-  s += `<path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/></g>`;
+  // La nieve con luz y sombra: el lado de la arista que mira al astro brilla un poco más y el otro queda en sombra.
+  s += `<defs><clipPath id="m-der"><path d="${cara}"/></clipPath></defs><path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/><path class="nieve-luz" clip-path="url(#m-der)" d="${dNieve}"/></g>`;
 
   s += lago(c, W, H);
   const [bx, by] = c.base;
@@ -243,7 +245,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const capa = (clase, extra, dx = 0, dy = 0) => `<g class="${clase}"${dx || dy ? ` transform="translate(${dx} ${dy})"` : ''}>${piezas.map((pz, i) => `<path d="${pz}" stroke-width="${f1(ancho(i) + extra)}"/>`).join('')}</g>`;
   // Sombra sobre la roca, borde, tierra y peldaños/piedras (se ponen al medir el trazo); encima, lo que falta (a trazos) y lo
   // recorrido (cálido, con su luz). Es paisaje: se ve con cualquier nivel de efectos.
-  s += capa('sendero-sombra', 3, 1.5, 2.5) + capa('sendero-borde', 2.6) + capa('sendero-tierra', 0) + '<g class="sendero-detalle" id="m-piedras"></g>';
+  s += capa('sendero-sombra', 3, 1.5, 2.5) + capa('sendero-borde', 2.6) + capa('sendero-tierra', 0) + '<g class="sendero-detalle" id="m-piedras"></g>'
+    // Donde el camino cruza la nieve, la nieve lo cubre en parte: se lee como una huella pisada, no como una cinta.
+    + `<path class="nieve-encima" clip-path="url(#m-silueta)" d="${dNieve}"/>`;
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-luz" id="m-luzhecha" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
   s += `<g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
@@ -261,16 +265,40 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     return lo;
   };
   detalleSendero(host.querySelector('#m-piedras'), camino, L, by, c.sy, anchoAbajo, anchoArriba);
-  const campos = esc.campos.map((m) => ({ m, p: camino.getPointAtLength(enAltura(altitud(m, esc))), cima: m === esc.cima }));
-  host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima }) =>
-    `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-28" r="50" fill="url(#m-luz)"/>' : ''}`
-    // Un claro pequeño sobre el sendero, el fogón (troncos), el mástil con su banderín de cola partida y, a la derecha, la tienda o la cabaña.
-    + `<ellipse class="campo-claro" cx="6" cy="1" rx="24" ry="5"/><path class="fogon" d="M-18 0.5L-6 -3M-18 -3L-6 0.5"/><line y2="-34"/><path class="banderin" d="M0 -34L24 -29.5L18.5 -25.5L24 -21L0 -20Z"/>`
-    + `<g transform="translate(6 1) scale(1.4)">${icono(cima ? 3 : esc.campos.indexOf(m))}</g>${humoYFogata()}</g>`).join('');
+  // Cada campamento mira hacia el lado donde el sendero no pasa (la tienda nunca queda encima del camino): se compara por dónde
+  // llega y por dónde sigue el trazo a unos pasos de la bandera.
+  const campos = esc.campos.map((m) => {
+    const l = enAltura(altitud(m, esc));
+    const p = camino.getPointAtLength(l);
+    const antes = camino.getPointAtLength(Math.max(0, l - 22)), despues = camino.getPointAtLength(Math.min(L, l + 22));
+    const ocupa = (signo) => [antes, despues].filter((q) => (q.x - p.x) * signo > 4).length;
+    return { m, p, cima: m === esc.cima, lado: ocupa(1) > ocupa(-1) ? -1 : 1 };
+  });
+  host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), lado)).join('');
   estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras, caja: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
+}
+
+/**
+ * Un campamento apoyado en el suelo: un rellano de tierra (o, en la cumbre, una cresta de roca y nieve) con sombras de contacto,
+ * los troncos del fogón, el mástil con su banderín, la tienda o la cabaña a un lado y la fogata y el humo al otro. `lado` = −1
+ * lo refleja para que la tienda quede del lado por donde no pasa el sendero. En la cumbre todo es un poco más grande y el
+ * resplandor nace en la fogata.
+ */
+function campamento(m, p, cima, i, lado) {
+  const alto = cima ? 46 : 34, bx = 24;
+  const banderin = `M0 ${-alto}L${bx} ${-alto + 4.5}L${bx - 5.5} ${-alto + 8.5}L${bx} ${-alto + 13}L0 ${-alto + 14}Z`;
+  const suelo = cima
+    ? '<path class="cima-rellano" d="M-30 6L-20 -3L-6 -6L12 -6.5L28 -3.5L40 4L24 10L4 13L-14 11Z"/><path class="cima-rellano-luz" d="M12 -6.5L28 -3.5L40 4L24 10L18 3Z"/>'
+      + '<path class="cima-piedras" d="M-24 3.5q3 -3 6 0M-8 7q2.5 -2.5 5 0M30 4q2.5 -2.5 5 0"/>'
+    : '<ellipse class="campo-borde" cx="8" cy="2.6" rx="30" ry="6.2"/><ellipse class="campo-claro" cx="8" cy="1.2" rx="29" ry="5.4"/>';
+  const sombras = '<ellipse class="sombra-contacto" cx="0" cy="0.4" rx="4" ry="1.4"/><ellipse class="sombra-contacto" cx="24" cy="1.2" rx="14" ry="2.4"/><ellipse class="sombra-contacto" cx="-12" cy="0.8" rx="8" ry="1.8"/>';
+  const dentro = `${suelo}<g transform="translate(0 ${cima ? -5 : 0})">${sombras}<path class="fogon" d="M-18 0.5L-6 -3M-18 -3L-6 0.5"/>`
+    + `<line y2="${-alto}"/><path class="banderin" d="${banderin}"/><g transform="translate(6 1) scale(1.4)">${icono(i)}</g>${humoYFogata()}</g>`;
+  const brillo = cima ? `<ellipse class="brillo-cima" cx="${-12 * lado}" cy="-16" rx="48" ry="32" fill="url(#m-luz)"/>` : '';
+  return `<g class="campo${cima ? ' es-cima' : ''}" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${brillo}${lado < 0 ? `<g transform="scale(-1 1)">${dentro}</g>` : dentro}</g>`;
 }
 
 /**
@@ -320,7 +348,7 @@ function banderas(host, campos, W, H) {
   if (!caja) return;
   estado.caja = caja;
   // De arriba abajo: el orden de tabulación es el visual.
-  const botones = [...campos].sort((a, b) => a.p.y - b.p.y).map(({ m, p, cima }) => {
+  const botones = [...campos].sort((a, b) => a.p.y - b.p.y).map(({ m, p, cima, lado }) => {
     const t = textoCampamento(m, sats, fechas[m] ?? null, cima);
     const b = document.createElement('button');
     b.type = 'button';
@@ -329,8 +357,8 @@ function banderas(host, campos, W, H) {
     b.setAttribute('aria-expanded', 'false');
     b.setAttribute('aria-controls', 'm-tarjeta');
     b.setAttribute('aria-label', `${t.titulo}. ${t.texto}`);
-    b.style.left = `${f1(Math.min(Math.max(p.x - TOQUE / 2 + 6, 0), W - TOQUE))}px`;
-    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - 16, 0), H - TOQUE))}px`;
+    b.style.left = `${f1(Math.min(Math.max(p.x - TOQUE / 2 + 8 * lado, 0), W - TOQUE))}px`;
+    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - (cima ? 30 : 16), 0), H - TOQUE))}px`;
     b.addEventListener('click', () => (abierta === m ? cerrarTarjeta() : abrirTarjeta(m)));
     return b;
   });
@@ -389,9 +417,11 @@ function instalarCierre() {
  * humo en los ya alcanzados y una fogata que parpadea en el siguiente. Pequeños y al pie de la bandera, lejos de la etiqueta.
  */
 function humoYFogata() {
-  const humo = [0, 1, 2].map(() => '<circle class="humo-bola" cx="-12" cy="-6" r="3.6"/>').join(''); // sin `style` en línea (CSP): los retrasos van en el CSS
+  // Humo: dos hilos finos que suben y se disuelven (degradado `#m-humo`), no bolitas sueltas.
+  const humo = '<path class="humo-hilo h1" d="M-12 -7C-15 -14 -9 -19 -12 -26C-15 -33 -8 -38 -11 -46" stroke="url(#m-humo)"/>'
+    + '<path class="humo-hilo h2" d="M-11 -8C-8 -15 -14 -21 -10 -29C-7 -35 -12 -40 -8 -48" stroke="url(#m-humo)"/>';
   return `<g class="efecto-ambiente humo">${humo}</g>`
-    + '<g class="efecto-ambiente fogata"><circle class="fogata-luz" cx="-12" cy="-6" r="20" fill="url(#m-luz)"/><g transform="translate(-4 0) scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g></g>';
+    + '<g class="efecto-ambiente fogata"><circle class="fogata-luz" cx="-12" cy="-4" r="22" fill="url(#m-luz)"/><g transform="translate(-4 0) scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g></g>';
 }
 
 /**
@@ -434,7 +464,7 @@ function huellas(l) {
 function etiquetar(yo) {
   const { campos, W, host } = estado;
   // Cada campamento (mástil, banderín y tienda) y el punto de «Tú» ocupan su sitio: ninguna etiqueta se les encima.
-  const cajas = campos.map(({ m, p }) => ({ x: p.x - 20, y: p.y - 36, w: 58, h: 40, m }));
+  const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 32, y: p.y - 56, w: 74, h: 62, m } : { x: lado < 0 ? p.x - 38 : p.x - 20, y: p.y - 36, w: 58, h: 42, m }));
   cajas.push({ x: yo.x - 18, y: yo.y - 18, w: 36, h: 36 });
   const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
   // «Tú» primero: arriba a la izquierda de tu punto y, si ahí hay un campamento, en otro rincón.
@@ -445,15 +475,15 @@ function etiquetar(yo) {
   const prioridad = (m) => (m === estado.esc.cima ? 0 : m === estado.meta ? 1 : 2);
   const orden = [...campos].sort((a, b) => prioridad(a.m) - prioridad(b.m));
   let s = `<text class="yo-txt" x="${f1(yb.tx)}" y="${f1(yb.y + 17)}" text-anchor="${yb.anclaje}">Tú</text>`;
-  for (const { m, p, cima } of orden) {
+  for (const { m, p, cima, lado } of orden) {
     const txt = nombreHito(m);
     const w = txt.length * 8.6 + 16;
     // Junto al banderín (a su derecha o a la izquierda del mástil), arriba de la cumbre o, si no cabe, bajo el claro.
     const derecha = { x: p.x + 27, y: p.y - 46, w, h: 22, anclaje: 'start', tx: p.x + 32 };
-    const izquierda = { x: p.x - 7 - w, y: p.y - 46, w, h: 22, anclaje: 'end', tx: p.x - 12 };
-    const arriba = { x: p.x - w / 2, y: p.y - 70, w, h: 22, anclaje: 'middle', tx: p.x };
+    const izquierda = { x: p.x - 27 - w, y: p.y - 46, w, h: 22, anclaje: 'end', tx: p.x - 32 };
+    const arriba = { x: p.x - w / 2, y: p.y - 80, w, h: 22, anclaje: 'middle', tx: p.x };
     const abajo = { x: p.x + 6 - w / 2, y: p.y + 8, w, h: 22, anclaje: 'middle', tx: p.x + 6 };
-    const opciones = cima ? [arriba, izquierda, derecha] : [derecha, izquierda, abajo];
+    const opciones = cima ? [arriba, izquierda, derecha] : lado < 0 ? [izquierda, derecha, abajo] : [derecha, izquierda, abajo];
     const b = opciones.find((o) => !choca(o, m));
     if (!b) continue;
     cajas.push(b);
@@ -489,7 +519,7 @@ function colocar(sats, animado) {
   const sig = estado.campos.find((x) => x.m > sats)?.m;
   host.querySelectorAll('.campo').forEach((g) => g.classList.toggle('sig', Number(g.dataset.m) === sig));
   const dn = trazoNieve(estado.nieveMedidas, altitud(sats, esc));
-  host.querySelectorAll('.nieve, .nieve-sombra').forEach((n) => n.setAttribute('d', dn));
+  host.querySelectorAll('.nieve, .nieve-sombra, .nieve-luz, .nieve-encima').forEach((n) => n.setAttribute('d', dn));
   if (!animado) { etiquetar(p); huellas(l); }
   return p;
 }
