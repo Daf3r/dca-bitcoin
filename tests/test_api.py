@@ -3,7 +3,7 @@
 Uso (con Flask instalado): python tests/test_api.py
 """
 import os; os.environ["LOG_PETICIONES"] = "0"; os.environ["LIMITE_ESCRITURAS"] = "1000000"  # las pruebas escriben a toda prisa; el límite se prueba aparte
-import re, sys, sqlite3, tempfile, importlib, json, subprocess, shutil
+import re, sys, sqlite3, tempfile, importlib, json, subprocess, shutil, hashlib
 APP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 from datetime import date, timedelta
 tmp = tempfile.mkdtemp()
@@ -950,7 +950,7 @@ cats = r.get_json()["categorias"]
 check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False)], f"categorías del lector y sus valores por defecto {cats}")
 check(all(c["nombre"] and c["ayuda"] for c in cats), "cada categoría trae nombre y ayuda")
 r = adm.post("/api/push/suscribir", json=_sus(EP_ADM))
-check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True)], "categorías del admin")
+check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("wallet", False)], "categorías del admin")
 check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "suscribirse no da permiso de escribir")
 
 # Estado por dispositivo: solo el dueño ve el suyo
@@ -1169,7 +1169,7 @@ check(r["horario"] == _HDEF and r["horario_defecto"] == _HDEF, f"el horario por 
 check(luz.post("/api/push/estado", json={"endpoint": "https://fcm.googleapis.com/otro"}).get_json() == {"suscrito": False, "categorias": []}, "sin suscribir no hay horario")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
 check(r.status_code == 200 and r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, f"se guarda el horario del dispositivo {r.data}")
-check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida"], "guardar el horario no cambia las categorías")
+check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "wallet"], "guardar el horario no cambia las categorías")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
 check(r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, "elegir categorías no borra el horario")
 adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
@@ -1212,6 +1212,98 @@ check(avisos._recordatorio(cxh) is False and not enviados, "23:30: fuera del hor
 push.ahora = lambda: _dtm(2026, 11, 10, 9, 5, tzinfo=ritmo.ZONA)
 check(avisos._recordatorio(cxh) is True and _a_quien() == sorted([EP_ADM, EP_ADM2]), "al día siguiente vuelve a avisar a los dos")
 ritmo.recordatorio = _ori
+
+# --- Campamento 9: aviso de prueba (143), botón en el recordatorio (144) y «retirar a tu wallet» (146)
+push.ahora = _de_dia
+enviados.clear()
+r = adm.post("/api/push/prueba", json={"endpoint": EP_ADM})
+check(r.status_code == 200 and r.get_json()["ok"] is True and "enviado" in r.get_json()["mensaje"], f"aviso de prueba enviado {r.data}")
+check(len(enviados) == 1 and enviados[0][0] == EP_ADM and enviados[0][1]["etiqueta"] == "prueba" and "acciones" not in enviados[0][1],
+      "la prueba llega solo a ese dispositivo y sin botones")
+r = adm.post("/api/push/prueba", json={"endpoint": EP_ADM})
+check(r.status_code == 429 and r.headers.get("Retry-After") and len(enviados) == 1, "otra prueba enseguida: 429 con Retry-After")
+check(adm.post("/api/push/prueba", json={"endpoint": EP_ADM2}).status_code == 200 and len(enviados) == 2, "el límite es por dispositivo")
+check(adm.post("/api/push/prueba", json={"endpoint": "https://fcm.googleapis.com/otro"}).status_code == 404, "prueba de un dispositivo sin avisos, 404")
+check(ana.post("/api/push/prueba", json={"endpoint": EP_ADM}).status_code == 404, "nadie prueba el dispositivo de otra cuenta")
+check(adm.post("/api/push/prueba", json={}).status_code == 404 and adm.post("/api/push/prueba", json=[1]).status_code in (400, 404), "sin endpoint no hay prueba")
+check(anon.post("/api/push/prueba", json={"endpoint": EP_ADM}).status_code == 401, "la prueba exige sesión")
+check(luz.post("/api/push/prueba", json={"endpoint": EP_LUZ}).status_code == 200, "un lector también prueba sus propios avisos")
+# Con el límite vencido, un dispositivo que el servicio ya no reconoce se quita y se explica; un fallo de red también
+cxp = server.connect()
+cxp.execute("UPDATE meta SET valor = '0' WHERE clave LIKE 'prueba_aviso:%'")
+cxp.commit()
+EP_MUERTO2 = "https://fcm.googleapis.com/fcm/send/muerto-prueba"
+adm.post("/api/push/suscribir", json=_sus(EP_MUERTO2))
+r = adm.post("/api/push/prueba", json={"endpoint": EP_MUERTO2}).get_json()
+check(r["ok"] is False and "vuelve a activar" in r["mensaje"] and adm.post("/api/push/estado", json={"endpoint": EP_MUERTO2}).get_json()["suscrito"] is False,
+      f"410: se dice y el dispositivo se quita {r}")
+class _Rechazo(Exception):
+    response = _types.SimpleNamespace(status_code=403)
+def _rechaza(sub, payload):
+    raise _Rechazo()
+def _sin_red(sub, payload):
+    raise OSError("sin red")
+cxp.execute("UPDATE meta SET valor = '0' WHERE clave LIKE 'prueba_aviso:%'")
+cxp.commit()
+push._enviar_uno = _rechaza
+r = adm.post("/api/push/prueba", json={"endpoint": EP_ADM}).get_json()
+check(r["ok"] is False and "403" in r["mensaje"] and adm.post("/api/push/estado", json={"endpoint": EP_ADM}).get_json()["suscrito"] is True, f"otro código: se explica y no se borra {r}")
+cxp.execute("UPDATE meta SET valor = '0' WHERE clave LIKE 'prueba_aviso:%'")
+cxp.commit()
+push._enviar_uno = _sin_red
+r = adm.post("/api/push/prueba", json={"endpoint": EP_ADM}).get_json()
+check(r["ok"] is False and "conexión" in r["mensaje"], f"sin red: mensaje de conexión {r}")
+push._enviar_uno = _enviar_falso
+
+# 144: solo el recordatorio lleva el botón «Anotar compra»
+enviados.clear()
+push.enviar_ahora(cxp, "recordatorio", "Libro DCA", "Te toca", "recordatorio")
+check(enviados and all(p.get("acciones") == ["anotar"] for _e, p in enviados), f"el recordatorio trae la acción anotar {enviados}")
+enviados.clear()
+push.enviar_ahora(cxp, "caida", "Libro DCA", "Caída", "caida")
+check(enviados and all("acciones" not in p for _e, p in enviados), "los demás avisos no traen botones")
+
+# 146: el monto de «retirar a tu wallet» es de cada dispositivo, solo del admin y validado
+est = adm.post("/api/push/estado", json={"endpoint": EP_ADM}).get_json()
+check(est["umbral_wallet"] == 0 and ("wallet", False) in [(c["id"], c["activo"]) for c in est["categorias"]], "la categoría nace apagada y sin monto")
+check(luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "umbral_wallet": 1000}).status_code == 403, "un lector no elige ese monto")
+for malo in (-1, 1.5, "mucho", None, True, 10**10 + 1, [5]):
+    check(adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": malo}).status_code == 400, f"monto inválido rechazado: {malo}")
+check(adm.put("/api/push/prefs", json={"endpoint": "https://fcm.googleapis.com/otro", "umbral_wallet": 5}).status_code == 404, "monto de un dispositivo sin avisos, 404")
+cxw = server.connect()
+exch = server.sats_en_exchange(cxw)
+check(exch > 0, f"hay sats en el exchange para probar ({exch})")
+r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": exch - 1})
+check(r.status_code == 200 and r.get_json()["umbral_wallet"] == exch - 1, "se guarda el monto")
+r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
+check(r.get_json()["umbral_wallet"] == exch - 1, "elegir categorías no borra el monto")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
+r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
+check(r.get_json()["umbral_wallet"] == exch - 1 and r.get_json()["horario"]["desde"] == 6, "guardar el horario no borra el monto ni al revés")
+check(adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": exch - 1}).get_json()["horario"]["desde"] == 6, "guardar el monto no borra el horario")
+# sin la categoría encendida no avisa
+enviados.clear()
+check(avisos._wallet(cxw) == 0 and not enviados, "con la categoría apagada no avisa aunque pase del monto")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"wallet": True}})
+push.ahora = lambda: _dtm(2026, 11, 12, 23, 30, tzinfo=ritmo.ZONA)
+check(avisos._wallet(cxw) == 0 and not enviados, "de noche (fuera de su horario) espera")
+push.ahora = lambda: _dtm(2026, 11, 13, 10, 0, tzinfo=ritmo.ZONA)
+check(avisos._wallet(cxw) == 1 and _a_quien() == [EP_ADM] and enviados[0][1]["etiqueta"] == "wallet" and f"{exch:,}" in enviados[0][1]["cuerpo"]
+      and "recordatorio" in enviados[0][1]["cuerpo"], f"avisa una vez al pasar del monto {enviados}")
+check(avisos._wallet(cxw) == 0 and len(enviados) == 1, "no repite mientras siga arriba")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": exch + 5})
+check(avisos._wallet(cxw) == 0 and server._meta(cxw, f"aviso_wallet:{cxw.execute('SELECT id FROM suscripciones WHERE endpoint = ?', (EP_ADM,)).fetchone()[0]}") is None,
+      "al quedar debajo del monto se quita la marca")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": exch - 1})
+check(avisos._wallet(cxw) == 1 and len(enviados) == 2, "al volver a pasarlo avisa otra vez")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": 0})
+check(avisos._wallet(cxw) == 0, "con monto 0 no avisa")
+# la marca de un dispositivo que ya no existe se limpia
+cxw.execute("INSERT OR REPLACE INTO meta (clave, valor) VALUES ('aviso_wallet:99999', '1'), ('prueba_aviso:99999', '1')")
+cxw.commit()
+avisos.limpiar(cxw)
+check(cxw.execute("SELECT COUNT(*) FROM meta WHERE clave IN ('aviso_wallet:99999', 'prueba_aviso:99999')").fetchone()[0] == 0, "la limpieza quita las marcas de dispositivos que ya no existen")
+push.ahora = _de_dia
 
 # De noche cada dispositivo espera su hora: lo que cae mientras duerme queda guardado solo para él
 EP_ANA2 = "https://web.push.apple.com/ana-horario"
@@ -1494,8 +1586,8 @@ t3 = _adm.post("/api/traslados", json={"fecha": "2026-03-20", "sats": 1000, "sen
 r = _adm.get("/api/traslados.csv")
 check(r.status_code == 200 and r.mimetype == "text/csv" and "traslados-btc-" in r.headers["Content-Disposition"], "traslados.csv se descarga como CSV")
 _lineas = r.get_data(as_text=True).splitlines()
-check(_lineas[0] == "fecha,sats,sentido,txid,nota" and len(_lineas) == 3, f"cabecera y solo los traslados vigentes {_lineas}")
-check(_lineas[1] == f'2026-03-05,150000,a_wallet,{"ab" * 32},"primer, retiro"' and _lineas[2] == "2026-03-12,40000,a_exchange,,", f"las filas salen en orden y con la nota entre comillas {_lineas[1:]}")
+check(_lineas[0] == "fecha,sats,sentido,txid,nota,wallet" and len(_lineas) == 3, f"cabecera y solo los traslados vigentes {_lineas}")
+check(_lineas[1] == f'2026-03-05,150000,a_wallet,{"ab" * 32},"primer, retiro",' and _lineas[2] == "2026-03-12,40000,a_exchange,,,", f"las filas salen en orden y con la nota entre comillas {_lineas[1:]}")
 check(nuevo().get("/api/traslados.csv").status_code == 401, "sin sesión no se exporta")
 _csv = r.get_data(as_text=True)
 # importar el mismo archivo: nada nuevo, todo repetido
@@ -1888,6 +1980,7 @@ try:
                                     ("https://fcm.googleapis.com/falla-reciente", 5, _ya - 86400, _viejo), ("https://fcm.googleapis.com/nunca-respondio", 4, None, _viejo)):
         _lc.execute("INSERT INTO suscripciones (usuario_id, endpoint, p256dh, auth, prefs, creado, ultimo_ok, fallos) VALUES (?, ?, 'k', 'a', '{}', ?, ?, ?)", (_uid, ep, creado, ult, fallos))
     _sid = _lc.execute("SELECT id FROM suscripciones WHERE endpoint LIKE '%sano-sin-envios'").fetchone()[0]
+    _lc.execute("DELETE FROM meta WHERE clave LIKE 'prueba_aviso:%' OR clave LIKE 'aviso_wallet:%'")  # restos de las pruebas de arriba (ya probadas aparte)
     server._meta_poner(_lc, f"aviso_recordatorio_dia:{_sid}", "2026-01-01"); server._meta_poner(_lc, "aviso_recordatorio_dia:99999", "2026-01-01")
     _lc.commit()
     _compras_antes = _lc.execute("SELECT COUNT(*) FROM compras").fetchone()[0]
@@ -1909,5 +2002,141 @@ try:
     _lc.execute("DELETE FROM compras WHERE txid = ?", (_tx_vivo,)); _lc.execute("DELETE FROM suscripciones"); _lc.commit()
 finally:
     _lc.close()
+
+# --- Campamento 9: enlace de solo lectura para hojas de cálculo (idea 159)
+adm_t = adm
+check(adm_t.get("/api/tokens").get_json() == [], "al principio no hay enlaces")
+check(luz.get("/api/tokens").status_code == 403 and luz.post("/api/tokens", json={"nombre": "x"}).status_code == 403, "un lector no maneja los enlaces")
+check(anon.get("/api/tokens").status_code == 401 and anon.post("/api/tokens", json={"nombre": "x"}).status_code == 401, "sin sesión tampoco")
+check(adm_t.post("/api/tokens", json={}).status_code == 400 and adm_t.post("/api/tokens", json={"nombre": "   "}).status_code == 400
+      and adm_t.post("/api/tokens", json={"nombre": 5}).status_code == 400, "el enlace pide un nombre")
+r = adm_t.post("/api/tokens", json={"nombre": "  Mi   hoja de Google  "})
+tk = r.get_json()
+check(r.status_code == 201 and len(tk["token"]) >= 40 and tk["rutas"]["compras"] == f"/api/token/{tk['token']}/compras.csv", f"se crea y el token se muestra una vez {r.status_code}")
+lista = adm_t.get("/api/tokens").get_json()
+check(len(lista) == 1 and lista[0]["nombre"] == "Mi hoja de Google" and "token" not in lista[0] and "hash" not in lista[0] and lista[0]["ultimo_uso"] is None
+      and tk["token"] not in json.dumps(lista), "la lista no trae el token ni su huella")
+cxt = server.connect()
+fila = cxt.execute("SELECT hash FROM tokens_api").fetchone()
+check(fila[0] == hashlib.sha256(tk["token"].encode()).hexdigest() and tk["token"] not in fila[0], "en la base solo queda el SHA-256")
+check(not any(tk["token"] in (str(v) if v is not None else "") for f in cxt.execute("SELECT antes, despues, ip FROM auditoria") for v in f), "la auditoría no guarda el token")
+check(any(a["accion"] == "token_creado" for a in adm_t.get("/api/auditoria").get_json()), "crear un enlace queda en el historial")
+# Lo lee cualquiera con el enlace, sin sesión, y es el mismo CSV que la exportación
+r = anon.get(tk["rutas"]["compras"])
+check(r.status_code == 200 and r.mimetype == "text/csv" and r.data.decode() == adm_t.get("/api/export.csv").data.decode(), "con el enlace se lee el CSV de compras, sin sesión")
+check(r.headers.get("X-Robots-Tag") == "noindex" and "no-store" in r.headers.get("Cache-Control", ""), "no se indexa ni se guarda en caché")
+r = anon.get(tk["rutas"]["traslados"])
+check(r.status_code == 200 and r.data.decode() == adm_t.get("/api/traslados.csv").data.decode(), "y el de traslados")
+check(adm_t.get("/api/tokens").get_json()[0]["ultimo_uso"] is not None, "queda anotado el último uso")
+# Solo esos dos archivos, solo lectura
+for malo in (f"/api/token/{tk['token']}/todo.zip", f"/api/token/{tk['token']}/compras", f"/api/token/{tk['token']}/yo", f"/api/token/{tk['token']}/../export.csv"):
+    check(anon.get(malo).status_code == 404, f"el enlace no da más que los dos CSV: {malo[-20:]}")
+check(anon.post(tk["rutas"]["compras"], json={}, headers={"X-Libro": "1"}).status_code in (401, 405), "el enlace no sirve para escribir")
+check(anon.get("/api/compras").status_code == 401 and anon.get("/api/yo").status_code == 401, "y el resto de la API sigue pidiendo sesión")
+# Un token que no existe responde igual que uno revocado, sin pistas
+check(anon.get("/api/token/" + "a" * 43 + "/compras.csv").status_code == 404 and anon.get("/api/token/corto/compras.csv").status_code == 404, "token inexistente o mal formado: 404")
+check(adm_t.delete(f"/api/tokens/{lista[0]['id']}").status_code == 204, "se revoca")
+check(anon.get(tk["rutas"]["compras"]).status_code == 404, "un enlace revocado deja de funcionar al instante")
+check(adm_t.delete(f"/api/tokens/{lista[0]['id']}").status_code == 404 and adm_t.delete("/api/tokens/99999").status_code == 404, "revocar dos veces o uno que no existe: 404")
+check(luz.delete(f"/api/tokens/{lista[0]['id']}").status_code == 403, "un lector no revoca")
+check(adm_t.get("/api/tokens").get_json()[0]["revocado"] is not None and any(a["accion"] == "token_revocado" for a in adm_t.get("/api/auditoria").get_json()), "se ve como revocado y queda en el historial")
+# Máximo 5 activos
+for i in range(5):
+    check(adm_t.post("/api/tokens", json={"nombre": f"hoja {i}"}).status_code == 201, f"enlace {i + 1} de 5")
+r = adm_t.post("/api/tokens", json={"nombre": "uno más"})
+check(r.status_code == 400 and "5" in r.get_json()["error"], "el sexto se rechaza")
+activos = [t for t in adm_t.get("/api/tokens").get_json() if not t["revocado"]]
+adm_t.delete(f"/api/tokens/{activos[0]['id']}")
+check(adm_t.post("/api/tokens", json={"nombre": "otra vez"}).status_code == 201, "al revocar uno se libera un lugar")
+# Las llaves no se cuentan por URL en las métricas ni en el registro: solo la regla de la ruta
+server.vaciar_metricas()
+rutas_met = [r[0] for r in server.connect().execute("SELECT ruta FROM metricas")]
+check("/api/token/<token>/<archivo>" in rutas_met and not any("a" * 20 in x or tk["token"] in x for x in rutas_met), f"las métricas usan la regla, no el token {rutas_met}")
+# Frenar a quien prueba tokens al azar (por proceso y por minuto)
+server._TOKEN_FALLOS.clear()
+for i in range(server.TOKEN_FALLOS_MAX):
+    anon.get(f"/api/token/{'b' * 40}{i:03d}/compras.csv")
+r = anon.get("/api/token/" + "c" * 43 + "/compras.csv")
+check(r.status_code == 429 and r.headers.get("Retry-After") == "60", "demasiados intentos con tokens que no existen: 429")
+server._TOKEN_FALLOS.clear()
+# Modo solo lectura de emergencia: el enlace (una lectura) sigue funcionando; crear o revocar no
+_tk_vivo = next(t for t in adm_t.get("/api/tokens").get_json() if not t["revocado"])
+_tk2 = adm_t.post("/api/tokens", json={"nombre": "emergencia"})
+check(_tk2.status_code == 400, "(ya hay 5 activos: sirve para el siguiente paso)")
+adm_t.delete(f"/api/tokens/{_tk_vivo['id']}")
+_tk3 = adm_t.post("/api/tokens", json={"nombre": "emergencia"}).get_json()
+_ant_sl2 = server.SOLO_LECTURA
+try:
+    server.SOLO_LECTURA = True
+    check(anon.get(_tk3["rutas"]["compras"]).status_code == 200, "con SOLO_LECTURA el enlace se sigue leyendo")
+    check(adm_t.post("/api/tokens", json={"nombre": "x"}).status_code == 503, "pero no se crean enlaces")
+    check(adm_t.delete(f"/api/tokens/{_tk_vivo['id']}").status_code == 503, "ni se revocan")
+finally:
+    server.SOLO_LECTURA = _ant_sl2
+
+# --- Campamento 9: varias wallets (idea 156)
+cxv = server.connect()
+check(adm.get("/api/wallets").get_json() == [] and luz.get("/api/wallets").status_code == 200 and anon.get("/api/wallets").status_code == 401, "al principio no hay más wallets; la ven todos con sesión")
+check(luz.post("/api/wallets", json={"nombre": "Ledger"}).status_code == 403 and luz.delete("/api/wallets/1").status_code == 403, "un lector no crea ni archiva wallets")
+for malo in ({}, {"nombre": ""}, {"nombre": "   "}, {"nombre": 5}, {"nombre": "x" * 25}, {"nombre": "<b>x</b>"}, {"nombre": "mi WALLET"}):
+    check(adm.post("/api/wallets", json=malo).status_code == 400, f"nombre de wallet rechazado: {malo}")
+r = adm.post("/api/wallets", json={"nombre": "  Ledger   frío "})
+wl = r.get_json()
+check(r.status_code == 201 and wl["nombre"] == "Ledger frío" and wl["sats"] == 0 and wl["archivada"] is False, f"se crea una wallet {r.data}")
+check(adm.post("/api/wallets", json={"nombre": "LEDGER FRÍO"}).status_code == 400, "no se repite el nombre (sin importar mayúsculas)")
+_E0 = server.sats_en_exchange(cxv)
+_p0 = server.saldos_wallets(server.traslados_vigentes(cxv)).get(0, 0)
+check(_E0 > 5000, f"hay sats suficientes en el exchange para probar ({_E0})")
+r = adm.post("/api/traslados", json={"fecha": today, "sats": 1000, "sentido": "a_wallet", "wallet_id": wl["id"]})
+check(r.status_code == 201 and r.get_json()["wallet_id"] == wl["id"], f"traslado a la otra wallet {r.data}")
+tr_l = r.get_json()
+check(next(t for t in adm.get("/api/traslados").get_json() if t["id"] == tr_l["id"])["wallet_id"] == wl["id"]
+      and all(t["wallet_id"] is None for t in adm.get("/api/traslados").get_json() if t["id"] != tr_l["id"]), "la lista de traslados dice a qué wallet va cada uno (null = la principal)")
+check(adm.get("/api/wallets").get_json()[0]["sats"] == 1000, "la wallet muestra lo que tiene")
+check(server.sats_en_exchange(cxv) == _E0 - 1000, "el exchange baja con lo que hay en cualquier wallet")
+for malo in (99999, "x", 1.5, True, [1]):
+    check(adm.post("/api/traslados", json={"fecha": today, "sats": 1, "wallet_id": malo}).status_code == 400, f"wallet_id inválido: {malo!r}")
+# cada wallet se valida sola: no se saca de una lo que hay en otra
+r = adm.post("/api/traslados", json={"fecha": today, "sats": _p0 + 1, "sentido": "a_exchange"})
+check(r.status_code == 400 and "tu wallet" in r.get_json()["error"], f"la principal no puede sacar más de lo que tiene aunque la otra tenga {r.data}")
+r = adm.post("/api/traslados", json={"fecha": today, "sats": 1001, "sentido": "a_exchange", "wallet_id": wl["id"]})
+check(r.status_code == 400 and "Ledger frío" in r.get_json()["error"], f"y la otra tampoco, con su nombre en el mensaje {r.data}")
+r = adm.post("/api/traslados", json={"fecha": today, "sats": _E0, "sentido": "a_wallet", "wallet_id": wl["id"]})
+check(r.status_code == 400 and "en total" in r.get_json()["error"], f"entre todas las wallets no hay más sats que el saldo {r.data}")
+check(lec_t.post("/api/traslados", json={"fecha": today, "sats": 1, "wallet_id": wl["id"]}).status_code == 403, "un lector no anota traslados")
+# archivar: solo sin sats; luego ya no recibe traslados, pero su historia se queda
+r = adm.delete(f"/api/wallets/{wl['id']}")
+check(r.status_code == 409 and "1,000" in r.get_json()["error"], f"con sats no se archiva {r.data}")
+check(adm.post("/api/traslados", json={"fecha": today, "sats": 1000, "sentido": "a_exchange", "wallet_id": wl["id"]}).status_code == 201, "se devuelven los sats al exchange")
+check(adm.delete(f"/api/wallets/{wl['id']}").status_code == 204 and adm.delete(f"/api/wallets/{wl['id']}").status_code == 404, "ahora sí se archiva (una sola vez)")
+check(adm.post("/api/traslados", json={"fecha": today, "sats": 1, "wallet_id": wl["id"]}).status_code == 400, "una wallet archivada ya no recibe traslados")
+check(adm.get("/api/wallets").get_json()[0]["archivada"] is True, "pero se sigue viendo (para nombrar sus traslados viejos)")
+# anular un traslado a otra wallet del que no dependen otros funciona; y el chequeo contable sigue limpio
+check(server.chequeo_contable(cxv) == [], "el chequeo contable no ve problemas con varias wallets")
+check({a["accion"] for a in adm.get("/api/auditoria").get_json()} >= {"wallet_creada", "wallet_archivada"}, "crear y archivar wallets quedan en el historial")
+# CSV: la columna wallet sale y entra; una wallet nueva en el archivo se crea; repetir no duplica
+_csvw = adm.get("/api/traslados.csv").get_data(as_text=True)
+check(_csvw.splitlines()[0].endswith(",wallet") and "Ledger frío" in _csvw, "el CSV de traslados lleva la wallet")
+_h2 = {"Content-Type": "text/csv"}
+_mas = "fecha,sats,sentido,txid,nota,wallet\n" + f"{today},700,a_wallet,,del archivo,Trezor\n{today},300,a_wallet,,otro,mi wallet\n{today},50,a_wallet,,,Ledger frío\n"
+r = adm.post("/api/traslados/import", data=_mas, headers=_h2)
+_j = r.get_json()
+check(r.status_code == 200 and _j["nuevos"] == 2 and _j["wallets_creadas"] == ["Trezor"] and len(_j["omitidos"]) == 1 and "archivada" in _j["omitidos"][0], f"importa con wallets: crea Trezor, la principal por nombre y omite la archivada {_j}")
+r = adm.post("/api/traslados/import", data=_mas, headers=_h2)
+check(r.get_json()["nuevos"] == 0 and r.get_json()["repetidos"] == 2, f"importar de nuevo no duplica {r.get_json()}")
+check([w["nombre"] for w in adm.get("/api/wallets").get_json()] == ["Ledger frío", "Trezor"] and adm.get("/api/wallets").get_json()[1]["sats"] == 700, "Trezor existe y tiene 700")
+# un CSV sin columna wallet entra como siempre (a la principal)
+r = adm.post("/api/traslados/import", data=f"fecha,sats,sentido,txid,nota\n{today},11,a_wallet,,vieja\n", headers=_h2)
+check(r.get_json()["nuevos"] == 1 and next(t for t in adm.get("/api/traslados").get_json() if t["nota"] == "vieja")["wallet_id"] is None, "un CSV de antes (sin wallet) entra en la principal")
+# si el archivo deja alguna wallet en negativo, se rechaza entero y no deja wallets a medias
+r = adm.post("/api/traslados/import", data=f"fecha,sats,sentido,txid,nota,wallet\n{today},5000,a_exchange,,,Nueva rara\n", headers=_h2)
+check(r.status_code == 400 and "No se importó nada" in r.get_json()["error"] and "Nueva rara" not in [w["nombre"] for w in adm.get("/api/wallets").get_json()], "un archivo que no cuadra no crea wallets")
+# tope de wallets (5 activas además de la principal)
+for i in range(3, 7):  # Trezor + estas cuatro = 5 activas (la archivada no cuenta)
+    check(adm.post("/api/wallets", json={"nombre": f"Extra {i}"}).status_code == 201, f"wallet activa {i - 1} de 5")
+check(adm.post("/api/wallets", json={"nombre": "Extra 7"}).status_code == 400, "la sexta activa se rechaza")
+r = adm.post("/api/traslados/import", data=f"fecha,sats,sentido,txid,nota,wallet\n{today},10,a_wallet,,,Otra más\n", headers=_h2)
+check(r.get_json()["nuevos"] == 0 and "no se crea" in r.get_json()["omitidos"][0], "importar tampoco pasa del tope")
+check("wallet_id" in {r[1] for r in cxv.execute("PRAGMA table_info(traslados)")}, "la migración añadió traslados.wallet_id")
 
 print("OK", ok, "comprobaciones")

@@ -253,7 +253,7 @@
     <div id="ub-datos" hidden>
       <div class="rueda ub-dona" id="ub-dona" role="img" aria-label=""><svg id="ub-dona-svg"></svg><span class="an-centro"><b id="ub-pct"></b><small>wallet</small></span></div>
       <dl class="ub-lista">
-        <div><dt><i class="ub-w" aria-hidden="true"></i> En tu wallet</dt><dd id="ub-w"></dd></div>
+        <div><dt><i class="ub-w" aria-hidden="true"></i> <span id="ub-w-t">En tu wallet</span></dt><dd id="ub-w"></dd></div>
         <div><dt><i class="ub-e" aria-hidden="true"></i> En el exchange</dt><dd id="ub-e"></dd></div>
       </dl>
     </div>
@@ -310,6 +310,14 @@
     <div class="h-tipo h-sentido" id="h-sentido" role="group" aria-label="Sentido del traslado" hidden>
       <button type="button" data-sentido="a_wallet" aria-pressed="true">A mi wallet</button>
       <button type="button" data-sentido="a_exchange" aria-pressed="false">De mi wallet al exchange</button>
+    </div>
+    <!-- Solo en un traslado, y solo con más de una wallet (o al pedir «Usar otra wallet»): cuál es la wallet. -->
+    <div class="h-wallet" id="h-wallet-caja" hidden>
+      <label class="h-wallet-l" id="h-wallet-sel-l" for="h-wallet">Wallet <select id="h-wallet"></select></label>
+      <button type="button" class="enlace" id="h-wallet-mas" hidden>Usar otra wallet…</button>
+      <label class="h-wallet-l" id="h-wallet-nueva-l" for="h-wallet-nueva" hidden>Nombre de la wallet nueva
+        <input id="h-wallet-nueva" type="text" maxlength="24" autocomplete="off" placeholder="Por ejemplo: Ledger">
+      </label>
     </div>
     <label class="h-sats"><span id="h-sats-l">Sats que recibiste</span>
       <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hoja-calc">
@@ -377,6 +385,7 @@
       <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
       <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar y traslados</button>
+      <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
       <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
       <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
@@ -431,6 +440,17 @@
       <label>Hasta <select id="av-hasta"></select></label>
       <label id="av-rec-l">Recordatorio de compra <select id="av-rec"></select></label>
     </div>
+    <div class="av-horario" id="av-wallet" role="group" aria-labelledby="av-w-t" hidden>
+      <h3 id="av-w-t">Retirar a tu wallet</h3>
+      <p class="dc-nota">Si en el exchange acumulas más sats de este monto, te lo recuerdo una vez. Solo es un recordatorio de tu propio hábito: tú eliges el monto y moverlos es decisión tuya. Con 0 no avisa.</p>
+      <label for="av-w-monto">Avisar si hay más de (sats)</label>
+      <input id="av-w-monto" type="text" inputmode="numeric" autocomplete="off" aria-describedby="av-w-ayuda">
+      <p class="dc-nota" id="av-w-ayuda"></p>
+    </div>
+    <div class="av-prueba" id="av-prueba" hidden>
+      <button type="button" id="av-prueba-btn">Enviarme un aviso de prueba</button>
+      <p class="dc-nota" id="av-prueba-res" role="status"></p>
+    </div>
     <p class="hoja-error" id="av-error" role="alert"></p>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
@@ -444,6 +464,26 @@
       <input class="sr" type="file" id="tras-in" accept=".csv,text/csv">
     </div>
     <p class="dc-nota">Importar salta lo repetido, así que puedes cargar el mismo archivo dos veces sin duplicar. Importa primero las compras: la wallet no puede tener más sats de los que posees ese día.</p>
+    <div class="dd-wallets" id="dd-wallets" hidden>
+      <h3>Tus wallets</h3>
+      <p class="dc-nota">Además de «Mi wallet». Una wallet nueva se crea al anotar un traslado. Archivarla la saca de las opciones, pero sus traslados se conservan.</p>
+      <ul class="sis-lista" id="dd-wallets-lista"></ul>
+    </div>
+    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
+  </div>
+  <div class="dc-enlaces" id="dc-enlaces" hidden>
+    <h2>Enlace para tu hoja de cálculo</h2>
+    <p>Un enlace de solo lectura para que Google Sheets o Excel lean tus compras y traslados sin iniciar sesión. No puede escribir ni ver cuentas, y lo puedes revocar cuando quieras.</p>
+    <p class="dc-nota en-aviso"><b>Es como una llave:</b> quien tenga el enlace ve tus movimientos. La dirección puede quedar en los registros de tu servidor o de Cloudflare; no la pegues en chats ni en documentos que otras personas vean.</p>
+    <form id="en-form" class="en-form">
+      <label for="en-nombre">Nombre del enlace</label>
+      <input id="en-nombre" type="text" maxlength="40" autocomplete="off" placeholder="Mi hoja de Google">
+      <button type="submit" class="primario" id="en-crear">Crear enlace</button>
+    </form>
+    <p class="dc-nota" id="en-cupo"></p>
+    <div class="en-nuevo" id="en-nuevo" role="status" hidden></div>
+    <ul class="sis-lista" id="en-lista"></ul>
+    <p class="hoja-error" id="en-error" role="alert"></p>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-sesiones" id="dc-sesiones" hidden>

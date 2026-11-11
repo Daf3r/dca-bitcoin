@@ -140,6 +140,34 @@ def _caida(conn: sqlite3.Connection, cada: int = CAIDA_CADA) -> bool:
     return True
 
 
+def _wallet(conn: sqlite3.Connection) -> int:
+    """«Retirar a tu wallet» (idea 146): avisa a cada dispositivo que lo pidió, una vez por cruce, cuando en el exchange hay más sats del
+    monto que esa persona eligió. Solo es un recordatorio de su propio hábito. La marca se quita cuando baja del monto (así vuelve a avisar
+    la próxima vez que lo pase). Respeta el horario de cada dispositivo: si duerme, espera a la pasada siguiente."""
+    conn.row_factory = sqlite3.Row
+    destinos = [d for d in push.destinatarios(conn, "wallet") if d.get("umbral", 0) > 0]
+    if not destinos:
+        return 0
+    en_exchange = server.sats_en_exchange(conn)
+    hora = push.ahora().hour
+    n = 0
+    for d in destinos:
+        clave = f"aviso_wallet:{d['id']}"
+        if en_exchange <= d["umbral"]:
+            if server._meta(conn, clave) is not None:
+                conn.execute("DELETE FROM meta WHERE clave = ?", (clave,))
+                conn.commit()
+            continue
+        if server._meta(conn, clave) is not None or not push.en_horario(d["horario"], hora):
+            continue
+        texto = (f"En el exchange tienes {en_exchange:,} sats, más de los {d['umbral']:,} que elegiste. "
+                 "Si quieres moverlos a tu wallet, anota el traslado después. Es solo un recordatorio.")
+        n += push.enviar_ahora(conn, "wallet", "Libro DCA", texto, "wallet", destinos=[d])
+        server._meta_poner(conn, clave, "1")
+        conn.commit()
+    return n
+
+
 def _una_vez_al_dia(conn: sqlite3.Connection, clave: str) -> bool:
     """True la primera vez que se pregunta cada día (y deja marcado el día)."""
     hoy = ritmo.hoy_sv(push.ahora()).isoformat()
@@ -235,7 +263,7 @@ def limpiar(conn: sqlite3.Connection, ahora: int | None = None) -> dict[str, int
     # las marcas «ya avisé hoy» de dispositivos que ya no existen
     vivos = {str(r["id"]) for r in conn.execute("SELECT id FROM suscripciones")}
     n["meta"] = 0
-    for r in conn.execute("SELECT clave FROM meta WHERE clave LIKE 'aviso_recordatorio_dia:%'").fetchall():
+    for r in conn.execute("SELECT clave FROM meta WHERE clave LIKE 'aviso_recordatorio_dia:%' OR clave LIKE 'aviso_wallet:%' OR clave LIKE 'prueba_aviso:%'").fetchall():
         if r["clave"].split(":", 1)[1] not in vivos:
             conn.execute("DELETE FROM meta WHERE clave = ?", (r["clave"],))
             n["meta"] += 1
@@ -254,7 +282,7 @@ def una_pasada() -> dict[str, Any]:
         server._meta_poner(conn, "avisos_latido", str(int(time.time())))  # «sigo vivo»: lo lee el chequeo de salud
         conn.commit()
         return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn), "caida": _caida(conn),
-                "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "cuentas": _cuentas(conn), "limpieza": _limpieza(conn)}
+                "wallet": _wallet(conn), "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "cuentas": _cuentas(conn), "limpieza": _limpieza(conn)}
     finally:
         conn.close()
 

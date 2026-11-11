@@ -7,6 +7,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-d', fecha: '2026-11-12',
+    items: [
+      'Puedes tener varias wallets: al anotar un traslado elige a cuál va, y la tarjeta «Dónde están tus sats» las reparte con sus nombres.',
+      'En «Avisos en este dispositivo» hay un botón para enviarte un aviso de prueba, y el recordatorio de compra trae el botón «Anotar compra».',
+      'Opcional: elige un monto y te recordamos cuando en el exchange haya más sats de ese monto, por si quieres moverlos a tu wallet (solo es un recordatorio).',
+      'Quien administra puede crear un enlace de solo lectura para ver tus compras en una hoja de cálculo (Google Sheets o Excel), y revocarlo cuando quiera.',
+    ],
+  },
+  {
     id: '2026-11-c', fecha: '2026-11-11',
     items: [
       'Ahora puedes ponerle etiquetas a tus compras («cumpleaños», «bono»…) y filtrar la lista por ellas.',

@@ -72,6 +72,8 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
                  "ayuda": "Si el respaldo diario falla."},
     "caida": {"rol": "admin", "defecto": True, "nombre": "Gran caída",
               "ayuda": "Una vez por caída, cuando BTC baja 15 % o más de su máximo de 30 días. Solo informa, no recomienda."},
+    "wallet": {"rol": "admin", "defecto": False, "nombre": "Retirar a tu wallet",
+               "ayuda": "Cuando en el exchange hay más sats del monto que tú elijas (abajo). Solo es un recordatorio de tu propio hábito."},
 }
 
 HORA_DESDE, HORA_HASTA = 8, 21  # los avisos no suenan de noche (hora de El Salvador)
@@ -159,6 +161,32 @@ def horario_dispositivo(conn: sqlite3.Connection, usuario_id: int, endpoint: Any
         return None
     f = conn.execute("SELECT prefs FROM suscripciones WHERE endpoint = ? AND usuario_id = ?", (endpoint, usuario_id)).fetchone()
     return horario_de(f[0]) if f else None
+
+
+UMBRAL_WALLET_MAX = 10**10  # 100 BTC: más que eso no es un recordatorio razonable
+
+
+def limpiar_umbral(v: Any) -> int:
+    """El monto (en sats) a partir del cual avisa «retirar a tu wallet»; 0 lo deja sin elegir. Entero de 0 a 10,000,000,000."""
+    if isinstance(v, bool) or not isinstance(v, int | float) or v != int(v) or not 0 <= int(v) <= UMBRAL_WALLET_MAX:
+        raise ValueError("Elige un monto en sats entre 0 y 10,000,000,000 (0 = sin avisar).")
+    return int(v)
+
+
+def umbral_de(prefs_json: str | None) -> int:
+    """El monto elegido en ese dispositivo (0 si no hay uno válido)."""
+    try:
+        crudas = json.loads(prefs_json or "{}")
+        return limpiar_umbral(crudas["umbral_wallet"]) if isinstance(crudas, dict) and "umbral_wallet" in crudas else 0
+    except (ValueError, KeyError):
+        return 0
+
+
+def umbral_dispositivo(conn: sqlite3.Connection, usuario_id: int, endpoint: Any) -> int | None:
+    if not isinstance(endpoint, str):
+        return None
+    f = conn.execute("SELECT prefs FROM suscripciones WHERE endpoint = ? AND usuario_id = ?", (endpoint, usuario_id)).fetchone()
+    return umbral_de(f[0]) if f else None
 
 
 # ------------------------------------------------------------------ claves VAPID
@@ -273,8 +301,10 @@ def guardar_prefs(conn: sqlite3.Connection, usuario_id: int, rol: str, endpoint:
     todas = {**prefs_efectivas(f["prefs"], rol), **nuevas}
     guardado = json.loads(f["prefs"] or "{}")
     contenido: dict[str, Any] = dict(todas)
-    if isinstance(guardado, dict) and "horario" in guardado:
-        contenido["horario"] = guardado["horario"]  # elegir categorías no borra el horario
+    if isinstance(guardado, dict):
+        for k, v in guardado.items():
+            if k not in CATEGORIAS:
+                contenido[k] = v  # elegir categorías no borra el horario ni el monto de «retirar a tu wallet»
     conn.execute("UPDATE suscripciones SET prefs = ? WHERE endpoint = ?", (json.dumps(contenido), endpoint))
     conn.commit()
     return todas
@@ -299,6 +329,25 @@ def guardar_horario(conn: sqlite3.Connection, usuario_id: int, endpoint: Any, ho
     return nuevo
 
 
+def guardar_umbral(conn: sqlite3.Connection, usuario_id: int, endpoint: Any, valor: Any) -> int:
+    """Guarda el monto de «retirar a tu wallet» de este dispositivo (validado)."""
+    nuevo = limpiar_umbral(valor)
+    f = conn.execute("SELECT prefs FROM suscripciones WHERE endpoint = ? AND usuario_id = ?", (endpoint, usuario_id)).fetchone() \
+        if isinstance(endpoint, str) else None
+    if not f:
+        raise LookupError("Este dispositivo no tiene los avisos activados.")
+    try:
+        contenido = json.loads(f["prefs"] or "{}")
+    except ValueError:
+        contenido = {}
+    if not isinstance(contenido, dict):
+        contenido = {}
+    contenido["umbral_wallet"] = nuevo
+    conn.execute("UPDATE suscripciones SET prefs = ? WHERE endpoint = ?", (json.dumps(contenido), endpoint))
+    conn.commit()
+    return nuevo
+
+
 def baja(conn: sqlite3.Connection, usuario_id: int, endpoint: Any) -> None:
     if isinstance(endpoint, str):
         conn.execute("DELETE FROM suscripciones WHERE endpoint = ? AND usuario_id = ?", (endpoint, usuario_id))
@@ -313,6 +362,41 @@ def _enviar_uno(sub: dict[str, Any], payload: str) -> None:
     webpush(
         subscription_info={"endpoint": sub["endpoint"], "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]}},
         data=payload, vapid_private_key=asegurar_clave(), vapid_claims={"sub": CONTACTO}, ttl=TTL, timeout=10)
+
+
+PRUEBA_ESPERA = 30  # segundos mínimos entre dos avisos de prueba al mismo dispositivo
+
+
+def probar(conn: sqlite3.Connection, usuario_id: int, endpoint: Any) -> dict[str, Any]:
+    """Un aviso de prueba, ya y solo a este dispositivo (idea 143). Devuelve `{ok, mensaje}` con el resultado en español.
+    LookupError si el dispositivo no tiene avisos; PermissionError (con los segundos que faltan) si se pidió hace menos de 30 s."""
+    f = conn.execute("SELECT id, endpoint, p256dh, auth FROM suscripciones WHERE endpoint = ? AND usuario_id = ?",
+                     (endpoint, usuario_id)).fetchone() if isinstance(endpoint, str) else None
+    if not f:
+        raise LookupError("Este dispositivo no tiene los avisos activados.")
+    clave = f"prueba_aviso:{f['id']}"
+    ahora_t = int(time.time())
+    previo = conn.execute("SELECT valor FROM meta WHERE clave = ?", (clave,)).fetchone()
+    if previo and ahora_t - int(previo[0]) < PRUEBA_ESPERA:
+        raise PermissionError(str(PRUEBA_ESPERA - (ahora_t - int(previo[0]))))
+    conn.execute("INSERT INTO meta (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor", (clave, str(ahora_t)))
+    conn.commit()
+    payload = json.dumps({"titulo": "Libro DCA", "cuerpo": "Aviso de prueba: si lo ves, los avisos funcionan en este dispositivo.",
+                          "etiqueta": "prueba", "url": "/"}, ensure_ascii=False)
+    try:
+        _enviar_uno(dict(f), payload)
+    except Exception as e:  # noqa: BLE001 — el resultado se traduce a un mensaje claro
+        codigo = _codigo(e)
+        if codigo in (404, 410):
+            conn.execute("DELETE FROM suscripciones WHERE id = ?", (f["id"],))
+            conn.commit()
+            return {"ok": False, "mensaje": "El servicio de avisos ya no reconoce este dispositivo (lo canceló o lo borró). Lo quité: vuelve a activar los avisos."}
+        if codigo is not None:
+            return {"ok": False, "mensaje": f"El servicio de avisos rechazó el mensaje (código {codigo}). Prueba apagar y volver a activar los avisos en este dispositivo."}
+        return {"ok": False, "mensaje": "El servidor no pudo hablar con el servicio de avisos. Revisa su conexión a internet y vuelve a intentarlo."}
+    conn.execute("UPDATE suscripciones SET ultimo_ok = ?, fallos = 0 WHERE id = ?", (int(time.time()), f["id"]))
+    conn.commit()
+    return {"ok": True, "mensaje": "Aviso enviado. Debería llegarte en unos segundos; si no aparece, mira los permisos de notificaciones del navegador."}
 
 
 def _codigo(e: Exception) -> int | None:
@@ -351,7 +435,8 @@ def destinatarios(conn: sqlite3.Connection, categoria: str) -> list[dict[str, An
             "SELECT s.id, s.endpoint, s.p256dh, s.auth, s.prefs FROM suscripciones s "
             "JOIN usuarios u ON u.id = s.usuario_id WHERE u.activo = 1 AND u.rol = ?", (rol,)):
         if prefs_efectivas(r["prefs"], rol).get(categoria):
-            out.append({"id": r["id"], "endpoint": r["endpoint"], "p256dh": r["p256dh"], "auth": r["auth"], "horario": horario_de(r["prefs"])})
+            out.append({"id": r["id"], "endpoint": r["endpoint"], "p256dh": r["p256dh"], "auth": r["auth"], "horario": horario_de(r["prefs"]),
+                        "umbral": umbral_de(r["prefs"])})
     return out
 
 
@@ -372,7 +457,10 @@ def enviar_ahora(conn: sqlite3.Connection, categoria: str, titulo: str, cuerpo: 
         destinos = destinatarios(conn, categoria)
     if not destinos:
         return 0
-    payload = json.dumps({"titulo": titulo, "cuerpo": cuerpo, "etiqueta": etiqueta, "url": "/"}, ensure_ascii=False)
+    datos: dict[str, Any] = {"titulo": titulo, "cuerpo": cuerpo, "etiqueta": etiqueta, "url": "/"}
+    if categoria == "recordatorio":
+        datos["acciones"] = ["anotar"]  # el botón «Anotar compra» de la notificación (Android y computadora; iPhone no los muestra)
+    payload = json.dumps(datos, ensure_ascii=False)
     ruta = _db_path(conn)
     if SINCRONO:
         return _despachar(ruta, destinos, payload)

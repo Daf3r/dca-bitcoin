@@ -358,7 +358,7 @@ try {
       await p.click('#dc-avisos-btn');
       await p.waitForTimeout(500);
     };
-    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'caida']], [LECTOR, 'lector', ['movimiento', 'hito']]]) {
+    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'caida', 'wallet']], [LECTOR, 'lector', ['movimiento', 'hito']]]) {
       const { ctx, p, consola } = await entrar(navegador, avisos, cuenta, {}, conPush);
       await abrirAvisos(p);
       ok(await p.locator('#dc-avisos').isVisible() && !(await p.locator('#dc-menu').isVisible()), `${quien}: se abre la vista de avisos`);
@@ -400,6 +400,39 @@ try {
       }
       await p.selectOption('#av-desde', '8');
       await p.waitForTimeout(300);
+      // Campamento 9: aviso de prueba (los dos) y monto de «retirar a tu wallet» (solo admin)
+      ok(await p.locator('#av-prueba-btn').isVisible(), `${quien}: con los avisos activados sale «Enviarme un aviso de prueba»`);
+      await p.click('#av-prueba-btn');
+      await p.waitForFunction(() => { const t = document.getElementById('av-prueba-res').textContent; return t && t !== 'Enviando…'; }, null, { timeout: 20000 });
+      const res1 = (await p.textContent('#av-prueba-res')).trim();
+      ok(res1.length > 20 && !(await p.locator('#av-prueba-btn').isDisabled()), `${quien}: la prueba dice qué pasó («${res1.slice(0, 60)}…») y el botón vuelve`);
+      await p.click('#av-prueba-btn');
+      await p.waitForFunction(() => document.getElementById('av-prueba-res').textContent.includes('Espera'), null, { timeout: 5000 });
+      ok((await p.textContent('#av-prueba-res')).includes('segundos'), `${quien}: pedir otra enseguida dice cuánto esperar`);
+      eq(await p.locator('#av-wallet').isVisible(), quien === 'admin', `${quien}: el monto de «retirar a tu wallet» solo lo ve el admin (con la categoría encendida)`);
+      if (quien === 'admin') {
+        ok((await p.textContent('#av-w-ayuda')).includes('Elige un monto'), 'admin: sin monto, la ayuda pide elegir uno');
+        await p.fill('#av-w-monto', '1500000');
+        await p.press('#av-w-monto', 'Tab');
+        await p.waitForTimeout(500);
+        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se guarda y se ve con comas');
+        ok((await p.textContent('#av-w-ayuda')).includes('1,500,000'), 'admin: la ayuda repite el monto');
+        await p.fill('#av-w-monto', 'mucho');
+        await p.press('#av-w-monto', 'Tab');
+        await p.waitForTimeout(300);
+        ok((await p.textContent('#av-error')).includes('solo números') && (await p.inputValue('#av-w-monto')) === '1,500,000', 'admin: un monto que no es número se rechaza y vuelve a lo guardado');
+        await p.click('#dc-avisos [data-cuenta="volver"]');
+        await p.click('#dc-avisos-btn');
+        await p.waitForTimeout(500);
+        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se recuerda');
+        ok(await p.locator('#av-w-monto').evaluate((el) => el.getBoundingClientRect().height >= 47.5), 'admin: el campo del monto mide 48 px');
+        await p.click('#av-lista input[data-cat="wallet"]');
+        await p.waitForTimeout(400);
+        ok(!(await p.locator('#av-wallet').isVisible()), 'admin: apagar la categoría esconde el monto');
+        await p.click('#av-lista input[data-cat="wallet"]');
+        await p.waitForTimeout(400);
+        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: y al volver a encenderla el monto sigue ahí');
+      }
       // Desactivar borra el dispositivo del servidor.
       await p.click('#av-interruptor');
       await p.waitForTimeout(700);
@@ -407,7 +440,153 @@ try {
       ok(!(await p.locator('#av-lista').isVisible()), `${quien}: sin casillas al apagar`);
       eq((await p.textContent('#av-error')).trim(), '', `${quien}: sin errores`);
       // El 400 es el horario inválido que se probó a propósito (una ventana de una hora).
-      eq(consola.filter((c) => !/400 \(BAD REQUEST\)/.test(c)), [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
+      eq(consola.filter((c) => !/400 \(BAD REQUEST\)|429/.test(c)), [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
+      await ctx.close();
+    }
+    // El botón «Anotar compra» del recordatorio abre la app en #anotar (o le manda un mensaje si ya estaba abierta): solo el admin llega a la hoja.
+    for (const [cuenta, quien] of [[ADMIN, 'admin'], [LECTOR, 'lector']]) {
+      const { ctx, p } = await entrar(navegador, avisos, cuenta);
+      if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
+      await p.waitForTimeout(500);
+      if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+      await p.evaluate(() => { location.hash = '#anotar'; });
+      await p.waitForTimeout(1200);
+      eq(await p.evaluate(() => !document.getElementById('hoja').hidden), quien === 'admin', `${quien}: #anotar ${quien === 'admin' ? 'abre' : 'no abre'} la hoja de anotar`);
+      eq(await p.evaluate(() => location.hash), '', `${quien}: y quita #anotar de la dirección`);
+      if (quien === 'admin') {
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+        await p.evaluate(() => navigator.serviceWorker?.dispatchEvent?.(new MessageEvent('message', { data: { tipo: 'anotar' } })));
+        await p.waitForTimeout(800);
+        ok(await p.evaluate(() => !document.getElementById('hoja').hidden), 'admin: el mensaje del service worker también abre la hoja');
+      }
+      await ctx.close();
+    }
+    // Varias wallets (idea 156): crear una al anotar un traslado, elegir entre ellas, validar por wallet, ver el reparto y archivarla
+    {
+      const wal = await servidor('hoy');
+      try {
+        const { ctx, p, consola } = await entrar(navegador, wal, ADMIN);
+        if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+        const saldoT = (await datos(p, '/api/compras')).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+        const parte = Math.floor(saldoT / 4);
+        await p.waitForTimeout(6000);
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.click('#h-tipo button[data-tipo="traslado"]');
+        ok(await p.locator('#h-wallet-mas').isVisible() && !(await p.locator('#h-wallet').isVisible()), 'sin más wallets, la hoja ofrece «Usar otra wallet…» y no un selector');
+        await p.click('#h-wallet-mas');
+        ok(await p.locator('#h-wallet-nueva').isVisible(), 'al pedirla sale el campo del nombre');
+        await p.fill('#h-sats', String(parte));
+        ok(await p.locator('#guardar').isDisabled(), 'sin nombre no se puede guardar el traslado a la wallet nueva');
+        await p.fill('#h-wallet-nueva', 'Ledger');
+        ok(/Ledger/.test(await p.textContent('#hoja-calc')) && !(await p.locator('#guardar').isDisabled()), 'con el nombre, la hoja habla de «Ledger»');
+        ok(await p.locator('#h-wallet-nueva').evaluate((el) => el.getBoundingClientRect().height >= 47.5), 'el campo del nombre mide 48 px');
+        await p.click('#guardar');
+        await p.waitForTimeout(1800);
+        const ws = await datos(p, '/api/wallets');
+        const tl = await datos(p, '/api/traslados');
+        eq([ws.length, ws[0]?.nombre, tl.length, tl[0]?.wallet_id === ws[0]?.id], [1, 'Ledger', 1, true], 'se creó la wallet y el traslado va a ella');
+        ok(/Ledger/.test(await p.innerText('#ub-dona-text, #ub-lista').catch(() => '')) || /Ledger/.test(await p.innerText('#ubicacion')), 'la tarjeta de dónde están tus sats nombra la wallet');
+        ok(/en Ledger/.test(await p.getAttribute('#ub-dona', 'aria-label')), 'y su texto accesible también');
+        ok(/«Ledger»/.test(await p.innerText('#lista .fila[data-tras]')), 'la lista dice a qué wallet fue el traslado');
+        // Con una wallet extra aparece el selector; cada wallet se valida por separado
+        await p.waitForTimeout(6000);
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.click('#h-tipo button[data-tipo="traslado"]');
+        eq(await p.$$eval('#h-wallet option', (os) => os.map((o) => o.textContent)), ['Mi wallet', 'Ledger', 'Otra wallet nueva…'], 'el selector ofrece la principal, Ledger y «Otra wallet nueva…»');
+        await p.click('#h-sentido button[data-sentido="a_exchange"]');
+        await p.fill('#h-sats', '1');
+        ok(/No tienes tantos sats en tu wallet/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'de «Mi wallet» no se puede sacar lo que no tiene, aunque Ledger sí tenga');
+        await p.selectOption('#h-wallet', { label: 'Ledger' });
+        await p.fill('#h-sats', String(parte + 1));
+        ok(/No tienes tantos sats en «Ledger»/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'ni de Ledger más de lo que tiene, con su nombre');
+        await p.fill('#h-sats', String(Math.floor(parte / 2)));
+        ok(!(await p.locator('#guardar').isDisabled()), 'lo que sí tiene se puede sacar');
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+        // Un traslado a la principal: la dona reparte entre las dos
+        await p.waitForTimeout(6000);
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.click('#h-tipo button[data-tipo="traslado"]');
+        await p.click('#h-sentido button[data-sentido="a_wallet"]'); // el borrador de la hoja puede traer el sentido de antes
+        await p.fill('#h-sats', String(parte));
+        await p.click('#guardar');
+        await p.waitForTimeout(1800);
+        eq(await p.$$eval('#ubicacion .ub-lista > div', (ds) => ds.map((d) => d.querySelector('dt').textContent.trim())), ['Mi wallet', 'Ledger', 'En el exchange'], 'la leyenda tiene una fila por wallet y una del exchange');
+        eq(await p.locator('#ub-dona-svg circle').count(), 3, 'la dona tiene un arco por wallet (más la pista)');
+        // «Tus datos»: archivar solo si está vacía
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        await p.click('#dc-datos-btn');
+        await p.waitForTimeout(500);
+        ok(await p.locator('#dd-wallets').isVisible() && (await p.textContent('#dd-wallets-lista')).includes('Ledger'), 'en «Tus datos» salen las wallets');
+        ok(await p.locator('#dd-wallets-lista .ses-cerrar').isDisabled(), 'con sats no se puede archivar');
+        await p.evaluate(async ({ sats, id }) => {
+          await fetch('/api/traslados', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), sats, sentido: 'a_exchange', wallet_id: id }) });
+        }, { sats: parte, id: ws[0].id });
+        await p.click('#dc-datos [data-cuenta="volver"]');
+        await p.click('#dc-datos-btn').catch(() => {});
+        await p.reload({ waitUntil: 'networkidle' });
+        await p.waitForTimeout(3200);
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        await p.click('#dc-datos-btn');
+        await p.waitForTimeout(500);
+        ok(!(await p.locator('#dd-wallets-lista .ses-cerrar').isDisabled()), 'vacía, sí se puede archivar');
+        await p.click('#dd-wallets-lista .ses-cerrar');
+        await p.waitForTimeout(700);
+        ok((await p.textContent('#dd-wallets-lista')).includes('archivadas') && (await datos(p, '/api/wallets'))[0].archivada === true, 'se archiva y el servidor lo confirma');
+        eq(consola.filter((c) => !/400|409/.test(c)), [], `consola limpia con varias wallets: ${consola.join(' | ')}`);
+        await ctx.close();
+      } finally {
+        wal.parar();
+      }
+    }
+    // Enlace de solo lectura para hojas de cálculo (idea 159): solo el admin; el token se ve una vez; revocar lo apaga.
+    {
+      const { ctx, p, consola } = await entrar(navegador, avisos, ADMIN, { permissions: ['clipboard-read', 'clipboard-write'] });
+      if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+      await p.click('#cuenta-btn');
+      await p.waitForTimeout(250);
+      ok(await p.locator('#dc-enlaces-btn').isVisible(), 'admin: «Tu cuenta» ofrece el enlace para la hoja de cálculo');
+      await p.click('#dc-enlaces-btn');
+      await p.waitForTimeout(500);
+      ok(await p.locator('#dc-enlaces').isVisible() && (await p.textContent('#en-cupo')).includes('0 de 5'), 'admin: se abre la vista y dice 0 de 5');
+      ok((await p.textContent('#dc-enlaces')).includes('Es como una llave'), 'admin: la advertencia de la llave está a la vista');
+      await p.click('#en-crear');
+      await p.waitForTimeout(300);
+      ok((await p.textContent('#en-error')).includes('nombre'), 'admin: sin nombre no crea y lo dice');
+      await p.fill('#en-nombre', 'Mi hoja');
+      await p.click('#en-crear');
+      await p.waitForSelector('#en-nuevo:not([hidden])', { timeout: 5000 });
+      const url = await p.inputValue('#en-nuevo input[aria-label="Enlace de compras"]');
+      ok(/\/api\/token\/[\w-]{40,}\/compras\.csv$/.test(url), `admin: se muestra el enlace completo («${url.slice(0, 50)}…»)`);
+      ok((await p.textContent('#en-nuevo')).includes('no se vuelve a mostrar') && (await p.textContent('#en-lista')).includes('Mi hoja') && (await p.textContent('#en-cupo')).includes('1 de 5'), 'admin: avisa que es la única vez y aparece en la lista');
+      ok(await p.locator('#en-nuevo .ses-cerrar').first().evaluate((b) => b.getBoundingClientRect().height >= 47.5), 'admin: «Copiar» mide 48 px');
+      await p.click('#en-nuevo .ses-cerrar >> nth=0');
+      await p.waitForTimeout(400);
+      eq(await p.evaluate(() => navigator.clipboard.readText()), url, 'admin: «Copiar» deja el enlace en el portapapeles');
+      // Quien tenga el enlace lee el CSV sin sesión (otra pestaña sin cookies)
+      const ctx2 = await navegador.newContext();
+      const r2 = await ctx2.request.get(url);
+      ok(r2.status() === 200 && (await r2.text()).startsWith('fecha,monto_usd'), 'el enlace da el CSV sin iniciar sesión');
+      await p.click('#en-lista .ses-cerrar');
+      await p.waitForTimeout(600);
+      ok((await p.textContent('#en-lista')).includes('Revocado') && (await p.textContent('#en-cupo')).includes('0 de 5'), 'admin: revocar lo marca como revocado');
+      eq((await ctx2.request.get(url)).status(), 404, 'el enlace revocado ya no funciona');
+      await ctx2.close();
+      eq(consola.filter((c) => !/404/.test(c)), [], `consola limpia con los enlaces: ${consola.join(' | ')}`);
+      await ctx.close();
+    }
+    {
+      const { ctx, p } = await entrar(navegador, avisos, LECTOR);
+      if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
+      await p.click('#cuenta-btn');
+      await p.waitForTimeout(250);
+      ok(!(await p.locator('#dc-enlaces-btn').isVisible()), 'lector: no ve el enlace para la hoja de cálculo');
       await ctx.close();
     }
     // Al entrar se ofrece activar los avisos, una sola vez por dispositivo; el permiso se pide en el toque del botón.

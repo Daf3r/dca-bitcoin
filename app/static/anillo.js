@@ -37,4 +37,5 @@ export function pintarAnillo(svg, arcos) {
     c.style.setProperty('stroke-dasharray', `${largo.toFixed(2)} ${(CIRC - largo).toFixed(2)}`);
     c.style.setProperty('stroke-dashoffset', (-desde * CIRC).toFixed(2));
   });
+  while (svg.children.length > arcos.length + 1) svg.lastChild.remove(); // si hay menos arcos que antes (una wallet menos)
 }

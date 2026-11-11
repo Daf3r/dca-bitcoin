@@ -29,6 +29,7 @@
  * @property {string|null} [txid]
  * @property {string|null} [nota]
  * @property {number} [creado]
+ * @property {number|null} [wallet_id] la wallet que recibe o entrega (null = «Mi wallet», la principal)
  */
 /**
  * Un movimiento dentro de `resumen`: lo mismo más lo que va acumulando.
@@ -610,15 +611,28 @@ export function costoVsPromedio(R, historico, vivo, hoy = hoyISO()) {
  * supera el saldo (si vendiste o gastaste más de lo que quedaba en el exchange, se recorta).
  */
 export const walletNeto = (traslados) => (traslados ?? []).reduce((a, t) => a + (t.sentido === 'a_exchange' ? -t.sats : t.sats), 0);
+/** Lo que hay en una wallet concreta (`id` 0 o null = «Mi wallet», la principal), neto de lo que volvió al exchange. */
+export const walletNetoDe = (traslados, id = 0) => walletNeto((traslados ?? []).filter((t) => (t.wallet_id ?? 0) === (id ?? 0)));
+/** El nombre de una wallet: la principal es «Mi wallet»; una que ya no está en la lista, «otra wallet». */
+export const nombreWallet = (wallets, id) => ((id ?? 0) === 0 ? 'Mi wallet' : ((wallets ?? []).find((w) => w.id === id)?.nombre ?? 'otra wallet'));
 /**
  * @param {Traslado[]|null|undefined} traslados
  * @param {number} saldo sats que tienes en total
- * @returns {{ wallet: number, exchange: number, pctWallet: number, hay: boolean }}
+ * @param {{ id: number, nombre: string }[]} [wallets] las wallets además de la principal (para ponerles nombre)
+ * @returns {{ wallet: number, exchange: number, pctWallet: number, hay: boolean, partes: { id: number, nombre: string, sats: number }[] }}
  */
-export function ubicacionSats(traslados, saldo) {
-  const wallet = Math.max(0, Math.min(saldo, walletNeto(traslados)));
+export function ubicacionSats(traslados, saldo, wallets = []) {
+  // Cada wallet cuenta lo suyo (nunca negativo) y, entre todas, nunca más que el saldo; si sobra, se recorta en orden (la principal primero).
+  const ids = [...new Set((traslados ?? []).map((t) => t.wallet_id ?? 0))].sort((a, b) => a - b);
+  let resto = Math.max(0, saldo);
+  const partes = ids.map((id) => {
+    const sats = Math.min(resto, Math.max(0, walletNetoDe(traslados, id)));
+    resto -= sats;
+    return { id, nombre: nombreWallet(wallets, id), sats };
+  });
+  const wallet = partes.reduce((a, p) => a + p.sats, 0);
   const exchange = Math.max(0, saldo - wallet);
-  return { wallet, exchange, pctWallet: saldo > 0 ? (wallet / saldo) * 100 : 0, hay: (traslados ?? []).length > 0 };
+  return { wallet, exchange, pctWallet: saldo > 0 ? (wallet / saldo) * 100 : 0, hay: (traslados ?? []).length > 0, partes };
 }
 
 /** Índice del punto de la serie para una fecha; si cae después de la última vela, la última. */

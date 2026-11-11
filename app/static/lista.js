@@ -1,4 +1,4 @@
-import { agruparPorMes, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
+import { agruparPorMes, nombreWallet, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
 import { avisar } from './avisar.js';
 import { copiarTexto } from './copiar.js';
 import { ico, ilustracion } from './iconos.js';
@@ -34,6 +34,11 @@ function htmlExtras(m) {
   if (esAdmin() && m.tipo !== 'traslado' && m.nota) partes.push(`<button type="button" class="f-nota-b" data-id="${m.id}">${ico('lapiz')} Editar nota</button>`);
   return partes.length ? `<div class="f-txw">${partes.join('')}</div>` : '';
 }
+/** «Traslado a tu wallet»; con más de una wallet, a cuál («a «Ledger»»; la principal, «Mi wallet»). */
+function textoTraslado(t, aW) {
+  const w = !S.wallets.length && !t.wallet_id ? 'tu wallet' : (t.wallet_id ? `«${esc(nombreWallet(S.wallets, t.wallet_id))}»` : 'Mi wallet');
+  return aW ? `Traslado a ${w}` : `Traslado de ${w} al exchange`;
+}
 /** Una fila de traslado: no es compra ni venta, solo mueve sats entre el exchange y tu wallet. */
 function htmlTraslado(m) {
   const t = m.ref;
@@ -43,7 +48,7 @@ function htmlTraslado(m) {
   return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-tras="${t.id}" data-tipo="traslado">` +
     (esAdmin() ? '<span class="sr">Ver el traslado del </span>' : '') + `<span class="f-fecha">${fechaCorta(t.fecha)}</span>` +
     `<span class="f-sats">${ico('traslado')} ${entero(t.sats)} <small>sats</small></span>` +
-    `<span class="f-det">${aW ? 'Traslado a tu wallet' : 'Traslado de tu wallet al exchange'}${t.nota ? ` · ${esc(t.nota)}` : ''}</span>` +
+    `<span class="f-det">${textoTraslado(t, aW)}${t.nota ? ` · ${esc(t.nota)}` : ''}</span>` +
     `<span class="f-var"></span></${cierre}>${htmlExtras(m)}</li>`;
 }
 function htmlFila(m) {

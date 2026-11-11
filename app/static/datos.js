@@ -14,9 +14,11 @@ export async function actualizarSuave() {
   try {
     const compras = (await api('/api/compras')).map(normalizar);
     const traslados = await api('/api/traslados');
-    if (JSON.stringify(compras) === JSON.stringify(S.compras) && JSON.stringify(traslados) === JSON.stringify(S.traslados)) return;
+    const wallets = await api('/api/wallets').catch(() => S.wallets);
+    if (JSON.stringify(compras) === JSON.stringify(S.compras) && JSON.stringify(traslados) === JSON.stringify(S.traslados) && JSON.stringify(wallets) === JSON.stringify(S.wallets)) return;
     S.compras = compras;
     S.traslados = traslados;
+    S.wallets = wallets;
     pintar({ montana: true });
   } catch { /* en silencio */ }
 }
@@ -26,6 +28,7 @@ export async function cargarCompras() {
   try {
     S.compras = (await api('/api/compras')).map(normalizar);
     S.traslados = await api('/api/traslados').catch(() => S.traslados); // dónde están los sats; si falla, lo demás sigue
+    S.wallets = await api('/api/wallets').catch(() => S.wallets);
     S.errorCarga = false;
     if (teniaError) avisar(''); // solo se quita el aviso de error propio: un «Deshacer» o un «Reconectando…» a la vista se quedan
   } catch (e) {
