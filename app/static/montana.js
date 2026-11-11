@@ -515,7 +515,7 @@ function etiquetar(yo) {
     const dx = (cima ? 26 : 14) * e;
     const fuera = { x: lado > 0 || cima ? xc + dx : xc - dx - w, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'start' : 'end', tx: lado > 0 || cima ? xc + dx + 3 : xc - dx - 3 };
     const otro = { x: lado > 0 || cima ? xc - dx - w : xc + dx, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'end' : 'start', tx: lado > 0 || cima ? xc - dx - 3 : xc + dx + 3 };
-    const encima = { x: xc - w / 2, y: p.y - (cima ? 70 : 46) * e, w, h: 20, anclaje: 'middle', tx: xc };
+    const encima = { x: xc - w / 2, y: p.y - (cima ? 62 : 46) * e, w, h: 20, anclaje: 'middle', tx: xc };
     const abajo = { x: xc - w / 2, y: p.y + 6 * e, w, h: 20, anclaje: 'middle', tx: xc };
     const opciones = cima ? [encima, fuera, otro] : [fuera, otro, encima, abajo];
     const b = opciones.find((o) => !choca(o, m));
