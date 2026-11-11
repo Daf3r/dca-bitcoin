@@ -206,6 +206,11 @@ try {
       await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(400);
       await p.click('#dc-sesiones-btn'); await p.waitForSelector('#ses-lista .sis-fila'); await p.waitForTimeout(400);
       await auditar(p, `sesiones abiertas ${esquema}`);
+      await p.click('#dc-sesiones [data-cuenta="volver"]'); await p.waitForTimeout(400);
+      await p.click('#dc-enlaces-btn'); await p.waitForTimeout(500);
+      await auditar(p, `enlace para la hoja de cálculo ${esquema}`);
+      await p.fill('#en-nombre', 'Mi hoja'); await p.click('#en-crear'); await p.waitForSelector('#en-nuevo:not([hidden])'); await p.waitForTimeout(500);
+      await auditar(p, `enlace para la hoja de cálculo, recién creado ${esquema}`);
       await ctx.close();
       const m = await nuevo(mil, ADMIN, conPush);
       await cerrarOferta(m.p);

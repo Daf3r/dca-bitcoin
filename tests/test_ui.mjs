@@ -462,6 +462,50 @@ try {
       }
       await ctx.close();
     }
+    // Enlace de solo lectura para hojas de cálculo (idea 159): solo el admin; el token se ve una vez; revocar lo apaga.
+    {
+      const { ctx, p, consola } = await entrar(navegador, avisos, ADMIN, { permissions: ['clipboard-read', 'clipboard-write'] });
+      if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+      await p.click('#cuenta-btn');
+      await p.waitForTimeout(250);
+      ok(await p.locator('#dc-enlaces-btn').isVisible(), 'admin: «Tu cuenta» ofrece el enlace para la hoja de cálculo');
+      await p.click('#dc-enlaces-btn');
+      await p.waitForTimeout(500);
+      ok(await p.locator('#dc-enlaces').isVisible() && (await p.textContent('#en-cupo')).includes('0 de 5'), 'admin: se abre la vista y dice 0 de 5');
+      ok((await p.textContent('#dc-enlaces')).includes('Es como una llave'), 'admin: la advertencia de la llave está a la vista');
+      await p.click('#en-crear');
+      await p.waitForTimeout(300);
+      ok((await p.textContent('#en-error')).includes('nombre'), 'admin: sin nombre no crea y lo dice');
+      await p.fill('#en-nombre', 'Mi hoja');
+      await p.click('#en-crear');
+      await p.waitForSelector('#en-nuevo:not([hidden])', { timeout: 5000 });
+      const url = await p.inputValue('#en-nuevo input[aria-label="Enlace de compras"]');
+      ok(/\/api\/token\/[\w-]{40,}\/compras\.csv$/.test(url), `admin: se muestra el enlace completo («${url.slice(0, 50)}…»)`);
+      ok((await p.textContent('#en-nuevo')).includes('no se vuelve a mostrar') && (await p.textContent('#en-lista')).includes('Mi hoja') && (await p.textContent('#en-cupo')).includes('1 de 5'), 'admin: avisa que es la única vez y aparece en la lista');
+      ok(await p.locator('#en-nuevo .ses-cerrar').first().evaluate((b) => b.getBoundingClientRect().height >= 47.5), 'admin: «Copiar» mide 48 px');
+      await p.click('#en-nuevo .ses-cerrar >> nth=0');
+      await p.waitForTimeout(400);
+      eq(await p.evaluate(() => navigator.clipboard.readText()), url, 'admin: «Copiar» deja el enlace en el portapapeles');
+      // Quien tenga el enlace lee el CSV sin sesión (otra pestaña sin cookies)
+      const ctx2 = await navegador.newContext();
+      const r2 = await ctx2.request.get(url);
+      ok(r2.status() === 200 && (await r2.text()).startsWith('fecha,monto_usd'), 'el enlace da el CSV sin iniciar sesión');
+      await p.click('#en-lista .ses-cerrar');
+      await p.waitForTimeout(600);
+      ok((await p.textContent('#en-lista')).includes('Revocado') && (await p.textContent('#en-cupo')).includes('0 de 5'), 'admin: revocar lo marca como revocado');
+      eq((await ctx2.request.get(url)).status(), 404, 'el enlace revocado ya no funciona');
+      await ctx2.close();
+      eq(consola.filter((c) => !/404/.test(c)), [], `consola limpia con los enlaces: ${consola.join(' | ')}`);
+      await ctx.close();
+    }
+    {
+      const { ctx, p } = await entrar(navegador, avisos, LECTOR);
+      if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
+      await p.click('#cuenta-btn');
+      await p.waitForTimeout(250);
+      ok(!(await p.locator('#dc-enlaces-btn').isVisible()), 'lector: no ve el enlace para la hoja de cálculo');
+      await ctx.close();
+    }
     // Al entrar se ofrece activar los avisos, una sola vez por dispositivo; el permiso se pide en el toque del botón.
     {
       const { ctx, p } = await entrar(navegador, avisos, ADMIN, {}, conPush);
