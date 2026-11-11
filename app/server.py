@@ -204,6 +204,18 @@ def _m_sesiones_compartida(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE sesiones ADD COLUMN compartida INTEGER NOT NULL DEFAULT 0")
 
 
+def _m_tokens_api(conn: sqlite3.Connection) -> None:
+    # Enlaces de solo lectura para hojas de cálculo (idea 159): solo se guarda el SHA-256 del token, nunca el token.
+    conn.execute("""CREATE TABLE IF NOT EXISTS tokens_api (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        hash       TEXT    NOT NULL UNIQUE,
+        nombre     TEXT    NOT NULL,
+        creado     INTEGER NOT NULL,
+        ultimo_uso INTEGER,
+        revocado   INTEGER
+    )""")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -214,6 +226,7 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (7, "metricas por día y ruta", _m_metricas),
     (8, "errores_js (errores del navegador)", _m_errores_js),
     (9, "sesiones.compartida", _m_sesiones_compartida),
+    (10, "tokens_api (enlaces de solo lectura para hojas de cálculo)", _m_tokens_api),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -817,6 +830,8 @@ def exigir_sesion() -> Any:
     ruta = request.path
     if ruta in PUBLICAS or (request.method in ("GET", "HEAD") and RECURSO_PUBLICO.fullmatch(ruta)):
         return None
+    if request.method in ("GET", "HEAD") and ruta.startswith("/api/token/"):
+        return None  # el enlace de solo lectura se autentica con su propio token (ver `leer_con_token`), no con la cookie
     api = ruta.startswith("/api/")
     conn = db()
     if not auth.hay_usuarios(conn):
@@ -1483,6 +1498,103 @@ def descargar_todo() -> Any:
             z.writestr(info, texto.encode("utf-8"))
     return Response(buf.getvalue(), mimetype="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="libro-dca-{date.today().isoformat()}.zip"'})
+
+
+# --- Enlaces de solo lectura para hojas de cálculo (idea 159)
+# Un enlace `…/api/token/<token>/compras.csv` que `=IMPORTDATA("…")` de Google Sheets (o cualquier programa) puede leer sin iniciar sesión.
+# El token son 32 bytes al azar, se enseña UNA vez al crearlo y en la base solo queda su SHA-256. Solo da los dos CSV (nada de escribir, cuentas ni
+# historial). Hay un máximo de 5 activos; el admin los revoca cuando quiera. OJO: la dirección completa viaja en la URL, así que puede quedar en los
+# registros de Caddy o de Cloudflare: es una llave, no la pegues en chats ni en documentos que otros vean.
+MAX_TOKENS = 5
+_TOKEN_FALLOS: list[float] = []  # instantes de los últimos intentos con un token que no existe (por proceso)
+TOKEN_FALLOS_MAX = 30  # por minuto y por proceso
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def crear_token(conn: sqlite3.Connection, nombre: str, usuario: str, ip: str | None = None) -> tuple[int, str]:
+    nombre = " ".join(nombre.split())[:40]
+    if not nombre:
+        raise ValueError("Ponle un nombre al enlace (por ejemplo «Mi hoja de Google»).")
+    if conn.execute("SELECT COUNT(*) FROM tokens_api WHERE revocado IS NULL").fetchone()[0] >= MAX_TOKENS:
+        raise ValueError(f"Ya hay {MAX_TOKENS} enlaces activos. Revoca alguno antes de crear otro.")
+    token = secrets.token_urlsafe(32)
+    cur = conn.execute("INSERT INTO tokens_api (hash, nombre, creado) VALUES (?, ?, ?)", (_hash_token(token), nombre, int(time.time())))
+    auth.auditar(conn, usuario, "token_creado", "token", cur.lastrowid, None, {"nombre": nombre}, ip)
+    conn.commit()
+    return int(cur.lastrowid or 0), token
+
+
+def _token_activo(conn: sqlite3.Connection, token: str) -> sqlite3.Row | None:
+    if not re.fullmatch(r"[A-Za-z0-9_-]{20,64}", token):
+        return None
+    return conn.execute("SELECT id, nombre FROM tokens_api WHERE hash = ? AND revocado IS NULL", (_hash_token(token),)).fetchone()
+
+
+@app.get("/api/token/<token>/<archivo>")
+def leer_con_token(token: str, archivo: str) -> Any:
+    if archivo not in ("compras.csv", "traslados.csv"):
+        return jsonify(error="No existe."), 404
+    ahora = time.time()
+    _TOKEN_FALLOS[:] = [t for t in _TOKEN_FALLOS if ahora - t < 60]
+    if len(_TOKEN_FALLOS) >= TOKEN_FALLOS_MAX:
+        resp = jsonify(error="Demasiados intentos. Espera un minuto.")
+        resp.headers["Retry-After"] = "60"
+        return resp, 429
+    conn = db()
+    if not auth.hay_usuarios(conn):
+        return jsonify(error="No existe."), 404
+    fila = _token_activo(conn, token)
+    if not fila:
+        _TOKEN_FALLOS.append(ahora)
+        return jsonify(error="No existe."), 404  # el mismo mensaje con un token mal escrito, revocado o inexistente
+    conn.execute("UPDATE tokens_api SET ultimo_uso = ? WHERE id = ?", (int(ahora), fila["id"]))
+    conn.commit()
+    texto = csv_compras(conn) if archivo == "compras.csv" else csv_traslados(conn)
+    return Response(texto, mimetype="text/csv", headers={"X-Robots-Tag": "noindex", "Referrer-Policy": "no-referrer"})
+
+
+def _solo_admin() -> Any:
+    return None if g.usuario["rol"] == "admin" else (jsonify(error="Solo el admin maneja estos enlaces."), 403)
+
+
+@app.get("/api/tokens")
+def listar_tokens() -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    filas = db().execute("SELECT id, nombre, creado, ultimo_uso, revocado FROM tokens_api ORDER BY id DESC LIMIT 50").fetchall()
+    return jsonify([{k: f[k] for k in ("id", "nombre", "creado", "ultimo_uso", "revocado")} for f in filas])
+
+
+@app.post("/api/tokens")
+def nuevo_token() -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("nombre"), str):
+        return jsonify(error="Ponle un nombre al enlace."), 400
+    try:
+        tid, token = crear_token(db(), body["nombre"], quien(), auth.ip_resumida(ip_real()))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    # El token se muestra esta única vez: no se puede volver a pedir.
+    return jsonify(id=tid, token=token, rutas={"compras": f"/api/token/{token}/compras.csv", "traslados": f"/api/token/{token}/traslados.csv"}), 201
+
+
+@app.delete("/api/tokens/<int:tid>")
+def revocar_token(tid: int) -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    conn = db()
+    f = conn.execute("SELECT id, nombre FROM tokens_api WHERE id = ? AND revocado IS NULL", (tid,)).fetchone()
+    if not f:
+        return jsonify(error="Ese enlace no existe o ya estaba revocado."), 404
+    conn.execute("UPDATE tokens_api SET revocado = ? WHERE id = ?", (int(time.time()), tid))
+    auth.auditar(conn, quien(), "token_revocado", "token", tid, {"nombre": f["nombre"]}, None, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return "", 204
 
 
 @app.post("/api/traslados/import")

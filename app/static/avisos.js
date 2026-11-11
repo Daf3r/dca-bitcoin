@@ -100,6 +100,18 @@ export function montarAvisos(api) {
     $('av-rec-l').hidden = !conRecordatorio;
   }
 
+  // «Retirar a tu wallet» (idea 146): el monto de este dispositivo; solo se muestra con esa categoría encendida (solo la tiene el admin).
+  let umbral = 0;
+  const conComas = (n) => (n > 0 ? n.toLocaleString('en-US') : '');
+  function pintarWallet(estado, activo) {
+    const enc = !!activo && estado.categorias.some((c) => c.id === 'wallet' && c.activo);
+    $('av-wallet').hidden = !enc;
+    if (!enc) return;
+    umbral = estado.umbral_wallet ?? 0;
+    $('av-w-monto').value = conComas(umbral);
+    $('av-w-ayuda').textContent = umbral > 0 ? `Te aviso cuando el exchange pase de ${conComas(umbral)} sats.` : 'Elige un monto para que el aviso funcione.';
+  }
+
   async function refrescar() {
     error();
     const motivo = motivoNoDisponible();
@@ -120,6 +132,9 @@ export function montarAvisos(api) {
     $('av-estado').textContent = activo ? 'Los avisos están activados en este dispositivo.' : 'Los avisos están apagados en este dispositivo.';
     pintarCategorias(activo ? estado.categorias : []);
     pintarHorario(activo ? estado.horario : null, activo && estado.categorias.some((c) => c.id === 'recordatorio'));
+    pintarWallet(estado, activo);
+    $('av-prueba').hidden = !activo;
+    $('av-prueba-res').textContent = '';
   }
 
   async function activar() {
@@ -194,11 +209,44 @@ export function montarAvisos(api) {
     if (!cb || !sub) return;
     error();
     try {
-      await api('/api/push/prefs', { metodo: 'PUT', cuerpo: { endpoint: sub.endpoint, prefs: { [cb.dataset.cat]: cb.checked } } });
+      const r = await api('/api/push/prefs', { metodo: 'PUT', cuerpo: { endpoint: sub.endpoint, prefs: { [cb.dataset.cat]: cb.checked } } });
+      if (cb.dataset.cat === 'wallet') pintarWallet(r, true);
     } catch (err) {
       cb.checked = !cb.checked;
       error(err.message || 'No se pudo guardar.');
     }
+  });
+
+  $('av-w-monto').addEventListener('change', async () => {
+    if (!sub) return;
+    error();
+    const texto = $('av-w-monto').value.replace(/[,\s]/g, '');
+    const n = texto === '' ? 0 : Number(texto);
+    if (!/^\d*$/.test(texto) || !Number.isSafeInteger(n)) { $('av-w-monto').value = conComas(umbral); error('Escribe solo números (sats), por ejemplo 1,000,000.'); return; }
+    try {
+      const r = await api('/api/push/prefs', { metodo: 'PUT', cuerpo: { endpoint: sub.endpoint, umbral_wallet: n } });
+      pintarWallet(r, true);
+    } catch (err) {
+      $('av-w-monto').value = conComas(umbral); // se vuelve a lo guardado
+      error(err.message || 'No se pudo guardar el monto.');
+    }
+  });
+
+  // Aviso de prueba (idea 143): llega solo a este dispositivo y dice, en palabras, qué falló si no llega.
+  $('av-prueba-btn').addEventListener('click', async (e) => {
+    const b = e.currentTarget;
+    if (!sub) return;
+    b.disabled = true;
+    error();
+    $('av-prueba-res').textContent = 'Enviando…';
+    try {
+      const r = await api('/api/push/prueba', { metodo: 'POST', cuerpo: { endpoint: sub.endpoint } });
+      $('av-prueba-res').textContent = r.mensaje;
+      if (!r.ok) await refrescar().then(() => { $('av-prueba-res').textContent = r.mensaje; });
+    } catch (err) {
+      $('av-prueba-res').textContent = err.message || 'No se pudo enviar la prueba.';
+    }
+    b.disabled = false;
   });
 
   $('av-horario').addEventListener('change', async () => {

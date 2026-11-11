@@ -168,6 +168,13 @@ try {
       await auditar(p, `avisos apagados ${esquema}`);
       await p.click('#av-interruptor'); await p.waitForTimeout(900);
       await auditar(p, `avisos activados ${esquema}`);
+      // campamento 9: con «Retirar a tu wallet» encendida (monto y aviso de prueba) y con la prueba contestada
+      await p.click('#av-lista input[data-cat="wallet"]'); await p.waitForTimeout(400);
+      await p.fill('#av-w-monto', '1500000'); await p.press('#av-w-monto', 'Tab'); await p.waitForTimeout(400);
+      await auditar(p, `avisos con monto de wallet ${esquema}`);
+      await p.click('#av-prueba-btn');
+      await p.waitForFunction(() => { const t = document.getElementById('av-prueba-res').textContent; return t && t !== 'Enviando…'; }, null, { timeout: 20000 });
+      await auditar(p, `aviso de prueba contestado ${esquema}`);
       await ctx.close();
     }
     { // alto contraste y letra muy grande: la app, la hoja y «Tu cuenta» (axe además mide el contraste de los colores reforzados)

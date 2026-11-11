@@ -3,7 +3,7 @@
 Uso (con Flask instalado): python tests/test_api.py
 """
 import os; os.environ["LOG_PETICIONES"] = "0"; os.environ["LIMITE_ESCRITURAS"] = "1000000"  # las pruebas escriben a toda prisa; el límite se prueba aparte
-import re, sys, sqlite3, tempfile, importlib, json, subprocess, shutil
+import re, sys, sqlite3, tempfile, importlib, json, subprocess, shutil, hashlib
 APP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 from datetime import date, timedelta
 tmp = tempfile.mkdtemp()
@@ -2002,5 +2002,76 @@ try:
     _lc.execute("DELETE FROM compras WHERE txid = ?", (_tx_vivo,)); _lc.execute("DELETE FROM suscripciones"); _lc.commit()
 finally:
     _lc.close()
+
+# --- Campamento 9: enlace de solo lectura para hojas de cálculo (idea 159)
+adm_t = adm
+check(adm_t.get("/api/tokens").get_json() == [], "al principio no hay enlaces")
+check(luz.get("/api/tokens").status_code == 403 and luz.post("/api/tokens", json={"nombre": "x"}).status_code == 403, "un lector no maneja los enlaces")
+check(anon.get("/api/tokens").status_code == 401 and anon.post("/api/tokens", json={"nombre": "x"}).status_code == 401, "sin sesión tampoco")
+check(adm_t.post("/api/tokens", json={}).status_code == 400 and adm_t.post("/api/tokens", json={"nombre": "   "}).status_code == 400
+      and adm_t.post("/api/tokens", json={"nombre": 5}).status_code == 400, "el enlace pide un nombre")
+r = adm_t.post("/api/tokens", json={"nombre": "  Mi   hoja de Google  "})
+tk = r.get_json()
+check(r.status_code == 201 and len(tk["token"]) >= 40 and tk["rutas"]["compras"] == f"/api/token/{tk['token']}/compras.csv", f"se crea y el token se muestra una vez {r.status_code}")
+lista = adm_t.get("/api/tokens").get_json()
+check(len(lista) == 1 and lista[0]["nombre"] == "Mi hoja de Google" and "token" not in lista[0] and "hash" not in lista[0] and lista[0]["ultimo_uso"] is None
+      and tk["token"] not in json.dumps(lista), "la lista no trae el token ni su huella")
+cxt = server.connect()
+fila = cxt.execute("SELECT hash FROM tokens_api").fetchone()
+check(fila[0] == hashlib.sha256(tk["token"].encode()).hexdigest() and tk["token"] not in fila[0], "en la base solo queda el SHA-256")
+check(not any(tk["token"] in (str(v) if v is not None else "") for f in cxt.execute("SELECT antes, despues, ip FROM auditoria") for v in f), "la auditoría no guarda el token")
+check(any(a["accion"] == "token_creado" for a in adm_t.get("/api/auditoria").get_json()), "crear un enlace queda en el historial")
+# Lo lee cualquiera con el enlace, sin sesión, y es el mismo CSV que la exportación
+r = anon.get(tk["rutas"]["compras"])
+check(r.status_code == 200 and r.mimetype == "text/csv" and r.data.decode() == adm_t.get("/api/export.csv").data.decode(), "con el enlace se lee el CSV de compras, sin sesión")
+check(r.headers.get("X-Robots-Tag") == "noindex" and "no-store" in r.headers.get("Cache-Control", ""), "no se indexa ni se guarda en caché")
+r = anon.get(tk["rutas"]["traslados"])
+check(r.status_code == 200 and r.data.decode() == adm_t.get("/api/traslados.csv").data.decode(), "y el de traslados")
+check(adm_t.get("/api/tokens").get_json()[0]["ultimo_uso"] is not None, "queda anotado el último uso")
+# Solo esos dos archivos, solo lectura
+for malo in (f"/api/token/{tk['token']}/todo.zip", f"/api/token/{tk['token']}/compras", f"/api/token/{tk['token']}/yo", f"/api/token/{tk['token']}/../export.csv"):
+    check(anon.get(malo).status_code == 404, f"el enlace no da más que los dos CSV: {malo[-20:]}")
+check(anon.post(tk["rutas"]["compras"], json={}, headers={"X-Libro": "1"}).status_code in (401, 405), "el enlace no sirve para escribir")
+check(anon.get("/api/compras").status_code == 401 and anon.get("/api/yo").status_code == 401, "y el resto de la API sigue pidiendo sesión")
+# Un token que no existe responde igual que uno revocado, sin pistas
+check(anon.get("/api/token/" + "a" * 43 + "/compras.csv").status_code == 404 and anon.get("/api/token/corto/compras.csv").status_code == 404, "token inexistente o mal formado: 404")
+check(adm_t.delete(f"/api/tokens/{lista[0]['id']}").status_code == 204, "se revoca")
+check(anon.get(tk["rutas"]["compras"]).status_code == 404, "un enlace revocado deja de funcionar al instante")
+check(adm_t.delete(f"/api/tokens/{lista[0]['id']}").status_code == 404 and adm_t.delete("/api/tokens/99999").status_code == 404, "revocar dos veces o uno que no existe: 404")
+check(luz.delete(f"/api/tokens/{lista[0]['id']}").status_code == 403, "un lector no revoca")
+check(adm_t.get("/api/tokens").get_json()[0]["revocado"] is not None and any(a["accion"] == "token_revocado" for a in adm_t.get("/api/auditoria").get_json()), "se ve como revocado y queda en el historial")
+# Máximo 5 activos
+for i in range(5):
+    check(adm_t.post("/api/tokens", json={"nombre": f"hoja {i}"}).status_code == 201, f"enlace {i + 1} de 5")
+r = adm_t.post("/api/tokens", json={"nombre": "uno más"})
+check(r.status_code == 400 and "5" in r.get_json()["error"], "el sexto se rechaza")
+activos = [t for t in adm_t.get("/api/tokens").get_json() if not t["revocado"]]
+adm_t.delete(f"/api/tokens/{activos[0]['id']}")
+check(adm_t.post("/api/tokens", json={"nombre": "otra vez"}).status_code == 201, "al revocar uno se libera un lugar")
+# Las llaves no se cuentan por URL en las métricas ni en el registro: solo la regla de la ruta
+server.vaciar_metricas()
+rutas_met = [r[0] for r in server.connect().execute("SELECT ruta FROM metricas")]
+check("/api/token/<token>/<archivo>" in rutas_met and not any("a" * 20 in x or tk["token"] in x for x in rutas_met), f"las métricas usan la regla, no el token {rutas_met}")
+# Frenar a quien prueba tokens al azar (por proceso y por minuto)
+server._TOKEN_FALLOS.clear()
+for i in range(server.TOKEN_FALLOS_MAX):
+    anon.get(f"/api/token/{'b' * 40}{i:03d}/compras.csv")
+r = anon.get("/api/token/" + "c" * 43 + "/compras.csv")
+check(r.status_code == 429 and r.headers.get("Retry-After") == "60", "demasiados intentos con tokens que no existen: 429")
+server._TOKEN_FALLOS.clear()
+# Modo solo lectura de emergencia: el enlace (una lectura) sigue funcionando; crear o revocar no
+_tk_vivo = next(t for t in adm_t.get("/api/tokens").get_json() if not t["revocado"])
+_tk2 = adm_t.post("/api/tokens", json={"nombre": "emergencia"})
+check(_tk2.status_code == 400, "(ya hay 5 activos: sirve para el siguiente paso)")
+adm_t.delete(f"/api/tokens/{_tk_vivo['id']}")
+_tk3 = adm_t.post("/api/tokens", json={"nombre": "emergencia"}).get_json()
+_ant_sl2 = server.SOLO_LECTURA
+try:
+    server.SOLO_LECTURA = True
+    check(anon.get(_tk3["rutas"]["compras"]).status_code == 200, "con SOLO_LECTURA el enlace se sigue leyendo")
+    check(adm_t.post("/api/tokens", json={"nombre": "x"}).status_code == 503, "pero no se crean enlaces")
+    check(adm_t.delete(f"/api/tokens/{_tk_vivo['id']}").status_code == 503, "ni se revocan")
+finally:
+    server.SOLO_LECTURA = _ant_sl2
 
 print("OK", ok, "comprobaciones")

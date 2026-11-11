@@ -4,6 +4,7 @@ import { cambiosPendientes, mostrarCambios } from './cambios.js';
 import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
 import { enTV, entrarTV } from './tv.js';
 import { pintarSesiones } from './sesiones.js';
+import { pintarEnlaces } from './enlaces.js';
 import { pintarSistema } from './sistema.js';
 import { pintarHistoria } from './historia.js';
 import { avatar, ilustracion } from './iconos.js';
@@ -28,6 +29,7 @@ function vistaCuenta(cual) {
   $('dc-datos').hidden = cual !== 'datos';
   $('dc-sistema').hidden = cual !== 'sistema';
   $('dc-sesiones').hidden = cual !== 'sesiones';
+  $('dc-enlaces').hidden = cual !== 'enlaces';
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
 const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
@@ -56,6 +58,7 @@ export async function cargarYo() {
     $('dc-historial').hidden = yo.rol !== 'admin';
     $('dc-datos-btn').hidden = yo.rol !== 'admin';
     $('dc-sistema-btn').hidden = yo.rol !== 'admin';
+    $('dc-enlaces-btn').hidden = yo.rol !== 'admin';
     $('dc-previa').hidden = yo.rol !== 'admin'; // vista previa temporal
     $('fc-usuario').value = yo.usuario;
     pintar();
@@ -159,6 +162,8 @@ function textoAuditoria(a) {
     clave_cambiada: `cambió la contraseña de ${d.nombre}`,
     cuenta_creada: `creó la cuenta ${d.nombre} (${d.rol})`,
     cuenta_activada: `activó la cuenta ${d.nombre}`, cuenta_desactivada: `desactivó la cuenta ${d.nombre}`,
+    token_creado: `creó el enlace de solo lectura «${d.nombre}»`, token_revocado: `revocó el enlace de solo lectura «${d.nombre}»`,
+    sesion_cerrada: 'cerró una de sus sesiones abiertas',
     sesiones_cerradas: `cerró las sesiones de ${d.nombre}`, desbloqueo: `desbloqueó la cuenta ${d.nombre}`,
   }[a.accion] ?? a.accion;
 }
@@ -220,6 +225,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'datos') irA('datos');
   else if (accion === 'sistema') irA('sistema', pintarSistema);
   else if (accion === 'sesiones') irA('sesiones', pintarSesiones);
+  else if (accion === 'enlaces') irA('enlaces', () => { $('en-nuevo').hidden = true; pintarEnlaces(); });
   else if (accion === 'avisos') irA('avisos', () => avisosUI.refrescar());
   else if (accion === 'salir' || accion === 'salir-todas') {
     try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }

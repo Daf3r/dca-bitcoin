@@ -16,14 +16,22 @@ self.addEventListener('push', (e) => {
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     data: { url: '/' },
+    // El recordatorio trae «Anotar compra» (Android y computadora; iPhone no muestra botones en las notificaciones).
+    actions: Array.isArray(d.acciones) && d.acciones.includes('anotar') ? [{ action: 'anotar', title: 'Anotar compra' }] : [],
   })]));
 });
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  const anotar = e.action === 'anotar';
   e.waitUntil((async () => {
     const abiertas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of abiertas) if ('focus' in c) return c.focus();
-    return self.clients.openWindow('/');
+    for (const c of abiertas) {
+      if (!('focus' in c)) continue;
+      const w = await c.focus();
+      if (anotar) (w ?? c).postMessage({ tipo: 'anotar' }); // la app ya está abierta: le pedimos la hoja
+      return w;
+    }
+    return self.clients.openWindow(anotar ? '/#anotar' : '/');
   })());
 });

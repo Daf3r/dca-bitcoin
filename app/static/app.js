@@ -17,6 +17,7 @@ import './copiar.js';
 import './minicab.js';
 import './atajos.js';
 import './indice.js';
+import './anotar.js';
 
 instalarParallax();
 cargarYo();

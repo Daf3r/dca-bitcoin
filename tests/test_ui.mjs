@@ -358,7 +358,7 @@ try {
       await p.click('#dc-avisos-btn');
       await p.waitForTimeout(500);
     };
-    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'caida']], [LECTOR, 'lector', ['movimiento', 'hito']]]) {
+    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'caida', 'wallet']], [LECTOR, 'lector', ['movimiento', 'hito']]]) {
       const { ctx, p, consola } = await entrar(navegador, avisos, cuenta, {}, conPush);
       await abrirAvisos(p);
       ok(await p.locator('#dc-avisos').isVisible() && !(await p.locator('#dc-menu').isVisible()), `${quien}: se abre la vista de avisos`);
@@ -400,6 +400,39 @@ try {
       }
       await p.selectOption('#av-desde', '8');
       await p.waitForTimeout(300);
+      // Campamento 9: aviso de prueba (los dos) y monto de «retirar a tu wallet» (solo admin)
+      ok(await p.locator('#av-prueba-btn').isVisible(), `${quien}: con los avisos activados sale «Enviarme un aviso de prueba»`);
+      await p.click('#av-prueba-btn');
+      await p.waitForFunction(() => { const t = document.getElementById('av-prueba-res').textContent; return t && t !== 'Enviando…'; }, null, { timeout: 20000 });
+      const res1 = (await p.textContent('#av-prueba-res')).trim();
+      ok(res1.length > 20 && !(await p.locator('#av-prueba-btn').isDisabled()), `${quien}: la prueba dice qué pasó («${res1.slice(0, 60)}…») y el botón vuelve`);
+      await p.click('#av-prueba-btn');
+      await p.waitForFunction(() => document.getElementById('av-prueba-res').textContent.includes('Espera'), null, { timeout: 5000 });
+      ok((await p.textContent('#av-prueba-res')).includes('segundos'), `${quien}: pedir otra enseguida dice cuánto esperar`);
+      eq(await p.locator('#av-wallet').isVisible(), quien === 'admin', `${quien}: el monto de «retirar a tu wallet» solo lo ve el admin (con la categoría encendida)`);
+      if (quien === 'admin') {
+        ok((await p.textContent('#av-w-ayuda')).includes('Elige un monto'), 'admin: sin monto, la ayuda pide elegir uno');
+        await p.fill('#av-w-monto', '1500000');
+        await p.press('#av-w-monto', 'Tab');
+        await p.waitForTimeout(500);
+        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se guarda y se ve con comas');
+        ok((await p.textContent('#av-w-ayuda')).includes('1,500,000'), 'admin: la ayuda repite el monto');
+        await p.fill('#av-w-monto', 'mucho');
+        await p.press('#av-w-monto', 'Tab');
+        await p.waitForTimeout(300);
+        ok((await p.textContent('#av-error')).includes('solo números') && (await p.inputValue('#av-w-monto')) === '1,500,000', 'admin: un monto que no es número se rechaza y vuelve a lo guardado');
+        await p.click('#dc-avisos [data-cuenta="volver"]');
+        await p.click('#dc-avisos-btn');
+        await p.waitForTimeout(500);
+        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se recuerda');
+        ok(await p.locator('#av-w-monto').evaluate((el) => el.getBoundingClientRect().height >= 47.5), 'admin: el campo del monto mide 48 px');
+        await p.click('#av-lista input[data-cat="wallet"]');
+        await p.waitForTimeout(400);
+        ok(!(await p.locator('#av-wallet').isVisible()), 'admin: apagar la categoría esconde el monto');
+        await p.click('#av-lista input[data-cat="wallet"]');
+        await p.waitForTimeout(400);
+        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: y al volver a encenderla el monto sigue ahí');
+      }
       // Desactivar borra el dispositivo del servidor.
       await p.click('#av-interruptor');
       await p.waitForTimeout(700);
@@ -407,7 +440,26 @@ try {
       ok(!(await p.locator('#av-lista').isVisible()), `${quien}: sin casillas al apagar`);
       eq((await p.textContent('#av-error')).trim(), '', `${quien}: sin errores`);
       // El 400 es el horario inválido que se probó a propósito (una ventana de una hora).
-      eq(consola.filter((c) => !/400 \(BAD REQUEST\)/.test(c)), [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
+      eq(consola.filter((c) => !/400 \(BAD REQUEST\)|429/.test(c)), [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
+      await ctx.close();
+    }
+    // El botón «Anotar compra» del recordatorio abre la app en #anotar (o le manda un mensaje si ya estaba abierta): solo el admin llega a la hoja.
+    for (const [cuenta, quien] of [[ADMIN, 'admin'], [LECTOR, 'lector']]) {
+      const { ctx, p } = await entrar(navegador, avisos, cuenta);
+      if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
+      await p.waitForTimeout(500);
+      if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+      await p.evaluate(() => { location.hash = '#anotar'; });
+      await p.waitForTimeout(1200);
+      eq(await p.locator('#hoja').isVisible(), quien === 'admin', `${quien}: #anotar ${quien === 'admin' ? 'abre' : 'no abre'} la hoja de anotar`);
+      eq(await p.evaluate(() => location.hash), '', `${quien}: y quita #anotar de la dirección`);
+      if (quien === 'admin') {
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+        await p.evaluate(() => navigator.serviceWorker?.dispatchEvent?.(new MessageEvent('message', { data: { tipo: 'anotar' } })));
+        await p.waitForTimeout(800);
+        ok(await p.locator('#hoja').isVisible(), 'admin: el mensaje del service worker también abre la hoja');
+      }
       await ctx.close();
     }
     // Al entrar se ofrece activar los avisos, una sola vez por dispositivo; el permiso se pide en el toque del botón.
