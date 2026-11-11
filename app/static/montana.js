@@ -427,8 +427,13 @@ function instalarCierre() {
  * Dos detalles de ambiente por campamento (solo con todos los efectos; el CSS decide cuál se ve):
  * humo en los ya alcanzados y una fogata que parpadea en el siguiente. Pequeños y al pie de la bandera, lejos de la etiqueta.
  */
-const humo = () => '<g class="efecto-ambiente humo"><path class="humo-hilo h1" d="M-12 -7C-15 -14 -9 -19 -12 -26C-15 -33 -8 -38 -11 -46" stroke="url(#m-humo)"/>'
-  + '<path class="humo-hilo h2" d="M-11 -8C-8 -15 -14 -21 -10 -29C-7 -35 -12 -40 -8 -48" stroke="url(#m-humo)"/></g>';
+// Humo: dos hilos finos que suben y se disuelven (degradado `#m-humo`). En los campamentos sale del tejado y se inclina hacia
+// el lado contrario a la bandera, para no confundirse con ella.
+const humo = (inclina = 0) => {
+  const x = (k) => f1(k * inclina);
+  return `<g class="efecto-ambiente humo"><path class="humo-hilo h1" d="M-12 -7C-15 -14 ${f1(-9 + 2 * x(-1.2))} -19 ${f1(-12 + Number(x(-2.5)))} -26C${f1(-15 + Number(x(-3.5)))} -33 ${f1(-8 + Number(x(-4.5)))} -38 ${f1(-11 + Number(x(-6)))} -46" stroke="url(#m-humo)"/>`
+    + `<path class="humo-hilo h2" d="M-11 -8C-8 -15 -14 -21 ${f1(-10 + Number(x(-2.5)))} -29C${f1(-7 + Number(x(-3.5)))} -35 ${f1(-12 + Number(x(-4.5)))} -40 ${f1(-8 + Number(x(-6)))} -48" stroke="url(#m-humo)"/></g>`;
+};
 const fogata = () => '<g class="efecto-ambiente fogata"><circle class="fogata-luz" cx="-12" cy="-4" r="22" fill="url(#m-luz)"/><g transform="translate(-4 0) scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g></g>';
 // Humo (dos hilos finos que suben y se disuelven, `#m-humo`) y fogata con su luz: solo con todos los efectos.
 function humoYFogata() { return humo() + fogata(); }
