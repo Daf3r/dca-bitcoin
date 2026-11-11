@@ -158,6 +158,7 @@ function pintarSaldo(desde) {
   etiquetaUnidad();
   pintarLinea();
   pintarProx();
+  pintarDatosEscena();
 }
 /** La línea bajo el saldo: lo que valen tus sats (con su propio odómetro) y la ganancia, con formas cortas en pantallas muy pequeñas. */
 export function pintarLinea() {
@@ -205,6 +206,29 @@ function pintarProx() {
     txt += faltan === 0 ? ' · próxima: hoy es el último día' : faltan === 1 ? ' · próxima: mañana es el último día' : ` · próxima, en ${faltan} días`;
   }
   el.textContent = txt;
+}
+
+/**
+ * Bajo el saldo, en pantallas anchas (el CSS los oculta en las demás): tu costo promedio, tu racha y cuántas compras llevas.
+ * Solo datos que ya están en los reportes, para que esa zona del cielo no quede vacía. Desde 3 compras.
+ */
+function pintarDatosEscena() {
+  const dl = $('esc-datos');
+  if (!S.cargado || !(R.nCompras >= 3)) { dl.hidden = true; return; }
+  const filas = [
+    ...(R.promedio > 0 ? [['Costo promedio', usd0(R.promedio)]] : []),
+    ['Racha', `${entero(R.racha)} ${R.paso === 2 ? (R.racha === 1 ? 'quincena' : 'quincenas') : R.racha === 1 ? 'semana' : 'semanas'}`],
+    ['Compras', entero(R.nCompras)],
+  ];
+  dl.replaceChildren(...filas.map(([k, v]) => {
+    const d = document.createElement('div');
+    const dt = document.createElement('dt'), dd = document.createElement('dd');
+    dt.textContent = k;
+    dd.textContent = v;
+    d.append(dt, dd);
+    return d;
+  }));
+  dl.hidden = false;
 }
 
 let anchoMontana = 0, altoMontana = 0;
