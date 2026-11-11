@@ -37,12 +37,18 @@
   --lejos: #1c2b45; --medio: #162139; --monte: #0f1828; --monte-sombra: #0a111d; --nieve: #d6dce6;
   --pino0: #081019; --pino1: #050a11;
   --cielo-txt: #f3ead8; --cielo-txt2: #aab4c6;
-  --fondo: #050a11; --s1: #0c1422; --s2: #121d30; --s3: #1b2840;
-  --txt: #f3ead8; --txt2: #aab3c3; --txt3: #8b96a9;
-  --naranja: #ff8a1f; --naranja-txt: #ffa04a; --naranja-osc: #2a1405;
-  --linea: #e9dfcc;
-  --compra-borde: #050a11;
-  --sube: #6fd8a0; --baja: #ff958a;
+  /* Hora dorada (pulido visual): neutros con un tinte azul tinta, texto crema y un ámbar algo más cálido. */
+  --fondo: #070b15; --s1: #10172a; --s2: #182136; --s3: #263149;
+  --txt: #f6eee0; --txt2: #b3bccb; --txt3: #8f9ab0;
+  --naranja: #ff9228; --naranja-txt: #ffb260; --naranja-osc: #2a1405;
+  --linea: #ecdcc0;
+  --compra-borde: #070b15;
+  --sube: #6fdca6; --baja: #ff9a8f;
+  /* Material de las tarjetas: un filo de luz arriba y una sombra en capas del color del fondo, no negra. */
+  --filo: rgb(255 236 205 / 0.07);
+  --sombra: 0 1px 1px rgb(0 0 0 / 0.28), 0 14px 34px -18px rgb(0 0 0 / 0.75);
+  --sombra-alta: 0 2px 4px rgb(0 0 0 / 0.3), 0 26px 60px -24px rgb(0 0 0 / 0.8);
+  --velo-tarjeta: linear-gradient(180deg, rgb(255 236 205 / 0.035), transparent 46%);
   --serif: "Fraunces", "Fraunces reserva", Georgia, serif;
   --sans: "Bricolage", "Bricolage reserva", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -53,12 +59,17 @@
     --lejos: #d4836a; --medio: #ac5c56; --monte: #24443f; --monte-sombra: #18302c; --nieve: #fff7ea;
     --pino0: #1b3832; --pino1: #10241f;
     --cielo-txt: #2b1c16; --cielo-txt2: #6b4637;
-    --fondo: #f7eedf; --s1: #fffaf2; --s2: #f1e5d2; --s3: #e6d6be;
-    --txt: #221d17; --txt2: #5a5045; --txt3: #6e6356;
-    --naranja-txt: #9c4a05;
-    --linea: #24443f;
-    --compra-borde: #9c4a05;
+    /* Claro «papel»: crema cálido con tinta marrón, no el oscuro invertido. */
+    --fondo: #f8f0e2; --s1: #fffaf1; --s2: #f2e7d5; --s3: #e2d1b6;
+    --txt: #261b12; --txt2: #5a4a3c; --txt3: #6c5c4c;
+    --naranja-txt: #9a4700;
+    --linea: #2c4a42;
+    --compra-borde: #9a4700;
     --sube: #146b3c; --baja: #b02a1d;
+    --filo: rgb(255 255 255 / 0.8);
+    --sombra: 0 1px 2px rgb(110 70 30 / 0.08), 0 14px 32px -18px rgb(110 70 30 / 0.3);
+    --sombra-alta: 0 2px 6px rgb(110 70 30 / 0.1), 0 26px 56px -24px rgb(110 70 30 / 0.38);
+    --velo-tarjeta: linear-gradient(180deg, rgb(255 255 255 / 0.5), transparent 46%);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -110,7 +121,7 @@ html[data-ligero] .montana::after { content: none; }
 .md-0 { stop-color: var(--medio); } .md-1 { stop-color: color-mix(in oklab, var(--medio) 62%, var(--c4)); }
 /* La montaña: la cara que mira al astro recibe su luz; la del sendero queda en sombra y se funde con la bruma del valle. */
 .ld-0 { stop-color: color-mix(in oklab, var(--monte) 86%, var(--astro)); } .ld-1 { stop-color: var(--monte); } .ld-2 { stop-color: color-mix(in oklab, var(--monte-sombra) 72%, var(--medio)); }
-.cr-0 { stop-color: color-mix(in oklab, var(--monte) 66%, var(--astro)); } .cr-1 { stop-color: color-mix(in oklab, var(--monte) 84%, var(--astro)); } .cr-2 { stop-color: var(--monte); }
+.cr-0 { stop-color: color-mix(in oklab, var(--monte) 72%, var(--astro)); } .cr-1 { stop-color: color-mix(in oklab, var(--monte) 88%, var(--astro)); } .cr-2 { stop-color: var(--monte); }
 .arista { fill: none; stroke: var(--astro); stroke-opacity: 0.42; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
 .nieve-sombra { fill: var(--monte-sombra); opacity: 0.32; }
 .nb-0 { stop-color: var(--nube); } .nb-1 { stop-color: color-mix(in oklab, var(--nube) 55%, transparent); }
@@ -261,6 +272,8 @@ html[data-efectos="todos"] .saldo-v em[data-vivo="1"]::before { animation: latid
 .saldo-v em { font: italic 400 clamp(1.3rem, 5vw, 2.1rem) var(--serif); color: var(--cielo-txt2); }
 .saldo-d { margin-top: 8px; font-size: 1.0625rem; color: var(--cielo-txt2); }
 /* Última compra y cuánto falta para la próxima (solo admin). La altura se reserva siempre para que nada se mueva al aparecer. */
+.esc-datos { display: none; }
+html[data-tv] .esc-datos { display: none !important; }
 .prox { min-height: 1.35rem; margin-top: 2px; font-size: 0.875rem; line-height: 1.35rem; color: var(--cielo-txt2); }
 .mini { display: inline-block; width: 58px; height: 18px; margin-left: 8px; vertical-align: -3px; overflow: visible; }
 .mini polyline { fill: none; stroke: var(--cielo-txt2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
@@ -305,7 +318,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .caida[hidden] { display: none; }
 .caida p { margin: 0; }
 .caida .enlace { flex: none; }
-.tramo { padding: 4px 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; }
+.tramo { padding: 18px 20px; border-radius: 24px; background-color: var(--s1); display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 16px; align-items: center; }
 .tramo > .tr-k, .tramo > .tr-v, .tramo > .tr-ritmo { grid-column: 1; }
 .tramo > .tr-anillo { grid-column: 2; grid-row: 1 / span 3; }
 .tramo[hidden] { display: none; }
@@ -719,6 +732,11 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   /* Deja sitio a «sats» en la misma línea sin invadir la montaña. */
   .cifra-grande { font-size: clamp(2.25rem, 80cqi / (var(--n, 7) * 0.575), 8rem); }
   .cima { padding-inline: max(48px, calc(50vw - var(--medio-ancho))); }
+  /* Tres datos de tu camino bajo el saldo: llenan el hueco del cielo en pantallas anchas. */
+  .esc-datos:not([hidden]) { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .esc-datos div { padding: 10px 16px 11px; border-radius: 16px; background: color-mix(in srgb, var(--c0) 62%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cielo-txt) 14%, transparent); text-shadow: none; }
+  .esc-datos dt { font-size: 0.8125rem; color: var(--cielo-txt2); }
+  .esc-datos dd { margin: 0; font: 500 1.25rem/1.25 var(--sans); color: var(--cielo-txt); }
   /* Dos columnas independientes: cada una apila lo suyo y ninguna espera a la otra. */
   .cuerpo { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); column-gap: 48px; padding: 40px 48px 120px; }
   .col-principal, .col-lateral { display: grid; gap: 32px; align-content: start; min-width: 0; }
@@ -1476,3 +1494,11 @@ html[data-tv]:not([data-tv-activo]) { cursor: none; }
   html[data-letra="grande"]:not([data-tv]) { font-size: 168.75%; }
   html[data-letra="muy-grande"]:not([data-tv]) { font-size: 187.5%; }
 }
+
+/* ------------------------------------------------------------- material de las tarjetas (pulido visual) */
+/* Todas las tarjetas comparten el mismo material: superficie con un velo de luz arriba, filo de luz y sombra en capas. */
+:is(.toca, .caida, .spd, .rep-const, .rep-curiosas, .ubicacion, .tramo, .comienzo) {
+  background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra);
+}
+dialog, .hoja-panel { box-shadow: inset 0 1px 0 var(--filo), var(--sombra-alta); }
+
