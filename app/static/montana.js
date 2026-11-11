@@ -208,7 +208,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const yb = H * (fila ? 1.005 : 0.975), alto = H * (fila ? 0.07 : 0.05);
     for (let x = -10; x < W + 20; x += alto * (0.55 + rnd() * 0.4)) {
       const a = alto * (0.7 + rnd() * 0.5), an = a * 0.42;
-      if (Math.abs(x - bx) < 30) continue;
+      // (Los pinos de adorno van detrás del sendero: ya no hace falta dejar hueco en la marca de salida.)
       s += `<path class="pino-${fila}" d="M${f1(x)} ${f1(yb - a)}L${f1(x + an)} ${f1(yb)}L${f1(x - an)} ${f1(yb)}Z"/>`;
     }
   }
