@@ -38,14 +38,23 @@ export function luna(cx, cy, r, fase) {
   return `<circle class="luna-sombra" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}"/><path class="astro" d="${luz}"${espejo}/>`;
 }
 
+/**
+ * Una nube de cúmulo: base plana y cuatro lomos redondos (un solo trazo, sin elipses apiladas). Con su degradado
+ * (`#m-nube`) la parte de arriba recibe la luz y la base queda en la sombra del cielo.
+ */
+function cumulo(x, y, k) {
+  const p = (dx, dy) => `${f1(x + dx * k)} ${f1(y + dy * k)}`;
+  return `M${p(-52, 0)}C${p(-60, 0)} ${p(-58, -12)} ${p(-44, -12)}C${p(-42, -26)} ${p(-20, -28)} ${p(-12, -18)}`
+    + `C${p(-6, -36)} ${p(22, -38)} ${p(26, -20)}C${p(36, -26)} ${p(50, -20)} ${p(46, -10)}C${p(60, -10)} ${p(62, 0)} ${p(52, 0)}Z`;
+}
 /** Tres nubes que cruzan despacio (solo con todos los efectos): van detrás de la montaña y por debajo del texto del saldo. */
 function nubes(H) {
-  const una = (x, y, k, clase) => `<g class="efecto-ambiente nube ${clase}"><ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(46 * k)}" ry="${f1(11 * k)}"/><ellipse cx="${f1(x + 22 * k)}" cy="${f1(y - 8 * k)}" rx="${f1(28 * k)}" ry="${f1(10 * k)}"/><ellipse cx="${f1(x - 20 * k)}" cy="${f1(y - 5 * k)}" rx="${f1(24 * k)}" ry="${f1(9 * k)}"/></g>`;
-  return una(0, H * 0.33, 1, 'n1') + una(0, H * 0.4, 1.4, 'n2') + una(0, H * 0.46, 0.8, 'n3');
+  const una = (y, k, clase) => `<g class="efecto-ambiente nube ${clase}"><path d="${cumulo(0, y, k)}"/></g>`;
+  return una(H * 0.33, 0.8, 'n1') + una(H * 0.4, 1.1, 'n2') + una(H * 0.46, 0.6, 'n3');
 }
-/** Dos bandas de niebla entre la sierra y la montaña (solo con todos los efectos). */
+/** Dos bandas de niebla entre la sierra y la montaña (solo con todos los efectos): degradados que se desvanecen arriba y abajo. */
 function niebla(W, H, y) {
-  return `<g class="efecto-ambiente niebla"><ellipse class="niebla-a" cx="${f1(W * 0.45)}" cy="${f1(y * H)}" rx="${f1(W * 0.7)}" ry="${f1(H * 0.028)}"/><ellipse class="niebla-b" cx="${f1(W * 0.6)}" cy="${f1(y * H + H * 0.07)}" rx="${f1(W * 0.6)}" ry="${f1(H * 0.024)}"/></g>`;
+  return `<g class="efecto-ambiente niebla"><rect class="niebla-a" x="${f1(-W * 0.15)}" y="${f1(y * H - H * 0.05)}" width="${f1(W * 1.3)}" height="${f1(H * 0.1)}" fill="url(#m-niebla)"/><rect class="niebla-b" x="${f1(-W * 0.15)}" y="${f1(y * H + H * 0.035)}" width="${f1(W * 1.3)}" height="${f1(H * 0.08)}" fill="url(#m-niebla)"/></g>`;
 }
 /** Un pequeño vuelo de aves al amanecer (solo con todos los efectos): siluetas en «v» que aletean mientras cruzan. */
 function aves(H) {
@@ -89,11 +98,13 @@ function auroraBoreal(W, H, techo) {
  * por debajo del arranque del sendero y a un lado, así que nunca empuja el camino ni las etiquetas.
  */
 function lago(c, W, H) {
-  const cx = c.lago ? c.lago[0] : Math.min(Math.max(c.sol[0], W * 0.2), W * 0.8), cy = Math.min(H * 0.845, c.base[1] - 24);
-  const rx = c.lago ? c.lago[1] : Math.min(W * 0.16, 150), ry = Math.max(8, H * 0.016);
+  const cx = c.lago ? c.lago[0] : Math.min(Math.max(c.sol[0], W * 0.2), W * 0.8), cy = Math.min(H * 0.875, c.base[1] - 24);
+  const rx = c.lago ? c.lago[1] : Math.min(W * 0.16, 120), ry = Math.max(8, H * 0.016);
   const reflejo = [0, 1, 2, 3].map((i) => `<ellipse class="lago-reflejo" cx="${f1(cx + (i % 2 ? 3 : -3))}" cy="${f1(cy - ry * 0.35 + i * ry * 0.42)}" rx="${f1(rx * (0.26 - i * 0.045))}" ry="${f1(Math.max(1.1, ry * 0.12))}"/>`).join('');
   const estrellas = [[-0.5, -0.2], [-0.2, 0.25], [0.45, -0.1], [0.62, 0.3], [-0.68, 0.2]].map(([x, y]) => `<circle class="lago-estrella" cx="${f1(cx + rx * x)}" cy="${f1(cy + ry * y)}" r="0.9"/>`).join('');
-  return `<g class="lago" aria-hidden="true"><ellipse class="lago-agua" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx)}" ry="${f1(ry)}"/><g class="lago-luna">${reflejo}${estrellas}</g><ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><ellipse class="lago-borde" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx)}" ry="${f1(ry)}"/></g>`;
+  // De día el sol deja una estela de luz en el agua (dos trazos finos); de noche, la luna con su fase.
+  const sol = [0, 1].map((i) => `<ellipse class="lago-sol" cx="${f1(cx)}" cy="${f1(cy - ry * 0.25 + i * ry * 0.5)}" rx="${f1(rx * (0.42 - i * 0.16))}" ry="${f1(Math.max(1, ry * 0.1))}"/>`).join('');
+  return `<g class="lago" aria-hidden="true"><ellipse class="lago-agua" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx)}" ry="${f1(ry)}" fill="url(#m-lago)"/><g class="lago-luz">${sol}</g><g class="lago-luna">${reflejo}${estrellas}</g><ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><path class="lago-borde" d="M${f1(cx - rx)} ${f1(cy)}A${f1(rx)} ${f1(ry)} 0 0 1 ${f1(cx + rx)} ${f1(cy)}"/></g>`;
 }
 
 /**
@@ -105,24 +116,45 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const c = composicion(W, H, techo);
   const esc = escalaMontana(sats, c.campos);
   const rnd = azar(42);
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter></defs><g aria-hidden="true">`;
+  // Degradados de la escena (dirección «Hora dorada»): el cielo es continuo (sin franjas), la luz del astro se difumina y cada
+  // sierra se funde hacia el color del horizonte según lo lejos que está (perspectiva atmosférica). Los colores salen de las
+  // variables de cielo.js, así que siguen a la hora sin volver a dibujar.
+  const yH = c.sy / H + 0.2; // altura aproximada del horizonte (la sierra lejana)
+  const lado = c.sol[0] >= c.sx ? 1 : -1; // de qué lado está el astro: esa cara de la montaña recibe la luz
+  const derX0 = c.sx + (c.sx - (c.base[0] - W * 0.2)) * 0.95;
+  const grad = (id, attrs, paradas) => `<linearGradient id="${id}" ${attrs}>${paradas.map(([o, k]) => `<stop offset="${o}" class="${k}"/>`).join('')}</linearGradient>`;
+  const defs = grad('m-cielo', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'g-c0'], [0.17, 'g-c1'], [0.31, 'g-c2'], [0.46, 'g-c3'], [Math.min(0.9, yH * 0.92).toFixed(3), 'g-c4'], [1, 'g-c4']])
+    + `<radialGradient id="m-halo"><stop offset="0" class="h-0"/><stop offset="0.3" class="h-1"/><stop offset="0.55" class="h-2"/><stop offset="1" class="h-3"/></radialGradient>`
+    + `<radialGradient id="m-resplandor" gradientUnits="userSpaceOnUse" cx="${f1(c.sol[0])}" cy="${f1(yH * H)}" r="${f1(Math.max(W, H) * 0.75)}" gradientTransform="translate(${f1(c.sol[0])} ${f1(yH * H)}) scale(1 0.55) translate(${f1(-c.sol[0])} ${f1(-yH * H)})"><stop offset="0" class="r-0"/><stop offset="0.45" class="r-1"/><stop offset="1" class="r-2"/></radialGradient>`
+    + grad('m-lejos', `gradientUnits="userSpaceOnUse" x1="0" y1="${f1((yH - 0.12) * H)}" x2="0" y2="${f1((yH + 0.12) * H)}"`, [[0, 'lj-0'], [1, 'lj-1']])
+    + grad('m-medio', `gradientUnits="userSpaceOnUse" x1="0" y1="${f1((yH + 0.02) * H)}" x2="0" y2="${f1((yH + 0.26) * H)}"`, [[0, 'md-0'], [1, 'md-1']])
+    + grad('m-ladera', `gradientUnits="userSpaceOnUse" x1="${f1(c.sx)}" y1="${f1(c.sy)}" x2="${f1(c.sx - W * 0.25 * lado)}" y2="${f1(H)}"`, [[0, 'ld-0'], [0.55, 'ld-1'], [1, 'ld-2']])
+    + grad('m-cara', `gradientUnits="userSpaceOnUse" x1="${f1(c.sx)}" y1="${f1(c.sy)}" x2="${f1(derX0)}" y2="${f1(H)}"`, [[0, 'cr-0'], [0.5, 'cr-1'], [1, 'cr-2']])
+    + grad('m-nube', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'nb-0'], [1, 'nb-1']])
+    + grad('m-niebla', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'nl-0'], [0.5, 'nl-1'], [1, 'nl-0']])
+    + grad('m-lago', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'lg-0'], [1, 'lg-1']])
+    + grad('m-suelo', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'sl-0'], [1, 'sl-1']]);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
   // Capa del cielo (parallax): cielo, estrellas, fugaz, sol, luna, nubes y aves.
   s += '<g class="par par-cielo">';
-  [0, 0.17, 0.31, 0.43, 0.53].forEach((b, i) => { s += `<rect class="cielo-${i}" x="0" y="${f1(b * H)}" width="${W}" height="${f1(H - b * H)}"/>`; });
+  // Un solo rectángulo con el degradado de las cinco capas (antes eran cinco franjas de bordes duros) y el resplandor del horizonte bajo el astro.
+  s += `<rect class="cielo-0" x="0" y="0" width="${W}" height="${H}" fill="url(#m-cielo)"/><rect class="resplandor" x="0" y="0" width="${W}" height="${H}" fill="url(#m-resplandor)"/>`;
   for (let i = 0; i < 46; i++) s += `<circle class="estrella t${i % 5}" cx="${f1(rnd() * W)}" cy="${f1(rnd() * H * 0.5)}" r="${f1(0.5 + rnd() * 1.1)}"/>`;
   // Estrella fugaz (muy esporádica, solo de noche y con todos los efectos): una raya corta que cruza el cielo alto.
   s += `<line class="fugaz" x1="${f1(W * 0.16)}" y1="${f1(H * 0.1)}" x2="${f1(W * 0.16 + 46)}" y2="${f1(H * 0.1 + 20)}"/>`;
   // Sol (amanecer, día y atardecer) y luna con su fase real (noche): el CSS muestra uno u otro según `html[data-cielo]`.
-  s += `<g class="sol"><circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 1.7)}"/><circle class="astro" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs)}"/></g>`;
-  s += `<g class="luna"><circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 1.7)}"/>${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}</g>`;
+  // El halo es un degradado radial (luz que se difumina), no un disco.
+  const halo = `<circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 3.4)}" fill="url(#m-halo)"/>`;
+  s += `<g class="sol">${halo}<circle class="astro" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs)}"/></g>`;
+  s += `<g class="luna">${halo}${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}</g>`;
   s += (aurora ? auroraBoreal(W, H, techo) : '') + nubes(H) + aves(H) + '</g>';
   // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
   s += `<rect class="alba" id="m-alba" x="0" y="0" width="${W}" height="${H}"/>`;
   const sierra = (base, amp, paso, clase) => {
     let d = `M0 ${H}`;
     for (let x = 0; x <= W + paso; x += paso) d += `L${f1(x)} ${f1(base * H - (Math.sin(x / (W / 3.3) + base * 9) * 0.5 + rnd() * 0.6) * amp * H)}`;
-    s += `<path class="${clase}" d="${d}L${W} ${H}Z"/>`;
+    s += `<path class="${clase}" d="${d}L${W} ${H}Z" fill="url(#m-${clase})"/>`;
   };
   s += '<g class="par par-lejos">';
   sierra(c.sy / H + 0.2, 0.1, Math.max(24, W / 18), 'lejos');
@@ -130,7 +162,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   sierra(c.sy / H + 0.32, 0.09, Math.max(30, W / 14), 'medio');
   s += '</g>' + niebla(W, H, c.sy / H + 0.3);
 
-  // Montaña: ladera izquierda larga (el sendero) y cara derecha en sombra.
+  // Montaña: ladera izquierda larga (el sendero) y cara derecha. La cara que mira al astro recibe la luz (`#m-cara`) y
+  // su arista lleva un filo de luz; la otra queda en una sombra suave que se funde con la niebla del valle (`#m-ladera`).
   const piso = H * 0.99;
   const izqX = c.base[0] - W * 0.2;
   const izq = [], der = [];
@@ -145,18 +178,33 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   }
   const contorno = [...izq, ...der].map((p, i) => `${i ? 'L' : 'M'}${f1(p[0])} ${f1(p[1])}`).join('');
   const silueta = `${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z`;
-  s += `<defs><clipPath id="m-silueta"><path d="${silueta}"/></clipPath></defs><path class="monte" d="${silueta}"/>`;
-  s += `<path class="monte-sombra" d="M${f1(c.sx)} ${f1(c.sy)}${der.map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}L${f1(c.sx + W * 0.07)} ${H}L${f1(c.sx + W * 0.02)} ${f1(c.sy + H * 0.3)}Z"/>`;
+  const cara = `M${f1(c.sx)} ${f1(c.sy)}${der.map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}L${f1(c.sx + W * 0.07)} ${H}L${f1(c.sx + W * 0.02)} ${f1(c.sy + H * 0.3)}Z`;
+  // Lo que queda a la izquierda de la arista central: ahí la nieve está en sombra.
+  const izqArista = `M${f1(c.sx)} ${f1(-H)}L${f1(c.sx)} ${f1(c.sy)}L${f1(c.sx + W * 0.02)} ${f1(c.sy + H * 0.3)}L${f1(c.sx + W * 0.07)} ${H}L${f1(-W)} ${H}L${f1(-W)} ${f1(-H)}Z`;
+  s += `<defs><clipPath id="m-silueta"><path d="${silueta}"/></clipPath><clipPath id="m-izq"><path d="${izqArista}"/></clipPath></defs><path class="monte" d="${silueta}" fill="url(#m-ladera)"/>`;
+  s += `<path class="monte-sombra" d="${cara}" fill="url(#m-cara)"/>`;
+  s += `<path class="arista" d="M${f1(c.sx)} ${f1(c.sy)}${der.slice(0, 5).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}"/>`;
   // Nieve: una franja irregular mucho más ancha que el pico, recortada por la silueta, para que
   // nunca sobresalga de las laderas.
   // Su profundidad sigue a tu altitud (`colocar` la actualiza), así que la cumbre se va cubriendo a medida que subes.
   const nieveMedidas = { sx: c.sx, sy: c.sy, ancho: Math.max(W * 0.12, 140), nv: H * 0.075 };
-  s += `<path class="nieve" clip-path="url(#m-silueta)" d="${trazoNieve(nieveMedidas, altitud(inicio, esc))}"/>`;
+  const dNieve = trazoNieve(nieveMedidas, altitud(inicio, esc));
+  s += `<path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/></g>`;
 
   s += lago(c, W, H);
+  const [bx, by] = c.base;
+  for (let fila = 0; fila < 2; fila++) {
+    const yb = H * (fila ? 1.005 : 0.975), alto = H * (fila ? 0.07 : 0.05);
+    for (let x = -10; x < W + 20; x += alto * (0.55 + rnd() * 0.4)) {
+      const a = alto * (0.7 + rnd() * 0.5), an = a * 0.42;
+      if (Math.abs(x - bx) < 30) continue;
+      s += `<path class="pino-${fila}" d="M${f1(x)} ${f1(yb - a)}L${f1(x + an)} ${f1(yb)}L${f1(x - an)} ${f1(yb)}Z"/>`;
+    }
+  }
+  // El pie de la escena se funde con el fondo de la página (sin el corte seco de antes).
+  s += `<rect class="suelo" x="0" y="${f1(H * 0.8)}" width="${W}" height="${f1(H * 0.2 + 1)}" fill="url(#m-suelo)"/>`;
 
   // Sendero en zigzag: siempre sube, así que la altura recorrida es monótona.
-  const [bx, by] = c.base;
   const pts = [[bx, by]];
   for (let i = 1; i <= c.vueltas; i++) {
     const f = i / c.vueltas;
@@ -175,14 +223,6 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
   s += `<g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
-  for (let fila = 0; fila < 2; fila++) {
-    const yb = H * (fila ? 1.005 : 0.975), alto = H * (fila ? 0.07 : 0.05);
-    for (let x = -10; x < W + 20; x += alto * (0.55 + rnd() * 0.4)) {
-      const a = alto * (0.7 + rnd() * 0.5), an = a * 0.42;
-      if (Math.abs(x - bx) < 30) continue;
-      s += `<path class="pino-${fila}" d="M${f1(x)} ${f1(yb - a)}L${f1(x + an)} ${f1(yb)}L${f1(x - an)} ${f1(yb)}Z"/>`;
-    }
-  }
   s += bosque(W, H, bx, compras, plantar);
   host.innerHTML = s + '</g></svg>';
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
@@ -375,7 +415,8 @@ function colocar(sats, animado) {
   // La fogata y el humo: el siguiente campamento es el primero que aún no alcanzaste.
   const sig = estado.campos.find((x) => x.m > sats)?.m;
   host.querySelectorAll('.campo').forEach((g) => g.classList.toggle('sig', Number(g.dataset.m) === sig));
-  host.querySelector('.nieve')?.setAttribute('d', trazoNieve(estado.nieveMedidas, altitud(sats, esc)));
+  const dn = trazoNieve(estado.nieveMedidas, altitud(sats, esc));
+  host.querySelectorAll('.nieve, .nieve-sombra').forEach((n) => n.setAttribute('d', dn));
   if (!animado) { etiquetar(p); huellas(l); }
   return p;
 }
