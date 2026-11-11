@@ -1586,8 +1586,8 @@ t3 = _adm.post("/api/traslados", json={"fecha": "2026-03-20", "sats": 1000, "sen
 r = _adm.get("/api/traslados.csv")
 check(r.status_code == 200 and r.mimetype == "text/csv" and "traslados-btc-" in r.headers["Content-Disposition"], "traslados.csv se descarga como CSV")
 _lineas = r.get_data(as_text=True).splitlines()
-check(_lineas[0] == "fecha,sats,sentido,txid,nota" and len(_lineas) == 3, f"cabecera y solo los traslados vigentes {_lineas}")
-check(_lineas[1] == f'2026-03-05,150000,a_wallet,{"ab" * 32},"primer, retiro"' and _lineas[2] == "2026-03-12,40000,a_exchange,,", f"las filas salen en orden y con la nota entre comillas {_lineas[1:]}")
+check(_lineas[0] == "fecha,sats,sentido,txid,nota,wallet" and len(_lineas) == 3, f"cabecera y solo los traslados vigentes {_lineas}")
+check(_lineas[1] == f'2026-03-05,150000,a_wallet,{"ab" * 32},"primer, retiro",' and _lineas[2] == "2026-03-12,40000,a_exchange,,,", f"las filas salen en orden y con la nota entre comillas {_lineas[1:]}")
 check(nuevo().get("/api/traslados.csv").status_code == 401, "sin sesión no se exporta")
 _csv = r.get_data(as_text=True)
 # importar el mismo archivo: nada nuevo, todo repetido
@@ -2073,5 +2073,70 @@ try:
     check(adm_t.delete(f"/api/tokens/{_tk_vivo['id']}").status_code == 503, "ni se revocan")
 finally:
     server.SOLO_LECTURA = _ant_sl2
+
+# --- Campamento 9: varias wallets (idea 156)
+cxv = server.connect()
+check(adm.get("/api/wallets").get_json() == [] and luz.get("/api/wallets").status_code == 200 and anon.get("/api/wallets").status_code == 401, "al principio no hay más wallets; la ven todos con sesión")
+check(luz.post("/api/wallets", json={"nombre": "Ledger"}).status_code == 403 and luz.delete("/api/wallets/1").status_code == 403, "un lector no crea ni archiva wallets")
+for malo in ({}, {"nombre": ""}, {"nombre": "   "}, {"nombre": 5}, {"nombre": "x" * 25}, {"nombre": "<b>x</b>"}, {"nombre": "mi WALLET"}):
+    check(adm.post("/api/wallets", json=malo).status_code == 400, f"nombre de wallet rechazado: {malo}")
+r = adm.post("/api/wallets", json={"nombre": "  Ledger   frío "})
+wl = r.get_json()
+check(r.status_code == 201 and wl["nombre"] == "Ledger frío" and wl["sats"] == 0 and wl["archivada"] is False, f"se crea una wallet {r.data}")
+check(adm.post("/api/wallets", json={"nombre": "LEDGER FRÍO"}).status_code == 400, "no se repite el nombre (sin importar mayúsculas)")
+_E0 = server.sats_en_exchange(cxv)
+_p0 = server.saldos_wallets(server.traslados_vigentes(cxv)).get(0, 0)
+check(_E0 > 5000, f"hay sats suficientes en el exchange para probar ({_E0})")
+r = adm.post("/api/traslados", json={"fecha": today, "sats": 1000, "sentido": "a_wallet", "wallet_id": wl["id"]})
+check(r.status_code == 201 and r.get_json()["wallet_id"] == wl["id"], f"traslado a la otra wallet {r.data}")
+tr_l = r.get_json()
+check(next(t for t in adm.get("/api/traslados").get_json() if t["id"] == tr_l["id"])["wallet_id"] == wl["id"]
+      and all(t["wallet_id"] is None for t in adm.get("/api/traslados").get_json() if t["id"] != tr_l["id"]), "la lista de traslados dice a qué wallet va cada uno (null = la principal)")
+check(adm.get("/api/wallets").get_json()[0]["sats"] == 1000, "la wallet muestra lo que tiene")
+check(server.sats_en_exchange(cxv) == _E0 - 1000, "el exchange baja con lo que hay en cualquier wallet")
+for malo in (99999, "x", 1.5, True, [1]):
+    check(adm.post("/api/traslados", json={"fecha": today, "sats": 1, "wallet_id": malo}).status_code == 400, f"wallet_id inválido: {malo!r}")
+# cada wallet se valida sola: no se saca de una lo que hay en otra
+r = adm.post("/api/traslados", json={"fecha": today, "sats": _p0 + 1, "sentido": "a_exchange"})
+check(r.status_code == 400 and "tu wallet" in r.get_json()["error"], f"la principal no puede sacar más de lo que tiene aunque la otra tenga {r.data}")
+r = adm.post("/api/traslados", json={"fecha": today, "sats": 1001, "sentido": "a_exchange", "wallet_id": wl["id"]})
+check(r.status_code == 400 and "Ledger frío" in r.get_json()["error"], f"y la otra tampoco, con su nombre en el mensaje {r.data}")
+r = adm.post("/api/traslados", json={"fecha": today, "sats": _E0, "sentido": "a_wallet", "wallet_id": wl["id"]})
+check(r.status_code == 400 and "en total" in r.get_json()["error"], f"entre todas las wallets no hay más sats que el saldo {r.data}")
+check(lec_t.post("/api/traslados", json={"fecha": today, "sats": 1, "wallet_id": wl["id"]}).status_code == 403, "un lector no anota traslados")
+# archivar: solo sin sats; luego ya no recibe traslados, pero su historia se queda
+r = adm.delete(f"/api/wallets/{wl['id']}")
+check(r.status_code == 409 and "1,000" in r.get_json()["error"], f"con sats no se archiva {r.data}")
+check(adm.post("/api/traslados", json={"fecha": today, "sats": 1000, "sentido": "a_exchange", "wallet_id": wl["id"]}).status_code == 201, "se devuelven los sats al exchange")
+check(adm.delete(f"/api/wallets/{wl['id']}").status_code == 204 and adm.delete(f"/api/wallets/{wl['id']}").status_code == 404, "ahora sí se archiva (una sola vez)")
+check(adm.post("/api/traslados", json={"fecha": today, "sats": 1, "wallet_id": wl["id"]}).status_code == 400, "una wallet archivada ya no recibe traslados")
+check(adm.get("/api/wallets").get_json()[0]["archivada"] is True, "pero se sigue viendo (para nombrar sus traslados viejos)")
+# anular un traslado a otra wallet del que no dependen otros funciona; y el chequeo contable sigue limpio
+check(server.chequeo_contable(cxv) == [], "el chequeo contable no ve problemas con varias wallets")
+check({a["accion"] for a in adm.get("/api/auditoria").get_json()} >= {"wallet_creada", "wallet_archivada"}, "crear y archivar wallets quedan en el historial")
+# CSV: la columna wallet sale y entra; una wallet nueva en el archivo se crea; repetir no duplica
+_csvw = adm.get("/api/traslados.csv").get_data(as_text=True)
+check(_csvw.splitlines()[0].endswith(",wallet") and "Ledger frío" in _csvw, "el CSV de traslados lleva la wallet")
+_h2 = {"Content-Type": "text/csv"}
+_mas = "fecha,sats,sentido,txid,nota,wallet\n" + f"{today},700,a_wallet,,del archivo,Trezor\n{today},300,a_wallet,,otro,mi wallet\n{today},50,a_wallet,,,Ledger frío\n"
+r = adm.post("/api/traslados/import", data=_mas, headers=_h2)
+_j = r.get_json()
+check(r.status_code == 200 and _j["nuevos"] == 2 and _j["wallets_creadas"] == ["Trezor"] and len(_j["omitidos"]) == 1 and "archivada" in _j["omitidos"][0], f"importa con wallets: crea Trezor, la principal por nombre y omite la archivada {_j}")
+r = adm.post("/api/traslados/import", data=_mas, headers=_h2)
+check(r.get_json()["nuevos"] == 0 and r.get_json()["repetidos"] == 2, f"importar de nuevo no duplica {r.get_json()}")
+check([w["nombre"] for w in adm.get("/api/wallets").get_json()] == ["Ledger frío", "Trezor"] and adm.get("/api/wallets").get_json()[1]["sats"] == 700, "Trezor existe y tiene 700")
+# un CSV sin columna wallet entra como siempre (a la principal)
+r = adm.post("/api/traslados/import", data=f"fecha,sats,sentido,txid,nota\n{today},11,a_wallet,,vieja\n", headers=_h2)
+check(r.get_json()["nuevos"] == 1 and next(t for t in adm.get("/api/traslados").get_json() if t["nota"] == "vieja")["wallet_id"] is None, "un CSV de antes (sin wallet) entra en la principal")
+# si el archivo deja alguna wallet en negativo, se rechaza entero y no deja wallets a medias
+r = adm.post("/api/traslados/import", data=f"fecha,sats,sentido,txid,nota,wallet\n{today},5000,a_exchange,,,Nueva rara\n", headers=_h2)
+check(r.status_code == 400 and "No se importó nada" in r.get_json()["error"] and "Nueva rara" not in [w["nombre"] for w in adm.get("/api/wallets").get_json()], "un archivo que no cuadra no crea wallets")
+# tope de wallets (5 activas además de la principal)
+for i in range(3, 7):  # Trezor + estas cuatro = 5 activas (la archivada no cuenta)
+    check(adm.post("/api/wallets", json={"nombre": f"Extra {i}"}).status_code == 201, f"wallet activa {i - 1} de 5")
+check(adm.post("/api/wallets", json={"nombre": "Extra 7"}).status_code == 400, "la sexta activa se rechaza")
+r = adm.post("/api/traslados/import", data=f"fecha,sats,sentido,txid,nota,wallet\n{today},10,a_wallet,,,Otra más\n", headers=_h2)
+check(r.get_json()["nuevos"] == 0 and "no se crea" in r.get_json()["omitidos"][0], "importar tampoco pasa del tope")
+check("wallet_id" in {r[1] for r in cxv.execute("PRAGMA table_info(traslados)")}, "la migración añadió traslados.wallet_id")
 
 print("OK", ok, "comprobaciones")

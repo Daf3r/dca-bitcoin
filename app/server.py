@@ -216,6 +216,18 @@ def _m_tokens_api(conn: sqlite3.Connection) -> None:
     )""")
 
 
+def _m_wallets(conn: sqlite3.Connection) -> None:
+    # Varias wallets (idea 156): la principal («Mi wallet») es `traslados.wallet_id IS NULL`; las demás viven en `wallets`.
+    conn.execute("""CREATE TABLE IF NOT EXISTS wallets (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre    TEXT    NOT NULL CHECK (length(nombre) BETWEEN 1 AND 24),
+        creado    INTEGER NOT NULL,
+        archivada INTEGER
+    )""")
+    if "wallet_id" not in _columnas(conn, "traslados"):
+        conn.execute("ALTER TABLE traslados ADD COLUMN wallet_id INTEGER REFERENCES wallets(id)")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -227,6 +239,7 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (8, "errores_js (errores del navegador)", _m_errores_js),
     (9, "sesiones.compartida", _m_sesiones_compartida),
     (10, "tokens_api (enlaces de solo lectura para hojas de cálculo)", _m_tokens_api),
+    (11, "wallets y traslados.wallet_id (varias wallets)", _m_wallets),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -322,7 +335,7 @@ def saldo_negativo(movs: list[Mov]) -> str | None:
 # ------------------------------------------------------------------ traslados
 # Un traslado mueve sats entre el exchange y tu wallet. `sats` es lo que LLEGÓ a destino: si pagaste comisión de red,
 # se anota aparte como un gasto. Dónde están los sats = lo trasladado a tu wallet (neto) frente al saldo total.
-Tras = tuple[str, int, str, int]  # fecha, id, sentido, sats
+Tras = tuple[str, int, str, int, int]  # fecha, id, sentido, sats, wallet (0 = «Mi wallet», la principal)
 
 
 def parse_sentido(v: Any) -> str:
@@ -355,33 +368,81 @@ def parse_sats(v: Any) -> int:
     return v
 
 
+TRAS_COLS = "id, fecha, sats, sentido, txid, nota, creado, wallet_id"
+PRINCIPAL = "Mi wallet"  # el nombre de la wallet de siempre (la que no tiene fila en `wallets`)
+MAX_WALLETS = 5  # además de la principal
+
+
 def fila_traslado(row: sqlite3.Row) -> dict[str, Any]:
-    return {k: row[k] for k in ("id", "fecha", "sats", "sentido", "txid", "nota", "creado")}
+    return {k: row[k] for k in ("id", "fecha", "sats", "sentido", "txid", "nota", "creado", "wallet_id")}
 
 
 def traslados_vigentes(conn: sqlite3.Connection) -> list[Tras]:
-    return [(r["fecha"], r["id"], r["sentido"], r["sats"]) for r in
-            conn.execute("SELECT fecha, id, sentido, sats FROM traslados WHERE anulada_ts IS NULL")]
+    return [(r["fecha"], r["id"], r["sentido"], r["sats"], r["wallet_id"] or 0) for r in
+            conn.execute("SELECT fecha, id, sentido, sats, wallet_id FROM traslados WHERE anulada_ts IS NULL")]
+
+
+def saldos_wallets(tras: list[Tras]) -> dict[int, int]:
+    """Cuánto hay hoy en cada wallet (0 = la principal), solo las que tienen o tuvieron traslados."""
+    out: dict[int, int] = {}
+    for _f, _i, sentido, sats, w in tras:
+        out[w] = out.get(w, 0) + (sats if sentido == "a_wallet" else -sats)
+    return out
+
+
+def nombres_wallets(conn: sqlite3.Connection) -> dict[int, str]:
+    return {0: PRINCIPAL, **{r["id"]: r["nombre"] for r in conn.execute("SELECT id, nombre FROM wallets")}}
+
+
+def parse_nombre_wallet(v: Any) -> str:
+    if not isinstance(v, str):
+        raise ValueError("Ponle un nombre a la wallet.")
+    nombre = " ".join(v.split())
+    if not 1 <= len(nombre) <= 24:
+        raise ValueError("El nombre de la wallet debe tener de 1 a 24 caracteres.")
+    if not re.fullmatch(r"[\w .\-]+", nombre):
+        raise ValueError("El nombre solo puede llevar letras, números, espacios, puntos y guiones.")
+    return nombre
+
+
+def parse_wallet_id(conn: sqlite3.Connection, v: Any) -> int | None:
+    """None = la principal. Un id debe ser de una wallet que existe y no está archivada."""
+    if v is None or v == "" or v == 0:
+        return None
+    if isinstance(v, bool) or not isinstance(v, int):
+        raise ValueError("Wallet inválida.")
+    f = conn.execute("SELECT archivada FROM wallets WHERE id = ?", (v,)).fetchone()
+    if not f:
+        raise ValueError("Esa wallet no existe.")
+    if f["archivada"]:
+        raise ValueError("Esa wallet está archivada: ya no recibe traslados.")
+    return v
+
+
+def wallet_por_nombre(conn: sqlite3.Connection, nombre: str) -> sqlite3.Row | None:
+    # La comparación se hace en Python: el `lower()` de SQLite no entiende acentos («FRÍO» y «frío» son la misma wallet).
+    return next((r for r in conn.execute("SELECT id, nombre, archivada FROM wallets") if r["nombre"].casefold() == nombre.casefold()), None)
 
 
 def sats_en_exchange(conn: sqlite3.Connection) -> int:
     """Sats que hoy están en el exchange: el saldo total menos lo que hay en la wallet (recortado a [0, saldo]), igual que `lib.ubicacionSats`."""
     saldo = sum(-s if tipo == "venta" else s for _f, _i, tipo, s in movimientos(conn))
-    wallet = sum(sats if sentido == "a_wallet" else -sats for _f, _i, sentido, sats in traslados_vigentes(conn))
+    wallet = sum(max(0, v) for v in saldos_wallets(traslados_vigentes(conn)).values())
     return max(0, saldo - max(0, min(saldo, wallet)))
 
 
 def falla_traslados(conn: sqlite3.Connection, tras: list[Tras]) -> str | None:
-    """Mensaje de error si los traslados no cuadran: la wallet no puede quedar en negativo ni tener más sats de los
-    que posees en total ese día. None si todo cuadra."""
+    """Mensaje de error si los traslados no cuadran: ninguna wallet puede quedar en negativo y entre todas no pueden tener más sats
+    de los que posees en total ese día. None si todo cuadra."""
     movs = movimientos(conn)
-    wallet = 0
-    for fecha, _id, sentido, sats in sorted(tras, key=lambda t: (t[0], t[1])):
-        wallet += sats if sentido == "a_wallet" else -sats
-        if wallet < 0:
-            return f"No tienes tantos sats en tu wallet (el {fecha})."
+    nombres = nombres_wallets(conn)
+    saldos: dict[int, int] = {}
+    for fecha, _id, sentido, sats, w in sorted(tras, key=lambda t: (t[0], t[1])):
+        saldos[w] = saldos.get(w, 0) + (sats if sentido == "a_wallet" else -sats)
+        if saldos[w] < 0:
+            return f"No tienes tantos sats en tu wallet (el {fecha})." if w == 0 else f"No tienes tantos sats en «{nombres.get(w, 'la wallet')}» (el {fecha})."
         total = sum(-s if tipo == "venta" else s for f, _i, tipo, s in movs if f <= fecha)
-        if sentido == "a_wallet" and wallet > total:
+        if sentido == "a_wallet" and sum(saldos.values()) > total:
             return f"No tienes tantos sats en total (el {fecha})."
     return None
 
@@ -592,6 +653,7 @@ def importar_traslados_csv(conn: sqlite3.Connection, texto: str, usuario: str = 
     nuevos = repetidos = 0
     omitidos: list[str] = []
     ids: list[int] = []
+    creadas: list[str] = []
     for n, row in enumerate(lector, start=2):
         row = {(k or "").strip(): v for k, v in row.items()}
         try:
@@ -600,24 +662,39 @@ def importar_traslados_csv(conn: sqlite3.Connection, texto: str, usuario: str = 
             sentido = parse_sentido((row.get("sentido") or "").strip().lower() or None)
             txid = parse_txid(row.get("txid"))
             nota = parse_nota(row.get("nota"))
+            nombre_w = " ".join((row.get("wallet") or "").split())
+            wid = None
+            if nombre_w and nombre_w.casefold() != PRINCIPAL.casefold():
+                nombre_w = parse_nombre_wallet(nombre_w)
+                existente = wallet_por_nombre(conn, nombre_w)
+                if existente and existente["archivada"]:
+                    raise ValueError(f"la wallet «{nombre_w}» está archivada")
+                if existente:
+                    wid = existente["id"]
+                else:  # una wallet nueva en el archivo: se crea (con el mismo tope de siempre)
+                    if conn.execute("SELECT COUNT(*) FROM wallets WHERE archivada IS NULL").fetchone()[0] >= MAX_WALLETS:
+                        raise ValueError(f"ya hay {MAX_WALLETS} wallets además de la principal; no se crea «{nombre_w}»")
+                    wid = int(conn.execute("INSERT INTO wallets (nombre, creado) VALUES (?, ?)", (nombre_w, int(time.time()))).lastrowid or 0)
+                    creadas.append(nombre_w)
         except ValueError as e:
             omitidos.append(f"Línea {n}: {e}")
             continue
-        if conn.execute("SELECT 1 FROM traslados WHERE anulada_ts IS NULL AND fecha = ? AND sats = ? AND sentido = ? AND (? IS NULL OR txid IS NULL OR txid = ?)",
-                        (fecha, sats, sentido, txid, txid)).fetchone():
+        if conn.execute("SELECT 1 FROM traslados WHERE anulada_ts IS NULL AND fecha = ? AND sats = ? AND sentido = ? AND COALESCE(wallet_id, 0) = ? "
+                        "AND (? IS NULL OR txid IS NULL OR txid = ?)", (fecha, sats, sentido, wid or 0, txid, txid)).fetchone():
             repetidos += 1
             continue
-        cur = conn.execute("INSERT INTO traslados (fecha, sats, sentido, txid, nota, creado) VALUES (?, ?, ?, ?, ?, ?)",
-                           (fecha, sats, sentido, txid, nota, int(time.time() * 1000)))
+        cur = conn.execute("INSERT INTO traslados (fecha, sats, sentido, txid, nota, creado, wallet_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                           (fecha, sats, sentido, txid, nota, int(time.time() * 1000), wid))
         ids.append(int(cur.lastrowid or 0))
         nuevos += 1
     if nuevos and (falla := falla_traslados(conn, traslados_vigentes(conn))):
         conn.rollback()
         raise ValueError(f"{falla} No se importó nada: importa primero las compras y revisa el orden de los traslados.")
     if nuevos:
-        auth.auditar(conn, usuario, "importacion", "traslado", None, None, {"nuevos": nuevos, "repetidos": repetidos, "omitidos": len(omitidos), "ids": ids[:500]}, ip)
+        auth.auditar(conn, usuario, "importacion", "traslado", None, None,
+                     {"nuevos": nuevos, "repetidos": repetidos, "omitidos": len(omitidos), "ids": ids[:500], **({"wallets_creadas": creadas} if creadas else {})}, ip)
     conn.commit()
-    return {"nuevos": nuevos, "repetidos": repetidos, "omitidos": omitidos}
+    return {"nuevos": nuevos, "repetidos": repetidos, "omitidos": omitidos, **({"wallets_creadas": creadas} if creadas else {})}
 
 
 # ------------------------------------------------------------------------ rutas
@@ -1366,8 +1443,56 @@ def editar(cid: int) -> Any:
 
 @app.get("/api/traslados")
 def listar_traslados() -> Response:
-    rows = db().execute("SELECT id, fecha, sats, sentido, txid, nota, creado FROM traslados WHERE anulada_ts IS NULL ORDER BY fecha, id").fetchall()
+    rows = db().execute(f"SELECT {TRAS_COLS} FROM traslados WHERE anulada_ts IS NULL ORDER BY fecha, id").fetchall()
     return jsonify([fila_traslado(r) for r in rows])
+
+
+@app.get("/api/wallets")
+def listar_wallets() -> Response:
+    """Las wallets además de la principal (también las archivadas, para poder nombrar traslados viejos). Las ven todos, como los traslados."""
+    conn = db()
+    saldos = saldos_wallets(traslados_vigentes(conn))
+    return jsonify([{"id": r["id"], "nombre": r["nombre"], "archivada": bool(r["archivada"]), "sats": max(0, saldos.get(r["id"], 0))}
+                    for r in conn.execute("SELECT id, nombre, archivada FROM wallets ORDER BY id")])
+
+
+@app.post("/api/wallets")
+def crear_wallet() -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    body = request.get_json(silent=True)
+    try:
+        nombre = parse_nombre_wallet(body.get("nombre") if isinstance(body, dict) else None)
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    conn = db()
+    if nombre.casefold() == PRINCIPAL.casefold() or wallet_por_nombre(conn, nombre):
+        return jsonify(error="Ya tienes una wallet con ese nombre."), 400
+    if conn.execute("SELECT COUNT(*) FROM wallets WHERE archivada IS NULL").fetchone()[0] >= MAX_WALLETS:
+        return jsonify(error=f"Ya tienes {MAX_WALLETS} wallets además de la principal. Archiva alguna antes de añadir otra."), 400
+    cur = conn.execute("INSERT INTO wallets (nombre, creado) VALUES (?, ?)", (nombre, int(time.time())))
+    wid = int(cur.lastrowid or 0)
+    auth.auditar(conn, quien(), "wallet_creada", "wallet", wid, None, {"nombre": nombre}, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return jsonify(id=wid, nombre=nombre, archivada=False, sats=0), 201
+
+
+@app.delete("/api/wallets/<int:wid>")
+def archivar_wallet(wid: int) -> Any:
+    """Archivar: deja de recibir traslados, pero su historia se conserva. Solo si ya no tiene sats."""
+    if (e := _solo_admin()) is not None:
+        return e
+    conn = db()
+    f = conn.execute("SELECT id, nombre FROM wallets WHERE id = ? AND archivada IS NULL", (wid,)).fetchone()
+    if not f:
+        return jsonify(error="Esa wallet no existe o ya está archivada."), 404
+    queda = saldos_wallets(traslados_vigentes(conn)).get(wid, 0)
+    if queda > 0:
+        return jsonify(error=f"«{f['nombre']}» todavía tiene {queda:,} sats. Anota un traslado de vuelta al exchange o a otra wallet antes de archivarla."), 409
+    conn.execute("UPDATE wallets SET archivada = ? WHERE id = ?", (int(time.time()), wid))
+    auth.auditar(conn, quien(), "wallet_archivada", "wallet", wid, {"nombre": f["nombre"]}, None, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return "", 204
 
 
 @app.post("/api/traslados")
@@ -1381,15 +1506,16 @@ def crear_traslado() -> Any:
         sentido = parse_sentido(body.get("sentido"))
         txid = parse_txid(body.get("txid"))
         nota = parse_nota(body.get("nota"))
+        conn = db()
+        wid = parse_wallet_id(conn, body.get("wallet_id"))
     except ValueError as e:
         return jsonify(error=str(e)), 400
-    conn = db()
-    if falla := falla_traslados(conn, traslados_vigentes(conn) + [(fecha, 10**12, sentido, sats)]):
+    if falla := falla_traslados(conn, traslados_vigentes(conn) + [(fecha, 10**12, sentido, sats, wid or 0)]):
         return jsonify(error=falla), 400
-    cur = conn.execute("INSERT INTO traslados (fecha, sats, sentido, txid, nota, creado) VALUES (?, ?, ?, ?, ?, ?)",
-                       (fecha, sats, sentido, txid, nota, int(time.time() * 1000)))
+    cur = conn.execute("INSERT INTO traslados (fecha, sats, sentido, txid, nota, creado, wallet_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                       (fecha, sats, sentido, txid, nota, int(time.time() * 1000), wid))
     tid = int(cur.lastrowid or 0)
-    nuevo = fila_traslado(conn.execute("SELECT id, fecha, sats, sentido, txid, nota, creado FROM traslados WHERE id = ?", (tid,)).fetchone())
+    nuevo = fila_traslado(conn.execute(f"SELECT {TRAS_COLS} FROM traslados WHERE id = ?", (tid,)).fetchone())
     auth.auditar(conn, quien(), "alta", "traslado", tid, None, nuevo, auth.ip_resumida(ip_real()))
     conn.commit()
     push.vigilar_tx(conn, txid)
@@ -1400,7 +1526,7 @@ def crear_traslado() -> Any:
 def anular_traslado(tid: int) -> Any:
     # Igual que las compras: anular conserva la fila y su historia; las cuentas dejan de contarla.
     conn = db()
-    previa = conn.execute("SELECT id, fecha, sats, sentido, txid, nota, creado FROM traslados WHERE id = ? AND anulada_ts IS NULL", (tid,)).fetchone()
+    previa = conn.execute(f"SELECT {TRAS_COLS} FROM traslados WHERE id = ? AND anulada_ts IS NULL", (tid,)).fetchone()
     if not previa:
         return jsonify(error="El traslado no existe."), 404
     if falla := falla_traslados(conn, [t for t in traslados_vigentes(conn) if t[1] != tid]):
@@ -1444,12 +1570,13 @@ def csv_compras(conn: sqlite3.Connection) -> str:
 
 
 def csv_traslados(conn: sqlite3.Connection) -> str:
-    rows = conn.execute("SELECT fecha, sats, sentido, txid, nota FROM traslados WHERE anulada_ts IS NULL ORDER BY fecha, id").fetchall()
+    nombres = nombres_wallets(conn)
+    rows = conn.execute("SELECT fecha, sats, sentido, txid, nota, wallet_id FROM traslados WHERE anulada_ts IS NULL ORDER BY fecha, id").fetchall()
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
-    w.writerow(["fecha", "sats", "sentido", "txid", "nota"])
+    w.writerow(["fecha", "sats", "sentido", "txid", "nota", "wallet"])
     for r in rows:
-        w.writerow([r["fecha"], r["sats"], r["sentido"], r["txid"] or "", r["nota"] or ""])
+        w.writerow([r["fecha"], r["sats"], r["sentido"], r["txid"] or "", r["nota"] or "", nombres.get(r["wallet_id"] or 0, "") if r["wallet_id"] else ""])
     return out.getvalue()
 
 
@@ -1475,7 +1602,7 @@ def exportar_traslados() -> Response:
 LEEME_ZIP = """Libro DCA: copia de tus datos
 ==============================
 compras.csv     compras, ventas y gastos (fecha, monto_usd, precio_btc_usd, sats, btc, txid, tipo, nota, extra, etiquetas)
-traslados.csv   traslados entre el exchange y tu wallet (fecha, sats, sentido, txid, nota)
+traslados.csv   traslados entre el exchange y tus wallets (fecha, sats, sentido, txid, nota, wallet; la wallet en blanco es «Mi wallet»)
 
 Se abren en cualquier hoja de cálculo. Para volver a cargarlos en la app usa «Importar CSV» (compras) y «Importar traslados»
 (traslados): saltan lo repetido, así que importar dos veces el mismo archivo no duplica nada. Primero las compras y después
