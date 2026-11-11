@@ -106,7 +106,7 @@ for ruta, d in disp.items():
 conn.commit()
 push.SINCRONO = True
 push.ahora = lambda: datetime(2026, 11, 6, 12, 0, tzinfo=ritmo.ZONA)  # a mediodía: dentro del horario de avisos
-ESPERADO = {"titulo": "Libro DCA", "cuerpo": "Te quedan 2 días para comprar este periodo.", "etiqueta": "recordatorio", "url": "/"}
+ESPERADO = {"titulo": "Libro DCA", "cuerpo": "Te quedan 2 días para comprar este periodo.", "etiqueta": "recordatorio", "url": "/", "acciones": ["anotar"]}  # el recordatorio trae el botón «Anotar compra»
 
 # ------------------------------------------------------------ envío de verdad (sin sustituir nada de push.py)
 n = push.notificar(conn, "recordatorio", ESPERADO["titulo"], ESPERADO["cuerpo"], ESPERADO["etiqueta"])

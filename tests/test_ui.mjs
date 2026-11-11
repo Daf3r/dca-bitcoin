@@ -511,6 +511,7 @@ try {
         await p.click('#anotar');
         await p.waitForTimeout(400);
         await p.click('#h-tipo button[data-tipo="traslado"]');
+        await p.click('#h-sentido button[data-sentido="a_wallet"]'); // el borrador de la hoja puede traer el sentido de antes
         await p.fill('#h-sats', String(parte));
         await p.click('#guardar');
         await p.waitForTimeout(1800);
