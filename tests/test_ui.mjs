@@ -2185,6 +2185,52 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- estado del sistema (campamento 8, 2/4)
+  {
+    const srv = await servidor('anio');
+    try {
+      const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      const a = await entrar(navegador, srv, ADMIN, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      // Un error de JavaScript en la página se reporta al servidor y el admin lo ve
+      await a.p.evaluate(() => { setTimeout(() => { throw new Error('prueba de error en el navegador'); }, 10); });
+      await a.p.waitForTimeout(1200);
+      await a.p.click('#cuenta-btn');
+      ok(await a.p.locator('#dc-sistema-btn').isVisible(), 'el admin ve «Estado del sistema»');
+      await a.p.click('#dc-sistema-btn');
+      await a.p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent), null, { timeout: 5000 });
+      ok(await a.p.locator('#dc-sistema').isVisible() && !(await a.p.locator('#dc-menu').isVisible()), 'se abre la vista');
+      const filas = await a.p.$$eval('#sis-lista .sis-fila', (fs) => fs.map((f) => ({ t: f.querySelector('b').textContent, p: f.querySelector('.sis-palabra').textContent.trim(), e: f.dataset.estado })));
+      eq(filas.map((f) => f.t), ['Tus cuentas', 'Último respaldo', 'Prueba de restauración', 'Servicio de avisos', 'Base de datos', 'Espacio en disco', 'Versión'], 'las filas del estado');
+      ok(filas.every((f) => /^· (Bien|Revisar|Falla)$/.test(f.p)), 'cada fila dice con palabras cómo está (no solo con color)');
+      eq(filas[0].e, 'ok', 'con las cuentas bien, «Tus cuentas» está bien');
+      ok(/^(Todo en orden\.|\d+ cosas? por revisar\.)$/.test((await a.p.textContent('#sis-res')).trim()), 'el resumen dice cuántas cosas revisar');
+      const rutas = await a.p.$$eval('#sis-met th[scope="row"]', (ths) => ths.map((t) => t.textContent));
+      ok(rutas.includes('/api/compras') && !rutas.some((r) => /^\/[a-f0-9]{64}/.test(r)), `las métricas salen por ruta (${rutas.slice(0, 3).join(', ')}…)`);
+      const errores = await a.p.$$eval('#sis-err .sis-fila', (fs) => fs.map((f) => f.textContent));
+      ok(errores.some((t) => t.includes('prueba de error en el navegador') && t.includes('Safari · iPhone')), `el error del navegador aparece con su agente: ${errores[0]}`);
+      ok(await a.p.locator('#sis-err-limpiar').isVisible(), 'y se puede limpiar la lista');
+      await a.p.click('#sis-err-limpiar');
+      await a.p.waitForTimeout(700);
+      eq(await a.p.locator('#sis-err .sis-fila').count(), 0, 'limpiada la lista, no quedan errores');
+      ok((await a.p.textContent('#sis-err')).includes('Sin errores'), 'y lo dice');
+      // El estado nunca trae claves ni contenido de las compras
+      const crudo = JSON.stringify(await datos(a.p, '/api/sistema'));
+      ok(!/p256dh|endpoint|vapid|"hash"|scrypt/.test(crudo), 'el estado no incluye claves ni hashes');
+      await a.ctx.close();
+      // Una lectora: sin botón, sin acceso, y sus errores sí se reportan
+      const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      if (await l.p.locator('#d-novedades[open]').count()) await l.p.click('#nov-ok');
+      await l.p.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 5000 });
+      await l.p.click('#cuenta-btn');
+      ok(!(await l.p.locator('#dc-sistema-btn').isVisible()), 'una lectora no ve «Estado del sistema»');
+      eq(await l.p.evaluate(() => fetch('/api/sistema').then((r) => r.status)), 403, 'y la API le dice que no');
+      eq(await l.p.evaluate(() => fetch('/api/errores', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ pantalla: '/', mensaje: 'error de una lectora' }) }).then((r) => r.status)), 204, 'pero sus errores sí se reportan');
+      await l.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {

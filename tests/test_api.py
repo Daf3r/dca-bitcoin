@@ -2,7 +2,8 @@
 
 Uso (con Flask instalado): python tests/test_api.py
 """
-import os, re, sys, sqlite3, tempfile, importlib, json, subprocess, shutil
+import os; os.environ["LOG_PETICIONES"] = "0"
+import re, sys, sqlite3, tempfile, importlib, json, subprocess, shutil
 APP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 from datetime import date, timedelta
 tmp = tempfile.mkdtemp()
@@ -1568,7 +1569,95 @@ r = _ad.post("/api/import", data="fecha,monto_usd,sats,etiquetas\n2026-04-06,10,
 check(r["nuevas"] == 1 and len(r["omitidas"]) == 1, f"un CSV con demasiadas etiquetas en una fila la omite {r}")
 check(_ad.post("/api/import", data="fecha,monto_usd,sats\n2026-04-08,10,10000\n", headers={"Content-Type": "text/csv"}).get_json()["nuevas"] == 1, "un CSV sin la columna etiquetas entra igual")
 check(server.parse_etiquetas(None) is None and server.parse_etiquetas("") is None and server.parse_etiquetas(["  "]) is None, "sin etiquetas: None")
-check(server.version_esquema(server.connect()) == 6, "la migración 6 está aplicada")
+check(server.version_esquema(server.connect()) >= 6, "la migración 6 está aplicada")
+
+# --- Estado del sistema (ideas 53, 145, 46, 96, 74, 95)
+_ad = cliente(); _lc2 = cliente("Lola", "lectora-nueva-123")
+check(nuevo().get("/api/sistema").status_code == 401, "sin sesión no hay estado del sistema")
+check(_lc2.get("/api/sistema").status_code == 403, "una lectora no ve el estado del sistema")
+_e = _ad.get("/api/sistema"); _est = _e.get_json()
+check(_e.status_code == 200 and {"version", "esquema", "respaldo", "avisos", "integridad", "disco", "cuentas", "dispositivos", "metricas", "errores"} <= set(_est), f"el admin ve el estado {sorted(_est)}")
+check(_est["version"] == server.VERSION and _est["esquema"] == server.VERSION_ESQUEMA and _est["disco"]["libre"] > 0, "versión, esquema y disco")
+check(_est["respaldo"]["ultimo"] is not None and _est["respaldo"]["ok"], "el último respaldo (el de las pruebas) aparece y está al día")
+check(not any(k in json.dumps(_est) for k in ("p256dh", "endpoint", "auth\"", "vapid", "hash")), "el estado no trae claves, endpoints ni hashes")
+# dispositivos: solo estados
+_ep_sis = "https://fcm.googleapis.com/fcm/send/sistema-prueba"
+_ad.post("/api/push/suscribir", json=_sus(_ep_sis))
+_dv = [d for d in _ad.get("/api/sistema").get_json()["dispositivos"] if d["tipo"].startswith("Google") and d["usuario"] == "Daf3r"]
+check(_dv and set(_dv[0]) == {"usuario", "tipo", "creado", "ultimo_ok", "fallos", "categorias"} and "recordatorio" in _dv[0]["categorias"], f"dispositivos con avisos: usuario, tipo, fechas y categorías {_dv[:1]}")
+_ad.post("/api/push/baja", json={"endpoint": _ep_sis})
+# Idea 46: el chequeo contable detecta lo que no cuadra y no corrige nada
+check(server.chequeo_contable(server.connect()) == [] and _ad.get("/api/sistema").get_json()["cuentas"] == [], "con las cuentas bien, el chequeo no dice nada")
+_cc = server.connect()
+_cv = _cc.execute("INSERT INTO compras (fecha, monto, precio, sats, creado, tipo) VALUES ('2026-05-02', 5, 100000, 100000000000, 2, 'venta')").lastrowid  # una venta imposible, metida «por fuera»
+_cc.commit()
+_pb = server.chequeo_contable(_cc)
+check(len(_pb) >= 1 and "negativo" in _pb[0], f"detecta el saldo negativo {_pb}")
+check(_ad.get("/api/sistema").get_json()["cuentas"] == _pb, "y el estado lo muestra")
+_antes = _cc.execute("SELECT COUNT(*) FROM compras WHERE anulada_ts IS NULL").fetchone()[0]
+server.chequeo_contable(_cc); check(_cc.execute("SELECT COUNT(*) FROM compras WHERE anulada_ts IS NULL").fetchone()[0] == _antes, "el chequeo nunca modifica nada")
+_cc.execute("DELETE FROM compras WHERE id = ?", (_cv,)); _cc.commit()
+check(server.chequeo_contable(_cc) == [], "al arreglarlo el chequeo vuelve a no decir nada")
+# traslado de más: una venta que baja el total por debajo de lo que hay en la wallet
+_n_sin = _cc.execute("SELECT COUNT(*) FROM traslados WHERE anulada_ts IS NULL").fetchone()[0]
+_cc.execute("INSERT INTO traslados (fecha, sats, sentido, creado) VALUES ('2026-05-01', 100000000000, 'a_wallet', 1)"); _cc.commit()
+check(any("traslados" in x.lower() for x in server.chequeo_contable(_cc)), "detecta una wallet con más sats de los que hay")
+_cc.execute("DELETE FROM traslados WHERE sats = 100000000000"); _cc.commit()
+check(server.chequeo_contable(_cc) == [], "al arreglar los traslados el chequeo vuelve a no decir nada")
+_cc.close()
+# Avisos push por cuentas que no cuadran (una vez por problema, no corrige)
+_ccn = server.connect()
+_ccn.execute("DELETE FROM meta WHERE clave = 'aviso_cuentas'"); _ccn.commit()
+_enviados2: list = []
+_orig_not = avisos.push.notificar
+avisos.push.notificar = lambda c, cat, t, cu, et: _enviados2.append((cat, cu, et)) or 1
+try:
+    check(avisos._cuentas(_ccn) is False and not _enviados2, "cuentas bien: no avisa")
+    _ccn.execute("INSERT INTO traslados (fecha, sats, sentido, creado) VALUES ('2026-05-01', 100000000000, 'a_wallet', 1)"); _ccn.commit()
+    check(avisos._cuentas(_ccn) is True and len(_enviados2) == 1 and _enviados2[0][0] == "respaldo" and "no cuadra" in _enviados2[0][1], "un problema nuevo avisa al admin")
+    check(avisos._cuentas(_ccn) is False and len(_enviados2) == 1, "el mismo problema no vuelve a avisar")
+    _ccn.execute("DELETE FROM traslados WHERE sats = 100000000000"); _ccn.commit()
+    check(avisos._cuentas(_ccn) is False and len(_enviados2) == 1, "si se arregla, se anota en silencio")
+finally:
+    avisos.push.notificar = _orig_not
+    _ccn.close()
+# Idea 96: métricas por ruta (la regla, no la URL) y X-Request-ID (idea 95)
+server.vaciar_metricas()
+_r = _ad.get("/api/compras"); _rid = _r.headers.get("X-Request-ID")
+check(_rid and re.fullmatch(r"[0-9a-f]{12}", _rid), f"cada respuesta lleva su X-Request-ID {_rid}")
+check(_ad.get("/api/compras", headers={"X-Request-ID": "mi-id-de-prueba-123"}).headers["X-Request-ID"] == "mi-id-de-prueba-123", "respeta el identificador que manda Caddy")
+check(_ad.get("/api/compras", headers={"X-Request-ID": "<script>"}).headers["X-Request-ID"] != "<script>", "uno raro se reemplaza")
+_ad.get("/api/no-existe-esta-ruta"); _ad.get("/api/tx/" + "ab" * 32)
+_m = {x["ruta"]: x for x in _ad.get("/api/sistema").get_json()["metricas"]}
+check(_m["/api/compras"]["n"] >= 3 and _m["/api/compras"]["ms_max"] >= _m["/api/compras"]["ms_medio"] >= 0, f"cuenta las peticiones por ruta {_m.get('/api/compras')}")
+check("api: no existe" in _m and "/api/tx/<txid>" in _m or "/api/tx/<txid>" in str(_m), f"usa la regla de la ruta, no la URL con datos {sorted(_m)}")
+check(not any("ab" * 16 in r for r in _m) and "/healthz" not in _m and not any(r.endswith(".js") for r in _m), "sin TXID, sin /healthz y sin archivos estáticos")
+check(server.version_esquema(server.connect()) == server.VERSION_ESQUEMA, "el esquema incluye las tablas de métricas y errores")
+# Idea 74: errores del navegador (también de un lector), con límites
+_c0 = server.connect(); _c0.execute("DELETE FROM errores_js"); _c0.commit(); _c0.close()
+server._ERR_RECIENTES.clear()
+r = _lc2.post("/api/errores", json={"pantalla": "/", "mensaje": "TypeError: x is undefined en https://dca.polarzero.dev/app.js?v=abc123 con 123456789 y yo@correo.com"},
+              headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 Version/17.0 Safari/604.1"})
+check(r.status_code == 204, "un lector puede reportar un error")
+_er = _ad.get("/api/sistema").get_json()["errores"]
+check(len(_er) == 1 and "dca.polarzero.dev" not in _er[0]["mensaje"] and "123456789" not in _er[0]["mensaje"] and "yo@correo.com" not in _er[0]["mensaje"], f"el mensaje se guarda sin enlaces, correos ni números largos {_er}")
+check(_er[0]["agente"] == "Safari · iPhone" and _er[0]["pantalla"] == "/" and _er[0]["usuario"] == "Lola" and _er[0]["n"] == 1, f"agente corto, pantalla y quién {_er[0]}")
+_lc2.post("/api/errores", json={"pantalla": "/", "mensaje": "TypeError: x is undefined en https://otro.example/x.js con 987654321 y otra@correo.com"},
+          headers={"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 Version/17.0 Safari/604.1"})
+check(_ad.get("/api/sistema").get_json()["errores"][0]["n"] == 2, "el mismo error repetido suma, no llena la tabla")
+check(_lc2.post("/api/errores", json={"pantalla": "/<script>", "mensaje": "raro"}).status_code == 204 and any(e["pantalla"] == "/" for e in _ad.get("/api/sistema").get_json()["errores"]), "una pantalla rara se guarda como «/»")
+for malo in ({}, {"mensaje": ""}, {"mensaje": 5}, {"mensaje": "   "}):
+    check(_lc2.post("/api/errores", json=malo).status_code == 400, f"se rechaza {malo}")
+check(nuevo().post("/api/errores", json={"mensaje": "x"}, headers={"X-Libro": "1"}).status_code == 401, "sin sesión no se reporta")
+check(_lc2.delete("/api/errores").status_code == 403, "una lectora no limpia la lista")
+server._ERR_RECIENTES.clear()
+_cod = [_lc2.post("/api/errores", json={"mensaje": f"error distinto {i}"}).status_code for i in range(25)]
+check(_cod[:20] == [204] * 20 and _cod[20:] == [429] * 5, f"pasadas 20 en 10 minutos se frena a esa cuenta {_cod[18:22]}")
+check(len(_ad.get("/api/sistema").get_json()["errores"]) <= 20, "el estado trae como mucho 20")
+_c0 = server.connect(); check(_c0.execute("SELECT COUNT(*) FROM errores_js").fetchone()[0] <= server.ERR_FILAS, "la tabla guarda como mucho 100"); _c0.close()
+r = _ad.delete("/api/errores"); check(r.status_code == 200 and r.get_json()["quitados"] >= 20 and _ad.get("/api/sistema").get_json()["errores"] == [], "el admin limpia la lista")
+server._ERR_RECIENTES.clear()
+check(server._agente_corto("Mozilla/5.0 (Windows NT 10.0) Chrome/120 Safari/537 Edg/120") == "Edge · Windows" and server._agente_corto("x") == "otro · otro", "agente corto")
 
 # --- Restaurar de verdad (idea 48): del respaldo a una base nueva, con todo igual, y reemplazando una base con su WAL viejo
 def _todo(ruta):

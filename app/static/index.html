@@ -10,6 +10,7 @@
 <script src="/accesibilidad.js"></script>
 <script src="/efectos.js"></script>
 <script src="/cielo.js"></script>
+<script src="/errores.js"></script>
 <title>Libro DCA</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -375,6 +376,7 @@
       <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
       <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar y traslados</button>
+      <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
@@ -441,6 +443,22 @@
     </div>
     <p class="dc-nota">Importar salta lo repetido, así que puedes cargar el mismo archivo dos veces sin duplicar. Importa primero las compras: la wallet no puede tener más sats de los que posees ese día.</p>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
+  </div>
+  <div class="dc-sistema" id="dc-sistema" hidden>
+    <h2>Estado del sistema</h2>
+    <p class="sis-res" id="sis-res" role="status">Cargando…</p>
+    <ul class="sis-lista" id="sis-lista"></ul>
+    <h3>Dispositivos con avisos</h3>
+    <ul class="sis-lista" id="sis-disp"></ul>
+    <h3>Peticiones de los últimos 7 días</h3>
+    <div class="sis-tabla"><table>
+      <caption class="sr">Peticiones por ruta: cuántas, tiempo medio y máximo, lentas y errores</caption>
+      <thead><tr><th scope="col">Ruta</th><th scope="col">Veces</th><th scope="col">Medio</th><th scope="col">Máx.</th><th scope="col">Lentas</th><th scope="col">Errores</th></tr></thead>
+      <tbody id="sis-met"></tbody>
+    </table></div>
+    <h3>Errores del navegador</h3>
+    <ul class="sis-lista" id="sis-err"></ul>
+    <div class="d-bot"><button type="button" id="sis-err-limpiar" hidden>Limpiar la lista</button><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-historial" id="dc-hist" hidden>
     <h2>Historial</h2>
