@@ -133,7 +133,7 @@ html[data-ligero] .montana::after { content: none; }
 .nieve-sombra { fill: var(--monte-sombra); opacity: 0.32; }
 .nb-0 { stop-color: var(--nube); } .nb-1 { stop-color: color-mix(in oklab, var(--nube) 55%, transparent); }
 .nl-0 { stop-color: var(--nube); stop-opacity: 0; } .nl-1 { stop-color: var(--nube); }
-.lg-0 { stop-color: color-mix(in oklab, var(--c3) 40%, var(--c4)); } .lg-1 { stop-color: color-mix(in oklab, var(--c4) 50%, var(--medio)); }
+.lg-0 { stop-color: color-mix(in oklab, var(--c4) 55%, var(--medio)); } .lg-1 { stop-color: color-mix(in oklab, var(--c3) 45%, var(--monte)); }
 .sl-0 { stop-color: var(--fondo); stop-opacity: 0; } .sl-1 { stop-color: var(--fondo); stop-opacity: 1; }
 .resplandor { pointer-events: none; }
 .suelo-a { opacity: 0.6; } /* el primer velo del pie solo apaga; el último, bajo el bosque, funde del todo con la página */
@@ -1307,10 +1307,15 @@ html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { 
 .campo.alcanzado .farol-halo { opacity: 0.9; }
 .campo.sig .farol-halo { opacity: 0.45; }
 .campo:not(.alcanzado):not(.sig) .campo-ico { fill: none; stroke: color-mix(in oklab, var(--nieve) 45%, transparent); }
-.es-cima .farol-cuerpo { fill: #ffd38a; stroke: #6b3e12; } .es-cima .farol-techo { stroke: #6b3e12; } .es-cima .farol-halo { opacity: 0.85; }
+.es-cima .farol-halo { opacity: 0.8; }
 .es-cima .campo-ico { fill: color-mix(in oklab, var(--nieve) 35%, #9f927f); }
 .cima-junta { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 60%, #241a12); stroke-width: 0.9; opacity: 0.6; }
-.cima-monticulo { fill: var(--nieve); } .cima-monticulo-luz { fill: #fff; opacity: 0.3; }
+.cima-brasa { fill: url(#m-luz); opacity: 0.85; }
+.cima-mastil { stroke-width: 1.8; }
+.cima-banderin { opacity: 0.95; }
+.cima-hilo { stroke: #ffd38a; stroke-width: 1; opacity: 0.55; stroke-linecap: round; }
+.cima-lucero { fill: #fff2cf; }
+.cima-haz { fill: #ffd38a; opacity: 0.35; }
 .luz-suelo { fill: #ffb25e; opacity: 0; }
 .campo.alcanzado .luz-suelo { opacity: 0.22; } .campo.sig .luz-suelo { opacity: 0.12; }
 /* El sol: un disco de borde suave (degradado) que se funde con su halo, no una moneda plana. */
@@ -1363,7 +1368,7 @@ html[data-efectos="todos"] .aurora-cinta.a2 { animation: aurora-mece 29s -11s ea
 .pag-login .aurora { display: none; }
 
 /* Lago con el reflejo de la luna (su brillo sigue la fase: --luna-ilum la fija montana.js). */
-.lago-agua { opacity: 0.96; }
+.lago-agua { opacity: 0.8; }
 .lago-borde { fill: none; stroke: var(--nieve); stroke-opacity: 0.3; stroke-width: 1; stroke-linecap: round; }
 .lago-sol { fill: var(--astro); opacity: 0.55; }
 html[data-cielo="noche"] .lago-luz { display: none; }
