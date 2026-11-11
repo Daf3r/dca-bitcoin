@@ -1,4 +1,39 @@
 // Cálculos y formatos sin DOM.
+//
+// Tipos (idea 79): las funciones del dinero llevan su tipo en comentarios JSDoc y `tsc` los comprueba solo en el CI y en tu equipo
+// (`cd tests && npx tsc -p tsconfig.json`; no hay build y nada de esto llega al navegador). Para anotar más funciones basta con escribir su
+// JSDoc: el archivo ya está en «include». Empezar por las que mueven dinero (`resumen` y lo que le llega) y seguir archivo por archivo.
+
+/**
+ * Una compra, venta o gasto como lo devuelve la API (`/api/compras`).
+ * @typedef {object} Movimiento
+ * @property {number} id
+ * @property {string} fecha AAAA-MM-DD (se compara como texto)
+ * @property {number} monto dólares
+ * @property {number} precio dólares por BTC
+ * @property {number} sats siempre positivos; una venta los resta
+ * @property {'compra'|'venta'} tipo un gasto es una venta
+ * @property {number} [creado] milisegundos
+ * @property {string|null} [txid]
+ * @property {string|null} [nota]
+ * @property {boolean} [extra] compra extra por una caída
+ * @property {string[]} [etiquetas]
+ */
+/**
+ * Un traslado entre el exchange y tu wallet (`/api/traslados`).
+ * @typedef {object} Traslado
+ * @property {number} id
+ * @property {string} fecha
+ * @property {number} sats lo que llegó a destino
+ * @property {'a_wallet'|'a_exchange'} sentido
+ * @property {string|null} [txid]
+ * @property {string|null} [nota]
+ * @property {number} [creado]
+ */
+/**
+ * Un movimiento dentro de `resumen`: lo mismo más lo que va acumulando.
+ * @typedef {Movimiento & { inv: number, satsAcum: number, realizada: number|null }} MovimientoAcumulado
+ */
 
 const nfUSD = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const nfUSD0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -129,7 +164,7 @@ function pasoSemanas(items) {
   for (const f of items.map((c) => c.fecha).sort()) if (!porSemana.has(semana(f))) porSemana.set(semana(f), f);
   const fechas = [...porSemana.values()].slice(-9);
   if (fechas.length < 4) return 1;
-  const d = fechas.slice(1).map((f, i) => (aFecha(f) - aFecha(fechas[i])) / 864e5).sort((a, b) => a - b);
+  const d = fechas.slice(1).map((f, i) => (aFecha(f).getTime() - aFecha(fechas[i]).getTime()) / 864e5).sort((a, b) => a - b);
   return d[d.length >> 1] >= 10 ? 2 : 1;
 }
 
@@ -230,7 +265,7 @@ export function proximosHitosConstancia(compras, hoy = hoyISO()) {
  * Cómo movería tu costo promedio una compra nueva (el «ajuste» del DCA: comprar barato lo baja, comprar caro lo sube).
  * Sin saldo ni invertido (primera compra o tras vender todo) no hay costo previo y devuelve null.
  */
-export function costoTrasCompra(R, monto, sats) {
+export function costoTrasCompra(/** @type {{ sats: number, inv: number }|null|undefined} */ R, /** @type {number} */ monto, /** @type {number} */ sats) {
   if (!R || !(R.sats > 0) || !(R.inv > 0) || !(sats > 0) || !(monto > 0)) return null;
   const antes = (R.inv * 1e8) / R.sats;
   const despues = ((R.inv + monto) * 1e8) / (R.sats + sats);
@@ -354,11 +389,16 @@ export function avisosAlAnotar(compras, { tipo, sats, monto, fecha, editando = n
   return avisos;
 }
 
-/** Todo lo que muestran la cabecera y los reportes, sin tocar el DOM. */
+/**
+ * Todo lo que muestran la cabecera y los reportes, sin tocar el DOM.
+ * @param {Movimiento[]} compras compras, ventas y gastos (en cualquier orden)
+ * @param {number|null|undefined} precio el precio vivo de BTC en dólares, si se conoce
+ * @param {string} [hoy] AAAA-MM-DD de El Salvador
+ */
 export function resumen(compras, precio, hoy = hoyISO()) {
   // Movimientos: compras (suman sats) y ventas o gastos (restan). Mismo orden que el servidor: por fecha y,
   // dentro del mismo día, las compras antes que las ventas.
-  const orden = [...compras].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.tipo === 'venta') - (b.tipo === 'venta') || a.id - b.id));
+  const orden = [...compras].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : Number(a.tipo === 'venta') - Number(b.tipo === 'venta') || a.id - b.id));
   // Costo promedio ponderado: al vender, el costo base baja en proporción a los sats que salen y la
   // ganancia realizada es lo recibido menos ese costo. Sin impuestos: es contabilidad, no declaración.
   let inv = 0, sats = 0, realizada = 0, comprado = 0, vendido = 0, satsComprados = 0;
@@ -522,7 +562,7 @@ export function ticksDolares(max) {
   if (!(max > 0)) return [];
   const raw = max / 3;
   const mag = 10 ** Math.floor(Math.log10(raw));
-  const paso = [1, 2, 5, 10].find((k) => k * mag >= raw) * mag;
+  const paso = ([1, 2, 5, 10].find((k) => k * mag >= raw) ?? 10) * mag;
   const ticks = [];
   for (let v = paso; v <= max * 0.97 + 1e-9; v += paso) ticks.push(Math.round(v * 100) / 100);
   return ticks;
@@ -570,6 +610,11 @@ export function costoVsPromedio(R, historico, vivo, hoy = hoyISO()) {
  * supera el saldo (si vendiste o gastaste más de lo que quedaba en el exchange, se recorta).
  */
 export const walletNeto = (traslados) => (traslados ?? []).reduce((a, t) => a + (t.sentido === 'a_exchange' ? -t.sats : t.sats), 0);
+/**
+ * @param {Traslado[]|null|undefined} traslados
+ * @param {number} saldo sats que tienes en total
+ * @returns {{ wallet: number, exchange: number, pctWallet: number, hay: boolean }}
+ */
 export function ubicacionSats(traslados, saldo) {
   const wallet = Math.max(0, Math.min(saldo, walletNeto(traslados)));
   const exchange = Math.max(0, saldo - wallet);
@@ -705,6 +750,7 @@ const sinAcentos = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const PALABRA_TIPO = { compra: 'compra', venta: 'venta gasto', traslado: 'traslado' };
 /** Compras, ventas y traslados en una sola forma, lo más reciente primero (a igual fecha, lo último que anotaste). */
+/** @param {Movimiento[]} items @param {Traslado[]} [traslados] */
 export function movimientosLista(items, traslados = []) {
   const m = [
     ...items.map((c) => ({ clave: `c${c.id}`, tipo: c.tipo === 'venta' ? 'venta' : 'compra', fecha: c.fecha, creado: c.creado ?? 0, id: c.id, sats: c.sats, monto: c.monto, nota: c.nota ?? '', txid: c.txid ?? '', extra: !!c.extra, etiquetas: c.etiquetas ?? [], ref: c })),
@@ -724,12 +770,14 @@ export function ordenarMovimientos(movs, orden = 'recientes') {
   return [...movs].sort(cmp);
 }
 /** Las etiquetas que has usado, de más a menos frecuentes: [{ nombre, n }]. Las anuladas ya no vienen en `items`. */
+/** @param {{ etiquetas?: string[] }[]} items @returns {{ nombre: string, n: number }[]} */
 export function etiquetasUsadas(items) {
   const cuenta = new Map();
   for (const c of items) for (const e of c.etiquetas ?? []) cuenta.set(e, (cuenta.get(e) ?? 0) + 1);
   return [...cuenta].map(([nombre, n]) => ({ nombre, n })).sort((a, b) => b.n - a.n || a.nombre.localeCompare(b.nombre, 'es'));
 }
 /** Lo que escribe la persona («Cumpleaños, #bono ») como lista: minúsculas, sin # ni repetidas (el servidor valida lo demás). */
+/** @param {string} texto @returns {string[]} */
 export function partirEtiquetas(texto) {
   const salida = [];
   for (const p of String(texto ?? '').split(/[,;]/)) {

@@ -55,7 +55,7 @@ export function filasDelEstado(e) {
   const d = e.disco;
   const pocoDisco = d.libre < 1024 ** 3 || (d.pct_libre ?? 100) < 10;
   f.push(fila(pocoDisco ? 'aviso' : 'ok', 'Espacio en disco', `${gb(d.libre)} libres de ${gb(d.total)} (${d.pct_libre ?? '?'} %).`));
-  f.push(fila('ok', 'Versión', `Archivos ${e.version}.`));
+  f.push(fila('ok', 'Versión', `Archivos ${e.version}${e.commit ? ` · commit ${e.commit}` : ' · sin commit (despliega con VERSION_GIT, ver el README)'}.`));
   return f;
 }
 

@@ -1797,6 +1797,11 @@ finally:
     if _env0 is None: os.environ.pop("BACKUP_CLAVE", None)
     else: os.environ["BACKUP_CLAVE"] = _env0
 
+# --- Commit desplegado (idea 97): VERSION_GIT llega del build y se muestra en «Estado del sistema»; nada raro entra
+check(server._leer_version_git("1d736a6") == "1d736a6" and server._leer_version_git(" abcdef0123456789abcdef0123456789abcdef01\n") == "abcdef0123456789abcdef0123456789abcdef01", "un commit válido pasa")
+check(all(server._leer_version_git(x) == "" for x in ("", "abc", "XYZ123", "1d736a6; rm -rf /", "<script>", "g" * 12, "a" * 41)), "lo que no es un hash corto o largo queda vacío")
+check(_ad.get("/api/sistema").get_json()["commit"] == server.VERSION_GIT[:12], "el estado del sistema trae el commit (vacío si no se desplegó con VERSION_GIT)")
+
 # --- Restaurar de verdad (idea 48): del respaldo a una base nueva, con todo igual, y reemplazando una base con su WAL viejo
 def _todo(ruta):
     """Todas las filas de todas las tablas de una base, para compararlas tal cual."""

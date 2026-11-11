@@ -7,6 +7,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY server.py auth.py usuarios.py backup.py importar.py push.py ritmo.py avisos.py salud.py ./
 COPY static ./static
+# El commit desplegado (README, «Actualizar»): va al final para no invalidar las capas de pip. Vacío si no se pasa.
+ARG VERSION_GIT=
+ENV VERSION_GIT=$VERSION_GIT
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=4s --retries=3 \

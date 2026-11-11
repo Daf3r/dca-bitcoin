@@ -8,10 +8,16 @@ x-endurecido: &endurecido
   security_opt: ["no-new-privileges:true"]
   tmpfs: ["/tmp"]
 
+# Los tres servicios usan la misma imagen; el commit desplegado entra como argumento de construcción (README, «Actualizar»).
+x-construir: &construir
+  context: ./app
+  args:
+    VERSION_GIT: ${VERSION_GIT:-}
+
 services:
   app:
     <<: *endurecido
-    build: ./app
+    build: *construir
     image: libro-dca:local
     environment:
       DB_PATH: /data/libro.db
@@ -28,7 +34,7 @@ services:
 
   backup:
     <<: *endurecido
-    build: ./app          # misma imagen que app; el caché evita reconstruirla
+    build: *construir     # misma imagen que app; el caché evita reconstruirla
     image: libro-dca:local
     depends_on: [app]
     command: ["python", "backup.py", "--loop"]
@@ -54,7 +60,7 @@ services:
   # y con los servicios de push de Apple, Google y Mozilla.
   avisos:
     <<: *endurecido
-    build: ./app
+    build: *construir
     image: libro-dca:local
     depends_on: [app]
     command: ["python", "avisos.py", "--loop"]

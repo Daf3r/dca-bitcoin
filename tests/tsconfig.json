@@ -1,0 +1,17 @@
+{
+  "//": "Solo para el CI y para ti (idea 79): comprueba con `tsc` los tipos escritos en comentarios JSDoc de app/static/lib.js. No emite nada ni llega al navegador ni a la imagen. Para ampliarlo, añade el archivo a «include» y anota sus funciones.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM"],
+    "skipLibCheck": true
+  },
+  "include": ["../app/static/lib.js"]
+}

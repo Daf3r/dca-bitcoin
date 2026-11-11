@@ -1,0 +1,47 @@
+name: Versión
+
+# Cada cambio que entra a main (un PR mezclado) genera una versión en GitHub: una etiqueta `vAAAA.MM.DD-N` y unas notas con el título
+# y la descripción del PR. Así sabes qué trae cada cambio y qué commit es (el mismo que muestra «Estado del sistema» si
+# desplegaste con VERSION_GIT, ver el README). No toca el código ni el despliegue.
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: version
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  version:
+    name: Etiqueta y notas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Crear la versión
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          dia=$(date -u +%Y.%m.%d)
+          n=$(git tag --list "v${dia}-*" | wc -l)
+          tag="v${dia}-$((n + 1))"
+          # El PR que trajo este commit (si fue un push directo, no hay: se usa el mensaje del commit)
+          pr=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" --jq '.[0].number // empty' || true)
+          if [ -n "$pr" ]; then
+            titulo=$(gh pr view "$pr" --json title --jq .title)
+            gh pr view "$pr" --json body --jq .body > notas.md
+            printf '\n\n---\nCommit `%s` · [PR #%s](https://github.com/%s/pull/%s)\n' "${SHA:0:7}" "$pr" "$GITHUB_REPOSITORY" "$pr" >> notas.md
+          else
+            titulo=$(git log -1 --format=%s "$SHA")
+            printf 'Commit `%s`\n' "${SHA:0:7}" > notas.md
+          fi
+          gh release create "$tag" --target "$SHA" --title "${tag} · ${titulo}" --notes-file notas.md
+          echo "Versión $tag creada" >> "$GITHUB_STEP_SUMMARY"
