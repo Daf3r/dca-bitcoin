@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-e', fecha: '2026-11-13',
+    items: [
+      'La app tiene un aspecto nuevo, más cálido: el cielo de la montaña cambia de color sin franjas y el sol y la luna dan una luz suave.',
+      'Las montañas lejanas se pierden en la bruma, la cara que mira al sol se ilumina y las nubes y el lago se ven más naturales.',
+      'Las tarjetas tienen más profundidad y la letra de los títulos es más suave.',
+      'En pantallas grandes, bajo tu saldo ves tu costo promedio, tu racha y cuántas compras llevas.',
+      'Cada wallet tiene ahora su propio color en «Dónde están tus sats».',
+    ],
+  },
+  {
     id: '2026-11-d', fecha: '2026-11-12',
     items: [
       'Puedes tener varias wallets: al anotar un traslado elige a cuál va, y la tarjeta «Dónde están tus sats» las reparte con sus nombres.',

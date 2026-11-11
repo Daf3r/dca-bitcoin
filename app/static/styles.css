@@ -49,6 +49,11 @@
   --sombra: 0 1px 1px rgb(0 0 0 / 0.28), 0 14px 34px -18px rgb(0 0 0 / 0.75);
   --sombra-alta: 0 2px 4px rgb(0 0 0 / 0.3), 0 26px 60px -24px rgb(0 0 0 / 0.8);
   --velo-tarjeta: linear-gradient(180deg, rgb(255 236 205 / 0.035), transparent 46%);
+  /* Tonos de las wallets extra (la principal es el naranja): oro, verde agua, lavanda, oliva y azul cielo; ≥ 3:1 sobre --s1. */
+  --w1: #f0c05a; --w2: #5fc4b2; --w3: #ad9ef0; --w4: #a9c873; --w5: #84b8ec;
+  /* Resortes (muestreados de un muelle amortiguado): una llegada con un leve rebote, sin JS. */
+  --resorte: linear(0, 0.122, 0.371, 0.63, 0.841, 0.982, 1.057, 1.084, 1.079, 1.06, 1.038, 1.018, 1.005, 0.997, 0.993, 0.993, 0.994, 0.996, 0.998, 0.999, 1);
+  --resorte-vivo: linear(0, 0.14, 0.453, 0.772, 1.032, 1.174, 1.218, 1.188, 1.123, 1.05, 0.995, 0.962, 0.953, 0.959, 0.973, 0.988, 1.001, 1.008, 1.01, 1.009, 1.006, 1.003, 1);
   --serif: "Fraunces", "Fraunces reserva", Georgia, serif;
   --sans: "Bricolage", "Bricolage reserva", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -70,6 +75,7 @@
     --sombra: 0 1px 2px rgb(110 70 30 / 0.08), 0 14px 32px -18px rgb(110 70 30 / 0.3);
     --sombra-alta: 0 2px 6px rgb(110 70 30 / 0.1), 0 26px 56px -24px rgb(110 70 30 / 0.38);
     --velo-tarjeta: linear-gradient(180deg, rgb(255 255 255 / 0.5), transparent 46%);
+    --w1: #8a6400; --w2: #2a7a6c; --w3: #6553b5; --w4: #56732a; --w5: #2f6aa3;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -177,6 +183,15 @@ html[data-efectos="todos"][data-cielo="amanecer"] .ave-ala.a2 { animation-delay:
 html[data-efectos="todos"][data-cielo="amanecer"] .ave-ala.a3 { animation-delay: -0.3s; }
 /* El cielo se funde con la página al bajar: un velo del color del fondo que sube con el desplazamiento (oscurece en el tema oscuro, aclara en el claro). */
 html[data-efectos="todos"] .escena::after { content: ""; position: absolute; inset: 0; z-index: 0; background: var(--fondo); opacity: calc(var(--scroll-p, 0) * 0.7); pointer-events: none; }
+/* La escena despierta al abrir (entrada.js, solo con todos los efectos): `translate` es independiente de `transform`, así que no
+   pisa el parallax. */
+@keyframes asienta { from { translate: 0 18px; opacity: 0.4; } to { translate: none; opacity: 1; } }
+@keyframes enciende { from { opacity: 0; } to { opacity: 1; } }
+@keyframes aparece-yo { from { opacity: 0; } to { opacity: 1; } }
+html.escena-abre[data-efectos="todos"] .par-lejos { animation: asienta 1.2s var(--resorte) both; }
+html.escena-abre[data-efectos="todos"] .par-medio { animation: asienta 1.2s var(--resorte) 0.12s both; }
+html.escena-abre[data-efectos="todos"] .resplandor { animation: enciende 1.6s ease-out both; }
+html.escena-abre[data-efectos="todos"] #m-yo { animation: aparece-yo 0.6s ease-out 0.5s both; }
 /* El logo entra al abrir (solo una vez, ~0.6 s): la montañita se dibuja y la marca aparece. Nunca retrasa el saldo. */
 @keyframes marca-entra { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes ico-dibuja { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
@@ -211,6 +226,8 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
   padding: 6px 10px 7px; margin: -6px -10px 0 0; border-radius: 14px; background: color-mix(in srgb, var(--c0) 46%, transparent); }
 .cotizacion > .cot-24, .cotizacion > .cot-meta { grid-column: 1 / -1; justify-self: end; }
 @media (min-width: 360px) { .cot-meta { white-space: nowrap; } }
+/* En 320 px el precio va en su columna estrecha de siempre (una cosa por línea) para no empujar la marca ni el saludo. */
+@media (max-width: 359px) { .cotizacion { grid-template-columns: auto; justify-items: end; } }
 .cot-k { font-size: 0.75rem; color: var(--cielo-txt2); white-space: nowrap; }
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
@@ -591,7 +608,7 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
   position: relative; display: grid; gap: 10px; max-height: 100%; overflow-y: auto; overscroll-behavior: contain;
   padding: 18px max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
   border-radius: 28px 28px 0 0; background: var(--s1);
-  transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.2, 1);
+  transform: translateY(100%); transition: transform 0.34s cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 .hoja.abierta .hoja-fondo { opacity: 1; }
 .hoja.abierta .hoja-panel { transform: none; }
@@ -633,16 +650,8 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 .ub-w { background: var(--naranja); }
 /* Las demás wallets: un tono propio por wallet (el nombre y las cifras van al lado, así que el color no es lo único que las distingue). */
 .an-w1, .an-w2, .an-w3, .an-w4, .an-w5 { stroke-linecap: butt; }
-.an-w1 { stroke: color-mix(in srgb, var(--naranja) 55%, var(--txt) 45%); }
-.an-w2 { stroke: var(--txt2); }
-.an-w3 { stroke: color-mix(in srgb, var(--naranja) 40%, var(--fondo) 60%); }
-.an-w4 { stroke: var(--txt3); }
-.an-w5 { stroke: color-mix(in srgb, var(--naranja) 70%, var(--fondo) 30%); }
-.ub-c1 { background: color-mix(in srgb, var(--naranja) 55%, var(--txt) 45%); }
-.ub-c2 { background: var(--txt2); }
-.ub-c3 { background: color-mix(in srgb, var(--naranja) 40%, var(--fondo) 60%); }
-.ub-c4 { background: var(--txt3); }
-.ub-c5 { background: color-mix(in srgb, var(--naranja) 70%, var(--fondo) 30%); }
+.an-w1 { stroke: var(--w1); } .an-w2 { stroke: var(--w2); } .an-w3 { stroke: var(--w3); } .an-w4 { stroke: var(--w4); } .an-w5 { stroke: var(--w5); }
+.ub-c1 { background: var(--w1); } .ub-c2 { background: var(--w2); } .ub-c3 { background: var(--w3); } .ub-c4 { background: var(--w4); } .ub-c5 { background: var(--w5); }
 .h-wallet { display: grid; gap: 8px; margin-top: 8px; }
 .h-wallet[hidden], .h-wallet [hidden] { display: none; }
 .h-wallet-l { display: grid; gap: 4px; color: var(--txt2); font-size: 0.9375rem; font-weight: 600; }
@@ -707,7 +716,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .reportes { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lienzo { margin-inline: 0; }
   .hoja { align-items: center; justify-items: center; }
-  .hoja-panel { width: min(440px, calc(100vw - 40px)); border-radius: 28px; opacity: 0; transform: translateY(24px); transition: transform 0.26s, opacity 0.26s; }
+  .hoja-panel { width: min(440px, calc(100vw - 40px)); border-radius: 28px; opacity: 0; transform: translateY(24px); transition: transform 0.5s var(--resorte), opacity 0.26s; }
   .hoja.abierta .hoja-panel { opacity: 1; }
 }
 /* Teléfono acostado (idea 64): poca altura y mucho ancho. La escena mide lo que la pantalla, el saldo se queda a la izquierda más chico,
@@ -811,6 +820,7 @@ div.fila:hover { background: none; }
 .d-cuenta { width: min(26rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
 .dc-quien { margin: 4px 0 14px; }
 .dc-lista { display: grid; gap: 6px; }
+.dc-grupo { margin: 12px 4px 2px; font: 600 0.8125rem var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt3); }
 .dc-lista button {
   min-height: var(--toque); padding: 10px 16px; border: 0; border-radius: 14px; background: var(--s2);
   text-align: left; font-weight: 600; cursor: pointer;
@@ -836,8 +846,12 @@ div.fila:hover { background: none; }
 .sis-fila { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: var(--s2); }
 .sis-fila small { color: var(--txt2); font-size: 0.8125rem; line-height: 1.35; overflow-wrap: anywhere; }
 .sis-ico { flex: none; width: 1.5rem; height: 1.5rem; display: grid; place-items: center; border-radius: 50%; background: var(--s3); font-weight: 800; font-size: 0.8125rem; }
+/* Bien, revisar y falla se distinguen por la palabra, el símbolo y la forma del borde (continuo o a trazos), no solo por el color. */
+.sis-fila[data-estado="ok"] .sis-ico { background: color-mix(in srgb, var(--sube) 20%, var(--s3)); color: var(--sube); }
 .sis-fila[data-estado="mal"] { box-shadow: inset 0 0 0 2px var(--baja); }
-.sis-fila[data-estado="aviso"] { box-shadow: inset 0 0 0 2px var(--naranja); }
+.sis-fila[data-estado="mal"] .sis-ico { background: var(--baja); color: var(--fondo); }
+.sis-fila[data-estado="aviso"] { outline: 2px dashed var(--naranja); outline-offset: -2px; }
+.sis-fila[data-estado="aviso"] .sis-ico { background: var(--naranja); color: var(--naranja-osc); }
 .sis-palabra { color: var(--txt2); font-weight: 600; font-size: 0.8125rem; }
 .sis-tabla { overflow-x: auto; }
 .sis-tabla table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }

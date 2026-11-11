@@ -34,7 +34,7 @@ function pintarControles() {
 // --- Colores: cada token con su valor y el contraste del texto sobre la tarjeta (--s1)
 const FONDOS = ['--fondo', '--s1', '--s2', '--s3', '--c0', '--c1', '--c2', '--c3', '--c4', '--monte', '--nieve'];
 const TEXTOS = ['--txt', '--txt2', '--txt3', '--naranja-txt', '--sube', '--baja'];
-const OTROS = ['--naranja', '--naranja-osc', '--linea'];
+const OTROS = ['--naranja', '--naranja-osc', '--linea', '--w1', '--w2', '--w3', '--w4', '--w5']; // --w1…5: las wallets extra
 function lum(c) {
   const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;

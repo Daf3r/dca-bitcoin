@@ -10,4 +10,9 @@ export function entradaTarjetas() {
   hijos.slice(0, 9).forEach((el, i) => el.style.setProperty('--entra', String(i)));
   cuerpo.classList.add('entra');
   setTimeout(() => cuerpo.classList.remove('entra'), 1400);
+  // La escena «despierta» (pulido visual): el resplandor del horizonte se enciende, las sierras se asientan desde abajo y
+  // aparece «Tú». Solo con la propiedad `translate` y opacidad, una vez por carga; nunca oculta nada al terminar.
+  const raiz = document.documentElement;
+  raiz.classList.add('escena-abre');
+  setTimeout(() => raiz.classList.remove('escena-abre'), 1800);
 }
