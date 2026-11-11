@@ -129,7 +129,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-lejos', `gradientUnits="userSpaceOnUse" x1="0" y1="${f1((yH - 0.12) * H)}" x2="0" y2="${f1((yH + 0.12) * H)}"`, [[0, 'lj-0'], [1, 'lj-1']])
     + grad('m-medio', `gradientUnits="userSpaceOnUse" x1="0" y1="${f1((yH + 0.02) * H)}" x2="0" y2="${f1((yH + 0.26) * H)}"`, [[0, 'md-0'], [1, 'md-1']])
     + grad('m-ladera', `gradientUnits="userSpaceOnUse" x1="${f1(c.sx)}" y1="${f1(c.sy)}" x2="${f1(c.sx - W * 0.25 * lado)}" y2="${f1(H)}"`, [[0, 'ld-0'], [0.55, 'ld-1'], [1, 'ld-2']])
-    + grad('m-cara', `gradientUnits="userSpaceOnUse" x1="${f1(c.sx)}" y1="${f1(c.sy)}" x2="${f1(derX0)}" y2="${f1(H)}"`, [[0, 'cr-0'], [0.5, 'cr-1'], [1, 'cr-2']])
+    + grad('m-cara', `gradientUnits="userSpaceOnUse" x1="${f1(c.sx)}" y1="${f1(c.sy)}" x2="${f1(c.sx + (derX0 - c.sx) * 0.35)}" y2="${f1(c.sy + (H - c.sy) * 0.55)}"`, [[0, 'cr-0'], [0.45, 'cr-1'], [1, 'cr-2']])
     + grad('m-nube', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'nb-0'], [1, 'nb-1']])
     + grad('m-niebla', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'nl-0'], [0.5, 'nl-1'], [1, 'nl-0']])
     + grad('m-lago', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'lg-0'], [1, 'lg-1']])
@@ -178,11 +178,22 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   }
   const contorno = [...izq, ...der].map((p, i) => `${i ? 'L' : 'M'}${f1(p[0])} ${f1(p[1])}`).join('');
   const silueta = `${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z`;
-  const cara = `M${f1(c.sx)} ${f1(c.sy)}${der.map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}L${f1(c.sx + W * 0.07)} ${H}L${f1(c.sx + W * 0.02)} ${f1(c.sy + H * 0.3)}Z`;
+  // La arista central baja quebrada (roca), no en línea recta: así la cara iluminada no parece una cascada.
+  const alto = piso - c.sy;
+  const quiebre = [[0.012, 0.07], [0.034, 0.13], [0.018, 0.2], [0.046, 0.29], [0.03, 0.38], [0.06, 0.52], [0.05, 0.7], [0.075, 1]]
+    .map(([dx, dy]) => [c.sx + W * dx, c.sy + alto * dy]);
+  const arista = quiebre.map((p) => `L${f1(p[0])} ${f1(p[1])}`);
+  const cara = `M${f1(c.sx)} ${f1(c.sy)}${der.map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}${[...arista].reverse().join('')}Z`;
   // Lo que queda a la izquierda de la arista central: ahí la nieve está en sombra.
-  const izqArista = `M${f1(c.sx)} ${f1(-H)}L${f1(c.sx)} ${f1(c.sy)}L${f1(c.sx + W * 0.02)} ${f1(c.sy + H * 0.3)}L${f1(c.sx + W * 0.07)} ${H}L${f1(-W)} ${H}L${f1(-W)} ${f1(-H)}Z`;
+  const izqArista = `M${f1(c.sx)} ${f1(-H)}L${f1(c.sx)} ${f1(c.sy)}${arista.join('')}L${f1(c.sx + W * 0.075)} ${H}L${f1(-W)} ${H}L${f1(-W)} ${f1(-H)}Z`;
   s += `<defs><clipPath id="m-silueta"><path d="${silueta}"/></clipPath><clipPath id="m-izq"><path d="${izqArista}"/></clipPath></defs><path class="monte" d="${silueta}" fill="url(#m-ladera)"/>`;
   s += `<path class="monte-sombra" d="${cara}" fill="url(#m-cara)"/>`;
+  // Facetas de roca en lo alto de la cara iluminada: tres planos que reciben un poco más de luz (solo cerca de la cumbre).
+  s += `<g class="facetas">${[[0, 1, 2], [1, 3, 4], [3, 5, 6]].map(([a, b, k], i) => {
+    const q = quiebre[Math.min(k, quiebre.length - 1)], r1 = der[Math.min(a, der.length - 1)], r2 = der[Math.min(b, der.length - 1)];
+    const mx = (r1[0] + q[0]) / 2, my = (r1[1] + q[1]) / 2;
+    return `<path class="faceta f${i}" d="M${f1(r1[0])} ${f1(r1[1])}L${f1(r2[0])} ${f1(r2[1])}L${f1(mx + (r2[0] - mx) * 0.3)} ${f1(my + (r2[1] - my) * 0.6)}Z"/>`;
+  }).join('')}</g>`;
   s += `<path class="arista" d="M${f1(c.sx)} ${f1(c.sy)}${der.slice(0, 5).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}"/>`;
   // Nieve: una franja irregular mucho más ancha que el pico, recortada por la silueta, para que
   // nunca sobresalga de las laderas.
@@ -238,7 +249,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   };
   const campos = esc.campos.map((m) => ({ m, p: camino.getPointAtLength(enAltura(altitud(m, esc))), cima: m === esc.cima }));
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima }) =>
-    `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-24" r="46" fill="url(#m-luz)"/>' : ''}<line y2="-28"/><path class="banderin" d="M0 -28L20 -22L0 -16Z"/>${icono(cima ? 3 : esc.campos.indexOf(m))}${humoYFogata()}</g>`).join('');
+    `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-28" r="50" fill="url(#m-luz)"/>' : ''}`
+    // Un claro pequeño sobre el sendero, el fogón (troncos), el mástil con su banderín de cola partida y, a la derecha, la tienda o la cabaña.
+    + `<ellipse class="campo-claro" cx="6" cy="1" rx="24" ry="5"/><path class="fogon" d="M-18 0.5L-6 -3M-18 -3L-6 0.5"/><line y2="-34"/><path class="banderin" d="M0 -34L24 -29.5L18.5 -25.5L24 -21L0 -20Z"/>`
+    + `<g transform="translate(6 1) scale(1.4)">${icono(cima ? 3 : esc.campos.indexOf(m))}</g>${humoYFogata()}</g>`).join('');
   estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras, caja: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
@@ -302,7 +316,7 @@ function banderas(host, campos, W, H) {
     b.setAttribute('aria-controls', 'm-tarjeta');
     b.setAttribute('aria-label', `${t.titulo}. ${t.texto}`);
     b.style.left = `${f1(Math.min(Math.max(p.x - TOQUE / 2 + 6, 0), W - TOQUE))}px`;
-    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - 12, 0), H - TOQUE))}px`;
+    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - 16, 0), H - TOQUE))}px`;
     b.addEventListener('click', () => (abierta === m ? cerrarTarjeta() : abrirTarjeta(m)));
     return b;
   });
@@ -361,9 +375,9 @@ function instalarCierre() {
  * humo en los ya alcanzados y una fogata que parpadea en el siguiente. Pequeños y al pie de la bandera, lejos de la etiqueta.
  */
 function humoYFogata() {
-  const humo = [[-7, -2], [-9, -3], [-6, -2]].map(([x, y]) => `<circle class="humo-bola" cx="${x}" cy="${y}" r="3.2"/>`).join(''); // sin `style` en línea (CSP): los retrasos van en el CSS
+  const humo = [0, 1, 2].map(() => '<circle class="humo-bola" cx="-12" cy="-6" r="3.6"/>').join(''); // sin `style` en línea (CSP): los retrasos van en el CSS
   return `<g class="efecto-ambiente humo">${humo}</g>`
-    + '<g class="efecto-ambiente fogata" transform="scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g>';
+    + '<g class="efecto-ambiente fogata"><circle class="fogata-luz" cx="-12" cy="-6" r="20" fill="url(#m-luz)"/><g transform="translate(-4 0) scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g></g>';
 }
 
 /** Huellas del tramo recorrido: puntitos que alternan a cada lado del sendero, hasta donde estás. Solo con todos los efectos. */
@@ -384,24 +398,45 @@ function huellas(l) {
 /** Etiquetas sin choques: a la derecha de la bandera; si choca o se sale, a la izquierda; si sigue, se oculta. */
 function etiquetar(yo) {
   const { campos, W, host } = estado;
-  const cajas = [{ x: yo.x - 34, y: yo.y - 30, w: 30, h: 18, fija: true }];
+  // Cada campamento (mástil, banderín y tienda) y el punto de «Tú» ocupan su sitio: ninguna etiqueta se les encima.
+  const cajas = campos.map(({ m, p }) => ({ x: p.x - 20, y: p.y - 36, w: 58, h: 40, m }));
+  cajas.push({ x: yo.x - 18, y: yo.y - 18, w: 36, h: 36 });
+  const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
+  // «Tú» primero: arriba a la izquierda de tu punto y, si ahí hay un campamento, en otro rincón.
+  const yoOpc = [[-46, -38, 'end', -16], [10, -38, 'start', 16], [-46, 12, 'end', -16], [10, 12, 'start', 16]]
+    .map(([dx, dy, a, tx]) => ({ x: yo.x + dx, y: yo.y + dy, w: 36, h: 24, anclaje: a, tx: yo.x + tx }));
+  const yb = yoOpc.find((o) => !choca(o)) ?? yoOpc[0];
+  cajas.push(yb);
   const prioridad = (m) => (m === estado.esc.cima ? 0 : m === estado.meta ? 1 : 2);
   const orden = [...campos].sort((a, b) => prioridad(a.m) - prioridad(b.m));
-  let s = `<text class="yo-txt" x="${f1(yo.x - 14)}" y="${f1(yo.y - 14)}" text-anchor="end">Tú</text>`;
-  const choca = (b) => b.x < 4 || b.x + b.w > W - 4 || cajas.some((o) => b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
+  let s = `<text class="yo-txt" x="${f1(yb.tx)}" y="${f1(yb.y + 17)}" text-anchor="${yb.anclaje}">Tú</text>`;
   for (const { m, p, cima } of orden) {
     const txt = nombreHito(m);
-    const w = txt.length * 8.6 + 6;
-    const derecha = { x: p.x + 24, y: p.y - 32, w, h: 18, anclaje: 'start', tx: p.x + 26 };
-    const izquierda = { x: p.x - 6 - w, y: p.y - 32, w, h: 18, anclaje: 'end', tx: p.x - 6 };
-    const arriba = { x: p.x - w / 2, y: p.y - 52, w, h: 18, anclaje: 'middle', tx: p.x };
-    const opciones = cima ? [arriba, izquierda, derecha] : [derecha, izquierda];
-    const b = opciones.find((o) => !choca(o));
+    const w = txt.length * 8.6 + 16;
+    // Junto al banderín (a su derecha o a la izquierda del mástil), arriba de la cumbre o, si no cabe, bajo el claro.
+    const derecha = { x: p.x + 27, y: p.y - 46, w, h: 22, anclaje: 'start', tx: p.x + 32 };
+    const izquierda = { x: p.x - 7 - w, y: p.y - 46, w, h: 22, anclaje: 'end', tx: p.x - 12 };
+    const arriba = { x: p.x - w / 2, y: p.y - 70, w, h: 22, anclaje: 'middle', tx: p.x };
+    const abajo = { x: p.x + 6 - w / 2, y: p.y + 8, w, h: 22, anclaje: 'middle', tx: p.x + 6 };
+    const opciones = cima ? [arriba, izquierda, derecha] : [derecha, izquierda, abajo];
+    const b = opciones.find((o) => !choca(o, m));
     if (!b) continue;
     cajas.push(b);
-    s += `<text class="campo-txt${cima ? ' cima' : ''}" x="${f1(b.tx)}" y="${f1(b.y + 14)}" text-anchor="${b.anclaje}">${txt}</text>`;
+    s += `<text class="campo-txt${cima ? ' cima' : ''}" x="${f1(b.tx)}" y="${f1(b.y + 16)}" text-anchor="${b.anclaje}">${txt}</text>`;
   }
-  host.querySelector('#m-etiquetas').innerHTML = s;
+  const caja = host.querySelector('#m-etiquetas');
+  caja.innerHTML = s;
+  // Cada etiqueta lleva detrás una placa redondeada (se mide el texto ya dibujado: legible sobre cualquier cielo o ladera).
+  for (const t of caja.querySelectorAll('text')) {
+    const bb = t.getBBox();
+    if (!bb.width) continue;
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r.setAttribute('class', t.classList.contains('yo-txt') ? 'eti-yo' : 'eti-fondo');
+    r.setAttribute('x', f1(bb.x - 6)); r.setAttribute('y', f1(bb.y - 1.5));
+    r.setAttribute('width', f1(bb.width + 12)); r.setAttribute('height', f1(bb.height + 3));
+    r.setAttribute('rx', f1((bb.height + 3) / 2));
+    caja.insertBefore(r, t);
+  }
 }
 
 function colocar(sats, animado) {
