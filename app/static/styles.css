@@ -136,6 +136,7 @@ html[data-ligero] .montana::after { content: none; }
 .lg-0 { stop-color: color-mix(in oklab, var(--c3) 40%, var(--c4)); } .lg-1 { stop-color: color-mix(in oklab, var(--c4) 50%, var(--medio)); }
 .sl-0 { stop-color: var(--fondo); stop-opacity: 0; } .sl-1 { stop-color: var(--fondo); stop-opacity: 1; }
 .resplandor { pointer-events: none; }
+.suelo-a { opacity: 0.6; } /* el primer velo del pie solo apaga; el último, bajo el bosque, funde del todo con la página */
 .estrella { fill: var(--astro); opacity: var(--estrellas); }
 .astro { fill: var(--astro); }
 /* Sol de día (amanecer, día, atardecer) y luna de noche; las estrellas ya van con --estrellas, que sube y baja con la hora. */
@@ -200,9 +201,19 @@ html[data-efectos="todos"] .marca { animation: marca-entra 0.6s ease-out both; }
 html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico-dibuja 0.7s ease-out both; }
 .nieve { fill: var(--nieve); }
 .pino-0 { fill: var(--pino0); } .pino-1 { fill: var(--pino1); }
-.sendero { fill: none; stroke: var(--nieve); stroke-width: 2; stroke-dasharray: 2 7; stroke-linecap: round; stroke-linejoin: round; opacity: 0.65; }
+/* El sendero es un camino de tierra (pulido visual): sombra sobre la roca, borde, tierra que se estrecha con la altura, peldaños y
+   piedras; lo que falta va a trazos claros y apagados, lo recorrido es naranja con su luz. */
+:is(.sendero-sombra, .sendero-borde, .sendero-tierra) path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.sendero-sombra path { stroke: var(--monte-sombra); opacity: 0.55; }
+.sendero-borde path { stroke: color-mix(in oklab, var(--monte-sombra) 70%, #4a3523); }
+.sendero-tierra path { stroke: color-mix(in oklab, var(--monte) 52%, #a8865c); }
+.peldano { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 65%, #4a3523); stroke-width: 1.3; stroke-linecap: round; opacity: 0.55; }
+.piedra { fill: color-mix(in oklab, var(--monte) 55%, var(--nieve)); opacity: 0.7; }
+.sendero { fill: none; stroke: var(--nieve); stroke-width: 1.6; stroke-dasharray: 2 8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.5; }
 .salida { fill: var(--monte); stroke: var(--naranja); stroke-width: 3; }
-.sendero-hecho { fill: none; stroke: var(--naranja); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+.sendero-luz { fill: none; stroke: var(--naranja); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.42; }
+.sendero-hecho { fill: none; stroke: color-mix(in oklab, var(--naranja) 80%, #ffe6b8); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.yo-anillo { fill: var(--monte-sombra); opacity: 0.75; }
 .campo line { stroke: var(--nieve); stroke-width: 2.2; stroke-linecap: round; }
 .banderin { fill: var(--nieve); opacity: 0.7; transform-box: fill-box; transform-origin: left center; }
 /* El campamento es parte de la escena: un claro sobre el sendero, los troncos del fogón (solo en los alcanzados) y su tienda o cabaña. */
@@ -954,7 +965,7 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
    móvil reserva abajo el sitio del botón de anotar, que aquí no existe). */
 .pag-login .montana { top: -42%; height: 142%; bottom: auto; }
 /* La entrada no representa a nadie: sin «Tú» ni camino recorrido, solo la salida. */
-.pag-login .yo, .pag-login .yo-txt, .pag-login .sendero-hecho { display: none; }
+.pag-login .yo, .pag-login .yo-txt, .pag-login .sendero-hecho, .pag-login .sendero-luz { display: none; }
 .pag-login .login { display: grid; justify-items: center; padding: 22px max(20px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
 .login-caja { display: grid; gap: 4px; width: min(24rem, 100%); }
 .login-caja h1 { font: 600 clamp(1.75rem, 7vw, 2.1rem)/1.1 var(--serif); }
@@ -1279,7 +1290,7 @@ html[data-efectos="todos"] .campo.sig .fogata { display: inline; }
 .llama-i { fill: #ffe08a; transform-box: fill-box; transform-origin: 50% 100%; animation: llama 0.8s ease-in-out infinite alternate-reverse; }
 @keyframes llama { from { transform: scale(1, 1); opacity: 0.85; } to { transform: scale(0.82, 1.18); opacity: 1; } }
 /* Huellas del tramo recorrido y linterna de «Tú» (de noche, y a medias al atardecer). */
-.huellas circle { fill: var(--nieve); opacity: 0.6; }
+.huellas circle { fill: color-mix(in oklab, var(--monte-sombra) 60%, #3a2512); opacity: 0.7; }
 .linterna { opacity: 0; transition: opacity 1.5s; pointer-events: none; }
 html[data-cielo="noche"] .linterna { opacity: 0.5; }
 html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { opacity: 0.22; }

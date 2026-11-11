@@ -213,7 +213,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     }
   }
   // El pie de la escena se funde con el fondo de la página (sin el corte seco de antes).
-  s += `<rect class="suelo" x="0" y="${f1(H * 0.8)}" width="${W}" height="${f1(H * 0.2 + 1)}" fill="url(#m-suelo)"/>`;
+  s += `<rect class="suelo suelo-a" x="0" y="${f1(H * 0.8)}" width="${W}" height="${f1(H * 0.2 + 1)}" fill="url(#m-suelo)"/>`;
 
   // Sendero en zigzag: siempre sube, así que la altura recorrida es monótona.
   const pts = [[bx, by]];
@@ -224,16 +224,29 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const x = i === c.vueltas ? c.sx : i % 2 ? c.sx - a * 0.2 + W * 0.03 : c.sx - a * 1.2;
     pts.push([x, y]);
   }
+  // El mismo trazo, entero (para medir la altitud y el tramo recorrido) y por tramos de zigzag (para la tierra del camino,
+  // que se estrecha con la altura: más ancho abajo, más fino arriba, como visto en perspectiva).
   let d = `M${f1(bx)} ${f1(by)}`;
+  const piezas = [];
+  let desde = [bx, by];
   for (let i = 1; i < pts.length; i++) {
     const [x, y] = pts[i], [px, py] = pts[i - 1];
-    if (i === pts.length - 1) { d += `L${f1(x)} ${f1(y)}`; break; }
+    if (i === pts.length - 1) { d += `L${f1(x)} ${f1(y)}`; piezas.push(`M${f1(desde[0])} ${f1(desde[1])}L${f1(x)} ${f1(y)}`); break; }
     const [nx, ny] = pts[i + 1], k = 0.22;
-    d += `L${f1(x + (px - x) * k)} ${f1(y + (py - y) * k)}Q${f1(x)} ${f1(y)} ${f1(x + (nx - x) * k)} ${f1(y + (ny - y) * k)}`;
+    const ax = x + (px - x) * k, ay = y + (py - y) * k, sx2 = x + (nx - x) * k, sy2 = y + (ny - y) * k;
+    d += `L${f1(ax)} ${f1(ay)}Q${f1(x)} ${f1(y)} ${f1(sx2)} ${f1(sy2)}`;
+    piezas.push(`M${f1(desde[0])} ${f1(desde[1])}L${f1(ax)} ${f1(ay)}Q${f1(x)} ${f1(y)} ${f1(sx2)} ${f1(sy2)}`);
+    desde = [sx2, sy2];
   }
-  s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
+  const anchoAbajo = Math.min(12, Math.max(7, W / 60)), anchoArriba = anchoAbajo * 0.42;
+  const ancho = (i) => anchoAbajo + (anchoArriba - anchoAbajo) * (piezas.length > 1 ? i / (piezas.length - 1) : 0);
+  const capa = (clase, extra, dx = 0, dy = 0) => `<g class="${clase}"${dx || dy ? ` transform="translate(${dx} ${dy})"` : ''}>${piezas.map((pz, i) => `<path d="${pz}" stroke-width="${f1(ancho(i) + extra)}"/>`).join('')}</g>`;
+  // Sombra sobre la roca, borde, tierra y peldaños/piedras (se ponen al medir el trazo); encima, lo que falta (a trazos) y lo
+  // recorrido (cálido, con su luz). Es paisaje: se ve con cualquier nivel de efectos.
+  s += capa('sendero-sombra', 3, 1.5, 2.5) + capa('sendero-borde', 2.6) + capa('sendero-tierra', 0) + '<g class="sendero-detalle" id="m-piedras"></g>';
+  s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-luz" id="m-luzhecha" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
-  s += `<g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
+  s += `<g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   s += bosque(W, H, bx, compras, plantar);
   s += `<rect class="suelo" x="0" y="${f1(H * 0.95)}" width="${W}" height="${f1(H * 0.05 + 1)}" fill="url(#m-suelo)"/>`;
   host.innerHTML = s + '</g></svg>';
@@ -247,6 +260,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     for (let k = 0; k < 28; k++) { const m = (lo + hi) / 2; if (camino.getPointAtLength(m).y > yObj) lo = m; else hi = m; }
     return lo;
   };
+  detalleSendero(host.querySelector('#m-piedras'), camino, L, by, c.sy, anchoAbajo, anchoArriba);
   const campos = esc.campos.map((m) => ({ m, p: camino.getPointAtLength(enAltura(altitud(m, esc))), cima: m === esc.cima }));
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima }) =>
     `<g class="campo" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${cima ? '<circle class="brillo-cima" cy="-28" r="50" fill="url(#m-luz)"/>' : ''}`
@@ -380,6 +394,27 @@ function humoYFogata() {
     + '<g class="efecto-ambiente fogata"><circle class="fogata-luz" cx="-12" cy="-6" r="20" fill="url(#m-luz)"/><g transform="translate(-4 0) scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g></g>';
 }
 
+/**
+ * Peldaños y piedras del sendero (paisaje, sin azar: la posición sale de la distancia recorrida). Un peldaño atraviesa la tierra
+ * cada tanto y, alternando a cada lado del borde, una piedra pequeña; el ancho sigue a la perspectiva del camino.
+ */
+function detalleSendero(caja, camino, L, by, sy, abajo, arriba) {
+  if (!caja) return;
+  let s = '';
+  for (let d = 22, i = 0; d < L - 10; d += 17, i++) {
+    const a = camino.getPointAtLength(d), b = camino.getPointAtLength(Math.min(L, d + 1.5));
+    const dx = b.x - a.x, dy = b.y - a.y, n = Math.hypot(dx, dy) || 1, nx = -dy / n, ny = dx / n;
+    const f = Math.min(1, Math.max(0, (by - a.y) / ((by - sy) || 1)));
+    const w = (abajo + (arriba - abajo) * f) / 2;
+    s += `<path class="peldano" d="M${f1(a.x - nx * w * 0.8)} ${f1(a.y - ny * w * 0.8)}L${f1(a.x + nx * w * 0.8)} ${f1(a.y + ny * w * 0.8)}"/>`;
+    if (i % 3 === 1) {
+      const lado = i % 2 ? 1 : -1, r = 1.2 + (i % 4) * 0.35 + (1 - f) * 0.8;
+      s += `<ellipse class="piedra" cx="${f1(a.x + nx * (w + 2.6) * lado)}" cy="${f1(a.y + ny * (w + 2.6) * lado)}" rx="${f1(r * 1.3)}" ry="${f1(r)}"/>`;
+    }
+  }
+  caja.innerHTML = s;
+}
+
 /** Huellas del tramo recorrido: puntitos que alternan a cada lado del sendero, hasta donde estás. Solo con todos los efectos. */
 function huellas(l) {
   const { camino, host } = estado;
@@ -390,7 +425,7 @@ function huellas(l) {
     const a = camino.getPointAtLength(d), b = camino.getPointAtLength(d + 1.5);
     const dx = b.x - a.x, dy = b.y - a.y, n = Math.hypot(dx, dy) || 1;
     const lado = i % 2 ? 1 : -1;
-    pasos.push(`<circle cx="${f1(a.x - (dy / n) * 3.4 * lado)}" cy="${f1(a.y + (dx / n) * 3.4 * lado)}" r="1.5"/>`);
+    pasos.push(`<circle cx="${f1(a.x - (dy / n) * 2.2 * lado)}" cy="${f1(a.y + (dx / n) * 2.2 * lado)}" r="1.1"/>`);
   }
   caja.innerHTML = pasos.join('');
 }
@@ -445,6 +480,8 @@ function colocar(sats, animado) {
   const hecho = host.querySelector('#m-hecho');
   hecho.style.strokeDasharray = `${f1(L)} ${f1(L)}`;
   hecho.style.strokeDashoffset = f1(L - l);
+  const luz = host.querySelector('#m-luzhecha');
+  if (luz) { luz.style.strokeDasharray = hecho.style.strokeDasharray; luz.style.strokeDashoffset = hecho.style.strokeDashoffset; }
   const p = camino.getPointAtLength(l);
   host.querySelector('#m-yo').setAttribute('transform', `translate(${f1(p.x)} ${f1(p.y)})`);
   host.querySelectorAll('.campo').forEach((g) => g.classList.toggle('alcanzado', Number(g.dataset.m) <= sats));
