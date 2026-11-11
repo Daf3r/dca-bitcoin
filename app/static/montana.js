@@ -147,7 +147,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // Sol (amanecer, día y atardecer) y luna con su fase real (noche): el CSS muestra uno u otro según `html[data-cielo]`.
   // El halo es un degradado radial (luz que se difumina), no un disco.
   const halo = `<circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 3.4)}" fill="url(#m-halo)"/>`;
-  s += `<g class="sol">${halo}<circle class="astro" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs)}"/></g>`;
+  s += `<g class="sol">${halo}<circle class="astro" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 0.8)}"/></g>`; // el sol, algo menor que la luna: con su halo se lee como luz, no como un disco
   s += `<g class="luna">${halo}${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}</g>`;
   s += (aurora ? auroraBoreal(W, H, techo) : '') + nubes(H) + aves(H) + '</g>';
   // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
@@ -284,7 +284,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     return { m, p, cima: m === esc.cima, lado: lejania(-1) > lejania(1) + 0.5 ? -1 : 1 };
   });
   // En pantallas grandes la montaña es mucho más alta: los campamentos crecen con ella (las cajas de las etiquetas también).
-  const ec = W >= 1100 ? 1.3 : W >= 700 ? 1.15 : 1;
+  const ec = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1;
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec)).join('');
   estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras, caja: null, techo, ec };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }

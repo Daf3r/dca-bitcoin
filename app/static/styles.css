@@ -217,25 +217,19 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .campo line { stroke: var(--nieve); stroke-width: 2.2; stroke-linecap: round; }
 .banderin { fill: var(--nieve); opacity: 0.7; transform-box: fill-box; transform-origin: left center; }
 /* El campamento es parte de la escena: un claro sobre el sendero, los troncos del fogón (solo en los alcanzados) y su tienda o cabaña. */
-/* Un rellano de tierra pisada (con un borde más oscuro debajo, que le da canto) y sombras de contacto bajo cada cosa. */
-.campo-claro { fill: color-mix(in oklab, var(--monte) 50%, #a8865c); opacity: 0.85; }
-.campo-borde { fill: color-mix(in oklab, var(--monte-sombra) 70%, #3a2a1a); opacity: 0.8; }
 .sombra-contacto { fill: var(--monte-sombra); opacity: 0.55; }
 /* La cumbre: una cresta de roca nevada donde se apoyan el mástil, la fogata y el mojón; la cara que mira al astro, más clara. */
 .nieve-luz { fill: #fff; opacity: 0.22; }
-.hm-0 { stop-color: color-mix(in oklab, var(--nieve) 70%, #8a8478); stop-opacity: 0.55; } .hm-1 { stop-color: var(--nieve); stop-opacity: 0; }
-.humo-hilo { fill: none; stroke-width: 4.5; stroke-linecap: round; transform-box: fill-box; transform-origin: 50% 100%; animation: humo-hilo 5.5s ease-in-out infinite alternate; }
-.humo-hilo.h2 { stroke-width: 3; animation-duration: 7s; animation-delay: -2.5s; }
-@keyframes humo-hilo { from { transform: skewX(-6deg) scaleY(0.92); opacity: 0.75; } to { transform: skewX(7deg) scaleY(1.06); opacity: 1; } }
-.fogon { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 40%, #8a5a2b); stroke-width: 2; stroke-linecap: round; }
 /* Las etiquetas van sobre una placa (legibles sobre cualquier cielo o ladera); «Tú» en naranja, lo tuyo. */
-/* Rótulos de madera (no píldoras de interfaz): tabla cálida con su canto oscuro, letra crema. */
-.eti-fondo { fill: color-mix(in oklab, #6e4a2c 82%, var(--monte-sombra)); stroke: #2e1d10; stroke-width: 1.2; }
+/* Rótulos: texto limpio con un halo suave del color de la roca, sin cajas. */
 .eti-yo { fill: var(--naranja); }
 .pag-login .eti-yo { display: none; }
 .campo.alcanzado .banderin { fill: var(--naranja); opacity: 1; animation: ondea 2.6s ease-in-out infinite; }
 @keyframes ondea { 50% { transform: skewY(-6deg) scaleX(0.9); } }
 .campo-txt, .yo-txt { fill: #f7e8cf; font: 600 14px var(--serif); }
+.campo-txt { paint-order: stroke; stroke: color-mix(in oklab, var(--monte-sombra) 80%, transparent); stroke-width: 4px; stroke-linejoin: round; }
+@media (min-width: 1100px) { .campo-txt { font-size: 16px; } }
+.campo-txt.cima { stroke: color-mix(in oklab, var(--c1) 85%, transparent); fill: var(--cielo-txt); }
 .yo-txt { fill: var(--naranja-osc); font-weight: 700; }
 .yo-punto { fill: var(--naranja); stroke: var(--nieve); stroke-width: 3; }
 .yo-halo { fill: var(--naranja); opacity: 0.35; transform-box: fill-box; transform-origin: center; animation: respira 2.4s ease-in-out infinite; }
@@ -1289,7 +1283,6 @@ html[data-efectos="todos"], html[data-efectos="esenciales"] { scroll-behavior: s
 .campo .humo, .campo .fogata { display: none; }
 html[data-efectos="todos"] .campo.alcanzado .humo { display: inline; }
 html[data-efectos="todos"] .campo.sig .fogata { display: inline; }
-.fogata-luz { opacity: 0.55; }
 .llama { fill: #ff9a2e; transform-box: fill-box; transform-origin: 50% 100%; animation: llama 1.1s ease-in-out infinite alternate; }
 .llama-i { fill: #ffe08a; transform-box: fill-box; transform-origin: 50% 100%; animation: llama 0.8s ease-in-out infinite alternate-reverse; }
 @keyframes llama { from { transform: scale(1, 1); opacity: 0.85; } to { transform: scale(0.82, 1.18); opacity: 1; } }
@@ -1302,26 +1295,21 @@ html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { 
 
 /* ---------------------------------------------------------------- Campamento 5 (2/3) */
 /* Un dibujo por campamento (tienda, cabaña, refugio, mojón): apagado hasta alcanzarlo. */
-/* Las construcciones del campamento: lona o madera cálida con su cara en sombra, el mismo trazo oscuro que el borde del sendero
-   (1.2 px) y, mientras no se alcanza el campamento, un poco apagadas. */
-.campo-ico { fill: color-mix(in oklab, #ead9b8 82%, var(--astro)); }
-.ico-sombra { fill: color-mix(in oklab, #ead9b8 55%, var(--monte-sombra)); }
-.ico-piedra { fill: color-mix(in oklab, #b9ad9c 70%, var(--astro)); }
-.campo-ico-d { fill: color-mix(in oklab, var(--monte-sombra) 80%, #2a1a0e); }
-.ico-trazo, .ico-viento { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 70%, #3a2512); stroke-width: 1.2; stroke-linejoin: round; stroke-linecap: round; }
-.ico-viento { stroke-width: 0.9; opacity: 0.7; }
-.ico-troncos, .ico-junta { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 45%, #8a6a46); stroke-width: 0.9; }
-.ico-techo { fill: color-mix(in oklab, #8a4a2a 75%, var(--monte-sombra)); stroke: color-mix(in oklab, var(--monte-sombra) 70%, #3a2512); stroke-width: 1.2; stroke-linejoin: round; }
-.ico-techo-luz { fill: color-mix(in oklab, #b0643a 80%, var(--astro)); opacity: 0.8; }
-.ico-chimenea { fill: color-mix(in oklab, #7d6d5d 80%, var(--monte-sombra)); stroke: color-mix(in oklab, var(--monte-sombra) 70%, #3a2512); stroke-width: 1; }
-.ico-brillo { fill: none; stroke: var(--astro); stroke-width: 1; stroke-linecap: round; opacity: 0.5; }
-.ico-piedra { stroke: color-mix(in oklab, var(--monte-sombra) 70%, #3a2512); stroke-width: 1.1; }
-.campo:not(.alcanzado):not(.es-cima) :is(.campo-ico, .ico-sombra, .ico-techo, .ico-techo-luz, .ico-chimenea, .campo-ico-d) { opacity: 0.62; }
-.fogon-luz { fill: #ffb25e; opacity: 0; }
-.campo.sig .fogon-luz { opacity: 0.22; }
-.fogon-piedras { fill: none; stroke: color-mix(in oklab, #9a8e80 70%, var(--monte-sombra)); stroke-width: 2.2; stroke-linecap: round; }
-.cima-banco { fill: var(--nieve); }
-.cima-banco-luz { fill: #fff; opacity: 0.35; }
+/* Los hitos: piedra geométrica con su cara en sombra, el mismo trazo que el sendero, y un farol. Alcanzado = farol encendido con
+   su halo; el siguiente, con la llama viva; pendiente = contorno tenue. Todo bajo la misma luz cálida. */
+.campo-ico { fill: color-mix(in oklab, var(--monte) 45%, #b9ab98); stroke: color-mix(in oklab, var(--monte-sombra) 70%, #241a12); stroke-width: 1.1; stroke-linejoin: round; }
+.ico-sombra { fill: var(--monte-sombra); opacity: 0.35; }
+.farol-cuerpo { fill: color-mix(in oklab, var(--monte) 60%, #3a2a1a); stroke: color-mix(in oklab, var(--nieve) 55%, transparent); stroke-width: 1; stroke-linejoin: round; }
+.farol-techo { fill: color-mix(in oklab, var(--monte-sombra) 70%, #241a12); stroke: color-mix(in oklab, var(--nieve) 45%, transparent); stroke-width: 0.8; stroke-linejoin: round; }
+.farol-halo { opacity: 0; }
+.campo.alcanzado .farol-cuerpo, .campo.sig .farol-cuerpo { fill: #ffd38a; stroke: #6b3e12; }
+.campo.alcanzado .farol-techo, .campo.sig .farol-techo { stroke: #6b3e12; }
+.campo.alcanzado .farol-halo { opacity: 0.9; }
+.campo.sig .farol-halo { opacity: 0.45; }
+.campo:not(.alcanzado):not(.sig) .campo-ico { fill: none; stroke: color-mix(in oklab, var(--nieve) 45%, transparent); }
+.humo { fill: none; stroke: #ffd38a; stroke-width: 1; opacity: 0; transform-box: fill-box; transform-origin: center; }
+html[data-efectos="todos"] .campo.alcanzado .humo { animation: farol-pulso 4.5s ease-out infinite; }
+@keyframes farol-pulso { 0% { opacity: 0.5; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.8); } }
 .sendero-nieve path { fill: none; stroke: var(--monte-sombra); stroke-linecap: round; stroke-linejoin: round; opacity: 0.22; }
 .pag-login .campo-ico, .pag-login .campo-ico-d { display: none; }
 /* El bosque: un pino por compra, con un toque cálido para distinguirlo de los pinos de adorno. */

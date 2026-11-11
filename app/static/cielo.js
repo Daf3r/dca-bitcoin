@@ -21,7 +21,7 @@
     },
     dia: {
       c: ['#7fb8ea', '#9bcaf0', '#b5daf5', '#cfe8f8', '#e4f3fb'], astro: '#fff3b0', halo: [255, 243, 176, 0.5], estrellas: 0, nube: [255, 255, 255, 0.85],
-      lejos: '#8fb0d0', medio: '#5d86a8', monte: '#2d5a4c', sombra: '#1e4036', nieve: '#ffffff', pino0: '#1c4a38', pino1: '#112f24',
+      lejos: '#9db4c8', medio: '#6f8ca3', monte: '#3c5a58', sombra: '#283f40', nieve: '#ffffff', pino0: '#294842', pino1: '#1b322f',
     },
     atardecer: {
       c: ['#241b4a', '#3f2766', '#5c2c6b', '#bd5a78', '#f0a35c'], astro: '#ffd9a0', halo: [255, 217, 160, 0.35], estrellas: 0.3, nube: [255, 205, 190, 0.4],
