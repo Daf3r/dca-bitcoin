@@ -124,6 +124,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const derX0 = c.sx + (c.sx - (c.base[0] - W * 0.2)) * 0.95;
   const grad = (id, attrs, paradas) => `<linearGradient id="${id}" ${attrs}>${paradas.map(([o, k]) => `<stop offset="${o}" class="${k}"/>`).join('')}</linearGradient>`;
   const defs = grad('m-cielo', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'g-c0'], [0.17, 'g-c1'], [0.31, 'g-c2'], [0.46, 'g-c3'], [Math.min(0.9, yH * 0.92).toFixed(3), 'g-c4'], [1, 'g-c4']])
+    + '<radialGradient id="m-sol"><stop offset="0" class="so-0"/><stop offset="0.72" class="so-1"/><stop offset="1" class="so-2"/></radialGradient>'
     + `<radialGradient id="m-halo"><stop offset="0" class="h-0"/><stop offset="0.3" class="h-1"/><stop offset="0.55" class="h-2"/><stop offset="1" class="h-3"/></radialGradient>`
     + `<radialGradient id="m-resplandor" gradientUnits="userSpaceOnUse" cx="${f1(c.sol[0])}" cy="${f1(yH * H)}" r="${f1(Math.max(W, H) * 0.75)}" gradientTransform="translate(${f1(c.sol[0])} ${f1(yH * H)}) scale(1 0.55) translate(${f1(-c.sol[0])} ${f1(-yH * H)})"><stop offset="0" class="r-0"/><stop offset="0.45" class="r-1"/><stop offset="1" class="r-2"/></radialGradient>`
     + grad('m-lejos', `gradientUnits="userSpaceOnUse" x1="0" y1="${f1((yH - 0.12) * H)}" x2="0" y2="${f1((yH + 0.12) * H)}"`, [[0, 'lj-0'], [1, 'lj-1']])
@@ -147,7 +148,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // Sol (amanecer, día y atardecer) y luna con su fase real (noche): el CSS muestra uno u otro según `html[data-cielo]`.
   // El halo es un degradado radial (luz que se difumina), no un disco.
   const halo = `<circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 3.4)}" fill="url(#m-halo)"/>`;
-  s += `<g class="sol">${halo}<circle class="astro" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 0.8)}"/></g>`; // el sol, algo menor que la luna: con su halo se lee como luz, no como un disco
+  s += `<g class="sol">${halo}<circle class="astro sol-disco" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 0.9)}" fill="url(#m-sol)"/></g>`; // el sol, algo menor que la luna: con su halo se lee como luz, no como un disco
   s += `<g class="luna">${halo}${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}</g>`;
   s += (aurora ? auroraBoreal(W, H, techo) : '') + nubes(H) + aves(H) + '</g>';
   // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
@@ -177,6 +178,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const f = k / 8, ruido = k < 8;
     der.push([c.sx + (derX - c.sx) * f + (ruido ? (rnd() - 0.5) * W * 0.025 : 0), c.sy + (piso * 0.97 - c.sy) * f ** 0.8 + (ruido ? (rnd() - 0.5) * H * 0.035 : 0)]);
   }
+  // Pendientes de la cumbre: la base de la baliza se asienta en un montículo de nieve que baja por las dos laderas.
+  const kL = Math.max(0.5, (izq[9][1] - c.sy) / Math.max(1, c.sx - izq[9][0])), kR = Math.max(0.5, (der[0][1] - c.sy) / Math.max(1, der[0][0] - c.sx));
   const contorno = [...izq, ...der].map((p, i) => `${i ? 'L' : 'M'}${f1(p[0])} ${f1(p[1])}`).join('');
   const silueta = `${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z`;
   // La arista central baja quebrada (roca), no en línea recta: así la cara iluminada no parece una cascada.
@@ -287,7 +290,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   });
   // En pantallas grandes la montaña es mucho más alta: los campamentos crecen con ella (las cajas de las etiquetas también).
   const ec = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1;
-  host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec)).join('');
+  host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec, kL, kR)).join('');
   estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras, caja: null, techo, ec };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
@@ -300,7 +303,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
  * lo refleja para que la tienda quede del lado por donde no pasa el sendero. En la cumbre todo es un poco más grande y el
  * resplandor nace en la fogata.
  */
-function campamento(m, p, cima, i, lado, ec = 1) {
+function campamento(m, p, cima, i, lado, ec = 1, kL = 1.5, kR = 1.5) {
   // Un campamento es UN símbolo: un hito de piedra junto al sendero con un farol encima. Alcanzado, el farol está encendido
   // (luz cálida y halo); el siguiente tiene la llama viva (`.fogata`, ambiente); los pendientes quedan en contorno tenue.
   // La cumbre es el vértice con luz y una bandera pequeña clavada en una base de piedra.
@@ -312,12 +315,18 @@ function campamento(m, p, cima, i, lado, ec = 1) {
   if (cima) {
     // La cumbre, la meta: una baliza de piedra en el vértice con un farol grande siempre encendido (te llama) y una bandera
     // clara encima. Es el mismo lenguaje que los campamentos, pero el doble de grande y con más luz.
-    dentro = '<ellipse class="sombra-contacto" cx="0" cy="-5" rx="10" ry="2"/>'
+    // El montículo: desde la base de la baliza (y −6, el vértice) baja por cada ladera con su pendiente real, así la baliza
+    // queda clavada en la nieve y no apoyada en un punto.
+    const hondo = 13 / ec, yv = -6;
+    const xi = -Math.max(hondo / kL + 3, 13), xd = Math.max(hondo / kR + 3, 13);
+    const mont = `M${f1(xi)} ${f1(yv + hondo)}Q-7 ${yv + 1} -5 ${yv - 1.5}H5Q7 ${yv + 1} ${f1(xd)} ${f1(yv + hondo)}Q0 ${f1(yv + hondo * 0.7)} ${f1(xi)} ${f1(yv + hondo)}Z`;
+    dentro = `<path class="cima-monticulo" d="${mont}"/><path class="cima-monticulo-luz" d="M0 ${yv - 1.5}H5Q7 ${yv + 1} ${f1(xd)} ${f1(yv + hondo)}Q4 ${f1(yv + hondo * 0.75)} 0 ${f1(yv + hondo * 0.72)}Z"/>`
+      + '<ellipse class="sombra-contacto" cx="0" cy="-5.5" rx="8" ry="1.6"/>'
       + '<path class="campo-ico" d="M-6.5 -5L-4.5 -26H4.5L6.5 -5Z"/><path class="ico-sombra" d="M0 -5V-26H4.5L6.5 -5Z"/><path class="cima-junta" d="M-6 -12H6M-5.4 -19H5.4"/>'
       + `<g transform="translate(0 -26) scale(1.6)">${farol(0)}</g>`
       + '<line x1="0" x2="0" y1="-43" y2="-62"/><path class="banderin" d="M0 -62L16 -57.5L0 -53Z"/>';
   } else {
-    dentro = `<g transform="translate(11 0)"><ellipse class="sombra-contacto" cx="0" cy="0.6" rx="7" ry="1.6"/>${ico.d}${farol(ico.cima)}</g>`;
+    dentro = `<g transform="translate(11 0)"><ellipse class="luz-suelo" cx="-2" cy="1" rx="18" ry="4.5"/><ellipse class="sombra-contacto" cx="0" cy="0.6" rx="7" ry="1.6"/>${ico.d}${farol(ico.cima)}</g>`; // la luz del farol cae sobre el suelo
   }
   const brillo = cima ? '<ellipse class="brillo-cima" cx="0" cy="-30" rx="48" ry="40" fill="url(#m-luz)"/>' : '';
   return `<g class="campo${cima ? ' es-cima' : ''}" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})${ec !== 1 ? ` scale(${ec})` : ''}">${brillo}${lado < 0 ? `<g transform="scale(-1 1)">${dentro}</g>` : dentro}</g>`;

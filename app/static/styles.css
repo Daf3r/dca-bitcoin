@@ -1310,6 +1310,12 @@ html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { 
 .es-cima .farol-cuerpo { fill: #ffd38a; stroke: #6b3e12; } .es-cima .farol-techo { stroke: #6b3e12; } .es-cima .farol-halo { opacity: 0.85; }
 .es-cima .campo-ico { fill: color-mix(in oklab, var(--nieve) 35%, #9f927f); }
 .cima-junta { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 60%, #241a12); stroke-width: 0.9; opacity: 0.6; }
+.cima-monticulo { fill: var(--nieve); } .cima-monticulo-luz { fill: #fff; opacity: 0.3; }
+.luz-suelo { fill: #ffb25e; opacity: 0; }
+.campo.alcanzado .luz-suelo { opacity: 0.22; } .campo.sig .luz-suelo { opacity: 0.12; }
+/* El sol: un disco de borde suave (degradado) que se funde con su halo, no una moneda plana. */
+.sol-disco { fill: url(#m-sol); }
+.so-0 { stop-color: color-mix(in oklab, var(--astro) 70%, #fff); } .so-1 { stop-color: var(--astro); } .so-2 { stop-color: var(--astro); stop-opacity: 0.35; }
 .nieve-faceta { fill: #fff; opacity: 0.28; } .nieve-pliegue { fill: none; stroke: var(--monte-sombra); stroke-width: 2; stroke-linecap: round; opacity: 0.18; }
 .humo { fill: none; stroke: #ffd38a; stroke-width: 1; opacity: 0; transform-box: fill-box; transform-origin: center; }
 html[data-efectos="todos"] .campo.alcanzado .humo { animation: farol-pulso 4.5s ease-out infinite; }
