@@ -198,6 +198,12 @@ def _m_errores_js(conn: sqlite3.Connection) -> None:
     );""")
 
 
+def _m_sesiones_compartida(conn: sqlite3.Connection) -> None:
+    # Dispositivo compartido (idea 105): esa sesión se cierra sola (tope de 4 h y 1 h sin usarse).
+    if "compartida" not in _columnas(conn, "sesiones"):
+        conn.execute("ALTER TABLE sesiones ADD COLUMN compartida INTEGER NOT NULL DEFAULT 0")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -207,6 +213,7 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (6, "compras.etiquetas", _m_compras_etiquetas),
     (7, "metricas por día y ruta", _m_metricas),
     (8, "errores_js (errores del navegador)", _m_errores_js),
+    (9, "sesiones.compartida", _m_sesiones_compartida),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -746,6 +753,33 @@ def limpiar_errores() -> Any:
     return jsonify(quitados=n)
 
 
+# ------------------------------------- modo solo lectura de emergencia y límite de escrituras (ideas 150, 151)
+SOLO_LECTURA = os.environ.get("SOLO_LECTURA", "0") == "1"
+LIMITE_ESCRITURAS = int(os.environ.get("LIMITE_ESCRITURAS", "120"))  # escrituras por cuenta y por minuto (por proceso)
+_ESCRITURAS: dict[str, deque[float]] = {}
+
+
+@app.before_request
+def modo_mantenimiento() -> Any:
+    """Con `SOLO_LECTURA=1` la app se sigue viendo entera pero ninguna escritura entra (salvo entrar y salir)."""
+    if SOLO_LECTURA and request.method in ESCRITURA and request.path not in ("/api/login", "/api/logout"):
+        return jsonify(error="La app está en mantenimiento: por ahora solo se puede mirar, no anotar.", mantenimiento=True), 503
+    return None
+
+
+def _demasiadas_escrituras(nombre: str) -> bool:
+    """Un tope holgado por cuenta (120 por minuto) contra un navegador que repite peticiones sin parar o un uso malicioso. Importar un
+    CSV grande es UNA escritura, así que el uso normal queda lejos."""
+    ahora = time.time()
+    cola = _ESCRITURAS.setdefault(nombre, deque())
+    while cola and ahora - cola[0] > 60:
+        cola.popleft()
+    if len(cola) >= LIMITE_ESCRITURAS:
+        return True
+    cola.append(ahora)
+    return False
+
+
 @app.before_request
 def mismo_origen() -> Any:
     if request.method not in ESCRITURA:
@@ -785,8 +819,12 @@ def exigir_sesion() -> Any:
     if not u:
         return (jsonify(error="Inicia sesión."), 401) if api else redirect("/login")
     g.usuario = u
+    if request.method in ESCRITURA and ruta not in ("/api/logout", "/api/errores") and _demasiadas_escrituras(u["nombre"]):
+        resp = jsonify(error="Demasiadas operaciones seguidas. Espera un minuto.")
+        resp.headers["Retry-After"] = "60"
+        return resp, 429
     if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto", "/api/cambios-visto", "/api/errores") \
-            and not ruta.startswith("/api/push/"):
+            and not ruta.startswith(("/api/push/", "/api/sesiones/")):
         return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
 
@@ -868,8 +906,8 @@ def estado() -> Response:
     return jsonify(abierto=auth.hay_usuarios(db()))
 
 
-def _poner_cookie(resp: Response, token: str) -> None:
-    resp.set_cookie(COOKIE, token, max_age=auth.SESION_DESLIZANTE, path="/", secure=True, httponly=True, samesite="Lax")
+def _poner_cookie(resp: Response, token: str, duracion: int = auth.SESION_DESLIZANTE) -> None:
+    resp.set_cookie(COOKIE, token, max_age=duracion, path="/", secure=True, httponly=True, samesite="Lax")
 
 
 @app.post("/api/login")
@@ -917,11 +955,12 @@ def login() -> Any:
     if rehacer:
         conn.execute("UPDATE usuarios SET hash = ? WHERE id = ?", (auth.hashear(clave), u["id"]))
     auth.cerrar_sesion(conn, request.cookies.get(COOKIE))  # la cookie anterior, si había, deja de valer
-    token = auth.crear_sesion(conn, u["id"], ip, request.headers.get("User-Agent", ""))
-    auth.auditar(conn, u["nombre"], "login", "usuario", u["id"], None, None, ipr)
+    compartido = isinstance(body, dict) and body.get("compartido") is True
+    token = auth.crear_sesion(conn, u["id"], ip, _agente_corto(request.headers.get("User-Agent", "")), compartido)
+    auth.auditar(conn, u["nombre"], "login", "usuario", u["id"], None, {"compartido": True} if compartido else None, ipr)
     conn.commit()
-    resp = jsonify(usuario=u["nombre"], rol=u["rol"])
-    _poner_cookie(resp, token)
+    resp = jsonify(usuario=u["nombre"], rol=u["rol"], compartido=compartido)
+    _poner_cookie(resp, token, auth.SESION_COMPARTIDA_TOPE if compartido else auth.SESION_DESLIZANTE)
     return resp
 
 
@@ -946,7 +985,27 @@ def logout() -> Any:
 def yo() -> Response:
     fila = db().execute("SELECT visto_ts, cambios_visto FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
     return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"], visto=fila["visto_ts"] if fila else None,
-                   cambios=fila["cambios_visto"] if fila else None)
+                   cambios=fila["cambios_visto"] if fila else None, mantenimiento=SOLO_LECTURA)
+
+
+@app.get("/api/sesiones")
+def listar_sesiones() -> Response:
+    """Las sesiones abiertas de quien pregunta (idea 152), también un lector: solo las suyas, sin tokens."""
+    lista = auth.sesiones_de(db(), g.usuario["id"], g.usuario["hash"])
+    for x in lista:  # las anteriores a este cambio guardaban el texto del navegador, no el resumen
+        if " · " not in x["agente"]:
+            x["agente"] = _agente_corto(x["agente"])
+    return jsonify(lista)
+
+
+@app.delete("/api/sesiones/<sid>")
+def cerrar_una_sesion(sid: str) -> Any:
+    conn = db()
+    if not auth.cerrar_una(conn, g.usuario["id"], sid, g.usuario["hash"]):
+        return jsonify(error="Esa sesión ya no existe (o es la de este dispositivo: usa Salir)."), 404
+    auth.auditar(conn, g.usuario["nombre"], "sesion_cerrada", "usuario", g.usuario["id"], ip=auth.ip_resumida(ip_real()))
+    conn.commit()
+    return "", 204
 
 
 @app.post("/api/visto")

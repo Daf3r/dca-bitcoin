@@ -5,7 +5,7 @@ import { avisar } from './avisar.js';
 // contenido de las compras. Cada fila lleva una palabra («Bien», «Revisar», «Falla») además del símbolo: no depende del color.
 const MARCA = { ok: ['✔', 'Bien'], aviso: ['!', 'Revisar'], mal: ['✘', 'Falla'] };
 
-function hace(ts, ahora) {
+export function hace(ts, ahora) {
   const s = Math.max(0, ahora - ts);
   if (s < 90) return 'hace un momento';
   const m = Math.round(s / 60);
@@ -18,7 +18,7 @@ function gb(bytes) {
   const g = bytes / 1024 ** 3;
   return g >= 10 ? `${Math.round(g)} GB` : `${g.toFixed(1)} GB`;
 }
-function fila(estado, titulo, detalle) {
+export function fila(estado, titulo, detalle) {
   const li = document.createElement('li');
   li.className = 'sis-fila';
   li.dataset.estado = estado;

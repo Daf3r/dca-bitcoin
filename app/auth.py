@@ -63,6 +63,10 @@ DIA = 86400
 SESION_DESLIZANTE = 90 * DIA
 SESION_TOPE = 180 * DIA
 ACTUALIZAR_CADA = 3600
+# Dispositivo compartido (idea 105): se cierra sola a las 4 horas como mucho y a la hora sin usarse. No cambia nada para quien no la marca.
+SESION_COMPARTIDA_TOPE = 4 * 3600
+SESION_COMPARTIDA_INACTIVA = 3600
+ACTUALIZAR_CADA_COMPARTIDA = 300
 VENTANA = 3600
 FALLOS_USUARIO = 5          # desde el quinto fallo, espera 2^(n-5) s ...
 ESPERA_MAX_USUARIO = 900    # ... hasta 15 min como mucho
@@ -179,11 +183,12 @@ def _h(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def crear_sesion(conn: sqlite3.Connection, uid: int, ip: str | None, agente: str) -> str:
+def crear_sesion(conn: sqlite3.Connection, uid: int, ip: str | None, agente: str, compartida: bool = False) -> str:
     token = secrets.token_urlsafe(32)
     ahora = int(time.time())
-    conn.execute("INSERT INTO sesiones (hash, usuario_id, creada, ultima, caduca, ip, agente) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                 (_h(token), uid, ahora, ahora, ahora + SESION_DESLIZANTE, ip_resumida(ip), agente[:80]))
+    conn.execute("INSERT INTO sesiones (hash, usuario_id, creada, ultima, caduca, ip, agente, compartida) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                 (_h(token), uid, ahora, ahora, ahora + (SESION_COMPARTIDA_INACTIVA if compartida else SESION_DESLIZANTE), ip_resumida(ip),
+                  agente[:80], 1 if compartida else 0))
     return token
 
 
@@ -192,24 +197,43 @@ def sesion(conn: sqlite3.Connection, token: str | None) -> dict[str, Any] | None
         return None
     hs = _h(token)
     row = conn.execute(
-        "SELECT s.hash, s.creada, s.ultima, s.caduca, u.id, u.nombre, u.rol FROM sesiones s "
+        "SELECT s.hash, s.creada, s.ultima, s.caduca, s.compartida, u.id, u.nombre, u.rol FROM sesiones s "
         "JOIN usuarios u ON u.id = s.usuario_id WHERE s.hash = ? AND u.activo = 1", (hs,)).fetchone()
     ahora = int(time.time())
-    if not row or row["caduca"] <= ahora or row["creada"] + SESION_TOPE <= ahora:
+    tope = SESION_COMPARTIDA_TOPE if row and row["compartida"] else SESION_TOPE
+    if not row or row["caduca"] <= ahora or row["creada"] + tope <= ahora:
         if row:
             conn.execute("DELETE FROM sesiones WHERE hash = ?", (hs,))
             conn.commit()
         return None
-    if ahora - row["ultima"] >= ACTUALIZAR_CADA:  # deslizante, sin escribir en cada petición
+    compartida = bool(row["compartida"])
+    if ahora - row["ultima"] >= (ACTUALIZAR_CADA_COMPARTIDA if compartida else ACTUALIZAR_CADA):  # deslizante, sin escribir en cada petición
         conn.execute("UPDATE sesiones SET ultima = ?, caduca = ? WHERE hash = ?",
-                     (ahora, min(ahora + SESION_DESLIZANTE, row["creada"] + SESION_TOPE), hs))
+                     (ahora, min(ahora + (SESION_COMPARTIDA_INACTIVA if compartida else SESION_DESLIZANTE), row["creada"] + tope), hs))
         conn.commit()
-    return {"id": row["id"], "nombre": row["nombre"], "rol": row["rol"], "hash": hs}
+    return {"id": row["id"], "nombre": row["nombre"], "rol": row["rol"], "hash": hs, "compartida": compartida}
 
 
 def cerrar_sesion(conn: sqlite3.Connection, token: str | None) -> None:
     if token:
         conn.execute("DELETE FROM sesiones WHERE hash = ?", (_h(token),))
+
+
+def sesiones_de(conn: sqlite3.Connection, uid: int, actual: str | None) -> list[dict[str, Any]]:
+    """Las sesiones abiertas de una persona (idea 152). El `id` es solo el comienzo del hash guardado: sirve para cerrarla y no
+    permite reconstruir el token. Nunca se devuelve nada que sirva para robar una sesión."""
+    ahora = int(time.time())
+    return [{"id": r["hash"][:12], "actual": r["hash"] == actual, "creada": r["creada"], "ultima": r["ultima"], "caduca": r["caduca"],
+             "agente": r["agente"], "compartida": bool(r["compartida"])}
+            for r in conn.execute("SELECT hash, creada, ultima, caduca, agente, compartida FROM sesiones WHERE usuario_id = ? AND caduca > ? "
+                                  "ORDER BY ultima DESC", (uid, ahora))]
+
+
+def cerrar_una(conn: sqlite3.Connection, uid: int, sid: str, actual: str | None) -> int:
+    """Cierra una sesión de esta persona por su `id`; la sesión actual no se cierra por aquí (para eso está Salir)."""
+    if not re.fullmatch(r"[0-9a-f]{12}", sid):
+        return 0
+    return conn.execute("DELETE FROM sesiones WHERE usuario_id = ? AND substr(hash, 1, 12) = ? AND hash IS NOT ?", (uid, sid, actual)).rowcount
 
 
 def cerrar_todas(conn: sqlite3.Connection, uid: int) -> int:

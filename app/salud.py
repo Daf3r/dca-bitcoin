@@ -20,7 +20,7 @@ LATIDO_MAX_SEGUNDOS = 600  # el servicio de avisos debe dejar su marca al menos 
 def ultimo_respaldo(carpeta: str | None = None) -> float | None:
     """Cuándo se hizo el respaldo más reciente (marca de tiempo de su archivo), o None si no hay ninguno."""
     carpeta = carpeta or os.environ.get("BACKUP_DIR", "/data/backups")
-    marcas = [os.path.getmtime(f) for f in glob.glob(os.path.join(carpeta, "libro-*.db"))]
+    marcas = [os.path.getmtime(f) for patron in ("libro-*.db", "libro-*.db.cifrado") for f in glob.glob(os.path.join(carpeta, patron))]
     return max(marcas) if marcas else None
 
 

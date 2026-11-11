@@ -25,9 +25,9 @@ const puertoLibre = () => new Promise((res) => {
 });
 
 /** Arranca el servidor de pruebas con un escenario y espera a que responda. */
-async function servidor(escenario) {
+async function servidor(escenario, env = {}) {
   const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: ['ignore', 'ignore', 'pipe'] });
+  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, ...env } });
   let err = '';
   hijo.stderr.on('data', (d) => { err += d; });
   const url = `http://127.0.0.1:${port}`;
@@ -2228,6 +2228,66 @@ try {
       await l.ctx.close();
     } finally {
       srv.parar();
+    }
+  }
+
+  // ---------------------------------------------------------------- sesiones y operación (campamento 8, 3/4)
+  {
+    const srv = await servidor('anio');
+    try {
+      const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      // Dos dispositivos con la misma cuenta; uno es «compartido»
+      const a = await entrar(navegador, srv, ADMIN, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      const ctx2 = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 } });
+      const p2 = await ctx2.newPage();
+      await p2.addInitScript(sinAvisos);
+      await p2.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+      ok(await p2.locator('#l-compartido').isVisible(), 'la entrada tiene la casilla «Este dispositivo es compartido»');
+      ok(!(await p2.locator('#l-compartido').isChecked()), 'y viene sin marcar');
+      await p2.fill('input[autocomplete="username"]', ADMIN[0]); await p2.fill('input[autocomplete="current-password"]', ADMIN[1]);
+      await p2.locator('label.l-comp').click();
+      await Promise.all([p2.waitForURL('**/'), p2.click('button[type=submit], .guardar')]);
+      await p2.waitForTimeout(1500);
+      await a.p.click('#cuenta-btn');
+      await a.p.click('#dc-sesiones-btn');
+      await a.p.waitForSelector('#ses-lista .sis-fila');
+      const filas = await a.p.$$eval('#ses-lista .sis-fila', (fs) => fs.map((f) => ({ t: f.textContent, cerrar: !!f.querySelector('.ses-cerrar') })));
+      eq(filas.length, 2, 'se ven las dos sesiones abiertas');
+      ok(filas.filter((f) => /Este dispositivo/.test(f.t)).length === 1 && filas.filter((f) => f.cerrar).length === 1, 'la de este dispositivo no tiene botón de cerrar; la otra sí');
+      ok(filas.some((f) => /compartido: se cierra solo a las/.test(f.t)), 'la compartida dice a qué hora se cierra sola');
+      ok(!JSON.stringify(filas).match(/[A-Za-z0-9_-]{30,}/), 'no se ve nada parecido a un token');
+      eq(await p2.evaluate(() => fetch('/api/yo').then((r) => r.status)), 200, 'la otra sesión funciona antes de cerrarla');
+      await a.p.click('#ses-lista .ses-cerrar');
+      await a.p.waitForFunction(() => document.querySelectorAll('#ses-lista .sis-fila').length === 1);
+      eq(await p2.evaluate(() => fetch('/api/yo').then((r) => r.status)), 401, 'cerrarla desde aquí la deja sin acceso');
+      ok(/Sesión cerrada/.test(await a.p.textContent('#aviso')), 'y lo dice');
+      eq(a.consola, [], `consola limpia (sesiones): ${a.consola.join(' | ')}`);
+      await ctx2.close();
+      // Una lectora también ve y gestiona sus sesiones
+      const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      if (await l.p.locator('#d-novedades[open]').count()) await l.p.click('#nov-ok');
+      await l.p.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 5000 });
+      await l.p.click('#cuenta-btn'); await l.p.click('#dc-sesiones-btn');
+      await l.p.waitForSelector('#ses-lista .sis-fila');
+      ok(await l.p.locator('#ses-lista .sis-fila').count() >= 1, 'una lectora ve sus sesiones');
+      await l.ctx.close();
+      await a.ctx.close();
+    } finally {
+      srv.parar();
+    }
+    // Modo solo lectura de emergencia
+    const mant = await servidor('anio', { SOLO_LECTURA: '1' });
+    try {
+      const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      const m = await entrar(navegador, mant, ADMIN, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      ok(await m.p.locator('#mant').isVisible() && /Mantenimiento/.test(await m.p.textContent('#mant')), 'con SOLO_LECTURA sale el aviso de mantenimiento');
+      ok(!(await m.p.locator('#anotar').isVisible()), 'y no hay botón de anotar');
+      eq(await m.p.evaluate(() => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: '2026-01-02', monto: 5, sats: 5000 }) }).then((r) => r.status)), 503, 'ninguna escritura entra');
+      ok(await m.p.locator('#s-sats .sr').count() === 1 && (await m.p.locator('#s-sats .sr').textContent()).length > 0, 'pero se ve todo el libro');
+      eq(m.consola.filter((c) => !/503/.test(c)), [], 'consola limpia salvo el 503 esperado');
+      await m.ctx.close();
+    } finally {
+      mant.parar();
     }
   }
 

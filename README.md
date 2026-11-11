@@ -83,6 +83,12 @@ bash scripts/verificar-despliegue.sh
 ## Migraciones de la base
 La base lleva su versión en la tabla `esquema` (`SELECT * FROM esquema;`). Al arrancar, `server.migrar` aplica en orden las migraciones que falten (`MIGRACIONES_ESQUEMA` en `app/server.py`), cada una **idempotente**, y dice en el registro cuáles aplicó (`docker compose logs app | grep esquema`). Una base de cualquier edad, con o sin esa tabla, llega al mismo estado; una base más nueva que el código (volviste a una versión anterior) sigue funcionando porque las migraciones solo añaden. Para cambiar la base: una migración nueva al final y su prueba (`tests/test_api.py`, «Migraciones versionadas»).
 
+## Respaldos cifrados (opcional)
+Los respaldos locales llevan los hashes de las contraseñas; restic ya cifra lo que sube a B2, pero los de `data/backups/` quedan en claro. Para cifrarlos pon una clave larga en el `.env` (`BACKUP_CLAVE=…`) y reinicia: `docker compose up -d backup`. Desde entonces cada copia es `libro-FECHA.db.cifrado` (AES-256-GCM, clave derivada con scrypt) y **no queda copia en claro**; el respaldo se descifra de vuelta y se compara antes de borrar la copia en claro. Los respaldos viejos en claro siguen ahí (conviven, la retención cuenta todos); bórralos tú cuando quieras. `backup.py --restaurar` y `--probar` leen la misma variable. **Si pierdes la clave, esos respaldos no se pueden abrir**: guárdala aparte. Por eso es opcional.
+
+## Modo solo lectura de emergencia
+Para un mantenimiento, o si sospechas de un problema y quieres revisarlo sin que nadie escriba: pon `SOLO_LECTURA=1` en el `.env` y `docker compose up -d app`. Todo se sigue viendo (saldo, gráficos, lista, estado del sistema), la gente puede entrar y salir, pero **ninguna escritura entra** (responde 503) y arriba sale «Mantenimiento: por ahora solo se puede mirar». Para volver a la normalidad quita la línea (o ponla en 0) y `docker compose up -d app`. El servicio `avisos` y los respaldos no se detienen.
+
 ## Importar y exportar
 *Exportar CSV* descarga todas las compras (`fecha,monto_usd,precio_btc_usd,sats,btc`). *Importar CSV* acepta ese mismo formato o uno viejo sin `sats` (usa `precio_btc_usd`). Salta filas repetidas e inválidas y dice cuáles, así que puedes importar el mismo archivo dos veces sin duplicar.
 

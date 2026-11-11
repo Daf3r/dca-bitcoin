@@ -18,6 +18,9 @@ services:
       TZ: America/El_Salvador
       # 1 solo cuando Caddy ponga X-Cliente-IP (ver README); activa el límite de intentos por IP.
       CONFIAR_X_CLIENTE_IP: ${CONFIAR_X_CLIENTE_IP:-0}
+      # 1 = modo solo lectura de emergencia: todo se ve, nada se puede escribir (ver README, «Modo solo lectura»).
+      SOLO_LECTURA: ${SOLO_LECTURA:-0}
+      LIMITE_ESCRITURAS: ${LIMITE_ESCRITURAS:-120}
     ports:
       - "127.0.0.1:18082:8000"
     volumes:
@@ -40,6 +43,8 @@ services:
       BACKUP_DIR: /data/backups
       BACKUP_KEEP: ${BACKUP_KEEP:-30}
       BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+      # Cifrado opcional de los respaldos (ver README, «Respaldos cifrados»). Vacío = en claro, como siempre.
+      BACKUP_CLAVE: ${BACKUP_CLAVE:-}
       TZ: America/El_Salvador
     volumes:
       - ./data:/data
