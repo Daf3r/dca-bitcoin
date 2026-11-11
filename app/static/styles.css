@@ -1311,8 +1311,10 @@ html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { 
 .es-cima .campo-ico { fill: color-mix(in oklab, var(--nieve) 35%, #9f927f); }
 .cima-junta { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 60%, #241a12); stroke-width: 0.9; opacity: 0.6; }
 .cima-brasa { fill: url(#m-luz); opacity: 0.85; }
-.cima-mastil { stroke-width: 1.8; }
-.cima-banderin { opacity: 0.95; }
+.cima-mastil { stroke: color-mix(in oklab, var(--monte-sombra) 60%, #3a2512); stroke-width: 1.4; }
+/* La banderita de la meta: cálida (se lee de día sobre la roca y el cielo claro), con su canto oscuro. */
+.es-cima .banderin { fill: #ffc46b; stroke: #6b3e12; stroke-width: 0.7; opacity: 1; }
+.fogon-cima { fill: none; stroke: #4a3020; stroke-width: 1.2; stroke-linecap: round; }
 .cima-hilo { stroke: #ffd38a; stroke-width: 1; opacity: 0.55; stroke-linecap: round; }
 .cima-lucero { fill: #fff2cf; }
 .cima-haz { fill: #ffd38a; opacity: 0.35; }
