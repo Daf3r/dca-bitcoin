@@ -690,7 +690,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 
 /* Celebración: breve, arriba y sin bloquear nada. */
 .hito-cel { position: fixed; z-index: 11; top: 14px; left: 0; right: 0; display: grid; justify-items: center; pointer-events: none; }
-.hito-cel p { display: grid; justify-items: center; padding: 12px 26px 14px; border-radius: 22px; background: var(--s1); border: 2px solid var(--naranja); color: var(--txt); text-align: center; box-shadow: 0 16px 34px -14px rgb(0 0 0 / 0.6); }
+.hito-cel p { display: grid; justify-items: center; padding: 12px 26px 14px; border-radius: 22px; background: var(--s1); border: 2px solid var(--naranja); color: var(--txt); text-align: center; box-shadow: var(--sombra-alta); }
 .hito-cel small { color: var(--naranja-txt); }
 .hito-cel small { font-weight: 650; font-size: 0.8125rem; }
 .hito-cel b { font: 600 1.75rem/1.1 var(--serif); }
