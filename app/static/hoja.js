@@ -1,4 +1,4 @@
-import { avisosAlAnotar, constanciaCruzada, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
+import { etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
 import { avisar } from './avisar.js';
 import { celebrar, destello } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
@@ -10,7 +10,7 @@ import { sonarGuardado } from './sonido.js';
 
 // ------------------------------------------------------------- hoja de anotar
 export const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const H = { tipo: 'compra', nota: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false };
+const H = { tipo: 'compra', nota: '', etq: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false };
 export const hoja = $('hoja');
 
 // «Deshacer» tras guardar, corregir o anular (8 s): deshacer una compra nueva la anula, deshacer una anulación la vuelve a anotar con los mismos
@@ -24,7 +24,7 @@ function conDeshacer(texto, deshacer, retraso = 0) {
   }, true, { etiqueta: 'Deshacer', ms: ESPERA_DESHACER });
   if (retraso) setTimeout(mostrar, retraso); else mostrar();
 }
-const cuerpoDe = (c) => ({ fecha: c.fecha, monto: c.monto, sats: c.sats, txid: c.txid ?? '', tipo: c.tipo, nota: c.nota ?? '', extra: c.tipo === 'compra' && !!c.extra });
+const cuerpoDe = (c) => ({ fecha: c.fecha, monto: c.monto, sats: c.sats, txid: c.txid ?? '', tipo: c.tipo, nota: c.nota ?? '', extra: c.tipo === 'compra' && !!c.extra, etiquetas: c.etiquetas ?? [] });
 /** Pinta tras deshacer: la montaña baja o sube desde donde estaba, sin celebración. */
 function repintarTrasDeshacer(mensaje) {
   pintar({ montana: true, desde: R.sats });
@@ -44,10 +44,10 @@ function leerBorrador() {
 function borrarBorrador() { try { localStorage.removeItem(CLAVE_BORRADOR); } catch { /* sin almacenamiento */ } }
 function guardarBorrador() {
   if (H.editando || hoja.hidden) return;
-  const { tipo, sats, usd, nota, txid, extra, sentido, comision } = H;
+  const { tipo, sats, usd, nota, etq, txid, extra, sentido, comision } = H;
   try {
-    if (!sats && !usd && !nota && !txid && !comision) localStorage.removeItem(CLAVE_BORRADOR);
-    else localStorage.setItem(CLAVE_BORRADOR, JSON.stringify({ t: Date.now(), tipo, sats, usd, nota, txid, extra, sentido, comision }));
+    if (!sats && !usd && !nota && !etq && !txid && !comision) localStorage.removeItem(CLAVE_BORRADOR);
+    else localStorage.setItem(CLAVE_BORRADOR, JSON.stringify({ t: Date.now(), tipo, sats, usd, nota, etq, txid, extra, sentido, comision }));
   } catch { /* sin almacenamiento: no hay borrador */ }
 }
 hoja.addEventListener('input', guardarBorrador);
@@ -62,21 +62,24 @@ export function abrirHoja(id = null, tipoInicial = 'compra') {
   H.txid = c?.txid ?? '';
   H.tipo = c?.tipo ?? (['venta', 'traslado'].includes(tipoInicial) ? tipoInicial : 'compra');
   H.nota = c?.nota ?? '';
+  H.etq = (c?.etiquetas ?? []).join(', ');
   H.extra = !!c?.extra;
   H.sentido = 'a_wallet';
   H.comision = '';
   const b = !c && tipoInicial === 'compra' ? leerBorrador() : null;
-  if (b) Object.assign(H, { tipo: b.tipo, sats: b.sats ?? '', usd: b.usd ?? '', usdTocado: !!b.usd, nota: b.nota ?? '', txid: b.txid ?? '', extra: !!b.extra, sentido: b.sentido ?? 'a_wallet', comision: b.comision ?? '' });
+  if (b) Object.assign(H, { tipo: b.tipo, sats: b.sats ?? '', usd: b.usd ?? '', usdTocado: !!b.usd, nota: b.nota ?? '', etq: b.etq ?? '', txid: b.txid ?? '', extra: !!b.extra, sentido: b.sentido ?? 'a_wallet', comision: b.comision ?? '' });
   $('h-borrador').hidden = !b;
   $('h-comision').value = H.comision ? entero(Number(H.comision)) : '';
   $('h-nota').value = H.nota;
   $('h-nota-c').value = H.nota;
   $('h-extra').checked = H.extra;
+  $('h-etq').value = H.etq;
+  $('h-etq-lista').replaceChildren(...etiquetasUsadas(S.compras).map(({ nombre }) => Object.assign(document.createElement('option'), { value: nombre })));
   $('h-tipo').hidden = !!c;
   $('h-txid').value = H.txid;
   $('h-sats').value = H.sats ? entero(Number(H.sats)) : '';
   $('h-usd').value = H.usd;
-  $('h-avanzado').open = !!c || !!(b && (b.usd || b.txid || b.extra || b.comision));
+  $('h-avanzado').open = !!c || !!(b && (b.usd || b.txid || b.extra || b.comision || b.etq));
   $('h-fecha').value = c?.fecha ?? hoyISO();
   $('h-fecha').max = hoyISO();
   $('hoja-t').textContent = c ? 'Editar compra' : 'Anotar compra';
@@ -216,6 +219,7 @@ $('h-tipo').addEventListener('click', (e) => {
 });
 $('h-nota').addEventListener('input', (e) => { H.nota = e.target.value; });
 $('h-nota-c').addEventListener('input', (e) => { H.nota = e.target.value; });
+$('h-etq').addEventListener('input', (e) => { H.etq = e.target.value; });
 // Marcar o desmarcar «extra» reinicia el aviso: lo que se confirmó ya no es lo mismo.
 $('h-extra').addEventListener('change', (e) => { H.extra = e.target.checked; limpiarError(); pintarHoja(); });
 $('h-sentido').addEventListener('click', (e) => {
@@ -376,7 +380,7 @@ $('guardar').addEventListener('click', async () => {
   H.guardando = true; pintarHoja();
   const antes = R;
   try {
-    const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid), tipo: H.tipo, nota: H.nota.trim(), extra: H.tipo === 'compra' && H.extra };
+    const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid), tipo: H.tipo, nota: H.nota.trim(), extra: H.tipo === 'compra' && H.extra, etiquetas: partirEtiquetas(H.etq) };
     const g = normalizar(H.editando ? await api(`/api/compras/${H.editando}`, { metodo: 'PUT', cuerpo }) : await api('/api/compras', { metodo: 'POST', cuerpo }));
     const comprasAntes = S.compras;
     S.compras = H.editando ? S.compras.map((x) => (x.id === g.id ? g : x)) : [...S.compras, g];

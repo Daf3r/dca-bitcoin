@@ -112,6 +112,8 @@ elif esc == "mil":
         comprar(d, monto)
         if k % 97 == 50:  # alguna compra extra por una caída, con su nota
             conn.execute("UPDATE compras SET extra = 1, nota = 'Caída' WHERE id = (SELECT MAX(id) FROM compras)")
+        if k % 40 == 7:  # unas etiquetas para probar el filtro (cumpleaños sale pocas veces; bono más)
+            conn.execute("UPDATE compras SET etiquetas = ? WHERE id = (SELECT MAX(id) FROM compras)", ("cumpleaños,bono" if k % 80 == 7 else "bono",))
     for k in range(6):  # unas ventas pequeñas y dos traslados
         server.insertar(conn, ((HOY - timedelta(days=100 + k * 300)).isoformat(), 5.0, 60000.0, 8000), None, "venta", "Gasto", 0)
     for fecha, sentido, sats in ((HOY - timedelta(days=500), "a_wallet", 3_000_000), (HOY - timedelta(days=60), "a_wallet", 1_500_000)):

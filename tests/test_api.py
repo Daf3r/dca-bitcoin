@@ -94,7 +94,7 @@ check(r.status_code == 201, "same-origin"); cl.delete(f"/api/compras/{r.get_json
 
 # export
 r = cl.get("/api/export.csv"); txt = r.get_data(as_text=True)
-check(r.status_code == 200 and txt.startswith("fecha,monto_usd,precio_btc_usd,sats,btc,txid,tipo,nota,extra\n"), txt[:80])
+check(r.status_code == 200 and txt.startswith("fecha,monto_usd,precio_btc_usd,sats,btc,txid,tipo,nota,extra,etiquetas\n"), txt[:80])
 check("attachment" in r.headers["Content-Disposition"], "disposition")
 n_antes = len(cl.get("/api/compras").get_json())
 # reimportar el export: todo repetido
@@ -644,11 +644,64 @@ check(nolibro.post("/api/cambios-visto", json={"id": "x"}).status_code == 403, "
 check(not [x for x in audit() if "cambios" in x["accion"]], "no se audita")
 # Migración: una base anterior (sin la columna) deja a las cuentas que ya existen en '0' (verán el primer aviso)
 sql("ALTER TABLE usuarios DROP COLUMN cambios_visto")
+sql("DELETE FROM esquema WHERE version = 5")  # la base «vuelve» a una versión anterior
 server.init_db()
 check({r[0] for r in sql("SELECT cambios_visto FROM usuarios")} == {"0"}, "la migración deja las cuentas existentes en '0'")
 check(luz.get("/api/yo").get_json()["cambios"] == "0", "yo lo refleja tras migrar")
 server.init_db()
 check({r[0] for r in sql("SELECT cambios_visto FROM usuarios")} == {"0"}, "la migración no se repite")
+
+# --- Migraciones versionadas (idea 94): una base de cualquier edad llega al mismo estado y no se repite nada
+check(server.version_esquema(server.connect()) == server.VERSION_ESQUEMA, "la base de las pruebas está en la última versión")
+check([r[0] for r in sql("SELECT version FROM esquema ORDER BY version")] == [n for n, _x, _f in server.MIGRACIONES_ESQUEMA], "una fila por migración")
+check([n for n, _x, _f in server.MIGRACIONES_ESQUEMA] == list(range(1, server.VERSION_ESQUEMA + 1)), "los números de migración son 1, 2, 3… sin huecos")
+_conn = server.connect()
+try:
+    check(server.migrar(_conn) == [], "volver a migrar no aplica nada")
+finally:
+    _conn.close()
+def _base_vieja(nombre, sql_inicial):
+    """Una base temporal «de antes», migrada con el código de hoy; devuelve su conexión."""
+    ruta = os.path.join(tmp, nombre)
+    c0 = sqlite3.connect(ruta); c0.executescript(sql_inicial); c0.commit(); c0.close()
+    anterior = server.DB_PATH
+    server.DB_PATH = ruta
+    try:
+        server.init_db()
+        return server.connect()
+    finally:
+        server.DB_PATH = anterior
+# (a) la más vieja: solo compras sin sats, sin tabla de usuarios, sin esquema
+v0 = _base_vieja("v0.db", """CREATE TABLE compras (id INTEGER PRIMARY KEY AUTOINCREMENT, fecha TEXT NOT NULL, monto REAL NOT NULL CHECK (monto>0), precio REAL NOT NULL CHECK (precio>0), creado INTEGER NOT NULL);
+INSERT INTO compras (fecha,monto,precio,creado) VALUES ('2024-01-05',50,42000,1);""")
+check(server.version_esquema(v0) == server.VERSION_ESQUEMA, "una base de la época sin sats migra hasta la última versión")
+check(v0.execute("SELECT sats, tipo, extra FROM compras").fetchone()[:] == (119048, "compra", 0), "la compra vieja conserva sus datos y recibe sats, tipo y extra")
+check({"anulada_ts", "txid", "nota"} <= server._columnas(v0, "compras"), "las columnas nuevas de compras están")
+v0.close()
+# (b) con todas las columnas pero sin la tabla `esquema` (la base de producción de antes de las migraciones versionadas)
+v1 = _base_vieja("v1.db", server.SCHEMA + auth.SCHEMA + server.push.SCHEMA)
+check(server.version_esquema(v1) == server.VERSION_ESQUEMA, "una base completa sin tabla esquema solo anota las versiones")
+v1.close()
+# (c) a medias: aplicada hasta la 3; se completan solo las que faltan y los datos de usuarios se respetan
+ruta_c = os.path.join(tmp, "v3.db")
+shutil.copy(dbp, ruta_c)
+cc = sqlite3.connect(ruta_c); cc.execute("DELETE FROM esquema WHERE version > 3"); cc.execute("ALTER TABLE usuarios DROP COLUMN cambios_visto"); cc.commit(); cc.close()
+_ant = server.DB_PATH; server.DB_PATH = ruta_c
+try:
+    _cx = server.connect()
+    check(server.migrar(_cx) == list(range(4, server.VERSION_ESQUEMA + 1)), "una base en la versión 3 aplica solo de la 4 en adelante")
+    check({r[0] for r in _cx.execute("SELECT cambios_visto FROM usuarios")} == {"0"}, "y la migración 5 deja las cuentas existentes en '0'")
+    _cx.close()
+finally:
+    server.DB_PATH = _ant
+# (d) una base más nueva que el código: no falla
+_cn = server.connect()
+try:
+    _cn.execute("INSERT INTO esquema (version, nombre, aplicada) VALUES (?, 'del futuro', 0)", (server.VERSION_ESQUEMA + 5,)); _cn.commit()
+    check(server.migrar(_cn) == [], "una base más nueva que el código no aplica nada ni falla")
+    _cn.execute("DELETE FROM esquema WHERE nombre = 'del futuro'"); _cn.commit()
+finally:
+    _cn.close()
 
 # --- Guía de estilo (solo admin) y paridad del sprite de iconos con index.html
 import re as _re
@@ -773,7 +826,7 @@ ed = next(a for a in au if a["accion"] == "edicion" and a["entidad_id"] == EX0)
 check(ed["antes"]["extra"] is True and ed["despues"]["extra"] is False, "la edición audita el cambio de extra")
 # CSV: la columna extra sale y vuelve a entrar; un CSV sin esa columna sigue entrando
 txt = adm.get("/api/export.csv").get_data(as_text=True)
-check(any(l.startswith("2018-05-02,") and l.endswith(",1") for l in txt.splitlines()), "el export marca la compra extra con 1")
+check(any(l.startswith("2018-05-02,") and l.endswith(",1,") for l in txt.splitlines()), "el export marca la compra extra con 1")
 check(any(l.startswith("2018-05-01,") and l.endswith(",") for l in txt.splitlines()), "el export deja vacío extra en las normales")
 r = adm.post("/api/import", data="fecha,monto_usd,sats,tipo,nota,extra\n2018-06-01,100,160000,compra,por caída,1\n2018-06-02,25,40000,compra,,\n", content_type="text/csv")
 check(r.get_json()["nuevas"] == 2, f"importar con columna extra {r.data}")
@@ -1428,6 +1481,142 @@ backup.DEST = _dest_ori
 check(subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "backup.py"), "--probar"],
                      env={**os.environ, "DB_PATH": dbp, "BACKUP_DIR": backup.DEST}, capture_output=True, text=True).returncode == 0, "backup.py --probar sale con 0 cuando todo está bien")
 
+# --- CSV de traslados y «descargar todo» (ideas 47 y 107)
+_adm = cliente()
+_c3 = server.connect(); auth.crear_usuario(_c3, "Lola", "lectora-nueva-123", "lector", "prueba"); _c3.close()
+_ana = cliente("Lola", "lectora-nueva-123")
+sql("DELETE FROM traslados")
+_adm.post("/api/compras", json={"fecha": "2026-03-01", "monto": 100, "sats": 200000}); _adm.post("/api/compras", json={"fecha": "2026-03-10", "monto": 50, "sats": 100000})
+t1 = _adm.post("/api/traslados", json={"fecha": "2026-03-05", "sats": 150000, "sentido": "a_wallet", "txid": "ab" * 32, "nota": "primer, retiro"}); check(t1.status_code == 201, f"traslado de prueba {t1.data}")
+t2 = _adm.post("/api/traslados", json={"fecha": "2026-03-12", "sats": 40000, "sentido": "a_exchange"}); check(t2.status_code == 201, "segundo traslado de prueba")
+t3 = _adm.post("/api/traslados", json={"fecha": "2026-03-20", "sats": 1000, "sentido": "a_wallet"}); _adm.delete(f"/api/traslados/{t3.get_json()['id']}")  # uno anulado
+r = _adm.get("/api/traslados.csv")
+check(r.status_code == 200 and r.mimetype == "text/csv" and "traslados-btc-" in r.headers["Content-Disposition"], "traslados.csv se descarga como CSV")
+_lineas = r.get_data(as_text=True).splitlines()
+check(_lineas[0] == "fecha,sats,sentido,txid,nota" and len(_lineas) == 3, f"cabecera y solo los traslados vigentes {_lineas}")
+check(_lineas[1] == f'2026-03-05,150000,a_wallet,{"ab" * 32},"primer, retiro"' and _lineas[2] == "2026-03-12,40000,a_exchange,,", f"las filas salen en orden y con la nota entre comillas {_lineas[1:]}")
+check(nuevo().get("/api/traslados.csv").status_code == 401, "sin sesión no se exporta")
+_csv = r.get_data(as_text=True)
+# importar el mismo archivo: nada nuevo, todo repetido
+_h = {"Content-Type": "text/csv"}
+r = _adm.post("/api/traslados/import", data=_csv, headers=_h)
+check(r.status_code == 200 and r.get_json() == {"nuevos": 0, "repetidos": 2, "omitidos": []}, f"importar lo mismo no duplica {r.get_json()}")
+# un archivo nuevo: filas válidas, repetidas e inválidas
+_mas = "fecha,sats,sentido,txid,nota\n2026-03-15,20000,a_wallet,,otro\n2026-03-05,150000,a_wallet,,\n2099-01-01,5,a_wallet,,\n2026-03-16,0,a_wallet,,\n2026-03-16,abc,a_wallet,,\n2026-03-16,100,raro,,\n"
+r = _adm.post("/api/traslados/import", data=_mas, headers=_h)
+_j = r.get_json()
+check(r.status_code == 200 and _j["nuevos"] == 1 and _j["repetidos"] == 1 and len(_j["omitidos"]) == 4, f"importa lo bueno, salta repetidos e inválidos {_j}")
+check(len(_adm.get("/api/traslados").get_json()) == 3, "ahora hay tres traslados vigentes")
+check([x for x in audit() if x["accion"] == "importacion" and x["entidad"] == "traslado"], "la importación de traslados se audita")
+# la wallet no puede quedar negativa ni con más de lo que posees: se rechaza TODO el archivo
+_antes_n = len(_adm.get("/api/traslados").get_json())
+r = _adm.post("/api/traslados/import", data="fecha,sats,sentido\n2026-03-21,1000,a_wallet\n2026-03-22,999999999,a_wallet\n", headers=_h)
+check(r.status_code == 400 and "No se importó nada" in r.get_json()["error"] and len(_adm.get("/api/traslados").get_json()) == _antes_n, "un archivo que pasaría de lo que tienes se rechaza entero y no deja nada a medias")
+r = _adm.post("/api/traslados/import", data="fecha,sats,sentido\n2026-03-23,200000,a_exchange\n", headers=_h)
+check(r.status_code == 400 and len(_adm.get("/api/traslados").get_json()) == _antes_n, "sacar más de lo que hay en la wallet también se rechaza")
+check(_adm.post("/api/traslados/import", data="a,b\n1,2\n", headers=_h).status_code == 400, "sin las columnas fecha y sats se rechaza")
+check(_adm.post("/api/traslados/import", data=_csv).status_code == 415, "hay que mandarlo como text/csv")
+check(nuevo().post("/api/traslados/import", data=_csv, headers={**_h, "X-Libro": "1"}).status_code == 401, "sin sesión no se importa")
+if _ana:
+    check(_ana.post("/api/traslados/import", data=_csv, headers=_h).status_code == 403, "una lectora no importa traslados")
+    check(_ana.get("/api/traslados.csv").status_code == 200, "una lectora sí ve el CSV de traslados (los ve todos)")
+    check(_ana.get("/api/todo.zip").status_code == 403, "una lectora no descarga todo")
+# el ZIP
+import zipfile, io as _io
+r = _adm.get("/api/todo.zip")
+check(r.status_code == 200 and r.mimetype == "application/zip" and "libro-dca-" in r.headers["Content-Disposition"], "todo.zip se descarga")
+_z = zipfile.ZipFile(_io.BytesIO(r.data))
+check(sorted(_z.namelist()) == ["LEEME.txt", "compras.csv", "traslados.csv"] and _z.testzip() is None, f"el ZIP trae LEEME, compras y traslados {_z.namelist()}")
+check(_z.read("compras.csv").decode() == _adm.get("/api/export.csv").get_data(as_text=True), "compras.csv del ZIP es igual al export de compras")
+check(_z.read("traslados.csv").decode() == _adm.get("/api/traslados.csv").get_data(as_text=True), "traslados.csv del ZIP es igual al export de traslados")
+check(nuevo().get("/api/todo.zip").status_code == 401, "sin sesión no se descarga")
+# ida y vuelta: borrar los traslados y volver a cargarlos desde el ZIP deja lo mismo
+_antes_f = [(x["fecha"], x["sats"], x["sentido"], x["txid"], x["nota"]) for x in _adm.get("/api/traslados").get_json()]
+sql("UPDATE traslados SET anulada_ts = 1, anulada_por = 'prueba'")
+r = _adm.post("/api/traslados/import", data=_z.read("traslados.csv").decode(), headers=_h)
+check(r.status_code == 200 and r.get_json()["nuevos"] == 3, f"el CSV exportado se puede volver a importar {r.get_json()}")
+check(sorted((x["fecha"], x["sats"], x["sentido"], x["txid"], x["nota"]) for x in _adm.get("/api/traslados").get_json()) == sorted(_antes_f), "y deja exactamente los mismos traslados")
+
+# --- Etiquetas en las compras (idea 56): minúsculas, hasta 5, en el CSV, la auditoría y el importador; editar sin mandarlas las conserva
+_ad = cliente()
+r = _ad.post("/api/compras", json={"fecha": "2026-04-01", "monto": 25, "sats": 30000, "etiquetas": ["Cumpleaños", " #BONO ", "cumpleaños", "dca mensual"]})
+check(r.status_code == 201 and r.get_json()["etiquetas"] == ["cumpleaños", "bono", "dca mensual"], f"se normalizan: minúsculas, sin # ni repetidas {r.get_json().get('etiquetas')}")
+_ide = r.get_json()["id"]
+check(_ad.post("/api/compras", json={"fecha": "2026-04-02", "monto": 25, "sats": 30000, "etiquetas": "regalo, extra casa;cumple"}).get_json()["etiquetas"] == ["regalo", "extra casa", "cumple"], "también acepta un texto con comas o punto y coma")
+_sin = _ad.post("/api/compras", json={"fecha": "2026-04-03", "monto": 25, "sats": 30000}); check(_sin.get_json()["etiquetas"] == [], "sin etiquetas es una lista vacía")
+for malo, msg in ((["a", "b", "c", "d", "e", "f"], "seis etiquetas"), (["x" * 25], "una de 25 caracteres"), (["a@b"], "con símbolos"), ([1], "un número"), ({"a": 1}, "un objeto")):
+    check(_ad.post("/api/compras", json={"fecha": "2026-04-04", "monto": 25, "sats": 30000, "etiquetas": malo}).status_code == 400, f"se rechaza {msg}")
+r = _ad.put(f"/api/compras/{_ide}", json={"fecha": "2026-04-01", "monto": 25, "sats": 30000})
+check(r.status_code == 200 and r.get_json()["etiquetas"] == ["cumpleaños", "bono", "dca mensual"], "editar sin mandar etiquetas las conserva")
+r = _ad.put(f"/api/compras/{_ide}", json={"fecha": "2026-04-01", "monto": 25, "sats": 30000, "etiquetas": ["bono"]})
+check(r.get_json()["etiquetas"] == ["bono"], "editar con etiquetas las reemplaza")
+ed = [x for x in audit("edicion") if json.loads(x["despues"] or "{}").get("id") == _ide][-1]
+check(json.loads(ed["antes"])["etiquetas"] == ["cumpleaños", "bono", "dca mensual"] and json.loads(ed["despues"])["etiquetas"] == ["bono"], "la auditoría guarda las etiquetas de antes y de después")
+r = _ad.put(f"/api/compras/{_ide}", json={"fecha": "2026-04-01", "monto": 25, "sats": 30000, "etiquetas": []})
+check(r.get_json()["etiquetas"] == [], "mandar una lista vacía las quita")
+_ad.put(f"/api/compras/{_ide}", json={"fecha": "2026-04-01", "monto": 25, "sats": 30000, "etiquetas": ["bono", "dca mensual"]})
+v = _ad.post("/api/compras", json={"fecha": "2026-04-05", "tipo": "venta", "monto": 5, "sats": 1000, "etiquetas": ["gasto"]}); check(v.status_code == 201 and v.get_json()["etiquetas"] == ["gasto"], "una venta o gasto también se etiqueta")
+_csvt = _ad.get("/api/export.csv").get_data(as_text=True)
+check('"bono, dca mensual"' in _csvt and _csvt.splitlines()[0].endswith(",etiquetas"), "el CSV trae la columna etiquetas")
+# ida y vuelta por el importador: se anula y se vuelve a importar
+_ad.delete(f"/api/compras/{_ide}")
+r = _ad.post("/api/import", data=_csvt, headers={"Content-Type": "text/csv"}).get_json()
+check(r["nuevas"] == 1 and r["repetidas"] >= 1, f"el importador recupera la compra anulada {r}")
+_vuelta = [x for x in _ad.get("/api/compras").get_json() if x["fecha"] == "2026-04-01"][0]
+check(_vuelta["etiquetas"] == ["bono", "dca mensual"], "y con sus etiquetas")
+r = _ad.post("/api/import", data="fecha,monto_usd,sats,etiquetas\n2026-04-06,10,10000,\"uno, dos, tres, cuatro, cinco, seis\"\n2026-04-07,10,10000,\"ok\"\n", headers={"Content-Type": "text/csv"}).get_json()
+check(r["nuevas"] == 1 and len(r["omitidas"]) == 1, f"un CSV con demasiadas etiquetas en una fila la omite {r}")
+check(_ad.post("/api/import", data="fecha,monto_usd,sats\n2026-04-08,10,10000\n", headers={"Content-Type": "text/csv"}).get_json()["nuevas"] == 1, "un CSV sin la columna etiquetas entra igual")
+check(server.parse_etiquetas(None) is None and server.parse_etiquetas("") is None and server.parse_etiquetas(["  "]) is None, "sin etiquetas: None")
+check(server.version_esquema(server.connect()) == 6, "la migración 6 está aplicada")
+
+# --- Restaurar de verdad (idea 48): del respaldo a una base nueva, con todo igual, y reemplazando una base con su WAL viejo
+def _todo(ruta):
+    """Todas las filas de todas las tablas de una base, para compararlas tal cual."""
+    c0 = sqlite3.connect(ruta)
+    try:
+        tablas = [r[0] for r in c0.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
+        return {t: c0.execute(f"SELECT * FROM {t} ORDER BY rowid").fetchall() for t in tablas}
+    finally:
+        c0.close()
+_bk = sorted(os.path.join(backup.DEST, f) for f in os.listdir(backup.DEST) if f.startswith("libro-"))[-1]
+_dst = os.path.join(tmp, "restauradas", "libro.db")
+_usado, _prob = backup.restaurar(_bk, _dst)
+check(_usado == _bk and _prob == [] and os.path.exists(_dst), f"restaurar deja la base en el destino {_prob}")
+check(_todo(_dst) == _todo(_bk), "la base restaurada tiene exactamente las mismas filas que el respaldo, tabla por tabla")
+_cr = sqlite3.connect(_dst); check(_cr.execute("PRAGMA integrity_check").fetchone()[0] == "ok", "la restaurada pasa la revisión de integridad"); _cr.close()
+_ant = server.DB_PATH; server.DB_PATH = _dst
+try:
+    server.init_db(); _cr = server.connect()
+    check(server.version_esquema(_cr) == server.VERSION_ESQUEMA and _cr.execute("SELECT COUNT(*) FROM compras").fetchone()[0] > 0, "la app abre la base restaurada y su esquema está al día")
+    _cr.close()
+finally:
+    server.DB_PATH = _ant
+check(backup.restaurar(_bk, _dst)[1] and "--reemplazar" in backup.restaurar(_bk, _dst)[1][0], "sin --reemplazar no pisa una base que ya existe")
+# reemplazar: la actual se guarda como .antes (con su WAL) y no queda nada del WAL viejo junto a la nueva
+open(_dst + "-wal", "wb").write(b"basura de una sesion anterior"); open(_dst + "-shm", "wb").write(b"x")
+check(backup.restaurar(_bk, _dst, reemplazar=True)[1] == [], "con --reemplazar restaura encima")
+_antes = [f for f in os.listdir(os.path.dirname(_dst)) if ".antes-" in f]
+check(len(_antes) == 3 and not os.path.exists(_dst + "-wal") and not os.path.exists(_dst + "-shm"), f"la anterior se guarda como .antes (con -wal y -shm) y el WAL viejo no se queda junto a la nueva {_antes}")
+check(_todo(_dst) == _todo(_bk), "tras reemplazar la base vuelve a ser igual al respaldo")
+# respaldos malos no tocan nada
+_malo = os.path.join(tmp, "malo.db"); open(_malo, "wb").write(b"esto no es una base de datos" * 50)
+_d2 = os.path.join(tmp, "restauradas", "otra.db")
+check(backup.restaurar(_malo, _d2)[1] and not os.path.exists(_d2), "un archivo que no es una base no restaura nada")
+_sin = os.path.join(tmp, "sin-tablas.db"); _cs = sqlite3.connect(_sin); _cs.execute("CREATE TABLE x (a)"); _cs.commit(); _cs.close()
+check("faltan tablas" in backup.restaurar(_sin, _d2)[1][0] and not os.path.exists(_d2), "un respaldo sin las tablas clave no restaura nada")
+check(backup.restaurar(os.path.join(tmp, "nada.db"), _d2)[1] and not os.path.exists(_d2), "un respaldo que no existe se dice y no hace nada")
+_dest_v = backup.DEST; backup.DEST = os.path.join(tmp, "vacio")
+check(backup.restaurar(None, _d2)[1] == ["No hay ningún respaldo que restaurar."], "sin ningún respaldo se dice")
+backup.DEST = _dest_v
+# la línea de comandos: por defecto el más reciente y un destino explícito
+_r = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "backup.py"), "--restaurar", "--a", _d2],
+                    env={**os.environ, "DB_PATH": dbp, "BACKUP_DIR": backup.DEST}, capture_output=True, text=True)
+check(_r.returncode == 0 and os.path.exists(_d2) and "restaurado" in _r.stdout, f"backup.py --restaurar --a RUTA restaura el último respaldo {_r.stderr}")
+_r = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "backup.py"), "--restaurar", "--a", _d2],
+                    env={**os.environ, "DB_PATH": dbp, "BACKUP_DIR": backup.DEST}, capture_output=True, text=True)
+check(_r.returncode == 1 and "--reemplazar" in _r.stderr, "y si ya existe, sale con 1 y explica")
+
 # --- ETag en las lecturas grandes (idea 165): «304 sin cambios» y la API sigue en no-store
 ce = cliente()
 for ruta in ("/api/compras", "/api/traslados"):
@@ -1446,5 +1635,47 @@ check(r3.status_code == 200 and r3.headers["ETag"] != r1.headers["ETag"] and any
 ce.delete(f"/api/compras/{nuevo.get_json()['id']}")
 check(ce.get("/api/estado").headers.get("ETag") is None, "ETag: solo las lecturas grandes lo llevan")
 check(anon.get("/api/compras", headers={"If-None-Match": r1.headers["ETag"]}).status_code in (401, 503), "ETag: sin sesión no se saca nada con el ETag de otro")
+
+# --- Limpieza automática de tablas que solo crecen (idea 50): quita lo viejo sin tocar compras, traslados, cuentas ni auditoría
+_lc = server.connect()
+try:
+    _ya = 2_000_000_000
+    _viejo = _ya - 100 * 86400
+    _tx_vivo, _tx_huerfano, _tx_cerrado, _tx_abierto = ("1f" * 32, "2e" * 32, "3d" * 32, "4c" * 32)
+    _lc.execute("DELETE FROM tx_vigilados"); _lc.execute("DELETE FROM tx_cache"); _lc.execute("DELETE FROM avisos_pendientes"); _lc.execute("DELETE FROM suscripciones"); _lc.execute("DELETE FROM meta WHERE clave LIKE 'aviso_recordatorio_dia:%'")
+    _lc.execute("INSERT INTO compras (fecha, monto, precio, sats, creado, txid) VALUES ('2026-01-02', 10, 100000, 10000, 1, ?)", (_tx_vivo,))
+    for t in (_tx_vivo, _tx_huerfano):
+        _lc.execute("INSERT INTO tx_cache (txid, estado, ts) VALUES (?, 'confirmada', ?)", (t, _viejo))
+    _lc.execute("INSERT INTO tx_vigilados (txid, creado, cerrado) VALUES (?, ?, 1)", (_tx_cerrado, _viejo))
+    _lc.execute("INSERT INTO tx_vigilados (txid, creado, cerrado) VALUES (?, ?, 0)", (_tx_abierto, _viejo))
+    _lc.execute("INSERT INTO tx_vigilados (txid, creado, cerrado) VALUES (?, ?, 1)", ("5b" * 32, _ya - 86400))
+    _lc.execute("INSERT INTO avisos_pendientes (categoria, titulo, cuerpo, etiqueta, creado) VALUES ('movimiento','t','c','e',?)", (_viejo,))
+    _lc.execute("INSERT INTO avisos_pendientes (categoria, titulo, cuerpo, etiqueta, creado) VALUES ('movimiento','t','c','e',?)", (_ya - 3600,))
+    _uid = _lc.execute("SELECT id FROM usuarios LIMIT 1").fetchone()[0]
+    for ep, fallos, ult, creado in (("https://fcm.googleapis.com/muerto", 5, _viejo, _viejo), ("https://fcm.googleapis.com/sano-sin-envios", 0, None, _viejo),
+                                    ("https://fcm.googleapis.com/falla-reciente", 5, _ya - 86400, _viejo), ("https://fcm.googleapis.com/nunca-respondio", 4, None, _viejo)):
+        _lc.execute("INSERT INTO suscripciones (usuario_id, endpoint, p256dh, auth, prefs, creado, ultimo_ok, fallos) VALUES (?, ?, 'k', 'a', '{}', ?, ?, ?)", (_uid, ep, creado, ult, fallos))
+    _sid = _lc.execute("SELECT id FROM suscripciones WHERE endpoint LIKE '%sano-sin-envios'").fetchone()[0]
+    server._meta_poner(_lc, f"aviso_recordatorio_dia:{_sid}", "2026-01-01"); server._meta_poner(_lc, "aviso_recordatorio_dia:99999", "2026-01-01")
+    _lc.commit()
+    _compras_antes = _lc.execute("SELECT COUNT(*) FROM compras").fetchone()[0]
+    _aud_antes = _lc.execute("SELECT COUNT(*) FROM auditoria").fetchone()[0]
+    _usr_antes = _lc.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]
+    _n = avisos.limpiar(_lc, ahora=_ya)
+    check(_n == {"tx_vigilados": 1, "tx_cache": 1, "avisos_pendientes": 1, "suscripciones": 2, "meta": 1}, f"la limpieza quita solo lo viejo e inútil {_n}")
+    check({r[0] for r in _lc.execute("SELECT txid FROM tx_cache")} == {_tx_vivo}, "la caché conserva el TXID de un movimiento que sigue ahí")
+    check({r[0] for r in _lc.execute("SELECT txid FROM tx_vigilados")} == {_tx_abierto, "5b" * 32}, "un TXID abierto o cerrado hace poco se conserva")
+    check([r[0].rsplit("/", 1)[1] for r in _lc.execute("SELECT endpoint FROM suscripciones ORDER BY endpoint")] == ["falla-reciente", "sano-sin-envios"],
+          "se van los dispositivos con fallos y sin envíos en 90 días; el sano que no ha recibido nada se queda")
+    check(_lc.execute("SELECT COUNT(*) FROM avisos_pendientes").fetchone()[0] == 1, "un aviso pendiente reciente se conserva")
+    check([r[0] for r in _lc.execute("SELECT clave FROM meta WHERE clave LIKE 'aviso_recordatorio_dia:%'")] == [f"aviso_recordatorio_dia:{_sid}"], "la marca de un dispositivo que ya no existe se va")
+    check((_lc.execute("SELECT COUNT(*) FROM compras").fetchone()[0], _lc.execute("SELECT COUNT(*) FROM auditoria").fetchone()[0],
+           _lc.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]) == (_compras_antes, _aud_antes, _usr_antes), "compras, auditoría y cuentas no se tocan")
+    check(avisos.limpiar(_lc, ahora=_ya) == {"tx_vigilados": 0, "tx_cache": 0, "avisos_pendientes": 0, "suscripciones": 0, "meta": 0}, "una segunda limpieza no encuentra nada")
+    server._meta_poner(_lc, "limpieza_dia", ""); _lc.commit()
+    check(avisos._limpieza(_lc) is not None and avisos._limpieza(_lc) is None, "la limpieza corre una vez al día")
+    _lc.execute("DELETE FROM compras WHERE txid = ?", (_tx_vivo,)); _lc.execute("DELETE FROM suscripciones"); _lc.commit()
+finally:
+    _lc.close()
 
 print("OK", ok, "comprobaciones")

@@ -707,8 +707,8 @@ const PALABRA_TIPO = { compra: 'compra', venta: 'venta gasto', traslado: 'trasla
 /** Compras, ventas y traslados en una sola forma, lo más reciente primero (a igual fecha, lo último que anotaste). */
 export function movimientosLista(items, traslados = []) {
   const m = [
-    ...items.map((c) => ({ clave: `c${c.id}`, tipo: c.tipo === 'venta' ? 'venta' : 'compra', fecha: c.fecha, creado: c.creado ?? 0, id: c.id, sats: c.sats, monto: c.monto, nota: c.nota ?? '', txid: c.txid ?? '', extra: !!c.extra, ref: c })),
-    ...traslados.map((t) => ({ clave: `t${t.id}`, tipo: 'traslado', fecha: t.fecha, creado: t.creado ?? 0, id: t.id, sats: t.sats, monto: null, nota: t.nota ?? '', txid: t.txid ?? '', extra: false, ref: t })),
+    ...items.map((c) => ({ clave: `c${c.id}`, tipo: c.tipo === 'venta' ? 'venta' : 'compra', fecha: c.fecha, creado: c.creado ?? 0, id: c.id, sats: c.sats, monto: c.monto, nota: c.nota ?? '', txid: c.txid ?? '', extra: !!c.extra, etiquetas: c.etiquetas ?? [], ref: c })),
+    ...traslados.map((t) => ({ clave: `t${t.id}`, tipo: 'traslado', fecha: t.fecha, creado: t.creado ?? 0, id: t.id, sats: t.sats, monto: null, nota: t.nota ?? '', txid: t.txid ?? '', extra: false, etiquetas: [], ref: t })),
   ];
   return ordenarMovimientos(m, 'recientes');
 }
@@ -723,21 +723,37 @@ export function ordenarMovimientos(movs, orden = 'recientes') {
   }[orden] ?? ((a, b) => -porFecha(a, b));
   return [...movs].sort(cmp);
 }
+/** Las etiquetas que has usado, de más a menos frecuentes: [{ nombre, n }]. Las anuladas ya no vienen en `items`. */
+export function etiquetasUsadas(items) {
+  const cuenta = new Map();
+  for (const c of items) for (const e of c.etiquetas ?? []) cuenta.set(e, (cuenta.get(e) ?? 0) + 1);
+  return [...cuenta].map(([nombre, n]) => ({ nombre, n })).sort((a, b) => b.n - a.n || a.nombre.localeCompare(b.nombre, 'es'));
+}
+/** Lo que escribe la persona («Cumpleaños, #bono ») como lista: minúsculas, sin # ni repetidas (el servidor valida lo demás). */
+export function partirEtiquetas(texto) {
+  const salida = [];
+  for (const p of String(texto ?? '').split(/[,;]/)) {
+    const t = p.replace(/#/g, ' ').trim().replace(/\s+/g, ' ').toLowerCase();
+    if (t && !salida.includes(t)) salida.push(t);
+  }
+  return salida;
+}
 /** Lo que se puede buscar de un movimiento: nota, fecha, nombre del mes, tipo, sats, dólares y TXID (sin acentos ni mayúsculas). */
 function pajar(m) {
   const mes = MESES[Number(m.fecha.slice(5, 7)) - 1] ?? '';
-  return sinAcentos([m.nota, m.fecha, mes, mes.slice(0, 3), PALABRA_TIPO[m.tipo], m.extra ? 'extra' : '', m.sats, m.monto != null ? m.monto.toFixed(2) : '', m.txid].join(' '));
+  return sinAcentos([m.nota, m.fecha, mes, mes.slice(0, 3), PALABRA_TIPO[m.tipo], m.extra ? 'extra' : '', (m.etiquetas ?? []).join(' '), m.sats, m.monto != null ? m.monto.toFixed(2) : '', m.txid].join(' '));
 }
 /**
  * Filtra: `texto` (todas las palabras deben aparecer), `filtro` (todos | compra | venta | traslado | extra | txid) y un rango de
  * fechas AAAA-MM-DD (`desde`, `hasta`, ambos inclusivos). Los totales de la pantalla no dependen de esto: solo es lo que se ve en la lista.
  */
-export function filtrarMovimientos(movs, { texto = '', filtro = 'todos', desde = '', hasta = '' } = {}) {
+export function filtrarMovimientos(movs, { texto = '', filtro = 'todos', desde = '', hasta = '', etiqueta = '' } = {}) {
   const palabras = sinAcentos(texto).split(/\s+/).map((p) => (/^[\d,.$]+$/.test(p) ? p.replace(/[,$]/g, '') : p)).filter(Boolean);
   return movs.filter((m) => {
     if (filtro === 'extra' ? !m.extra : filtro === 'txid' ? !m.txid : filtro !== 'todos' && m.tipo !== filtro) return false;
     if (desde && m.fecha < desde) return false;
     if (hasta && m.fecha > hasta) return false;
+    if (etiqueta && !(m.etiquetas ?? []).includes(etiqueta)) return false;
     if (!palabras.length) return true;
     const h = pajar(m);
     return palabras.every((p) => h.includes(p));

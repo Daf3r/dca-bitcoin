@@ -23,6 +23,7 @@ function vistaCuenta(cual) {
   $('dc-hist').hidden = cual !== 'historial';
   $('dc-avisos').hidden = cual !== 'avisos';
   $('dc-historia').hidden = cual !== 'historia';
+  $('dc-datos').hidden = cual !== 'datos';
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
 const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
@@ -47,6 +48,7 @@ export async function cargarYo() {
     pintarSaludo(yo.usuario);
     conAvatar($('dc-quien'), yo.usuario, `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`, { grande: true });
     $('dc-historial').hidden = yo.rol !== 'admin';
+    $('dc-datos-btn').hidden = yo.rol !== 'admin';
     $('dc-previa').hidden = yo.rol !== 'admin'; // vista previa temporal
     $('fc-usuario').value = yo.usuario;
     pintar();
@@ -114,7 +116,8 @@ const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 function textoMov(x) {
   if (!x?.sats) return '';
   return `${entero(x.sats)} sats (${usd(x.monto)}) del ${fechaLarga(x.fecha)}` +
-    (x.extra ? ' · compra extra' : '') + (x.txid ? ` · TXID ${txCorto(x.txid)}` : '') + (x.nota ? ` · «${x.nota}»` : '');
+    (x.extra ? ' · compra extra' : '') + (x.txid ? ` · TXID ${txCorto(x.txid)}` : '') + (x.nota ? ` · «${x.nota}»` : '') +
+    (x.etiquetas?.length ? ` · etiquetas: ${x.etiquetas.join(', ')}` : '');
 }
 /** Qué cambió en una edición: solo los campos que difieren. */
 function cambiosEdicion(antes, despues) {
@@ -126,6 +129,8 @@ function cambiosEdicion(antes, despues) {
   if ((antes.txid ?? null) !== (despues.txid ?? null)) c.push(`TXID ${txCorto(antes.txid)} → ${txCorto(despues.txid)}`);
   if (!!antes.extra !== !!despues.extra) c.push(despues.extra ? 'marcada como extra' : 'ya no es extra');
   if ((antes.nota ?? null) !== (despues.nota ?? null)) c.push(`nota ${antes.nota ? `«${antes.nota}»` : 'vacía'} → ${despues.nota ? `«${despues.nota}»` : 'vacía'}`);
+  const eA = (antes.etiquetas ?? []).join(', '), eD = (despues.etiquetas ?? []).join(', ');
+  if (eA !== eD) c.push(`etiquetas ${eA || 'ninguna'} → ${eD || 'ninguna'}`);
   return c.join(' · ') || 'sin cambios visibles';
 }
 function textoAuditoria(a) {
@@ -205,6 +210,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'clave') irA('clave', () => { $('fc-error').textContent = ''; $('fc-actual').focus(); });
   else if (accion === 'historial') irA('historial', cargarHistorial);
   else if (accion === 'historia') irA('historia', pintarHistoria);
+  else if (accion === 'datos') irA('datos');
   else if (accion === 'avisos') irA('avisos', () => avisosUI.refrescar());
   else if (accion === 'salir' || accion === 'salir-todas') {
     try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }
