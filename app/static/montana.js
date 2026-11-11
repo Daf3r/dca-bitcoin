@@ -177,6 +177,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const f = k / 8, ruido = k < 8;
     der.push([c.sx + (derX - c.sx) * f + (ruido ? (rnd() - 0.5) * W * 0.025 : 0), c.sy + (piso * 0.97 - c.sy) * f ** 0.8 + (ruido ? (rnd() - 0.5) * H * 0.035 : 0)]);
   }
+  // Pendiente de la cima por la izquierda (la fogata de la cumbre se apoya en esa ladera).
+  const kL = Math.max(0.6, (izq[9][1] - c.sy) / Math.max(1, c.sx - izq[9][0]));
   const contorno = [...izq, ...der].map((p, i) => `${i ? 'L' : 'M'}${f1(p[0])} ${f1(p[1])}`).join('');
   const silueta = `${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z`;
   // La arista central baja quebrada (roca), no en línea recta: así la cara iluminada no parece una cascada.
@@ -274,8 +276,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const ocupa = (signo) => [antes, despues].filter((q) => (q.x - p.x) * signo > 4).length;
     return { m, p, cima: m === esc.cima, lado: ocupa(1) > ocupa(-1) ? -1 : 1 };
   });
-  host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), lado)).join('');
-  estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras, caja: null };
+  host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, kL)).join('');
+  estado = { host, W, H, L, camino, enAltura, esc, campos, sats, meta, c, nieveMedidas, fechas, compras, caja: null, techo };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -287,17 +289,26 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
  * lo refleja para que la tienda quede del lado por donde no pasa el sendero. En la cumbre todo es un poco más grande y el
  * resplandor nace en la fogata.
  */
-function campamento(m, p, cima, i, lado) {
-  const alto = cima ? 46 : 34, bx = 24;
-  const banderin = `M0 ${-alto}L${bx} ${-alto + 4.5}L${bx - 5.5} ${-alto + 8.5}L${bx} ${-alto + 13}L0 ${-alto + 14}Z`;
-  const suelo = cima
-    ? '<path class="cima-rellano" d="M-30 6L-20 -3L-6 -6L12 -6.5L28 -3.5L40 4L24 10L4 13L-14 11Z"/><path class="cima-rellano-luz" d="M12 -6.5L28 -3.5L40 4L24 10L18 3Z"/>'
-      + '<path class="cima-piedras" d="M-24 3.5q3 -3 6 0M-8 7q2.5 -2.5 5 0M30 4q2.5 -2.5 5 0"/>'
-    : '<ellipse class="campo-borde" cx="8" cy="2.6" rx="30" ry="6.2"/><ellipse class="campo-claro" cx="8" cy="1.2" rx="29" ry="5.4"/>';
-  const sombras = '<ellipse class="sombra-contacto" cx="0" cy="0.4" rx="4" ry="1.4"/><ellipse class="sombra-contacto" cx="24" cy="1.2" rx="14" ry="2.4"/><ellipse class="sombra-contacto" cx="-12" cy="0.8" rx="8" ry="1.8"/>';
-  const dentro = `${suelo}<g transform="translate(0 ${cima ? -5 : 0})">${sombras}<path class="fogon" d="M-18 0.5L-6 -3M-18 -3L-6 0.5"/>`
-    + `<line y2="${-alto}"/><path class="banderin" d="${banderin}"/><g transform="translate(6 1) scale(1.4)">${icono(i)}</g>${humoYFogata()}</g>`;
-  const brillo = cima ? `<ellipse class="brillo-cima" cx="${-12 * lado}" cy="-16" rx="48" ry="32" fill="url(#m-luz)"/>` : '';
+function campamento(m, p, cima, i, lado, kL = 1.5) {
+  let dentro;
+  if (cima) {
+    // La cumbre: un mojón de piedras sobre el vértice con la bandera clavada en él (así suben las cumbres de verdad). La base
+    // es una laja ancha que tapa la punta; la fogata, si toca, se apoya en la ladera de la izquierda.
+    const yf = f1(-6 + 13 * kL);
+    dentro = '<ellipse class="sombra-contacto" cx="0" cy="-2.5" rx="16" ry="3"/><ellipse class="mojon-base" cx="0" cy="-4" rx="14" ry="3.4"/>'
+      + `<g transform="translate(-20.8 -2) scale(1.6)">${icono(i)}</g>`
+      + '<line y1="-17" y2="-62"/><path class="banderin" d="M0 -62L28 -57L22 -52.5L28 -48L0 -47Z"/>'
+      + `<g transform="translate(1 ${yf})"><ellipse class="sombra-contacto" cx="-12" cy="0.6" rx="6" ry="1.5"/>${humoYFogata()}</g>`;
+  } else {
+    // Un campamento es un solo objeto: su tienda (o cabaña o refugio) sobre un rellano de tierra, con la bandera clavada en
+    // el tejado. Va al lado del sendero por donde no pasa el camino; en el siguiente, la fogata delante; en los alcanzados, humo.
+    dentro = '<ellipse class="campo-borde" cx="25" cy="2.4" rx="21" ry="5"/><ellipse class="campo-claro" cx="25" cy="1.2" rx="20" ry="4.3"/>'
+      + '<ellipse class="sombra-contacto" cx="25" cy="0.9" rx="15" ry="2.2"/>'
+      + `<g transform="translate(5.5 1) scale(1.5)">${icono(i)}</g>`
+      + '<line x1="25" x2="25" y1="-18" y2="-48"/><path class="banderin" d="M25 -48L49 -43.5L43.5 -39.5L49 -35L25 -34Z"/>'
+      + `<g transform="translate(50 -6)">${humo()}</g><g transform="translate(62 1)">${fogata()}</g>`;
+  }
+  const brillo = cima ? '<ellipse class="brillo-cima" cx="0" cy="-22" rx="40" ry="34" fill="url(#m-luz)"/>' : '';
   return `<g class="campo${cima ? ' es-cima' : ''}" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})">${brillo}${lado < 0 ? `<g transform="scale(-1 1)">${dentro}</g>` : dentro}</g>`;
 }
 
@@ -357,8 +368,8 @@ function banderas(host, campos, W, H) {
     b.setAttribute('aria-expanded', 'false');
     b.setAttribute('aria-controls', 'm-tarjeta');
     b.setAttribute('aria-label', `${t.titulo}. ${t.texto}`);
-    b.style.left = `${f1(Math.min(Math.max(p.x - TOQUE / 2 + 8 * lado, 0), W - TOQUE))}px`;
-    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - (cima ? 30 : 16), 0), H - TOQUE))}px`;
+    b.style.left = `${f1(Math.min(Math.max(p.x + (cima ? 6 : 30 * lado) - TOQUE / 2, 0), W - TOQUE))}px`;
+    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - (cima ? 38 : 26), 0), H - TOQUE))}px`;
     b.addEventListener('click', () => (abierta === m ? cerrarTarjeta() : abrirTarjeta(m)));
     return b;
   });
@@ -416,13 +427,11 @@ function instalarCierre() {
  * Dos detalles de ambiente por campamento (solo con todos los efectos; el CSS decide cuál se ve):
  * humo en los ya alcanzados y una fogata que parpadea en el siguiente. Pequeños y al pie de la bandera, lejos de la etiqueta.
  */
-function humoYFogata() {
-  // Humo: dos hilos finos que suben y se disuelven (degradado `#m-humo`), no bolitas sueltas.
-  const humo = '<path class="humo-hilo h1" d="M-12 -7C-15 -14 -9 -19 -12 -26C-15 -33 -8 -38 -11 -46" stroke="url(#m-humo)"/>'
-    + '<path class="humo-hilo h2" d="M-11 -8C-8 -15 -14 -21 -10 -29C-7 -35 -12 -40 -8 -48" stroke="url(#m-humo)"/>';
-  return `<g class="efecto-ambiente humo">${humo}</g>`
-    + '<g class="efecto-ambiente fogata"><circle class="fogata-luz" cx="-12" cy="-4" r="22" fill="url(#m-luz)"/><g transform="translate(-4 0) scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g></g>';
-}
+const humo = () => '<g class="efecto-ambiente humo"><path class="humo-hilo h1" d="M-12 -7C-15 -14 -9 -19 -12 -26C-15 -33 -8 -38 -11 -46" stroke="url(#m-humo)"/>'
+  + '<path class="humo-hilo h2" d="M-11 -8C-8 -15 -14 -21 -10 -29C-7 -35 -12 -40 -8 -48" stroke="url(#m-humo)"/></g>';
+const fogata = () => '<g class="efecto-ambiente fogata"><circle class="fogata-luz" cx="-12" cy="-4" r="22" fill="url(#m-luz)"/><g transform="translate(-4 0) scale(1.5)"><path class="llama" d="M-8 0C-12 -4 -9 -8 -8 -12C-7 -8 -4 -5 -8 0Z"/><path class="llama-i" d="M-8 0C-10 -2 -8 -5 -8 -7C-7 -5 -6 -3 -8 0Z"/></g></g>';
+// Humo (dos hilos finos que suben y se disuelven, `#m-humo`) y fogata con su luz: solo con todos los efectos.
+function humoYFogata() { return humo() + fogata(); }
 
 /**
  * Peldaños y piedras del sendero (paisaje, sin azar: la posición sale de la distancia recorrida). Un peldaño atraviesa la tierra
@@ -464,12 +473,13 @@ function huellas(l) {
 function etiquetar(yo) {
   const { campos, W, host } = estado;
   // Cada campamento (mástil, banderín y tienda) y el punto de «Tú» ocupan su sitio: ninguna etiqueta se les encima.
-  const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 32, y: p.y - 56, w: 74, h: 62, m } : { x: lado < 0 ? p.x - 38 : p.x - 20, y: p.y - 36, w: 58, h: 42, m }));
+  const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 20, y: p.y - 64, w: 52, h: 62, m } : { x: p.x + (lado < 0 ? -50 : 2), y: p.y - 50, w: 48, h: 54, m }));
   cajas.push({ x: yo.x - 18, y: yo.y - 18, w: 36, h: 36 });
-  const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
+  const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || b.y < (estado.techo || 0) + 4 || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
   // «Tú» primero: arriba a la izquierda de tu punto y, si ahí hay un campamento, en otro rincón.
-  const yoOpc = [[-46, -38, 'end', -16], [10, -38, 'start', 16], [-46, 12, 'end', -16], [10, 12, 'start', 16]]
+  const yoOpc = [[-46, -38, 'end', -16], [10, -38, 'start', 16], [-46, 12, 'end', -16], [10, 12, 'start', 16], [-54, -8, 'end', -24], [18, -8, 'start', 24], [-18, -64, 'middle', 0], [-18, 26, 'middle', 0]]
     .map(([dx, dy, a, tx]) => ({ x: yo.x + dx, y: yo.y + dy, w: 36, h: 24, anclaje: a, tx: yo.x + tx }));
+  // (Con `middle` la caja ya va centrada: dx = −18.)
   const yb = yoOpc.find((o) => !choca(o)) ?? yoOpc[0];
   cajas.push(yb);
   const prioridad = (m) => (m === estado.esc.cima ? 0 : m === estado.meta ? 1 : 2);
@@ -479,11 +489,13 @@ function etiquetar(yo) {
     const txt = nombreHito(m);
     const w = txt.length * 8.6 + 16;
     // Junto al banderín (a su derecha o a la izquierda del mástil), arriba de la cumbre o, si no cabe, bajo el claro.
-    const derecha = { x: p.x + 27, y: p.y - 46, w, h: 22, anclaje: 'start', tx: p.x + 32 };
-    const izquierda = { x: p.x - 27 - w, y: p.y - 46, w, h: 22, anclaje: 'end', tx: p.x - 32 };
-    const arriba = { x: p.x - w / 2, y: p.y - 80, w, h: 22, anclaje: 'middle', tx: p.x };
-    const abajo = { x: p.x + 6 - w / 2, y: p.y + 8, w, h: 22, anclaje: 'middle', tx: p.x + 6 };
-    const opciones = cima ? [arriba, izquierda, derecha] : lado < 0 ? [izquierda, derecha, abajo] : [derecha, izquierda, abajo];
+    // Junto al banderín (a su derecha, o a la izquierda del mástil), arriba de la cumbre o, si no cabe, bajo el campamento.
+    const xm = cima ? p.x : p.x + 25 * lado; // el mástil
+    const derecha = { x: xm + (cima ? 32 : 28), y: p.y - (cima ? 66 : 52), w, h: 22, anclaje: 'start', tx: xm + (cima ? 37 : 33) };
+    const izquierda = { x: xm - 8 - w, y: p.y - (cima ? 66 : 52), w, h: 22, anclaje: 'end', tx: xm - 13 };
+    const arriba = { x: p.x - w / 2, y: p.y - 92, w, h: 22, anclaje: 'middle', tx: p.x };
+    const abajo = { x: xm - w / 2, y: p.y + 8, w, h: 22, anclaje: 'middle', tx: xm };
+    const opciones = cima ? [arriba, derecha, izquierda] : lado < 0 ? [izquierda, derecha, abajo] : [derecha, izquierda, abajo];
     const b = opciones.find((o) => !choca(o, m));
     if (!b) continue;
     cajas.push(b);

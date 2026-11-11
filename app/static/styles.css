@@ -222,9 +222,7 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .campo-borde { fill: color-mix(in oklab, var(--monte-sombra) 70%, #3a2a1a); opacity: 0.8; }
 .sombra-contacto { fill: var(--monte-sombra); opacity: 0.55; }
 /* La cumbre: una cresta de roca nevada donde se apoyan el mástil, la fogata y el mojón; la cara que mira al astro, más clara. */
-.cima-rellano { fill: color-mix(in oklab, var(--nieve) 62%, var(--monte)); stroke: color-mix(in oklab, var(--monte-sombra) 60%, transparent); stroke-width: 1; stroke-linejoin: round; }
-.cima-rellano-luz { fill: var(--nieve); opacity: 0.55; }
-.cima-piedras { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 70%, var(--nieve)); stroke-width: 1.6; stroke-linecap: round; opacity: 0.8; }
+.mojon-base { fill: color-mix(in oklab, var(--monte-sombra) 45%, var(--nieve)); }
 .nieve-luz { fill: #fff; opacity: 0.22; }
 .nieve-encima { fill: var(--nieve); opacity: 0.55; pointer-events: none; }
 .hm-0 { stop-color: var(--nieve); stop-opacity: 0.7; } .hm-1 { stop-color: var(--nieve); stop-opacity: 0; }
