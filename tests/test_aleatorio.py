@@ -29,6 +29,8 @@ from datetime import date, timedelta
 
 tmp = tempfile.mkdtemp()
 os.environ["DB_PATH"] = os.path.join(tmp, "libro.db")
+os.environ.setdefault("LIMITE_ESCRITURAS", "1000000")  # estas pruebas escriben a toda prisa; el límite (idea 151) se prueba aparte en test_api
+os.environ.setdefault("LOG_PETICIONES", "0")
 APP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 sys.path.insert(0, APP)
 import auth  # noqa: E402
