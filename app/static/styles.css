@@ -753,6 +753,16 @@ div.fila:hover { background: none; }
 }
 .dc-lista button:hover { background: var(--s3); }
 .dc-lista button[data-cuenta="cerrar"] { background: none; color: var(--txt2); }
+.dc-datos p { margin: 6px 0 12px; color: var(--txt2); font-size: 0.9375rem; line-height: 1.4; }
+.dc-datos .dc-nota { margin-top: 12px; font-size: 0.8125rem; color: var(--txt3); }
+.dc-lista .enlace-boton {
+  display: flex; align-items: center; min-height: var(--toque); padding: 10px 16px; border-radius: 14px; background: var(--s2);
+  color: var(--txt); font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.dc-lista .enlace-boton:hover { background: var(--s3); }
+.dc-lista .enlace-boton:focus-within, .dc-lista .enlace-boton:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+.f-et { display: inline-block; padding: 0 7px; border-radius: 999px; background: var(--s3); color: var(--txt2); font-size: 0.75rem; line-height: 1.5; }
+.f-et::before { content: '#'; opacity: 0.7; }
 .dc-clave { display: grid; gap: 6px; }
 .dc-clave label, .login-caja .campo-l { margin-top: 6px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
 .dc-clave input, .login-caja input {

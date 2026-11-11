@@ -2104,6 +2104,87 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- datos y etiquetas (campamento 8, 1/4)
+  {
+    const srv = await servidor('mil');
+    try {
+      const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      const r = await entrar(navegador, srv, ADMIN, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      const compras = await datos(r.p, '/api/compras');
+      const conBono = compras.filter((c) => c.etiquetas?.includes('bono')).length, conCumple = compras.filter((c) => c.etiquetas?.includes('cumpleaños')).length;
+      ok(conBono > conCumple && conCumple > 0, `el escenario trae etiquetas (bono ${conBono}, cumpleaños ${conCumple})`);
+      // El filtro de la lista
+      await r.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+      await r.p.click('#l-mas summary');
+      ok(await r.p.locator('#l-etq-l').isVisible(), 'con etiquetas sale el selector «Etiqueta»');
+      const opciones = await r.p.$$eval('#l-etq option', (os) => os.map((o) => o.textContent));
+      eq(opciones, ['Todas', `bono (${conBono})`, `cumpleaños (${conCumple})`], 'el selector lista las etiquetas de más a menos usadas, con su cuenta');
+      await r.p.selectOption('#l-etq', 'cumpleaños');
+      await r.p.waitForTimeout(300);
+      eq((await r.p.textContent('#l-res')).trim(), `${conCumple} de ${compras.length + (await datos(r.p, '/api/traslados')).length} movimientos`, 'el resumen dice cuántos coinciden');
+      eq(await r.p.locator('#lista .fila').count(), Math.min(8, conCumple), 'la lista muestra solo esos movimientos');
+      ok((await r.p.locator('#lista .f-et').allInnerTexts()).every((t) => t.length > 0) && await r.p.locator('#lista .f-et').count() >= conCumple, 'cada fila muestra sus etiquetas');
+      await r.p.click('#l-limpiar');
+      eq(await r.p.inputValue('#l-etq'), '', '«Quitar filtros» limpia también la etiqueta');
+      // El buscador también las encuentra
+      await r.p.fill('#l-buscar', 'CUMPLEANOS');
+      await r.p.waitForTimeout(300);
+      ok((await r.p.textContent('#l-res')).startsWith(`${conCumple} de`), 'el buscador encuentra la etiqueta sin acentos ni mayúsculas');
+      await r.p.click('#l-limpiar');
+      // Anotar con etiquetas
+      await r.p.evaluate(() => scrollTo(0, 0));
+      await r.p.click('#anotar');
+      await r.p.waitForTimeout(400);
+      await r.p.fill('#h-sats', '12345');
+      await r.p.click('#h-avanzado summary');
+      ok(await r.p.locator('#h-etq').isVisible(), 'la hoja tiene el campo de etiquetas en «Más detalles»');
+      eq(await r.p.$$eval('#h-etq-lista option', (os) => os.map((o) => o.value)), ['bono', 'cumpleaños'], 'las que ya usaste salen como sugerencia');
+      await r.p.fill('#h-etq', 'Regalo, #BONO');
+      await r.p.click('#guardar');
+      await r.p.waitForTimeout(1500);
+      const ultima = (await datos(r.p, '/api/compras')).find((c) => c.sats === 12345);
+      eq(ultima?.etiquetas, ['regalo', 'bono'], 'se guardan normalizadas (minúsculas, sin #)');
+      eq(await r.p.locator('#l-etq option').count(), 4, 'la etiqueta nueva aparece en el selector');
+      // Editarla: el campo viene con lo guardado y se conserva si no se toca
+      await r.p.click('#lista .fila[data-id="' + ultima.id + '"]');
+      await r.p.waitForTimeout(400);
+      eq(await r.p.inputValue('#h-etq'), 'regalo, bono', 'al editar el campo trae las etiquetas');
+      await r.p.fill('#h-etq', 'regalo');
+      await r.p.click('#guardar');
+      await r.p.waitForTimeout(1200);
+      eq((await datos(r.p, '/api/compras')).find((c) => c.id === ultima.id).etiquetas, ['regalo'], 'editar las cambia');
+      eq(r.consola, [], `consola limpia (etiquetas): ${r.consola.join(' | ')}`);
+      await r.ctx.close();
+
+      // «Tus datos» (ideas 47 y 107): solo el admin; descargas e importar traslados
+      const a = await entrar(navegador, srv, ADMIN, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      await a.p.click('#cuenta-btn');
+      ok(await a.p.locator('#dc-datos-btn').isVisible(), 'el admin ve «Tus datos»');
+      await a.p.click('#dc-datos-btn');
+      await a.p.waitForTimeout(400);
+      ok(await a.p.locator('#dc-datos').isVisible() && !(await a.p.locator('#dc-menu').isVisible()), 'se abre la vista de datos');
+      const [descarga] = await Promise.all([a.p.waitForEvent('download'), a.p.click('#dd-zip')]);
+      ok(/^libro-dca-\d{4}-\d{2}-\d{2}\.zip$/.test(descarga.suggestedFilename()), `el ZIP se descarga con su nombre (${descarga.suggestedFilename()})`);
+      const [descarga2] = await Promise.all([a.p.waitForEvent('download'), a.p.click('#dd-tras')]);
+      ok(/^traslados-btc-/.test(descarga2.suggestedFilename()), 'el CSV de traslados se descarga');
+      const antesT = (await datos(a.p, '/api/traslados')).length;
+      await a.p.setInputFiles('#tras-in', { name: 't.csv', mimeType: 'text/csv', buffer: Buffer.from(`fecha,sats,sentido\n${hoySV()},1000,a_wallet\n`) });
+      await a.p.waitForTimeout(1200);
+      eq((await datos(a.p, '/api/traslados')).length, antesT + 1, 'importar un traslado desde la vista de datos lo guarda');
+      ok(/Traslados importados: 1/.test(await a.p.textContent('#aviso')), 'y lo dice');
+      eq(a.consola, [], `consola limpia (datos): ${a.consola.join(' | ')}`);
+      await a.ctx.close();
+      const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      if (await l.p.locator('#d-novedades[open]').count()) await l.p.click('#nov-ok');
+      await l.p.waitForFunction(() => !document.querySelector('dialog[open]'), null, { timeout: 5000 });
+      await l.p.click('#cuenta-btn');
+      ok(!(await l.p.locator('#dc-datos-btn').isVisible()), 'una lectora no ve «Tus datos»');
+      await l.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {

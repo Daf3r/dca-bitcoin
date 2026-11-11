@@ -5,6 +5,10 @@ Uso:
   python backup.py --loop         una copia cada BACKUP_INTERVAL_HOURS (por defecto 24) y, una vez por semana, una
                                   prueba de restauración del último respaldo
   python backup.py --probar       la prueba de restauración ahora (sale con 1 si encuentra algo)
+  python backup.py --restaurar [ARCHIVO] [--a RUTA] [--reemplazar]
+                                  recupera la base desde un respaldo (por defecto, el más reciente) en RUTA (por defecto
+                                  `libro.restaurada.db` junto a la base real). Con --reemplazar, RUTA puede ser la base
+                                  real: la actual se guarda antes como `.antes-FECHA`. Pasos completos: README, «Restaurar».
   (el chequeo de salud de docker-compose vive en salud.py)
 
 Usa la API de respaldo de SQLite, que produce una copia coherente aunque la
@@ -87,6 +91,63 @@ def probar_restauracion(respaldo: str | None = None, db_vivo: str | None = None)
     return problemas
 
 
+def restaurar(respaldo: str | None = None, destino: str | None = None, reemplazar: bool = False) -> tuple[str | None, list[str]]:
+    """Recupera la base desde un respaldo (idea 48). Devuelve (ruta del respaldo usado, problemas); sin problemas, la base quedó en `destino`.
+
+    Valida el respaldo (se abre, integrity_check, tablas clave), lo copia con la API de SQLite a un temporal junto al destino y
+    lo mueve de golpe. Si el destino ya existe exige `reemplazar` y lo guarda antes como `.antes-FECHA` junto con sus archivos
+    -wal y -shm (un WAL viejo al lado de una base restaurada la dañaría). NO se debe restaurar sobre la base real con la app corriendo:
+    primero `docker compose stop app avisos`.
+    """
+    if respaldo is None:
+        archivos = sorted(glob.glob(os.path.join(DEST, "libro-*.db")))
+        if not archivos:
+            return None, ["No hay ningún respaldo que restaurar."]
+        respaldo = archivos[-1]
+    if not os.path.isfile(respaldo):
+        return respaldo, [f"No existe el respaldo {respaldo}."]
+    destino = destino or os.path.join(os.path.dirname(DB_PATH) or ".", "libro.restaurada.db")
+    if os.path.exists(destino) and not reemplazar:
+        return respaldo, [f"Ya existe {destino}; usa --reemplazar para guardarla como .antes y restaurar encima."]
+    try:
+        src = sqlite3.connect(f"file:{respaldo}?mode=ro", uri=True)
+        try:
+            if src.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                return respaldo, ["El respaldo no pasa la revisión de integridad: no se restauró nada."]
+            faltan = [t for t in TABLAS_CLAVE if not src.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (t,)).fetchone()]
+            if faltan:
+                return respaldo, [f"Al respaldo le faltan tablas ({', '.join(faltan)}): no se restauró nada."]
+            carpeta = os.path.dirname(os.path.abspath(destino))
+            os.makedirs(carpeta, exist_ok=True)
+            tmp = os.path.join(carpeta, f".restaurando-{os.getpid()}.db")
+            dst = sqlite3.connect(tmp)
+            try:
+                src.backup(dst)
+            finally:
+                dst.close()
+        finally:
+            src.close()
+        nuevo = sqlite3.connect(tmp)
+        try:
+            if nuevo.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                os.remove(tmp)
+                return respaldo, ["La copia restaurada no pasó la revisión de integridad: no se restauró nada."]
+        finally:
+            nuevo.close()
+        if os.path.exists(destino):
+            marca = time.strftime("%Y%m%d-%H%M%S")
+            for sufijo in ("", "-wal", "-shm"):
+                if os.path.exists(destino + sufijo):
+                    os.replace(destino + sufijo, f"{destino}.antes-{marca}{sufijo}")
+        for sufijo in ("-wal", "-shm"):  # restos sin base: también estorban
+            if os.path.exists(destino + sufijo):
+                os.remove(destino + sufijo)
+        os.replace(tmp, destino)
+    except sqlite3.DatabaseError as e:
+        return respaldo, [f"El respaldo no se pudo abrir ({e})."]
+    return respaldo, []
+
+
 def prueba_semanal(ahora: float | None = None) -> list[str] | None:
     """Corre la prueba de restauración si pasó una semana desde la última. None si todavía no tocaba."""
     marca = os.path.join(DEST, MARCA_PRUEBA)
@@ -149,6 +210,16 @@ def run() -> bool:
 
 
 if __name__ == "__main__":
+    if "--restaurar" in sys.argv:
+        args = sys.argv[sys.argv.index("--restaurar") + 1:]
+        destino_arg = args[args.index("--a") + 1] if "--a" in args and args.index("--a") + 1 < len(args) else None
+        sueltos = [a for i, a in enumerate(args) if not a.startswith("--") and not (i > 0 and args[i - 1] == "--a")]
+        usado, problemas = restaurar(sueltos[0] if sueltos else None, destino_arg, "--reemplazar" in args)
+        if problemas:
+            print("backup: " + "; ".join(problemas), file=sys.stderr, flush=True)
+            sys.exit(1)
+        print(f"backup: restaurado {usado} en {destino_arg or os.path.join(os.path.dirname(DB_PATH) or '.', 'libro.restaurada.db')}", flush=True)
+        sys.exit(0)
     if "--probar" in sys.argv:
         problemas = probar_restauracion()
         print("backup: la prueba de restauración encontró problemas: " + "; ".join(problemas) if problemas else "backup: la prueba de restauración salió bien", flush=True)

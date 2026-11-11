@@ -1,4 +1,4 @@
-import { agruparPorMes, entero, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
+import { agruparPorMes, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
 import { avisar } from './avisar.js';
 import { copiarTexto } from './copiar.js';
 import { ico, ilustracion } from './iconos.js';
@@ -16,11 +16,11 @@ const ORDENES = ['recientes', 'antiguas', 'monto', 'sats'];
 function ordenGuardado() {
   try { const o = localStorage.getItem(CLAVE_ORDEN); return ORDENES.includes(o) ? o : 'recientes'; } catch { return 'recientes'; }
 }
-const F = { texto: '', filtro: 'todos', desde: '', hasta: '', orden: ordenGuardado(), limite: INICIAL };
-const hayFiltros = () => !!(F.texto.trim() || F.filtro !== 'todos' || F.desde || F.hasta);
+const F = { texto: '', filtro: 'todos', desde: '', hasta: '', etiqueta: '', orden: ordenGuardado(), limite: INICIAL };
+const hayFiltros = () => !!(F.texto.trim() || F.filtro !== 'todos' || F.desde || F.hasta || F.etiqueta);
 function quitarFiltros() {
-  Object.assign(F, { texto: '', filtro: 'todos', desde: '', hasta: '', limite: INICIAL });
-  $('l-buscar').value = ''; $('l-desde').value = ''; $('l-hasta').value = '';
+  Object.assign(F, { texto: '', filtro: 'todos', desde: '', hasta: '', etiqueta: '', limite: INICIAL });
+  $('l-buscar').value = ''; $('l-desde').value = ''; $('l-hasta').value = ''; $('l-etq').value = '';
   document.querySelectorAll('#l-chips button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === 'todos')));
 }
 
@@ -57,7 +57,7 @@ function htmlFila(m) {
   return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}">` +
     (esAdmin() ? `<span class="sr">Editar la ${venta ? 'venta' : 'compra'} del </span>` : '') + `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
     `<span class="f-sats">${venta ? '−' : '+'}${entero(c.sats)} <small>sats</small></span>` +
-    `<span class="f-det">${venta ? 'Venta · ' : ''}${c.extra ? `<b class="f-extra">${ico('rayo')} Extra</b> · ` : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}</span>` +
+    `<span class="f-det">${venta ? 'Venta · ' : ''}${c.extra ? `<b class="f-extra">${ico('rayo')} Extra</b> · ` : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}${c.etiquetas?.length ? ` · ${c.etiquetas.map((e) => `<span class="f-et">${esc(e)}</span>`).join(' ')}` : ''}</span>` +
     `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${textoV}</span></${esAdmin() ? 'button' : 'div'}>${htmlExtras(m)}</li>`;
 }
 
@@ -109,6 +109,20 @@ function reordenarAnimado(host, viejos, filas, firma) {
   previas = { firma, claves };
 }
 
+/** El selector «Etiqueta»: solo sale si hay etiquetas; si la elegida ya no existe (se quitó o se anuló la compra), vuelve a «Todas». */
+let firmaEtiquetas = '';
+function pintarEtiquetas() {
+  const usadas = etiquetasUsadas(R.items);
+  const firma = usadas.map((e) => `${e.nombre}:${e.n}`).join('|');
+  if (F.etiqueta && !usadas.some((e) => e.nombre === F.etiqueta)) F.etiqueta = '';
+  if (firma !== firmaEtiquetas) {
+    firmaEtiquetas = firma;
+    $('l-etq').replaceChildren(Object.assign(document.createElement('option'), { value: '', textContent: 'Todas' }),
+      ...usadas.map(({ nombre, n }) => Object.assign(document.createElement('option'), { value: nombre, textContent: `${nombre} (${n})` })));
+  }
+  $('l-etq').value = F.etiqueta;
+  $('l-etq-l').hidden = !usadas.length;
+}
 /** Lo que se ve ahora: todos los movimientos, filtrados y en el orden elegido. */
 function movimientosVisibles() {
   const todos = movimientosLista(R.items, S.traslados);
@@ -127,6 +141,7 @@ export function pintarLista() {
     previas = null;
     return;
   }
+  pintarEtiquetas();
   let { todos, vistos } = movimientosVisibles();
   const controles = todos.length > INICIAL;
   $('l-ctl').hidden = !controles;
@@ -153,7 +168,7 @@ export function pintarLista() {
     }
   } else for (const m of filas) html.push(htmlFila(m));
   host.innerHTML = html.join('');
-  reordenarAnimado(host, viejos, filas, JSON.stringify([F.texto, F.filtro, F.desde, F.hasta, F.orden, F.limite]));
+  reordenarAnimado(host, viejos, filas, JSON.stringify([F.texto, F.filtro, F.desde, F.hasta, F.etiqueta, F.orden, F.limite]));
   // Resumen y botones
   $('l-res').textContent = hayFiltros() ? `${vistos.length} de ${todos.length} ${todos.length === 1 ? 'movimiento' : 'movimientos'}` : '';
   $('l-limpiar').hidden = !hayFiltros();
@@ -263,6 +278,7 @@ $('l-chips').addEventListener('click', (e) => {
 });
 $('l-desde').addEventListener('change', (e) => { F.desde = e.target.value; reiniciar(); });
 $('l-hasta').addEventListener('change', (e) => { F.hasta = e.target.value; reiniciar(); });
+$('l-etq').addEventListener('change', (e) => { F.etiqueta = e.target.value; reiniciar(); });
 $('l-orden').value = F.orden;
 $('l-orden').addEventListener('change', (e) => {
   F.orden = ORDENES.includes(e.target.value) ? e.target.value : 'recientes';

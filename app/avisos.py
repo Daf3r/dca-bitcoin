@@ -11,6 +11,9 @@ En cada pasada:
   · TXID vigilados: si uno que estaba pendiente ya se confirmó, avisa al admin una vez;
   · gran caída: si BTC está 15 % o más bajo su máximo de 30 días, avisa al admin una vez por caída (se reinicia cuando
     BTC se recupera y queda a menos de 10 % de su máximo). Solo informa; solo de 8:00 a 21:00;
+  · limpieza (una vez al día): quita lo que solo crece y ya no sirve (TXID cerrados, caché de TXID de movimientos que ya no existen,
+    avisos pendientes de hace más de una semana, dispositivos que dejaron de responder). Nunca toca compras, traslados, cuentas ni la
+    auditoría;
   · vigilantes: deja una marca de «sigo vivo»; avisa si pasan más de 36 horas sin respaldo nuevo, si la revisión semanal
     de la base de datos encuentra un problema o si queda poco espacio en disco (cada aviso, una vez al día).
   (el chequeo de salud de docker-compose vive en salud.py)
@@ -39,6 +42,11 @@ CAIDA_RECUPERADA = 10.0  # la caída «termina» cuando BTC queda a menos de est
 RESPALDO_MAX_HORAS = 36
 DISCO_MIN_BYTES = 1024**3  # menos de 1 GiB libre
 DISCO_MIN_PCT = 10.0       # o menos del 10 % libre
+LIMPIEZA_TX_CERRADOS_DIAS = 30
+LIMPIEZA_TX_CACHE_DIAS = 30        # solo la caché de TXID que ya no están en ningún movimiento
+LIMPIEZA_PENDIENTES_DIAS = 7       # un aviso nocturno que lleva una semana sin salir ya no tiene sentido
+LIMPIEZA_DISPOSITIVO_DIAS = 90     # sin ningún envío exitoso en tanto tiempo Y con fallos: dejó de responder
+LIMPIEZA_DISPOSITIVO_FALLOS = 3
 
 
 def _recordatorio(conn: sqlite3.Connection) -> bool:
@@ -190,13 +198,46 @@ def _disco(conn: sqlite3.Connection) -> bool:
     return True
 
 
+def limpiar(conn: sqlite3.Connection, ahora: int | None = None) -> dict[str, int]:
+    """Borra lo que solo crece y ya no sirve (idea 50). Devuelve cuántas filas quitó de cada tabla.
+
+    Nunca toca `compras`, `traslados`, `usuarios`, `sesiones`, `auditoria` ni `precios`. Un dispositivo con avisos solo se quita si
+    además de llevar 90 días sin un envío exitoso ya acumuló fallos: uno sano que simplemente no ha recibido nada se conserva.
+    """
+    ahora = int(ahora if ahora is not None else time.time())
+    n: dict[str, int] = {}
+    n["tx_vigilados"] = conn.execute("DELETE FROM tx_vigilados WHERE cerrado = 1 AND creado < ?",
+                                     (ahora - LIMPIEZA_TX_CERRADOS_DIAS * 86400,)).rowcount
+    n["tx_cache"] = conn.execute(
+        "DELETE FROM tx_cache WHERE ts < ? AND txid NOT IN (SELECT txid FROM compras WHERE txid IS NOT NULL) "
+        "AND txid NOT IN (SELECT txid FROM traslados WHERE txid IS NOT NULL)", (ahora - LIMPIEZA_TX_CACHE_DIAS * 86400,)).rowcount
+    n["avisos_pendientes"] = conn.execute("DELETE FROM avisos_pendientes WHERE creado < ?", (ahora - LIMPIEZA_PENDIENTES_DIAS * 86400,)).rowcount
+    n["suscripciones"] = conn.execute(
+        "DELETE FROM suscripciones WHERE fallos >= ? AND COALESCE(ultimo_ok, creado) < ?",
+        (LIMPIEZA_DISPOSITIVO_FALLOS, ahora - LIMPIEZA_DISPOSITIVO_DIAS * 86400)).rowcount
+    # las marcas «ya avisé hoy» de dispositivos que ya no existen
+    vivos = {str(r["id"]) for r in conn.execute("SELECT id FROM suscripciones")}
+    n["meta"] = 0
+    for r in conn.execute("SELECT clave FROM meta WHERE clave LIKE 'aviso_recordatorio_dia:%'").fetchall():
+        if r["clave"].split(":", 1)[1] not in vivos:
+            conn.execute("DELETE FROM meta WHERE clave = ?", (r["clave"],))
+            n["meta"] += 1
+    conn.commit()
+    return n
+
+
+def _limpieza(conn: sqlite3.Connection) -> dict[str, int] | None:
+    """La limpieza corre una vez al día; None si hoy ya se hizo."""
+    return limpiar(conn) if _una_vez_al_dia(conn, "limpieza_dia") else None
+
+
 def una_pasada() -> dict[str, Any]:
     conn = server.connect()
     try:
         server._meta_poner(conn, "avisos_latido", str(int(time.time())))  # «sigo vivo»: lo lee el chequeo de salud
         conn.commit()
         return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn), "caida": _caida(conn),
-                "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn)}
+                "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "limpieza": _limpieza(conn)}
     finally:
         conn.close()
 

@@ -14,6 +14,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+import zipfile
 from datetime import UTC, date, datetime, timedelta
 from collections.abc import Callable
 from typing import Any
@@ -100,7 +101,7 @@ CSP = (
     "base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 )
 
-COLS = "id, fecha, monto, precio, sats, creado, txid, tipo, nota, extra"
+COLS = "id, fecha, monto, precio, sats, creado, txid, tipo, nota, extra, etiquetas"
 GENESIS = date(2009, 1, 3)
 Compra = tuple[str, float, float, int]  # fecha, monto, precio, sats
 
@@ -114,33 +115,97 @@ def connect() -> sqlite3.Connection:
     return conn
 
 
+# ---- Migraciones versionadas (idea 94): la tabla `esquema` guarda qué versiones de la base ya se aplicaron.
+# Cada migración es una función numerada que **debe ser idempotente** (mira si el cambio ya está antes de hacerlo): así una base de
+# cualquier edad, con o sin la tabla `esquema`, llega al mismo estado, y una caída a medias se reanuda sin dañar nada. Para cambiar la
+# base: añade UNA migración al final con el número siguiente (nunca edites ni reordenes las anteriores) y su prueba en tests/test_api.py.
+def _columnas(conn: sqlite3.Connection, tabla: str) -> set[str]:
+    return {r["name"] for r in conn.execute(f"PRAGMA table_info({tabla})")}
+
+
+def _m_tablas_base(conn: sqlite3.Connection) -> None:
+    conn.executescript(SCHEMA)
+    conn.executescript(auth.SCHEMA)
+    conn.executescript(push.SCHEMA)
+
+
+def _m_columnas_compras(conn: sqlite3.Connection) -> None:
+    cols = _columnas(conn, "compras")
+    for col, ddl in MIGRACIONES:
+        if col not in cols:
+            conn.execute(ddl)
+    conn.execute("CREATE INDEX IF NOT EXISTS compras_txid ON compras (txid) WHERE txid IS NOT NULL")
+    # filas de antes de guardar sats: se estiman con monto y precio
+    conn.execute("UPDATE compras SET sats = MAX(1, CAST(ROUND(monto / precio * 100000000) AS INTEGER)) WHERE sats IS NULL")
+
+
+def _m_pendientes_sus_id(conn: sqlite3.Connection) -> None:
+    if "sus_id" not in _columnas(conn, "avisos_pendientes"):
+        conn.execute("ALTER TABLE avisos_pendientes ADD COLUMN sus_id INTEGER")
+
+
+def _m_usuarios_visto(conn: sqlite3.Connection) -> None:
+    # «Novedades»: cuándo vio cada persona el resumen por última vez
+    if "visto_ts" not in _columnas(conn, "usuarios"):
+        conn.execute("ALTER TABLE usuarios ADD COLUMN visto_ts INTEGER")
+
+
+def _m_usuarios_cambios(conn: sqlite3.Connection) -> None:
+    # «Qué hay de nuevo»: las cuentas que ya existen al añadir la columna quedan en '0' (verán el primero); las nuevas, en NULL.
+    if "cambios_visto" not in _columnas(conn, "usuarios"):
+        conn.execute("ALTER TABLE usuarios ADD COLUMN cambios_visto TEXT")
+        conn.execute("UPDATE usuarios SET cambios_visto = '0'")
+
+
+def _m_compras_etiquetas(conn: sqlite3.Connection) -> None:
+    # Etiquetas (idea 56): «cumpleaños», «bono»… guardadas en minúsculas y separadas por coma (un nombre nunca lleva coma).
+    if "etiquetas" not in _columnas(conn, "compras"):
+        conn.execute("ALTER TABLE compras ADD COLUMN etiquetas TEXT CHECK (etiquetas IS NULL OR length(etiquetas) <= 200)")
+
+
+MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
+    (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
+    (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
+    (3, "avisos_pendientes.sus_id", _m_pendientes_sus_id),
+    (4, "usuarios.visto_ts", _m_usuarios_visto),
+    (5, "usuarios.cambios_visto", _m_usuarios_cambios),
+    (6, "compras.etiquetas", _m_compras_etiquetas),
+)
+VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
+
+
+def version_esquema(conn: sqlite3.Connection) -> int:
+    """La versión más alta aplicada a esta base (0 si aún no tiene la tabla `esquema`)."""
+    try:
+        return int(conn.execute("SELECT COALESCE(MAX(version), 0) FROM esquema").fetchone()[0])
+    except sqlite3.OperationalError:
+        return 0
+
+
+def migrar(conn: sqlite3.Connection) -> list[int]:
+    """Aplica las migraciones que falten, en orden, y devuelve los números aplicados."""
+    conn.execute("CREATE TABLE IF NOT EXISTS esquema (version INTEGER PRIMARY KEY, nombre TEXT NOT NULL, aplicada INTEGER NOT NULL)")
+    hechas = {r["version"] for r in conn.execute("SELECT version FROM esquema")}
+    if hechas and max(hechas) > VERSION_ESQUEMA:  # una base más nueva que este código (p. ej. tras volver a una versión anterior)
+        print(f"esquema: la base está en la versión {max(hechas)} y este código conoce hasta la {VERSION_ESQUEMA}; sigue funcionando "
+              "porque las migraciones solo añaden", flush=True)
+    aplicadas = []
+    for numero, nombre, fn in MIGRACIONES_ESQUEMA:
+        if numero in hechas:
+            continue
+        fn(conn)
+        conn.execute("INSERT INTO esquema (version, nombre, aplicada) VALUES (?, ?, ?)", (numero, nombre, int(time.time())))
+        conn.commit()
+        aplicadas.append(numero)
+        print(f"esquema: aplicada la migración {numero} ({nombre})", flush=True)
+    return aplicadas
+
+
 def init_db() -> None:
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
     conn = connect()
     try:
-        conn.executescript(SCHEMA)
-        conn.executescript(auth.SCHEMA)
-        conn.executescript(push.SCHEMA)
-        if "sus_id" not in {r["name"] for r in conn.execute("PRAGMA table_info(avisos_pendientes)")}:
-            conn.execute("ALTER TABLE avisos_pendientes ADD COLUMN sus_id INTEGER")
-        cols = {r["name"] for r in conn.execute("PRAGMA table_info(compras)")}
-        for col, ddl in MIGRACIONES:
-            if col not in cols:
-                conn.execute(ddl)
-        # «Novedades»: cuándo vio cada persona el resumen por última vez (en bases anteriores, se añade aquí)
-        if "visto_ts" not in {r["name"] for r in conn.execute("PRAGMA table_info(usuarios)")}:
-            conn.execute("ALTER TABLE usuarios ADD COLUMN visto_ts INTEGER")
-        # «Qué hay de nuevo»: el último aviso de cambios que vio cada persona. Las cuentas que ya existen al añadir la columna
-        # quedan en '0' (verán el primero); las nuevas empiezan en NULL (no han visto nada que haya cambiado: se marca en silencio).
-        if "cambios_visto" not in {r["name"] for r in conn.execute("PRAGMA table_info(usuarios)")}:
-            conn.execute("ALTER TABLE usuarios ADD COLUMN cambios_visto TEXT")
-            conn.execute("UPDATE usuarios SET cambios_visto = '0'")
-        conn.execute("CREATE INDEX IF NOT EXISTS compras_txid ON compras (txid) WHERE txid IS NOT NULL")
-        # filas de antes de guardar sats: se estiman con monto y precio
-        conn.execute(
-            "UPDATE compras SET sats = MAX(1, CAST(ROUND(monto / precio * 100000000) AS INTEGER)) WHERE sats IS NULL"
-        )
-        conn.commit()
+        migrar(conn)
     finally:
         conn.close()
     try:
@@ -163,15 +228,16 @@ def _close_db(_exc: BaseException | None) -> None:
 
 
 def fila(row: sqlite3.Row) -> dict[str, Any]:
-    return {**{k: row[k] for k in ("id", "fecha", "monto", "precio", "sats", "creado", "txid", "tipo", "nota")}, "extra": bool(row["extra"])}
+    return {**{k: row[k] for k in ("id", "fecha", "monto", "precio", "sats", "creado", "txid", "tipo", "nota")}, "extra": bool(row["extra"]),
+            "etiquetas": [e for e in (row["etiquetas"] or "").split(",") if e]}
 
 
 def insertar(conn: sqlite3.Connection, c: Compra, txid: str | None = None, tipo: str = "compra", nota: str | None = None,
-             extra: int = 0) -> int:
+             extra: int = 0, etiquetas: str | None = None) -> int:
     fecha, monto, precio, sats = c
     cur = conn.execute(
-        "INSERT INTO compras (fecha, monto, precio, sats, creado, txid, tipo, nota, extra) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (fecha, monto, precio, sats, int(time.time() * 1000), txid, tipo, nota, extra),
+        "INSERT INTO compras (fecha, monto, precio, sats, creado, txid, tipo, nota, extra, etiquetas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (fecha, monto, precio, sats, int(time.time() * 1000), txid, tipo, nota, extra, etiquetas),
     )
     return int(cur.lastrowid or 0)
 
@@ -360,6 +426,37 @@ def parse_nota(v: Any) -> str | None:
     return t or None
 
 
+MAX_ETIQUETAS = 5
+_RE_ETIQUETA = re.compile(r"[0-9a-záéíóúüñ][0-9a-záéíóúüñ \-]{0,23}")
+
+
+def parse_etiquetas(v: Any) -> str | None:
+    """Etiquetas opcionales (idea 56): una lista o un texto separado por comas o punto y coma. Se guardan en minúsculas, sin `#`,
+    sin repetidas, hasta 5 de 1 a 24 caracteres (letras, números, espacios y guion). Devuelve «a,b,c» o None."""
+    if v is None or v == "":
+        return None
+    if isinstance(v, str):
+        piezas: list[Any] = re.split(r"[,;]", v)
+    elif isinstance(v, list):
+        piezas = v
+    else:
+        raise ValueError("Etiquetas inválidas.")
+    salida: list[str] = []
+    for p in piezas:
+        if not isinstance(p, str):
+            raise ValueError("Etiquetas inválidas.")
+        t = " ".join(p.replace("#", " ").split()).lower()
+        if not t:
+            continue
+        if not _RE_ETIQUETA.fullmatch(t):
+            raise ValueError("Cada etiqueta admite hasta 24 letras, números, espacios o guiones.")
+        if t not in salida:
+            salida.append(t)
+    if len(salida) > MAX_ETIQUETAS:
+        raise ValueError(f"Hasta {MAX_ETIQUETAS} etiquetas por movimiento.")
+    return ",".join(salida) or None
+
+
 def _decimal(v: str | None, nombre: str) -> float:
     try:
         return float((v or "").strip())
@@ -394,6 +491,7 @@ def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip:
             tipo = parse_tipo((row.get("tipo") or "").strip().lower() or None)
             nota = parse_nota(row.get("nota"))
             extra = parse_extra(row.get("extra"), tipo)
+            etiquetas = parse_etiquetas(row.get("etiquetas"))
         except ValueError as e:
             omitidas.append(f"Línea {n}: {e}")
             continue
@@ -406,7 +504,7 @@ def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip:
         if existe:
             repetidas += 1
             continue
-        ids.append(insertar(conn, c, txid, tipo, nota, extra))
+        ids.append(insertar(conn, c, txid, tipo, nota, extra, etiquetas))
         nuevas += 1
     resumen = {"nuevas": nuevas, "repetidas": repetidas, "omitidas": len(omitidas), "ids": ids[:500]}
     if nuevas and (falla := saldo_negativo(movimientos(conn))):
@@ -416,6 +514,46 @@ def importar_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip:
         auth.auditar(conn, usuario, "importacion", "compra", None, None, resumen, ip)
     conn.commit()
     return {"nuevas": nuevas, "repetidas": repetidas, "omitidas": omitidas}
+
+
+def importar_traslados_csv(conn: sqlite3.Connection, texto: str, usuario: str = "cli", ip: str | None = None) -> dict[str, Any]:
+    """Importa un CSV de traslados (`fecha,sats,sentido,txid,nota`), igual que `importar_csv`: salta repetidos e inválidos, así que se
+    puede importar dos veces el mismo archivo. Un traslado es repetido si ya hay uno vigente con la misma fecha, sats y sentido
+    (y mismo TXID si lo trae). Si el resultado dejaría la wallet en negativo o con más sats de los que posees, se rechaza todo el
+    archivo (hay que importar las compras primero)."""
+    lector = csv.DictReader(io.StringIO(texto.lstrip("﻿")))
+    campos = {c.strip() for c in lector.fieldnames or []}
+    if not {"fecha", "sats"} <= campos:
+        raise ValueError("El CSV necesita las columnas fecha y sats.")
+    nuevos = repetidos = 0
+    omitidos: list[str] = []
+    ids: list[int] = []
+    for n, row in enumerate(lector, start=2):
+        row = {(k or "").strip(): v for k, v in row.items()}
+        try:
+            fecha = parse_fecha((row.get("fecha") or "").strip())
+            sats = parse_sats(_decimal(row.get("sats"), "Sats"))
+            sentido = parse_sentido((row.get("sentido") or "").strip().lower() or None)
+            txid = parse_txid(row.get("txid"))
+            nota = parse_nota(row.get("nota"))
+        except ValueError as e:
+            omitidos.append(f"Línea {n}: {e}")
+            continue
+        if conn.execute("SELECT 1 FROM traslados WHERE anulada_ts IS NULL AND fecha = ? AND sats = ? AND sentido = ? AND (? IS NULL OR txid IS NULL OR txid = ?)",
+                        (fecha, sats, sentido, txid, txid)).fetchone():
+            repetidos += 1
+            continue
+        cur = conn.execute("INSERT INTO traslados (fecha, sats, sentido, txid, nota, creado) VALUES (?, ?, ?, ?, ?, ?)",
+                           (fecha, sats, sentido, txid, nota, int(time.time() * 1000)))
+        ids.append(int(cur.lastrowid or 0))
+        nuevos += 1
+    if nuevos and (falla := falla_traslados(conn, traslados_vigentes(conn))):
+        conn.rollback()
+        raise ValueError(f"{falla} No se importó nada: importa primero las compras y revisa el orden de los traslados.")
+    if nuevos:
+        auth.auditar(conn, usuario, "importacion", "traslado", None, None, {"nuevos": nuevos, "repetidos": repetidos, "omitidos": len(omitidos), "ids": ids[:500]}, ip)
+    conn.commit()
+    return {"nuevos": nuevos, "repetidos": repetidos, "omitidos": omitidos}
 
 
 # ------------------------------------------------------------------------ rutas
@@ -810,13 +948,14 @@ def crear() -> Any:
         tipo = parse_tipo(body.get("tipo"))
         nota = parse_nota(body.get("nota"))
         extra = parse_extra(body.get("extra"), tipo)
+        etiquetas = parse_etiquetas(body.get("etiquetas"))
     except ValueError as e:
         return jsonify(error=str(e)), 400
     conn = db()
     if tipo == "venta" and (falla := saldo_negativo(movimientos(conn) + [(c[0], 10**12, "venta", c[3])])):
         return jsonify(error=_error_saldo(falla)), 400
     antes = movimientos(conn)
-    cid = insertar(conn, c, txid, tipo, nota, extra)
+    cid = insertar(conn, c, txid, tipo, nota, extra, etiquetas)
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "alta", "compra", cid, None, nueva, auth.ip_resumida(ip_real()))
     conn.commit()
@@ -835,6 +974,7 @@ def editar(cid: int) -> Any:
         tipo = parse_tipo(body.get("tipo")) if "tipo" in body else None
         nota = parse_nota(body.get("nota")) if "nota" in body else None
         extra = parse_extra(body.get("extra"), tipo or "compra") if "extra" in body else None
+        etiquetas = parse_etiquetas(body.get("etiquetas")) if "etiquetas" in body else None
     except ValueError as e:
         return jsonify(error=str(e)), 400
     conn = db()
@@ -849,6 +989,8 @@ def editar(cid: int) -> Any:
         nota = previa["nota"]
     if extra is None:
         extra = previa["extra"]
+    if "etiquetas" not in body:  # un cliente que no manda el campo no borra las etiquetas guardadas
+        etiquetas = previa["etiquetas"]
     if tipo == "venta":
         if extra and "extra" in body:
             return jsonify(error="Solo una compra puede ser extra."), 400
@@ -856,8 +998,8 @@ def editar(cid: int) -> Any:
     otros = [m for m in movimientos(conn) if m[1] != cid]
     if falla := saldo_negativo(otros + [(fecha, cid, tipo, sats)]):
         return jsonify(error=_error_saldo(falla)), 400
-    conn.execute("UPDATE compras SET fecha = ?, monto = ?, precio = ?, sats = ?, txid = ?, tipo = ?, nota = ?, extra = ? WHERE id = ?",
-                 (fecha, monto, precio, sats, txid, tipo, nota, extra, cid))
+    conn.execute("UPDATE compras SET fecha = ?, monto = ?, precio = ?, sats = ?, txid = ?, tipo = ?, nota = ?, extra = ?, etiquetas = ? WHERE id = ?",
+                 (fecha, monto, precio, sats, txid, tipo, nota, extra, etiquetas, cid))
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "edicion", "compra", cid, fila(previa), nueva, auth.ip_resumida(ip_real()))
     conn.commit()
@@ -934,19 +1076,82 @@ def _fmt(x: float) -> str:
     return s if "e" not in s else f"{x:.8f}".rstrip("0").rstrip(".")
 
 
-@app.get("/api/export.csv")
-def exportar() -> Response:
-    rows = db().execute(f"SELECT fecha, monto, precio, sats, txid, tipo, nota, extra FROM compras WHERE {VIGENTES} ORDER BY fecha, id").fetchall()
+def csv_compras(conn: sqlite3.Connection) -> str:
+    rows = conn.execute(f"SELECT fecha, monto, precio, sats, txid, tipo, nota, extra, etiquetas FROM compras WHERE {VIGENTES} ORDER BY fecha, id").fetchall()
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\n")
-    w.writerow(["fecha", "monto_usd", "precio_btc_usd", "sats", "btc", "txid", "tipo", "nota", "extra"])
+    w.writerow(["fecha", "monto_usd", "precio_btc_usd", "sats", "btc", "txid", "tipo", "nota", "extra", "etiquetas"])
     for r in rows:
-        w.writerow([r["fecha"], _fmt(r["monto"]), _fmt(r["precio"]), r["sats"], f'{r["sats"] / 1e8:.8f}', r["txid"] or "", r["tipo"], r["nota"] or "", "1" if r["extra"] else ""])
+        w.writerow([r["fecha"], _fmt(r["monto"]), _fmt(r["precio"]), r["sats"], f'{r["sats"] / 1e8:.8f}', r["txid"] or "", r["tipo"], r["nota"] or "", "1" if r["extra"] else "",
+                    (r["etiquetas"] or "").replace(",", ", ")])
+    return out.getvalue()
+
+
+def csv_traslados(conn: sqlite3.Connection) -> str:
+    rows = conn.execute("SELECT fecha, sats, sentido, txid, nota FROM traslados WHERE anulada_ts IS NULL ORDER BY fecha, id").fetchall()
+    out = io.StringIO()
+    w = csv.writer(out, lineterminator="\n")
+    w.writerow(["fecha", "sats", "sentido", "txid", "nota"])
+    for r in rows:
+        w.writerow([r["fecha"], r["sats"], r["sentido"], r["txid"] or "", r["nota"] or ""])
+    return out.getvalue()
+
+
+@app.get("/api/export.csv")
+def exportar() -> Response:
     return Response(
-        out.getvalue(),
+        csv_compras(db()),
         mimetype="text/csv",
         headers={"Content-Disposition": f'attachment; filename="compras-btc-{date.today().isoformat()}.csv"'},
     )
+
+
+@app.get("/api/traslados.csv")
+def exportar_traslados() -> Response:
+    """Los traslados como CSV (idea 47): `fecha,sats,sentido,txid,nota`. Los ven todos, igual que la lista."""
+    return Response(
+        csv_traslados(db()),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="traslados-btc-{date.today().isoformat()}.csv"'},
+    )
+
+
+LEEME_ZIP = """Libro DCA: copia de tus datos
+==============================
+compras.csv     compras, ventas y gastos (fecha, monto_usd, precio_btc_usd, sats, btc, txid, tipo, nota, extra, etiquetas)
+traslados.csv   traslados entre el exchange y tu wallet (fecha, sats, sentido, txid, nota)
+
+Se abren en cualquier hoja de cálculo. Para volver a cargarlos en la app usa «Importar CSV» (compras) y «Importar traslados»
+(traslados): saltan lo repetido, así que importar dos veces el mismo archivo no duplica nada. Primero las compras y después
+los traslados (la wallet no puede tener más sats de los que posees ese día).
+Solo lo vigente: lo anulado queda en la base y en el historial, no aquí.
+"""
+
+
+@app.get("/api/todo.zip")
+def descargar_todo() -> Any:
+    """Todo tu historial en un solo archivo (idea 107): compras y traslados en CSV más un LEEME. Solo el admin."""
+    if g.usuario["rol"] != "admin":
+        return jsonify(error="Solo el admin descarga todo."), 403
+    conn = db()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for nombre, texto in (("LEEME.txt", LEEME_ZIP), ("compras.csv", csv_compras(conn)), ("traslados.csv", csv_traslados(conn))):
+            info = zipfile.ZipInfo(nombre, date_time=time.gmtime()[:6])  # fecha fija por archivo: sin atributos raros del servidor
+            info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, texto.encode("utf-8"))
+    return Response(buf.getvalue(), mimetype="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="libro-dca-{date.today().isoformat()}.zip"'})
+
+
+@app.post("/api/traslados/import")
+def importar_traslados() -> Any:
+    if request.mimetype != "text/csv":
+        return jsonify(error="Envía el archivo como text/csv."), 415
+    try:
+        return jsonify(importar_traslados_csv(db(), request.get_data(as_text=True), quien(), auth.ip_resumida(ip_real())))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
 
 
 @app.post("/api/import")

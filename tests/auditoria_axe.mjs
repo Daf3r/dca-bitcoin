@@ -69,6 +69,7 @@ const navegador = await chromium.launch();
 const anio = await servidor('anio');
 const hoy = await servidor('hoy');
 const ballena = await servidor('ballena');
+const mil = await servidor('mil'); // con etiquetas
 try {
   for (const esquema of ['light', 'dark']) {
     const nuevo = async (srv, cuenta, init = null, hora = esquema === 'light' ? 12 : 22) => {
@@ -185,6 +186,23 @@ try {
       await auditar(p, `alto contraste: cuenta ${esquema}`);
       await ctx.close();
     }
+    { // «Tus datos» (descargas e importar traslados) y la lista con una etiqueta elegida (escenario con etiquetas)
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-datos-btn'); await p.waitForTimeout(700);
+      await auditar(p, `tus datos ${esquema}`);
+      await ctx.close();
+      const m = await nuevo(mil, ADMIN, conPush);
+      await cerrarOferta(m.p);
+      await m.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+      await m.p.click('#l-mas summary'); await m.p.selectOption('#l-etq', 'bono'); await m.p.waitForTimeout(300);
+      await auditar(m.p, `lista con una etiqueta elegida ${esquema}`);
+      await m.p.click('#anotar'); await m.p.waitForTimeout(500);
+      await m.p.click('#h-avanzado summary'); await m.p.fill('#h-etq', 'regalo, bono'); await m.p.waitForTimeout(200);
+      await auditar(m.p, `hoja con etiquetas ${esquema}`);
+      await m.ctx.close();
+    }
     { // «Tu historia» (medallas y línea de tiempo) y «Qué hay de nuevo»
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
@@ -271,7 +289,7 @@ try {
     }
   }
 } finally {
-  anio.parar(); hoy.parar(); ballena.parar(); await navegador.close();
+  anio.parar(); hoy.parar(); ballena.parar(); mil.parar(); await navegador.close();
 }
 console.log(`${estados} estados revisados con axe.`);
 if (hallazgos.length) {

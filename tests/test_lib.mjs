@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {
-  descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto,
+  descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
 } from '../app/static/lib.js';
 
@@ -558,6 +558,21 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq(claves({ hasta: '2026-09-30' }), ['c1'], 'rango: solo hasta');
   eq(claves({ filtro: 'compra', desde: '2026-10-01', hasta: '2026-10-31', texto: 'quincena' }), ['c2'], 'filtros combinados');
   eq(claves({ texto: 'zzz' }), [], 'sin coincidencias');
+  // Etiquetas (idea 56): se buscan, se filtran y se cuentan
+  const conEtq = movimientosLista([
+    { id: 1, fecha: '2026-09-01', creado: 1, sats: 10000, monto: 8, tipo: 'compra', nota: '', txid: '', etiquetas: ['cumpleaños', 'bono'] },
+    { id: 2, fecha: '2026-09-02', creado: 2, sats: 10000, monto: 8, tipo: 'compra', nota: '', txid: '', etiquetas: ['bono'] },
+    { id: 3, fecha: '2026-09-03', creado: 3, sats: 10000, monto: 8, tipo: 'venta', nota: '', txid: '' },
+  ]);
+  const cl = (f) => filtrarMovimientos(conEtq, f).map((x) => x.clave);
+  eq(cl({ etiqueta: 'bono' }), ['c2', 'c1'], 'filtro por etiqueta');
+  eq(cl({ etiqueta: 'cumpleaños' }), ['c1'], 'filtro por otra etiqueta');
+  eq(cl({ etiqueta: 'nada' }), [], 'una etiqueta que nadie usa no trae nada');
+  eq(cl({ texto: 'CUMPLEANOS' }), ['c1'], 'la búsqueda también encuentra las etiquetas (sin acentos ni mayúsculas)');
+  eq(cl({ etiqueta: 'bono', filtro: 'venta' }), [], 'la etiqueta se combina con los otros filtros');
+  eq(etiquetasUsadas([{ etiquetas: ['b', 'a'] }, { etiquetas: ['b'] }, {}]), [{ nombre: 'b', n: 2 }, { nombre: 'a', n: 1 }], 'las etiquetas usadas, de más a menos frecuentes');
+  eq(partirEtiquetas(' Cumpleaños, #BONO ;  bono ,, dca  mensual '), ['cumpleaños', 'bono', 'dca mensual'], 'lo escrito se parte, en minúsculas, sin # ni repetidas');
+  eq(partirEtiquetas(''), [], 'vacío: sin etiquetas');
   const g = agruparPorMes(m);
   eq(g.map((x) => [x.etiqueta, x.resumen]), [['Noviembre 2026', '1 compra'], ['Octubre 2026', '2 compras · 1 venta · 1 traslado'], ['Septiembre 2026', '1 compra']], 'meses: etiqueta y resumen de cada uno');
   eq(agruparPorMes(ordenarMovimientos(m, 'antiguas')).map((x) => x.mes), ['2026-09', '2026-10', '2026-11'], 'meses: respetan el orden dado');

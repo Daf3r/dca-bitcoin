@@ -67,13 +67,21 @@ Si algo falla: vuelve a activar Access en Cloudflare (un clic) y despliega el co
 - El servicio `backup` copia la base cada 24 h a `data/backups/`, verifica cada copia con `PRAGMA integrity_check` y conserva las últimas 30.
 - Copia manual: `docker compose exec backup python backup.py`
 - **Una copia en el mismo disco no te salva si pierdes el servidor.** Saca copias fuera con `scripts/offsite.sh` (rclone hacia R2, Backblaze B2 u otra máquina) y prográmalo en cron. Los *backups automáticos* de Vultr cubren el servidor completo y se suman a esto.
-- Prueba una restauración una vez, antes de necesitarla:
+- **Restaurar** (idea 48; el comando y la prueba están probados de verdad en `tests/test_api.py`: restauran un respaldo, comparan tabla por tabla y abren el resultado con la app):
+  1. *Ensayo sin riesgo* (no toca nada): `docker compose exec backup python backup.py --restaurar` deja el último respaldo en `data/libro.restaurada.db` (o `--restaurar data/backups/libro-AAAAMMDD-HHMMSS.db`). Puedes abrirlo con `sqlite3` y mirar.
+  2. *Recuperar de verdad* (la base real se dañó o se borró algo): primero para quien escribe, y después restaura encima. La base actual no se borra: se guarda junto a ella como `libro.db.antes-FECHA` (con su `-wal` y `-shm`).
 ```bash
-docker compose stop app backup
-cp data/backups/libro-AAAAMMDD-HHMMSS.db data/libro.db
-rm -f data/libro.db-wal data/libro.db-shm
-docker compose start app backup
+docker compose stop app avisos
+docker compose exec backup python backup.py --restaurar --a /data/libro.db --reemplazar
+docker compose start app avisos
+bash scripts/verificar-despliegue.sh
 ```
+  3. Elige otro respaldo si el último ya traía el problema: añade su ruta tras `--restaurar` (están en `data/backups/`, uno por día). La app migra el esquema sola al arrancar (`esquema`: ver «Migraciones»).
+  - El comando se niega (sale con 1 y no toca nada) si el archivo no es una base, no pasa `integrity_check` o le faltan las tablas clave.
+  - La prueba semanal automática y `python backup.py --probar` siguen igual (comparan el último respaldo con la base real).
+
+## Migraciones de la base
+La base lleva su versión en la tabla `esquema` (`SELECT * FROM esquema;`). Al arrancar, `server.migrar` aplica en orden las migraciones que falten (`MIGRACIONES_ESQUEMA` en `app/server.py`), cada una **idempotente**, y dice en el registro cuáles aplicó (`docker compose logs app | grep esquema`). Una base de cualquier edad, con o sin esa tabla, llega al mismo estado; una base más nueva que el código (volviste a una versión anterior) sigue funcionando porque las migraciones solo añaden. Para cambiar la base: una migración nueva al final y su prueba (`tests/test_api.py`, «Migraciones versionadas»).
 
 ## Importar y exportar
 *Exportar CSV* descarga todas las compras (`fecha,monto_usd,precio_btc_usd,sats,btc`). *Importar CSV* acepta ese mismo formato o uno viejo sin `sats` (usa `precio_btc_usd`). Salta filas repetidas e inválidas y dice cuáles, así que puedes importar el mismo archivo dos veces sin duplicar.

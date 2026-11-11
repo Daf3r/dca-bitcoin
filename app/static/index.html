@@ -233,6 +233,7 @@
         <div class="l-mas-c">
           <label>Desde <input type="date" id="l-desde"></label>
           <label>Hasta <input type="date" id="l-hasta"></label>
+          <label id="l-etq-l" hidden>Etiqueta <select id="l-etq"><option value="">Todas</option></select></label>
           <label>Orden <select id="l-orden"><option value="recientes">Más recientes primero</option><option value="antiguas">Más antiguas primero</option><option value="monto">Mayor monto primero</option><option value="sats">Más sats primero</option></select></label>
         </div>
       </details>
@@ -339,6 +340,12 @@
       <label class="h-usd" data-solo-compra>Nota (opcional)
         <input id="h-nota-c" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="¿Por qué esta compra?">
       </label>
+      <!-- Etiquetas (idea 56): hasta 5, separadas por comas; las que ya usaste salen como sugerencia. Compras y ventas, no traslados. -->
+      <label class="h-usd" data-no-traslado>Etiquetas (opcional)
+        <input id="h-etq" type="text" list="h-etq-lista" maxlength="140" autocomplete="off" autocapitalize="none" enterkeyhint="done" placeholder="cumpleaños, bono">
+      </label>
+      <datalist id="h-etq-lista"></datalist>
+      <p class="h-nota" data-no-traslado>Hasta 5, separadas por comas. Sirven para filtrar la lista.</p>
     </details>
     <div class="hoja-bot">
       <button type="button" class="borrar" id="h-borrar" hidden>Anular</button>
@@ -367,6 +374,7 @@
       <button type="button" data-cuenta="clave">Cambiar contraseña</button>
       <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
+      <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar y traslados</button>
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
@@ -420,6 +428,18 @@
       <label id="av-rec-l">Recordatorio de compra <select id="av-rec"></select></label>
     </div>
     <p class="hoja-error" id="av-error" role="alert"></p>
+    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
+  </div>
+  <div class="dc-datos" id="dc-datos" hidden>
+    <h2>Tus datos</h2>
+    <p>Todo tu historial en archivos que abre cualquier hoja de cálculo. Solo lo vigente: lo anulado queda en el historial.</p>
+    <div class="dc-lista">
+      <a class="enlace-boton" id="dd-zip" href="/api/todo.zip" download>Descargar todo (ZIP con compras y traslados)</a>
+      <a class="enlace-boton" id="dd-tras" href="/api/traslados.csv" download>Exportar traslados (CSV)</a>
+      <label class="enlace-boton" for="tras-in">Importar traslados (CSV)</label>
+      <input class="sr" type="file" id="tras-in" accept=".csv,text/csv">
+    </div>
+    <p class="dc-nota">Importar salta lo repetido, así que puedes cargar el mismo archivo dos veces sin duplicar. Importa primero las compras: la wallet no puede tener más sats de los que posees ese día.</p>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-historial" id="dc-hist" hidden>
