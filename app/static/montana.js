@@ -50,7 +50,7 @@ function cumulo(x, y, k) {
 /** Tres nubes que cruzan despacio (solo con todos los efectos): van detrás de la montaña y por debajo del texto del saldo. */
 function nubes(H) {
   const una = (y, k, clase) => `<g class="efecto-ambiente nube ${clase}"><path d="${cumulo(0, y, k)}"/></g>`;
-  return una(H * 0.33, 0.8, 'n1') + una(H * 0.4, 1.1, 'n2') + una(H * 0.46, 0.6, 'n3');
+  return una(H * 0.5, 0.8, 'n1') + una(H * 0.57, 1.1, 'n2') + una(H * 0.63, 0.6, 'n3'); // por debajo de la cumbre: asoman a los lados de la montaña y nunca tapan la meta
 }
 /** Dos bandas de niebla entre la sierra y la montaña (solo con todos los efectos): degradados que se desvanecen arriba y abajo. */
 function niebla(W, H, y) {
@@ -202,7 +202,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const nieveMedidas = { sx: c.sx, sy: c.sy, ancho: Math.max(W * 0.12, 140), nv: H * 0.075 };
   const dNieve = trazoNieve(nieveMedidas, altitud(inicio, esc));
   // La nieve con luz y sombra: el lado de la arista que mira al astro brilla un poco más y el otro queda en sombra.
-  s += `<defs><clipPath id="m-der"><path d="${cara}"/></clipPath></defs><path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/><path class="nieve-luz" clip-path="url(#m-der)" d="${dNieve}"/></g>`;
+  s += `<defs><clipPath id="m-der"><path d="${cara}"/></clipPath></defs><path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/><path class="nieve-luz" clip-path="url(#m-der)" d="${dNieve}"/>`
+    // Facetas de la nieve: un plano más claro que baja del vértice hacia el astro y un pliegue en sombra al otro lado.
+    + `<g clip-path="url(#m-nieve-c)"><path class="nieve-faceta" d="M${f1(c.sx)} ${f1(c.sy)}L${f1(c.sx + nieveMedidas.ancho * 0.32)} ${f1(c.sy + nieveMedidas.nv * 1.6)}L${f1(c.sx + nieveMedidas.ancho * 0.08)} ${f1(c.sy + nieveMedidas.nv * 1.6)}Z"/><path class="nieve-pliegue" d="M${f1(c.sx - 2)} ${f1(c.sy + 4)}L${f1(c.sx - nieveMedidas.ancho * 0.16)} ${f1(c.sy + nieveMedidas.nv * 1.4)}"/></g></g>`;
 
   s += lago(c, W, H);
   const [bx, by] = c.base;
@@ -308,13 +310,16 @@ function campamento(m, p, cima, i, lado, ec = 1) {
     + '<g class="efecto-ambiente fogata"><path class="llama" d="M0 -1.2C-2 -3 -1.2 -5 0 -6.8C1.2 -5 2 -3 0 -1.2Z"/></g></g>';
   let dentro;
   if (cima) {
-    dentro = `<ellipse class="sombra-contacto" cx="0" cy="-5" rx="9" ry="1.8"/><g transform="translate(0 -5)">${ico.d}</g>`
-      + '<line x1="0" x2="0" y1="-10" y2="-34"/><path class="banderin" d="M0 -34L15 -30L0 -26Z"/>'
-      + `<g transform="translate(-10 -5)">${farol(0)}</g>`;
+    // La cumbre, la meta: una baliza de piedra en el vértice con un farol grande siempre encendido (te llama) y una bandera
+    // clara encima. Es el mismo lenguaje que los campamentos, pero el doble de grande y con más luz.
+    dentro = '<ellipse class="sombra-contacto" cx="0" cy="-5" rx="10" ry="2"/>'
+      + '<path class="campo-ico" d="M-6.5 -5L-4.5 -26H4.5L6.5 -5Z"/><path class="ico-sombra" d="M0 -5V-26H4.5L6.5 -5Z"/><path class="cima-junta" d="M-6 -12H6M-5.4 -19H5.4"/>'
+      + `<g transform="translate(0 -26) scale(1.6)">${farol(0)}</g>`
+      + '<line x1="0" x2="0" y1="-43" y2="-62"/><path class="banderin" d="M0 -62L16 -57.5L0 -53Z"/>';
   } else {
     dentro = `<g transform="translate(11 0)"><ellipse class="sombra-contacto" cx="0" cy="0.6" rx="7" ry="1.6"/>${ico.d}${farol(ico.cima)}</g>`;
   }
-  const brillo = cima ? '<ellipse class="brillo-cima" cx="-2" cy="-14" rx="34" ry="24" fill="url(#m-luz)"/>' : '';
+  const brillo = cima ? '<ellipse class="brillo-cima" cx="0" cy="-30" rx="48" ry="40" fill="url(#m-luz)"/>' : '';
   return `<g class="campo${cima ? ' es-cima' : ''}" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})${ec !== 1 ? ` scale(${ec})` : ''}">${brillo}${lado < 0 ? `<g transform="scale(-1 1)">${dentro}</g>` : dentro}</g>`;
 }
 
@@ -377,8 +382,8 @@ function banderas(host, campos, W, H) {
     b.setAttribute('aria-controls', 'm-tarjeta');
     b.setAttribute('aria-label', `${t.titulo}. ${t.texto}`);
     const e = estado.ec || 1;
-    b.style.left = `${f1(Math.min(Math.max(p.x + (cima ? 3 : 11 * lado) * e - TOQUE / 2, 0), W - TOQUE))}px`;
-    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - (cima ? 20 : 12) * e, 0), H - TOQUE))}px`;
+    b.style.left = `${f1(Math.min(Math.max(p.x + (cima ? 0 : 11 * lado) * e - TOQUE / 2, 0), W - TOQUE))}px`;
+    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - (cima ? 34 : 12) * e, 0), H - TOQUE))}px`;
     b.addEventListener('click', () => (abierta === m ? cerrarTarjeta() : abrirTarjeta(m)));
     return b;
   });
@@ -477,7 +482,7 @@ function etiquetar(yo) {
   const { campos, W, host } = estado;
   // Cada campamento (mástil, banderín y tienda) y el punto de «Tú» ocupan su sitio: ninguna etiqueta se les encima.
   const e = estado.ec || 1;
-  const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 22 * e, y: p.y - 38 * e, w: 42 * e, h: 38 * e, m } : { x: p.x + (lado < 0 ? -22 : 0) * e, y: p.y - 30 * e, w: 22 * e, h: 34 * e, m }));
+  const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 17 * e, y: p.y - 64 * e, w: 36 * e, h: 64 * e, m } : { x: p.x + (lado < 0 ? -22 : 0) * e, y: p.y - 30 * e, w: 22 * e, h: 34 * e, m }));
   cajas.push({ x: yo.x - 18, y: yo.y - 18, w: 36, h: 36 });
   // En el teléfono y la tablet el saldo ocupa todo el ancho de arriba: ninguna etiqueta sube por encima de él.
   const techoEt = W < 1100 && !estado.c.lago ? (estado.techo || 0) + 4 : 0;
@@ -497,10 +502,11 @@ function etiquetar(yo) {
     // Un letrero junto al campamento: por fuera (del lado de la tienda), encima, del otro lado del camino o debajo.
     // El rótulo es texto con un halo suave sobre la roca, junto al hito: por fuera del camino, al otro lado, encima o debajo.
     const xc = cima ? p.x : p.x + 11 * lado * e;
-    const yt = p.y - (cima ? 30 : 22) * e;
-    const fuera = { x: lado > 0 || cima ? xc + 14 * e : xc - 14 * e - w, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'start' : 'end', tx: lado > 0 || cima ? xc + 14 * e + 3 : xc - 14 * e - 3 };
-    const otro = { x: lado > 0 || cima ? xc - 14 * e - w : xc + 14 * e, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'end' : 'start', tx: lado > 0 || cima ? xc - 14 * e - 3 : xc + 14 * e + 3 };
-    const encima = { x: xc - w / 2, y: p.y - (cima ? 58 : 46) * e, w, h: 20, anclaje: 'middle', tx: xc };
+    const yt = p.y - (cima ? 46 : 22) * e;
+    const dx = (cima ? 20 : 14) * e;
+    const fuera = { x: lado > 0 || cima ? xc + dx : xc - dx - w, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'start' : 'end', tx: lado > 0 || cima ? xc + dx + 3 : xc - dx - 3 };
+    const otro = { x: lado > 0 || cima ? xc - dx - w : xc + dx, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'end' : 'start', tx: lado > 0 || cima ? xc - dx - 3 : xc + dx + 3 };
+    const encima = { x: xc - w / 2, y: p.y - (cima ? 88 : 46) * e, w, h: 20, anclaje: 'middle', tx: xc };
     const abajo = { x: xc - w / 2, y: p.y + 6 * e, w, h: 20, anclaje: 'middle', tx: xc };
     const opciones = cima ? [encima, fuera, otro] : [fuera, otro, encima, abajo];
     const b = opciones.find((o) => !choca(o, m));

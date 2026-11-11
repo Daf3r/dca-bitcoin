@@ -1307,6 +1307,10 @@ html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { 
 .campo.alcanzado .farol-halo { opacity: 0.9; }
 .campo.sig .farol-halo { opacity: 0.45; }
 .campo:not(.alcanzado):not(.sig) .campo-ico { fill: none; stroke: color-mix(in oklab, var(--nieve) 45%, transparent); }
+.es-cima .farol-cuerpo { fill: #ffd38a; stroke: #6b3e12; } .es-cima .farol-techo { stroke: #6b3e12; } .es-cima .farol-halo { opacity: 0.85; }
+.es-cima .campo-ico { fill: color-mix(in oklab, var(--nieve) 35%, #9f927f); }
+.cima-junta { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 60%, #241a12); stroke-width: 0.9; opacity: 0.6; }
+.nieve-faceta { fill: #fff; opacity: 0.28; } .nieve-pliegue { fill: none; stroke: var(--monte-sombra); stroke-width: 2; stroke-linecap: round; opacity: 0.18; }
 .humo { fill: none; stroke: #ffd38a; stroke-width: 1; opacity: 0; transform-box: fill-box; transform-origin: center; }
 html[data-efectos="todos"] .campo.alcanzado .humo { animation: farol-pulso 4.5s ease-out infinite; }
 @keyframes farol-pulso { 0% { opacity: 0.5; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.8); } }
