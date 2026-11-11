@@ -227,7 +227,7 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .cotizacion > .cot-24, .cotizacion > .cot-meta { grid-column: 1 / -1; justify-self: end; }
 @media (min-width: 360px) { .cot-meta { white-space: nowrap; } }
 /* En 320 px el precio va en su columna estrecha de siempre (una cosa por línea) para no empujar la marca ni el saludo. */
-@media (max-width: 359px) { .cotizacion { grid-template-columns: auto; justify-items: end; } }
+@media (max-width: 359px) { .cotizacion { grid-template-columns: auto; justify-items: end; padding: 0; margin: 0; background: none; } }
 .cot-k { font-size: 0.75rem; color: var(--cielo-txt2); white-space: nowrap; }
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
