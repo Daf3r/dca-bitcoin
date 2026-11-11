@@ -351,6 +351,13 @@ def traslados_vigentes(conn: sqlite3.Connection) -> list[Tras]:
             conn.execute("SELECT fecha, id, sentido, sats FROM traslados WHERE anulada_ts IS NULL")]
 
 
+def sats_en_exchange(conn: sqlite3.Connection) -> int:
+    """Sats que hoy están en el exchange: el saldo total menos lo que hay en la wallet (recortado a [0, saldo]), igual que `lib.ubicacionSats`."""
+    saldo = sum(-s if tipo == "venta" else s for _f, _i, tipo, s in movimientos(conn))
+    wallet = sum(sats if sentido == "a_wallet" else -sats for _f, _i, sentido, sats in traslados_vigentes(conn))
+    return max(0, saldo - max(0, min(saldo, wallet)))
+
+
 def falla_traslados(conn: sqlite3.Connection, tras: list[Tras]) -> str | None:
     """Mensaje de error si los traslados no cuadran: la wallet no puede quedar en negativo ni tener más sats de los
     que posees en total ese día. None si todo cuadra."""
@@ -1045,12 +1052,13 @@ def cambios_visto() -> Response | tuple[Response, int]:
 
 # ----------------------------------------------------------------- avisos push
 # Cada persona (también un lector) activa o apaga los avisos de SU dispositivo: solo toca sus propias suscripciones.
-def _resp_push(prefs: dict[str, bool] | None, rol: str, horario: dict[str, int] | None = None) -> Response:
+def _resp_push(prefs: dict[str, bool] | None, rol: str, horario: dict[str, int] | None = None, umbral: int | None = None) -> Response:
     cats = [{"id": c, "nombre": push.CATEGORIAS[c]["nombre"], "ayuda": push.CATEGORIAS[c]["ayuda"], "activo": prefs[c]}
             for c in push.categorias_de(rol)] if prefs is not None else []
     if prefs is None:
         return jsonify(suscrito=False, categorias=[])
-    return jsonify(suscrito=True, categorias=cats, horario=horario or push.horario_defecto(), horario_defecto=push.horario_defecto())
+    return jsonify(suscrito=True, categorias=cats, horario=horario or push.horario_defecto(), horario_defecto=push.horario_defecto(),
+                   umbral_wallet=umbral or 0)
 
 
 def _cuerpo_push() -> dict[str, Any] | None:
@@ -1071,7 +1079,7 @@ def push_estado() -> Any:
     body = _cuerpo_push() or {}
     u = g.usuario
     return _resp_push(push.estado(db(), u["id"], u["rol"], body.get("endpoint")), u["rol"],
-                      push.horario_dispositivo(db(), u["id"], body.get("endpoint")))
+                      push.horario_dispositivo(db(), u["id"], body.get("endpoint")), push.umbral_dispositivo(db(), u["id"], body.get("endpoint")))
 
 
 @app.post("/api/push/suscribir")
@@ -1083,7 +1091,8 @@ def push_suscribir() -> Any:
     try:
         prefs = push.suscribir(db(), u["id"], u["rol"], body.get("suscripcion"))
         s = body.get("suscripcion")
-        return _resp_push(prefs, u["rol"], push.horario_dispositivo(db(), u["id"], s.get("endpoint") if isinstance(s, dict) else None))
+        ep = s.get("endpoint") if isinstance(s, dict) else None
+        return _resp_push(prefs, u["rol"], push.horario_dispositivo(db(), u["id"], ep), push.umbral_dispositivo(db(), u["id"], ep))
     except ValueError as e:
         return jsonify(error=str(e)), 400
 
@@ -1098,13 +1107,31 @@ def push_prefs() -> Any:
         endpoint = body.get("endpoint")
         if "horario" in body:  # el horario de este dispositivo (y, si vienen, también las categorías)
             push.guardar_horario(db(), u["id"], endpoint, body.get("horario"))
+        if "umbral_wallet" in body:  # el monto de «retirar a tu wallet» (solo el admin tiene esa categoría)
+            if u["rol"] != "admin":
+                return jsonify(error="Solo el admin elige ese monto."), 403
+            push.guardar_umbral(db(), u["id"], endpoint, body.get("umbral_wallet"))
         prefs = push.guardar_prefs(db(), u["id"], u["rol"], endpoint, body["prefs"]) if "prefs" in body \
             else push.estado(db(), u["id"], u["rol"], endpoint)
-        return _resp_push(prefs, u["rol"], push.horario_dispositivo(db(), u["id"], endpoint))
+        return _resp_push(prefs, u["rol"], push.horario_dispositivo(db(), u["id"], endpoint), push.umbral_dispositivo(db(), u["id"], endpoint))
     except ValueError as e:
         return jsonify(error=str(e)), 400
     except LookupError as e:
         return jsonify(error=str(e)), 404
+
+
+@app.post("/api/push/prueba")
+def push_prueba() -> Any:
+    """Manda un aviso de prueba solo al dispositivo que lo pide (idea 143), con un mínimo de 30 s entre uno y otro."""
+    body = _cuerpo_push() or {}
+    try:
+        return jsonify(push.probar(db(), g.usuario["id"], body.get("endpoint")))
+    except LookupError as e:
+        return jsonify(error=str(e)), 404
+    except PermissionError as e:
+        resp = jsonify(error=f"Espera {e} segundos antes de pedir otra prueba.")
+        resp.headers["Retry-After"] = str(e)
+        return resp, 429
 
 
 @app.post("/api/push/baja")

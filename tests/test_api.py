@@ -950,7 +950,7 @@ cats = r.get_json()["categorias"]
 check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False)], f"categorías del lector y sus valores por defecto {cats}")
 check(all(c["nombre"] and c["ayuda"] for c in cats), "cada categoría trae nombre y ayuda")
 r = adm.post("/api/push/suscribir", json=_sus(EP_ADM))
-check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True)], "categorías del admin")
+check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("wallet", False)], "categorías del admin")
 check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "suscribirse no da permiso de escribir")
 
 # Estado por dispositivo: solo el dueño ve el suyo
@@ -1169,7 +1169,7 @@ check(r["horario"] == _HDEF and r["horario_defecto"] == _HDEF, f"el horario por 
 check(luz.post("/api/push/estado", json={"endpoint": "https://fcm.googleapis.com/otro"}).get_json() == {"suscrito": False, "categorias": []}, "sin suscribir no hay horario")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
 check(r.status_code == 200 and r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, f"se guarda el horario del dispositivo {r.data}")
-check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida"], "guardar el horario no cambia las categorías")
+check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "wallet"], "guardar el horario no cambia las categorías")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
 check(r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, "elegir categorías no borra el horario")
 adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
@@ -1212,6 +1212,98 @@ check(avisos._recordatorio(cxh) is False and not enviados, "23:30: fuera del hor
 push.ahora = lambda: _dtm(2026, 11, 10, 9, 5, tzinfo=ritmo.ZONA)
 check(avisos._recordatorio(cxh) is True and _a_quien() == sorted([EP_ADM, EP_ADM2]), "al día siguiente vuelve a avisar a los dos")
 ritmo.recordatorio = _ori
+
+# --- Campamento 9: aviso de prueba (143), botón en el recordatorio (144) y «retirar a tu wallet» (146)
+push.ahora = _de_dia
+enviados.clear()
+r = adm.post("/api/push/prueba", json={"endpoint": EP_ADM})
+check(r.status_code == 200 and r.get_json()["ok"] is True and "enviado" in r.get_json()["mensaje"], f"aviso de prueba enviado {r.data}")
+check(len(enviados) == 1 and enviados[0][0] == EP_ADM and enviados[0][1]["etiqueta"] == "prueba" and "acciones" not in enviados[0][1],
+      "la prueba llega solo a ese dispositivo y sin botones")
+r = adm.post("/api/push/prueba", json={"endpoint": EP_ADM})
+check(r.status_code == 429 and r.headers.get("Retry-After") and len(enviados) == 1, "otra prueba enseguida: 429 con Retry-After")
+check(adm.post("/api/push/prueba", json={"endpoint": EP_ADM2}).status_code == 200 and len(enviados) == 2, "el límite es por dispositivo")
+check(adm.post("/api/push/prueba", json={"endpoint": "https://fcm.googleapis.com/otro"}).status_code == 404, "prueba de un dispositivo sin avisos, 404")
+check(ana.post("/api/push/prueba", json={"endpoint": EP_ADM}).status_code == 404, "nadie prueba el dispositivo de otra cuenta")
+check(adm.post("/api/push/prueba", json={}).status_code == 404 and adm.post("/api/push/prueba", json=[1]).status_code in (400, 404), "sin endpoint no hay prueba")
+check(anon.post("/api/push/prueba", json={"endpoint": EP_ADM}).status_code == 401, "la prueba exige sesión")
+check(luz.post("/api/push/prueba", json={"endpoint": EP_LUZ}).status_code == 200, "un lector también prueba sus propios avisos")
+# Con el límite vencido, un dispositivo que el servicio ya no reconoce se quita y se explica; un fallo de red también
+cxp = server.connect()
+cxp.execute("UPDATE meta SET valor = '0' WHERE clave LIKE 'prueba_aviso:%'")
+cxp.commit()
+EP_MUERTO2 = "https://fcm.googleapis.com/fcm/send/muerto-prueba"
+adm.post("/api/push/suscribir", json=_sus(EP_MUERTO2))
+r = adm.post("/api/push/prueba", json={"endpoint": EP_MUERTO2}).get_json()
+check(r["ok"] is False and "vuelve a activar" in r["mensaje"] and adm.post("/api/push/estado", json={"endpoint": EP_MUERTO2}).get_json()["suscrito"] is False,
+      f"410: se dice y el dispositivo se quita {r}")
+class _Rechazo(Exception):
+    response = _types.SimpleNamespace(status_code=403)
+def _rechaza(sub, payload):
+    raise _Rechazo()
+def _sin_red(sub, payload):
+    raise OSError("sin red")
+cxp.execute("UPDATE meta SET valor = '0' WHERE clave LIKE 'prueba_aviso:%'")
+cxp.commit()
+push._enviar_uno = _rechaza
+r = adm.post("/api/push/prueba", json={"endpoint": EP_ADM}).get_json()
+check(r["ok"] is False and "403" in r["mensaje"] and adm.post("/api/push/estado", json={"endpoint": EP_ADM}).get_json()["suscrito"] is True, f"otro código: se explica y no se borra {r}")
+cxp.execute("UPDATE meta SET valor = '0' WHERE clave LIKE 'prueba_aviso:%'")
+cxp.commit()
+push._enviar_uno = _sin_red
+r = adm.post("/api/push/prueba", json={"endpoint": EP_ADM}).get_json()
+check(r["ok"] is False and "conexión" in r["mensaje"], f"sin red: mensaje de conexión {r}")
+push._enviar_uno = _enviar_falso
+
+# 144: solo el recordatorio lleva el botón «Anotar compra»
+enviados.clear()
+push.enviar_ahora(cxp, "recordatorio", "Libro DCA", "Te toca", "recordatorio")
+check(enviados and all(p.get("acciones") == ["anotar"] for _e, p in enviados), f"el recordatorio trae la acción anotar {enviados}")
+enviados.clear()
+push.enviar_ahora(cxp, "caida", "Libro DCA", "Caída", "caida")
+check(enviados and all("acciones" not in p for _e, p in enviados), "los demás avisos no traen botones")
+
+# 146: el monto de «retirar a tu wallet» es de cada dispositivo, solo del admin y validado
+est = adm.post("/api/push/estado", json={"endpoint": EP_ADM}).get_json()
+check(est["umbral_wallet"] == 0 and ("wallet", False) in [(c["id"], c["activo"]) for c in est["categorias"]], "la categoría nace apagada y sin monto")
+check(luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "umbral_wallet": 1000}).status_code == 403, "un lector no elige ese monto")
+for malo in (-1, 1.5, "mucho", None, True, 10**10 + 1, [5]):
+    check(adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": malo}).status_code == 400, f"monto inválido rechazado: {malo}")
+check(adm.put("/api/push/prefs", json={"endpoint": "https://fcm.googleapis.com/otro", "umbral_wallet": 5}).status_code == 404, "monto de un dispositivo sin avisos, 404")
+cxw = server.connect()
+exch = server.sats_en_exchange(cxw)
+check(exch > 0, f"hay sats en el exchange para probar ({exch})")
+r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": exch - 1})
+check(r.status_code == 200 and r.get_json()["umbral_wallet"] == exch - 1, "se guarda el monto")
+r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
+check(r.get_json()["umbral_wallet"] == exch - 1, "elegir categorías no borra el monto")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
+r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
+check(r.get_json()["umbral_wallet"] == exch - 1 and r.get_json()["horario"]["desde"] == 6, "guardar el horario no borra el monto ni al revés")
+check(adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": exch - 1}).get_json()["horario"]["desde"] == 6, "guardar el monto no borra el horario")
+# sin la categoría encendida no avisa
+enviados.clear()
+check(avisos._wallet(cxw) == 0 and not enviados, "con la categoría apagada no avisa aunque pase del monto")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"wallet": True}})
+push.ahora = lambda: _dtm(2026, 11, 12, 23, 30, tzinfo=ritmo.ZONA)
+check(avisos._wallet(cxw) == 0 and not enviados, "de noche (fuera de su horario) espera")
+push.ahora = lambda: _dtm(2026, 11, 13, 10, 0, tzinfo=ritmo.ZONA)
+check(avisos._wallet(cxw) == 1 and _a_quien() == [EP_ADM] and enviados[0][1]["etiqueta"] == "wallet" and f"{exch:,}" in enviados[0][1]["cuerpo"]
+      and "recordatorio" in enviados[0][1]["cuerpo"], f"avisa una vez al pasar del monto {enviados}")
+check(avisos._wallet(cxw) == 0 and len(enviados) == 1, "no repite mientras siga arriba")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": exch + 5})
+check(avisos._wallet(cxw) == 0 and server._meta(cxw, f"aviso_wallet:{cxw.execute('SELECT id FROM suscripciones WHERE endpoint = ?', (EP_ADM,)).fetchone()[0]}") is None,
+      "al quedar debajo del monto se quita la marca")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": exch - 1})
+check(avisos._wallet(cxw) == 1 and len(enviados) == 2, "al volver a pasarlo avisa otra vez")
+adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "umbral_wallet": 0})
+check(avisos._wallet(cxw) == 0, "con monto 0 no avisa")
+# la marca de un dispositivo que ya no existe se limpia
+cxw.execute("INSERT OR REPLACE INTO meta (clave, valor) VALUES ('aviso_wallet:99999', '1'), ('prueba_aviso:99999', '1')")
+cxw.commit()
+avisos.limpiar(cxw)
+check(cxw.execute("SELECT COUNT(*) FROM meta WHERE clave IN ('aviso_wallet:99999', 'prueba_aviso:99999')").fetchone()[0] == 0, "la limpieza quita las marcas de dispositivos que ya no existen")
+push.ahora = _de_dia
 
 # De noche cada dispositivo espera su hora: lo que cae mientras duerme queda guardado solo para él
 EP_ANA2 = "https://web.push.apple.com/ana-horario"
@@ -1888,6 +1980,7 @@ try:
                                     ("https://fcm.googleapis.com/falla-reciente", 5, _ya - 86400, _viejo), ("https://fcm.googleapis.com/nunca-respondio", 4, None, _viejo)):
         _lc.execute("INSERT INTO suscripciones (usuario_id, endpoint, p256dh, auth, prefs, creado, ultimo_ok, fallos) VALUES (?, ?, 'k', 'a', '{}', ?, ?, ?)", (_uid, ep, creado, ult, fallos))
     _sid = _lc.execute("SELECT id FROM suscripciones WHERE endpoint LIKE '%sano-sin-envios'").fetchone()[0]
+    _lc.execute("DELETE FROM meta WHERE clave LIKE 'prueba_aviso:%' OR clave LIKE 'aviso_wallet:%'")  # restos de las pruebas de arriba (ya probadas aparte)
     server._meta_poner(_lc, f"aviso_recordatorio_dia:{_sid}", "2026-01-01"); server._meta_poner(_lc, "aviso_recordatorio_dia:99999", "2026-01-01")
     _lc.commit()
     _compras_antes = _lc.execute("SELECT COUNT(*) FROM compras").fetchone()[0]
