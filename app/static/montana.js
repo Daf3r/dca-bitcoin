@@ -71,7 +71,7 @@ const NIEVE_MIN = 0.55; // con la altitud en cero: una capa fina
 const NIEVE_MAX = 1.5;  // llegando a la cumbre: la cumbre bien cubierta
 function trazoNieve({ sx, sy, ancho, nv }, alt) {
   const hondo = nv * (NIEVE_MIN + (NIEVE_MAX - NIEVE_MIN) * Math.min(1, Math.max(0, alt)));
-  let d = `M${f1(sx - ancho)} ${f1(sy - 20)}L${f1(sx + ancho)} ${f1(sy - 20)}`;
+  let d = `M${f1(sx - ancho)} ${f1(sy - 60)}L${f1(sx + ancho)} ${f1(sy - 60)}`;
   DIENTES.forEach((k, i) => { d += `L${f1(sx + ancho - (2 * ancho * (i + 0.5)) / DIENTES.length)} ${f1(sy + hondo * k)}`; });
   return `${d}Z`;
 }
@@ -188,8 +188,12 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // La cumbre no es una aguja: el sendero llega a un rellano (la meta) y, a su derecha, un cuerno de roca un poco más alto
   // la resguarda. Así la bandera de la meta queda por debajo del cuerno, dentro de la silueta, y no sobresale contra el cielo.
   const ecC = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1;
-  const cuerno = [[c.sx - 9 * ecC, c.sy + 2 * ecC], [c.sx + 6 * ecC, c.sy], [c.sx + 13 * ecC, c.sy - 22 * ecC], [c.sx + 19 * ecC, c.sy - 16 * ecC], [c.sx + 26 * ecC, c.sy + 3 * ecC]];
-  const cimaPts = [...izq.slice(0, 10), ...cuerno, ...der.filter((p) => p[0] > c.sx + 28 * ecC)];
+  // El cuerno es una pequeña cima con hombro (no una aguja): sube en dos tramos, tiene su pico y baja por la cara derecha en
+  // pendiente, así que se lee como parte de la montaña. Todo son puntos fijos que crecen con la escena (sin `rnd()`).
+  const cuerno = [[c.sx - 10 * ecC, c.sy + 3 * ecC], [c.sx + 7 * ecC, c.sy], [c.sx + 12 * ecC, c.sy - 10 * ecC], [c.sx + 18 * ecC, c.sy - 15 * ecC],
+    [c.sx + 25 * ecC, c.sy - 28 * ecC], [c.sx + 35 * ecC, c.sy - 12 * ecC], [c.sx + 45 * ecC, c.sy + 6 * ecC]];
+  const picoC = cuerno[4];
+  const cimaPts = [...izq.slice(0, 10), ...cuerno, ...der.filter((p) => p[0] > c.sx + 48 * ecC)];
   const contorno = cimaPts.map((p, i) => `${i ? 'L' : 'M'}${f1(p[0])} ${f1(p[1])}`).join('');
   const silueta = `${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z`;
   // La arista central baja quebrada (roca), no en línea recta: así la cara iluminada no parece una cascada.
@@ -197,7 +201,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const quiebre = [[0.012, 0.07], [0.034, 0.13], [0.018, 0.2], [0.046, 0.29], [0.03, 0.38], [0.06, 0.52], [0.05, 0.7], [0.075, 1]]
     .map(([dx, dy]) => [c.sx + W * dx, c.sy + alto * dy]);
   const arista = quiebre.map((p) => `L${f1(p[0])} ${f1(p[1])}`);
-  const cara = `M${f1(c.sx)} ${f1(c.sy)}${cuerno.slice(1).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}${der.filter((p) => p[0] > c.sx + 28 * ecC).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}${[...arista].reverse().join('')}Z`;
+  const cara = `M${f1(c.sx)} ${f1(c.sy)}${cuerno.slice(1).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}${der.filter((p) => p[0] > c.sx + 48 * ecC).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}${[...arista].reverse().join('')}Z`;
   // Lo que queda a la izquierda de la arista central: ahí la nieve está en sombra.
   const izqArista = `M${f1(c.sx)} ${f1(-H)}L${f1(c.sx)} ${f1(c.sy)}${arista.join('')}L${f1(c.sx + W * 0.075)} ${H}L${f1(-W)} ${H}L${f1(-W)} ${f1(-H)}Z`;
   s += `<defs><clipPath id="m-silueta"><path d="${silueta}"/></clipPath><clipPath id="m-izq"><path d="${izqArista}"/></clipPath></defs><path class="monte" d="${silueta}" fill="url(#m-ladera)"/>`;
@@ -208,7 +212,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const mx = (r1[0] + q[0]) / 2, my = (r1[1] + q[1]) / 2;
     return `<path class="faceta f${i}" d="M${f1(r1[0])} ${f1(r1[1])}L${f1(r2[0])} ${f1(r2[1])}L${f1(mx + (r2[0] - mx) * 0.3)} ${f1(my + (r2[1] - my) * 0.6)}Z"/>`;
   }).join('')}</g>`;
-  s += `<path class="arista" d="M${f1(cuerno[1][0])} ${f1(cuerno[1][1])}${[...cuerno.slice(2), ...der.filter((p) => p[0] > c.sx + 28 * ecC).slice(0, 4)].map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}"/>`;
+  s += `<path class="arista" d="M${f1(cuerno[1][0])} ${f1(cuerno[1][1])}${[...cuerno.slice(2), ...der.filter((p) => p[0] > c.sx + 48 * ecC).slice(0, 4)].map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}"/>`;
   // Nieve: una franja irregular mucho más ancha que el pico, recortada por la silueta, para que
   // nunca sobresalga de las laderas.
   // Su profundidad sigue a tu altitud (`colocar` la actualiza), así que la cumbre se va cubriendo a medida que subes.
@@ -217,7 +221,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // La nieve con luz y sombra: el lado de la arista que mira al astro brilla un poco más y el otro queda en sombra.
   s += `<defs><clipPath id="m-der"><path d="${cara}"/></clipPath></defs><path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/><path class="nieve-luz" clip-path="url(#m-der)" d="${dNieve}"/>`
     // Facetas de la nieve: un plano más claro que baja del vértice hacia el astro y un pliegue en sombra al otro lado.
-    + `<g clip-path="url(#m-nieve-c)"><path class="nieve-faceta" d="M${f1(c.sx)} ${f1(c.sy)}L${f1(c.sx + nieveMedidas.ancho * 0.32)} ${f1(c.sy + nieveMedidas.nv * 1.6)}L${f1(c.sx + nieveMedidas.ancho * 0.08)} ${f1(c.sy + nieveMedidas.nv * 1.6)}Z"/><path class="nieve-pliegue" d="M${f1(c.sx - 2)} ${f1(c.sy + 4)}L${f1(c.sx - nieveMedidas.ancho * 0.16)} ${f1(c.sy + nieveMedidas.nv * 1.4)}"/></g></g>`;
+    + `<g clip-path="url(#m-nieve-c)"><path class="nieve-faceta" d="M${f1(picoC[0])} ${f1(picoC[1])}L${f1(picoC[0] + nieveMedidas.ancho * 0.3)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}L${f1(picoC[0] + nieveMedidas.ancho * 0.03)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}Z"/><path class="nieve-pliegue" d="M${f1(picoC[0] - 2)} ${f1(picoC[1] + 4)}L${f1(picoC[0] - nieveMedidas.ancho * 0.2)} ${f1(picoC[1] + nieveMedidas.nv * 2.1)}"/></g></g>`;
 
   s += lago(c, W, H);
   const [bx, by] = c.base;
