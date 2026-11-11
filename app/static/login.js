@@ -54,7 +54,7 @@ form.addEventListener('submit', async (e) => {
     const r = await fetch('/api/login', {
       method: 'POST', cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Libro': '1' },
-      body: JSON.stringify({ usuario, clave }),
+      body: JSON.stringify({ usuario, clave, compartido: $('l-compartido').checked }),
     });
     if (r.ok) { location.replace('/'); return; }
     const j = await r.json().catch(() => null);

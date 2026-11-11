@@ -777,6 +777,14 @@ div.fila:hover { background: none; }
 .sis-tabla th, .sis-tabla td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--s3); white-space: nowrap; }
 .sis-tabla th[scope="col"], .sis-tabla th[scope="row"] { text-align: left; }
 .sis-tabla th[scope="row"] { font-weight: 500; overflow-wrap: anywhere; white-space: normal; }
+.dc-sesiones p { margin: 6px 0 12px; color: var(--txt2); font-size: 0.9375rem; line-height: 1.4; }
+.ses-fila { align-items: center; justify-content: space-between; }
+.ses-fila > span { min-width: 0; }
+.ses-cerrar { flex: none; min-height: var(--toque); padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 12px; background: none; color: var(--txt); font-weight: 650; cursor: pointer; }
+.l-comp { display: flex; align-items: center; gap: 10px; min-height: var(--toque); color: var(--txt2); font-size: 0.875rem; cursor: pointer; }
+.l-comp input { flex: none; width: 22px; height: 22px; accent-color: var(--naranja); }
+.mant { grid-column: 1 / -1; margin: 0; padding: 12px 16px; border-radius: 14px; background: color-mix(in srgb, var(--naranja) 16%, var(--s2)); font-weight: 600; font-size: 0.9375rem; }
+body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"] label[for="csv-in"], body[data-mant="1"] #csv-in { display: none !important; }
 .dc-clave { display: grid; gap: 6px; }
 .dc-clave label, .login-caja .campo-l { margin-top: 6px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
 .dc-clave input, .login-caja input {
@@ -856,11 +864,21 @@ div.fila:hover { background: none; }
   .pag-login .login { position: absolute; z-index: 2; top: 50%; transform: translateY(-50%); left: max(24px, env(safe-area-inset-left)); right: auto; padding: 0; justify-items: start; }
   .login-caja { width: min(20rem, 46vw); padding: 14px 16px 12px; border-radius: 20px; background: color-mix(in srgb, var(--s1) 96%, transparent); box-shadow: 0 18px 40px -22px rgb(0 0 0 / 0.6); }
   .login-lema, .login-pie { display: none; }
-}
-@media (max-height: 360px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
-  .login-caja { gap: 2px; padding: 8px 14px 10px; }
+  .l-comp { min-height: 36px; font-size: 0.8125rem; }
+  .l-comp-det { display: none; } /* el detalle («se cierra solo a las 4 horas») no cabe en una línea */
+  .login-caja { gap: 2px; padding: 8px 16px 8px; }
   .login-caja h1 { font-size: 1.375rem; }
   .login-error { min-height: 0; margin: 0; }
+  .login-caja .guardar { margin-top: 2px; }
+  .pag-login .login { top: calc(50% + 12px); } /* deja ver la marca arriba */
+}
+@media (max-height: 360px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
+  .login-caja { padding: 6px 14px 8px; }
+  .login-caja input:not([type="checkbox"]) { min-height: 42px; }
+  .login-caja .campo-l { font-size: 0.8125rem; line-height: 1.1; margin: 0; }
+  .l-comp { min-height: 30px; }
+  /* El título «Entrar» solo se oculta a la vista (el lector de pantalla lo sigue leyendo): la marca de arriba y el botón ya lo dicen. */
+  .login-caja h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .pag-login .login { top: calc(50% + 14px); } /* deja ver la marca arriba */
 }
 /* La composición de tablet ya sube la cumbre: el lienzo sube menos para no cortarla. */

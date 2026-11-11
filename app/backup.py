@@ -11,6 +11,10 @@ Uso:
                                   real: la actual se guarda antes como `.antes-FECHA`. Pasos completos: README, «Restaurar».
   (el chequeo de salud de docker-compose vive en salud.py)
 
+Cifrado opcional (idea 153): con BACKUP_CLAVE (o BACKUP_CLAVE_ARCHIVO, la ruta de un archivo con la clave) cada respaldo se guarda
+cifrado (AES-256-GCM, clave derivada con scrypt) como `libro-FECHA.db.cifrado` y no queda copia en claro. SIN LA CLAVE ESOS RESPALDOS
+NO SE PUEDEN ABRIR: guárdala aparte (por ejemplo en tu gestor de contraseñas). `--restaurar` y `--probar` leen la misma variable.
+
 Usa la API de respaldo de SQLite, que produce una copia coherente aunque la
 app esté escribiendo, y verifica la copia antes de conservarla.
 """
@@ -27,6 +31,76 @@ DB_PATH = os.environ.get("DB_PATH", "/data/libro.db")
 DEST = os.environ.get("BACKUP_DIR", "/data/backups")
 KEEP = int(os.environ.get("BACKUP_KEEP", "30"))
 INTERVAL = int(os.environ.get("BACKUP_INTERVAL_HOURS", "24")) * 3600
+
+
+MAGIA = b"LDCA1"  # cabecera de los respaldos cifrados
+
+
+def _clave_cifrado() -> str | None:
+    """La clave de cifrado de los respaldos, de BACKUP_CLAVE o del archivo BACKUP_CLAVE_ARCHIVO; None si no se pidió cifrar."""
+    if (c := os.environ.get("BACKUP_CLAVE", "")):
+        return c
+    if (ruta := os.environ.get("BACKUP_CLAVE_ARCHIVO", "")):
+        with open(ruta, encoding="utf-8") as f:
+            return f.read().strip() or None
+    return None
+
+
+def cifrar_archivo(origen: str, destino: str, clave: str) -> None:
+    """`MAGIA + sal(16) + nonce(12) + AES-256-GCM`; la clave sale de la contraseña con scrypt (n=2^15, r=8, p=1) y la cabecera va autenticada."""
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+
+    sal, nonce = os.urandom(16), os.urandom(12)
+    k = Scrypt(salt=sal, length=32, n=2**15, r=8, p=1).derive(clave.encode())
+    with open(origen, "rb") as f:
+        datos = f.read()
+    cifrado = AESGCM(k).encrypt(nonce, datos, MAGIA + sal)
+    tmp = destino + ".tmp"
+    with open(tmp, "wb") as f:
+        f.write(MAGIA + sal + nonce + cifrado)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, destino)
+
+
+def descifrar_archivo(origen: str, destino: str, clave: str) -> None:
+    """Deja en `destino` la base descifrada; ValueError si la clave no es la correcta o el archivo está dañado."""
+    from cryptography.exceptions import InvalidTag
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+
+    with open(origen, "rb") as f:
+        datos = f.read()
+    if not datos.startswith(MAGIA) or len(datos) < len(MAGIA) + 28 + 16:
+        raise ValueError("no es un respaldo cifrado de Libro DCA")
+    sal = datos[len(MAGIA):len(MAGIA) + 16]
+    nonce = datos[len(MAGIA) + 16:len(MAGIA) + 28]
+    k = Scrypt(salt=sal, length=32, n=2**15, r=8, p=1).derive(clave.encode())
+    try:
+        claro = AESGCM(k).decrypt(nonce, datos[len(MAGIA) + 28:], MAGIA + sal)
+    except InvalidTag:
+        raise ValueError("la clave no es la correcta o el respaldo está dañado") from None
+    with open(destino, "wb") as f:
+        f.write(claro)
+
+
+def respaldos(carpeta: str | None = None) -> list[str]:
+    """Los respaldos de la carpeta, del más viejo al más nuevo (en claro o cifrados)."""
+    c = carpeta or DEST
+    return sorted(glob.glob(os.path.join(c, "libro-*.db")) + glob.glob(os.path.join(c, "libro-*.db.cifrado")), key=os.path.basename)
+
+
+def _abrible(ruta: str, carpeta_temporal: str) -> str:
+    """La ruta de una copia en claro de ese respaldo: él mismo si no está cifrado; si lo está, lo descifra en la carpeta temporal."""
+    if not ruta.endswith(".cifrado"):
+        return ruta
+    clave = _clave_cifrado()
+    if not clave:
+        raise ValueError("el respaldo está cifrado: define BACKUP_CLAVE (o BACKUP_CLAVE_ARCHIVO) para poder abrirlo")
+    claro = os.path.join(carpeta_temporal, "descifrado.db")
+    descifrar_archivo(ruta, claro, clave)
+    return claro
 
 
 TABLAS_CLAVE = ("compras", "traslados", "usuarios", "auditoria", "precios", "meta")  # lo que un respaldo debe traer
@@ -51,14 +125,17 @@ def probar_restauracion(respaldo: str | None = None, db_vivo: str | None = None)
     """
     db_vivo = db_vivo or DB_PATH
     if respaldo is None:
-        archivos = sorted(glob.glob(os.path.join(DEST, "libro-*.db")))
+        archivos = respaldos()
         if not archivos:
             return ["No hay ningún respaldo que probar."]
         respaldo = archivos[-1]
     problemas: list[str] = []
     with tempfile.TemporaryDirectory() as d:
         copia = os.path.join(d, "restaurada.db")
-        shutil.copy2(respaldo, copia)
+        try:
+            shutil.copy2(_abrible(respaldo, d), copia)
+        except ValueError as e:
+            return [f"No se pudo abrir el respaldo: {e}"]
         try:
             rest = sqlite3.connect(copia)
             vivo = sqlite3.connect(f"file:{db_vivo}?mode=ro", uri=True, timeout=15)
@@ -100,7 +177,7 @@ def restaurar(respaldo: str | None = None, destino: str | None = None, reemplaza
     primero `docker compose stop app avisos`.
     """
     if respaldo is None:
-        archivos = sorted(glob.glob(os.path.join(DEST, "libro-*.db")))
+        archivos = respaldos()
         if not archivos:
             return None, ["No hay ningún respaldo que restaurar."]
         respaldo = archivos[-1]
@@ -110,13 +187,26 @@ def restaurar(respaldo: str | None = None, destino: str | None = None, reemplaza
     if os.path.exists(destino) and not reemplazar:
         return respaldo, [f"Ya existe {destino}; usa --reemplazar para guardarla como .antes y restaurar encima."]
     try:
+        with tempfile.TemporaryDirectory() as d_claro:
+            try:
+                origen = _abrible(respaldo, d_claro)
+            except ValueError as e:
+                return respaldo, [str(e)]
+            return respaldo, _restaurar_desde(origen, destino)
+    except sqlite3.DatabaseError as e:
+        return respaldo, [f"El respaldo no se pudo abrir ({e})."]
+
+
+def _restaurar_desde(respaldo: str, destino: str) -> list[str]:
+    """La parte de `restaurar` que trabaja con una copia ya en claro; devuelve los problemas (vacío = restaurado)."""
+    try:
         src = sqlite3.connect(f"file:{respaldo}?mode=ro", uri=True)
         try:
             if src.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-                return respaldo, ["El respaldo no pasa la revisión de integridad: no se restauró nada."]
+                return ["El respaldo no pasa la revisión de integridad: no se restauró nada."]
             faltan = [t for t in TABLAS_CLAVE if not src.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (t,)).fetchone()]
             if faltan:
-                return respaldo, [f"Al respaldo le faltan tablas ({', '.join(faltan)}): no se restauró nada."]
+                return [f"Al respaldo le faltan tablas ({', '.join(faltan)}): no se restauró nada."]
             carpeta = os.path.dirname(os.path.abspath(destino))
             os.makedirs(carpeta, exist_ok=True)
             tmp = os.path.join(carpeta, f".restaurando-{os.getpid()}.db")
@@ -131,7 +221,7 @@ def restaurar(respaldo: str | None = None, destino: str | None = None, reemplaza
         try:
             if nuevo.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 os.remove(tmp)
-                return respaldo, ["La copia restaurada no pasó la revisión de integridad: no se restauró nada."]
+                return ["La copia restaurada no pasó la revisión de integridad: no se restauró nada."]
         finally:
             nuevo.close()
         if os.path.exists(destino):
@@ -144,8 +234,8 @@ def restaurar(respaldo: str | None = None, destino: str | None = None, reemplaza
                 os.remove(destino + sufijo)
         os.replace(tmp, destino)
     except sqlite3.DatabaseError as e:
-        return respaldo, [f"El respaldo no se pudo abrir ({e})."]
-    return respaldo, []
+        return [f"El respaldo no se pudo abrir ({e})."]
+    return []
 
 
 def prueba_semanal(ahora: float | None = None) -> list[str] | None:
@@ -201,11 +291,31 @@ def run() -> bool:
         os.remove(tmp)
         print("backup: la copia no pasó la verificación, se descartó", file=sys.stderr, flush=True)
         return False
-    os.replace(tmp, final)
-    todas = sorted(glob.glob(os.path.join(DEST, "libro-*.db")))
+    clave = _clave_cifrado()
+    if clave:
+        # Cifrada y comprobada (se descifra y se compara) antes de borrar la copia en claro: si algo falla, no se pierde el respaldo.
+        final = final + ".cifrado"
+        cifrar_archivo(tmp, final, clave)
+        with tempfile.TemporaryDirectory() as d:
+            prueba = os.path.join(d, "p.db")
+            try:
+                descifrar_archivo(final, prueba, clave)
+                with open(prueba, "rb") as a, open(tmp, "rb") as b:
+                    igual = hashlib.sha256(a.read()).digest() == hashlib.sha256(b.read()).digest()
+            except ValueError:
+                igual = False
+        if not igual:
+            os.remove(tmp)
+            os.remove(final)
+            print("backup: el respaldo cifrado no se pudo descifrar de vuelta, se descartó", file=sys.stderr, flush=True)
+            return False
+        os.remove(tmp)
+    else:
+        os.replace(tmp, final)
+    todas = respaldos()
     for f in todas[:-KEEP]:
         os.remove(f)
-    print(f"backup: {final} ({filas} compras), copias guardadas: {len(todas[-KEEP:])}", flush=True)
+    print(f"backup: {final} ({filas} compras{', cifrado' if clave else ''}), copias guardadas: {len(todas[-KEEP:])}", flush=True)
     return True
 
 

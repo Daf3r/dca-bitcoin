@@ -2,7 +2,7 @@
 
 Uso (con Flask instalado): python tests/test_api.py
 """
-import os; os.environ["LOG_PETICIONES"] = "0"
+import os; os.environ["LOG_PETICIONES"] = "0"; os.environ["LIMITE_ESCRITURAS"] = "1000000"  # las pruebas escriben a toda prisa; el límite se prueba aparte
 import re, sys, sqlite3, tempfile, importlib, json, subprocess, shutil
 APP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app")
 from datetime import date, timedelta
@@ -399,7 +399,7 @@ check(anon.get("/index.html").status_code == 302, "index.html directo exige sesi
 # Cookie con sus atributos
 c1 = nuevo(); r = c1.post("/api/login", json={"usuario": "daf3r", "clave": CLAVE_ADMIN})
 sc = r.headers["Set-Cookie"]
-check(r.status_code == 200 and r.get_json() == {"usuario": "Daf3r", "rol": "admin"}, "login sin distinguir mayúsculas")
+check(r.status_code == 200 and r.get_json() == {"usuario": "Daf3r", "rol": "admin", "compartido": False}, "login sin distinguir mayúsculas")
 check(sc.startswith("__Host-sesion=") and "Secure" in sc and "HttpOnly" in sc and "SameSite=Lax" in sc and "Path=/" in sc and "Domain" not in sc, sc)
 check(c1.get("/api/yo").get_json()["rol"] == "admin", "yo")
 r = c1.get("/api/compras"); check(r.headers["Cache-Control"] == "no-store" and "Cookie" in r.headers["Vary"], "no-store y Vary")
@@ -619,7 +619,7 @@ check(any(x["accion"] == "alta" and '"venta"' in (x["despues"] or "") for x in a
 # --- Novedades: cuándo vio cada persona el resumen (un lector también puede marcarlo)
 _c = server.connect(); auth.crear_usuario(_c, "Luz", "clave-de-luz-2026", "lector", "prueba"); _c.close()
 luz = cliente("Luz", "clave-de-luz-2026")
-check(luz.get("/api/yo").get_json() == {"usuario": "Luz", "rol": "lector", "visto": None, "cambios": None}, "sin visita ni cambios vistos al principio")
+check(luz.get("/api/yo").get_json() == {"usuario": "Luz", "rol": "lector", "visto": None, "cambios": None, "mantenimiento": False}, "sin visita ni cambios vistos al principio")
 check("visto_ts" in [r[1] for r in sql("PRAGMA table_info(usuarios)")], "columna visto_ts")
 r = luz.post("/api/visto"); v1 = r.get_json()["visto"]
 check(r.status_code == 200 and isinstance(v1, int) and abs(v1 - _tt.time() * 1000) < 5000, f"un lector puede marcar que vio las novedades {r.data}")
@@ -1658,6 +1658,144 @@ _c0 = server.connect(); check(_c0.execute("SELECT COUNT(*) FROM errores_js").fet
 r = _ad.delete("/api/errores"); check(r.status_code == 200 and r.get_json()["quitados"] >= 20 and _ad.get("/api/sistema").get_json()["errores"] == [], "el admin limpia la lista")
 server._ERR_RECIENTES.clear()
 check(server._agente_corto("Mozilla/5.0 (Windows NT 10.0) Chrome/120 Safari/537 Edg/120") == "Edge · Windows" and server._agente_corto("x") == "otro · otro", "agente corto")
+
+# --- Sesiones abiertas (152), dispositivo compartido (105), límite de escrituras (151), solo lectura (150)
+def _entrar(nombre, clave, ua=None, **extra):
+    c = nuevo(); h = {"User-Agent": ua} if ua else {}
+    r = c.post("/api/login", json={"usuario": nombre, "clave": clave, **extra}, headers=h); assert r.status_code == 200, r.data
+    return c, r
+_UA_IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1"
+_UA_PC = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36"
+sql("DELETE FROM sesiones WHERE usuario_id = (SELECT id FROM usuarios WHERE nombre = 'Lola')")
+l1, _ = _entrar("Lola", "lectora-nueva-123", _UA_IPHONE)
+l2, _ = _entrar("Lola", "lectora-nueva-123", _UA_PC)   # entrar invalida solo la cookie de ESTE cliente, no la del otro
+ss = l1.get("/api/sesiones").get_json()
+check(len(ss) == 2 and sum(x["actual"] for x in ss) == 1, f"dos sesiones abiertas, una marcada como la de este dispositivo {ss}")
+check(sorted(x["agente"] for x in ss) == ["Chrome · Windows", "Safari · iPhone"], "el dispositivo se resume («Chrome · Windows»), no se guarda el texto del navegador")
+check(all(set(x) == {"id", "actual", "creada", "ultima", "caduca", "agente", "compartida"} and re.fullmatch(r"[0-9a-f]{12}", x["id"]) for x in ss), "solo id corto, fechas y agente: nada que sirva para robar una sesión")
+check(not any(len(str(v)) >= 40 for x in ss for v in x.values()), "ningún valor largo (ni token ni hash completo)")
+check(nuevo().get("/api/sesiones").status_code == 401, "sin sesión no se ve la lista")
+check(len(_adm.get("/api/sesiones").get_json()) >= 1 and all(x["agente"] for x in _adm.get("/api/sesiones").get_json()), "cada cuenta ve solo las suyas")
+actual = [x for x in ss if x["actual"]][0]; otra = [x for x in ss if not x["actual"]][0]
+check(l1.delete(f"/api/sesiones/{actual['id']}").status_code == 404, "la sesión de este dispositivo no se cierra por aquí (para eso está Salir)")
+check(l1.delete("/api/sesiones/xxxxxxxxxxxx").status_code == 404 and l1.delete("/api/sesiones/" + "0" * 12).status_code == 404, "un id raro o inexistente da 404")
+check(_adm.delete(f"/api/sesiones/{otra['id']}").status_code == 404, "no se puede cerrar la sesión de otra persona")
+check(l2.get("/api/yo").status_code == 200, "antes de cerrarla, la otra sesión funciona")
+r = l1.delete(f"/api/sesiones/{otra['id']}")
+check(r.status_code == 204 and l2.get("/api/yo").status_code == 401 and l1.get("/api/yo").status_code == 200, "cerrar una sesión ajena la deja sin acceso y no toca la actual")
+check(len(l1.get("/api/sesiones").get_json()) == 1, "la lista se actualiza")
+check([x for x in audit() if x["accion"] == "sesion_cerrada"], "cerrar una sesión se audita")
+check(nuevo().delete(f"/api/sesiones/{otra['id']}", headers={"X-Libro": "1"}).status_code == 401, "sin sesión no se cierra nada")
+# dispositivo compartido
+c_comp, r = _entrar("Lola", "lectora-nueva-123", _UA_PC, compartido=True)
+check(r.get_json()["compartido"] is True and "Max-Age=14400" in r.headers["Set-Cookie"], f"la cookie de un dispositivo compartido dura 4 horas {r.headers['Set-Cookie'][:120]}")
+_hc = [x for x in c_comp.get("/api/sesiones").get_json() if x["actual"]][0]
+check(_hc["compartida"] is True and _hc["caduca"] - _hc["creada"] <= auth.SESION_COMPARTIDA_INACTIVA, "la sesión compartida caduca en una hora sin usarse")
+check(c_comp.get("/api/yo").status_code == 200, "una sesión compartida funciona")
+import time as _tt2
+_ahora = int(_tt2.time())
+sql("UPDATE sesiones SET creada = ?, ultima = ?, caduca = ? WHERE substr(hash, 1, 12) = ?", (_ahora - 5 * 3600, _ahora - 60, _ahora + 3000, _hc["id"]))
+check(c_comp.get("/api/yo").status_code == 401, "pasadas 4 horas desde que entró, se cierra aunque la usen (tope duro)")
+c_comp, _ = _entrar("Lola", "lectora-nueva-123", _UA_PC, compartido=True); _hc = [x for x in c_comp.get("/api/sesiones").get_json() if x["actual"]][0]
+sql("UPDATE sesiones SET ultima = ?, caduca = ? WHERE substr(hash, 1, 12) = ?", (_ahora - 4000, _ahora - 400, _hc["id"]))
+check(c_comp.get("/api/yo").status_code == 401, "una hora sin usarse la cierra")
+c_comp, _ = _entrar("Lola", "lectora-nueva-123", _UA_PC, compartido=True); _hc = [x for x in c_comp.get("/api/sesiones").get_json() if x["actual"]][0]
+sql("UPDATE sesiones SET ultima = ?, caduca = ? WHERE substr(hash, 1, 12) = ?", (_ahora - 400, _ahora + 3200, _hc["id"]))
+c_comp.get("/api/yo")
+_nueva = [x for x in c_comp.get("/api/sesiones").get_json() if x["actual"]][0]
+check(_nueva["caduca"] - _ahora >= 3500 and _nueva["caduca"] <= _nueva["creada"] + auth.SESION_COMPARTIDA_TOPE, "usarla la renueva (cada 5 min) sin pasar del tope de 4 horas")
+c_norm, r = _entrar("Lola", "lectora-nueva-123", _UA_PC, compartido="si")
+check(r.get_json()["compartido"] is False and "Max-Age=7776000" in r.headers["Set-Cookie"], "sin marcar la casilla (o con un valor raro) la sesión es la de siempre: 90 días")
+_hn = [x for x in c_norm.get("/api/sesiones").get_json() if x["actual"]][0]
+check(_hn["compartida"] is False and _hn["caduca"] - _hn["creada"] >= 80 * 86400, "la normal sigue en 90 días deslizantes")
+# Límite de escrituras por cuenta (151)
+_lim = server.LIMITE_ESCRITURAS
+try:
+    server.LIMITE_ESCRITURAS = 5; server._ESCRITURAS.clear()
+    _cod = [c_norm.post("/api/visto", json={}).status_code for _ in range(8)]
+    check(_cod == [200] * 5 + [429] * 3, f"pasado el límite por minuto se frena a esa cuenta {_cod}")
+    r = c_norm.post("/api/visto", json={})
+    check(r.headers.get("Retry-After") == "60" and "Demasiadas" in r.get_json()["error"], "con su Retry-After y un mensaje claro")
+    check(c_norm.get("/api/yo").status_code == 200 and c_norm.get("/api/compras").status_code == 200, "las lecturas nunca se frenan")
+    check(_adm.post("/api/visto", json={}).status_code == 200, "las otras cuentas no se ven afectadas")
+    check(c_norm.post("/api/logout", json={}).status_code == 200, "salir nunca se frena")
+    server._ESCRITURAS["Lola"].clear() if "Lola" in server._ESCRITURAS else None
+finally:
+    server.LIMITE_ESCRITURAS = _lim; server._ESCRITURAS.clear()
+# Modo solo lectura de emergencia (150)
+_ant_sl = server.SOLO_LECTURA
+try:
+    server.SOLO_LECTURA = True
+    n_antes = len(_adm.get("/api/compras").get_json())
+    r = _adm.post("/api/compras", json={"fecha": "2026-05-05", "monto": 10, "sats": 10000})
+    check(r.status_code == 503 and r.get_json()["mantenimiento"] is True and "mantenimiento" in r.get_json()["error"], f"con SOLO_LECTURA no se escribe {r.status_code}")
+    check(_adm.put("/api/compras/1", json={"fecha": "2026-05-05", "monto": 10, "sats": 10000}).status_code == 503 and _adm.delete("/api/compras/1").status_code == 503, "ni editar ni anular")
+    check(_adm.post("/api/traslados", json={"fecha": "2026-05-05", "sats": 10}).status_code == 503 and _adm.post("/api/import", data="fecha,monto_usd,sats\n2026-05-05,1,100\n", headers={"Content-Type": "text/csv"}).status_code == 503, "ni traslados ni importar")
+    check(_adm.post("/api/visto", json={}).status_code == 503 and _adm.post("/api/errores", json={"mensaje": "x"}).status_code == 503, "ni siquiera las marcas menores")
+    check(len(_adm.get("/api/compras").get_json()) == n_antes and _adm.get("/api/export.csv").status_code == 200 and _adm.get("/api/sistema").status_code == 200, "todo lo demás se puede mirar")
+    check(_adm.get("/api/yo").get_json()["mantenimiento"] is True, "/api/yo lo dice (la pantalla lo avisa)")
+    c_nuevo, r = _entrar("Daf3r", CLAVE_ADMIN)
+    check(r.status_code == 200 and c_nuevo.post("/api/logout", json={}).status_code == 200, "entrar y salir siguen funcionando")
+    check(nuevo().post("/api/login", json={"usuario": "Daf3r", "clave": "mala-mala-mala"}).status_code == 401, "y un login mal sigue dando 401, no 503")
+finally:
+    server.SOLO_LECTURA = _ant_sl
+check(_adm.get("/api/yo").get_json()["mantenimiento"] is False and _adm.post("/api/visto", json={}).status_code == 200, "al quitarlo, todo vuelve a la normalidad")
+
+# --- Respaldos cifrados (idea 153)
+import hashlib as _hl
+_bk_dir = os.path.join(tmp, "bk-cifrado"); os.makedirs(_bk_dir)
+_dest0, _db0, _env0 = backup.DEST, backup.DB_PATH, os.environ.get("BACKUP_CLAVE")
+try:
+    backup.DEST = _bk_dir; backup.DB_PATH = dbp
+    os.environ["BACKUP_CLAVE"] = "clave-larga-de-pruebas-153"
+    check(backup.run() is True, "un respaldo con clave se hace")
+    _arch = sorted(os.listdir(_bk_dir))
+    check(len(_arch) == 1 and _arch[0].endswith(".db.cifrado") and not any(f.endswith(".db") or f.endswith(".tmp") for f in _arch), f"queda solo la copia cifrada, sin la de en claro {_arch}")
+    _crudo = open(os.path.join(_bk_dir, _arch[0]), "rb").read()
+    check(_crudo.startswith(backup.MAGIA) and b"SQLite format" not in _crudo and b"Daf3r" not in _crudo, "el archivo no contiene la base ni nombres en claro")
+    check(salud.ultimo_respaldo(_bk_dir) is not None and backup.respaldos(_bk_dir) == [os.path.join(_bk_dir, _arch[0])], "salud y la lista de respaldos lo ven")
+    check(backup.probar_restauracion() == [], f"la prueba de restauración abre el cifrado con la clave {backup.probar_restauracion()}")
+    _dd = os.path.join(tmp, "desc.db"); backup.descifrar_archivo(os.path.join(_bk_dir, _arch[0]), _dd, "clave-larga-de-pruebas-153")
+    check(sqlite3.connect(_dd).execute("SELECT COUNT(*) FROM compras").fetchone()[0] > 0, "descifrado, es una base con sus compras")
+    try:
+        backup.descifrar_archivo(os.path.join(_bk_dir, _arch[0]), _dd, "otra-clave"); _mal = False
+    except ValueError as e:
+        _mal = "clave" in str(e)
+    check(_mal, "con otra clave no se abre (y lo dice)")
+    # alterar un byte: se detecta
+    _alt = bytearray(_crudo); _alt[-5] ^= 1; open(os.path.join(tmp, "alt.db.cifrado"), "wb").write(_alt)
+    try:
+        backup.descifrar_archivo(os.path.join(tmp, "alt.db.cifrado"), _dd, "clave-larga-de-pruebas-153"); _mal = False
+    except ValueError:
+        _mal = True
+    check(_mal, "un archivo alterado no se descifra (GCM autentica)")
+    # restaurar desde el cifrado
+    _rd = os.path.join(tmp, "restaurada-cifrada.db")
+    _u, _p = backup.restaurar(None, _rd)
+    check(_p == [] and os.path.exists(_rd), f"restaurar desde un respaldo cifrado {_p}")
+    check(sqlite3.connect(_rd).execute("SELECT COUNT(*) FROM compras").fetchone()[0] > 0, "y la base restaurada trae las compras")
+    # sin la clave: no se puede abrir y lo explica
+    del os.environ["BACKUP_CLAVE"]
+    _p = backup.restaurar(None, os.path.join(tmp, "sin-clave.db"))[1]
+    check(_p and "BACKUP_CLAVE" in _p[0] and not os.path.exists(os.path.join(tmp, "sin-clave.db")), "sin la clave no restaura nada y dice qué falta")
+    check(backup.probar_restauracion() and "BACKUP_CLAVE" in backup.probar_restauracion()[0], "la prueba semanal también lo dice")
+    # clave en archivo
+    _kf = os.path.join(tmp, "clave.txt"); open(_kf, "w").write("clave-larga-de-pruebas-153\n"); os.environ["BACKUP_CLAVE_ARCHIVO"] = _kf
+    check(backup.probar_restauracion() == [], "la clave también puede venir de un archivo")
+    del os.environ["BACKUP_CLAVE_ARCHIVO"]
+    # sin clave: respaldo en claro como siempre, y conviven en la carpeta
+    _tt2.sleep(1.1)
+    check(backup.run() is True and len(backup.respaldos(_bk_dir)) == 2 and any(f.endswith(".db") for f in os.listdir(_bk_dir)), "sin clave se respalda en claro y conviven con los cifrados")
+    _keep0 = backup.KEEP; backup.KEEP = 1
+    _tt2.sleep(1.1)
+    backup.run()
+    check(len(backup.respaldos(_bk_dir)) == 1, "la retención cuenta cifrados y en claro por igual")
+    backup.KEEP = _keep0
+finally:
+    backup.DEST, backup.DB_PATH = _dest0, _db0
+    os.environ.pop("BACKUP_CLAVE_ARCHIVO", None)
+    if _env0 is None: os.environ.pop("BACKUP_CLAVE", None)
+    else: os.environ["BACKUP_CLAVE"] = _env0
 
 # --- Restaurar de verdad (idea 48): del respaldo a una base nueva, con todo igual, y reemplazando una base con su WAL viejo
 def _todo(ruta):

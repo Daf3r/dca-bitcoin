@@ -25,6 +25,8 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 tmp = tempfile.mkdtemp()
 os.environ["DB_PATH"] = os.path.join(tmp, "libro.db")
+os.environ.setdefault("LIMITE_ESCRITURAS", "1000000")  # estas pruebas escriben a toda prisa; el límite (idea 151) se prueba aparte en test_api
+os.environ.setdefault("LOG_PETICIONES", "0")
 os.environ["NO_PROXY"] = os.environ["no_proxy"] = "127.0.0.1,localhost"  # el servicio falso es local
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app"))
 import auth  # noqa: E402

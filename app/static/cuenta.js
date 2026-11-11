@@ -3,6 +3,7 @@ import { montarAvisos } from './avisos.js';
 import { cambiosPendientes, mostrarCambios } from './cambios.js';
 import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
 import { enTV, entrarTV } from './tv.js';
+import { pintarSesiones } from './sesiones.js';
 import { pintarSistema } from './sistema.js';
 import { pintarHistoria } from './historia.js';
 import { avatar, ilustracion } from './iconos.js';
@@ -26,6 +27,7 @@ function vistaCuenta(cual) {
   $('dc-historia').hidden = cual !== 'historia';
   $('dc-datos').hidden = cual !== 'datos';
   $('dc-sistema').hidden = cual !== 'sistema';
+  $('dc-sesiones').hidden = cual !== 'sesiones';
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
 const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
@@ -44,6 +46,8 @@ export async function cargarYo() {
     const yo = await api('/api/yo');
     Object.assign(S, { usuario: yo.usuario, rol: yo.rol, visto: yo.visto ?? null, cambios: yo.cambios ?? null });
     document.body.dataset.rol = yo.rol;
+    document.body.dataset.mant = yo.mantenimiento ? '1' : ''; // modo solo lectura de emergencia (SOLO_LECTURA=1 en el servidor)
+    $('mant').hidden = !yo.mantenimiento;
     conAvatar($('cuenta-btn'), yo.usuario, yo.usuario);
     aclararCuenta();
     $('cuenta-btn').hidden = false;
@@ -215,6 +219,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'historia') irA('historia', pintarHistoria);
   else if (accion === 'datos') irA('datos');
   else if (accion === 'sistema') irA('sistema', pintarSistema);
+  else if (accion === 'sesiones') irA('sesiones', pintarSesiones);
   else if (accion === 'avisos') irA('avisos', () => avisosUI.refrescar());
   else if (accion === 'salir' || accion === 'salir-todas') {
     try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }

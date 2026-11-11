@@ -88,6 +88,7 @@
 </section>
 
 <main class="cuerpo" id="principal" tabindex="-1">
+  <p class="mant" id="mant" role="status" hidden>Mantenimiento: por ahora solo se puede mirar, no anotar. Vuelve en un rato.</p>
   <!-- Dos columnas en escritorio; en móvil y tablet los contenedores no cuentan (display: contents)
        y el orden visual es el del documento, igual que el de tabulación. -->
   <div class="col-principal">
@@ -377,6 +378,7 @@
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
       <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar y traslados</button>
       <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
+      <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
@@ -442,6 +444,12 @@
       <input class="sr" type="file" id="tras-in" accept=".csv,text/csv">
     </div>
     <p class="dc-nota">Importar salta lo repetido, así que puedes cargar el mismo archivo dos veces sin duplicar. Importa primero las compras: la wallet no puede tener más sats de los que posees ese día.</p>
+    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
+  </div>
+  <div class="dc-sesiones" id="dc-sesiones" hidden>
+    <h2>Sesiones abiertas</h2>
+    <p>Los dispositivos donde tu cuenta está abierta. Si perdiste un teléfono o la dejaste en una computadora ajena, ciérrala desde aquí.</p>
+    <ul class="sis-lista" id="ses-lista"></ul>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-sistema" id="dc-sistema" hidden>

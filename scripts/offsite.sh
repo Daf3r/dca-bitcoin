@@ -13,5 +13,5 @@ ORIGEN="$(cd "$(dirname "$0")/.." && pwd)/data/backups"
 [ -d "$ORIGEN" ] || { echo "No existe $ORIGEN: ¿ya corrió el primer respaldo?" >&2; exit 1; }
 
 # copy (no sync): si se borra algo por error aquí, el remoto lo conserva.
-rclone copy "$ORIGEN" "$REMOTO" --include "libro-*.db" --max-age 72h --verbose
+rclone copy "$ORIGEN" "$REMOTO" --include "libro-*.db" --include "libro-*.db.cifrado" --max-age 72h --verbose
 echo "$(date -Is) respaldo copiado a $REMOTO"
