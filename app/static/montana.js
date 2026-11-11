@@ -12,11 +12,14 @@ function azar(s) {
 function composicion(W, H, techo) {
   // techo: dónde acaba el texto del saldo; la cumbre y su etiqueta quedan por debajo.
   // En móvil y tablet el botón fijo «Anotar compra» ocupa los últimos ~90 px: el sendero empieza por encima.
+  // Teléfono acostado (idea 64): la escena mide lo que la pantalla (poca altura), el saldo va a la izquierda y la montaña a la
+  // derecha, a lo ancho; el botón «Anotar» va abajo a la izquierda, así que el sendero puede bajar hasta casi el borde.
+  if (H <= 520 && W >= H * 1.5 && W < 1100) return { sx: W * 0.7, sy: Math.max(H * 0.36, 92), base: [W * 0.5, H - 26], vueltas: 4, ancho: 0.2, campos: 3, sol: [W * 0.92, H * 0.3], rs: H * 0.07, lago: [W * 0.85, W * 0.11] };
   if (W < 700) return { sx: W * 0.62, sy: Math.max(H * 0.43, techo + 70), base: [W * 0.14, H - 104], vueltas: 5, ancho: 0.34, campos: 3, sol: [W * 0.86, H * 0.47], rs: W * 0.1 };
   if (W < 1100) return { sx: W * 0.64, sy: Math.max(H * 0.3, techo + 70), base: [W * 0.2, H - 104], vueltas: 6, ancho: 0.27, campos: 4, sol: [W * 0.87, H * 0.3], rs: W * 0.07 };
   // Escritorio: el pico se dimensiona por la altura y se compone en un marco centrado de hasta
-  // 1600 px, alineado con el contenido; fuera del marco solo hay cielo y cordillera.
-  const marco = Math.min(W, 1600);
+  // 1600 px (2000 desde 2400 px de ancho, 2400 desde 3200), alineado con el contenido; fuera del marco solo hay cielo y cordillera.
+  const marco = Math.min(W, W >= 3200 ? 2400 : W >= 2400 ? 2000 : 1600); // crece con la raíz en pantallas muy anchas (styles.css: --medio-ancho)
   const dcha = (W + marco) / 2;
   const mw = Math.min(marco, H * 1.7);
   return { sx: dcha - mw * 0.42, sy: H * 0.16, base: [dcha - mw * 0.74, H * 0.915], vueltas: 7, ancho: mw * 0.26 / W, campos: 4, sol: [dcha - mw * 0.12, H * 0.24], rs: H * 0.08 };
@@ -86,8 +89,8 @@ function auroraBoreal(W, H, techo) {
  * por debajo del arranque del sendero y a un lado, así que nunca empuja el camino ni las etiquetas.
  */
 function lago(c, W, H) {
-  const cx = Math.min(Math.max(c.sol[0], W * 0.2), W * 0.8), cy = Math.min(H * 0.845, c.base[1] - 24);
-  const rx = Math.min(W * 0.16, 150), ry = Math.max(8, H * 0.016);
+  const cx = c.lago ? c.lago[0] : Math.min(Math.max(c.sol[0], W * 0.2), W * 0.8), cy = Math.min(H * 0.845, c.base[1] - 24);
+  const rx = c.lago ? c.lago[1] : Math.min(W * 0.16, 150), ry = Math.max(8, H * 0.016);
   const reflejo = [0, 1, 2, 3].map((i) => `<ellipse class="lago-reflejo" cx="${f1(cx + (i % 2 ? 3 : -3))}" cy="${f1(cy - ry * 0.35 + i * ry * 0.42)}" rx="${f1(rx * (0.26 - i * 0.045))}" ry="${f1(Math.max(1.1, ry * 0.12))}"/>`).join('');
   const estrellas = [[-0.5, -0.2], [-0.2, 0.25], [0.45, -0.1], [0.62, 0.3], [-0.68, 0.2]].map(([x, y]) => `<circle class="lago-estrella" cx="${f1(cx + rx * x)}" cy="${f1(cy + ry * y)}" r="0.9"/>`).join('');
   return `<g class="lago" aria-hidden="true"><ellipse class="lago-agua" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx)}" ry="${f1(ry)}"/><g class="lago-luna">${reflejo}${estrellas}</g><ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><ellipse class="lago-borde" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx)}" ry="${f1(ry)}"/></g>`;

@@ -242,6 +242,17 @@ try {
       await auditar(p, `índice lateral (pantalla ancha) ${esquema}`);
       await ctx.close();
     }
+    { // teléfono acostado (app y entrada) y monitor ultra ancho
+      for (const [nombre, w, h, ruta] of [['app acostada 844×390', 844, 390, null], ['entrada acostada 568×320', 568, 320, '/login'], ['pantalla ultra ancha 3440×1440', 3440, 1440, null]]) {
+        const ctx = await navegador.newContext({ viewport: { width: w, height: h }, colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+        if (ruta) { await p.goto(`${anio.url}${ruta}`, { waitUntil: 'networkidle' }); await p.waitForTimeout(800); }
+        else { await entrar(p, anio.url, ADMIN); await cerrarOferta(p); }
+        await auditar(p, `${nombre} ${esquema}`);
+        await ctx.close();
+      }
+    }
     { // la oferta de avisos al entrar
       const { ctx, p } = await nuevo(hoy, ADMIN, conPush);
       await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });
