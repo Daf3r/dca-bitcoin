@@ -192,6 +192,10 @@ try {
       await p.click('#cuenta-btn'); await p.waitForTimeout(300);
       await p.click('#dc-datos-btn'); await p.waitForTimeout(700);
       await auditar(p, `tus datos ${esquema}`);
+      await p.click('#dc-datos [data-cuenta="volver"]'); await p.waitForTimeout(400);
+      await p.evaluate(() => { setTimeout(() => { throw new Error('error de prueba'); }, 10); }); await p.waitForTimeout(900); // para que la vista tenga un error que mostrar
+      await p.click('#dc-sistema-btn'); await p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent)); await p.waitForTimeout(500);
+      await auditar(p, `estado del sistema ${esquema}`);
       await ctx.close();
       const m = await nuevo(mil, ADMIN, conPush);
       await cerrarOferta(m.p);

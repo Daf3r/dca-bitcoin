@@ -11,6 +11,8 @@ En cada pasada:
   · TXID vigilados: si uno que estaba pendiente ya se confirmó, avisa al admin una vez;
   · gran caída: si BTC está 15 % o más bajo su máximo de 30 días, avisa al admin una vez por caída (se reinicia cuando
     BTC se recupera y queda a menos de 10 % de su máximo). Solo informa; solo de 8:00 a 21:00;
+  · cuentas (idea 46): si las reglas contables no cuadran (saldo negativo, wallet con más sats de los que hay), avisa al admin una vez
+    por problema nuevo. Solo avisa: nunca corrige nada;
   · limpieza (una vez al día): quita lo que solo crece y ya no sirve (TXID cerrados, caché de TXID de movimientos que ya no existen,
     avisos pendientes de hace más de una semana, dispositivos que dejaron de responder). Nunca toca compras, traslados, cuentas ni la
     auditoría;
@@ -20,6 +22,7 @@ En cada pasada:
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import sqlite3
@@ -164,6 +167,20 @@ def _respaldo_viejo(conn: sqlite3.Connection) -> bool:
     return True
 
 
+def _cuentas(conn: sqlite3.Connection) -> bool:
+    """Avisa (una vez por problema nuevo) si las reglas contables no cuadran; no corrige nada. Si se arregla, lo anota en silencio."""
+    problemas = server.chequeo_contable(conn)
+    huella = hashlib.sha1("|".join(problemas).encode()).hexdigest()[:12] if problemas else ""
+    if huella == (server._meta(conn, "aviso_cuentas") or ""):
+        return False
+    server._meta_poner(conn, "aviso_cuentas", huella)
+    conn.commit()
+    if not problemas:
+        return False
+    push.notificar(conn, "respaldo", "Libro DCA", f"Algo no cuadra en tus cuentas: {problemas[0]} Mira «Estado del sistema» en Tu cuenta. La app no corrige nada sola.", "cuentas")
+    return True
+
+
 def _resultado_integridad(conn: sqlite3.Connection) -> list[str]:
     return [str(r[0]) for r in conn.execute("PRAGMA integrity_check")]
 
@@ -237,7 +254,7 @@ def una_pasada() -> dict[str, Any]:
         server._meta_poner(conn, "avisos_latido", str(int(time.time())))  # «sigo vivo»: lo lee el chequeo de salud
         conn.commit()
         return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn), "caida": _caida(conn),
-                "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "limpieza": _limpieza(conn)}
+                "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "cuentas": _cuentas(conn), "limpieza": _limpieza(conn)}
     finally:
         conn.close()
 

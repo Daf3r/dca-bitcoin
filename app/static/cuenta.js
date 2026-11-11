@@ -3,6 +3,7 @@ import { montarAvisos } from './avisos.js';
 import { cambiosPendientes, mostrarCambios } from './cambios.js';
 import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
 import { enTV, entrarTV } from './tv.js';
+import { pintarSistema } from './sistema.js';
 import { pintarHistoria } from './historia.js';
 import { avatar, ilustracion } from './iconos.js';
 import { avisar } from './avisar.js';
@@ -24,6 +25,7 @@ function vistaCuenta(cual) {
   $('dc-avisos').hidden = cual !== 'avisos';
   $('dc-historia').hidden = cual !== 'historia';
   $('dc-datos').hidden = cual !== 'datos';
+  $('dc-sistema').hidden = cual !== 'sistema';
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
 const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
@@ -49,6 +51,7 @@ export async function cargarYo() {
     conAvatar($('dc-quien'), yo.usuario, `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`, { grande: true });
     $('dc-historial').hidden = yo.rol !== 'admin';
     $('dc-datos-btn').hidden = yo.rol !== 'admin';
+    $('dc-sistema-btn').hidden = yo.rol !== 'admin';
     $('dc-previa').hidden = yo.rol !== 'admin'; // vista previa temporal
     $('fc-usuario').value = yo.usuario;
     pintar();
@@ -211,6 +214,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'historial') irA('historial', cargarHistorial);
   else if (accion === 'historia') irA('historia', pintarHistoria);
   else if (accion === 'datos') irA('datos');
+  else if (accion === 'sistema') irA('sistema', pintarSistema);
   else if (accion === 'avisos') irA('avisos', () => avisosUI.refrescar());
   else if (accion === 'salir' || accion === 'salir-todas') {
     try { await api('/api/logout', { metodo: 'POST', cuerpo: { todas: accion === 'salir-todas' } }); } catch { /* da igual: se sale */ }

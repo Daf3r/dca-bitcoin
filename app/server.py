@@ -9,14 +9,17 @@ import math
 import mimetypes
 import os
 import re
+import secrets
+import shutil
 import sqlite3
 import threading
 import time
 import urllib.error
 import urllib.request
 import zipfile
-from datetime import UTC, date, datetime, timedelta
+from collections import deque
 from collections.abc import Callable
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from flask import Flask, Response, g, jsonify, redirect, request
@@ -25,6 +28,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import auth
 import push
 import ritmo
+import salud
 
 DB_PATH = os.environ.get("DB_PATH", "/data/libro.db")
 PRICE_TTL = int(os.environ.get("PRICE_TTL", "30"))               # segundos entre consultas al exchange
@@ -163,6 +167,37 @@ def _m_compras_etiquetas(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE compras ADD COLUMN etiquetas TEXT CHECK (etiquetas IS NULL OR length(etiquetas) <= 200)")
 
 
+def _m_metricas(conn: sqlite3.Connection) -> None:
+    # Métricas simples (idea 96): por día y ruta (la regla, no la URL), con tope de 14 días. Cada proceso suma lo suyo.
+    conn.executescript("""
+    CREATE TABLE IF NOT EXISTS metricas (
+      dia      TEXT    NOT NULL,
+      ruta     TEXT    NOT NULL,
+      n        INTEGER NOT NULL DEFAULT 0,
+      errores  INTEGER NOT NULL DEFAULT 0,
+      lentas   INTEGER NOT NULL DEFAULT 0,
+      ms_total REAL    NOT NULL DEFAULT 0,
+      ms_max   REAL    NOT NULL DEFAULT 0,
+      PRIMARY KEY (dia, ruta)
+    );""")
+
+
+def _m_errores_js(conn: sqlite3.Connection) -> None:
+    # Errores del navegador (idea 74): solo mensaje y pantalla, agrupados (un mismo error repetido suma, no llena la tabla).
+    conn.executescript("""
+    CREATE TABLE IF NOT EXISTS errores_js (
+      id       INTEGER PRIMARY KEY AUTOINCREMENT,
+      primero  INTEGER NOT NULL,
+      ultimo   INTEGER NOT NULL,
+      pantalla TEXT    NOT NULL,
+      mensaje  TEXT    NOT NULL,
+      agente   TEXT    NOT NULL,
+      usuario  TEXT,
+      n        INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (pantalla, mensaje, agente)
+    );""")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -170,6 +205,8 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (4, "usuarios.visto_ts", _m_usuarios_visto),
     (5, "usuarios.cambios_visto", _m_usuarios_cambios),
     (6, "compras.etiquetas", _m_compras_etiquetas),
+    (7, "metricas por día y ruta", _m_metricas),
+    (8, "errores_js (errores del navegador)", _m_errores_js),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -563,6 +600,152 @@ PUBLICAS = {"/healthz", "/login", "/api/login", "/api/estado"}
 RECURSO_PUBLICO = re.compile(r"/(?:[\w-]+\.js|styles\.css|icon\.svg|manifest\.webmanifest|(?:icon-[\w-]+|apple-touch-icon|arranque-\d+x\d+)\.png|fonts/[\w.-]+)")
 
 
+# ------------------------------------------- registros estructurados, métricas y errores del navegador (ideas 95, 96, 74)
+LOG_PETICIONES = os.environ.get("LOG_PETICIONES", "1") != "0"
+LENTA_MS = 1000       # una petición que tarda más de esto cuenta como «lenta»
+MET_CADA = 60         # cada cuántos segundos cada proceso vuelca sus contadores a la base
+MET_DIAS = 14
+_MET_LOCK = threading.Lock()
+_MET: dict[tuple[str, str], list[float]] = {}  # (día, ruta) -> [n, errores, lentas, ms_total, ms_max]
+_MET_ULTIMO = [time.time()]
+
+
+def registrar(nivel: str, evento: str, **campos: Any) -> None:
+    """Una línea de registro en JSON (para `docker compose logs app`). Nunca lleva contraseñas, cuerpos, consultas ni IP."""
+    print(json.dumps({"t": datetime.now(UTC).isoformat(timespec="seconds"), "nivel": nivel, "evento": evento, **campos}, ensure_ascii=False), flush=True)
+
+
+def _ruta_de_la_peticion() -> str | None:
+    """La regla de la ruta («/api/compras/<int:cid>»), no la URL con sus datos; None para los archivos estáticos y /healthz."""
+    if request.path == "/healthz" or RECURSO_PUBLICO.fullmatch(request.path):
+        return None
+    regla = request.url_rule.rule if request.url_rule else None
+    if regla in (None, "/<path:filename>"):
+        return "otras" if not request.path.startswith("/api/") else "api: no existe"
+    return regla
+
+
+def registrar_metrica(ruta: str, estado: int, ms: float) -> None:
+    clave = (ritmo.hoy_sv().isoformat(), ruta)
+    with _MET_LOCK:
+        m = _MET.setdefault(clave, [0, 0, 0, 0.0, 0.0])
+        m[0] += 1
+        m[1] += 1 if estado >= 500 else 0
+        m[2] += 1 if ms >= LENTA_MS else 0
+        m[3] += ms
+        m[4] = max(m[4], ms)
+
+
+def vaciar_metricas(conn: sqlite3.Connection | None = None) -> None:
+    """Suma lo contado en este proceso a la tabla `metricas` (los dos procesos de gunicorn suman sobre las mismas filas)."""
+    with _MET_LOCK:
+        pendientes = dict(_MET)
+        _MET.clear()
+    _MET_ULTIMO[0] = time.time()
+    if not pendientes:
+        return
+    c = conn or connect()
+    try:
+        for (dia, ruta), (n, e, lentas, tot, mx) in pendientes.items():
+            c.execute("INSERT INTO metricas (dia, ruta, n, errores, lentas, ms_total, ms_max) VALUES (?, ?, ?, ?, ?, ?, ?) "
+                      "ON CONFLICT (dia, ruta) DO UPDATE SET n = n + excluded.n, errores = errores + excluded.errores, "
+                      "lentas = lentas + excluded.lentas, ms_total = ms_total + excluded.ms_total, ms_max = MAX(ms_max, excluded.ms_max)",
+                      (dia, ruta, int(n), int(e), int(lentas), tot, mx))
+        c.execute("DELETE FROM metricas WHERE dia < ?", ((ritmo.hoy_sv() - timedelta(days=MET_DIAS)).isoformat(),))
+        c.commit()
+    except sqlite3.Error as e:  # las métricas son un extra: nunca rompen una petición
+        registrar("aviso", "metricas_sin_guardar", error=type(e).__name__)
+    finally:
+        if conn is None:
+            c.close()
+
+
+@app.before_request
+def iniciar_peticion() -> None:
+    g.t0 = time.perf_counter()
+    rid = request.headers.get("X-Request-ID", "")
+    g.rid = rid if re.fullmatch(r"[\w-]{8,64}", rid) else secrets.token_hex(6)
+
+
+@app.after_request
+def cerrar_peticion(resp: Response) -> Response:
+    """Pone el identificador de la petición, la cuenta en las métricas y deja una línea de registro en JSON."""
+    rid = g.get("rid")
+    if rid:
+        resp.headers["X-Request-ID"] = rid
+    ruta = _ruta_de_la_peticion()
+    t0 = g.get("t0")
+    if ruta is not None and t0 is not None:
+        ms = (time.perf_counter() - t0) * 1000
+        registrar_metrica(ruta, resp.status_code, ms)
+        if LOG_PETICIONES:
+            u = g.get("usuario")
+            registrar("error" if resp.status_code >= 500 else "info", "peticion", rid=rid, m=request.method, ruta=ruta, st=resp.status_code,
+                      ms=round(ms), u=u["nombre"] if u else None)
+        if time.time() - _MET_ULTIMO[0] > MET_CADA:
+            vaciar_metricas()
+    return resp
+
+
+def _agente_corto(ua: str) -> str:
+    """«Safari · iPhone»: solo el navegador y el sistema, nunca el texto completo del agente."""
+    nav = next((n for k, n in (("Edg/", "Edge"), ("OPR/", "Opera"), ("Firefox/", "Firefox"), ("Chrome/", "Chrome"), ("Safari/", "Safari")) if k in ua), "otro")
+    so = next((n for k, n in (("iPhone", "iPhone"), ("iPad", "iPad"), ("Android", "Android"), ("Windows", "Windows"), ("Macintosh", "Mac"), ("Linux", "Linux")) if k in ua), "otro")
+    return f"{nav} · {so}"
+
+
+def _limpiar_mensaje(m: Any) -> str:
+    """El mensaje de un error del navegador sin nada que identifique: sin enlaces, correos ni números largos, en una línea y corto."""
+    if not isinstance(m, str):
+        return ""
+    t = re.sub(r"https?://\S+", "<enlace>", m)
+    t = re.sub(r"[\w.+-]+@[\w-]+\.[\w.-]+", "<correo>", t)
+    t = re.sub(r"\d{6,}", "<número>", t)
+    t = re.sub(r"[0-9a-fA-F]{32,}", "<código>", t)
+    return " ".join("".join(ch for ch in t if ch.isprintable()).split())[:160]
+
+
+_ERR_RECIENTES: dict[str, deque[float]] = {}
+ERR_MAX, ERR_VENTANA, ERR_FILAS = 20, 600, 100  # por cuenta y proceso: 20 reportes cada 10 minutos; se guardan como mucho 100 errores distintos
+
+
+@app.post("/api/errores")
+def reportar_error() -> Any:
+    """Un error de JavaScript en cualquier dispositivo (también de un lector): solo la pantalla y el mensaje, con límites estrictos."""
+    cuerpo: Any = request.get_json(silent=True)
+    if not isinstance(cuerpo, dict):
+        return jsonify(error="Datos inválidos."), 400
+    mensaje = _limpiar_mensaje(cuerpo.get("mensaje"))
+    pantalla = cuerpo.get("pantalla") if isinstance(cuerpo.get("pantalla"), str) and re.fullmatch(r"/[a-z0-9/_-]{0,30}", cuerpo["pantalla"]) else "/"
+    if not mensaje:
+        return jsonify(error="Falta el mensaje."), 400
+    ahora = time.time()
+    cola = _ERR_RECIENTES.setdefault(quien(), deque())
+    while cola and ahora - cola[0] > ERR_VENTANA:
+        cola.popleft()
+    if len(cola) >= ERR_MAX:
+        return jsonify(error="Demasiados reportes."), 429
+    cola.append(ahora)
+    conn = db()
+    agente = _agente_corto(request.headers.get("User-Agent", ""))
+    conn.execute("INSERT INTO errores_js (primero, ultimo, pantalla, mensaje, agente, usuario) VALUES (?, ?, ?, ?, ?, ?) "
+                 "ON CONFLICT (pantalla, mensaje, agente) DO UPDATE SET ultimo = excluded.ultimo, n = n + 1, usuario = excluded.usuario",
+                 (int(ahora), int(ahora), pantalla, mensaje, agente, quien()))
+    conn.execute("DELETE FROM errores_js WHERE id NOT IN (SELECT id FROM errores_js ORDER BY ultimo DESC LIMIT ?)", (ERR_FILAS,))
+    conn.commit()
+    return "", 204
+
+
+@app.delete("/api/errores")
+def limpiar_errores() -> Any:
+    if g.usuario["rol"] != "admin":  # la ruta está abierta a lectores para reportar; borrar es solo del admin
+        return jsonify(error="Solo el admin limpia la lista."), 403
+    conn = db()
+    n = conn.execute("DELETE FROM errores_js").rowcount
+    conn.commit()
+    return jsonify(quitados=n)
+
+
 @app.before_request
 def mismo_origen() -> Any:
     if request.method not in ESCRITURA:
@@ -602,7 +785,7 @@ def exigir_sesion() -> Any:
     if not u:
         return (jsonify(error="Inicia sesión."), 401) if api else redirect("/login")
     g.usuario = u
-    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto", "/api/cambios-visto") \
+    if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto", "/api/cambios-visto", "/api/errores") \
             and not ruta.startswith("/api/push/"):
         return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
@@ -915,6 +1098,71 @@ def nueva_clave() -> Any:
     except ValueError as e:
         return jsonify(error=str(e)), 400
     return jsonify(ok=True)
+
+
+# ------------------------------------------------------------- estado del sistema (ideas 53, 145, 46, 96, 74)
+def chequeo_contable(conn: sqlite3.Connection) -> list[str]:
+    """Reglas contables que deben cumplirse siempre (idea 46). Devuelve lo que NO cuadra, en texto; lista vacía = todo bien.
+    Solo avisa: nunca corrige nada por su cuenta. El servidor valida los traslados al crearlos o anularlos, pero una venta, anular
+    o editar una compra después pueden dejar la wallet con más sats de los que hay: aquí se detecta."""
+    problemas: list[str] = []
+    if fecha := saldo_negativo(movimientos(conn)):
+        problemas.append(f"El saldo queda en negativo el {fecha}: hay ventas o gastos que no alcanzan con lo comprado hasta entonces.")
+    if falla := falla_traslados(conn, traslados_vigentes(conn)):
+        problemas.append(f"Los traslados no cuadran con las compras. {falla}")
+    return problemas
+
+
+_TIPO_PUSH = (("fcm.googleapis.com", "Google (Chrome o Android)"), ("push.apple.com", "Apple (iPhone o Safari)"),
+              ("push.services.mozilla.com", "Mozilla (Firefox)"), ("notify.windows.com", "Windows (Edge)"))
+
+
+def _tipo_dispositivo(endpoint: str) -> str:
+    return next((nombre for host, nombre in _TIPO_PUSH if host in endpoint), "otro")
+
+
+def estado_sistema(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Todo lo que ve el admin en «Estado del sistema». Solo estados y fechas: ni claves, ni endpoints, ni contenido de las compras."""
+    ahora = int(time.time())
+    carpeta = os.environ.get("BACKUP_DIR", "/data/backups")
+    ultimo = salud.ultimo_respaldo(carpeta)
+    prueba = None
+    try:
+        marca = os.path.join(carpeta, ".restauracion")
+        with open(marca) as f:
+            prueba = {"ts": int(os.path.getmtime(marca)), "bien": " bien" in f.read()}
+    except OSError:
+        pass
+    latido = _meta(conn, "avisos_latido")
+    integ = (_meta(conn, "aviso_integridad") or "").split(":", 1)
+    uso = shutil.disk_usage(os.path.dirname(DB_PATH) or ".")
+    vaciar_metricas(conn)  # incluye lo que este proceso lleva contado
+    desde = (ritmo.hoy_sv() - timedelta(days=6)).isoformat()
+    metricas = [{"ruta": r["ruta"], "n": r["n"], "errores": r["errores"], "lentas": r["lentas"], "ms_medio": round(r["ms_total"] / r["n"]) if r["n"] else 0,
+                 "ms_max": round(r["ms_max"])} for r in conn.execute(
+        "SELECT ruta, SUM(n) AS n, SUM(errores) AS errores, SUM(lentas) AS lentas, SUM(ms_total) AS ms_total, MAX(ms_max) AS ms_max "
+        "FROM metricas WHERE dia >= ? GROUP BY ruta ORDER BY n DESC LIMIT 15", (desde,))]
+    return {
+        "ahora": ahora, "version": VERSION, "esquema": version_esquema(conn),
+        "respaldo": {"ultimo": int(ultimo) if ultimo else None, "ok": ultimo is not None and ahora - ultimo < 36 * 3600, "prueba": prueba},
+        "avisos": {"latido": int(latido) if latido else None, "vivo": latido is not None and ahora - int(latido) < salud.LATIDO_MAX_SEGUNDOS},
+        "integridad": {"estado": integ[0] if integ[0] in ("ok", "mal") else None, "cuando": integ[1] if len(integ) > 1 else None},
+        "disco": {"libre": uso.free, "total": uso.total, "pct_libre": round(uso.free / uso.total * 100, 1) if uso.total else None},
+        "cuentas": chequeo_contable(conn),
+        "dispositivos": [{"usuario": r["nombre"], "tipo": _tipo_dispositivo(r["endpoint"]), "creado": r["creado"], "ultimo_ok": r["ultimo_ok"], "fallos": r["fallos"],
+                          "categorias": [c for c, on in push.prefs_efectivas(r["prefs"], r["rol"]).items() if on]}
+                         for r in conn.execute("SELECT u.nombre, u.rol, s.endpoint, s.creado, s.ultimo_ok, s.fallos, s.prefs FROM suscripciones s "
+                                               "JOIN usuarios u ON u.id = s.usuario_id ORDER BY u.nombre, s.id")],
+        "metricas": metricas,
+        "errores": [dict(r) for r in conn.execute("SELECT ultimo, pantalla, mensaje, agente, usuario, n FROM errores_js ORDER BY ultimo DESC LIMIT 20")],
+    }
+
+
+@app.get("/api/sistema")
+def ver_sistema() -> Any:
+    if g.usuario["rol"] != "admin":
+        return jsonify(error="Solo el admin ve el estado del sistema."), 403
+    return jsonify(estado_sistema(db()))
 
 
 @app.get("/api/auditoria")

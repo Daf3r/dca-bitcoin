@@ -11,4 +11,5 @@ USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=4s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--access-logfile", "-", "server:app"]
+# Sin registro de accesos de gunicorn: cada petición la registra la app misma, en JSON y sin IP ni datos (server.cerrar_peticion).
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "server:app"]
