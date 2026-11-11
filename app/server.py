@@ -847,6 +847,13 @@ def _version() -> str:
 
 
 VERSION = _version()
+def _leer_version_git(v: str) -> str:
+    """El commit desplegado (README, «Actualizar»): solo hex de 4 a 40; cualquier otra cosa (o nada) queda vacía."""
+    v = v.strip()
+    return v if re.fullmatch(r"[0-9a-f]{4,40}", v) else ""
+
+
+VERSION_GIT = _leer_version_git(os.environ.get("VERSION_GIT", ""))
 _REF_JS = re.compile(r"""((?:from|import)\s*['"]\./[\w-]+\.js)(['"])""")
 _REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.woff2))(")""")
 _REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
@@ -1202,7 +1209,7 @@ def estado_sistema(conn: sqlite3.Connection) -> dict[str, Any]:
         "SELECT ruta, SUM(n) AS n, SUM(errores) AS errores, SUM(lentas) AS lentas, SUM(ms_total) AS ms_total, MAX(ms_max) AS ms_max "
         "FROM metricas WHERE dia >= ? GROUP BY ruta ORDER BY n DESC LIMIT 15", (desde,))]
     return {
-        "ahora": ahora, "version": VERSION, "esquema": version_esquema(conn),
+        "ahora": ahora, "version": VERSION, "commit": VERSION_GIT[:12], "esquema": version_esquema(conn),
         "respaldo": {"ultimo": int(ultimo) if ultimo else None, "ok": ultimo is not None and ahora - ultimo < 36 * 3600, "prueba": prueba},
         "avisos": {"latido": int(latido) if latido else None, "vivo": latido is not None and ahora - int(latido) < salud.LATIDO_MAX_SEGUNDOS},
         "integridad": {"estado": integ[0] if integ[0] in ("ok", "mal") else None, "cuando": integ[1] if len(integ) > 1 else None},

@@ -69,6 +69,8 @@ jobs:
       - run: npm ci --prefix tests
       - name: Revisión del JavaScript con Biome
         run: npx --prefix tests biome lint
+      - name: Tipos de lib.js (JSDoc comprobado con tsc; no emite nada)
+        run: npx --prefix tests tsc -p tests/tsconfig.json
 
   navegador:
     name: Navegador (Playwright)

@@ -31,7 +31,14 @@ if docker compose exec -T backup python salud.py respaldo; then bien "hay un res
 if docker compose exec -T avisos python salud.py avisos; then bien "el servicio de avisos está vivo"; else falla "el servicio de avisos no dejó su marca de «sigo vivo» (mira: docker compose logs avisos)"; fi
 
 echo "Versión desplegada"
-docker compose exec -T app python -c "import server;print('  versión de los archivos:', server.VERSION)" 2>/dev/null || falla "no se pudo leer la versión"
+docker compose exec -T app python -c "import server;print('  versión de los archivos:', server.VERSION, '· commit:', server.VERSION_GIT or 'sin commit (usa VERSION_GIT, ver el README)')" 2>/dev/null || falla "no se pudo leer la versión"
+
+# Opcional: con DOMINIO=dca.tudominio.com comprueba que Caddy comprime (idea 104).
+if [ -n "${DOMINIO:-}" ]; then
+  echo "Compresión (Caddy)"
+  enc=$(curl -sS -m 10 -H 'Accept-Encoding: gzip, zstd' -o /dev/null -D - "https://$DOMINIO/styles.css" | tr -d '\r' | awk -F': ' 'tolower($1)=="content-encoding" {print $2}')
+  if [ -n "$enc" ]; then bien "styles.css llega comprimido ($enc)"; else falla "styles.css llega sin comprimir: añade «encode zstd gzip» al Caddyfile (README, «Más rápido»)"; fi
+fi
 
 echo
 if [ "$mal" -eq 0 ]; then echo "Todo bien ($ok comprobaciones)."; exit 0; fi

@@ -9,6 +9,30 @@ navegador ──▶ Cloudflare (proxy) ──▶ Caddy ──▶ 127.0.0.1:18082
                                                        backup ──▶ data/backups/ (diario)
 ```
 
+## Arquitectura
+Tres servicios con la misma imagen y la misma carpeta de datos (GitHub dibuja el diagrama solo):
+
+```mermaid
+flowchart LR
+  N["Navegador / PWA<br/>(teléfono, PC, TV)"] -->|HTTPS| CF["Cloudflare<br/>(proxy, límite en /api/login)"]
+  CF --> CD["Caddy<br/>(HTTPS, compresión,<br/>pone X-Cliente-IP)"]
+  CD -->|127.0.0.1:18082| APP["app<br/>Flask + gunicorn<br/>login, API, estáticos"]
+  APP <--> DB[("data/libro.db<br/>SQLite WAL")]
+  BK["backup<br/>respaldo diario +<br/>prueba semanal"] --> DB
+  BK --> RB[("data/backups/")]
+  AV["avisos<br/>recordatorios, TXID,<br/>gran caída, vigilantes,<br/>limpieza"] <--> DB
+  AV -->|Web Push| PUSH["Servicios de push<br/>(Apple, Google, Mozilla)"]
+  APP -->|solo el servidor| EX["Coinbase / Kraken<br/>(precio e histórico)"]
+  APP -->|solo el servidor| MP["mempool.space<br/>(estado del TXID)"]
+  PUSH -.->|notificación| N
+  RB -->|restic| B2[("Backblaze B2")]
+```
+
+- **La app** sirve la página (módulos ES sin build, con `?v=<hash>`), la API y el login. El navegador nunca habla con terceros: precio, histórico y estado de TXID los pide el servidor y los guarda en la base.
+- **`backup`** copia la base cada 24 h (verificada), conserva 30 y una vez por semana prueba restaurar el último. **`avisos`** manda lo programado por Web Push y deja su marca de «sigo vivo»; los dos tienen su `healthcheck`.
+- **Estado del sistema** (Tu cuenta, solo admin) junta lo que mira cada pieza: respaldo, avisos, integridad, disco, versión y errores. El registro de la app sale en JSON (`docker compose logs app`).
+- Lo que no se puede probar fuera del servidor (Caddy, Cloudflare, el build de Docker, iPhone real) se valida con `scripts/verificar-despliegue.sh`.
+
 ## Qué necesitas
 - Docker y Docker Compose en el servidor, y Caddy (u otro proxy) para HTTPS.
 - Un dominio en Cloudflare y Zero Trust (el plan gratis alcanza).
@@ -27,6 +51,7 @@ La app solo escucha en `127.0.0.1:18082`. Publícala con tu Caddy:
 
 ```caddy
 dca.tudominio.com {
+	encode zstd gzip
 	reverse_proxy 127.0.0.1:18082
 }
 ```
@@ -49,6 +74,7 @@ Las contraseñas generadas son de 16 caracteres sin letras ambiguas (`xxxx-xxxx-
 Caddy debe decir a la app la IP real del visitante (solo así funciona el límite de intentos por IP). En el Caddyfile del servidor:
 ```caddy
 dca.polarzero.dev {
+	encode zstd gzip
 	reverse_proxy 127.0.0.1:18082 {
 		header_up X-Forwarded-Proto https
 		header_up X-Cliente-IP {http.request.header.CF-Connecting-IP}
@@ -97,8 +123,16 @@ Desde el servidor, para archivos grandes (la página acepta hasta 1 MB):
 docker compose run --rm --no-deps -v "$PWD/compras.csv:/import/compras.csv:ro" app python importar.py /import/compras.csv
 ```
 
+## Más rápido: compresión y fuentes
+La app es liviana pero el CSS pesa ~110 KB y los módulos de JavaScript más de 200 KB sin comprimir. **Caddy comprime** con una sola línea, `encode zstd gzip`, dentro del bloque del sitio (ya está en los ejemplos de arriba; tras añadirla, `sudo systemctl reload caddy`). Mide antes y después con `bash scripts/medir-carga.sh https://dca.tudominio.com`: baja lo que pide la entrada con y sin compresión y dice el ahorro (esperable: más de la mitad). `DOMINIO=dca.tudominio.com bash scripts/verificar-despliegue.sh` comprueba también que llega comprimido. Las fuentes (Fraunces y Bricolage) ya se piden por adelantado (`<link rel="preload">`) y los recursos con versión van `immutable`, así que la segunda visita casi no descarga nada. Cloudflare comprime por su cuenta lo que pasa por él; la línea de Caddy cubre el tramo hasta Cloudflare y las pruebas directas.
+
 ## Actualizar
-Copia los archivos nuevos y ejecuta `docker compose up -d --build`. Los datos viven en `./data` y no se tocan.
+Copia los archivos nuevos y ejecuta:
+```bash
+export VERSION_GIT=$(git rev-parse --short HEAD)   # opcional: así «Estado del sistema» dice qué commit está desplegado
+docker compose up -d --build
+```
+Los datos viven en `./data` y no se tocan. Sin `VERSION_GIT` todo funciona igual; solo que «Versión» no mostrará el commit. Cada PR mezclado a `main` genera una **versión** en GitHub (Releases, `v2026.11.11-N`) con el título del PR y su descripción: ahí ves qué trae cada cambio y qué commit corresponde a cada una.
 
 ## Notas de seguridad
 - Ningún servicio publica puertos; los contenedores van en solo lectura, sin capabilities y con `no-new-privileges`.

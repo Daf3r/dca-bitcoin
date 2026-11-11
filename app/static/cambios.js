@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-c', fecha: '2026-11-11',
+    items: [
+      'Ahora puedes ponerle etiquetas a tus compras («cumpleaños», «bono»…) y filtrar la lista por ellas.',
+      'En «Tu cuenta» está «Sesiones abiertas»: ves en qué dispositivos está tu cuenta y puedes cerrar cualquiera con un toque.',
+      'Al entrar, marca «Este dispositivo es compartido» si es una computadora o tablet de varios: la sesión se cierra sola a las 4 horas.',
+      'Quien administra puede descargar todo en un solo archivo y ver el estado del sistema.',
+      'La app se ve bien también con el teléfono acostado y en pantallas muy grandes.',
+    ],
+  },
+  {
     id: '2026-11-b', fecha: '2026-11-10',
     items: [
       'La montaña ahora tiene una cima más cercana: la siguiente potencia de 10 (100k, 1M, 10M…). Al llegar, se rehace con la siguiente.',
