@@ -1703,7 +1703,8 @@ try {
       const u = await estado();
       ok(u.marca === 'usuario' && u.halo > reposo.halo, `entrada: al enfocar el usuario la luna se agranda (${reposo.halo.toFixed(2)} → ${u.halo.toFixed(2)})`);
       await p.focus('#l-clave');
-      await p.waitForFunction(() => getComputedStyle(document.querySelector('.campo .banderin')).fill !== 'rgb(214, 220, 230)' && document.documentElement.dataset.entrada === 'clave', null, { timeout: 4000 });
+      // La bandera de la cumbre ya no es blanca en reposo (pulido visual: ámbar, para leerse de día): se espera a que cambie de su color de reposo.
+      await p.waitForFunction((antes) => getComputedStyle(document.querySelector('.campo .banderin')).fill !== antes && document.documentElement.dataset.entrada === 'clave', reposo.banderin, { timeout: 4000 });
       const c = await estado();
       ok(c.marca === 'clave' && c.banderin !== reposo.banderin, `entrada: al enfocar la contraseña la bandera de la cumbre se alza (${reposo.banderin} → ${c.banderin})`);
       await p.evaluate(() => document.activeElement.blur());
