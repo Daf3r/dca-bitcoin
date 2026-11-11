@@ -9,6 +9,7 @@ export const S = {
   precio: null, precioTs: 0, fuente: '', viejo: false, errorPrecio: false,
   historico: [], histEstado: 'cargando', histDesde: null, rango: null,
   traslados: [],
+  wallets: [], // las wallets además de la principal (idea 156)
   usuario: null, rol: null,
 };
 export let R = resumen([], null);

@@ -5,6 +5,7 @@ import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
 import { enTV, entrarTV } from './tv.js';
 import { pintarSesiones } from './sesiones.js';
 import { pintarEnlaces } from './enlaces.js';
+import { pintarWallets } from './wallets.js';
 import { pintarSistema } from './sistema.js';
 import { pintarHistoria } from './historia.js';
 import { avatar, ilustracion } from './iconos.js';
@@ -164,6 +165,7 @@ function textoAuditoria(a) {
     cuenta_activada: `activó la cuenta ${d.nombre}`, cuenta_desactivada: `desactivó la cuenta ${d.nombre}`,
     token_creado: `creó el enlace de solo lectura «${d.nombre}»`, token_revocado: `revocó el enlace de solo lectura «${d.nombre}»`,
     sesion_cerrada: 'cerró una de sus sesiones abiertas',
+    wallet_creada: `añadió la wallet «${d.nombre}»`, wallet_archivada: `archivó la wallet «${d.nombre}»`,
     sesiones_cerradas: `cerró las sesiones de ${d.nombre}`, desbloqueo: `desbloqueó la cuenta ${d.nombre}`,
   }[a.accion] ?? a.accion;
 }
@@ -222,7 +224,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'clave') irA('clave', () => { $('fc-error').textContent = ''; $('fc-actual').focus(); });
   else if (accion === 'historial') irA('historial', cargarHistorial);
   else if (accion === 'historia') irA('historia', pintarHistoria);
-  else if (accion === 'datos') irA('datos');
+  else if (accion === 'datos') irA('datos', pintarWallets);
   else if (accion === 'sistema') irA('sistema', pintarSistema);
   else if (accion === 'sesiones') irA('sesiones', pintarSesiones);
   else if (accion === 'enlaces') irA('enlaces', () => { $('en-nuevo').hidden = true; pintarEnlaces(); });

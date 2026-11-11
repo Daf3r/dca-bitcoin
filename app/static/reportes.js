@@ -151,7 +151,7 @@ export function pintarToca() {
 // ------------------------------------------------------ dónde están tus sats
 /** Wallet frente a exchange, según los traslados. Todos la ven cuando hay traslados; el admin ve además la pista inicial. */
 export function pintarUbicacion() {
-  const u = ubicacionSats(S.traslados, R.sats);
+  const u = ubicacionSats(S.traslados, R.sats, S.wallets);
   const ver = S.cargado && R.n > 0 && (u.hay || esAdmin());
   $('ubicacion').hidden = !ver;
   if (!ver) return;
@@ -160,16 +160,47 @@ export function pintarUbicacion() {
   if (!u.hay && !$('ub-pista').querySelector('.ilu')) $('ub-pista').insertAdjacentHTML('afterbegin', ilustracion('traslado'));
   $('ub-anotar').hidden = u.hay;
   // La pista y el botón son para quien anota; un lector sin traslados no ve la tarjeta.
-  const fw = Math.max(0, Math.min(1, u.pctWallet / 100));
-  pintarAnillo($('ub-dona-svg'), [{ clase: 'an-naranja', desde: 0, hasta: fw }]);
+  // Una wallet: como siempre. Varias: un arco por wallet (los de las demás con otro tono) y una fila por cada una en la leyenda.
+  const varias = u.partes.length > 1 || S.wallets.some((w) => !w.archivada);
+  const porc = (sats) => (R.sats > 0 ? (sats / R.sats) * 100 : 0);
+  let desde = 0;
+  const arcos = u.partes.map((p, i) => {
+    const hasta = Math.min(1, desde + porc(p.sats) / 100);
+    const a = { clase: i === 0 ? 'an-naranja' : `an-w${Math.min(i, 5)}`, desde, hasta };
+    desde = hasta;
+    return a;
+  });
+  pintarAnillo($('ub-dona-svg'), arcos.length ? arcos : [{ clase: 'an-naranja', desde: 0, hasta: 0 }]);
   $('ub-pct').textContent = `${Math.round(u.pctWallet)}%`;
-  $('ub-dona').setAttribute('aria-label', `${Math.round(u.pctWallet)}% de tus sats en tu wallet y ${Math.round(100 - u.pctWallet)}% en el exchange`);
-  for (const [id, sats, parte] of [['ub-w', u.wallet, u.pctWallet], ['ub-e', u.exchange, 100 - u.pctWallet]]) {
-    const el = $(id);
-    el.textContent = '';
-    dual(el, `${entero(sats)} sats`, satsCorto(sats));
-    el.append(` · ${Math.round(parte)}%`);
+  const detalle = varias ? u.partes.filter((p) => p.sats > 0).map((p) => `${Math.round(porc(p.sats))}% en ${p.nombre}`).join(', ') : '';
+  $('ub-dona').setAttribute('aria-label', varias
+    ? `${Math.round(u.pctWallet)}% de tus sats en tus wallets${detalle ? ` (${detalle})` : ''} y ${Math.round(100 - u.pctWallet)}% en el exchange`
+    : `${Math.round(u.pctWallet)}% de tus sats en tu wallet y ${Math.round(100 - u.pctWallet)}% en el exchange`);
+  const lleno = (el, sats, parte) => { el.textContent = ''; dual(el, `${entero(sats)} sats`, satsCorto(sats)); el.append(` · ${Math.round(parte)}%`); };
+  const principal = u.partes.find((p) => p.id === 0);
+  $('ub-w-t').textContent = varias ? 'Mi wallet' : 'En tu wallet';
+  lleno($('ub-w'), varias ? (principal?.sats ?? 0) : u.wallet, varias ? porc(principal?.sats ?? 0) : u.pctWallet);
+  const filaE = $('ub-e').closest('div');
+  filaE.parentNode.querySelectorAll('.ub-extra').forEach((f) => f.remove());
+  if (varias) {
+    u.partes.forEach((p, i) => {
+      if (p.id === 0) return;
+      const fila = document.createElement('div');
+      fila.className = 'ub-extra';
+      const dt = document.createElement('dt');
+      const marca = document.createElement('i');
+      marca.className = `ub-c${Math.min(i, 5)}`;
+      marca.setAttribute('aria-hidden', 'true');
+      const nombre = document.createElement('span');
+      nombre.textContent = p.nombre; // el nombre entra siempre como texto
+      dt.append(marca, nombre);
+      const dd = document.createElement('dd');
+      lleno(dd, p.sats, porc(p.sats));
+      fila.append(dt, dd);
+      filaE.before(fila);
+    });
   }
+  lleno($('ub-e'), u.exchange, 100 - u.pctWallet);
 }
 $('ub-anotar').addEventListener('click', () => abrirHoja(null, 'traslado'));
 

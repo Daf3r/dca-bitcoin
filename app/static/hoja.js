@@ -1,4 +1,4 @@
-import { etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
+import { nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
 import { avisar } from './avisar.js';
 import { celebrar, destello } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
@@ -10,7 +10,7 @@ import { sonarGuardado } from './sonido.js';
 
 // ------------------------------------------------------------- hoja de anotar
 export const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const H = { tipo: 'compra', nota: '', etq: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false };
+const H = { tipo: 'compra', nota: '', etq: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', wallet: '', walletNueva: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false };
 export const hoja = $('hoja');
 
 // «Deshacer» tras guardar, corregir o anular (8 s): deshacer una compra nueva la anula, deshacer una anulación la vuelve a anotar con los mismos
@@ -65,6 +65,8 @@ export function abrirHoja(id = null, tipoInicial = 'compra') {
   H.etq = (c?.etiquetas ?? []).join(', ');
   H.extra = !!c?.extra;
   H.sentido = 'a_wallet';
+  H.wallet = '';
+  H.walletNueva = '';
   H.comision = '';
   const b = !c && tipoInicial === 'compra' ? leerBorrador() : null;
   if (b) Object.assign(H, { tipo: b.tipo, sats: b.sats ?? '', usd: b.usd ?? '', usdTocado: !!b.usd, nota: b.nota ?? '', etq: b.etq ?? '', txid: b.txid ?? '', extra: !!b.extra, sentido: b.sentido ?? 'a_wallet', comision: b.comision ?? '' });
@@ -154,6 +156,7 @@ function textoAvisos(avisos) {
 function camposSegunTipo() {
   const tras = H.tipo === 'traslado';
   $('h-sentido').hidden = !tras;
+  pintarSelectorWallet(tras);
   $('h-nota-l').hidden = !(H.tipo === 'venta' || tras);
   $('h-nota').placeholder = tras ? 'Por ejemplo: a mi Ledger' : 'Por ejemplo: gasté en renta';
   document.querySelectorAll('#h-avanzado [data-solo-compra]').forEach((el) => { el.hidden = H.tipo !== 'compra'; });
@@ -162,19 +165,57 @@ function camposSegunTipo() {
   document.querySelectorAll('#h-tipo button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tipo === H.tipo)));
   document.querySelectorAll('#h-sentido button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sentido === H.sentido)));
 }
+/** Las wallets que pueden recibir traslados (las archivadas ya no). */
+const walletsActivas = () => S.wallets.filter((w) => !w.archivada);
+/** El id de la wallet elegida: 0 es la principal, un número es otra y null es una nueva que aún no existe. */
+function walletElegida() {
+  if (H.wallet === 'nueva') return null;
+  return H.wallet === '' ? 0 : Number(H.wallet);
+}
+/** Selector de wallet: solo en un traslado y solo si hay más de una; si no, un enlace para usar otra. */
+function pintarSelectorWallet(tras) {
+  const activas = walletsActivas();
+  const caja = $('h-wallet-caja');
+  caja.hidden = !tras;
+  if (!tras) return;
+  const conSelector = activas.length > 0;
+  const nuevaAbierta = H.wallet === 'nueva' || (!conSelector && H.walletNueva !== '');
+  $('h-wallet-sel-l').hidden = !conSelector;
+  $('h-wallet-mas').hidden = conSelector || nuevaAbierta;
+  $('h-wallet-nueva-l').hidden = !nuevaAbierta;
+  if (conSelector) {
+    const sel = $('h-wallet');
+    const opciones = [['', 'Mi wallet'], ...activas.map((w) => [String(w.id), w.nombre]), ['nueva', 'Otra wallet nueva…']];
+    if (sel.options.length !== opciones.length || opciones.some(([v, t], i) => sel.options[i].value !== v || sel.options[i].textContent !== t)) {
+      sel.replaceChildren(...opciones.map(([v, t]) => Object.assign(document.createElement('option'), { value: v, textContent: t })));
+    }
+    sel.value = H.wallet;
+  }
+}
+$('h-wallet').addEventListener('change', (e) => { H.wallet = e.target.value; limpiarError(); pintarHoja(); if (H.wallet === 'nueva') $('h-wallet-nueva').focus(); });
+$('h-wallet-mas').addEventListener('click', () => { H.wallet = 'nueva'; pintarHoja(); $('h-wallet-nueva').focus(); });
+$('h-wallet-nueva').addEventListener('input', (e) => { H.walletNueva = e.target.value; pintarHoja(); });
 /** Traslado: el saldo total no cambia, solo cambia dónde están los sats. */
 function pintarHojaTraslado() {
   const d = datosHoja();
   const aWallet = H.sentido === 'a_wallet';
-  const neto = walletNeto(S.traslados);
-  $('hoja-t').textContent = aWallet ? 'Traslado a tu wallet' : 'Traslado de tu wallet al exchange';
-  $('h-sats-l').textContent = aWallet ? 'Sats que llegaron a tu wallet' : 'Sats que salieron de tu wallet';
-  const falla = !!d && (aWallet ? neto + d.sats > R.sats : d.sats > neto);
+  const id = walletElegida();
+  const nuevaAbierta = id === null || (!walletsActivas().length && H.walletNueva !== '');
+  const nombreW = id === null ? (H.walletNueva.trim() || 'la wallet nueva') : id === 0 ? 'tu wallet' : `«${nombreWallet(S.wallets, id)}»`;
+  const neto = id === null ? 0 : walletNetoDe(S.traslados, id);
+  const todas = walletNeto(S.traslados);
+  const sinNombre = id === null && !H.walletNueva.trim();
+  $('hoja-t').textContent = aWallet ? `Traslado a ${nombreW}` : `Traslado de ${nombreW} al exchange`;
+  $('h-sats-l').textContent = aWallet ? `Sats que llegaron a ${nombreW}` : `Sats que salieron de ${nombreW}`;
+  const falla = !!d && (aWallet ? todas + d.sats > R.sats : d.sats > neto);
   const enWallet = d ? Math.max(0, neto + (aWallet ? d.sats : -d.sats)) : neto;
+  const enTodas = d ? Math.max(0, todas + (aWallet ? d.sats : -d.sats)) : todas;
+  const parte = id === 0 && !S.wallets.length ? '' : ` (${enWallet === 0 ? 'nada' : entero(enWallet)} en ${nombreW})`;
   $('hoja-calc').textContent = !d ? (aWallet ? 'Escribe los sats que te llegaron a la wallet. El saldo total no cambia: solo cambia dónde están.' : 'Escribe los sats que sacaste de tu wallet hacia el exchange.')
-    : falla ? (aWallet ? `No tienes tantos sats: tu saldo es ${entero(R.sats)} y ya tienes ${entero(neto)} en la wallet.` : `No tienes tantos sats en tu wallet: tienes ${entero(neto)}.`)
-      : `Quedarán ${entero(enWallet)} sats en tu wallet y ${entero(Math.max(0, R.sats - enWallet))} en el exchange.`;
-  $('guardar').disabled = !d || falla || H.guardando;
+    : falla ? (aWallet ? `No tienes tantos sats: tu saldo es ${entero(R.sats)} y ya tienes ${entero(todas)} en tus wallets.` : `No tienes tantos sats en ${nombreW}: tienes ${entero(neto)}.`)
+      : id === 0 && !S.wallets.length ? `Quedarán ${entero(enWallet)} sats en tu wallet y ${entero(Math.max(0, R.sats - enWallet))} en el exchange.`
+        : `Quedarán ${entero(enTodas)} sats en tus wallets${parte} y ${entero(Math.max(0, R.sats - enTodas))} en el exchange.`;
+  $('guardar').disabled = !d || falla || H.guardando || (nuevaAbierta && sinNombre);
   $('guardar').textContent = H.guardando ? 'Guardando…' : 'Guardar traslado';
 }
 function pintarHoja() {
@@ -313,7 +354,15 @@ async function guardarTraslado(d, fecha) {
   const antes = R;
   let nota = '';
   try {
-    const t = await api('/api/traslados', { metodo: 'POST', cuerpo: { fecha, sats: d.sats, sentido: H.sentido, txid: extraerTxid(H.txid), nota: H.nota.trim() } });
+    if (H.wallet === 'nueva' || (!walletsActivas().length && H.walletNueva.trim())) {
+      // La wallet nueva se crea antes del traslado; si el traslado falla, queda creada y el reintento ya no la crea otra vez.
+      const w = await api('/api/wallets', { metodo: 'POST', cuerpo: { nombre: H.walletNueva.trim() } });
+      S.wallets = [...S.wallets, w];
+      H.wallet = String(w.id);
+      H.walletNueva = '';
+    }
+    const wid = walletElegida();
+    const t = await api('/api/traslados', { metodo: 'POST', cuerpo: { fecha, sats: d.sats, sentido: H.sentido, wallet_id: wid || null, txid: extraerTxid(H.txid), nota: H.nota.trim() } });
     S.traslados = [...S.traslados, t];
     borrarBorrador();
     resaltar(`t${t.id}`);
@@ -334,7 +383,8 @@ async function guardarTraslado(d, fecha) {
     H.guardando = false;
     cerrarHoja();
     pintar({ montana: true, desde: antes.sats });
-    const textoT = `Traslado anotado: ${entero(d.sats)} sats ${H.sentido === 'a_wallet' ? 'a tu wallet' : 'al exchange'}.${nota}`;
+    const adonde = !t.wallet_id && !S.wallets.length ? 'tu wallet' : `«${nombreWallet(S.wallets, t.wallet_id)}»`;
+    const textoT = `Traslado anotado: ${entero(d.sats)} sats ${H.sentido === 'a_wallet' ? `a ${adonde}` : `de ${adonde} al exchange`}.${nota}`;
     if (nota) avisar(textoT, null, true); // con comisión anotada aparte, deshacer solo el traslado dejaría el gasto: no se ofrece
     else conDeshacer(textoT, async () => {
       await api(`/api/traslados/${t.id}`, { metodo: 'DELETE' });
@@ -440,7 +490,8 @@ export function abrirAnularTraslado(id) {
   const t = S.traslados.find((x) => x.id === id);
   if (!t) return;
   $('d-titulo').textContent = '¿Anular este traslado?';
-  $('d-texto').textContent = `${fechaLarga(t.fecha)} · ${entero(t.sats)} sats ${t.sentido === 'a_exchange' ? 'de tu wallet al exchange' : 'a tu wallet'}`;
+  const w = !t.wallet_id && !S.wallets.length ? 'tu wallet' : `«${nombreWallet(S.wallets, t.wallet_id)}»`;
+  $('d-texto').textContent = `${fechaLarga(t.fecha)} · ${entero(t.sats)} sats ${t.sentido === 'a_exchange' ? `de ${w} al exchange` : `a ${w}`}`;
   dialogo.dataset.tras = String(id);
   dialogo.returnValue = '';
   dialogo.showModal();
@@ -460,7 +511,7 @@ dialogo.addEventListener('close', async () => {
     pintar();
     if (!anulado) { avisar('Traslado anulado. Queda en el historial.', null, true); return; }
     conDeshacer('Traslado anulado. Queda en el historial.', async () => {
-      const t = await api('/api/traslados', { metodo: 'POST', cuerpo: { fecha: anulado.fecha, sats: anulado.sats, sentido: anulado.sentido, txid: anulado.txid ?? '', nota: anulado.nota ?? '' } });
+      const t = await api('/api/traslados', { metodo: 'POST', cuerpo: { fecha: anulado.fecha, sats: anulado.sats, sentido: anulado.sentido, wallet_id: anulado.wallet_id ?? null, txid: anulado.txid ?? '', nota: anulado.nota ?? '' } });
       S.traslados = [...S.traslados, t];
       resaltar(`t${t.id}`);
       repintarTrasDeshacer('Vuelve a estar anotado el traslado.');

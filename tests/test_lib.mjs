@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -383,7 +383,7 @@ eq(costoVsPromedio(Rcv, [], null, dd(39)), null, 'sin histórico no se muestra')
 
 // Dónde están tus sats: traslados entre el exchange y la wallet
 const tr = (sats, sentido = 'a_wallet') => ({ sats, sentido });
-eq(ubicacionSats([], 1000), { wallet: 0, exchange: 1000, pctWallet: 0, hay: false }, 'sin traslados todo se considera en el exchange');
+eq(ubicacionSats([], 1000), { wallet: 0, exchange: 1000, pctWallet: 0, hay: false, partes: [] }, 'sin traslados todo se considera en el exchange');
 const u1 = ubicacionSats([tr(600)], 1000);
 eq([u1.wallet, u1.exchange, u1.pctWallet, u1.hay], [600, 400, 60, true], 'un traslado a la wallet');
 eq(ubicacionSats([tr(600), tr(200, 'a_exchange')], 1000).wallet, 400, 'lo que vuelve al exchange baja la wallet');
@@ -393,6 +393,16 @@ eq([u2.wallet, u2.exchange, u2.pctWallet], [1000, 0, 100], 'la wallet nunca supe
 eq(ubicacionSats([tr(100, 'a_exchange')], 1000).wallet, 0, 'la wallet nunca es negativa');
 eq(ubicacionSats([tr(600)], 0).pctWallet, 0, 'con saldo cero no se divide');
 eq([walletNeto([tr(5), tr(2, 'a_exchange')]), walletNeto(null)], [3, 0], 'walletNeto suma con signo y tolera null');
+// Varias wallets (idea 156): cada una cuenta lo suyo, nunca negativo, y entre todas nunca más que el saldo
+const trw = (sats, wallet_id = null, sentido = 'a_wallet') => ({ sats, sentido, wallet_id });
+const lw = [{ id: 7, nombre: 'Ledger' }, { id: 9, nombre: 'Trezor' }];
+const uw = ubicacionSats([trw(500), trw(300, 7), trw(100, 9), trw(50, 7, 'a_exchange')], 2000, lw);
+eq([uw.wallet, uw.exchange, uw.pctWallet, uw.partes.map((p) => [p.id, p.nombre, p.sats])], [850, 1150, 42.5, [[0, 'Mi wallet', 500], [7, 'Ledger', 250], [9, 'Trezor', 100]]], 'cada wallet con su nombre y sus sats; la principal primero');
+eq(ubicacionSats([trw(600), trw(400, 7)], 700, lw).partes.map((p) => p.sats), [600, 100], 'si el total pasa del saldo, se recorta en orden (la principal primero)');
+eq(ubicacionSats([trw(100, 7, 'a_exchange'), trw(80)], 1000, lw).partes.map((p) => p.sats), [80, 0], 'una wallet en negativo cuenta cero (no resta a las demás)');
+eq([walletNetoDe([trw(10), trw(4, 7), trw(1, 7, 'a_exchange')], 7), walletNetoDe([trw(10), trw(4, 7)], 0), walletNetoDe([trw(10)], null)], [3, 10, 10], 'walletNetoDe separa por wallet (0 y null son la principal)');
+eq([nombreWallet(lw, 7), nombreWallet(lw, 0), nombreWallet(lw, null), nombreWallet(lw, 99), nombreWallet(null, 3)], ['Ledger', 'Mi wallet', 'Mi wallet', 'otra wallet', 'otra wallet'], 'nombreWallet: la principal, una conocida y una que ya no está');
+eq(ubicacionSats([tr(600)], 1000).partes, [{ id: 0, nombre: 'Mi wallet', sats: 600 }], 'sin wallets extra, una sola parte: la principal');
 
 // El cielo según la hora (cielo.js es un script clásico: se carga en un contexto con un `document` de mentira)
 {

@@ -58,6 +58,8 @@ assert cl.post("/api/login", json={"usuario": "Daf3r", "clave": "clave-de-prueba
 
 rng = random.Random(SEMILLA)
 HOY = ritmo.hoy_sv()
+# Dos wallets además de la principal (idea 156): los traslados al azar van a cualquiera de las tres
+WALLETS = [cl.post("/api/wallets", json={"nombre": n}).get_json()["id"] for n in ("Ledger", "Trezor")]
 
 
 def fecha_al_azar():
@@ -97,7 +99,8 @@ def operacion(compras, traslados):
         return "venta", cl.post("/api/compras", json={"fecha": fecha_al_azar(), "monto": round(sats / 1e8 * 70_000, 2) or 0.01, "sats": sats, "tipo": "venta"})
     if azar < 0.74:
         sats = rng.randrange(1, max(2, int(max(saldo, 1) * rng.uniform(0.05, 1.3)) + 2))
-        return "traslado", cl.post("/api/traslados", json={"fecha": fecha_al_azar(), "sats": sats, "sentido": rng.choice(["a_wallet", "a_wallet", "a_exchange"])})
+        return "traslado", cl.post("/api/traslados", json={"fecha": fecha_al_azar(), "sats": sats, "sentido": rng.choice(["a_wallet", "a_wallet", "a_exchange"]),
+                                                                 "wallet_id": rng.choice([None, None, *WALLETS])})
     if azar < 0.84:
         c = rng.choice(compras)
         return "anular compra", cl.delete(f"/api/compras/{c['id']}")
@@ -145,8 +148,10 @@ if shutil.which("node"):
         movs = [(c["fecha"], c["id"], c["tipo"], c["monto"], c["sats"], c["extra"]) for c in caso["compras"]]
         inv, sats = ritmo.invertido_y_sats(movs)
         check(sats == esperado["sats"] and abs(inv - esperado["inv"]) < 1e-6, f"saldo e invertido igual que lib.js (secuencia {i}): {sats}/{inv} contra {esperado}")
-        neto = sum(t["sats"] if t["sentido"] == "a_wallet" else -t["sats"] for t in caso["traslados"])
-        wallet = max(0, min(neto, sats))
+        netos: dict[int, int] = {}
+        for t in caso["traslados"]:
+            netos[t["wallet_id"] or 0] = netos.get(t["wallet_id"] or 0, 0) + (t["sats"] if t["sentido"] == "a_wallet" else -t["sats"])
+        wallet = max(0, min(sum(max(0, v) for v in netos.values()), sats))
         check(esperado["wallet"] == wallet and esperado["exchange"] == sats - wallet, f"wallet y exchange igual que lib.js (secuencia {i}): {wallet} contra {esperado}")
 else:
     print("(sin node: se omite la paridad con lib.js)")

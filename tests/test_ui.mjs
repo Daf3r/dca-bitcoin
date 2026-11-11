@@ -462,6 +462,88 @@ try {
       }
       await ctx.close();
     }
+    // Varias wallets (idea 156): crear una al anotar un traslado, elegir entre ellas, validar por wallet, ver el reparto y archivarla
+    {
+      const wal = await servidor('hoy');
+      try {
+        const { ctx, p, consola } = await entrar(navegador, wal, ADMIN);
+        if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+        const saldoT = (await datos(p, '/api/compras')).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+        const parte = Math.floor(saldoT / 4);
+        await p.waitForTimeout(6000);
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.click('#h-tipo button[data-tipo="traslado"]');
+        ok(await p.locator('#h-wallet-mas').isVisible() && !(await p.locator('#h-wallet').isVisible()), 'sin más wallets, la hoja ofrece «Usar otra wallet…» y no un selector');
+        await p.click('#h-wallet-mas');
+        ok(await p.locator('#h-wallet-nueva').isVisible(), 'al pedirla sale el campo del nombre');
+        await p.fill('#h-sats', String(parte));
+        ok(await p.locator('#guardar').isDisabled(), 'sin nombre no se puede guardar el traslado a la wallet nueva');
+        await p.fill('#h-wallet-nueva', 'Ledger');
+        ok(/Ledger/.test(await p.textContent('#hoja-calc')) && !(await p.locator('#guardar').isDisabled()), 'con el nombre, la hoja habla de «Ledger»');
+        ok(await p.locator('#h-wallet-nueva').evaluate((el) => el.getBoundingClientRect().height >= 47.5), 'el campo del nombre mide 48 px');
+        await p.click('#guardar');
+        await p.waitForTimeout(1800);
+        const ws = await datos(p, '/api/wallets');
+        const tl = await datos(p, '/api/traslados');
+        eq([ws.length, ws[0]?.nombre, tl.length, tl[0]?.wallet_id === ws[0]?.id], [1, 'Ledger', 1, true], 'se creó la wallet y el traslado va a ella');
+        ok(/Ledger/.test(await p.innerText('#ub-dona-text, #ub-lista').catch(() => '')) || /Ledger/.test(await p.innerText('#ubicacion')), 'la tarjeta de dónde están tus sats nombra la wallet');
+        ok(/en Ledger/.test(await p.getAttribute('#ub-dona', 'aria-label')), 'y su texto accesible también');
+        ok(/«Ledger»/.test(await p.innerText('#lista .fila[data-tras]')), 'la lista dice a qué wallet fue el traslado');
+        // Con una wallet extra aparece el selector; cada wallet se valida por separado
+        await p.waitForTimeout(6000);
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.click('#h-tipo button[data-tipo="traslado"]');
+        eq(await p.$$eval('#h-wallet option', (os) => os.map((o) => o.textContent)), ['Mi wallet', 'Ledger', 'Otra wallet nueva…'], 'el selector ofrece la principal, Ledger y «Otra wallet nueva…»');
+        await p.click('#h-sentido button[data-sentido="a_exchange"]');
+        await p.fill('#h-sats', '1');
+        ok(/No tienes tantos sats en tu wallet/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'de «Mi wallet» no se puede sacar lo que no tiene, aunque Ledger sí tenga');
+        await p.selectOption('#h-wallet', { label: 'Ledger' });
+        await p.fill('#h-sats', String(parte + 1));
+        ok(/No tienes tantos sats en «Ledger»/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'ni de Ledger más de lo que tiene, con su nombre');
+        await p.fill('#h-sats', String(Math.floor(parte / 2)));
+        ok(!(await p.locator('#guardar').isDisabled()), 'lo que sí tiene se puede sacar');
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(400);
+        // Un traslado a la principal: la dona reparte entre las dos
+        await p.waitForTimeout(6000);
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.click('#h-tipo button[data-tipo="traslado"]');
+        await p.fill('#h-sats', String(parte));
+        await p.click('#guardar');
+        await p.waitForTimeout(1800);
+        eq(await p.$$eval('#ubicacion .ub-lista > div', (ds) => ds.map((d) => d.querySelector('dt').textContent.trim())), ['Mi wallet', 'Ledger', 'En el exchange'], 'la leyenda tiene una fila por wallet y una del exchange');
+        eq(await p.locator('#ub-dona-svg circle').count(), 3, 'la dona tiene un arco por wallet (más la pista)');
+        // «Tus datos»: archivar solo si está vacía
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        await p.click('#dc-datos-btn');
+        await p.waitForTimeout(500);
+        ok(await p.locator('#dd-wallets').isVisible() && (await p.textContent('#dd-wallets-lista')).includes('Ledger'), 'en «Tus datos» salen las wallets');
+        ok(await p.locator('#dd-wallets-lista .ses-cerrar').isDisabled(), 'con sats no se puede archivar');
+        await p.evaluate(async ({ sats, id }) => {
+          await fetch('/api/traslados', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), sats, sentido: 'a_exchange', wallet_id: id }) });
+        }, { sats: parte, id: ws[0].id });
+        await p.click('#dc-datos [data-cuenta="volver"]');
+        await p.click('#dc-datos-btn').catch(() => {});
+        await p.reload({ waitUntil: 'networkidle' });
+        await p.waitForTimeout(3200);
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        await p.click('#dc-datos-btn');
+        await p.waitForTimeout(500);
+        ok(!(await p.locator('#dd-wallets-lista .ses-cerrar').isDisabled()), 'vacía, sí se puede archivar');
+        await p.click('#dd-wallets-lista .ses-cerrar');
+        await p.waitForTimeout(700);
+        ok((await p.textContent('#dd-wallets-lista')).includes('archivadas') && (await datos(p, '/api/wallets'))[0].archivada === true, 'se archiva y el servidor lo confirma');
+        eq(consola.filter((c) => !/400|409/.test(c)), [], `consola limpia con varias wallets: ${consola.join(' | ')}`);
+        await ctx.close();
+      } finally {
+        wal.parar();
+      }
+    }
     // Enlace de solo lectura para hojas de cálculo (idea 159): solo el admin; el token se ve una vez; revocar lo apaga.
     {
       const { ctx, p, consola } = await entrar(navegador, avisos, ADMIN, { permissions: ['clipboard-read', 'clipboard-write'] });
