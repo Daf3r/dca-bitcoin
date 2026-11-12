@@ -353,7 +353,7 @@ export function equilibrio(R, vivo) {
 /** «hace 12 s», «hace 3 min», «hace 2 h»: para el precio en vivo. */
 export function haceCuanto(ts, ahora = Date.now()) {
   const s = Math.max(0, Math.round((ahora - ts) / 1000));
-  if (s < 5) return 'ahora mismo';
+  if (s < 5) return 'ahora';
   if (s < 60) return `hace ${s} s`;
   const m = Math.floor(s / 60);
   if (m < 60) return `hace ${m} min`;

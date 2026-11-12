@@ -235,7 +235,7 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .campo-txt, .yo-txt { fill: #f7e8cf; font: 600 14px var(--serif); }
 .campo-txt { paint-order: stroke; stroke: color-mix(in oklab, var(--monte-sombra) 80%, transparent); stroke-width: 4px; stroke-linejoin: round; }
 @media (min-width: 1100px) { .campo-txt { font-size: 16px; } }
-.campo-txt.cima { stroke: color-mix(in oklab, var(--c1) 85%, transparent); fill: var(--cielo-txt); }
+.campo-txt.cima { stroke: color-mix(in oklab, var(--c2) 55%, transparent); stroke-width: 3.5px; fill: var(--cielo-txt); }
 .yo-txt { fill: var(--naranja-osc); font-weight: 700; }
 .yo-punto { fill: var(--naranja); stroke: var(--nieve); stroke-width: 3; }
 .yo-halo { fill: var(--naranja); opacity: 0.35; transform-box: fill-box; transform-origin: center; animation: respira 2.4s ease-in-out infinite; }
@@ -453,6 +453,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .vistas { align-self: start; min-width: 0; max-width: 100%; margin-bottom: 4px; }
 .vistas button { min-width: 0; padding: 0 clamp(8px, 3.4vw, 14px); font-size: 0.9375rem; }
 .vistas[hidden] { display: none; }
+@media (min-width: 700px) { .vistas { align-self: stretch; } .vistas button { flex: 1; } }
 .cuerpo:not([data-vista="valor"]) #valor, .cuerpo:not([data-vista="costo"]) #costo-prom, .cuerpo:not([data-vista="sats"]) #sats-acum,
 .cuerpo[data-vista="valor"] #mercado, .cuerpo[data-vista="costo"] #mercado, .cuerpo[data-vista="sats"] #mercado { display: none; }
 /* Costo promedio y sats: línea o escalera naranja con sus puntos. */
@@ -756,7 +757,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .saldo { top: 84px; left: 40px; right: 40px; }
   .cima { padding-inline: 40px; }
   .cuerpo { padding-inline: 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
-  .tramo, .mercado, .compras, .pie, .comienzo, .rep-anios { grid-column: 1 / -1; }
+  .tramo, .spd, .vistas, .mercado, .compras, .pie, .comienzo, .rep-anios { grid-column: 1 / -1; }
   .reportes { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lienzo { margin-inline: 0; }
   .hoja { align-items: center; justify-items: center; }
@@ -955,9 +956,16 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .av-fila { display: flex; align-items: flex-start; gap: 12px; min-height: var(--toque); padding: 10px 12px; border-radius: 14px; background: var(--s2); cursor: pointer; }
 .av-fila input { flex: none; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--naranja); }
 .av-fila span { display: grid; gap: 2px; }
+/* Casillas con el mismo lenguaje que el resto: borde suave, naranja al marcar y una palomita (solo CSS). */
+:is(.h-extra, .l-comp, .av-fila) input[type="checkbox"] { appearance: none; -webkit-appearance: none; display: grid; place-content: center; border: 2px solid var(--txt3); border-radius: 7px; background: transparent; cursor: pointer; transition: background-color 0.15s, border-color 0.15s; }
+:is(.h-extra, .l-comp, .av-fila) input[type="checkbox"]::before { content: ""; width: 11px; height: 6px; border-left: 2.5px solid var(--naranja-osc); border-bottom: 2.5px solid var(--naranja-osc); transform: rotate(-45deg) translate(1px, -1px); opacity: 0; transition: opacity 0.12s; }
+:is(.h-extra, .l-comp, .av-fila) input[type="checkbox"]:checked { background: var(--naranja); border-color: var(--naranja); }
+:is(.h-extra, .l-comp, .av-fila) input[type="checkbox"]:checked::before { opacity: 1; }
+@media (forced-colors: active) { :is(.h-extra, .l-comp, .av-fila) input[type="checkbox"] { appearance: auto; } }
 .av-fila b { font-size: 0.9375rem; }
 .av-fila small { color: var(--txt2); font-size: 0.8125rem; line-height: 1.35; }
 .d-bot .primario { border-color: var(--naranja); background: var(--naranja); color: var(--naranja-osc); }
+#en-crear { width: 100%; min-height: var(--toque); border: 1.5px solid var(--naranja); border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font-weight: 650; cursor: pointer; }
 .hist { max-height: 60vh; overflow-y: auto; margin: 10px 0 14px; }
 .hist li { display: grid; gap: 1px; padding: 10px 0; border-bottom: 1px solid var(--s3); }
 .hist time { font-size: 0.75rem; color: var(--txt3); }
