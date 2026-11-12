@@ -36,6 +36,47 @@
 <link rel="preload" href="/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
+<!-- Los módulos se piden todos a la vez (en vez de descubrirlos uno tras otro al ejecutar el anterior): la app abre antes, sobre todo en el teléfono. -->
+<link rel="modulepreload" href="/estado.js">
+<link rel="modulepreload" href="/datos.js">
+<link rel="modulepreload" href="/avisar.js">
+<link rel="modulepreload" href="/pintar.js">
+<link rel="modulepreload" href="/mercado.js">
+<link rel="modulepreload" href="/lista.js">
+<link rel="modulepreload" href="/hoja.js">
+<link rel="modulepreload" href="/reportes.js">
+<link rel="modulepreload" href="/celebracion.js">
+<link rel="modulepreload" href="/novedades.js">
+<link rel="modulepreload" href="/csv.js">
+<link rel="modulepreload" href="/cuenta.js">
+<link rel="modulepreload" href="/parallax.js">
+<link rel="modulepreload" href="/refrescar.js">
+<link rel="modulepreload" href="/copiar.js">
+<link rel="modulepreload" href="/minicab.js">
+<link rel="modulepreload" href="/atajos.js">
+<link rel="modulepreload" href="/indice.js">
+<link rel="modulepreload" href="/anotar.js">
+<link rel="modulepreload" href="/lib.js">
+<link rel="modulepreload" href="/movimiento.js">
+<link rel="modulepreload" href="/entrada.js">
+<link rel="modulepreload" href="/anillo.js">
+<link rel="modulepreload" href="/iconos.js">
+<link rel="modulepreload" href="/insignia.js">
+<link rel="modulepreload" href="/tv.js">
+<link rel="modulepreload" href="/cifras.js">
+<link rel="modulepreload" href="/montana.js">
+<link rel="modulepreload" href="/odometro.js">
+<link rel="modulepreload" href="/grafico.js">
+<link rel="modulepreload" href="/valor.js">
+<link rel="modulepreload" href="/escalera.js">
+<link rel="modulepreload" href="/sonido.js">
+<link rel="modulepreload" href="/avisos.js">
+<link rel="modulepreload" href="/cambios.js">
+<link rel="modulepreload" href="/sesiones.js">
+<link rel="modulepreload" href="/enlaces.js">
+<link rel="modulepreload" href="/wallets.js">
+<link rel="modulepreload" href="/sistema.js">
+<link rel="modulepreload" href="/historia.js">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
@@ -117,7 +158,7 @@
   <section class="spd" id="spd" aria-labelledby="t-spd" hidden>
     <h2 class="sr" id="t-spd">Sats por dólar</h2>
     <div class="spd-txt">
-      <p class="spd-k">Hoy, con $1 compras</p>
+      <p class="spd-k">Hoy, $1 te compra</p>
       <p class="spd-v"><b id="spd-v">—</b> <span>sats</span></p>
       <p class="spd-t" id="spd-t"></p>
     </div>

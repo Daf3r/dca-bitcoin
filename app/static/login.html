@@ -34,6 +34,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="preload" href="/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/styles.css">
+<!-- Los módulos se piden todos a la vez (en vez de descubrirlos uno tras otro al ejecutar el anterior): la app abre antes, sobre todo en el teléfono. -->
+<link rel="modulepreload" href="/montana.js">
+<link rel="modulepreload" href="/parallax.js">
+<link rel="modulepreload" href="/lib.js">
+<link rel="modulepreload" href="/movimiento.js">
 <script type="module" src="/login.js"></script>
 </head>
 <body class="pag-login">

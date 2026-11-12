@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
-  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
+  escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, ticksPrecio, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -342,6 +342,11 @@ eq(ticksDolares(1100), [500, 1000], 'hasta $1,100: marcas en $500 y $1,000');
 eq(ticksDolares(24), [10, 20], 'hasta $24: $10 y $20');
 eq(ticksDolares(95), [50], 'hasta $95: solo $50 (la de $100 no cabe)');
 eq(ticksDolares(3000), [1000, 2000], 'hasta $3,000: $1,000 y $2,000');
+eq(ticksPrecio(60000, 100000), [60000, 80000, 100000], 'precio de 60k a 100k: marcas cada 20k');
+eq(ticksPrecio(70500, 91700), [80000, 90000], 'precio de 70.5k a 91.7k: 80k y 90k');
+eq(ticksPrecio(100, 100000, true), [100, 1000, 10000, 100000], 'escala log: potencias de 10 si hay demasiadas');
+eq(ticksPrecio(5, 90, true), [5, 10, 20, 50], 'escala log corta: 1, 2 y 5 de cada potencia');
+eq(ticksPrecio(10, 5), [], 'rango invertido: sin marcas');
 eq(ticksDolares(1.1e6), [500000, 1000000], 'hasta $1.1M: $500,000 y $1,000,000');
 eq(ticksDolares(0), [], 'sin máximo no hay marcas');
 ok(ticksDolares(1234).length >= 1 && ticksDolares(1234).length <= 3 && ticksDolares(1234).every((v) => v < 1234), 'nunca más de 3 marcas y siempre dentro del gráfico');

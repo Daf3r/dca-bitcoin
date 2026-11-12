@@ -2139,4 +2139,21 @@ r = adm.post("/api/traslados/import", data=f"fecha,sats,sentido,txid,nota,wallet
 check(r.get_json()["nuevos"] == 0 and "no se crea" in r.get_json()["omitidos"][0], "importar tampoco pasa del tope")
 check("wallet_id" in {r[1] for r in cxv.execute("PRAGMA table_info(traslados)")}, "la migración añadió traslados.wallet_id")
 
+# --- Carga rápida: la página pide por adelantado (modulepreload) todos los módulos que va a importar, cada uno con su versión
+import re as _re2
+def _grafo_js(raiz):
+    visto, cola = [], [raiz]
+    while cola:
+        f = cola.pop(0)
+        if f in visto:
+            continue
+        visto.append(f)
+        cola += _re2.findall(r"""(?:from|import)\s*['"]\./([\w-]+\.js)['"]""", open(os.path.join(server.ESTATICOS, f)).read())
+    return visto
+for _pag, _raiz in (("/", "app.js"), ("/login", "login.js")):
+    _cl = adm if _pag == "/" else anon
+    _html = _cl.get(_pag).get_data(as_text=True)
+    _pre = _re2.findall(r'<link rel="modulepreload" href="/([\w-]+\.js)\?v=[0-9a-f]+">', _html)
+    check(sorted(_pre) == sorted(m for m in _grafo_js(_raiz) if m != _raiz), f"{_pag}: modulepreload de todos los módulos con su versión ({len(_pre)})")
+
 print("OK", ok, "comprobaciones")

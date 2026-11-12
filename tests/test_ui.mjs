@@ -780,7 +780,7 @@ try {
         const cs = (s) => getComputedStyle(document.querySelector(s));
         return { cielo: cs('.par-cielo').transform, lejos: cs('.par-lejos').transform, medio: cs('.par-medio').transform, filtro: cs('.lejos').filter,
           nube: cs('.nube.n1').display, nubeAnim: cs('.nube.n1').animationName, niebla: cs('.niebla').display, ave: cs('.ave').animationName, aveDisplay: cs('.ave').display,
-          velo: getComputedStyle(document.querySelector('.escena'), '::after').content === 'none' ? 0 : Number(getComputedStyle(document.querySelector('.escena'), '::after').opacity), marca: cs('.marca').animationName, ico: cs('.marca-ico path').animationName,
+          velo: getComputedStyle(document.querySelector('.escena-velo')).display === 'none' ? 0 : Number(getComputedStyle(document.querySelector('.escena-velo')).opacity), marca: cs('.marca').animationName, ico: cs('.marca-ico path').animationName,
           sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
       });
       // Todos los efectos, de día y en un teléfono potente
