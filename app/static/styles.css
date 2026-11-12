@@ -110,7 +110,7 @@ button, input { font: inherit; color: inherit; }
 .montana svg { display: block; width: 100%; height: 100%; }
 /* Grano estático (un PNG de 96 px en mosaico, mezclado al 5 %): disimula las bandas de los degradados largos en pantallas
    oscuras y da textura de papel. No se anima; fuera en modo ligero. */
-.montana::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: url("/grano.png") repeat; background-size: 96px 96px; mix-blend-mode: overlay; opacity: 0.05; }
+.montana::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: url("/grano.png") repeat; background-size: 96px 96px; opacity: 0.028; } /* motas claras y oscuras con transparencia (sin mix-blend-mode, que en iPhone obliga a recomponer toda la escena) */
 html[data-ligero] .montana::after { content: none; }
 /* Hora dorada: el cielo es un degradado continuo de las cinco capas de cielo.js (antes, cinco franjas de borde duro) y la
    luz del astro se difumina (halo radial y resplandor sobre el horizonte). Todo sale de las variables de la hora. */
@@ -158,10 +158,7 @@ html[data-efectos="todos"][data-cielo="noche"] .fugaz { animation: fugaz 34s lin
 /* Parallax por capas: la sierra lejana y la media se retrasan al bajar y se mueven con el puntero; el cielo, aún más.
    Cada capa va un 5 % más grande desde el centro para que al moverse no deje huecos en los bordes. */
 .par { transform-box: view-box; transform-origin: 50% 50%; }
-html[data-efectos="todos"] .par { transition: transform 0.3s ease-out; }
-html[data-efectos="todos"] .par-cielo { transform: translate(calc(var(--par-x, 0) * -5px), calc(var(--par-y, 0) * 0.3px)) scale(1.05); }
-html[data-efectos="todos"] .par-lejos { transform: translate(calc(var(--par-x, 0) * -9px), calc(var(--par-y, 0) * 0.2px)) scale(1.05); }
-html[data-efectos="todos"] .par-medio { transform: translate(calc(var(--par-x, 0) * -15px), calc(var(--par-y, 0) * 0.1px)) scale(1.05); }
+/* (El transform de cada capa lo escribe parallax.js directamente: ver ese archivo.) */
 /* Desenfoque leve de la sierra lejana (profundidad de campo); fuera del modo ligero. */
 html[data-efectos="todos"]:not([data-ligero]) .lejos { filter: url(#m-bruma); }
 /* Nubes y niebla: el color sale del cielo de la hora (--nube). */
@@ -184,7 +181,16 @@ html[data-efectos="todos"][data-cielo="amanecer"] .ave-ala { animation: aleteo 0
 html[data-efectos="todos"][data-cielo="amanecer"] .ave-ala.a2 { animation-delay: -0.15s; }
 html[data-efectos="todos"][data-cielo="amanecer"] .ave-ala.a3 { animation-delay: -0.3s; }
 /* El cielo se funde con la página al bajar: un velo del color del fondo que sube con el desplazamiento (oscurece en el tema oscuro, aclara en el claro). */
-html[data-efectos="todos"] .escena::after { content: ""; position: absolute; inset: 0; z-index: 0; background: var(--fondo); opacity: calc(var(--scroll-p, 0) * 0.7); pointer-events: none; }
+/* Rendimiento en teléfono: las nubes, la niebla y las estrellas se mueven tan despacio (un píxel por segundo o menos) que no
+   hace falta redibujar el SVG sesenta veces por segundo. Con `steps()` se actualizan unas pocas veces por segundo, con saltos de
+   menos de un píxel: no se nota y la escena casi no repinta. En pantallas grandes siguen suaves. */
+@media (max-width: 899px) {
+  html[data-efectos="todos"] .nube { animation-timing-function: steps(1300); }
+  html[data-efectos="todos"] .niebla-a, html[data-efectos="todos"] .niebla-b { animation-timing-function: steps(250); }
+  html[data-efectos="todos"] .estrella.t1, html[data-efectos="todos"] .estrella.t2, html[data-efectos="todos"] .estrella.t3, html[data-efectos="todos"] .estrella.t4 { animation-timing-function: steps(15); }
+}
+.escena-velo { display: none; position: absolute; inset: 0; z-index: 0; background: var(--fondo); opacity: 0; pointer-events: none; }
+html[data-efectos="todos"] .escena-velo { display: block; }
 /* La escena despierta al abrir (entrada.js, solo con todos los efectos): `translate` es independiente de `transform`, así que no
    pisa el parallax. */
 @keyframes asienta { from { translate: 0 18px; opacity: 0.4; } to { translate: none; opacity: 1; } }
