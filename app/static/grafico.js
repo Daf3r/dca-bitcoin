@@ -1,5 +1,5 @@
 // Gráfico del precio de BTC con tus compras encima y tu costo promedio.
-import { usd, usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha, tramosCaida } from './lib.js';
+import { usd, usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha, tramosCaida, ticksPrecio } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { ilustracion } from './iconos.js';
 
@@ -76,6 +76,12 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
     const p = pts[Math.round((k / (n - 1)) * (pts.length - 1))];
     s += `<text class="g-t" x="${f1(x(p.fecha))}" y="${H - 8}" text-anchor="${k === 0 ? 'start' : k === n - 1 ? 'end' : 'middle'}">${rango && rango <= 182 ? fechaCorta(p.fecha) : mes(p.fecha)}</text>`;
   }
+  // Escala de precios: líneas de referencia suaves con cifra redonda al borde derecho (no estorban a «Tu costo» ni al máximo).
+  const evita = [promDentro ? y(promedio) : null, maximo30 ? y(maximo30.max) : null].filter((v) => v != null);
+  const ticksP = ticksPrecio(log ? Math.exp(lo) : lo, log ? Math.exp(hi) : hi, log)
+    .map((v) => ({ v, yy: y(v) }))
+    .filter(({ yy }) => yy > m.t + 12 && yy < H - m.b - 8 && evita.every((e) => Math.abs(yy - e) > 17));
+  for (const { yy } of ticksP) s += `<line class="v-rej g-rej" x1="${m.l}" x2="${W - m.r}" y1="${f1(yy)}" y2="${f1(yy)}"/>`;
   s += `<path class="g-area" d="${linea}L${f1(x(pts.at(-1).fecha))} ${H - m.b}L${f1(x(pts[0].fecha))} ${H - m.b}Z"/>`;
   // Entre el precio y tu costo promedio: sombra lisa por encima de tu costo (vas ganando) y rayas por debajo (vas perdiendo).
   if (promDentro) {
@@ -83,6 +89,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
     s += `<path class="g-zona-g" clip-path="url(#g-clip-g)" d="${cerrada}"/><path class="g-zona-p" clip-path="url(#g-clip-p)" d="${cerrada}"/>`;
   }
   s += `<path class="g-linea" d="${linea}"/>`;
+  for (const { v, yy } of ticksP) s += `<text class="g-t v-eje g-eje" x="${W - m.r}" y="${f1(yy - 5)}" text-anchor="end">${usd0(v)}</text>`;
   // Máximo de 30 días (solo con la tarjeta de gran caída): una línea punteada suave con su etiqueta.
   if (maximo30) {
     const ym = y(maximo30.max);

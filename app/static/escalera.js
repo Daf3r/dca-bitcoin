@@ -50,7 +50,7 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
     const p = puntos[Math.round((k / (n - 1)) * (puntos.length - 1))];
     s += `<text class="g-t" x="${f1(x(p.fecha))}" y="${H - 8}" text-anchor="${k === 0 ? 'start' : k === n - 1 ? 'end' : 'middle'}">${mes(p.fecha)}</text>`;
   }
-  const ticks = marcas(lo, hi * 0.97);
+  const ticks = marcas(lo, hi * 0.97).filter((v) => y(v) < base - 16); // la marca pegada a la base (p. ej. «0 sats») solo estorba al primer punto
   for (const v of ticks) s += `<line class="v-rej" x1="${m.l}" x2="${W - m.r}" y1="${f1(y(v))}" y2="${f1(y(v))}"/>`;
   s += `<line class="v-base" x1="${m.l}" x2="${W - m.r}" y1="${base}" y2="${base}"/>`;
   if (desdeCero) s += `<path class="s-area" d="${d}L${f1(x(puntos.at(-1).fecha))} ${base}L${f1(x(puntos[0].fecha))} ${base}Z"/>`;

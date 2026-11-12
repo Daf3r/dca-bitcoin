@@ -570,6 +570,30 @@ export function ticksDolares(max) {
 }
 
 /**
+ * Marcas «redondas» (1, 2, 5 × 10ⁿ) para el eje de precios de un gráfico que va de `lo` a `hi` dólares: entre 2 y 4.
+ * En escala lineal son múltiplos de un paso redondo; en logarítmica, los 1, 2 y 5 de cada potencia de 10 (se aclaran
+ * si salen demasiadas). Devuelve de menor a mayor, solo las que caen dentro de `lo`–`hi`.
+ * @param {number} lo
+ * @param {number} hi
+ * @param {boolean} [log]
+ * @returns {number[]}
+ */
+export function ticksPrecio(lo, hi, log = false) {
+  if (!(hi > lo) || !(lo > 0)) return [];
+  const bonito = (v) => { const mag = 10 ** Math.floor(Math.log10(v)); return ([1, 2, 5, 10].find((k) => k * mag >= v) ?? 10) * mag; };
+  /** @type {number[]} */
+  let t = [];
+  if (log) {
+    for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) for (const k of [1, 2, 5]) { const v = k * 10 ** e; if (v >= lo && v <= hi) t.push(v); }
+    if (t.length > 4) t = t.filter((v) => /^1/.test(String(v)));
+  } else {
+    const paso = bonito((hi - lo) / 4);
+    for (let v = Math.ceil(lo / paso) * paso; v <= hi + 1e-9; v += paso) t.push(Math.round(v * 100) / 100);
+  }
+  return t.length > 4 ? t.filter((_, i) => i % 2 === 0) : t;
+}
+
+/**
  * Lo que pusiste y lo que vale, día a día desde tu primera compra. `items` son los movimientos de `resumen()`
  * (con `inv`, el invertido neto, y `satsAcum`, el saldo, tras cada uno). `valor` es el saldo de sats al precio de
  * cada día; el último punto usa el precio vivo. Cada punto lleva `p: valor` para poder decimarlo con `muestrear`.
