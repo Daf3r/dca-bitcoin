@@ -57,7 +57,9 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
   s += `<path class="s-linea" d="${d}"/>`;
   const r = puntos.length > 120 ? 2.4 : puntos.length > 30 ? 3.2 : 4.5;
   s += `<path class="s-puntos" d="${puntos.slice(0, -1).map((p) => `M${f1(x(p.fecha) - r)} ${f1(y(p.v))}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`).join('')}"/>`;
-  for (const v of ticks) s += `<text class="g-t v-eje" x="${m.l}" y="${f1(y(v) - 6)}">${fmtEje(v)}</text>`;
+  // La cifra va del lado donde la línea no pasa: a la izquierda si el valor sube, a la derecha si baja.
+  const izq = puntos.at(-1).v >= puntos[0].v;
+  for (const v of ticks) s += `<text class="g-t v-eje" x="${izq ? m.l : W - m.r}" y="${f1(y(v) - 6)}"${izq ? '' : ' text-anchor="end"'}>${fmtEje(v)}</text>`;
   const u = puntos.at(-1);
   s += `<circle class="s-hoy" cx="${f1(x(u.fecha))}" cy="${f1(y(u.v))}" r="5"/>`;
   s += `<g class="g-cursor" visibility="hidden"><line y1="${m.t}" y2="${base}"/><circle class="vc-v" r="5.5"/></g></svg>`;

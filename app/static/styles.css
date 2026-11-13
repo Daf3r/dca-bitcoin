@@ -254,7 +254,7 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .cotizacion { display: grid; grid-template-columns: auto auto; align-items: baseline; justify-content: end; column-gap: 6px; line-height: 1.25; text-align: right;
   padding: 6px 10px 7px; margin: -6px -10px 0 0; border-radius: 14px; background: color-mix(in srgb, var(--c0) 46%, transparent); }
 .cotizacion > .cot-24, .cotizacion > .cot-meta { grid-column: 1 / -1; justify-self: end; }
-@media (min-width: 700px) { .cot-meta { white-space: nowrap; } }
+.cot-meta { white-space: nowrap; }
 /* En el teléfono la píldora no pasa de 10 rem: la marca y tu nombre caben siempre en su línea (si no, el saludo bajaría sobre «Tu saldo»). */
 @media (max-width: 699px) { .cotizacion { max-width: 10rem; } }
 /* En 320 px el precio va en su columna estrecha de siempre (una cosa por línea) para no empujar la marca ni el saludo. */
@@ -671,7 +671,7 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 .h-avanzado summary::before { content: '+'; margin-right: 8px; font-weight: 700; color: var(--naranja-txt, var(--naranja)); }
 .h-avanzado[open] summary::before { content: '−'; }
 .h-usd { display: grid; gap: 4px; margin-top: 4px; }
-.h-usd input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1.125rem; }
+.h-usd input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font: 400 1.125rem var(--sans); }
 .h-nota { margin-top: 6px; font-size: 0.8125rem; }
 .hoja-calc { min-height: 2.6em; font-size: 0.875rem; color: var(--txt2); }
 .hoja-calc .costo { display: block; margin-top: 2px; }
@@ -700,7 +700,7 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 .h-wallet { display: grid; gap: 8px; margin-top: 8px; }
 .h-wallet[hidden], .h-wallet [hidden] { display: none; }
 .h-wallet-l { display: grid; gap: 4px; color: var(--txt2); font-size: 0.9375rem; font-weight: 600; }
-.h-wallet select, .h-wallet input { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
+.h-wallet select, .h-wallet input { width: 100%; min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font: 400 1rem var(--sans); }
 .h-wallet select:focus-visible, .h-wallet input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
 .wal-fila .ses-cerrar:disabled { opacity: 0.55; }
 .ub-e { background: var(--s3); box-shadow: inset 0 0 0 1.5px var(--txt3); }
@@ -758,6 +758,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .cima { padding-inline: 40px; }
   .cuerpo { padding-inline: 40px; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
   .tramo, .spd, .vistas, .mercado, .compras, .pie, .comienzo, .rep-anios { grid-column: 1 / -1; }
+  .toca, .caida { align-self: start; }
   .reportes { grid-column: 1 / -1; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lienzo { margin-inline: 0; }
   .hoja { align-items: center; justify-items: center; }
@@ -902,13 +903,13 @@ div.fila:hover { background: none; }
 .sis-tabla table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
 .sis-tabla th, .sis-tabla td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--s3); white-space: nowrap; }
 .sis-tabla th[scope="col"], .sis-tabla th[scope="row"] { text-align: left; }
-.sis-tabla th[scope="row"] { font-weight: 500; overflow-wrap: anywhere; white-space: normal; }
+.sis-tabla th[scope="row"] { font-weight: 500; overflow-wrap: break-word; white-space: normal; }
 .dc-sesiones p, .dc-enlaces p { margin: 6px 0 12px; color: var(--txt2); font-size: 0.9375rem; line-height: 1.4; }
 .ses-fila { align-items: center; justify-content: space-between; }
 .ses-fila > span { min-width: 0; }
 .en-form { display: grid; gap: 8px; margin: 8px 0 0; }
 .en-form label, .en-nuevo b { color: var(--txt2); font-size: 0.9375rem; font-weight: 600; }
-.en-form input, .en-url { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
+.en-form input, .en-url { width: 100%; min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font: 400 1rem var(--sans); }
 .en-form input:focus-visible, .en-url:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
 .en-aviso { padding: 10px 12px; border-radius: 12px; background: var(--s2); box-shadow: inset 0 0 0 2px var(--naranja); }
 .en-nuevo { display: grid; gap: 6px; margin: 10px 0; padding: 12px; border-radius: 14px; background: var(--s2); }
@@ -924,11 +925,11 @@ div.fila:hover { background: none; }
 body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"] label[for="csv-in"], body[data-mant="1"] #csv-in { display: none !important; }
 .dc-clave { display: grid; gap: 6px; }
 .dc-clave label, .login-caja .campo-l { margin-top: 6px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
-.dc-clave input, .login-caja input {
+.dc-clave input, .login-caja input:not([type="checkbox"]) {
   min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 12px;
   background: var(--s2); color: var(--txt); font: 400 1rem var(--sans);
 }
-.dc-clave input:focus-visible, .login-caja input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
+.dc-clave input:focus-visible, .login-caja input:not([type="checkbox"]):focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
 .dc-nota { font-size: 0.8125rem; color: var(--txt3); }
 /* Avisos push: interruptor del dispositivo y una casilla por categoría. */
 .dc-avisos { display: grid; gap: 10px; }
@@ -1044,7 +1045,7 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .h-tipo button { min-height: var(--toque); padding: 0 4px; border: 0; border-radius: 10px; background: none; font-size: 0.875rem; font-weight: 650; cursor: pointer; touch-action: manipulation; }
 .h-tipo button[aria-pressed="true"] { background: var(--s1); box-shadow: inset 0 0 0 2px var(--naranja); }
 .h-nota-campo { display: grid; gap: 4px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
-.h-nota-campo input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }
+.h-nota-campo input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font: 400 1rem var(--sans); }
 .fila[data-tipo="venta"] .f-sats { color: var(--txt2); }
 .gan-lista { display: grid; gap: 8px; margin: 10px 0 6px; }
 .gan-lista > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
