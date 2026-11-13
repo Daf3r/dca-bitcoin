@@ -254,7 +254,7 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .cotizacion { display: grid; grid-template-columns: auto auto; align-items: baseline; justify-content: end; column-gap: 6px; line-height: 1.25; text-align: right;
   padding: 6px 10px 7px; margin: -6px -10px 0 0; border-radius: 14px; background: color-mix(in srgb, var(--c0) 46%, transparent); }
 .cotizacion > .cot-24, .cotizacion > .cot-meta { grid-column: 1 / -1; justify-self: end; }
-.cot-meta { white-space: nowrap; }
+@media (min-width: 360px) { .cot-meta { white-space: nowrap; } } /* en 320 px la línea se parte: si no, la píldora empuja el saludo sobre «Tu saldo» */
 /* En el teléfono la píldora no pasa de 10 rem: la marca y tu nombre caben siempre en su línea (si no, el saludo bajaría sobre «Tu saldo»). */
 @media (max-width: 699px) { .cotizacion { max-width: 10rem; } }
 /* En 320 px el precio va en su columna estrecha de siempre (una cosa por línea) para no empujar la marca ni el saludo. */
