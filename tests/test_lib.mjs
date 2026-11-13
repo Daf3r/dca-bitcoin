@@ -640,7 +640,10 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
     if (w === 12) continue;
     const d = new Date(Date.UTC(2025, 0, 6 + w * 7)); // lunes
     const f = d.toISOString().slice(0, 10);
-    cs.push({ id: id++, fecha: f, tipo: 'compra', monto: 20, sats: 25_000, precio: 80000, extra: w === 5 || w === 20 || w === 25, nota: w === 5 ? 'caída' : '' });
+    const esExtra = w === 5 || w === 20 || w === 25;
+    // La extra va ademas de la compra de la semana: una extra sola no cubre la semana (no cuenta para la racha).
+    if (esExtra) cs.push({ id: id++, fecha: new Date(Date.UTC(2025, 0, 6 + w * 7 + 2)).toISOString().slice(0, 10), tipo: 'compra', monto: 20, sats: 25_000, precio: 80000, extra: true, nota: w === 5 ? 'caída' : '' });
+    cs.push({ id: id++, fecha: f, tipo: 'compra', monto: 20, sats: 25_000, precio: 80000, extra: false, nota: '' });
   }
   const hoyH = '2025-08-15';
   const Rh = resumen(cs, 80000, hoyH);

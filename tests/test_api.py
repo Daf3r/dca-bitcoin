@@ -1160,6 +1160,17 @@ check(avisos._recordatorio(cx) is True and len(enviados) == 2, "al día siguient
 ritmo.recordatorio = lambda f, h: None
 push.ahora = lambda: _dtm(2026, 11, 8, 9, 5, tzinfo=ritmo.ZONA)
 check(avisos._recordatorio(cx) is False and len(enviados) == 2, "si ya compraste (o no toca) no avisa")
+# Una compra extra no cubre la semana: el recordatorio no la cuenta como «ya compraste»
+_vistas: list[list[str]] = []
+ritmo.recordatorio = lambda f, h: (_vistas.append(list(f)), {"estado": "toca", "racha": 8, "paso": 1, "dias_restantes": 2})[1]
+_id_extra = server.insertar(cx, ("2099-01-01", 20.0, 50000.0, 40000), None, "compra", None, 1)
+_id_normal = server.insertar(cx, ("2099-01-02", 20.0, 50000.0, 40000), None, "compra", None, 0)
+cx.commit()
+push.ahora = lambda: _dtm(2026, 12, 30, 9, 5, tzinfo=ritmo.ZONA)
+avisos._recordatorio(cx)
+check(_vistas and "2099-01-02" in _vistas[-1] and "2099-01-01" not in _vistas[-1], f"el recordatorio ignora las compras extra {_vistas[-1:] and _vistas[-1][-3:]}")
+cx.execute("DELETE FROM compras WHERE id IN (?, ?)", (_id_extra, _id_normal))
+cx.commit()
 ritmo.recordatorio = _ori
 
 # --- Horario propio de cada dispositivo (idea 103): desde, hasta y hora del recordatorio
