@@ -158,6 +158,8 @@ function camposSegunTipo() {
   $('h-sentido').hidden = !tras;
   pintarSelectorWallet(tras);
   $('h-nota-l').hidden = !(H.tipo === 'venta' || tras);
+  $('h-av-t').textContent = tras ? 'Más detalles: TXID y comisión' : H.tipo === 'venta' ? 'Más detalles: dólares y TXID' : 'Más detalles: dólares, TXID y compra extra';
+  $('h-usd-t').textContent = H.tipo === 'venta' ? 'Recibiste (USD)' : 'Pagaste (USD)';
   $('h-nota').placeholder = tras ? 'Por ejemplo: a mi Ledger' : 'Por ejemplo: gasté en renta';
   document.querySelectorAll('#h-avanzado [data-solo-compra]').forEach((el) => { el.hidden = H.tipo !== 'compra'; });
   document.querySelectorAll('#h-avanzado [data-no-traslado]').forEach((el) => { el.hidden = tras; });

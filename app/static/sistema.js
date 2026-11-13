@@ -79,7 +79,8 @@ export async function pintarSistema() {
     for (const [k, v] of [['ruta', m.ruta], ['n', m.n.toLocaleString('en-US')], ['medio', `${m.ms_medio} ms`], ['max', `${m.ms_max} ms`], ['lentas', m.lentas], ['err', m.errores]]) {
       const td = document.createElement(k === 'ruta' ? 'th' : 'td');
       if (k === 'ruta') td.scope = 'row';
-      td.textContent = String(v);
+      if (k === 'ruta') String(v).split('/').forEach((t, i) => { if (i) td.append('/', document.createElement('wbr')); td.append(t); });
+      else td.textContent = String(v);
       tr.append(td);
     }
     return tr;

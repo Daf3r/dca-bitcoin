@@ -50,7 +50,7 @@ export const usdSigno = (n) => signo(n) + nfUSD.format(Math.abs(n));
 export const pct = (n) => signo(n) + Math.abs(n).toFixed(1) + '%';
 export const entero = (n) => nfInt.format(Math.round(n));
 const nfComp = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
-export const compacto = (n) => nfComp.format(n);
+export const compacto = (n) => nfComp.format(n).replace(/K$/, 'k'); // «500k», como los hitos («100k»)
 export const btc = (sats) => (sats / 1e8).toFixed(8);
 export const hora = (ts) => dfHora.format(new Date(ts));
 /** Formas compactas (con signo, como usdSigno) para pantallas muy pequeñas (320 px): «+$1.2K», «−$79», «1.2M». Solo para cifras secundarias; el saldo nunca se abrevia. */
@@ -353,7 +353,7 @@ export function equilibrio(R, vivo) {
 /** «hace 12 s», «hace 3 min», «hace 2 h»: para el precio en vivo. */
 export function haceCuanto(ts, ahora = Date.now()) {
   const s = Math.max(0, Math.round((ahora - ts) / 1000));
-  if (s < 5) return 'ahora mismo';
+  if (s < 5) return 'ahora';
   if (s < 60) return `hace ${s} s`;
   const m = Math.floor(s / 60);
   if (m < 60) return `hace ${m} min`;
