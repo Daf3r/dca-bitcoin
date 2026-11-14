@@ -37,11 +37,12 @@ function alturaPerfil(pts, d) {
  * los filos de luz.
  */
 export function volcanes(W, H, suelo, lado = 1) {
-  const A = Math.min(H * 0.11, W * (W < 700 ? 0.14 : 0.1)); // la altura del Santa Ana: crece con la escena, sin volverse una aguja en el teléfono
-  const iz = W * 0.02 + 1.35 * A;
-  const sitios = W < 700
-    ? { izalco: iz, 'cerro-verde': iz + 1.2 * A, 'santa-ana': iz + 2.5 * A, 'san-salvador': W - 0.4 * A }
-    : { izalco: iz, 'cerro-verde': iz + 1.2 * A, 'santa-ana': iz + 2.5 * A, 'san-salvador': W * 0.88 };
+  const A = Math.min(H * (W < 1100 ? 0.11 : 0.12), W * (W < 700 ? 0.14 : 0.1)); // la altura del Santa Ana: crece con la escena, sin volverse una aguja en el teléfono
+  // Dónde va cada uno: en los lados que la montaña deja libres. En el teléfono y la tablet, el Izalco a la izquierda y el Santa Ana
+  // asomando por la derecha; en escritorio, el volcán de San Salvador a la izquierda y el grupo de Santa Ana a la derecha, junto al sol.
+  const sitios = W < 1100
+    ? { izalco: W * 0.02 + 1.35 * A, 'cerro-verde': W - 1.5 * A, 'santa-ana': W - 0.25 * A }
+    : { 'san-salvador': W * 0.1, 'santa-ana': W * 0.74, 'cerro-verde': W * 0.74 + 1.25 * A, izalco: W * 0.74 + 2.35 * A };
   const nombres = Object.keys(sitios);
   const altura = (n, x) => alturaPerfil(PERFILES[n], (x - sitios[n]) / A) * A;
   // Entre los volcanes, lomas bajas de la cordillera (ondas fijas).
@@ -61,7 +62,7 @@ export function volcanes(W, H, suelo, lado = 1) {
   const cono = `${lin(izPts)}Z`;
   // Filos de luz: el flanco que mira al astro de cada cumbre, solo donde ese volcán es el que se ve (no por encima de otro).
   let filos = '';
-  for (const k of ['santa-ana', 'izalco', 'san-salvador']) {
+  for (const k of nombres.filter((n) => n !== 'cerro-verde' && sitios[n] > W * 0.05 && sitios[n] < W * 0.95)) {
     const tramo = pts.filter(([x], i) => quien[i] === k && (x - sitios[k]) * lado > -0.05 * A && (x - sitios[k]) * lado < 1.6 * A);
     if (tramo.length > 2) filos += lin(tramo);
   }
@@ -79,8 +80,8 @@ export function torogoz(y, k = 1) {
   return `<g transform="translate(0 ${f1(y)})"><g class="efecto-ambiente ave torogoz"><g class="toro-bota"><g transform="scale(${f1(k * 1.15)})">`
     // La cola: las plumas cortas, las varillas desnudas y las dos raquetas de la punta.
     + '<path class="toro-cola" d="M-5.5 0.4L-13 1.2L-12.4 2.7L-5.2 1.9Z"/>'
-    + '<path class="toro-varilla" d="M-12.5 1.6L-22.5 3.1M-12.4 2.2L-21.8 4.9"/>'
-    + '<path class="toro-raqueta" d="M-21.3 2.9C-22.6 1.7-25 1.9-26.2 3.2C-25 4.1-22.6 4.1-21.3 2.9ZM-20.7 4.7C-21.8 3.8-24 4.3-25 5.7C-23.7 6.4-21.6 6-20.7 4.7Z"/>'
+    + '<path class="toro-varilla" d="M-12.5 1.5L-21.4 2.9M-12.4 2.1L-21.2 3.9"/>'
+    + '<path class="toro-raqueta" d="M-21 2.6C-22.4 1.6-24.6 1.8-26 3.1C-24.6 4.1-22.4 3.9-21 2.6ZM-20.8 3.8C-22.2 3-24.3 3.3-25.6 4.6C-24.2 5.4-22.1 5.1-20.8 3.8Z"/>'
     // El ala de atrás (más oscura) y el cuerpo con su vientre canela.
     + '<path class="toro-ala toro-ala-lejos" d="M2.2 -1.3C0.4 -4.4 -2.2 -7 -5.2 -8.4C-3.6 -5.6 -2.6 -3 -2.2 -0.6Z"/>'
     + '<path class="toro-cuerpo" d="M7.6 -1.6C5.6 -3.6 -1.4 -3.2 -6 0.3C-1.6 2.9 4.6 3 7.6 1.1Z"/>'
@@ -96,53 +97,45 @@ export function torogoz(y, k = 1) {
 }
 
 // ---------------------------------------------------------------- papel picado
-// Cifras de esténcil (como las que se recortan en el papel): siete segmentos con puentes entre ellos. Caja de 5 × 8.
-const SEGMENTOS = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
-function cifraCalada(c, x0, y0, u) {
-  const t = 1.35, w = 5, h = 8, g = 0.32; // grueso, ancho, alto y puente (en unidades)
-  const v = (h - 3 * t) / 2;
-  const R = { a: [0, 0, w, t], g: [0, (h - t) / 2, w, t], d: [0, h - t, w, t], f: [0, t, t, v], b: [w - t, t, t, v], e: [0, (h + t) / 2, t, v], c: [w - t, (h + t) / 2, t, v] };
-  return [...(SEGMENTOS[c] ?? '')].map((s) => {
-    let [x, y, ww, hh] = R[s];
-    if (ww > hh) { x += g; ww -= 2 * g; } else { y += g; hh -= 2 * g; }
-    const X = x0 + x * u, Y = y0 + y * u;
-    return `M${f1(X)} ${f1(Y)}h${f1(ww * u)}v${f1(hh * u)}h${f1(-ww * u)}Z`;
-  }).join('');
-}
 /** La silueta de la montaña del logo (la misma de la marca), como calado. */
 function montanaCalada(cx, cy, u) {
-  const p = [[1.5, 16.5], [9, 3.5], [13, 10], [16, 6], [22.5, 16.5]].map(([x, y]) => [cx + (x - 12) * u * 0.36, cy + (y - 10) * u * 0.36]);
+  const p = [[1.5, 16.5], [9, 3.5], [13, 10], [16, 6], [22.5, 16.5]].map(([x, y]) => [cx + (x - 12) * u * 0.4, cy + (y - 10) * u * 0.4]);
   return `${lin(p)}Z`;
 }
 
 /**
- * Una tira de papel picado (fiestas agostinas, patrias y navidad): seis banderitas colgadas de un cordel entre dos estacas.
- * Las de los extremos llevan calada la silueta de la montaña y las cuatro del centro, una cifra del año cada una. Los
- * colores los da el CSS según `html[data-fiesta]`; oculta el resto del año.
+ * Una tira de papel picado (fiestas agostinas, patrias y navidad): seis banderitas de papel de china colgadas de un cordel
+ * entre dos estacas. Cada una tiene su doblez arriba, un borde de picos, una hilera de rombos calados y, en el centro, la
+ * silueta de la montaña (las de los extremos) o una cifra del año (las cuatro del centro). Las cifras se calan con una máscara
+ * (letra de las cifras de la app); como la máscara va en el espacio de cada banderita, se mueve con ella al ondear.
+ * Los colores los da el CSS según `html[data-fiesta]`; el resto del año está oculta.
  */
-export function papelPicado(x1, x2, y, anio, k = 1) {
+export function papelPicado(x1, x2, y, anio, k = 1, estacas = true, id = 'm-pp') {
   const cifras = String(anio).slice(-4).split('');
   const motivos = ['m', ...cifras, 'm'];
   const n = motivos.length;
-  const fw = 15 * k, fh = 19 * k, u = fw / 12;
-  const comba = Math.min(14, (x2 - x1) * 0.06);
+  const paso = (x2 - x1) / n;
+  const fw = Math.min(paso * 0.86, 17 * k), fh = fw * 1.3, u = fw / 12;
+  const comba = Math.min(12 * k, (x2 - x1) * 0.05);
   const yc = (t) => y + comba * 4 * t * (1 - t); // el cordel cuelga (parábola)
-  let s = `<g class="papel-picado" aria-hidden="true"><path class="pp-estaca" d="M${f1(x1)} ${f1(y - 3)}V${f1(y + 34 * k)}M${f1(x2)} ${f1(y - 3)}V${f1(y + 34 * k)}"/>`;
-  s += `<path class="pp-cordel" d="M${f1(x1)} ${f1(y)}Q${f1((x1 + x2) / 2)} ${f1(y + comba * 2)} ${f1(x2)} ${f1(y)}"/>`;
-  let doblez = '';
+  let banderas = '', cifrasMask = '';
   motivos.forEach((m, i) => {
-    const t = (i + 0.5) / n, cx = x1 + (x2 - x1) * t, top = yc(t);
+    const t = (i + 0.5) / n, cx = x1 + (x2 - x1) * t, top = yc(t) + 0.6 * u;
     const l = cx - fw / 2, r = cx + fw / 2, b = top + fh;
-    // El borde de abajo, en picos; un ribete de tres triángulos calados arriba del borde.
-    const picos = [0, 1, 2, 3, 4].map((j) => `L${f1(r - (j + 0.5) * (fw / 5))} ${f1(b - (j % 2 ? 0 : 1.6 * u))}`).join('');
-    let d = `M${f1(l)} ${f1(top)}L${f1(r)} ${f1(top)}L${f1(r)} ${f1(b - 1.6 * u)}${picos}L${f1(l)} ${f1(b - 1.6 * u)}Z`;
-    const yr = b - 3.6 * u;
-    for (const dx of [-3.2, 0, 3.2]) d += `M${f1(cx + dx * u - 0.9 * u)} ${f1(yr)}L${f1(cx + dx * u + 0.9 * u)} ${f1(yr)}L${f1(cx + dx * u)} ${f1(yr + 1.2 * u)}Z`;
-    d += m === 'm' ? montanaCalada(cx, top + 7.6 * u, u) : cifraCalada(m, cx - 2.5 * u, top + 2.2 * u, u * 1.02);
-    s += `<g class="pp-bandera pp-c${i % 3}"><path fill-rule="evenodd" d="${d}"/></g>`;
-    doblez += `M${f1(l)} ${f1(top)}h${f1(fw)}v${f1(1.2 * u)}h${f1(-fw)}Z`;
+    // Borde de abajo en ondas (cinco picos redondeados).
+    let d = `M${f1(l)} ${f1(top)}L${f1(r)} ${f1(top)}L${f1(r)} ${f1(b - 1.4 * u)}`;
+    for (let j = 0; j < 4; j++) d += `Q${f1(r - (j + 0.5) * (fw / 4))} ${f1(b + 0.6 * u)} ${f1(r - (j + 1) * (fw / 4))} ${f1(b - 1.4 * u)}`;
+    d += 'Z';
+    // Hilera de rombos calados bajo el doblez y otra sobre el borde.
+    for (const yy of [top + 2.4 * u, b - 3.2 * u]) for (const dx of [-3.6, -1.2, 1.2, 3.6]) d += `M${f1(cx + dx * u)} ${f1(yy - 0.75 * u)}l${f1(0.6 * u)} ${f1(0.75 * u)}l${f1(-0.6 * u)} ${f1(0.75 * u)}l${f1(-0.6 * u)} ${f1(-0.75 * u)}Z`;
+    if (m === 'm') d += montanaCalada(cx, top + 7.6 * u, u);
+    else cifrasMask += `<text class="pp-cifra" x="${f1(cx)}" y="${f1(top + 11.1 * u)}" font-size="${f1(9.4 * u)}" text-anchor="middle">${m}</text>`;
+    banderas += `<g class="pp-bandera pp-c${i % 3}"><path fill-rule="evenodd" mask="url(#${id})" d="${d}"/><path class="pp-doblez" d="M${f1(l)} ${f1(top)}h${f1(fw)}v${f1(1.1 * u)}h${f1(-fw)}Z"/></g>`;
   });
-  return `${s}<path class="pp-doblez" d="${doblez}"/></g>`;
+  const alto = 30 * k + comba * 2;
+  const mask = `<mask id="${id}" maskUnits="userSpaceOnUse" x="${f1(x1 - 20)}" y="${f1(y - 40)}" width="${f1(x2 - x1 + 40)}" height="${f1(alto + 80)}"><rect x="${f1(x1 - 20)}" y="${f1(y - 40)}" width="${f1(x2 - x1 + 40)}" height="${f1(alto + 80)}" fill="#fff"/>${cifrasMask}</mask>`;
+  return `<g class="papel-picado" aria-hidden="true"><defs>${mask}</defs>${estacas ? `<path class="pp-estaca" d="M${f1(x1)} ${f1(y - 3)}V${f1(y + 30 * k)}M${f1(x2)} ${f1(y - 3)}V${f1(y + 30 * k)}"/>` : ''}`
+    + `<path class="pp-cordel" d="M${f1(x1)} ${f1(y)}Q${f1((x1 + x2) / 2)} ${f1(y + comba * 2)} ${f1(x2)} ${f1(y)}"/>${banderas}</g>`;
 }
 
 // ---------------------------------------------------------------- cohetes de fin de año
@@ -151,13 +144,12 @@ export function papelPicado(x1, x2, y, anio, k = 1) {
  * suben en zigzag y revientan arriba. Cada pieza es una forma fija; el CSS la mueve (solo transform y opacity) y le da su
  * retraso con `:nth-child`. Solo con `html[data-cohetes]` y todos los efectos.
  */
-export function cohetes(W, H, suelo, k = 1) {
-  const volcancito = (x) => `<g class="volcancito" transform="translate(${f1(x)} ${f1(suelo)}) scale(${f1(k)})"><path class="vc-cono" d="M-3 0L-1.4 -6H1.4L3 0Z"/>`
-    + `<g class="vc-chispas" transform="translate(0 -6)">${'<circle class="chispa" r="1.1"/>'.repeat(5)}</g></g>`;
-  const silbador = (x, alto) => `<g class="silbador" transform="translate(${f1(x)} ${f1(suelo)})"><g class="sb-sube"><path class="sb-estela" d="M0 0V9"/><circle class="sb-cabeza" r="1.5"/></g>`
-    + `<g transform="translate(0 ${f1(-alto)})"><g class="sb-estallido"><path d="M0 -9V-4M0 4V9M-9 0H-4M4 0H9M-6.4 -6.4L-3 -3M3 3L6.4 6.4M-6.4 6.4L-3 3M3 -3L6.4 -6.4"/><circle r="12"/></g></g></g>`;
-  const alto = Math.min(H * 0.22, 170);
-  return `<g class="efecto-ambiente cohetes" aria-hidden="true">${volcancito(W * 0.22)}${volcancito(W * 0.71)}${silbador(W * 0.38, alto)}${silbador(W * 0.86, alto * 0.82)}</g>`;
+export function cohetes(W, suelo, k = 1, alto = 140) {
+  const volcancito = (x) => `<g class="volcancito" transform="translate(${f1(x)} ${f1(suelo)}) scale(${f1(k)})"><path class="vc-cono" d="M-3.4 0L-1.5 -7H1.5L3.4 0Z"/><path class="vc-banda" d="M-2.6 -3H2.6"/>`
+    + `<g class="vc-chispas" transform="translate(0 -7)">${'<circle class="chispa" r="1.3"/>'.repeat(5)}</g></g>`;
+  const silbador = (x, a) => `<g class="silbador" transform="translate(${f1(x)} ${f1(suelo)})"><g class="sb-sube"><path class="sb-estela" d="M0 0V12"/><circle class="sb-cabeza" r="1.8"/></g>`
+    + `<g transform="translate(0 ${f1(-a)}) scale(${f1(k)})"><g class="sb-estallido"><path d="M0 -15V-6M0 6V15M-15 0H-6M6 0H15M-10.6 -10.6L-4.3 -4.3M4.3 4.3L10.6 10.6M-10.6 10.6L-4.3 4.3M4.3 -4.3L10.6 -10.6"/><circle r="19"/></g></g></g>`;
+  return `<g class="efecto-ambiente cohetes" aria-hidden="true">${volcancito(W * 0.3)}${volcancito(W * 0.66)}${silbador(W * 0.12, alto)}${silbador(W * 0.88, alto * 0.82)}</g>`;
 }
 
 // ---------------------------------------------------------------- clima
@@ -167,7 +159,8 @@ export function cohetes(W, H, suelo, k = 1) {
  * efectos) y el CSS decide cuál se ve por `html[data-epoca]` y la franja del día.
  */
 export function clima(W, H, yH) {
-  const cx = W * 0.17, cy = H * 0.46, k = Math.max(0.9, Math.min(1.6, W / 500));
+  // En el teléfono y la tablet, a la izquierda (sobre el Izalco); en escritorio, a la derecha (sobre el Santa Ana): siempre en un cielo libre de texto.
+  const cx = W < 1100 ? W * 0.17 : W * 0.88, cy = H * (W < 1100 ? 0.46 : 0.3), k = Math.max(0.9, Math.min(1.6, W / 500));
   const p = (dx, dy) => `${f1(cx + dx * k)} ${f1(cy + dy * k)}`;
   const nube = `M${p(-70, 0)}C${p(-80, 0)} ${p(-78, -12)} ${p(-62, -13)}C${p(-60, -28)} ${p(-34, -32)} ${p(-24, -20)}C${p(-16, -38)} ${p(16, -40)} ${p(22, -22)}`
     + `C${p(34, -30)} ${p(56, -24)} ${p(54, -11)}C${p(72, -12)} ${p(78, 0)} ${p(64, 0)}Z`;
@@ -181,69 +174,87 @@ export function clima(W, H, yH) {
 }
 
 // ---------------------------------------------------------------- árboles de honor
-/** Una copa de lóbulos (como un cúmulo): `n` lomos alrededor de una elipse. Puntos fijos, sin azar. */
-function lobos(cx, cy, rx, ry, n, k = 0.3, fase = 0) {
-  let d = '';
-  for (let i = 0; i <= n; i++) {
-    const t = fase + (i / n) * Math.PI * 2, x = cx + Math.cos(t) * rx, y = cy + Math.sin(t) * ry;
-    if (!i) { d = `M${f1(x)} ${f1(y)}`; continue; }
-    const tm = fase + ((i - 0.5) / n) * Math.PI * 2, o = 1 + k * (0.8 + 0.4 * ((i * 7) % 3) / 2);
-    d += `Q${f1(cx + Math.cos(tm) * rx * o)} ${f1(cy + Math.sin(tm) * ry * o)} ${f1(x)} ${f1(y)}`;
+/**
+ * Una copa facetada, en el mismo lenguaje que la roca de la montaña: un polígono irregular (radios fijos, sin azar) partido en
+ * triángulos desde un vértice interior desplazado hacia la luz. Cada faceta toma el tono que le toca según hacia dónde mira su
+ * borde: las que miran al astro van en luz, las de abajo y del otro lado en sombra; las aristas en luz llevan un filo. Devuelve
+ * el contorno y tres trazos (luz, media luz y sombra), cada uno una sola pieza.
+ */
+function facetas(cx, cy, rx, ry, radios, L, giro = 0, acc = { base: '', luz: '', media: '', sombra: '', filo: '' }, abajo = 0.7) {
+  const n = radios.length;
+  // Dos anillos de vértices (el de fuera con radios irregulares fijos y uno interior a media distancia, girado medio paso) y la
+  // cima: como una cúpula vista de frente. Por debajo la copa es más plana (`abajo`).
+  const anillo = (k, d) => radios.map((r, i) => {
+    const t = giro + ((i + d) / n) * Math.PI * 2 - Math.PI / 2, sy = Math.sin(t) > 0 ? abajo : 1;
+    return [cx + Math.cos(t) * rx * r * k, cy + Math.sin(t) * ry * r * k * sy];
+  });
+  const v = anillo(1, 0), w = anillo(0.56, 0.5), P = [cx + L * rx * 0.08, cy - ry * 0.12];
+  const lx = L * 0.55, ly = -0.62, lz = 0.56; // de dónde viene la luz (el astro, algo de frente)
+  const tono = (pts, z) => {
+    const mx = pts.reduce((s, p) => s + p[0], 0) / 3, my = pts.reduce((s, p) => s + p[1], 0) / 3;
+    const dx = (mx - cx) / rx, dy = (my - cy) / ry;
+    const d = dx * lx + dy * ly + z * lz;
+    const tri = `M${f1(pts[0][0])} ${f1(pts[0][1])}L${f1(pts[1][0])} ${f1(pts[1][1])}L${f1(pts[2][0])} ${f1(pts[2][1])}Z`;
+    if (d > 0.62) acc.luz += tri; else if (d > 0.4) acc.media += tri; else if (d < 0.08) acc.sombra += tri;
+  };
+  acc.base += `${lin(v)}Z`;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    tono([w[i], v[i], v[j]], 0.25);
+    tono([w[i], v[j], w[j]], 0.55);
+    tono([P, w[i], w[j]], 0.85);
+    // Filo de luz en el borde que mira al astro.
+    const ex = v[j][0] - v[i][0], ey = v[j][1] - v[i][1], m = Math.hypot(ex, ey) || 1;
+    if ((ey / m) * lx + (-ex / m) * ly > 0.5) acc.filo += `M${f1(v[i][0])} ${f1(v[i][1])}L${f1(v[j][0])} ${f1(v[j][1])}`;
   }
-  return `${d}Z`;
+  return acc;
 }
+const copaSvg = (c) => `<path class="copa" d="${c.base}"/><path class="copa-media" d="${c.media}"/><path class="copa-luz" d="${c.luz}"/><path class="copa-sombra" d="${c.sombra}"/><path class="copa-filo" d="${c.filo}"/>`;
 
 /**
- * Los árboles de honor con su carácter. `L` es de qué lado viene la luz (1 = desde la derecha): la copa se aclara de ese lado
- * y se oscurece por debajo; el tronco lleva su lado en sombra. Cada uno, menos de 12 piezas.
- * - Ceibo (compra 100): tronco recto y gris con aletones en la base y la copa en sombrilla, en pisos anchos y planos.
- * - Amate (500): tronco grueso y retorcido que se abre en ramas, raíces aéreas y una copa enorme y redonda.
- * - Maquilishuat (1,000): tronco esbelto que se abre en «V» y una copa rala de racimos rosados, con flores caídas al pie.
+ * Los árboles de honor, facetados como la montaña. `L` es de qué lado viene la luz (1 = desde la derecha).
+ * - Ceibo (compra 100): tronco recto y gris con dos aletones en la base y la copa en sombrilla: dos pisos anchos y planos.
+ * - Amate (500): tronco macizo que se tuerce y se abre en brazos, raíces aéreas y una copa enorme y redonda.
+ * - Maquilishuat (1,000): tronco esbelto en «V» y racimos rosados como gemas; al pie, una alfombra de flores; con todos los
+ *   efectos caen tres pétalos de vez en cuando.
  */
 export function arbolHonor(tipo, x, yb, h, L = 1) {
-  const sh = (d) => `<path class="tronco-sombra" d="${d}"/>`;
+  const sombraTronco = (d) => `<path class="tronco-sombra" d="${d}"/>`;
   if (tipo === 'ceibo') {
-    const t = h * 0.045, yt = yb - h * 0.66;
-    const tronco = `M${f1(x - t * 4)} ${f1(yb)}Q${f1(x - t * 1.3)} ${f1(yb - h * 0.03)} ${f1(x - t * 1.1)} ${f1(yb - h * 0.17)}L${f1(x - t * 0.8)} ${f1(yt)}L${f1(x + t * 0.8)} ${f1(yt)}L${f1(x + t * 1.1)} ${f1(yb - h * 0.17)}Q${f1(x + t * 1.3)} ${f1(yb - h * 0.03)} ${f1(x + t * 4)} ${f1(yb)}Z`;
-    // Los aletones: dos cuchillas de raíz que se ven de frente, con su cara en sombra.
-    const aletas = `M${f1(x - t * 0.2)} ${f1(yb)}L${f1(x - t * 0.5)} ${f1(yb - h * 0.13)}L${f1(x + t * 0.4)} ${f1(yb)}ZM${f1(x - L * t * 2.6)} ${f1(yb)}Q${f1(x - L * t * 1.2)} ${f1(yb - h * 0.02)} ${f1(x - L * t * 0.9)} ${f1(yb - h * 0.14)}L${f1(x - L * t * 0.2)} ${f1(yb - h * 0.2)}L${f1(x)} ${f1(yt)}L${f1(x - L * t * 0.8)} ${f1(yt)}L${f1(x - L * t * 1.1)} ${f1(yb - h * 0.17)}Q${f1(x - L * t * 1.3)} ${f1(yb - h * 0.03)} ${f1(x - L * t * 4)} ${f1(yb)}Z`;
-    const ramas = `M${f1(x)} ${f1(yt + 2)}Q${f1(x - h * 0.1)} ${f1(yt - h * 0.06)} ${f1(x - h * 0.4)} ${f1(yt - h * 0.07)}M${f1(x)} ${f1(yt + 2)}Q${f1(x + h * 0.12)} ${f1(yt - h * 0.05)} ${f1(x + h * 0.42)} ${f1(yt - h * 0.09)}M${f1(x)} ${f1(yt)}L${f1(x + L * h * 0.03)} ${f1(yt - h * 0.18)}`;
-    // Dos pisos de copa: anchos, planos y de borde ondulado (la sombrilla del ceibo).
-    const p1 = [x, yb - h * 0.75, h * 0.56, h * 0.075], p2 = [x - L * h * 0.05, yb - h * 0.875, h * 0.36, h * 0.07];
-    const copa = lobos(...p1, 11, 0.42, 0.2) + lobos(...p2, 9, 0.42, 0.5);
-    const sombra = lobos(p1[0], p1[2] * 0 + p1[1] + h * 0.03, p1[2] * 0.96, p1[3] * 0.8, 11, 0.3, 0.1) + lobos(p2[0], p2[1] + h * 0.028, p2[2] * 0.94, p2[3] * 0.8, 9, 0.3, 0.4);
-    const luz = lobos(p1[0] + L * h * 0.12, p1[1] - h * 0.022, p1[2] * 0.55, p1[3] * 0.55, 7, 0.35, 0.3) + lobos(p2[0] + L * h * 0.07, p2[1] - h * 0.02, p2[2] * 0.55, p2[3] * 0.55, 6, 0.35, 0.6);
-    return `<path class="tronco" d="${tronco}"/>${sh(aletas)}<path class="rama" d="${ramas}"/><path class="copa-sombra" d="${sombra}"/><path class="copa" d="${copa}"/><path class="copa-luz" d="${luz}"/>`;
+    const t = h * 0.05, yt = yb - h * 0.68;
+    // Tronco con aletones: el lado en sombra es una faceta propia y cada aletón lleva su cara iluminada y su cara oscura.
+    const tronco = lin([[x - t * 4.4, yb], [x - t * 1.2, yb - h * 0.16], [x - t * 0.75, yt], [x + t * 0.75, yt], [x + t * 1.2, yb - h * 0.16], [x + t * 4.4, yb]]) + 'Z';
+    const oscura = lin([[x - L * t * 4.4, yb], [x - L * t * 1.2, yb - h * 0.16], [x - L * t * 0.75, yt], [x, yt], [x + L * t * 0.1, yb - h * 0.2], [x - L * t * 0.4, yb]]) + 'Z'
+      + lin([[x + L * t * 0.7, yb], [x + L * t * 0.35, yb - h * 0.12], [x + L * t * 1.9, yb]]) + 'Z';
+    const ramas = `M${f1(x)} ${f1(yt + 3)}L${f1(x - h * 0.2)} ${f1(yt - h * 0.06)}L${f1(x - h * 0.42)} ${f1(yt - h * 0.075)}M${f1(x)} ${f1(yt + 3)}L${f1(x + h * 0.22)} ${f1(yt - h * 0.05)}L${f1(x + h * 0.44)} ${f1(yt - h * 0.09)}M${f1(x)} ${f1(yt)}L${f1(x + L * h * 0.04)} ${f1(yt - h * 0.17)}`;
+    const c = facetas(x, yb - h * 0.76, h * 0.6, h * 0.1, [1, 0.62, 0.95, 0.7, 1.05, 0.9, 1.25, 1.1, 1.3, 1.15, 1.25, 1.05], L, 0.1);
+    facetas(x - L * h * 0.05, yb - h * 0.9, h * 0.38, h * 0.085, [1, 0.7, 1, 0.75, 1.1, 1, 1.25, 1.15, 1.2, 1.05], L, 0.3, c);
+    return `<path class="tronco" d="${tronco}"/>${sombraTronco(oscura)}<path class="rama" d="${ramas}"/>${copaSvg(c)}`;
   }
   if (tipo === 'amate') {
-    const t = h * 0.075;
-    // Un tronco corto y macizo que se retuerce y se abre en tres brazos, con las raíces que se agarran al suelo.
-    const tronco = `M${f1(x - t * 2.4)} ${f1(yb)}C${f1(x - t * 0.9)} ${f1(yb - h * 0.05)} ${f1(x - t * 1.6)} ${f1(yb - h * 0.2)} ${f1(x - t * 0.7)} ${f1(yb - h * 0.33)}`
-      + `C${f1(x - t * 1.6)} ${f1(yb - h * 0.42)} ${f1(x - t * 2.6)} ${f1(yb - h * 0.47)} ${f1(x - t * 3.2)} ${f1(yb - h * 0.55)}L${f1(x - t * 2.3)} ${f1(yb - h * 0.57)}`
-      + `C${f1(x - t * 1.4)} ${f1(yb - h * 0.5)} ${f1(x - t * 0.6)} ${f1(yb - h * 0.47)} ${f1(x - t * 0.1)} ${f1(yb - h * 0.6)}L${f1(x + t * 0.8)} ${f1(yb - h * 0.6)}`
-      + `C${f1(x + t * 0.9)} ${f1(yb - h * 0.5)} ${f1(x + t * 1.8)} ${f1(yb - h * 0.48)} ${f1(x + t * 3)} ${f1(yb - h * 0.54)}L${f1(x + t * 3.4)} ${f1(yb - h * 0.49)}`
-      + `C${f1(x + t * 2)} ${f1(yb - h * 0.42)} ${f1(x + t * 0.9)} ${f1(yb - h * 0.36)} ${f1(x + t * 1.1)} ${f1(yb - h * 0.25)}C${f1(x + t * 1.3)} ${f1(yb - h * 0.12)} ${f1(x + t * 0.8)} ${f1(yb - h * 0.04)} ${f1(x + t * 2.6)} ${f1(yb)}Z`;
-    // La torsión: una franja de sombra en espiral sobre el lado contrario a la luz.
-    const giro = `M${f1(x - L * t * 0.2)} ${f1(yb)}C${f1(x - L * t * 1.4)} ${f1(yb - h * 0.08)} ${f1(x + L * t * 0.2)} ${f1(yb - h * 0.2)} ${f1(x - L * t * 0.5)} ${f1(yb - h * 0.34)}L${f1(x - L * t * 0.9)} ${f1(yb - h * 0.3)}C${f1(x - L * t * 0.6)} ${f1(yb - h * 0.2)} ${f1(x - L * t * 1.8)} ${f1(yb - h * 0.1)} ${f1(x - L * t * 1.8)} ${f1(yb)}Z`;
-    const raices = `M${f1(x - h * 0.3)} ${f1(yb - h * 0.46)}V${f1(yb - h * 0.2)}M${f1(x - h * 0.22)} ${f1(yb - h * 0.44)}V${f1(yb - h * 0.29)}M${f1(x + h * 0.27)} ${f1(yb - h * 0.45)}V${f1(yb - h * 0.24)}`;
-    const cy = yb - h * 0.66, rx = h * 0.6, ry = h * 0.34;
-    const copa = lobos(x, cy, rx, ry, 13, 0.2, 0.15);
-    const sombra = lobos(x - L * h * 0.03, cy + h * 0.09, rx * 0.92, ry * 0.7, 11, 0.2, 0.3);
-    const luz = lobos(x + L * rx * 0.25, cy - ry * 0.3, rx * 0.5, ry * 0.5, 9, 0.24, 0.1) + lobos(x - L * rx * 0.35, cy - ry * 0.45, rx * 0.22, ry * 0.25, 6, 0.3, 0.4);
-    return `<path class="rama raiz" d="${raices}"/><path class="tronco" d="${tronco}"/>${sh(giro)}<path class="copa-sombra" d="${sombra}"/><path class="copa" d="${copa}"/><path class="copa-luz" d="${luz}"/>`;
+    const t = h * 0.08;
+    // Tronco corto y macizo que se tuerce: sus caras son facetas (la de la luz y la de la sombra se cruzan al subir).
+    const tronco = lin([[x - t * 2.6, yb], [x - t * 1.1, yb - h * 0.1], [x - t * 1.2, yb - h * 0.3], [x - t * 3.4, yb - h * 0.52], [x - t * 2.3, yb - h * 0.56],
+      [x - t * 0.3, yb - h * 0.42], [x + t * 0.2, yb - h * 0.58], [x + t * 1.2, yb - h * 0.58], [x + t * 0.9, yb - h * 0.44], [x + t * 3.1, yb - h * 0.52], [x + t * 3.5, yb - h * 0.46],
+      [x + t * 1.3, yb - h * 0.3], [x + t * 1.1, yb - h * 0.1], [x + t * 2.8, yb]]) + 'Z';
+    const giro = lin([[x - L * t * 2.6, yb], [x - L * t * 1.1, yb - h * 0.1], [x - L * t * 1.2, yb - h * 0.3], [x - L * t * 3.4, yb - h * 0.52], [x - L * t * 2.3, yb - h * 0.56],
+      [x - L * t * 0.3, yb - h * 0.42], [x + L * t * 0.4, yb - h * 0.25], [x - L * t * 0.2, yb - h * 0.1], [x + L * t * 0.2, yb]]) + 'Z';
+    const raices = `M${f1(x - h * 0.34)} ${f1(yb - h * 0.44)}V${f1(yb - h * 0.16)}M${f1(x - h * 0.25)} ${f1(yb - h * 0.42)}V${f1(yb - h * 0.27)}M${f1(x + h * 0.3)} ${f1(yb - h * 0.43)}V${f1(yb - h * 0.2)}M${f1(x + h * 0.38)} ${f1(yb - h * 0.45)}V${f1(yb - h * 0.33)}`;
+    const c = facetas(x, yb - h * 0.62, h * 0.62, h * 0.4, [1, 0.94, 1.03, 0.95, 1.05, 0.97, 1.02, 0.93, 1.04, 0.96, 1.03, 0.94, 1.05, 0.96, 1.02, 0.95], L, 0.1, undefined, 0.55);
+    return `<path class="rama raiz" d="${raices}"/><path class="tronco" d="${tronco}"/>${sombraTronco(giro)}${copaSvg(c)}`;
   }
-  // Maquilishuat: el tronco esbelto, sus tres brazos y los racimos de flor con huecos entre ellos.
-  const t = h * 0.028, yr = yb - h * 0.4;
-  const tronco = `M${f1(x - t * 1.6)} ${f1(yb)}L${f1(x - t)} ${f1(yr)}L${f1(x + t)} ${f1(yr)}L${f1(x + t * 1.6)} ${f1(yb)}Z`;
-  const racimos = [[-0.24, 0.66, 0.13], [0.22, 0.7, 0.12], [-0.04, 0.84, 0.15], [0.27, 0.9, 0.09], [-0.3, 0.88, 0.09], [0.07, 0.99, 0.08]];
-  const brazos = racimos.slice(0, 5).map(([dx, dy]) => `M${f1(x)} ${f1(yr + 1)}Q${f1(x + dx * h * 0.25)} ${f1(yb - h * (dy * 0.65))} ${f1(x + dx * h * 0.85)} ${f1(yb - h * (dy - 0.02))}`).join('');
-  const copa = racimos.map(([dx, dy, r], i) => lobos(x + dx * h, yb - dy * h, r * h, r * h * 0.78, 7, 0.32, i * 0.7)).join('');
-  const sombra = racimos.map(([dx, dy, r], i) => lobos(x + dx * h - L * r * h * 0.1, yb - dy * h + r * h * 0.32, r * h * 0.86, r * h * 0.55, 6, 0.3, i)).join('');
-  const luz = racimos.map(([dx, dy, r], i) => lobos(x + dx * h + L * r * h * 0.32, yb - dy * h - r * h * 0.3, r * h * 0.42, r * h * 0.32, 5, 0.35, i * 0.4)).join('');
-  // Flores caídas al pie: una alfombra rosa, más tupida bajo la copa.
-  const caidas = [-0.34, -0.22, -0.12, -0.02, 0.09, 0.18, 0.3, 0.4].map((dx, i) => `M${f1(x + dx * h)} ${f1(yb - 1 - (i % 3) * 1.2)}a${f1(h * 0.022)} ${f1(h * 0.012)} 0 1 0 0.1 0Z`).join('');
-  return `<path class="tronco" d="${tronco}"/>${sh(`M${f1(x + L * t * 0.1)} ${f1(yb)}L${f1(x + L * t * 0.05)} ${f1(yr)}L${f1(x - L * t)} ${f1(yr)}L${f1(x - L * t * 1.6)} ${f1(yb)}Z`)}<path class="rama" d="${brazos}"/>`
-    + `<path class="copa-sombra" d="${sombra}"/><path class="copa" d="${copa}"/><path class="copa-luz" d="${luz}"/><path class="flores-caidas" d="${caidas}"/>`;
+  // Maquilishuat: el tronco esbelto, sus brazos y los racimos de flor (gemas rosadas) con huecos entre ellos.
+  const t = h * 0.03, yr = yb - h * 0.42;
+  const tronco = lin([[x - t * 1.7, yb], [x - t, yr], [x + t, yr], [x + t * 1.7, yb]]) + 'Z';
+  const racimos = [[-0.24, 0.64, 0.13], [0.22, 0.69, 0.12], [-0.04, 0.83, 0.15], [0.29, 0.89, 0.1], [-0.31, 0.87, 0.1], [0.07, 0.99, 0.085]];
+  const brazos = racimos.slice(0, 5).map(([dx, dy]) => `M${f1(x)} ${f1(yr + 1)}L${f1(x + dx * h * 0.45)} ${f1(yb - h * (dy * 0.75))}L${f1(x + dx * h * 0.85)} ${f1(yb - h * (dy - 0.03))}`).join('');
+  const c = { base: '', luz: '', media: '', sombra: '', filo: '' };
+  racimos.forEach(([dx, dy, r], i) => facetas(x + dx * h, yb - dy * h, r * h, r * h * 0.8, [[1, 0.8, 1.1, 0.85, 1, 0.9], [0.9, 1.1, 0.8, 1, 0.95, 1.05]][i % 2], L, i * 0.5, c));
+  const caidas = [-0.36, -0.24, -0.13, -0.03, 0.08, 0.17, 0.28, 0.38].map((dx, i) => `M${f1(x + dx * h)} ${f1(yb - 1 - (i % 3) * 1.1)}l${f1(h * 0.018)} ${f1(-h * 0.01)}l${f1(h * 0.018)} ${f1(h * 0.01)}Z`).join('');
+  // Pétalos que caen (ambiente): tres rombos que bajan girando desde la copa.
+  const petalos = [[-0.2, 0.62], [0.18, 0.66], [0.02, 0.78]].map(([dx, dy]) => `<path class="petalo" d="M${f1(x + dx * h)} ${f1(yb - dy * h)}l2.2 -1.2l2.2 1.2l-2.2 1.2Z"/>`).join('');
+  return `<path class="tronco" d="${tronco}"/>${sombraTronco(lin([[x + L * t * 0.1, yb], [x, yr], [x - L * t, yr], [x - L * t * 1.7, yb]]) + 'Z')}<path class="rama" d="${brazos}"/>`
+    + `${copaSvg(c)}<path class="flores-caidas" d="${caidas}"/><g class="efecto-ambiente petalos">${petalos}</g>`;
 }
 
 // ---------------------------------------------------------------- la luna-moneda

@@ -1991,7 +1991,7 @@ try {
         ok(c.muestras >= 20 && c.buenos === 6 && c.malos.length === 0, `guía (${tema}, contraste ${contraste}): ${c.muestras} colores, los 6 de texto con 4.5:1 o más${c.malos.length ? ` (mal: ${c.malos})` : ''}`);
       }
       const ic = await g.p.evaluate(() => ({ iconos: [...document.querySelectorAll('#guia-iconos .ico')].map((e) => { const r = e.getBoundingClientRect(); return r.width > 8 && r.height > 8; }), avatares: document.querySelectorAll('#guia-av .avatar').length, medallas: document.querySelectorAll('#guia-med .med').length, ilus: document.querySelectorAll('#guia-ilu .ilu').length }));
-      ok(ic.iconos.length === 8 && ic.iconos.every(Boolean) && ic.avatares === 8 && ic.medallas === 4 && ic.ilus === 3, 'guía: muestra los 8 iconos, los avatares, las medallas y las ilustraciones');
+      ok(ic.iconos.length === 9 && ic.iconos.every(Boolean) && ic.avatares === 8 && ic.medallas === 4 && ic.ilus === 3, 'guía: muestra los 9 iconos (con el zopilote), los avatares, las medallas y las ilustraciones');
       for (const w of [320, 768, 1280]) {
         await g.p.setViewportSize({ width: w, height: 800 });
         await g.p.waitForTimeout(200);
@@ -2619,6 +2619,102 @@ try {
       ok(/árboles de honor: un ceibo, un amate, un maquilishuat/.test(t.d), 'los árboles de honor están en la descripción de la montaña');
       await ctx.close();
     } finally { sMil.parar(); }
+  }
+
+  // ---------------------------------------------------------------- campamento 12: El Salvador en la escena
+  {
+    const ent = async (...a) => { const r = await entrar(...a); if (await r.p.locator('#d-cambios[open]').count()) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(300); } return r; };
+    // Día y efectos fijos (el papel picado, los cohetes y el clima dependen de la fecha de El Salvador).
+    const con = (dia, efectos = 'todos') => [([d, e]) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, [dia, efectos]];
+    const cs = (p, sel, prop) => p.evaluate(([s, k]) => { const e = document.querySelector(s); return e ? getComputedStyle(e)[k] : null; }, [sel, prop]);
+    const choca = (p, a, b) => p.evaluate(([x, y]) => {
+      const r1 = document.querySelector(x)?.getBoundingClientRect(), r2 = document.querySelector(y)?.getBoundingClientRect();
+      return Boolean(r1 && r2 && r1.width && r2.width && r1.left < r2.right && r1.right > r2.left && r1.top < r2.bottom && r1.bottom > r2.top);
+    }, [a, b]);
+    const sAnio = await servidor('anio');
+    try {
+      // Volcanes: en el teléfono el Izalco y el Santa Ana; en escritorio, también el de San Salvador. El cono del Izalco va por delante.
+      let r = await ent(navegador, sAnio, ADMIN, { hora: 12 }, con('2026-03-10'));
+      const v = await r.p.evaluate(() => ({ vol: document.querySelector('.lejos')?.dataset.volcanes ?? '', ceniza: document.querySelectorAll('.volcan-ceniza').length }));
+      ok(/izalco/.test(v.vol) && /santa-ana/.test(v.vol) && v.ceniza === 1, `volcanes en el teléfono (${v.vol})`);
+      // Fuera de temporada: sin papel picado ni cohetes; época seca de día: aire dorado y sin llovizna; de día no cruza el torogoz.
+      eq([await cs(r.p, '.papel-picado', 'display'), await cs(r.p, '.cohetes', 'display'), await cs(r.p, '.aire-seco', 'display'), await cs(r.p, '.clima-lluvia', 'display'), await cs(r.p, '.torogoz', 'animationName')],
+        ['none', 'none', 'inline', 'none', 'none'], 'fuera de temporada: sin papel picado ni cohetes; época seca: aire dorado; de día no cruza el torogoz');
+      await r.ctx.close();
+      r = await ent(navegador, sAnio, ADMIN, { hora: 12, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, con('2026-03-10'));
+      ok(/san-salvador/.test(await r.p.evaluate(() => document.querySelector('.lejos').dataset.volcanes)), 'volcanes: en escritorio también el de San Salvador');
+      await r.ctx.close();
+
+      // Torogoz al amanecer (todos los efectos): cruza y aletea; con esenciales no está.
+      r = await ent(navegador, sAnio, ADMIN, { hora: 6 }, con('2026-03-10'));
+      eq([await cs(r.p, '.torogoz', 'animationName'), await cs(r.p, '.toro-ala:not(.toro-ala-lejos)', 'animationName'), await r.p.locator('.toro-ceja').count()], ['ave', 'toro-aleteo', 1], 'torogoz: al amanecer cruza el cielo y aletea');
+      await r.p.evaluate(() => window.libroEfectos.fijar('esenciales'));
+      eq(await cs(r.p, '.torogoz', 'display'), 'none', 'torogoz: con esenciales no está');
+      await r.ctx.close();
+
+      // Papel picado en las agostinas: visible, con el año calado, sin tapar «Anotar» ni rótulos; colores distintos en navidad.
+      r = await ent(navegador, sAnio, ADMIN, { hora: 12 }, con('2026-08-03'));
+      const pp = await r.p.evaluate(() => ({ cifras: [...document.querySelectorAll('.pp-cifra')].map((t) => t.textContent).join(''), banderas: document.querySelectorAll('.pp-bandera').length, fill: getComputedStyle(document.querySelector('.pp-bandera path')).fill }));
+      ok(await cs(r.p, '.papel-picado', 'display') === 'inline' && pp.cifras === '2026' && pp.banderas === 6, `papel picado: en las agostinas, seis banderitas con el año (${pp.cifras})`);
+      ok(!(await choca(r.p, '.papel-picado', '#anotar')), 'papel picado: no tapa el botón «Anotar»');
+      ok(!(await r.p.evaluate(() => { const b = document.querySelector('.papel-picado').getBoundingClientRect(); return [...document.querySelectorAll('#m-etiquetas text')].some((t) => { const q = t.getBoundingClientRect(); return q.left < b.right && q.right > b.left && q.top < b.bottom && q.bottom > b.top; }); })), 'papel picado: no pisa ningún rótulo de la montaña');
+      eq(await cs(r.p, '.pp-bandera', 'animationName'), 'pp-ondea', 'papel picado: ondea con todos los efectos');
+      await r.ctx.close();
+      r = await ent(navegador, sAnio, ADMIN, { hora: 12 }, con('2026-12-24', 'ninguno'));
+      const fillNav = await cs(r.p, '.pp-bandera path', 'fill');
+      ok(await cs(r.p, '.papel-picado', 'display') === 'inline' && fillNav !== pp.fill, `papel picado: en navidad también, con sus colores (${pp.fill} → ${fillNav})`);
+      eq(await cs(r.p, '.pp-bandera', 'animationName'), 'none', 'papel picado: sin efectos se queda quieto');
+      await r.ctx.close();
+
+      // Cohetes: solo la noche de fin de año y con todos los efectos.
+      r = await ent(navegador, sAnio, ADMIN, { hora: 23.95 }, con('2026-12-31'));
+      eq([await cs(r.p, '.cohetes', 'display'), await cs(r.p, '.chispa', 'animationName'), await cs(r.p, '.sb-sube', 'animationName'), await r.p.locator('.cohetes :is(.chispa, .sb-sube, .sb-estallido)').count()],
+        ['inline', 'chispa', 'silba', 14], 'cohetes: la noche de fin de año saltan volcancitos y silbadores');
+      await r.p.evaluate(() => window.libroEfectos.fijar('esenciales'));
+      eq(await cs(r.p, '.cohetes', 'display'), 'none', 'cohetes: con esenciales no salen');
+      await r.ctx.close();
+
+      // Época lluviosa por la tarde: llovizna (20 gotas) y nubes más bajas; de noche no llueve.
+      r = await ent(navegador, sAnio, ADMIN, { hora: 15 }, con('2026-07-10'));
+      eq([await cs(r.p, '.clima-lluvia', 'display'), await r.p.locator('.gota').count(), await cs(r.p, '.aire-seco', 'display'), (await cs(r.p, '.nube.n1', 'translate')) !== 'none'], ['inline', 20, 'none', true], 'época lluviosa por la tarde: llovizna y nubes más bajas');
+      await r.ctx.close();
+      r = await ent(navegador, sAnio, ADMIN, { hora: 23 }, con('2026-07-10'));
+      eq(await cs(r.p, '.clima-lluvia', 'display'), 'none', 'época lluviosa: de noche no llueve');
+      await r.ctx.close();
+    } finally { sAnio.parar(); }
+
+    // Árboles de honor facetados (luz y sombra, pocas piezas) y la luna-moneda con canto, relieve y brillo.
+    const sMil = await servidor('mil');
+    try {
+      const { ctx, p, consola } = await ent(navegador, sMil, ADMIN, { hora: 23 }, con('2026-03-10'));
+      const a = await p.evaluate(() => [...document.querySelectorAll('.arbol-honor')].map((g) => ({ n: g.querySelectorAll('*').length, luz: (g.querySelector('.copa-luz')?.getAttribute('d') ?? '').length, sombra: (g.querySelector('.copa-sombra')?.getAttribute('d') ?? '').length, petalos: g.querySelectorAll('.petalo').length })));
+      ok(a.length === 3 && a.every((x) => x.n <= 25 && x.luz > 0 && x.sombra > 0), `árboles de honor: facetas en luz y en sombra, 25 piezas como mucho (${a.map((x) => x.n).join(', ')})`);
+      eq(a.map((x) => x.petalos), [0, 0, 3], 'árboles de honor: solo el maquilishuat suelta pétalos');
+      ok(await p.locator('.moneda-canto').count() === 1 && await p.locator('.moneda-brillo').count() === 1, 'luna-moneda: con canto y brillo');
+      const pos = await p.evaluate(() => { const b = document.querySelector('.luna .astro').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; });
+      for (let i = 0; i < 3; i++) { await p.mouse.click(pos.x, pos.y); await p.waitForTimeout(100); }
+      eq(await cs(p, '.luna.moneda .moneda-gira', 'animationName'), 'moneda-gira', 'luna-moneda: gira como una moneda lanzada');
+      eq(consola, [], `consola limpia (campamento 12): ${consola.join(' | ')}`);
+      await ctx.close();
+    } finally { sMil.parar(); }
+
+    // El eco con su estela de luz y el rótulo en el color del eco (no en negro).
+    const sEco = await servidor('eco');
+    try {
+      const { ctx, p } = await ent(navegador, sEco, ADMIN, { hora: 23 }, con('2026-03-10'));
+      ok(await p.locator('.eco-estela').count() === 1 && await p.locator('.eco-halo').count() === 1, 'eco: un «Tú» fantasma con su estela de luz');
+      ok(await cs(p, '.eco-txt', 'fill') !== 'rgb(0, 0, 0)', 'eco: el rótulo lleva el color del eco');
+      await ctx.close();
+    } finally { sEco.parar(); }
+
+    // El mensajero: sin precio, un zopilote planea en el hueco de la cifra; el texto sigue siendo «—» para los lectores.
+    const sSin = await servidor('sinprecio');
+    try {
+      const { ctx, p } = await ent(navegador, sSin, ADMIN, {}, con('2026-03-10'));
+      const z = await p.evaluate(() => ({ uso: document.querySelector('#precio use')?.getAttribute('href'), txt: document.getElementById('precio').textContent, alto: document.getElementById('precio').getBoundingClientRect().height }));
+      ok(z.uso === '#i-zopilote' && z.txt === '—' && z.alto <= 26, `sin precio: el zopilote en el hueco del precio (${JSON.stringify(z)})`);
+      await ctx.close();
+    } finally { sSin.parar(); }
   }
 
   // ---------------------------------------------------------------- una sola compra
