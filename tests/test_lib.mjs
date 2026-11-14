@@ -271,6 +271,17 @@ eq([Rx1.paso, Rx1.racha, tocaComprar(Rx1, fq(9, 2)).estado], [2, 6, 'aldia'], 'u
 const Rs = resumen(compSemFechas([...[0, 1, 2, 3, 4, 5].map((k) => fq(k)), fq(5, 4)]), null, fq(6, 2));
 eq([Rs.paso, Rs.racha], [1, 6], 'semanal con dos compras en una semana: la semana cuenta una vez');
 
+// Una compra marcada como extra NO cubre la semana: la racha, el ritmo y «te toca» miran solo las habituales
+const extraEn = (fs, extras) => fs.map((f, i) => ({ id: i + 1, tipo: 'compra', fecha: f, monto: 25, sats: 30000, precio: 83000, extra: extras.includes(f) }));
+const habSem = [0, 1, 2, 3, 4, 5].map((k) => sem(k, 1));
+const viernes6 = sem(6, 4);
+const Re1 = resumen(extraEn([...habSem, viernes6], [viernes6]), null, viernes6);
+eq([Re1.racha, tocaComprar(Re1, viernes6).estado], [6, 'toca'], 'una extra esta semana no la cubre: sigue tocando y la racha no sube');
+const Re2 = resumen(extraEn([...habSem, viernes6], []), null, viernes6);
+eq([Re2.racha, tocaComprar(Re2, viernes6).estado], [7, 'hecho'], 'la misma compra sin marcar como extra sí cuenta (7 semanas, al día)');
+const Re3 = resumen(extraEn([...habSem, sem(5, 3)], [sem(5, 3)]), null, sem(5, 4));
+eq([Re3.racha, Re3.nCompras, Re3.nExtra], [6, 7, 1], 'una extra en una semana que ya tenías no cambia la racha, y sigue contando como compra');
+
 // Efecto de una compra en el costo promedio (comprar barato lo baja)
 const Rc = resumen([{ id: 1, tipo: 'compra', fecha: '2026-10-01', monto: 100, sats: 100000, precio: 100000 }], null, '2026-10-05');
 const barato = costoTrasCompra(Rc, 50, 200000); // $50 por 200k sats = $25,000 el BTC
@@ -629,7 +640,10 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
     if (w === 12) continue;
     const d = new Date(Date.UTC(2025, 0, 6 + w * 7)); // lunes
     const f = d.toISOString().slice(0, 10);
-    cs.push({ id: id++, fecha: f, tipo: 'compra', monto: 20, sats: 25_000, precio: 80000, extra: w === 5 || w === 20 || w === 25, nota: w === 5 ? 'caída' : '' });
+    const esExtra = w === 5 || w === 20 || w === 25;
+    // La extra va ademas de la compra de la semana: una extra sola no cubre la semana (no cuenta para la racha).
+    if (esExtra) cs.push({ id: id++, fecha: new Date(Date.UTC(2025, 0, 6 + w * 7 + 2)).toISOString().slice(0, 10), tipo: 'compra', monto: 20, sats: 25_000, precio: 80000, extra: true, nota: w === 5 ? 'caída' : '' });
+    cs.push({ id: id++, fecha: f, tipo: 'compra', monto: 20, sats: 25_000, precio: 80000, extra: false, nota: '' });
   }
   const hoyH = '2025-08-15';
   const Rh = resumen(cs, 80000, hoyH);

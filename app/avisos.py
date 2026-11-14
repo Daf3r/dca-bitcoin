@@ -67,7 +67,7 @@ def _recordatorio(conn: sqlite3.Connection) -> bool:
                   and server._meta(conn, f"aviso_recordatorio_dia:{d['id']}") != hoy.isoformat()]
     if not pendientes:
         return False
-    fechas = [r["fecha"] for r in conn.execute(f"SELECT fecha FROM compras WHERE tipo = 'compra' AND {server.VIGENTES}")]
+    fechas = [r["fecha"] for r in conn.execute(f"SELECT fecha FROM compras WHERE tipo = 'compra' AND extra = 0 AND {server.VIGENTES}")]  # una compra extra no cubre la semana
     t = ritmo.recordatorio(fechas, hoy)
     if t is None:
         return False

@@ -450,8 +450,10 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     anios.set(y, a);
   }
 
+  // La compra de la semana (racha, ritmo, «te toca», recordatorio) es la habitual: una compra extra por una caída no la cubre.
+  const habituales = comprasItems.filter((c) => !c.extra);
   const porSemana = new Map();
-  for (const c of comprasItems) porSemana.set(semana(c.fecha), (porSemana.get(semana(c.fecha)) ?? 0) + c.monto);
+  for (const c of habituales) porSemana.set(semana(c.fecha), (porSemana.get(semana(c.fecha)) ?? 0) + c.monto);
   // Semana = lunes a domingo en hora local. La semana en curso sin compra aún no rompe
   // la racha (le quedan días): entonces la referencia es la semana anterior, y la ventana
   // de 52 semanas termina en esa misma referencia para que ambas cuenten lo mismo.
@@ -461,7 +463,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
   // Ritmo: cada semana o cada quincena (mediana de días entre tus últimas compras). Una racha es una
   // corrida de compras con no más de `paso` semanas entre una y otra; sigue viva mientras la última
   // compra no quede a más de `paso` semanas de hoy (la semana en curso aún no la rompe).
-  const paso = pasoSemanas(comprasItems);
+  const paso = pasoSemanas(habituales);
   let mejorRacha = 0, corrida = 0, previa = null, ini = null, mejorIni = null, mejorFin = null;
   for (const s of [...porSemana.keys()].sort((a, b) => a - b)) {
     if (previa !== null && s - previa <= paso) corrida++;
@@ -470,7 +472,7 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     previa = s;
   }
   // Cuándo empezó y acabó la mejor racha (primera compra de su primera semana y última de la última): «Tu historia».
-  const fechasDe = (sem) => comprasItems.filter((c) => semana(c.fecha) === sem).map((c) => c.fecha).sort();
+  const fechasDe = (sem) => habituales.filter((c) => semana(c.fecha) === sem).map((c) => c.fecha).sort();
   const mejorRachaDesde = mejorIni === null ? null : fechasDe(mejorIni)[0], mejorRachaHasta = mejorFin === null ? null : fechasDe(mejorFin).at(-1);
   const racha = previa !== null && actual - previa <= paso ? corrida : 0;
   const venceSemanas = previa !== null ? previa + paso - actual : 0;
