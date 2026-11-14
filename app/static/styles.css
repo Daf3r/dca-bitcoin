@@ -1659,3 +1659,5 @@ html[data-efectos="todos"][data-cielo="noche"] .fugaz.f5 { animation-duration: 3
 html:not([data-efectos="ninguno"]) .arbol-honor.pino-nuevo { transform-box: fill-box; transform-origin: 50% 100%; }
 /* Modo madrugada (idea 20): de 22:00 a 5:00 un velo cálido y oscuro atenúa la página (no toca los colores ni el contraste medido; los diálogos, en la capa superior, no lo llevan). */
 html[data-madrugada]:not([data-tv]):not([data-contraste="alto"])::after { content: ""; position: fixed; inset: 0; z-index: 30; pointer-events: none; background: rgb(70 32 0 / 0.2); }
+/* Los adornos de ambiente (aurora, humo, linterna…) nunca capturan toques: así la luna sigue tocable bajo la aurora. */
+.efecto-ambiente, .aurora-cinta { pointer-events: none; }
