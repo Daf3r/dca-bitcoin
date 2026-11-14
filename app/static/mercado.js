@@ -69,6 +69,8 @@ $('d-grafico').addEventListener('close', () => $('g-ampliar').focus({ preventScr
 
 // Escala logarítmica y series ocultables (leyenda interactiva).
 $('g-log').addEventListener('click', () => { escalaLog = !escalaLog; guardar(CLAVE_LOG, escalaLog ? '1' : ''); pintarMercado(); });
+// En el teléfono la leyenda va plegada (ocupaba tres filas de botones); desde 700 px, abierta.
+{ const det = document.getElementById('ley-det'); if (det) det.open = window.matchMedia('(min-width: 700px)').matches; }
 document.querySelector('.mercado .leyenda').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-serie]');
   if (!b) return;

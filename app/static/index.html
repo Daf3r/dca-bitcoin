@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="/styles.css">
 <!-- Los módulos se piden todos a la vez (en vez de descubrirlos uno tras otro al ejecutar el anterior): la app abre antes, sobre todo en el teléfono. -->
 <link rel="modulepreload" href="/estado.js">
+<link rel="modulepreload" href="/favicon.js">
 <link rel="modulepreload" href="/datos.js">
 <link rel="modulepreload" href="/avisar.js">
 <link rel="modulepreload" href="/pintar.js">
@@ -88,7 +89,7 @@
   <a href="#t-saldo" data-s="escena">Saldo</a><a href="#mercado" data-s="grafico">Gráfico</a><a href="#reportes" data-s="reportes">Reportes</a><a href="#compras" data-s="compras">Compras</a>
 </nav>
 <!-- Mini-cabecera: al bajar y perder de vista el saldo, queda una franja con el saldo y el precio; tocarla sube (minicab.js). -->
-<button type="button" class="minicab" id="minicab"><b id="minicab-saldo"></b> <span id="minicab-precio"></span><span class="sr"> Volver arriba</span></button>
+<button type="button" class="minicab" id="minicab"><b id="minicab-saldo"></b> <i class="mc-alt" id="minicab-alt" aria-hidden="true" hidden><i class="mc-punto"></i></i> <span id="minicab-precio"></span><span class="sr"> Volver arriba</span></button>
 <!-- Sprite de iconos (iconos.js): un solo trazo para todo. -->
 <svg class="sprite" width="0" height="0" aria-hidden="true" focusable="false">
   <symbol id="i-traslado" viewBox="0 0 24 24"><path d="M4 8h14m-4-4 4 4-4 4M20 16H6m4-4-4 4 4 4"/></symbol>
@@ -196,7 +197,9 @@
         <div class="gt-acciones"><button type="button" class="gt-editar" hidden>Editar</button><button type="button" class="gt-cerrar">Cerrar</button></div>
       </div>
     </div>
-    <p class="leyenda" role="group" aria-label="Qué mostrar en el gráfico (toca para ocultar o mostrar)"><button type="button" class="k-p" data-serie="precio" aria-pressed="true">Precio de BTC</button><button type="button" class="k-c" data-serie="compras" aria-pressed="true">Tus compras, a su precio</button><span class="k-x" hidden>Compra extra</span><button type="button" class="k-a" data-serie="costo" aria-pressed="true">Tu costo promedio</button><span class="k-g" hidden>Por encima de tu costo</span><span class="k-l" hidden>Por debajo de tu costo</span><button type="button" class="k-m" data-serie="max" aria-pressed="true" hidden>Máximo de 30 días</button><button type="button" class="k-b" data-serie="bandas" aria-pressed="true" hidden>Caída fuerte (15 %+)</button></p>
+    <details class="ley-det" id="ley-det"><summary>Leyenda y series</summary>
+      <p class="leyenda" role="group" aria-label="Qué mostrar en el gráfico (toca para ocultar o mostrar)"><button type="button" class="k-p" data-serie="precio" aria-pressed="true">Precio de BTC</button><button type="button" class="k-c" data-serie="compras" aria-pressed="true">Tus compras, a su precio</button><span class="k-x" hidden>Compra extra</span><button type="button" class="k-a" data-serie="costo" aria-pressed="true">Tu costo promedio</button><span class="k-g" hidden>Por encima de tu costo</span><span class="k-l" hidden>Por debajo de tu costo</span><button type="button" class="k-m" data-serie="max" aria-pressed="true" hidden>Máximo de 30 días</button><button type="button" class="k-b" data-serie="bandas" aria-pressed="true" hidden>Caída fuerte (15 %+)</button></p>
+    </details>
   </section>
 
   <!-- Lo que pusiste (neto) frente a lo que vale tu saldo, día a día. Desde 3 compras y con histórico. -->

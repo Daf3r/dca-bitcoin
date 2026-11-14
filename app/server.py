@@ -701,7 +701,7 @@ def importar_traslados_csv(conn: sqlite3.Connection, texto: str, usuario: str = 
 ESCRITURA = ("POST", "PUT", "DELETE", "PATCH")
 PUBLICAS = {"/healthz", "/login", "/api/login", "/api/estado"}
 # El código de la página no es secreto: módulos, estilos, fuentes e icono se sirven sin sesión.
-RECURSO_PUBLICO = re.compile(r"/(?:[\w-]+\.js|styles\.css|icon\.svg|manifest\.webmanifest|(?:icon-[\w-]+|apple-touch-icon|arranque-\d+x\d+|grano)\.png|fonts/[\w.-]+)")
+RECURSO_PUBLICO = re.compile(r"/(?:[\w-]+\.js|styles\.css|icon\.svg|manifest\.webmanifest|(?:icon-[\w-]+|apple-touch-icon|arranque-\d+x\d+|grano)\.png|icon-(?:luna|oro)-\d\.svg|curvas\.svg|fonts/[\w.-]+)")
 
 
 # ------------------------------------------- registros estructurados, métricas y errores del navegador (ideas 95, 96, 74)
