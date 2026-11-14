@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-h', fecha: '2026-11-14',
+    items: [
+      'En la montaña aparece tu eco: una sombra con la leyenda «hace 1 año» marca dónde estabas hace doce meses.',
+      'Si tu saldo es un número especial (capicúa, todo repetido, una escalera…), una etiqueta junto a «Tu saldo» lo dice.',
+      'La compra 100 planta un ceibo entre los pinos; la 500, un amate; la 1,000, un maquilishuat.',
+      'Hay días con una nota: el aniversario de tu primera compra, fechas de Bitcoin y las lluvias de estrellas reales.',
+      'Pasadas las 10 de la noche la página se atenúa un poco (se apaga en «Tu cuenta»). Y la luna guarda un secreto: toca tres veces.',
+    ],
+  },
+  {
     id: '2026-11-g', fecha: '2026-11-14',
     items: [
       'En el gráfico del precio, cada compra tiene el tamaño de sus sats: una compra grande se ve grande. En el teléfono la leyenda está plegada para dejar más sitio.',
