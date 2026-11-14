@@ -2515,7 +2515,7 @@ try {
     // Las cuentas de prueba ven «Qué hay de nuevo» al entrar: se cierra para poder tocar la página.
     const ent = async (...a) => { const r = await entrar(...a); if (await r.p.locator('#d-cambios[open]').count()) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(300); } return r; };
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
-    const fijarDia = (d) => () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.dia', d); } catch { /* sin almacenamiento */ } };
+    const fijarDia = (d) => [(dia) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.dia', dia); } catch { /* sin almacenamiento */ } }, d];
     // Eco (31): con más de un año de camino aparece; con menos, no.
     const sEco = await servidor('eco');
     try {
