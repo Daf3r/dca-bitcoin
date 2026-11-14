@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-i', fecha: '2026-11-14',
+    items: [
+      'Detrás de la montaña se ven ahora los volcanes de Occidente: el Izalco, el Santa Ana y el de San Salvador.',
+      'Al amanecer, de vez en cuando, cruza el cielo un torogoz.',
+      'En las fiestas agostinas, las patrias y en Navidad cuelga papel picado con el año; y la noche de fin de año hay cohetes.',
+      'En la época lluviosa, por la tarde, cae una llovizna detrás de la montaña; en la seca, el aire se pone dorado.',
+      'Los árboles de honor, la luna-moneda y tu eco están mejor dibujados. Y si no llega el precio, en su lugar planea el mensajero.',
+    ],
+  },
+  {
     id: '2026-11-h', fecha: '2026-11-14',
     items: [
       'En la montaña aparece tu eco: una sombra con la leyenda «hace 1 año» marca dónde estabas hace doce meses.',

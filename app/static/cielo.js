@@ -49,6 +49,30 @@
     const n = (t) => Number(partes.find((p) => p.type === t).value);
     return n('hour') + n('minute') / 60;
   }
+  /** Fecha AAAA-MM-DD de El Salvador. Con `libro.dia` en localStorage, la que se pida (para probar fiestas y épocas). */
+  const dfDia = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA });
+  function dia(ahora = new Date()) {
+    try {
+      const f = localStorage.getItem('libro.dia');
+      if (/^\d{4}-\d{2}-\d{2}$/.test(f)) return f;
+    } catch { /* sin almacenamiento */ }
+    return dfDia.format(ahora);
+  }
+  /** Fiestas que adornan la escena (papel picado): agostinas (1–6 ago), patrias (13–15 sep) y navidad (20–26 dic); si no, ''. */
+  function fiesta(f) {
+    const md = f.slice(5);
+    if (md >= '08-01' && md <= '08-06') return 'agostinas';
+    if (md >= '09-13' && md <= '09-15') return 'patrias';
+    if (md >= '12-20' && md <= '12-26') return 'navidad';
+    return '';
+  }
+  /** Época del año en El Salvador: lluviosa de mayo a octubre, seca el resto. */
+  const epoca = (f) => (Number(f.slice(5, 7)) >= 5 && Number(f.slice(5, 7)) <= 10 ? 'lluviosa' : 'seca');
+  /** Cohetes de fin de año: del 31 de diciembre a las 23:50 hasta el 1 de enero a las 0:30. */
+  function cohetes(f, h) {
+    const md = f.slice(5);
+    return (md === '12-31' && h >= 23 + 50 / 60) || (md === '01-01' && h < 0.5);
+  }
   /** La franja a la que pertenece la hora. */
   function franja(h) {
     if (h >= 19 || h < 5) return 'noche';
@@ -123,6 +147,11 @@
     for (const [k, v] of Object.entries(colores(h))) raiz.style.setProperty(k, v);
     const ti = tinta(h), t = TINTA[ti];
     raiz.dataset.cielo = franja(h);
+    // Fiestas, época del año y cohetes de fin de año: el CSS muestra lo que toque (la escena dibuja todo y se queda oculto).
+    const d = dia(), fi = fiesta(d);
+    if (fi) raiz.dataset.fiesta = fi; else delete raiz.dataset.fiesta;
+    raiz.dataset.epoca = epoca(d);
+    raiz.toggleAttribute('data-cohetes', cohetes(d, h));
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
     raiz.dataset.tinta = ti;
@@ -136,5 +165,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible') aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar };
 })();

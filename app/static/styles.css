@@ -172,14 +172,10 @@ html[data-efectos="todos"] .nube.n3 { animation: nube 200s linear -90s infinite;
 html[data-efectos="todos"] .niebla-a { animation: niebla 80s ease-in-out infinite alternate; }
 html[data-efectos="todos"] .niebla-b { animation: niebla 110s ease-in-out -40s infinite alternate-reverse; }
 /* Aves al amanecer: cruzan de vez en cuando, muy esporádicas. */
+/* Al amanecer cruza un torogoz (el ave nacional), muy de vez en cuando: aletea a ratos y planea (arte.js: torogoz). */
 .ave { opacity: 0; }
-.ave-ala { fill: none; stroke: var(--monte); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transform-box: fill-box; transform-origin: center; }
-@keyframes ave { 0%, 88% { opacity: 0; transform: translate(-60px, 0); } 89% { opacity: 0.8; } 99% { opacity: 0.8; } 100% { opacity: 0; transform: translate(calc(var(--escena-w, 400px) + 60px), -34px); } }
-@keyframes aleteo { from { transform: scaleY(1); } to { transform: scaleY(0.35); } }
+@keyframes ave { 0%, 88% { opacity: 0; transform: translate(-60px, 0); } 89% { opacity: 0.95; } 99% { opacity: 0.95; } 100% { opacity: 0; transform: translate(calc(var(--escena-w, 400px) + 60px), -34px); } }
 html[data-efectos="todos"][data-cielo="amanecer"] .ave { animation: ave 52s linear 4s infinite; }
-html[data-efectos="todos"][data-cielo="amanecer"] .ave-ala { animation: aleteo 0.45s ease-in-out infinite alternate; }
-html[data-efectos="todos"][data-cielo="amanecer"] .ave-ala.a2 { animation-delay: -0.15s; }
-html[data-efectos="todos"][data-cielo="amanecer"] .ave-ala.a3 { animation-delay: -0.3s; }
 /* El cielo se funde con la página al bajar: un velo del color del fondo que sube con el desplazamiento (oscurece en el tema oscuro, aclara en el claro). */
 /* Rendimiento en teléfono: las nubes, la niebla y las estrellas se mueven tan despacio (un píxel por segundo o menos) que no
    hace falta redibujar el SVG sesenta veces por segundo. Con `steps()` se actualizan unas pocas veces por segundo, con saltos de
@@ -221,9 +217,16 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .peldano { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 65%, #4a3523); stroke-width: 1.3; stroke-linecap: round; opacity: 0.55; }
 .piedra { fill: color-mix(in oklab, var(--monte) 55%, var(--nieve)); opacity: 0.7; }
 .sendero { fill: none; stroke: var(--nieve); stroke-width: 1.6; stroke-dasharray: 2 8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.5; }
-.eco-anillo { fill: none; stroke: #fff2d9; stroke-width: 1.8; stroke-dasharray: 3 3; opacity: 0.9; }
-.eco-punto { fill: #fff2d9; opacity: 0.55; }
-.eco-txt { fill: #f7e8cf; font: italic 600 12px var(--serif); opacity: 0.85; paint-order: stroke; stroke: var(--monte-sombra); stroke-width: 3px; stroke-linejoin: round; }
+/* Tu eco: un «Tú» fantasma (las mismas capas que «Tú», en el color de la nieve, translúcidas y con el anillo punteado). */
+.montana { --eco: color-mix(in oklab, var(--nieve) 78%, #ffd9a0); }
+.eco-halo { fill: var(--eco); opacity: 0.12; }
+.eco-anillo { fill: none; stroke: var(--eco); stroke-width: 1.4; stroke-dasharray: 2.2 2.8; stroke-linecap: round; opacity: 0.9; }
+.eco-sombra { fill: var(--monte-sombra); opacity: 0.4; }
+.eco-punto { fill: var(--eco); opacity: 0.55; }
+.eco-txt { fill: var(--eco); font: italic 600 12px var(--serif); opacity: 0.92; paint-order: stroke; stroke: var(--monte-sombra); stroke-width: 3px; stroke-linejoin: round; }
+@keyframes eco-respira { 50% { opacity: 0.55; } }
+html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out infinite; }
+.eco-estela { fill: none; stroke: var(--eco); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; opacity: 0.2; }
 .pag-login .eco, .pag-login .eco-txt { display: none; }
 .salida { fill: var(--monte); stroke: var(--naranja); stroke-width: 3; }
 .sendero-luz { fill: none; stroke: var(--naranja); stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.42; }
@@ -287,7 +290,7 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .saldo-v em[data-vivo="1"]::before { content: ""; display: inline-block; width: 0.32em; height: 0.32em; margin-right: 0.3em; border-radius: 50%; background: var(--cielo-sube, var(--sube)); vertical-align: 0.12em; }
 html[data-efectos="todos"] .saldo-v em[data-vivo="1"]::before { animation: latido 2.4s ease-in-out infinite; }
 @keyframes latido { 50% { opacity: 0.3; } }
-.cotizacion[data-estado="viejo"] .cot-meta, .cotizacion[data-estado="error"] .cot-meta { color: var(--baja); }
+.cotizacion[data-estado="viejo"] .cot-meta, .cotizacion[data-estado="error"] .cot-meta { color: var(--cielo-baja, var(--baja)); } /* el rojo de la tinta del cielo: se lee sobre cualquier hora */
 
 /* La caja del saldo se coloca con left/right y nunca con un relleno que crezca con la ventana:
    así su ancho útil no puede llegar a 0 (era la causa del saldo invisible con zoom pequeño). */
@@ -1640,24 +1643,152 @@ dialog, .hoja-panel { box-shadow: inset 0 1px 0 var(--filo), var(--sombra-alta);
 /* Campamento 11 · tus números y tu eco */
 .sendero-memoria { fill: none; stroke: var(--naranja); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0.3; }
 .salida-aniv { opacity: 0.9; }
-.moneda-b { opacity: 0; pointer-events: none; transform-box: fill-box; transform-origin: center; }
-.moneda-disco { fill: #e8b04a; fill-opacity: 0.72; stroke: #ffe2a0; stroke-width: 0.08; }
-.moneda-signo { fill: none; stroke: #5a3a00; stroke-width: 0.14; stroke-linecap: round; stroke-linejoin: round; }
-.luna.moneda .moneda-b { opacity: 1; animation: moneda-gira 1.6s ease-in-out both; }
-@keyframes moneda-gira { 0% { opacity: 0; transform: scaleX(0.05); } 20% { opacity: 1; transform: scaleX(1); } 45% { transform: scaleX(-1); } 70% { transform: scaleX(1); } 88% { opacity: 1; } 100% { opacity: 0; transform: scaleX(1); } }
-html[data-efectos="ninguno"] .luna.moneda .moneda-b { animation: none; opacity: 1; }
 /* Lluvia de estrellas real: las fugaces de más cruzan a ritmos distintos (solo de noche y con todos los efectos, como la primera). */
 html[data-efectos="todos"][data-cielo="noche"] .fugaz.f2 { animation-duration: 23s; animation-delay: 4s; }
 html[data-efectos="todos"][data-cielo="noche"] .fugaz.f3 { animation-duration: 27s; animation-delay: 12s; }
 html[data-efectos="todos"][data-cielo="noche"] .fugaz.f4 { animation-duration: 19s; animation-delay: 7s; }
 html[data-efectos="todos"][data-cielo="noche"] .fugaz.f5 { animation-duration: 31s; animation-delay: 2s; }
-/* Árboles de honor (compra 100, 500 y 1,000): más grandes que los pinos, entre ellos. */
-.arbol-honor .tronco { fill: color-mix(in srgb, var(--monte-sombra) 35%, #6b4a2c); }
-.arbol-honor .copa { fill: color-mix(in srgb, var(--pino0) 40%, #4d9a52); }
-.arbol-honor.amate .copa { fill: color-mix(in srgb, var(--pino0) 38%, #6c9a3e); }
-.arbol-honor.maquilishuat .copa { fill: color-mix(in srgb, var(--pino0) 18%, #d9739a); }
-html:not([data-efectos="ninguno"]) .arbol-honor.pino-nuevo { transform-box: fill-box; transform-origin: 50% 100%; }
 /* Modo madrugada (idea 20): de 22:00 a 5:00 un velo cálido y oscuro atenúa la página (no toca los colores ni el contraste medido; los diálogos, en la capa superior, no lo llevan). */
 html[data-madrugada]:not([data-tv]):not([data-contraste="alto"])::after { content: ""; position: fixed; inset: 0; z-index: 30; pointer-events: none; background: rgb(70 32 0 / 0.2); }
 /* Los adornos de ambiente (aurora, humo, linterna…) nunca capturan toques: así la luna sigue tocable bajo la aurora. */
 .efecto-ambiente, .aurora-cinta { pointer-events: none; }
+
+/* ---------------------------------------------------------------- Campamento 12 · El Salvador en la escena (arte.js) */
+/* Volcanes de Occidente: el cono del Izalco, de ceniza, más oscuro arriba; un filo de luz en el flanco que mira al astro. */
+.volcan-ceniza { fill: url(#m-ceniza); }
+.ce-0 { stop-color: var(--monte-sombra); stop-opacity: 0.45; } .ce-1 { stop-color: var(--monte-sombra); stop-opacity: 0; }
+.volcan-filo { fill: none; stroke: var(--astro); stroke-opacity: calc(0.2 + var(--halo-a, 0.2) * 0.5); stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; }
+
+/* El torogoz: verde, con la ceja turquesa, el antifaz negro, el vientre canela y las raquetas de la cola. Se funde un poco con el cielo. */
+.torogoz { --toro-verde: color-mix(in oklab, #3f9a5c 84%, var(--c3)); --toro-turquesa: color-mix(in oklab, #35b6c8 86%, var(--c3)); --toro-canela: color-mix(in oklab, #c9773a 86%, var(--c3)); --toro-oscuro: #1c2622; }
+.toro-cuerpo { fill: var(--toro-verde); }
+.toro-vientre { fill: var(--toro-canela); }
+.toro-cola { fill: var(--toro-turquesa); }
+.toro-varilla { fill: none; stroke: var(--toro-oscuro); stroke-width: 0.55; stroke-linecap: round; }
+.toro-raqueta { fill: var(--toro-turquesa); stroke: var(--toro-oscuro); stroke-width: 0.5; }
+.toro-ala { fill: var(--toro-turquesa); stroke: var(--toro-verde); stroke-width: 0.7; stroke-linejoin: round; transform-box: fill-box; transform-origin: 75% 100%; }
+.toro-ala-lejos { fill: color-mix(in oklab, var(--toro-verde) 65%, #0d1d17); stroke: none; }
+.toro-pico { fill: var(--toro-oscuro); }
+.toro-antifaz { fill: none; stroke: #0b0f0d; stroke-width: 1.1; stroke-linecap: round; }
+.toro-ceja { fill: none; stroke: #7fe6f2; stroke-width: 0.85; stroke-linecap: round; }
+/* Aletea tres veces y planea (las alas casi planas); el cuerpo sube con cada aleteo y baja al planear. */
+@keyframes toro-aleteo { 0%, 20%, 40% { transform: scaleY(1); animation-timing-function: ease-in; } 10%, 30% { transform: scaleY(-0.5); animation-timing-function: ease-out; } 56%, 100% { transform: scaleY(0.22); } }
+@keyframes toro-ondula { 0% { transform: translateY(1.5px); } 42% { transform: translateY(-2.5px); } 100% { transform: translateY(1.5px); } }
+html[data-efectos="todos"][data-cielo="amanecer"] .toro-ala { animation: toro-aleteo 1.9s infinite; }
+html[data-efectos="todos"][data-cielo="amanecer"] .toro-bota { animation: toro-ondula 1.9s ease-in-out infinite; }
+
+/* Papel picado (fiestas): oculto el resto del año. Los colores de cada fiesta; de noche, un poco en sombra. */
+.papel-picado { display: none; pointer-events: none; }
+html[data-fiesta] .papel-picado { display: inline; }
+html[data-fiesta="agostinas"] { --pp-1: #2f62c9; --pp-2: #f3eee2; --pp-3: #d0453b; }
+html[data-fiesta="patrias"] { --pp-1: #2f6fd0; --pp-2: #f4f1ea; --pp-3: #6fa8e8; }
+html[data-fiesta="navidad"] { --pp-1: #c8323a; --pp-2: #2f8a4a; --pp-3: #e6b43c; }
+html { --pp-luz: 88%; } html[data-cielo="noche"] { --pp-luz: 66%; }
+.pp-bandera path:first-child { fill: color-mix(in oklab, var(--pp-1) var(--pp-luz, 100%), var(--monte-sombra)); }
+.pp-bandera.pp-c1 path:first-child { fill: color-mix(in oklab, var(--pp-2) var(--pp-luz, 100%), var(--monte-sombra)); }
+.pp-bandera.pp-c2 path:first-child { fill: color-mix(in oklab, var(--pp-3) var(--pp-luz, 100%), var(--monte-sombra)); }
+.pp-doblez { fill: #000; opacity: 0.2; }
+.pp-cordel { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 45%, #d9c8a6); stroke-width: 0.9; }
+.pp-estaca { stroke: color-mix(in oklab, var(--monte-sombra) 55%, #6b4a2c); stroke-width: 2; stroke-linecap: round; }
+.pp-bandera { transform-box: fill-box; transform-origin: 50% 0; }
+@keyframes pp-ondea { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+html[data-efectos="todos"] .pp-bandera { animation: pp-ondea 3.4s ease-in-out infinite alternate; }
+html[data-efectos="todos"] .pp-bandera:nth-child(even) { animation-duration: 2.9s; animation-delay: -1.2s; }
+html[data-efectos="todos"] .pp-bandera:nth-child(3n) { animation-delay: -2.1s; }
+
+/* Cohetes de fin de año (31 de diciembre a medianoche): volcancitos de chispas y silbadores que suben en zigzag y revientan. */
+.cohetes { display: none; pointer-events: none; }
+html[data-cohetes] .cohetes { display: inline; }
+.vc-cono { fill: #b8323a; stroke: #f2cf7c; stroke-width: 0.6; }
+.chispa { fill: #ffd780; opacity: 0; }
+@keyframes chispa { 0% { transform: translate(0, 0); opacity: 1; } 55% { transform: translate(calc(var(--dx) * 0.7), var(--dy)); opacity: 0.95; } 100% { transform: translate(var(--dx), calc(var(--dy) * 0.45)); opacity: 0; } }
+.chispa { animation: chispa 1.25s ease-out infinite; }
+.vc-banda { stroke: #f2cf7c; stroke-width: 0.9; }
+.chispa:nth-child(1) { --dx: -13px; --dy: -34px; }
+.chispa:nth-child(2) { --dx: -5px; --dy: -46px; animation-delay: -0.25s; }
+.chispa:nth-child(3) { --dx: 2px; --dy: -52px; animation-delay: -0.5s; fill: #fff3c8; }
+.chispa:nth-child(4) { --dx: 8px; --dy: -42px; animation-delay: -0.75s; }
+.chispa:nth-child(5) { --dx: 15px; --dy: -31px; animation-delay: -1s; fill: #ff9f5a; }
+.volcancito:nth-child(2) .chispa { animation-duration: 1.4s; }
+.silbador { --sube: var(--cohete-alto, 120px); }
+.silbador:nth-child(4) { --sube: calc(var(--cohete-alto, 120px) * 0.82); }
+.sb-cabeza { fill: #fff3cf; }
+.sb-estela { stroke: #ffc56b; stroke-width: 1.2; stroke-linecap: round; opacity: 0.7; }
+.sb-sube { opacity: 0; }
+@keyframes silba { 0% { transform: translate(0, 0); opacity: 0; } 4% { opacity: 1; } 22% { transform: translate(5px, calc(var(--sube) * -0.25)); } 42% { transform: translate(-5px, calc(var(--sube) * -0.5)); } 62% { transform: translate(5px, calc(var(--sube) * -0.75)); } 79% { transform: translate(0, calc(var(--sube) * -1)); opacity: 1; } 80%, 100% { transform: translate(0, calc(var(--sube) * -1)); opacity: 0; } }
+@keyframes estalla { 0%, 79% { opacity: 0; transform: scale(0.2); } 81% { opacity: 1; } 100% { opacity: 0; transform: scale(1.5); } }
+.sb-sube { animation: silba 3.4s ease-in infinite; }
+.sb-estallido { opacity: 0; transform-box: fill-box; transform-origin: center; animation: estalla 3.4s ease-out infinite; }
+.sb-estallido path { fill: none; stroke: #ffd780; stroke-width: 1.6; stroke-linecap: round; }
+.sb-estallido circle { fill: none; stroke: #ff9fb0; stroke-width: 1.6; stroke-dasharray: 0.1 6; stroke-linecap: round; }
+.silbador:nth-child(4) .sb-estallido path { stroke: #9fe3ff; }
+.silbador:nth-child(4) :is(.sb-sube, .sb-estallido) { animation-delay: -1.7s; }
+
+/* Clima: en la época lluviosa, por la tarde, nubes más bajas y una llovizna de vez en cuando; en la seca, un aire dorado leve. */
+.clima-lluvia, .aire-seco { display: none; }
+html[data-epoca="lluviosa"]:is([data-cielo="dia"], [data-cielo="atardecer"]) .clima-lluvia { display: inline; }
+html[data-epoca="seca"]:not([data-cielo="noche"]) .aire-seco { display: inline; }
+html[data-epoca="lluviosa"][data-efectos="todos"]:is([data-cielo="dia"], [data-cielo="atardecer"]) .nube { translate: 0 calc(var(--escena-w, 400px) * 0.03); }
+.nube-cargada { fill: color-mix(in oklab, var(--lejos) 50%, var(--c3)); opacity: 0.9; }
+.gota { fill: none; stroke: color-mix(in oklab, var(--lejos) 45%, #fff); stroke-width: 1.2; stroke-linecap: round; opacity: 0; }
+@keyframes gota { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 0.75; } 100% { transform: translate(-7px, 46px); opacity: 0; } }
+@keyframes llovizna { 0%, 30% { opacity: 0; } 38%, 72% { opacity: 1; } 80%, 100% { opacity: 0; } }
+.gotas { animation: llovizna 42s linear infinite; }
+.gota { animation: gota 1.1s linear infinite; }
+.gota:nth-child(5n + 2) { animation-delay: -0.22s; } .gota:nth-child(5n + 3) { animation-delay: -0.44s; }
+.gota:nth-child(5n + 4) { animation-delay: -0.66s; } .gota:nth-child(5n) { animation-delay: -0.88s; }
+@media (max-width: 899px) { .gota { animation-timing-function: steps(9); } }
+.ai-0 { stop-color: #f2c46d; stop-opacity: 0; } .ai-1 { stop-color: #f2c46d; stop-opacity: 0.13; }
+
+/* Árboles de honor (compra 100, 500 y 1,000): copa con su luz del lado del astro y su sombra debajo. */
+.arbol-honor { --copa: color-mix(in oklab, var(--pino0) 40%, #4f9b55); --corteza: color-mix(in oklab, var(--monte-sombra) 38%, #6b4a2c); }
+.arbol-honor.ceibo { --corteza: color-mix(in oklab, var(--monte-sombra) 38%, #a09b8a); }
+.arbol-honor.amate { --copa: color-mix(in oklab, var(--pino0) 40%, #5d9442); }
+.arbol-honor.maquilishuat { --copa: color-mix(in oklab, var(--pino0) 16%, #e07fa3); }
+.arbol-honor .tronco { fill: var(--corteza); }
+.arbol-honor .tronco-sombra { fill: var(--monte-sombra); opacity: 0.42; }
+.arbol-honor .rama { fill: none; stroke: var(--corteza); stroke-width: 1.7; stroke-linecap: round; }
+.arbol-honor .raiz { stroke-width: 0.9; opacity: 0.75; }
+.arbol-honor .copa { fill: var(--copa); }
+.arbol-honor .copa-media { fill: color-mix(in oklab, var(--copa) 84%, var(--astro)); }
+.arbol-honor .copa-luz { fill: color-mix(in oklab, var(--copa) 66%, var(--astro)); }
+.arbol-honor .copa-sombra { fill: color-mix(in oklab, var(--copa) 55%, var(--monte-sombra)); }
+.arbol-honor .copa-filo { fill: none; stroke: var(--astro); stroke-opacity: calc(0.18 + var(--halo-a, 0.2) * 0.5); stroke-width: 0.9; stroke-linecap: round; }
+.arbol-honor .flores-caidas { fill: color-mix(in oklab, var(--copa) 80%, #fff); opacity: 0.75; }
+.petalo { fill: color-mix(in oklab, var(--copa) 70%, #fff); opacity: 0; transform-box: fill-box; transform-origin: center; }
+@keyframes petalo { 0%, 70% { opacity: 0; transform: translate(0, 0) rotate(0deg); } 74% { opacity: 0.9; } 100% { opacity: 0; transform: translate(-14px, 46px) rotate(260deg); } }
+html[data-efectos="todos"] .petalo { animation: petalo 11s ease-in infinite; }
+html[data-efectos="todos"] .petalo:nth-child(2) { animation-delay: -4s; animation-duration: 13s; }
+html[data-efectos="todos"] .petalo:nth-child(3) { animation-delay: -8s; }
+html:not([data-efectos="ninguno"]) .arbol-honor.pino-nuevo { transform-box: fill-box; transform-origin: 50% 100%; }
+
+/* La luna-moneda: canto, cara con su borde en relieve, el signo ₿ grabado y un brillo que la cruza al terminar de girar. */
+.moneda-b { opacity: 0; pointer-events: none; }
+.moneda-gira { transform-box: fill-box; transform-origin: center; }
+.moneda-canto { fill: #8a5a12; }
+.moneda-disco { fill: #e3a73a; }
+.moneda-cara { fill: #f2bf55; }
+.moneda-relieve { fill: none; stroke: #b37a1c; stroke-width: 0.045; }
+.moneda-grabado { fill: none; stroke: #8a5a12; stroke-width: 0.15; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+.moneda-signo { fill: none; stroke: #fff2cc; stroke-width: 0.13; stroke-linecap: round; stroke-linejoin: round; }
+.moneda-brillo { fill: #fff; opacity: 0; }
+.luna.moneda .moneda-b { opacity: 1; }
+/* Aparece, gira dos veces como una moneda lanzada (cada media vuelta acelera y frena) y un destello la cruza. */
+@keyframes moneda-gira {
+  0% { transform: scale(0.55); opacity: 0; }
+  12% { transform: scale(1); opacity: 1; animation-timing-function: ease-in; }
+  24% { transform: scaleX(0.04); animation-timing-function: ease-out; }
+  36% { transform: scaleX(1); animation-timing-function: ease-in; }
+  48% { transform: scaleX(0.04); animation-timing-function: ease-out; }
+  62%, 90% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scale(1.04); opacity: 0; }
+}
+@keyframes moneda-brillo { 0%, 62% { opacity: 0; transform: translateX(0); } 68% { opacity: 0.55; } 86%, 100% { opacity: 0; transform: translateX(1.9px); } }
+.luna.moneda .moneda-gira { animation: moneda-gira 1.6s both; }
+.luna.moneda .moneda-brillo { animation: moneda-brillo 1.6s ease-in-out both; }
+html[data-efectos="ninguno"] .luna.moneda :is(.moneda-gira, .moneda-brillo) { animation: none; }
+.pp-cifra { font-family: var(--sans); font-weight: 800; fill: #000; }
+/* El mensajero (sin precio): un zopilote planea en el hueco de la cifra. Los márgenes negativos no dejan que cambie el alto de la línea. */
+.cot-v .ico { width: 1.6em; height: 1.6em; margin: -0.66em 0; vertical-align: middle; color: var(--cielo-txt2); }
+@keyframes zopilote { 50% { transform: translate(-1.5px, -1px) rotate(-4deg); } }
+html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infinite; }

@@ -437,6 +437,20 @@ eq(ubicacionSats([tr(600)], 1000).partes, [{ id: 0, nombre: 'Mi wallet', sats: 6
   // Un instante fijo: 2026-11-07 12:00 UTC = 06:00 en El Salvador
   eq(C.hora(new Date('2026-11-07T12:00:00Z')), 6, 'hora de El Salvador (UTC−6, sin horario de verano)');
   eq(C.hora(new Date('2026-11-07T05:30:00Z')), 23.5, 'la hora cruza el día hacia atrás');
+  // Fiestas, época y cohetes (campamento 12): por fecha de El Salvador, con `libro.dia` para probar
+  {
+    const raiz = ctx.document.documentElement;
+    eq(['2026-07-31', '2026-08-01', '2026-08-06', '2026-08-07', '2026-09-12', '2026-09-13', '2026-09-15', '2026-09-16', '2026-12-19', '2026-12-20', '2026-12-26', '2026-12-27'].map(C.fiesta),
+      ['', 'agostinas', 'agostinas', '', '', 'patrias', 'patrias', '', '', 'navidad', 'navidad', ''], 'fiestas: agostinas, patrias y navidad');
+    eq(['2026-04-30', '2026-05-01', '2026-10-31', '2026-11-01', '2027-01-15'].map(C.epoca), ['seca', 'lluviosa', 'lluviosa', 'seca', 'seca'], 'época: lluviosa de mayo a octubre');
+    eq([C.cohetes('2026-12-31', 23.8), C.cohetes('2026-12-31', 23.84), C.cohetes('2027-01-01', 0.2), C.cohetes('2027-01-01', 0.5), C.cohetes('2026-12-30', 23.9), C.cohetes('2026-12-31', 12)], [false, true, true, false, false, false], 'cohetes: 23:50 del 31 a 0:30 del 1');
+    eq(C.dia(new Date('2026-11-07T05:30:00Z')), '2026-11-06', 'el día cruza hacia atrás como la hora (UTC−6)');
+    almacen['libro.dia'] = '2026-09-14'; almacen['libro.hora'] = '12'; C.aplicar();
+    eq([raiz.dataset.fiesta, raiz.dataset.epoca, raiz.atributos.has('data-cohetes')], ['patrias', 'lluviosa', false], 'aplicar: deja la fiesta y la época en html');
+    almacen['libro.dia'] = '2026-12-31'; almacen['libro.hora'] = '23.9'; C.aplicar();
+    eq([raiz.dataset.fiesta, raiz.dataset.epoca, raiz.atributos.has('data-cohetes')], [undefined, 'seca', true], 'aplicar: cohetes a fin de año y sin fiesta');
+    delete almacen['libro.dia']; delete almacen['libro.hora'];
+  }
   // Modo madrugada (idea 20): de 22:00 a 5:00, y se apaga con `libro.madrugada` = 0
   {
     const raiz = ctx.document.documentElement;
