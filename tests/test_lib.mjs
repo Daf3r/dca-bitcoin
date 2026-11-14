@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, ticksPrecio, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
+  satsEn, haceUnAnio, eco, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -683,5 +684,28 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   let peor = 99;
   for (let i = 0; i < 36; i++) peor = Math.min(peor, 1.05 / (lum(hsl(i * 10, 52, 28)) + 0.05));
   ok(peor >= 4.5, `avatar: la inicial blanca llega a 4.5:1 con los 36 tonos (peor ${peor.toFixed(2)})`);
+}
+
+// Campamento 11 · tu eco y tus números
+{
+  const mov = [
+    { id: 1, fecha: '2025-06-01', tipo: 'compra', sats: 10000 },
+    { id: 2, fecha: '2025-12-01', tipo: 'compra', sats: 20000 },
+    { id: 3, fecha: '2026-03-01', tipo: 'venta', sats: 5000 },
+    { id: 4, fecha: '2026-09-01', tipo: 'compra', sats: 15000 },
+  ];
+  eq([satsEn(mov, '2025-05-31'), satsEn(mov, '2025-06-01'), satsEn(mov, '2026-03-01'), satsEn(mov, '2026-12-31')], [0, 10000, 25000, 40000], 'satsEn: saldo al final de cada fecha, con ventas');
+  eq([haceUnAnio('2026-11-14'), haceUnAnio('2028-02-29')], ['2025-11-14', '2027-02-28'], 'haceUnAnio: el 29 de febrero cae el 28');
+  eq(eco(mov, 40000, '2026-11-14'), { fecha: '2025-11-14', sats: 10000, subiste: 30000 }, 'eco: dónde estabas hace un año y cuánto subiste');
+  eq(eco(mov, 40000, '2026-05-01'), null, 'eco: si la primera compra es de hace menos de un año no hay eco');
+  eq(eco([], 0, '2026-11-14'), null, 'eco: sin compras no hay eco');
+  eq(eco(mov, 40000, '2026-06-01'), { fecha: '2025-06-01', sats: 10000, subiste: 30000 }, 'eco: el día exacto del año cuenta');
+  eq([numeroBonito(1234321), numeroBonito(777777), numeroBonito(123456), numeroBonito(2100000), numeroBonito(21000000)], ['capicúa', 'repetido', 'escalera', '21', '21'], 'número bonito: capicúa, repetido, escalera y 21');
+  eq([numeroBonito(121567), numeroBonito(0), numeroBonito(77), numeroBonito(999), numeroBonito(1000), numeroBonito(12321)], [null, null, null, null, null, 'capicúa'], 'número bonito: lo corriente y lo muy corto no cuentan');
+  eq([efemeride('2027-01-03')?.clave, efemeride('2026-05-22')?.clave, efemeride('2026-11-14')], ['01-03', '05-22', null], 'efeméride por día del año');
+  eq([lluviaEstrellas('2026-11-17'), lluviaEstrellas('2026-11-18'), lluviaEstrellas('2026-12-14')?.nombre, lluviaEstrellas('2026-08-12')?.nombre, lluviaEstrellas('2026-11-20')], [{ nombre: 'Leónidas', fuerza: 1 }, { nombre: 'Leónidas', fuerza: 0.5 }, 'Gemínidas', 'Perseidas', null], 'lluvias de estrellas reales');
+  eq([aniversario(mov, '2026-06-01'), aniversario(mov, '2026-06-02'), aniversario(mov, '2025-06-01'), aniversario(mov, '2027-06-01')], [{ anios: 1 }, null, null, { anios: 2 }], 'aniversario de la primera compra');
+  eq([enPupusas(921.15), enPupusas(0), enPupusas(0.5)], [1228, null, 0], 'pupusas a $0.75');
+  eq([arbolesDe(99), arbolesDe(100), arbolesDe(500), arbolesDe(1000)], [[], ['ceibo'], ['ceibo', 'amate'], ['ceibo', 'amate', 'maquilishuat']], 'árboles de honor por compra');
 }
 console.log(`OK ${n} comprobaciones`);
