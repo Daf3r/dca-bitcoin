@@ -156,6 +156,7 @@ function alternarUnidad() {
     pintarLinea();
   }
   etiquetaUnidad();
+  pintarBonito();
 }
 $('s-saldo-v').addEventListener('click', alternarUnidad);
 $('s-saldo-v').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alternarUnidad(); } });
