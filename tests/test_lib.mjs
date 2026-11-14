@@ -426,8 +426,8 @@ eq(ubicacionSats([tr(600)], 1000).partes, [{ id: 0, nombre: 'Mi wallet', sats: 6
   const estilos = {};
   const almacen = {};
   const ctx = {
-    document: { documentElement: { dataset: {}, style: { setProperty: (k, v) => { estilos[k] = v; } } }, addEventListener() {}, visibilityState: 'visible' },
-    localStorage: { getItem: (k) => almacen[k] ?? null }, setInterval() {}, Intl, Date, Math, Number, Object,
+    document: { documentElement: { dataset: {}, atributos: new Set(), toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty: (k, v) => { estilos[k] = v; } } }, addEventListener() {}, visibilityState: 'visible' },
+    localStorage: { getItem: (k) => almacen[k] ?? null, setItem: (k, v) => { almacen[k] = String(v); }, removeItem: (k) => { delete almacen[k]; } }, setInterval() {}, Intl, Date, Math, Number, Object,
   };
   ctx.window = ctx;
   vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
@@ -437,6 +437,18 @@ eq(ubicacionSats([tr(600)], 1000).partes, [{ id: 0, nombre: 'Mi wallet', sats: 6
   // Un instante fijo: 2026-11-07 12:00 UTC = 06:00 en El Salvador
   eq(C.hora(new Date('2026-11-07T12:00:00Z')), 6, 'hora de El Salvador (UTC−6, sin horario de verano)');
   eq(C.hora(new Date('2026-11-07T05:30:00Z')), 23.5, 'la hora cruza el día hacia atrás');
+  // Modo madrugada (idea 20): de 22:00 a 5:00, y se apaga con `libro.madrugada` = 0
+  {
+    const raiz = ctx.document.documentElement;
+    delete almacen['libro.hora'];
+    const en = (h) => { almacen['libro.hora'] = String(h); C.aplicar(); return raiz.atributos.has('data-madrugada'); };
+    eq([en(21.9), en(22), en(23.5), en(2), en(4.9), en(5), en(12)], [false, true, true, true, true, false, false], 'madrugada: de 22:00 a 5:00');
+    C.fijarMadrugada(false);
+    eq([en(23), C.madrugadaPref()], [false, false], 'madrugada: apagada a mano no se pone');
+    C.fijarMadrugada(true);
+    eq([en(23), C.madrugadaPref()], [true, true], 'madrugada: al volver a automático se pone');
+    delete almacen['libro.hora'];
+  }
   almacen['libro.hora'] = '14.5';
   eq(C.hora(), 14.5, 'libro.hora fuerza la hora (para probar)');
   delete almacen['libro.hora'];

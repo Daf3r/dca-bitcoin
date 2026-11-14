@@ -271,7 +271,7 @@ Vienen de la ronda de ideas con Opus (`scratchpad/ideas-visuales.md` y el artifa
 - `test_ui` (9 comprobaciones nuevas), `test_api` (iconos y curvas públicos) y `CAMBIOS` `2026-11-g` lo cubren. Quedan los campamentos 11–15 del artifact.
 
 ## Campamento 11 · Tu eco y tus números (detalles, ideas 31, 41, 50, 52, 28, 42, 43, 6, 51, 45, 48, 20)
-Las cuentas son puras y están en el final de `lib.js` (`satsEn`, `haceUnAnio`, `eco`, `numeroBonito`, `efemeride`, `lluviaEstrellas`, `aniversario`, `enPupusas`, `arbolesDe`; `test_lib` 348). Todo informa; nada recomienda.
+Las cuentas son puras y están en el final de `lib.js` (`satsEn`, `haceUnAnio`, `eco`, `numeroBonito`, `efemeride`, `lluviaEstrellas`, `aniversario`, `enPupusas`, `arbolesDe`; `test_lib` 351). Todo informa; nada recomienda.
 - **Tu eco** (`montana.js`, parámetro `eco`, `#m-eco`, `.eco-anillo/.eco-punto/.eco-txt`): un «Tú» translúcido y punteado donde estabas hace un año (`lib.eco`: solo si la primera compra tiene un año o más y ya tenías sats entonces; no se dibuja si de ahí a hoy hay menos de 16 px de sendero). Rótulo «hace 1 año» con la misma lógica de choques; `#m-desc` lo dice. La entrada no lo tiene. Escenario de pruebas `eco` (80 semanas).
 - **Número bonito** (`pintar.js: pintarBonito`, `#s-bonito` junto a «Tu saldo», `.saldo-cab`): capicúa (≥ 5 cifras), todo repetido (≥ 4), escalera ascendente (≥ 5) o 21·10ⁿ; solo con la unidad en sats; con efectos, un brillo dorado de 2.6 s en la cifra (`bonito-brillo`). `#t-saldo` conserva su texto.
 - **Saldo en cero** (50): `R.sats === 0` con compras: «Volviste al campamento base. Tus pinos siguen aquí.» y el camino recorrido tenue (`.sendero-memoria`, hasta el máximo histórico `satsAcum`); el bosque sigue.
