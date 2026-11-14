@@ -7,6 +7,14 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-f', fecha: '2026-11-14',
+    items: [
+      'En el sendero de la montaña ahora se ven las etapas entre un campamento y otro (250k, 500k…) como marcas, y la siguiente lleva su nombre.',
+      'La tarjeta «Próximo campamento» ahora se llama «Próxima etapa», y la lista de abajo, «Etapas», para que coincidan con lo que ves en la montaña.',
+      'Una compra marcada como extra ya no cuenta como la compra de la semana para tu racha ni para «Te toca comprar».',
+    ],
+  },
+  {
     id: '2026-11-e', fecha: '2026-11-13',
     items: [
       'La app tiene un aspecto nuevo, más cálido: el cielo de la montaña cambia de color sin franjas y el sol y la luna dan una luz suave.',

@@ -235,6 +235,11 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .campo-txt, .yo-txt { fill: #f7e8cf; font: 600 14px var(--serif); }
 .campo-txt { paint-order: stroke; stroke: color-mix(in oklab, var(--monte-sombra) 80%, transparent); stroke-width: 4px; stroke-linejoin: round; }
 @media (min-width: 1100px) { .campo-txt { font-size: 16px; } }
+/* Marcas de etapa (250k, 500k…) atravesadas en el sendero: apagadas, encendidas al llegar y la siguiente en naranja. */
+.etapa-sombra { stroke: rgba(10, 8, 5, 0.45); stroke-width: 4.5; stroke-linecap: round; }
+.etapa-tick { stroke: #f7e8cf; stroke-width: 2.2; stroke-linecap: round; opacity: 0.5; }
+.etapa.alcanzada .etapa-tick { opacity: 0.95; }
+.etapa.sig .etapa-tick { stroke: var(--naranja); opacity: 1; }
 .campo-txt.cima { stroke: color-mix(in oklab, var(--c2) 55%, transparent); stroke-width: 3.5px; fill: var(--cielo-txt); }
 .yo-txt { fill: var(--naranja-osc); font-weight: 700; }
 .yo-punto { fill: var(--naranja); stroke: var(--nieve); stroke-width: 3; }
