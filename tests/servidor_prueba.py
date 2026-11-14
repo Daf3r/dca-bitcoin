@@ -1,7 +1,7 @@
 """Servidor Flask local para las pruebas de navegador: base temporal, exchanges simulados y sin red.
 
 Uso: python tests/servidor_prueba.py PUERTO [ESCENARIO]
-Escenarios: hoy (1 compra), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
+Escenarios: hoy (1 compra), bonito (saldo capicúa), cero (vendió todo), aniv (hoy es el aniversario de su primera compra), eco (80 semanas), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
 mil (1,000 compras en casi seis años, con extras, ventas y traslados), vacio (sin compras), sinprecio,
 sinhist (sin histórico de precios).
 Cuentas: Daf3r / clave-de-prueba-12 (admin) y Ana / lectora-de-prueba (lector).
@@ -98,6 +98,20 @@ if esc in ("hoy", "sinprecio", "sinhist"):
 elif esc == "nueve":
     for k in range(9, 0, -1):
         comprar(HOY - timedelta(days=k * 7 - 3), 25.0)
+elif esc == "bonito":  # saldo capicúa: 1,234,321 sats
+    comprar(HOY - timedelta(days=10), 500.0, 1_000_000)
+    comprar(HOY - timedelta(days=3), 200.0, 234_321)
+elif esc == "cero":  # compró y vendió todo: campamento base con el bosque en pie
+    comprar(HOY - timedelta(days=24), 25.0, 30_000)
+    comprar(HOY - timedelta(days=17), 25.0, 30_000)
+    comprar(HOY - timedelta(days=10), 25.0, 30_000)
+    comprar(HOY - timedelta(days=5), 25.0, 30_000)
+    server.insertar(conn, ((HOY - timedelta(days=2)).isoformat(), 100.0, 100000.0, 120_000), None, "venta", "Gasto", 0)
+elif esc == "aniv":  # la primera compra fue hace exactamente un año (hoy es su aniversario) y hay compras semanales desde entonces
+    ya = HOY.replace(year=HOY.year - 1, day=28) if (HOY.month == 2 and HOY.day == 29) else HOY.replace(year=HOY.year - 1)
+    comprar(ya, 25.0, 30_000)
+    for k in range(40, 0, -1):
+        comprar(HOY - timedelta(days=3 + k * 7), 25.0, 30_000)
 elif esc == "dos":
     comprar(HOY - timedelta(days=10), 25.0)
     comprar(HOY - timedelta(days=3), 28.68, 36578)
@@ -121,8 +135,8 @@ elif esc == "mil":
     for fecha, sentido, sats in ((HOY - timedelta(days=500), "a_wallet", 3_000_000), (HOY - timedelta(days=60), "a_wallet", 1_500_000)):
         conn.execute("INSERT INTO traslados (fecha, sats, sentido, creado) VALUES (?, ?, ?, ?)", (fecha.isoformat(), sats, sentido, 1))
     conn.commit()
-elif esc in ("anio", "largo", "ballena"):
-    semanas = {"anio": 52, "largo": 300, "ballena": 300}[esc]
+elif esc in ("anio", "eco", "largo", "ballena"):
+    semanas = {"anio": 52, "eco": 80, "largo": 300, "ballena": 300}[esc]
     r2 = random.Random(len(esc) * 13)
     for k in range(semanas - 1, -1, -1):
         if r2.random() < 0.06:
@@ -131,7 +145,7 @@ elif esc in ("anio", "largo", "ballena"):
         # Un día antes como mucho, pero sin salirse de la semana (lunes a domingo) de `ref`: si no, los jueves
         # —cuando HOY - 3 cae en lunes— la compra pasaba a la semana anterior y la racha se rompía sola.
         d = ref - timedelta(days=r2.randint(0, 1) if ref.weekday() > 0 else (r2.randint(0, 1) and 0))
-        base = 14 if esc == "anio" else 12 + (semanas - k) * 0.05
+        base = 14 if esc in ("anio", "eco") else 12 + (semanas - k) * 0.05
         if esc == "ballena":
             base *= 2500
         comprar(d, round(base + r2.random() * base * 0.8, 2))

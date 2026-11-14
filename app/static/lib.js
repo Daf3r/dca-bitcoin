@@ -878,3 +878,98 @@ export function descripcionMontana(sats, meta, campos, cima) {
   return `Estás a ${entero(sats)} sats de altitud, subiendo por un sendero con campamentos en la montaña. ${pasados} `
     + `Siguiente meta: ${nombreHito(meta)}, al ${pct < 10 ? pct.toFixed(1) : Math.floor(pct)} %;${falta}. La cumbre es ${nombreHito(cima)}.`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 11 · «Tu eco y tus números»: pequeñas cuentas puras (el dibujo vive en montana.js y pintar.js).
+// ---------------------------------------------------------------------------------------------
+
+/** Saldo de sats que tenías al final de `fecha` (inclusive). `items` son los movimientos vigentes (compras y ventas). */
+export function satsEn(items, fecha) {
+  let s = 0;
+  for (const c of items) {
+    if (c.fecha > fecha) continue;
+    s += c.tipo === 'venta' ? -c.sats : c.sats;
+  }
+  return Math.max(0, s);
+}
+
+/** La misma fecha de hace un año (el 29 de febrero cae el 28). */
+export const haceUnAnio = (hoy) => sumarMeses(hoy, -12);
+
+/**
+ * Tu eco (idea 31): dónde estabas hace un año. Solo existe si ya tenías sats entonces y la primera compra es de hace un año o más
+ * (si no, no hay «hace un año» que mostrar). `subiste` es cuánto más tienes hoy (puede ser 0 o negativo si vendiste).
+ */
+export function eco(items, saldoHoy, hoy = hoyISO()) {
+  const compras = items.filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return null;
+  const primera = compras.reduce((m, c) => (c.fecha < m ? c.fecha : m), compras[0].fecha);
+  const fecha = haceUnAnio(hoy);
+  if (primera > fecha) return null;
+  const sats = satsEn(items, fecha);
+  if (sats <= 0) return null;
+  return { fecha, sats, subiste: saldoHoy - sats };
+}
+
+/**
+ * «Número bonito» (idea 41): el saldo es capicúa (1,234,321), repite una cifra (777,777), es una escalera (123,456) o
+ * recuerda a los 21 millones (2,100,000). Devuelve la razón en una palabra o null. Con menos de 4 cifras no cuenta:
+ * 11 o 22 sats no son una rareza.
+ */
+export function numeroBonito(sats) {
+  const s = String(Math.floor(sats));
+  if (!(sats >= 1000) || s.length < 4) return null;
+  if (/^(\d)\1+$/.test(s)) return 'repetido';
+  if (s.length >= 5 && '0123456789'.includes(s)) return 'escalera';
+  if (s.length >= 5 && s === [...s].reverse().join('')) return 'capicúa';
+  if (/^21(0+)$/.test(s) && s.length >= 6) return '21';
+  return null;
+}
+export const TEXTO_BONITO = { repetido: 'número bonito · todo repetido', escalera: 'número bonito · una escalera', 'capicúa': 'número bonito · capicúa', 21: 'número bonito · como los 21 millones' };
+
+/** Calendario bitcoiner (idea 42): un dato del día, solo informativo. */
+const EFEMERIDES = {
+  '01-03': 'Hoy, en 2009, nació la red: el bloque génesis.',
+  '05-22': 'Hoy es el Pizza Day: en 2010 alguien pagó dos pizzas con 10,000 BTC.',
+  '10-31': 'Hoy, en 2008, se publicó el documento de Bitcoin.',
+  '11-17': 'Noche de Leónidas: hoy se ven más estrellas fugaces.',
+};
+export function efemeride(fecha = hoyISO()) {
+  const t = EFEMERIDES[fecha.slice(5)];
+  return t ? { clave: fecha.slice(5), texto: t } : null;
+}
+
+/** Lluvias de estrellas reales (idea 43): la noche del máximo y las dos de al lado. `fuerza` 1 es la noche del máximo. */
+const LLUVIAS = [
+  { nombre: 'Perseidas', mes: 8, dia: 12 },
+  { nombre: 'Leónidas', mes: 11, dia: 17 },
+  { nombre: 'Gemínidas', mes: 12, dia: 14 },
+];
+export function lluviaEstrellas(fecha = hoyISO()) {
+  const [y, m, d] = fecha.split('-').map(Number);
+  const t = Date.UTC(y, m - 1, d);
+  for (const l of LLUVIAS) {
+    const dias = Math.round((t - Date.UTC(y, l.mes - 1, l.dia)) / 864e5);
+    if (Math.abs(dias) <= 1) return { nombre: l.nombre, fuerza: dias === 0 ? 1 : 0.5 };
+  }
+  return null;
+}
+
+/** Aniversario (idea 6): hoy es el día en que hiciste tu primera compra, y de ello hace al menos un año. */
+export function aniversario(items, hoy = hoyISO()) {
+  const compras = items.filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return null;
+  const primera = compras.reduce((m, c) => (c.fecha < m ? c.fecha : m), compras[0].fecha);
+  const anios = Number(hoy.slice(0, 4)) - Number(primera.slice(0, 4));
+  if (anios < 1) return null;
+  return sumarMeses(primera, anios * 12) === hoy ? { anios } : null;
+}
+
+/** Cuántas pupusas (idea 28, huevo de pascua): a un precio fijo en dólares; sin precio no se calcula. */
+export function enPupusas(valorUsd, precio = 0.75) {
+  return valorUsd > 0 ? Math.floor(valorUsd / precio) : null;
+}
+
+/** Árbol de honor (idea 52): la compra n.º 100, 500 y 1,000 plantan uno distinto entre los pinos. */
+export const ARBOLES = [{ desde: 1000, tipo: 'maquilishuat' }, { desde: 500, tipo: 'amate' }, { desde: 100, tipo: 'ceibo' }];
+export const arbolesDe = (nCompras) => ARBOLES.filter((a) => nCompras >= a.desde).map((a) => a.tipo).reverse();

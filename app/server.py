@@ -1233,6 +1233,21 @@ def push_baja() -> Any:
     return "", 204
 
 
+# La voz del libro (idea 48): al avisar de una compra, una frase del paisaje. Rota por el id de la compra (no al azar: cada compra
+# siempre dice la misma, y se puede probar). Nada de «compra ahora»: solo describe la montaña.
+FRASES_PAISAJE = (
+    "Hay un pino más al pie de la montaña.",
+    "El sendero sube un poco más.",
+    "Un farol más cerca en el camino.",
+    "La montaña guarda otro paso.",
+    "El campamento queda un poco más cerca.",
+)
+
+
+def frase_paisaje(cid: int) -> str:
+    return FRASES_PAISAJE[cid % len(FRASES_PAISAJE)]
+
+
 def _avisar_movimiento(conn: sqlite3.Connection, antes: list[Mov], cid: int, nueva: dict[str, Any]) -> None:
     """Avisa de un movimiento nuevo a quien tenga esa categoría (y, en una compra, de la etapa o constancia que cruce)."""
     try:
@@ -1242,7 +1257,7 @@ def _avisar_movimiento(conn: sqlite3.Connection, antes: list[Mov], cid: int, nue
                 push.notificar(conn, "movimiento", "Libro DCA", f"{quien_} anotó una venta o gasto de {sats:,} sats", f"mov-{cid}")
             return
         extra = "extra " if nueva.get("extra") else ""
-        push.notificar(conn, "movimiento", "Libro DCA", f"{quien_} anotó una compra {extra}de {sats:,} sats", f"mov-{cid}")
+        push.notificar(conn, "movimiento", "Libro DCA", f"{quien_} anotó una compra {extra}de {sats:,} sats. {frase_paisaje(cid)}", f"mov-{cid}")
         saldo = sum(-s if tipo == "venta" else s for _f, _i, tipo, s in antes)
         if cruzadas := ritmo.etapas_cruzadas(saldo, saldo + sats):
             m = cruzadas[-1]  # la más alta si fueron varias

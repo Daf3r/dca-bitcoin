@@ -1,5 +1,6 @@
-import { aFecha, acentoDe, btc, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, aniversario, btc, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
+import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
 import { ico } from './iconos.js';
 import { pintarInsignia } from './insignia.js';
@@ -37,6 +38,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   pintarReportes();
   pintarComienzo();
   pintarNovedades();
+  pintarDelDia();
   ofrecerAvisos();
   pintarMinicab();
   pintarTitulo();
@@ -81,7 +83,7 @@ export function pintarPrecio() {
   $('precio-meta').textContent = {
     vivo: `${S.fuente} · ${haceCuanto(S.precioTs)}`,
     viejo: `sin actualizar desde las ${hora(S.precioTs)}`,
-    error: 'no disponible',
+    error: 'El mensajero no ha llegado',
     cargando: 'consultando…',
   }[estado];
   // Cuánto subió o bajó desde el cierre de ayer (con menos de 3 días de histórico, no se muestra).
@@ -128,7 +130,19 @@ function etiquetaUnidad() {
   $('s-unidad').dataset.vivo = u === 'usd' ? '1' : ''; // el punto «en vivo»: el valor sigue al precio
   $('s-saldo-ayuda').textContent = `Tu saldo${u === 'usd' ? ' en dólares, al precio en vivo' : ''}. Toca para verlo en ${NOMBRE_SIGUIENTE[u]}.`;
 }
+// Huevo de pascua (idea 28): siete toques seguidos en el saldo y el libro dice cuántas pupusas son (a $0.75, solo es una cuenta curiosa).
+let toquesSeguidos = 0, ultimoToque = 0;
+function contarToque() {
+  const ahora = Date.now();
+  toquesSeguidos = ahora - ultimoToque < 1500 ? toquesSeguidos + 1 : 1;
+  ultimoToque = ahora;
+  if (toquesSeguidos < 7) return;
+  toquesSeguidos = 0;
+  const n = R.valor != null ? enPupusas(R.valor) : null;
+  if (n != null) avisar(`Tu saldo equivale a unas ${entero(n)} pupusas, a $0.75 cada una.`, null, true, { ms: 5000 });
+}
 function alternarUnidad() {
+  contarToque();
   let sig = UNIDADES[(UNIDADES.indexOf(unidad) + 1) % UNIDADES.length];
   if (sig === 'usd' && R.valor == null) sig = 'sats'; // sin precio no hay dólares
   unidad = sig;
@@ -142,6 +156,7 @@ function alternarUnidad() {
     pintarLinea();
   }
   etiquetaUnidad();
+  pintarBonito();
 }
 $('s-saldo-v').addEventListener('click', alternarUnidad);
 $('s-saldo-v').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alternarUnidad(); } });
@@ -165,14 +180,51 @@ function pintarSaldo(desde) {
     unidadPintada = u;
   }
   etiquetaUnidad();
+  pintarBonito();
   pintarLinea();
   pintarProx();
   pintarDatosEscena();
 }
+/**
+ * Lo del día, una sola vez por día y por dispositivo (ideas 6, 42 y 43): el aniversario de tu primera compra, o una efeméride
+ * bitcoiner, o una lluvia de estrellas real. Es un aviso temporal; nunca recomienda nada. Para probar otro día:
+ * `localStorage` `libro.dia` = AAAA-MM-DD (como `libro.hora` con el cielo).
+ */
+let delDiaHecho = false;
+export const diaVista = () => { try { return localStorage.getItem('libro.dia') || hoyISO(); } catch { return hoyISO(); } };
+function pintarDelDia() {
+  if (delDiaHecho || !S.cargado || S.errorCarga || document.documentElement.hasAttribute('data-tv')) return;
+  delDiaHecho = true;
+  const hoy = diaVista();
+  let txt = null;
+  const an = aniversario(S.compras, hoy);
+  if (an) {
+    const cuanto = an.anios === 1 ? '1 año' : `${an.anios} años`;
+    txt = esAdmin() ? `Hoy hace ${cuanto} que empezaste a subir.` : `Hoy se cumple ${an.anios === 1 ? 'un año' : `${an.anios} años`} de la primera compra del libro.`;
+  } else {
+    const lluvia = lluviaEstrellas(hoy);
+    txt = efemeride(hoy)?.texto ?? (lluvia ? `Noche de ${lluvia.nombre}: hoy se ven más estrellas fugaces.` : null);
+  }
+  if (!txt) return;
+  try { if (localStorage.getItem('libro.delDia') === hoy) return; localStorage.setItem('libro.delDia', hoy); } catch { /* sin almacenamiento: sale en cada visita */ }
+  avisar(txt, null, true, { ms: 6000 });
+}
+
+/** «Número bonito» (idea 41): solo con el saldo en sats y mientras el número lo sea. */
+function pintarBonito() {
+  const razon = unidadVista() === 'sats' && R.nCompras ? numeroBonito(R.sats) : null;
+  const chip = $('s-bonito');
+  chip.hidden = !razon;
+  chip.textContent = razon ? TEXTO_BONITO[razon] : '';
+  document.querySelector('.saldo').toggleAttribute('data-bonito', Boolean(razon));
+}
+
 /** La línea bajo el saldo: lo que valen tus sats (con su propio odómetro) y la ganancia, con formas cortas en pantallas muy pequeñas. */
 export function pintarLinea() {
   const linea = $('s-valor');
   if (!R.n) { linea.textContent = 'Tu montaña te espera. Anota tu primera compra para empezar a subir.'; return; }
+  // Saldo en cero tras vender todo (idea 50): estás en el campamento base y el bosque sigue en pie.
+  if (R.sats === 0 && R.nCompras) { linea.textContent = 'Volviste al campamento base. Tus pinos siguen aquí.'; return; }
   if (R.valor == null) { linea.textContent = `${btc(R.sats)} BTC · invertiste ${usd(R.inv)}`; return; }
   const b = document.createElement('b');
   if (unidadVista() === 'usd') {
@@ -258,7 +310,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true, aurora: hayAurora(R.racha) });
+  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true, aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     const m = etapasCruzadas(festejo.antes, R.sats).at(-1);
