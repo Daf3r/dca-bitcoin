@@ -1620,6 +1620,44 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- suelo, leyenda plegable, altímetro, favicon con luna y curvas (campamento 10, 1/6)
+  {
+    const srv = await servidor('anio');
+    try {
+      const claro = () => { try { localStorage.setItem('libro.tema', 'claro'); localStorage.setItem('libro.efectos', 'ninguno'); } catch { /* sin almacenamiento */ } };
+      const r = await entrar(navegador, srv, ADMIN, { hora: 12 }, claro);
+      await r.p.waitForSelector('.g-compras', { state: 'attached', timeout: 8000 });
+      const m = await r.p.evaluate(() => {
+        const alt = document.getElementById('minicab-alt');
+        const suelo = getComputedStyle(document.body, '::after');
+        const radios = [...new Set([...document.querySelector('.g-compras').getAttribute('d').matchAll(/a([\d.]+) /g)].map((x) => x[1]))];
+        return {
+          favicon: document.querySelector('link[rel="icon"]').getAttribute('href'),
+          alt: alt.hidden ? null : Number(alt.style.getPropertyValue('--p')),
+          leyAbierta: document.getElementById('ley-det').open,
+          fondo: getComputedStyle(document.body).backgroundImage,
+          suelo: [suelo.position, suelo.content],
+          radios: radios.length,
+        };
+      });
+      ok(/^\/icon-luna-[0-7]\.svg$/.test(m.favicon), `favicon: la pestaña lleva la luna del día (${m.favicon})`);
+      ok(m.alt !== null && m.alt >= 0 && m.alt <= 1, `altímetro: la mini-cabecera lleva tu avance entre etapas (${m.alt})`);
+      ok(m.leyAbierta === false, 'leyenda del gráfico: en el teléfono empieza plegada');
+      ok(m.fondo.includes('curvas.svg'), 'tema claro: curvas de nivel de fondo');
+      eq(m.suelo, ['fixed', '""'], 'suelo bajo el botón «Anotar»: degradado fijo en el teléfono');
+      ok(m.radios >= 2, `gráfico: el tamaño de los puntos sigue a los sats (${m.radios} tamaños)`);
+      await r.p.click('#ley-det > summary');
+      ok(await r.p.evaluate(() => document.getElementById('ley-det').open), 'leyenda del gráfico: tocar «Leyenda y series» la abre');
+      await r.ctx.close();
+      const g = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: 1280, height: 900 } }, claro);
+      ok(await g.p.evaluate(() => document.getElementById('ley-det').open), 'leyenda del gráfico: en pantalla ancha va abierta');
+      eq(await g.p.evaluate(() => getComputedStyle(document.body, '::after').content), 'none', 'sin suelo bajo el botón en escritorio (el botón no flota)');
+      await g.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- identidad: iconos, avatares, estados vacíos y entrada viva (campamento 6, 1/3)
   {
     const srv = await servidor('mil');
