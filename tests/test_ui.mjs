@@ -2568,16 +2568,16 @@ try {
       ok(!(await c4.p.evaluate(() => document.documentElement.hasAttribute('data-madrugada'))), 'madrugada: a mediodía no hay velo');
       await c4.ctx.close();
       // Efemérides (42) y lluvias de estrellas (43), con `libro.dia`.
-      const e1 = await ent(navegador, sAnio, ADMIN, {}, fijarDia('2027-01-03'));
+      const e1 = await entrar(navegador, sAnio, ADMIN, {}, fijarDia('2027-01-03'));
       const t1 = await e1.p.textContent('#aviso-txt');
       ok(/bloque génesis/.test(t1), `efeméride del 3 de enero (${t1})`);
       await e1.p.reload({ waitUntil: 'networkidle' }); await e1.p.waitForTimeout(2500);
       ok(await e1.p.evaluate(() => document.getElementById('aviso').hidden || !/génesis/.test(document.getElementById('aviso-txt').textContent)), 'la efeméride sale una sola vez por día');
       await e1.ctx.close();
-      const e2 = await ent(navegador, sAnio, ADMIN, {}, fijarDia('2026-11-17'));
+      const e2 = await entrar(navegador, sAnio, ADMIN, {}, fijarDia('2026-11-17'));
       ok(/Leónidas/.test(await e2.p.textContent('#aviso-txt')) && await e2.p.locator('.fugaz').count() === 5, 'Leónidas: aviso y cuatro estrellas fugaces de más');
       await e2.ctx.close();
-      const e3 = await ent(navegador, sAnio, ADMIN, {}, fijarDia('2026-11-18'));
+      const e3 = await entrar(navegador, sAnio, ADMIN, {}, fijarDia('2026-11-18'));
       eq(await e3.p.locator('.fugaz').count(), 3, 'la noche siguiente al máximo caen dos de más');
       await e3.ctx.close();
     } finally { sAnio.parar(); }
@@ -2590,11 +2590,11 @@ try {
     } finally { sCero.parar(); }
     const sAniv = await servidor('aniv');
     try {
-      const { ctx, p } = await ent(navegador, sAniv, ADMIN, {}, sinAviso);
+      const { ctx, p } = await entrar(navegador, sAniv, ADMIN, {}, sinAviso);
       const a = await p.evaluate(() => ({ t: document.getElementById('aviso-txt').textContent, luz: document.querySelectorAll('.salida-aniv').length }));
       ok(/^Hoy hace 1 año que empezaste a subir\.$/.test(a.t) && a.luz === 1, `aniversario: aviso y farolito en la salida (${a.t})`);
       await ctx.close();
-      const l = await ent(navegador, sAniv, LECTOR, {}, sinAviso);
+      const l = await entrar(navegador, sAniv, LECTOR, {}, sinAviso);
       ok(/^Hoy se cumple un año de la primera compra del libro\.$/.test(await l.p.textContent('#aviso-txt')), 'aniversario: la lectora lo lee en neutro');
       await l.ctx.close();
     } finally { sAniv.parar(); }
