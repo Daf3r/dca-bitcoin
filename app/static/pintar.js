@@ -1,4 +1,4 @@
-import { aFecha, acentoDe, btc, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, btc, eco, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { pintarFavicon } from './favicon.js';
 import { ico } from './iconos.js';
@@ -258,7 +258,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true, aurora: hayAurora(R.racha) });
+  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true, aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats) });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     const m = etapasCruzadas(festejo.antes, R.sats).at(-1);

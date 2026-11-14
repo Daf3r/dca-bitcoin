@@ -117,7 +117,7 @@ function lago(c, W, H) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
@@ -271,7 +271,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + `<g clip-path="url(#m-silueta)"><g clip-path="url(#m-nieve-c)">${capa('sendero-nieve', 0)}</g></g>`;
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-luz" id="m-luzhecha" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
-  s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
+  s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   s += bosque(W, H, bx, compras, plantar);
   s += `<rect class="suelo" x="0" y="${f1(H * 0.95)}" width="${W}" height="${f1(H * 0.05 + 1)}" fill="url(#m-suelo)"/>`;
   host.innerHTML = s + '</g></svg>';
@@ -317,7 +317,14 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const l = `x1="${f1(p.x - dx)}" y1="${f1(p.y - dy)}" x2="${f1(p.x + dx)}" y2="${f1(p.y + dy)}"`;
     return `<g class="etapa" data-m="${m}"><line class="etapa-sombra" ${l}/><line class="etapa-tick" ${l}/></g>`;
   }).join('');
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, techo, ec };
+  // Tu eco (idea 31): un «Tú» translúcido y quieto donde estabas hace un año. Solo si de ahí hasta hoy hay camino que se vea.
+  let ecoP = null;
+  if (eco && eco.sats > 0 && eco.sats < sats) {
+    const le = enAltura(altitud(eco.sats, esc)), ly = enAltura(altitud(sats, esc));
+    if (ly - le > 16) ecoP = camino.getPointAtLength(le);
+  }
+  if (ecoP) host.querySelector('#m-eco').innerHTML = `<g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="5"/></g>`;
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, techo, ec, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -515,6 +522,7 @@ function etiquetar(yo, sats = estado.sats) {
   const e = estado.ec || 1;
   const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 12 * e, y: p.y - 30 * e, w: 40 * e, h: 30 * e, m } : { x: p.x + (lado < 0 ? -30 : -2) * e, y: p.y - 38 * e, w: 32 * e, h: 42 * e, m }));
   cajas.push({ x: yo.x - 18, y: yo.y - 18, w: 36, h: 36 });
+  if (estado.eco) cajas.push({ x: estado.eco.p.x - 12, y: estado.eco.p.y - 12, w: 24, h: 24 });
   // Las marcas de etapa también ocupan su sitio (solo la siguiente lleva rótulo).
   for (const { m, p } of estado.etapas || []) cajas.push({ x: p.x - 9, y: p.y - 9, w: 18, h: 18, m });
   // En el teléfono y la tablet el saldo ocupa todo el ancho de arriba: ninguna etiqueta sube por encima de él.
@@ -546,6 +554,18 @@ function etiquetar(yo, sats = estado.sats) {
     if (!b) continue;
     cajas.push(b);
     s += `<text class="campo-txt${cima ? ' cima' : ''}" x="${f1(b.tx)}" y="${f1(b.y + 15)}" text-anchor="${b.anclaje}">${txt}</text>`;
+  }
+  // El rótulo del eco, pequeño y sin placa, donde quepa (si no cabe, el eco queda sin letrero: la descripción de la montaña lo dice).
+  if (estado.eco) {
+    const q = estado.eco.p, w = 62;
+    const opc = [
+      { x: q.x + 13, y: q.y - 9, w, h: 18, anclaje: 'start', tx: q.x + 15 },
+      { x: q.x - 13 - w, y: q.y - 9, w, h: 18, anclaje: 'end', tx: q.x - 15 },
+      { x: q.x - w / 2, y: q.y - 32, w, h: 18, anclaje: 'middle', tx: q.x },
+      { x: q.x - w / 2, y: q.y + 12, w, h: 18, anclaje: 'middle', tx: q.x },
+    ];
+    const b = opc.find((o) => !choca(o, 'eco'));
+    if (b) { cajas.push(b); s += `<text class="eco-txt" x="${f1(b.tx)}" y="${f1(b.y + 13)}" text-anchor="${b.anclaje}">hace 1 año</text>`; }
   }
   // La siguiente etapa, si no es un campamento: su rótulo junto a la marca (a la derecha, a la izquierda, encima o debajo).
   const eSig = (estado.etapas || []).find((x) => x.m === etapaSiguiente(sats));
@@ -742,5 +762,6 @@ function epico(fx, c, W, H) {
 }
 
 function describir(sats, meta) {
-  estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima) + (estado.compras ? ` Al pie crece tu bosque: un pino por compra (${estado.compras}).` : '');
+  estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima) + (estado.compras ? ` Al pie crece tu bosque: un pino por compra (${estado.compras}).` : '')
+    + (estado.eco ? ` Tu eco, una sombra quieta en el sendero, marca dónde estabas hace un año: ${entero(estado.eco.sats)} sats.` : '');
 }

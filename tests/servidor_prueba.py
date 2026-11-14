@@ -121,8 +121,8 @@ elif esc == "mil":
     for fecha, sentido, sats in ((HOY - timedelta(days=500), "a_wallet", 3_000_000), (HOY - timedelta(days=60), "a_wallet", 1_500_000)):
         conn.execute("INSERT INTO traslados (fecha, sats, sentido, creado) VALUES (?, ?, ?, ?)", (fecha.isoformat(), sats, sentido, 1))
     conn.commit()
-elif esc in ("anio", "largo", "ballena"):
-    semanas = {"anio": 52, "largo": 300, "ballena": 300}[esc]
+elif esc in ("anio", "eco", "largo", "ballena"):
+    semanas = {"anio": 52, "eco": 80, "largo": 300, "ballena": 300}[esc]
     r2 = random.Random(len(esc) * 13)
     for k in range(semanas - 1, -1, -1):
         if r2.random() < 0.06:
@@ -131,7 +131,7 @@ elif esc in ("anio", "largo", "ballena"):
         # Un día antes como mucho, pero sin salirse de la semana (lunes a domingo) de `ref`: si no, los jueves
         # —cuando HOY - 3 cae en lunes— la compra pasaba a la semana anterior y la racha se rompía sola.
         d = ref - timedelta(days=r2.randint(0, 1) if ref.weekday() > 0 else (r2.randint(0, 1) and 0))
-        base = 14 if esc == "anio" else 12 + (semanas - k) * 0.05
+        base = 14 if esc in ("anio", "eco") else 12 + (semanas - k) * 0.05
         if esc == "ballena":
             base *= 2500
         comprar(d, round(base + r2.random() * base * 0.8, 2))
