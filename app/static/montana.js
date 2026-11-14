@@ -1,5 +1,5 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
+import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 
 const f1 = (n) => n.toFixed(1);
@@ -117,7 +117,7 @@ function lago(c, W, H) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0 }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
@@ -152,11 +152,13 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   for (let i = 0; i < 46; i++) s += `<circle class="estrella t${i % 5}" cx="${f1(rnd() * W)}" cy="${f1(rnd() * H * 0.5)}" r="${f1(0.5 + rnd() * 1.1)}"/>`;
   // Estrella fugaz (muy esporádica, solo de noche y con todos los efectos): una raya corta que cruza el cielo alto.
   s += `<line class="fugaz" x1="${f1(W * 0.16)}" y1="${f1(H * 0.1)}" x2="${f1(W * 0.16 + 46)}" y2="${f1(H * 0.1 + 20)}"/>`;
+  // Lluvia de estrellas real (idea 43): esa noche cruzan más (dos de más a los lados del máximo, cuatro la noche del máximo).
+  for (let k = 0; k < Math.round(lluvia * 4); k++) { const x0 = W * (0.3 + 0.17 * k), y0 = H * (0.07 + 0.045 * ((k * 3) % 4)); s += `<line class="fugaz f${k + 2}" x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x0 + 46)}" y2="${f1(y0 + 20)}"/>`; }
   // Sol (amanecer, día y atardecer) y luna con su fase real (noche): el CSS muestra uno u otro según `html[data-cielo]`.
   // El halo es un degradado radial (luz que se difumina), no un disco.
   const halo = `<circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 3.4)}" fill="url(#m-halo)"/>`;
   s += `<g class="sol">${halo}<circle class="astro sol-disco" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 0.9)}" fill="url(#m-sol)"/></g>`; // el sol, algo menor que la luna: con su halo se lee como luz, no como un disco
-  s += `<g class="luna">${halo}${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}</g>`;
+  s += `<g class="luna">${halo}${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}${monedaB(c.sol[0], c.sol[1], c.rs)}</g>`;
   s += (aurora ? auroraBoreal(W, H, techo) : '') + nubes(H) + aves(H) + '</g>';
   // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
   s += `<rect class="alba" id="m-alba" x="0" y="0" width="${W}" height="${H}"/>`;
@@ -270,10 +272,13 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + `<g mask="url(#m-tierra)">${capa('sendero-sombra', 3, 1.5, 2.5)}${capa('sendero-borde', 2.6)}${capa('sendero-tierra', 0)}<g class="sendero-detalle" id="m-piedras"></g></g>`
     + `<g clip-path="url(#m-silueta)"><g clip-path="url(#m-nieve-c)">${capa('sendero-nieve', 0)}</g></g>`;
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-luz" id="m-luzhecha" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
+  if (aniv) s += `<circle class="salida-aniv" cx="${f1(bx)}" cy="${f1(by)}" r="26" fill="url(#m-luz)"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
   s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
-  s += bosque(W, H, bx, compras, plantar);
+  s += bosque(W, H, bx, compras, plantar, pts);
+  const honor = arbolesHonor(W, H, bx, compras, plantar, pts);
   s += `<rect class="suelo" x="0" y="${f1(H * 0.95)}" width="${W}" height="${f1(H * 0.05 + 1)}" fill="url(#m-suelo)"/>`;
+  s += honor; // por delante del suelo que funde el pie de la escena: sus troncos se ven
   host.innerHTML = s + '</g></svg>';
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
 
@@ -323,7 +328,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const le = enAltura(altitud(eco.sats, esc)), ly = enAltura(altitud(sats, esc));
     if (ly - le > 16) ecoP = camino.getPointAtLength(le);
   }
+  // Saldo en cero (idea 50): el camino que ya recorriste queda dibujado, tenue, aunque hoy estés en el campamento base.
+  const memoriaL = sats <= 0 && memoria > 0 ? enAltura(altitud(memoria, esc)) : 0;
+  if (memoriaL > 4) host.querySelector('#m-eco').innerHTML = `<path class="sendero-memoria" d="${camino.getAttribute('d')}" stroke-dasharray="${f1(memoriaL)} ${f1(L)}"/>`;
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="5"/></g>`;
+  instalarMoneda(host);
   estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, techo, ec, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
@@ -383,7 +392,7 @@ function icono(i) {
  * animación corta si la compra es de esta sesión (`plantar`).
  */
 const MAX_PINOS = 60;
-function bosque(W, H, bx, compras, plantar) {
+function bosque(W, H, bx, compras, plantar, pts = []) {
   if (!(compras > 0)) return '';
   const por = Math.ceil(compras / MAX_PINOS), n = Math.ceil(compras / por);
   const rnd = azar(7);
@@ -398,6 +407,60 @@ function bosque(W, H, bx, compras, plantar) {
     s += `<path class="pino-2${nuevo}" d="M${f1(x)} ${f1(yb - a)}L${f1(x + an * 0.55)} ${f1(yb - a * 0.5)}L${f1(x + an * 0.25)} ${f1(yb - a * 0.5)}L${f1(x + an)} ${f1(yb)}L${f1(x - an)} ${f1(yb)}L${f1(x - an * 0.25)} ${f1(yb - a * 0.5)}L${f1(x - an * 0.55)} ${f1(yb - a * 0.5)}Z"/>`;
   }
   return `${s}</g>`;
+}
+
+/** La moneda ₿ que sale de la luna (dibujada con trazos: la letra ₿ no está en la fuente recortada). */
+function monedaB(cx, cy, r) {
+  return `<g class="moneda-b" transform="translate(${f1(cx)} ${f1(cy)}) scale(${f1(r)})"><circle class="moneda-disco" r="0.96"/>`
+    + '<path class="moneda-signo" d="M-0.3 -0.52V0.52M-0.3 -0.52H0.1Q0.38 -0.52 0.38 -0.27Q0.38 -0.02 0.1 -0.02H-0.3M0.1 -0.02H0.18Q0.46 -0.02 0.46 0.25Q0.46 0.52 0.18 0.52H-0.3M-0.1 -0.7V-0.52M0.1 -0.7V-0.52M-0.1 0.52V0.7M0.1 0.52V0.7"/></g>';
+}
+
+/** La luna-moneda (idea 45): tres toques seguidos a la luna y por un instante es una moneda ₿ con su fase. Solo de noche, solo con el puntero. */
+const tocaLuna = new WeakSet();
+function instalarMoneda(host) {
+  if (tocaLuna.has(host)) return;
+  tocaLuna.add(host);
+  let n = 0, t0 = 0;
+  host.addEventListener('click', (e) => {
+    const luna = e.target.closest?.('.luna');
+    if (!luna || document.documentElement.dataset.cielo !== 'noche') return;
+    const ahora = Date.now();
+    n = ahora - t0 < 1200 ? n + 1 : 1;
+    t0 = ahora;
+    if (n < 3) return;
+    n = 0;
+    luna.classList.add('moneda');
+    setTimeout(() => luna.classList.remove('moneda'), sinMovimiento() ? 1400 : 1600);
+  });
+}
+
+/**
+ * Árboles de honor (idea 52): la compra n.º 100 planta un ceibo, la 500 un amate y la 1,000 un maquilishuat, más grandes que los
+ * pinos y en sitios fijos entre ellos (sin azar: la forma de la montaña y del bosque no cambia). Formas sencillas, de dos o tres
+ * piezas; el color sale del CSS.
+ */
+function arbolesHonor(W, H, bx, compras, plantar, pts) {
+  const yb = H * 0.955;
+  // ¿Pasa el sendero por la caja de un árbol de ancho `a` y alto `h` centrado en x? (se mira cada tramo del zigzag a trozos)
+  const tapa = (x, a, h) => pts.some(([x1, y1], i) => i && [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].some((k) => {
+    const px = pts[i - 1][0] + (x1 - pts[i - 1][0]) * k, py = pts[i - 1][1] + (y1 - pts[i - 1][1]) * k;
+    return Math.abs(px - x) < a && py > yb - h - 6;
+  }));
+  const usados = [];
+  let s = '';
+  for (const tipo of arbolesDe(compras)) {
+    const h = H * (tipo === 'ceibo' ? 0.17 : tipo === 'amate' ? 0.13 : 0.12), a = h * 0.55;
+    const x = [0.88, 0.7, 0.54, 0.38, 0.22, 0.1].map((f) => W * f).find((c) => c > a * 0.6 && c < W - a * 0.6 && Math.abs(c - bx) > a + 12 && !tapa(c, a, h) && usados.every((u) => Math.abs(u - c) > a * 1.6)) ?? W * 0.9;
+    usados.push(x);
+    const nuevo = plantar && ((tipo === 'ceibo' && compras === 100) || (tipo === 'amate' && compras === 500) || (tipo === 'maquilishuat' && compras === 1000)) ? ' pino-nuevo' : '';
+    const t = h * (tipo === 'amate' ? 0.11 : 0.08);
+    let copa;
+    if (tipo === 'ceibo') copa = `<ellipse class="copa" cx="${f1(x)}" cy="${f1(yb - h * 0.78)}" rx="${f1(h * 0.46)}" ry="${f1(h * 0.17)}"/><ellipse class="copa" cx="${f1(x - h * 0.1)}" cy="${f1(yb - h * 0.93)}" rx="${f1(h * 0.28)}" ry="${f1(h * 0.13)}"/>`;
+    else if (tipo === 'amate') copa = `<ellipse class="copa" cx="${f1(x)}" cy="${f1(yb - h * 0.66)}" rx="${f1(h * 0.52)}" ry="${f1(h * 0.3)}"/>`;
+    else copa = [[0, 0.78, 0.26], [-0.2, 0.62, 0.2], [0.21, 0.64, 0.2]].map(([dx, dy, r]) => `<circle class="copa" cx="${f1(x + dx * h)}" cy="${f1(yb - h * dy)}" r="${f1(r * h)}"/>`).join('');
+    s += `<g class="arbol-honor ${tipo}${nuevo}"><path class="tronco" d="M${f1(x - t)} ${f1(yb)}L${f1(x - t * 0.6)} ${f1(yb - h * 0.7)}L${f1(x + t * 0.6)} ${f1(yb - h * 0.7)}L${f1(x + t)} ${f1(yb)}Z"/>${copa}</g>`;
+  }
+  return s;
 }
 
 // Tarjeta de cada campamento (idea 72). Los botones son transparentes, de 48 px, y viven FUERA del SVG (que es role="img"):
@@ -763,5 +826,6 @@ function epico(fx, c, W, H) {
 
 function describir(sats, meta) {
   estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima) + (estado.compras ? ` Al pie crece tu bosque: un pino por compra (${estado.compras}).` : '')
+    + (arbolesDe(estado.compras).length ? ` Entre los pinos crecen tus árboles de honor: ${arbolesDe(estado.compras).map((t) => ({ ceibo: 'un ceibo', amate: 'un amate', maquilishuat: 'un maquilishuat' })[t]).join(', ')}.` : '')
     + (estado.eco ? ` Tu eco, una sombra quieta en el sendero, marca dónde estabas hace un año: ${entero(estado.eco.sats)} sats.` : '');
 }

@@ -88,6 +88,7 @@ function fundirTema() {
   clearTimeout(fundidoTimer);
   fundidoTimer = setTimeout(() => raiz.classList.remove('tema-fundido'), 450);
 }
+const etiquetaMadrugada = () => { $('dc-madrugada').textContent = `Modo madrugada (22:00 a 5:00): ${window.libroCielo?.madrugadaPref() ? 'automático' : 'apagado'}`; };
 const etiquetaSonido = () => { $('dc-sonido').textContent = `Sonido al guardar: ${sonidoActivo() ? 'encendido' : 'apagado'}`; };
 const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'con saldo y precio' : 'sin saldo'}`; };
 // Tamaño de letra (normal → grande → muy grande) y contraste (automático → alto → normal): `accesibilidad.js` los aplica antes de pintar.
@@ -120,7 +121,7 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetasAccesibilidad(); dCuenta.showModal(); });
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaMadrugada(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -215,6 +216,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'letra') { window.libroAcc?.fijarLetra(SIGUIENTE_LETRA[window.libroAcc.letra()]); etiquetasAccesibilidad(); }
   else if (accion === 'contraste') { window.libroAcc?.fijarContraste(SIGUIENTE_CONTRASTE[window.libroAcc.contraste()]); etiquetasAccesibilidad(); }
   else if (accion === 'atajos') { fijarAtajos(!atajosActivos()); etiquetasAccesibilidad(); }
+  else if (accion === 'madrugada') { window.libroCielo?.fijarMadrugada(!window.libroCielo.madrugadaPref()); etiquetaMadrugada(); }
   else if (accion === 'sonido') { fijarSonido(!sonidoActivo()); etiquetaSonido(); if (sonidoActivo()) sonar('compra'); } // al encenderlo suena una muestra
   else if (accion === 'tv') { dCuenta.close(); entrarTV(); }
   else if (accion === 'titulo') { fijarTituloConSaldo(!tituloConSaldo()); etiquetaTitulo(); }

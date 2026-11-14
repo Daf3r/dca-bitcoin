@@ -971,9 +971,11 @@ check(ana.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"movimiento
 enviados.clear()
 r = adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": 25000})
 CN = r.get_json()["id"]
-check(_a_quien() == [EP_LUZ] and enviados[0][1]["cuerpo"] == "Daf3r anotó una compra de 25,000 sats" and enviados[0][1]["etiqueta"] == f"mov-{CN}",
+check(_a_quien() == [EP_LUZ] and enviados[0][1]["cuerpo"] == f"Daf3r anotó una compra de 25,000 sats. {server.frase_paisaje(CN)}" and enviados[0][1]["etiqueta"] == f"mov-{CN}",
       f"una compra avisa al lector {enviados}")
 check(enviados[0][1]["url"] == "/" and enviados[0][1]["titulo"] == "Libro DCA", "el aviso lleva título y a dónde abrir")
+check({server.frase_paisaje(i) for i in range(10)} == set(server.FRASES_PAISAJE) and server.frase_paisaje(7) == server.frase_paisaje(7 + len(server.FRASES_PAISAJE))
+      and not any(w in f.lower() for f in server.FRASES_PAISAJE for w in ("compra ", "compre", "ahora")), "la voz del libro rota por id, es la misma por compra y no recomienda")
 enviados.clear()
 adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": 25000, "extra": True, "nota": "caída"})
 check(enviados and "compra extra de 25,000 sats" in enviados[0][1]["cuerpo"] and "caída" not in enviados[0][1]["cuerpo"], "una compra extra lo dice y no cuenta la nota")

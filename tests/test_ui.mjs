@@ -2510,6 +2510,115 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- tu eco y tus números (campamento 11)
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const fijarDia = (d) => () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.dia', d); } catch { /* sin almacenamiento */ } };
+    // Eco (31): con más de un año de camino aparece; con menos, no.
+    const sEco = await servidor('eco');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, sEco, ADMIN, {}, sinAviso);
+      ok(await p.locator('.eco-anillo').count() === 1, 'eco: con compras de hace más de un año sale el eco');
+      const ed = await p.evaluate(() => ({ txt: document.querySelector('.eco-txt')?.textContent, desc: document.getElementById('m-desc').textContent }));
+      ok(ed.txt === 'hace 1 año' && /Tu eco, una sombra quieta en el sendero, marca dónde estabas hace un año: [\d,]+ sats\./.test(ed.desc), `eco: rótulo y descripción (${ed.txt})`);
+      const sep = await p.evaluate(() => { const e = document.querySelector('.eco-anillo').getBoundingClientRect(), y = document.querySelector('.yo-punto').getBoundingClientRect(); return Math.hypot(e.x - y.x, e.y - y.y); });
+      ok(sep > 14, `eco: está lejos de «Tú» (${sep.toFixed(0)} px)`);
+      eq(consola, [], `consola limpia (eco): ${consola.join(' | ')}`);
+      await ctx.close();
+    } finally { sEco.parar(); }
+
+    // Número bonito (41) y árboles de honor (52), y lo que no debe cambiar.
+    const sBon = await servidor('bonito');
+    try {
+      const { ctx, p } = await entrar(navegador, sBon, ADMIN, {}, sinAviso);
+      const b = await p.evaluate(() => ({ visible: !document.getElementById('s-bonito').hidden, txt: document.getElementById('s-bonito').textContent, marca: document.querySelector('.saldo').hasAttribute('data-bonito'), titulo: document.getElementById('t-saldo').textContent }));
+      ok(b.visible && /capicúa/.test(b.txt) && b.marca && b.titulo === 'Tu saldo', `número bonito: 1,234,321 es capicúa (${b.txt})`);
+      ok(await p.locator('.eco-anillo').count() === 0, 'eco: sin un año de camino no hay eco');
+      await p.click('#s-saldo-v'); await p.waitForTimeout(300);
+      ok(await p.locator('#s-bonito').isHidden(), 'número bonito: en BTC no se marca');
+      await ctx.close();
+    } finally { sBon.parar(); }
+    const sAnio = await servidor('anio');
+    try {
+      const { ctx, p } = await entrar(navegador, sAnio, ADMIN, {}, sinAviso);
+      ok(await p.locator('#s-bonito').isHidden() && await p.locator('.arbol-honor').count() === 0 && await p.locator('.fugaz').count() === 1, 'un saldo corriente no es bonito, no hay árboles de honor y hay una sola fugaz');
+      // Pupusas (28): siete toques seguidos al saldo.
+      for (let i = 0; i < 7; i++) await p.click('#s-saldo-v');
+      await p.waitForTimeout(300);
+      const aviso = await p.evaluate(() => ({ v: !document.getElementById('aviso').hidden, t: document.getElementById('aviso-txt').textContent }));
+      ok(aviso.v && /^Tu saldo equivale a unas [\d,]+ pupusas, a \$0\.75 cada una\.$/.test(aviso.t), `pupusas tras siete toques (${aviso.t})`);
+      await ctx.close();
+      // Luna-moneda (45): tres toques a la luna, de noche.
+      const c3 = await entrar(navegador, sAnio, ADMIN, { hora: 23 }, sinAviso);
+      const pos = await c3.p.evaluate(() => { const b = document.querySelector('.luna .astro').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, mad: document.documentElement.hasAttribute('data-madrugada') }; });
+      ok(pos.mad, 'madrugada: a las 23:00 el velo está puesto');
+      for (let i = 0; i < 3; i++) { await c3.p.mouse.click(pos.x, pos.y); await c3.p.waitForTimeout(100); }
+      ok(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda')), 'luna-moneda: tres toques seguidos la convierten en moneda');
+      await c3.p.waitForTimeout(2000);
+      ok(!(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda'))), 'luna-moneda: vuelve a ser luna');
+      // Modo madrugada (20): se apaga desde «Tu cuenta» y de día no existe.
+      await c3.p.click('#cuenta-btn'); await c3.p.waitForTimeout(300);
+      ok(/automático/.test(await c3.p.textContent('#dc-madrugada')), 'madrugada: el botón dice automático');
+      await c3.p.click('#dc-madrugada'); await c3.p.waitForTimeout(200);
+      ok(/apagado/.test(await c3.p.textContent('#dc-madrugada')) && !(await c3.p.evaluate(() => document.documentElement.hasAttribute('data-madrugada'))), 'madrugada: apagarlo quita el velo');
+      await c3.ctx.close();
+      const c4 = await entrar(navegador, sAnio, ADMIN, { hora: 12 }, sinAviso);
+      ok(!(await c4.p.evaluate(() => document.documentElement.hasAttribute('data-madrugada'))), 'madrugada: a mediodía no hay velo');
+      await c4.ctx.close();
+      // Efemérides (42) y lluvias de estrellas (43), con `libro.dia`.
+      const e1 = await entrar(navegador, sAnio, ADMIN, {}, fijarDia('2027-01-03'));
+      const t1 = await e1.p.textContent('#aviso-txt');
+      ok(/bloque génesis/.test(t1), `efeméride del 3 de enero (${t1})`);
+      await e1.p.reload({ waitUntil: 'networkidle' }); await e1.p.waitForTimeout(2500);
+      ok(await e1.p.evaluate(() => document.getElementById('aviso').hidden || !/génesis/.test(document.getElementById('aviso-txt').textContent)), 'la efeméride sale una sola vez por día');
+      await e1.ctx.close();
+      const e2 = await entrar(navegador, sAnio, ADMIN, {}, fijarDia('2026-11-17'));
+      ok(/Leónidas/.test(await e2.p.textContent('#aviso-txt')) && await e2.p.locator('.fugaz').count() === 5, 'Leónidas: aviso y cuatro estrellas fugaces de más');
+      await e2.ctx.close();
+      const e3 = await entrar(navegador, sAnio, ADMIN, {}, fijarDia('2026-11-18'));
+      eq(await e3.p.locator('.fugaz').count(), 3, 'la noche siguiente al máximo caen dos de más');
+      await e3.ctx.close();
+    } finally { sAnio.parar(); }
+    const sCero = await servidor('cero');
+    try {
+      const { ctx, p } = await entrar(navegador, sCero, ADMIN, {}, sinAviso);
+      const z = await p.evaluate(() => ({ linea: document.getElementById('s-valor').textContent, memoria: document.querySelectorAll('.sendero-memoria').length, pinos: document.querySelectorAll('.pino-2').length }));
+      ok(/campamento base\. Tus pinos siguen aquí/.test(z.linea) && z.memoria === 1 && z.pinos === 4, `saldo en cero: mensaje, camino tenue y bosque en pie (${JSON.stringify(z)})`);
+      await ctx.close();
+    } finally { sCero.parar(); }
+    const sAniv = await servidor('aniv');
+    try {
+      const { ctx, p } = await entrar(navegador, sAniv, ADMIN, {}, sinAviso);
+      const a = await p.evaluate(() => ({ t: document.getElementById('aviso-txt').textContent, luz: document.querySelectorAll('.salida-aniv').length }));
+      ok(/^Hoy hace 1 año que empezaste a subir\.$/.test(a.t) && a.luz === 1, `aniversario: aviso y farolito en la salida (${a.t})`);
+      await ctx.close();
+      const l = await entrar(navegador, sAniv, LECTOR, {}, sinAviso);
+      ok(/^Hoy se cumple un año de la primera compra del libro\.$/.test(await l.p.textContent('#aviso-txt')), 'aniversario: la lectora lo lee en neutro');
+      await l.ctx.close();
+    } finally { sAniv.parar(); }
+    const sSin = await servidor('sinprecio');
+    try {
+      const { ctx, p } = await entrar(navegador, sSin, ADMIN, {}, sinAviso);
+      eq(await p.textContent('#precio-meta'), 'El mensajero no ha llegado', 'sin precio: el mensajero no ha llegado');
+      await ctx.close();
+    } finally { sSin.parar(); }
+    const sLargo = await servidor('largo');
+    try {
+      const { ctx, p } = await entrar(navegador, sLargo, ADMIN, {}, sinAviso);
+      const t = await p.evaluate(() => [...document.querySelectorAll('.arbol-honor')].map((a) => a.getAttribute('class').replace('arbol-honor ', '')));
+      eq(t, ['ceibo'], 'árboles de honor: con 283 compras, solo el ceibo');
+      await ctx.close();
+    } finally { sLargo.parar(); }
+    const sMil = await servidor('mil');
+    try {
+      const { ctx, p } = await entrar(navegador, sMil, ADMIN, {}, sinAviso);
+      const t = await p.evaluate(() => ({ a: [...document.querySelectorAll('.arbol-honor')].map((x) => x.getAttribute('class').replace('arbol-honor ', '')), d: document.getElementById('m-desc').textContent }));
+      eq(t.a, ['ceibo', 'amate', 'maquilishuat'], 'árboles de honor: con 1,000 compras, los tres');
+      ok(/árboles de honor: un ceibo, un amate, un maquilishuat/.test(t.d), 'los árboles de honor están en la descripción de la montaña');
+      await ctx.close();
+    } finally { sMil.parar(); }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {

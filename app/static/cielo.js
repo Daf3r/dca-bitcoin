@@ -110,11 +110,21 @@
     return h >= 5 && h < 12 ? 'Buenos días' : h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches';
   }
 
+  /** `libro.madrugada` = `0` lo apaga en este dispositivo; por defecto es automático. */
+  const madrugadaPref = () => { try { return localStorage.getItem('libro.madrugada') !== '0'; } catch { return true; } };
+  const madrugadaActiva = (h) => madrugadaPref() && (h >= 22 || h < 5);
+  function fijarMadrugada(on) {
+    try { if (on) localStorage.removeItem('libro.madrugada'); else localStorage.setItem('libro.madrugada', '0'); } catch { /* vale para esta visita */ }
+    aplicar();
+  }
+
   function aplicar() {
     const h = hora();
     for (const [k, v] of Object.entries(colores(h))) raiz.style.setProperty(k, v);
     const ti = tinta(h), t = TINTA[ti];
     raiz.dataset.cielo = franja(h);
+    // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
+    raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
     raiz.dataset.tinta = ti;
     raiz.style.setProperty('--cielo-txt', t.txt);
     raiz.style.setProperty('--cielo-txt2', t.txt2);
@@ -126,5 +136,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible') aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar };
+  window.libroCielo = { madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar };
 })();

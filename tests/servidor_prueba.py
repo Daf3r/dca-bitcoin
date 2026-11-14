@@ -1,7 +1,7 @@
 """Servidor Flask local para las pruebas de navegador: base temporal, exchanges simulados y sin red.
 
 Uso: python tests/servidor_prueba.py PUERTO [ESCENARIO]
-Escenarios: hoy (1 compra), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
+Escenarios: hoy (1 compra), bonito (saldo capicúa), cero (vendió todo), aniv (hoy es el aniversario de su primera compra), eco (80 semanas), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
 mil (1,000 compras en casi seis años, con extras, ventas y traslados), vacio (sin compras), sinprecio,
 sinhist (sin histórico de precios).
 Cuentas: Daf3r / clave-de-prueba-12 (admin) y Ana / lectora-de-prueba (lector).
@@ -98,6 +98,20 @@ if esc in ("hoy", "sinprecio", "sinhist"):
 elif esc == "nueve":
     for k in range(9, 0, -1):
         comprar(HOY - timedelta(days=k * 7 - 3), 25.0)
+elif esc == "bonito":  # saldo capicúa: 1,234,321 sats
+    comprar(HOY - timedelta(days=10), 500.0, 1_000_000)
+    comprar(HOY - timedelta(days=3), 200.0, 234_321)
+elif esc == "cero":  # compró y vendió todo: campamento base con el bosque en pie
+    comprar(HOY - timedelta(days=24), 25.0, 30_000)
+    comprar(HOY - timedelta(days=17), 25.0, 30_000)
+    comprar(HOY - timedelta(days=10), 25.0, 30_000)
+    comprar(HOY - timedelta(days=5), 25.0, 30_000)
+    server.insertar(conn, ((HOY - timedelta(days=2)).isoformat(), 100.0, 100000.0, 120_000), None, "venta", "Gasto", 0)
+elif esc == "aniv":  # la primera compra fue hace exactamente un año (hoy es su aniversario) y hay compras semanales desde entonces
+    ya = HOY.replace(year=HOY.year - 1, day=28) if (HOY.month == 2 and HOY.day == 29) else HOY.replace(year=HOY.year - 1)
+    comprar(ya, 25.0, 30_000)
+    for k in range(40, 0, -1):
+        comprar(HOY - timedelta(days=3 + k * 7), 25.0, 30_000)
 elif esc == "dos":
     comprar(HOY - timedelta(days=10), 25.0)
     comprar(HOY - timedelta(days=3), 28.68, 36578)
