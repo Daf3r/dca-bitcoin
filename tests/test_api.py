@@ -365,6 +365,9 @@ for pagina in ("/", "/login"):
               and int(dw) * int(d) == int(w) and int(dh) * int(d) == int(a), f"{href} público, mide lo que dice y coincide con su media query")
 r = anon.get("/icon.svg")
 check(r.status_code == 200 and "prefers-color-scheme:light" in r.get_data(as_text=True), "icon.svg cambia de colores con el tema del sistema")
+# Iconos de pestaña con la luna del día (ocho fases, normal y dorada) y curvas de nivel: públicos, como icon.svg
+check(all(anon.get(f"/icon-{t}-{k}.svg").status_code == 200 for t in ("luna", "oro") for k in range(8)), "los 16 iconos de pestaña con luna son públicos")
+check(anon.get("/curvas.svg").status_code == 200, "curvas.svg (fondo del tema claro) es público")
 # --- Tema claro/oscuro: tema.js público (lo piden también la entrada y el HTML), bloqueante en <head> y sin inline
 r = anon.get("/tema.js")
 check(r.status_code == 200 and r.mimetype == "text/javascript" and "libro.tema" in r.get_data(as_text=True), "tema.js público")

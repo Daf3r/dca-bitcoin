@@ -1,5 +1,6 @@
-import { aFecha, acentoDe, btc, cruzo1Btc, entero, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, btc, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
+import { pintarFavicon } from './favicon.js';
 import { ico } from './iconos.js';
 import { pintarInsignia } from './insignia.js';
 import { pintarTV } from './tv.js';
@@ -22,6 +23,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   pintarSaldo(desde);
   if (montana) pintarMontana(animar, desde, festejo);
   if (!acentoRetenido) pintarAcento();
+  pintarFavicon(R?.sats ?? 0);
   pintarToca();
   pintarCaida();
   pintarTramo();
@@ -63,6 +65,13 @@ export function pintarMinicab() {
   const precio = S.precio ? usd0(S.precio) : '';
   $('minicab-saldo').textContent = saldo;
   $('minicab-precio').textContent = precio;
+  // Altímetro: una regla diminuta entre la etapa anterior y la siguiente, con tu punto (el mismo avance que el anillo de «Próxima etapa»).
+  const alt = $('minicab-alt');
+  alt.hidden = !hay;
+  if (hay) {
+    const a = etapaAnterior(R.sats), b = R.etapa;
+    alt.style.setProperty('--p', String(Math.max(0, Math.min(1, b > a ? (R.sats - a) / (b - a) : 0)).toFixed(3)));
+  }
 }
 
 export function pintarPrecio() {

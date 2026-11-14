@@ -107,11 +107,13 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   // Las compras van a su propio precio: un único path de círculos, ligero aunque sean cientos.
   const r = enRango.length > 120 ? 2.6 : enRango.length > 30 ? 3.6 : 5.5;
   const cxy = enRango.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
-  if (cxy.length) s += `<path class="g-compras" d="${cxy.map(([cx, cy]) => `M${f1(cx - r)} ${f1(cy)}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`).join('')}"/>`;
+  // El tamaño de cada punto sigue a los sats de esa compra (raíz cuadrada: el área, no el radio, es proporcional), entre 0.75 y 1.45 veces el normal.
+  const mediana = (() => { const v = enRango.map((c) => c.sats).filter((q) => q > 0).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : 1; })();
+  const rs = enRango.map((c) => r * Math.min(1.45, Math.max(0.75, Math.sqrt((c.sats || mediana) / mediana))));
+  if (cxy.length) s += `<path class="g-compras" d="${cxy.map(([cx, cy], i) => `M${f1(cx - rs[i])} ${f1(cy)}a${f1(rs[i])} ${f1(rs[i])} 0 1 0 ${f1(2 * rs[i])} 0a${f1(rs[i])} ${f1(rs[i])} 0 1 0 ${f1(-2 * rs[i])} 0`).join('')}"/>`;
   // Las compras extra (por una caída) llevan un anillo naranja alrededor del punto.
-  const extras = cxy.filter((_, i) => enRango[i].extra);
-  const re = r + 3.2;
-  if (extras.length) s += `<path class="g-extras" d="${extras.map(([cx, cy]) => `M${f1(cx - re)} ${f1(cy)}a${re} ${re} 0 1 0 ${2 * re} 0a${re} ${re} 0 1 0 ${-2 * re} 0`).join('')}"/>`;
+  const extras = cxy.map((p, i) => [p, rs[i] + 3.2, enRango[i].extra]).filter((q) => q[2]);
+  if (extras.length) s += `<path class="g-extras" d="${extras.map(([[cx, cy], re]) => `M${f1(cx - re)} ${f1(cy)}a${f1(re)} ${f1(re)} 0 1 0 ${f1(2 * re)} 0a${f1(re)} ${f1(re)} 0 1 0 ${f1(-2 * re)} 0`).join('')}"/>`;
   // Las ventas van como rombos huecos a su precio de venta.
   const vxy = ventasRango.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
   const rv = r + 1.5;
