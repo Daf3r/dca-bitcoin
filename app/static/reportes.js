@@ -266,7 +266,7 @@ export function pintarComienzo() {
   const falta = R.etapa - R.sats;
   const porCompra = R.nHabituales ? R.satsHabituales / R.nHabituales : R.satsComprados / R.nCompras; // sin las extra
   const compras = Math.max(1, Math.ceil(falta / porCompra));
-  $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.etapa === 1e5 ? 'tu primer campamento' : `los ${nombreMeta(R.etapa)}`}`;
+  $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.etapa === 1e5 ? 'tu primera etapa' : `los ${nombreMeta(R.etapa)}`}`;
   $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.etapa)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
   $('com-racha').textContent = rachaTxt(R.racha);
   $('com-racha-sub').textContent = R.racha

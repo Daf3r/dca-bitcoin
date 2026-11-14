@@ -282,6 +282,6 @@ function pintarTramo() {
   $('t-anillo').setAttribute('aria-label', `Vas en ${(p * 100).toFixed(1)}% del camino a ${nombreHito(R.etapa)}${R.etapa >= 1e8 ? '' : ' sats'}`);
   $('t-ritmo').textContent = R.proyeccion
     ? `Al ritmo de los últimos 6 meses${R.nExtra ? ', sin contar tus compras extra,' : ''} (${entero(R.satsMes)} sats al mes) llegas en ${plazo(R.proyeccion)}.`
-    : R.n ? `Vas en ${(prog * 100).toFixed(1)}% de este tramo.` : 'El primer campamento está en 100k sats.';
+    : R.n ? `Vas en ${(prog * 100).toFixed(1)}% de este tramo.` : 'La primera etapa está en 100k sats.';
 }
 export const plazo = (m) => (m < 1 ? 'menos de un mes' : `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}`);
