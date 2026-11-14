@@ -2132,6 +2132,7 @@ try {
     await p.keyboard.press('Escape'); await p.waitForTimeout(100);
     // Leyenda interactiva: ocultar series y que siempre quede una a la vista
     const oculto = (cls) => p.evaluate((c) => getComputedStyle(document.querySelector(`#lienzo ${c}`)).display === 'none', cls);
+    await p.evaluate(() => { document.getElementById('ley-det').open = true; }); // en el teléfono la leyenda empieza plegada
     await p.click('.leyenda button[data-serie="compras"]');
     eq([await p.getAttribute('.leyenda button[data-serie="compras"]', 'aria-pressed'), await oculto('.g-compras'), await p.evaluate(() => document.getElementById('lienzo').dataset.ocultas)], ['false', true, 'compras'], 'la leyenda oculta las compras');
     await p.click('.leyenda button[data-serie="precio"]');
