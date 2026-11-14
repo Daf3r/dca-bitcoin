@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-g', fecha: '2026-11-14',
+    items: [
+      'En el gráfico del precio, cada compra tiene el tamaño de sus sats: una compra grande se ve grande. En el teléfono la leyenda está plegada para dejar más sitio.',
+      'Al bajar por la página, la franja de arriba muestra una regla con tu punto entre la etapa anterior y la siguiente.',
+      'El tema claro tiene curvas de nivel muy suaves de fondo, como un mapa.',
+      'El icono de la pestaña lleva la luna real del día, y se vuelve dorado al pasar de 1 BTC.',
+      'El botón «Anotar compra» tiene un degradado debajo para que el texto no se enrede con él.',
+    ],
+  },
+  {
     id: '2026-11-f', fecha: '2026-11-14',
     items: [
       'En el sendero de la montaña ahora se ven las etapas entre un campamento y otro (250k, 500k…) como marcas, y la siguiente lleva su nombre.',
