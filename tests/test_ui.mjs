@@ -3157,7 +3157,7 @@ try {
       ok(await fila.locator('.f-pie-b').count() === 1 && /^Dejar una piedrita$/.test((await fila.locator('.f-pie-b').textContent()).trim()) && await fila.locator('.f-pie-b').getAttribute('aria-pressed') === 'false', '15B piedritas: una lectora ve «Dejar una piedrita» en una compra');
       ok(await l.p.locator('#lista li[data-clave^="t"] .f-pie-b').count() === 0 && await l.p.locator('#lista li:has(.fila[data-tipo="venta"]) .f-pie-b').count() === 0, '15B piedritas: ni los traslados ni las ventas reciben piedritas');
       await fila.locator('.f-pie-b').click(); await l.p.waitForTimeout(900);
-      ok(/Dejaste una piedrita/.test(await fila.locator('.f-pie-b').textContent()) && await fila.locator('.f-pie-b').getAttribute('aria-pressed') === 'true' && /Ana dejó una piedrita/.test(await fila.innerText()), '15B piedritas: queda dejada y el texto dice quién');
+      ok(/Dejaste una piedrita/.test(await fila.locator('.f-pie-b').textContent()) && await fila.locator('.f-pie-b').getAttribute('aria-pressed') === 'true' && !/Ana dejó/.test(await fila.innerText()), '15B piedritas: queda dejada, sin nombrarte a ti misma');
       ok(/Dejaste una piedrita\./.test(await l.p.textContent('#aviso-txt')), '15B piedritas: avisa');
       eq((await datos(l.p, '/api/piedritas')).length, 1, '15B piedritas: se guardó en el servidor');
       ok(await l.p.evaluate(() => document.activeElement?.classList.contains('f-pie-b')), '15B piedritas: el foco se queda en el botón');

@@ -427,27 +427,142 @@ export function miniMontana({ altitud = 0.5 } = {}) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Campamento 15B · piedritas, farol de cumpleaños, luciérnagas y sismógrafo. (PROVISIONALES: dibujos mínimos para probar la integración.)
+// Campamento 15B · piedritas, farol de cumpleaños, luciérnagas y sismógrafo. Funciones puras, sin azar y sin <defs> propios (las
+// piedritas salen muchas veces por página); los colores los pone el CSS (bloque «Campamento 15B»).
 // ---------------------------------------------------------------------------------------------
-/** Una piedrita (el gesto de la apacheta): una pequeña piedra lisa. */
+/**
+ * Una piedra de río con cuatro anclas (izquierda, arriba, derecha, abajo) desplazadas por `v`, para que cada una sea distinta: el
+ * contorno, la cara que mira a la luz (arriba a la derecha), la cara en sombra (abajo a la izquierda), un filo de luz y, si `veta`,
+ * la veta de cuarzo que las hace reconocibles (las piedras de una apacheta se escogen por bonitas).
+ */
+function piedra(cx, cy, rx, ry, v, tono = 0, veta = false) {
+  const K = 0.62;
+  const L = [cx - rx, cy + v[0] * ry], T = [cx + v[1] * rx, cy - ry], Rr = [cx + rx, cy + v[2] * ry], B = [cx + v[3] * rx, cy + ry];
+  const P = (q) => `${f1(q[0])} ${f1(q[1])}`;
+  const arco = (a, b, ax, ay, bx, by) => `C${f1(a[0] + ax)} ${f1(a[1] + ay)} ${f1(b[0] + bx)} ${f1(b[1] + by)} ${P(b)}`;
+  const kx = K * rx, ky = K * ry;
+  const lt = arco(L, T, 0, -ky, -kx, 0), tr = arco(T, Rr, kx, 0, 0, -ky), rb = arco(Rr, B, 0, ky, kx, 0), bl = arco(B, L, -kx, 0, 0, ky);
+  const c = [cx + rx * 0.18, cy - ry * 0.05];
+  const contorno = `M${P(L)}${lt}${tr}${rb}${bl}Z`;
+  // La cara iluminada: de la cima a la derecha por el borde y de vuelta por el centro; la sombra: de la derecha baja a la izquierda.
+  const luz = `M${P(T)}${tr}L${f1(c[0] + rx * 0.1)} ${f1(c[1] + ry * 0.2)}L${f1(cx - rx * 0.35)} ${f1(cy - ry * 0.35)}Z`;
+  const som = `M${f1(cx + rx * 0.62)} ${f1(cy + ry * 0.72)}${arco([cx + rx * 0.62, cy + ry * 0.72], B, -kx * 0.3, ky * 0.25, kx * 0.4, 0)}${bl}L${f1(cx - rx * 0.2)} ${f1(cy + ry * 0.25)}Z`;
+  const filo = `M${f1(cx - rx * 0.55)} ${f1(cy - ry * 0.72)}Q${f1(T[0])} ${f1(cy - ry * 1.02)} ${f1(cx + rx * 0.72)} ${f1(cy - ry * 0.55)}`;
+  const vt = veta ? `<path class="pi-veta" d="M${f1(cx - rx * 0.9)} ${f1(cy + ry * 0.12)}Q${f1(cx - rx * 0.05)} ${f1(cy + ry * 0.62)} ${f1(cx + rx * 0.92)} ${f1(cy - ry * 0.02)}"/>` : '';
+  return `<g class="pi-p pi-t${tono}"><path class="pi-cuerpo" d="${contorno}"/><path class="pi-luz" d="${luz}"/><path class="pi-som" d="${som}"/>${vt}<path class="pi-filo" d="${filo}"/><path class="pi-borde" d="${contorno}"/></g>`;
+}
+/** Una piedrita (el gesto de la apacheta): una piedra de río con su veta de cuarzo, facetada con la luz del proyecto. */
 export function piedrita() {
-  return '<svg class="pie-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><ellipse cx="12" cy="15" rx="9" ry="6" fill="var(--s3)"/></svg>';
+  return '<svg class="pie-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'
+    + '<ellipse class="pi-suelo" cx="12.4" cy="19.6" rx="9.4" ry="1.7"/>'
+    + `<g class="pi-una">${piedra(12, 13.4, 9.4, 6.3, [0.22, -0.16, 0.08, 0.1], 0, true)}</g></svg>`;
 }
-/** La apacheta de `n` piedritas (de 1 a 5 se apilan; más de 5 se quedan en 5). */
+// Las piedras de la apacheta, de abajo arriba: tamaño, forma (anclas), desplazamiento lateral (equilibrio) y tono.
+const APACHETA = [
+  { rx: 9.4, ry: 3.9, v: [0.3, -0.2, 0.15, 0.08], dx: 0, t: 0 },
+  { rx: 7.2, ry: 3.3, v: [0.1, 0.22, 0.3, -0.1], dx: 1.1, t: 1 },
+  { rx: 5.8, ry: 2.9, v: [0.35, -0.3, 0.05, 0.15], dx: -0.9, t: 2 },
+  { rx: 4.6, ry: 2.5, v: [0.15, 0.12, 0.35, 0], dx: 0.7, t: 0 },
+  { rx: 3.5, ry: 2.4, v: [0.3, -0.05, 0.2, 0.1], dx: -0.2, t: 1 },
+];
+/** La apacheta de `n` piedritas (de 1 a 5 se apilan en equilibrio, cada una distinta; más de 5 se quedan en 5). */
 export function apacheta(n = 1) {
-  const k = Math.min(5, Math.max(1, n));
-  return `<svg class="pie-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${Array.from({ length: k }, (_, i) => `<ellipse cx="12" cy="${20 - i * 4}" rx="${9 - i * 1.4}" ry="2.6" fill="var(--s3)"/>`).join('')}</svg>`;
+  const k = Math.min(5, Math.max(1, Math.round(Number(n) || 1)));
+  if (k === 1) return piedrita();
+  let y = 21.2, s = '';
+  const alto = APACHETA.slice(0, k).reduce((a, p) => a + p.ry * 1.72, 0);
+  const esc = Math.min(1, 19.5 / alto);
+  APACHETA.slice(0, k).forEach((p, i) => {
+    const rx = p.rx * esc, ry = p.ry * esc;
+    y -= ry;
+    s += piedra(12 + p.dx * esc, y, rx, ry, p.v, p.t, i === k - 1);
+    y -= ry * 0.72;
+  });
+  return `<svg class="pie-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><ellipse class="pi-suelo" cx="12.4" cy="21.6" rx="${f1(10 * esc + 0.4)}" ry="1.5"/>${s}</svg>`;
 }
-/** El farol extra de un cumpleaños: su inicial arde junto a la marca de salida. Va dentro del SVG de la montaña (coordenadas de la escena). */
+/**
+ * El farol extra de un cumpleaños: un farolito de papel facetado (el lenguaje de los faroles de los campamentos: tejado de dos aguas,
+ * cara en sombra, filo de luz) sobre una estaca clavada en una piedra; la inicial va recortada en el papel y la llama la enciende por
+ * detrás. Cuatro papelitos de fiesta alrededor. (x, y) es la base; `k`, la escala de la escena.
+ */
 export function farolCumple({ inicial = '?', x = 0, y = 0, k = 1 } = {}) {
-  return `<g class="farol-cumple" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${k})"><circle r="8" fill="var(--naranja)"/><text y="3.5" text-anchor="middle" font-size="10" fill="#1d1206">${inicial}</text></g>`;
+  const letra = escT(String(inicial || '?').slice(0, 2));
+  return `<g class="farol-cumple" transform="translate(${f1(x)} ${f1(y)}) scale(${k})">`
+    + '<ellipse class="fc-charco" cy="0" rx="18" ry="4.2" fill="url(#m-luz)"/>'
+    + '<circle class="fc-halo" cy="-17" r="24" fill="url(#m-luz)"/>'
+    + '<circle class="efecto-ambiente fc-pulso" cy="-17" r="15" fill="url(#m-luz)"/>'
+    + '<path class="fc-piedra" d="M-5.2 0.6L-4 -2.6L-0.8 -3.6L3.4 -2.9L5.4 0.6Z"/><path class="fc-piedra-som" d="M0.4 0.6L-0.8 -3.6L3.4 -2.9L5.4 0.6Z"/>'
+    + '<path class="fc-estaca" d="M0 -3V-6.6"/>'
+    // El cuerpo: ocho caras vistas de frente (tres se ven), más ancho a media altura.
+    + '<path class="fc-papel" d="M-5.4 -6.4L-8.2 -11V-23L-5.4 -27.6H5.4L8.2 -23V-11L5.4 -6.4Z"/>'
+    + '<ellipse class="fc-brillo" cy="-17" rx="5.2" ry="8.4"/>'
+    + '<path class="fc-cara-som" d="M-5.4 -6.4L-8.2 -11V-23L-5.4 -27.6Z"/>'
+    + '<path class="fc-cara-luz" d="M5.4 -6.4L8.2 -11V-23L5.4 -27.6Z"/>'
+    + '<path class="fc-costilla" d="M-5.4 -6.6V-27.4M5.4 -6.6V-27.4"/>'
+    + '<path class="fc-borde" d="M-5.4 -6.4L-8.2 -11V-23L-5.4 -27.6H5.4L8.2 -23V-11L5.4 -6.4Z"/>'
+    + `<text class="fc-letra" y="-12.6" text-anchor="middle">${letra}</text>`
+    // La boca de abajo con su brasa y el tejado de dos aguas (como los faroles de los campamentos), con su argolla.
+    + '<path class="fc-aro" d="M-5.8 -6.6H5.8V-5.2H-5.8Z"/><ellipse class="fc-brasa" cy="-7.4" rx="2.6" ry="0.9"/>'
+    + '<path class="fc-techo" d="M-7.2 -27.4H7.2L0 -32.4Z"/><path class="fc-techo-luz" d="M0 -32.4L7.2 -27.4H3.6Z"/>'
+    + '<path class="fc-argolla" d="M-1.5 -32.6A1.6 1.6 0 1 1 1.5 -32.6"/>'
+    + '<g class="efecto-ambiente fc-llama"><ellipse cy="-9.2" rx="2.2" ry="2.8"/></g>'
+    // Papelitos de fiesta: cuatro, quietos (con «todos» flotan un poco).
+    + '<g class="fc-fiesta"><path class="fc-c1" d="M-12.6 -30.4l1.6 -1.6 1.6 1.6 -1.6 1.6Z"/><path class="fc-c2" d="M11 -34.2h2.6v1.4h-2.6Z" transform="rotate(-24 12.3 -33.5)"/>'
+    + '<circle class="fc-c3" cx="13.4" cy="-24.6" r="1.1"/><path class="fc-c2" d="M-14.4 -21.6h2.4v1.3h-2.4Z" transform="rotate(32 -13.2 -21)"/></g>'
+    + '</g>';
 }
-/** Luciérnagas en el valle (ambiente: lleva `efecto-ambiente`; el CSS decide cuándo se ven). */
-export function luciernagas({ W = 300, H = 400, yH = 200 } = {}) {
-  return `<g class="luciernagas efecto-ambiente" aria-hidden="true"><circle cx="${(W * 0.3).toFixed(0)}" cy="${(H * 0.8).toFixed(0)}" r="1.5" fill="var(--naranja)"/></g>`;
+// Las luciérnagas: posiciones fijas en fracciones del ancho y del alto (todas en el 40 % de abajo, lejos del saldo); las cuatro
+// últimas solo salen en la época de lluvias.
+const LUCIERNAGAS = [[0.07, 0.84], [0.19, 0.77], [0.29, 0.89], [0.4, 0.81], [0.55, 0.9], [0.63, 0.79], [0.76, 0.86], [0.9, 0.8],
+  [0.13, 0.92], [0.47, 0.75], [0.7, 0.93], [0.95, 0.9]];
+/** Luciérnagas en el valle (ambiente: lleva `efecto-ambiente`; el CSS las muestra al atardecer y de noche). */
+export function luciernagas({ W = 300, H = 400 } = {}) {
+  const r = Math.max(1, Math.min(1.5, W / 700));
+  const s = LUCIERNAGAS.map(([fx, fy], i) => `<g class="lu lu-${i + 1}" transform="translate(${f1(fx * W)} ${f1(fy * H)}) scale(${r.toFixed(2)})">`
+    + '<g class="lu-v lu-cola"><circle r="1"/></g>'
+    + '<g class="lu-v"><circle class="lu-halo" r="7" fill="url(#m-luz)"/><circle class="lu-luz" r="1.35"/></g></g>').join('');
+  return `<g class="luciernagas efecto-ambiente" aria-hidden="true">${s}</g>`;
 }
-/** La tira del sismógrafo de la tele: la aguja dibuja el precio en vivo. `datos` sale de `lib.muestrasSismo`. */
+/**
+ * La tira del sismógrafo de la tele (600×120 de referencia): papel cuadriculado que entra por el rodillo, la línea de tinta del precio y
+ * la pluma con su gota de tinta en el último punto, montada en un brazo que sale de la caja del aparato. Sin texto ni colores de alarma.
+ * `puntos` sale de `lib.muestrasSismo` (x 0–1, y 0–1 con 1 arriba).
+ */
 export function sismografo({ puntos = [], ancho = 600, alto = 120 } = {}) {
-  const d = puntos.map((p, i) => `${i ? 'L' : 'M'}${(p.x * ancho).toFixed(1)} ${((1 - p.y) * (alto - 16) + 8).toFixed(1)}`).join('');
-  return `<svg viewBox="0 0 ${ancho} ${alto}" aria-hidden="true" focusable="false"><path d="${d}" fill="none" stroke="var(--naranja)" stroke-width="2"/></svg>`;
+  const x0 = 14, x1 = ancho - 78, y0 = 22, y1 = alto - 20, top = 8, bot = alto - 8, rod = x1 + 8;
+  const X = (p) => x0 + p.x * (x1 - x0), Y = (p) => y1 - p.y * (y1 - y0);
+  const d = puntos.map((p, i) => `${i ? 'L' : 'M'}${f1(X(p))} ${f1(Y(p))}`).join('');
+  const u = puntos.at(-1) ?? { x: 1, y: 0.5 };
+  const tx = X(u), ty = Y(u);
+  // Borde izquierdo rasgado (la tira se arrancó a medianoche): dientes fijos.
+  let roto = '';
+  for (let yy = bot, i = 0; yy > top; yy -= 6, i++) roto += `L${f1(x0 - 6 + (i % 3 === 1 ? 3.2 : i % 3 === 2 ? 1.2 : 0))} ${f1(Math.max(top, yy - 6))}`;
+  const papel = `M${x0 - 6} ${top}H${rod + 4}V${bot}H${x0 - 6}${roto}Z`;
+  let fina = '', gruesa = '', horas = '';
+  for (let x = x0 + 6; x < rod; x += 12) ((x - x0 - 6) % 60 === 0 ? (gruesa += `M${x} ${top + 4}V${bot - 4}`) : (fina += `M${x} ${top + 4}V${bot - 4}`));
+  for (let y = top + 6, i = 0; y < bot - 2; y += 12, i++) (i % 4 === 2 ? (gruesa += `M${x0 - 2} ${y}H${rod}`) : (fina += `M${x0 - 2} ${y}H${rod}`));
+  for (let x = x0 + 6; x < rod; x += 60) horas += `M${x} ${top}V${top + 5}M${x} ${bot}V${bot - 5}`;
+  // El brazo: del eje en la caja a la pluma; la pluma es una cápsula a lo largo del brazo, cerca de la punta.
+  const ex = ancho - 30, ey = alto / 2, dx = tx - ex, dy = ty - ey, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
+  const q = (a, b) => `${f1(tx - ux * a + nx * b)} ${f1(ty - uy * a + ny * b)}`;
+  const pluma = `M${q(3.5, 0)}L${q(7, 2.6)}L${q(20, 2.6)}L${q(20, -2.6)}L${q(7, -2.6)}Z`;
+  return `<svg class="sm-svg" viewBox="0 0 ${ancho} ${alto}" aria-hidden="true" focusable="false">`
+    + `<g class="sm-tira"><path class="sm-sombra" d="${papel}" transform="translate(2 4)"/><path class="sm-papel" d="${papel}"/>`
+    + `<path class="sm-fina" d="${fina}"/><path class="sm-gruesa" d="${gruesa}"/><path class="sm-hora" d="${horas}"/>`
+    + `<path class="sm-margen" d="M${x0 - 4} ${top + 4}H${rod}M${x0 - 4} ${bot - 4}H${rod}"/>`
+    + (d ? `<path class="sm-tinta-c" d="${d}"/><path class="sm-tinta" d="${d}"/>` : '')
+    + `<path class="sm-luz" d="M${x0 - 4} ${top + 1}H${rod}"/></g>`
+    // El rodillo por donde entra el papel y la caja del aparato.
+    + `<rect class="sm-rodillo" x="${rod}" y="${top - 6}" width="18" height="${bot - top + 12}" rx="6"/><rect class="sm-rodillo-luz" x="${rod + 10}" y="${top - 3}" width="3" height="${bot - top + 6}" rx="1.5"/>`
+    + `<path class="sm-rodillo-som" d="M${rod + 2} ${top - 2}V${bot + 2}"/>`
+    + `<path class="sm-caja" d="M${rod + 20} ${top - 8}H${ancho - 4}a4 4 0 0 1 4 4V${bot + 4}a4 4 0 0 1 -4 4H${rod + 20}Z"/>`
+    + `<path class="sm-caja-filo" d="M${rod + 22} ${top - 7}H${ancho - 5}"/>`
+    + `<rect class="sm-placa" x="${ancho - 44}" y="${bot - 18}" width="28" height="9" rx="2"/><path class="sm-placa-l" d="M${ancho - 39} ${bot - 13.5}H${ancho - 21}"/>`
+    + `<circle class="sm-tornillo" cx="${ancho - 12}" cy="${top + 2}" r="2"/><circle class="sm-tornillo" cx="${ancho - 12}" cy="${bot - 2}" r="2"/>`
+    + `<path class="sm-brazo-s" d="M${f1(ex)} ${f1(ey + 2)}L${f1(tx - ux * 12)} ${f1(ty - uy * 12 + 2.5)}"/>`
+    + `<path class="sm-brazo" d="M${f1(ex)} ${f1(ey)}L${f1(tx - ux * 12)} ${f1(ty - uy * 12)}"/>`
+    + `<path class="sm-pluma" d="${pluma}"/>`
+    + `<circle class="sm-eje" cx="${ex}" cy="${ey}" r="7"/><circle class="sm-eje-c" cx="${ex}" cy="${ey}" r="2.4"/>`
+    + `<circle class="sm-gota-h" cx="${f1(tx)}" cy="${f1(ty)}" r="6"/><circle class="sm-gota" cx="${f1(tx)}" cy="${f1(ty)}" r="3"/><circle class="sm-gota-b" cx="${f1(tx + 0.9)}" cy="${f1(ty - 1)}" r="0.9"/>`
+    + '</svg>';
 }

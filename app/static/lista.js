@@ -34,8 +34,9 @@ function htmlPiedritas(id) {
   const texto = textoPiedritas(lista);
   if (esAdmin()) return lista.length ? `<span class="f-pie"><span class="f-pie-ico" aria-hidden="true">${apacheta(lista.length)}</span><span>${esc(texto)}</span></span>` : '';
   const mia = lista.some((x) => x.quien === S.usuario);
+  const otros = lista.filter((x) => x.quien !== S.usuario); // a ti no se te nombra: tu botón ya lo dice
   return `<button type="button" class="f-pie-b" data-id="${id}" aria-pressed="${mia}"><span class="f-pie-ico" aria-hidden="true">${piedrita()}</span>${mia ? 'Dejaste una piedrita' : 'Dejar una piedrita'}</button>` +
-    (lista.length ? `<span class="f-pie f-pie-otros">${esc(texto)}</span>` : '');
+    (otros.length ? `<span class="f-pie f-pie-otros">${esc(textoPiedritas(otros))}</span>` : '');
 }
 /** Los traslados llevan su propia línea; el botón de TXID y el de la nota van en una fila aparte, hermana del botón de editar (no anidados). */
 function htmlExtras(m) {
@@ -354,7 +355,9 @@ $('lista').addEventListener('click', async (e) => {
     await api(`/api/piedritas/${id}`, { metodo: tenia ? 'DELETE' : 'POST' });
     S.piedritas = await api('/api/piedritas').catch(() => S.piedritas);
     pintarLista();
-    document.querySelector(`.f-pie-b[data-id="${id}"]`)?.focus();
+    const nuevo = document.querySelector(`.f-pie-b[data-id="${id}"]`);
+    nuevo?.focus();
+    if (!tenia && nuevo) { nuevo.classList.add('recien'); setTimeout(() => nuevo.classList.remove('recien'), 1000); } // la piedra cae y se asienta (CSS)
     avisar(tenia ? 'Quitaste tu piedrita.' : 'Dejaste una piedrita. Se la avisamos a quien anotó la compra.', null, true);
   } catch (err) { b.disabled = false; avisar(err.message, null, true); }
 });

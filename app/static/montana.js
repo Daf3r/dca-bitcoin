@@ -277,7 +277,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   if (aniv) s += `<circle class="salida-aniv" cx="${f1(bx)}" cy="${f1(by)}" r="26" fill="url(#m-luz)"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
   // Farol por cumpleaños (campamento 15B): el día de un familiar, su inicial arde en un farol junto a la marca de salida. // 15B
-  cumples.slice(0, 3).forEach((p, i) => { s += farolCumple({ inicial: p.inicial, x: bx + (i % 2 ? 1 : -1) * (30 + 22 * Math.floor((i + 1) / 2)), y: by + 3, k: W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1 }); });
+  { const k = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1, dir = (pts[1]?.[0] ?? bx) > bx ? -1 : 1, n = Math.min(3, cumples.length), paso = Math.min(21 * k, Math.max(15 * k, ((dir < 0 ? bx : W - bx) - 34 * k) / Math.max(1, n - 1))); cumples.slice(0, 3).forEach((p, i) => { s += farolCumple({ inicial: p.inicial, x: Math.max(10 * k, Math.min(W - 10 * k, bx + dir * (24 * k + paso * i))), y: by + 2 + (i % 2) * 4 * k, k }); }); } // 15B
   s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   s += bosque(W, H, bx, compras, plantar, pts);
   const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0]);
