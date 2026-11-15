@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, ticksPrecio, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
-  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
+  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, textoApertura, etapasFuturas, mananaISO, diario, textoDiario, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -858,5 +858,32 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(partitura(it).every((a) => a.notas.every((x) => x.paso >= 0 && x.paso <= 12 && Number.isInteger(x.paso))) && PASOS_HZ.length === 13 && PASOS_HZ.every((h, i) => i === 0 || h > PASOS_HZ[i - 1]), 'partitura: trece pasos, de 0 a 12, y sus notas suben');
   eq(JSON.stringify(partitura(it)), JSON.stringify(partitura(it)), 'partitura: siempre sale igual');
   ok(/^Tu partitura tiene 1 pauta, una por año, y una nota por compra/.test(textoPartitura(p)) && textoPartitura([]) === 'Tu partitura empieza con tu primera compra.' && /^2026: 3 notas; BTC entre \$50,000 y \$100,000/.test(textoAnioPartitura(p[0])) && /\+30,000 sats · compra extra$/.test(textoNota(p[0].notas[2])), 'partitura: los textos');
+}
+
+// Campamento 15A · el Diario del Libro y las cartas selladas
+{
+  const it = [
+    { id: 1, fecha: '2025-10-01', tipo: 'compra', sats: 20000, precio: 100000, monto: 20, extra: 0 },
+    { id: 2, fecha: '2026-03-02', tipo: 'compra', sats: 30000, precio: 100000, monto: 30, extra: 0 },
+    { id: 3, fecha: '2026-11-12', tipo: 'compra', sats: 40000, precio: 100000, monto: 40, extra: 0 },
+  ];
+  const R = resumen(it, 90000);
+  const d = diario(R, '2026-11-15');
+  ok(d && d.edicion === '15 nov 2026' && d.numero > 1 && d.altitud > 0 && d.altitud < 1, 'diario: edición, número y altitud');
+  ok(/^Un paso más: la montaña subió 40,000 sats$/.test(d.titular) && /Una compra en los últimos siete días/.test(d.sub), 'diario: el titular cuenta lo de la semana');
+  eq(d.clasificados.length, 3, 'diario: tres clasificados');
+  ok(d.clasificados.some((c) => /^SE BUSCAN 10,000 sats para llegar a 100k sats\. Sin prisa/.test(c)), 'diario: un clasificado dice cuánto falta, sin presión («sin prisa»)');
+  ok(!/compra ahora|conviene|recomend|precio/i.test(`${d.pronostico} ${d.clasificados.join(' ')} ${d.titular}`), 'diario: no recomienda ni habla del precio');
+  ok(/Es el clima, no un consejo/.test(d.pronostico), 'diario: el pronóstico es del clima de la montaña');
+  eq(JSON.stringify(diario(R, '2026-11-15')), JSON.stringify(d), 'diario: el mismo día sale igual');
+  const tranquila = diario(R, '2026-12-20');
+  ok(/^Semana tranquila en la montaña$/.test(tranquila.titular) && /Nadie se apura/.test(tranquila.sub), 'diario: sin compras en la semana, una semana tranquila (sin reproche)');
+  ok(d.haceUnAnio && /^Hace un año el libro tenía 20,000 sats\. Hoy tiene 90,000: 70,000 más\.$/.test(d.haceUnAnio.texto), `diario: «hace un año» (${d.haceUnAnio?.texto})`);
+  eq(diario(resumen(it.slice(2), 90000), '2026-11-15').haceUnAnio, null, 'diario: sin un año de historia no hay «hace un año»');
+  eq(diario(resumen([], null), '2026-11-15'), null, 'diario: sin compras no hay portada');
+  const grande = resumen([{ id: 1, fecha: '2026-11-14', tipo: 'compra', sats: 120000, precio: 100000, monto: 120, extra: 0 }], 90000);
+  ok(/^Llegamos a 100k sats$/.test(diario(grande, '2026-11-15').titular), 'diario: una etapa reciente es el titular');
+  ok(/^El Diario del Libro, edición del 15 nov 2026\. Un paso más/.test(textoDiario(d)), 'diario: el texto para lectores');
+  eq([etapasFuturas(50000, 3), etapasFuturas(100000, 2), mananaISO('2026-12-31'), mananaISO('2026-02-28')], [[100000, 250000, 500000], [250000, 500000], '2027-01-01', '2026-03-01'], 'cartas: las etapas de arriba y la fecha de mañana');
 }
 console.log(`OK ${n} comprobaciones`);

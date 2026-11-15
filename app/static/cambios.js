@@ -7,6 +7,14 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-n', fecha: '2026-11-16',
+    items: [
+      'Llegó «El Diario del Libro»: una portada en el Resumen con lo que pasó, qué había hace un año, unos clasificados con humor y el pronóstico de la montaña.',
+      'Ahora se pueden dejar cartas selladas para el futuro: se abren solas en una fecha o al llegar a una etapa, y toda la familia las lee cuando llega el momento.',
+      'Cada campamento puede tener un mensaje: al tocar su bandera sale la frase, y también aparece en «Tu historia». Hasta que llegues, es una sorpresa.',
+    ],
+  },
+  {
     id: '2026-11-m', fecha: '2026-11-16',
     items: [
       'Lo de debajo de la montaña ahora está en cuatro pestañas: Resumen, Gráficos, Historia y Movimientos. Una sola cosa a la vez, sin tanto scroll.',

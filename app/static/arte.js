@@ -366,10 +366,62 @@ export function petroglifo({ cifra, titulo, fecha, cima = false }) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Campamento 15A · grabado del Diario. (PROVISIONAL: dibujo mínimo para probar la integración.)
+// Campamento 15A · el grabado del Diario
 // ---------------------------------------------------------------------------------------------
-/** Una montañita con tu punto a la altura `altitud` (0 a 1): el grabado de la portada del Diario y de las novedades. */
+// Un grabado a tinta, como los de los periódicos viejos: la misma montaña de la app (rellano en la cumbre, cuerno de roca a la derecha,
+// arista quebrada) pero dibujada con líneas. La luz llega de arriba a la derecha: la cara izquierda va rayada (trama), la derecha queda
+// en papel con un lavado cálido cerca de la cumbre. El sendero son puntos de tinta y lo recorrido, un trazo naranja hasta «Tú».
+// Sin texto, sin azar; colores por clases `dm-…` (bloque «Campamento 15A» de styles.css). ~20 nodos.
+const DM_SENDA = [[122, 122], [90, 111], [142, 97], [100, 83], [134, 69], [106, 55], [126, 42], [114, 25]];
+/** El punto a la fracción `t` (0–1) del largo de una línea quebrada y los puntos recorridos hasta él. */
+const aLo = (pts, t) => {
+  const seg = pts.slice(1).map((p, i) => Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]));
+  let resto = Math.min(1, Math.max(0, t)) * seg.reduce((a, b) => a + b, 0);
+  const hecho = [pts[0]];
+  for (let i = 0; i < seg.length; i++) {
+    if (resto <= seg[i] || i === seg.length - 1) {
+      const k = seg[i] ? Math.min(1, resto / seg[i]) : 0;
+      const p = [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * k, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * k];
+      hecho.push(p);
+      return { p, hecho };
+    }
+    resto -= seg[i];
+    hecho.push(pts[i + 1]);
+  }
+  return { p: pts[0], hecho };
+};
+/** El grabado de la portada del Diario: la montaña con tu punto a la altura `altitud` (0 a 1). */
 export function miniMontana({ altitud = 0.5 } = {}) {
-  const y = 70 - altitud * 56;
-  return `<svg viewBox="0 0 160 80" aria-hidden="true" focusable="false"><path d="M6 76 80 8 154 76Z" fill="var(--s2)" stroke="var(--s3)"/><circle cx="${(80 - altitud * 0 + 0).toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="var(--naranja)"/></svg>`;
+  const { p, hecho } = aLo(DM_SENDA, altitud);
+  const monte = [[10, 122], [50, 84], [62, 89], [97, 41], [109, 23], [118, 23], [126, 13], [133, 27], [150, 52], [165, 47], [230, 122]];
+  const sombra = [[10, 122], [50, 84], [62, 89], [97, 41], [109, 23], [118, 23], [121, 40], [116, 58], [124, 76], [118, 98], [126, 122]];
+  const nieve = [[98, 40], [109, 23], [118, 23], [126, 13], [133, 27], [141, 39], [135, 36], [129, 43], [122, 37], [115, 45], [108, 38], [103, 43]];
+  // El cielo de grabado: rayas horizontales que se acortan hacia el sol.
+  let cielo = '';
+  for (let k = 0; k < 6; k++) { const y = 10 + k * 7; cielo += `M${6 + k * 3} ${y}H${150 - k * 9 - (k < 3 ? 40 : 0)}`; }
+  let rayos = '';
+  for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2; rayos += `M${f1(198 + Math.cos(a) * 15)} ${f1(30 + Math.sin(a) * 15)}L${f1(198 + Math.cos(a) * (k % 2 ? 19 : 22))} ${f1(30 + Math.sin(a) * (k % 2 ? 19 : 22))}`; }
+  // Pinos de tinta al pie, a los dos lados del arranque del sendero.
+  const pinos = [[36, 122, 9], [50, 122, 12], [62, 122, 8], [172, 122, 10], [186, 122, 13], [200, 122, 9]]
+    .map(([x, y, h]) => `M${x} ${y}L${f1(x - h * 0.42)} ${f1(y - h * 0.4)}H${f1(x - h * 0.2)}L${x} ${y - h}L${f1(x + h * 0.2)} ${f1(y - h * 0.4)}H${f1(x + h * 0.42)}Z`).join('');
+  return '<svg class="dm" viewBox="0 0 240 132" aria-hidden="true" focusable="false"><defs>'
+    + '<pattern id="dm-trama" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><path class="dm-tr" d="M0 1.6H3.2"/></pattern>'
+    + '</defs>'
+    + `<path class="dm-cielo" d="${cielo}"/>`
+    + '<circle class="dm-sol" cx="198" cy="30" r="10"/>'
+    + `<path class="dm-rayos" d="${rayos}"/>`
+    // La sierra del fondo, rayada y tenue.
+    + '<path class="dm-sierra" d="M0 104L22 92L40 97L70 80L92 88L118 76L150 86L176 72L204 84L222 80L240 88V122H0Z"/>'
+    + `<path class="dm-monte" d="${lin(monte)}Z"/>`
+    + `<path class="dm-luz" d="M118 23L126 13L133 27L150 52L165 47L178 62L140 70L124 76L116 58L121 40Z"/>`
+    + `<path class="dm-sombra" d="${lin(sombra)}Z"/>`
+    + `<path class="dm-nieve" d="${lin(nieve)}Z"/>`
+    + `<path class="dm-arista" d="M118 23L121 40L116 58L124 76L118 98L126 122M133 27L140 46M150 52L158 70"/>`
+    + `<path class="dm-silueta" d="${lin(monte)}"/>`
+    + `<path class="dm-senda" d="${lin(DM_SENDA)}"/>`
+    + `<path class="dm-hecho" d="${lin(hecho)}"/>`
+    + `<path class="dm-pinos" d="${pinos}"/>`
+    + '<path class="dm-suelo" d="M4 122.5H236M22 127H96M118 127H218"/>'
+    + `<circle class="dm-yo-halo" cx="${f1(p[0])}" cy="${f1(p[1])}" r="7"/><circle class="dm-yo" cx="${f1(p[0])}" cy="${f1(p[1])}" r="3.4"/>`
+    + '</svg>';
 }

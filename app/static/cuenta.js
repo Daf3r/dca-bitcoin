@@ -146,6 +146,10 @@ function cambiosEdicion(antes, despues) {
 }
 function textoAuditoria(a) {
   const d = a.despues || a.antes || {};
+  // Mensajes y cartas (campamento 15A): se arman aparte porque el diccionario de abajo evalúa todas sus líneas con cada fila.
+  if (a.accion === 'mensaje_bandera') return a.despues ? `dejó un mensaje en el campamento ${nombreHito(a.entidad_id)}` : `quitó el mensaje del campamento ${nombreHito(a.entidad_id)}`;
+  if (a.accion === 'capsula_sellada') return `selló una carta para ${d.abre_fecha ? `el ${fechaLarga(d.abre_fecha)}` : `cuando llegue a ${nombreHito(d.abre_sats)}`}`;
+  if (a.accion === 'capsula_anulada') return 'anuló una carta aún sellada';
   if (a.entidad === 'traslado') {
     const dir = d.sentido === 'a_exchange' ? 'de su wallet al exchange' : 'a su wallet';
     return a.accion === 'alta' ? `anotó un traslado de ${entero(d.sats)} sats ${dir}` : `anuló el traslado de ${entero(d.sats)} sats ${dir}`;
@@ -165,9 +169,6 @@ function textoAuditoria(a) {
     cuenta_activada: `activó la cuenta ${d.nombre}`, cuenta_desactivada: `desactivó la cuenta ${d.nombre}`,
     token_creado: `creó el enlace de solo lectura «${d.nombre}»`, token_revocado: `revocó el enlace de solo lectura «${d.nombre}»`,
     sesion_cerrada: 'cerró una de sus sesiones abiertas',
-    mensaje_bandera: a.despues ? `dejó un mensaje en el campamento ${nombreHito(a.entidad_id)}` : `quitó el mensaje del campamento ${nombreHito(a.entidad_id)}`,
-    capsula_sellada: `selló una carta para ${d.abre_fecha ? `el ${fechaLarga(d.abre_fecha)}` : `cuando llegue a ${nombreHito(d.abre_sats)}`}`,
-    capsula_anulada: 'anuló una carta aún sellada',
     wallet_creada: `añadió la wallet «${d.nombre}»`, wallet_archivada: `archivó la wallet «${d.nombre}»`,
     sesiones_cerradas: `cerró las sesiones de ${d.nombre}`, desbloqueo: `desbloqueó la cuenta ${d.nombre}`,
   }[a.accion] ?? a.accion;

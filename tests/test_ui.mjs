@@ -3024,6 +3024,125 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- campamento 15A: Diario, cartas selladas y mensajes en la bandera
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const ent = async (srv, cuenta, opts = {}) => { const r = await entrar(navegador, srv, cuenta, opts, sinAviso); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
+    const ver = (p, sel) => p.locator(sel).first().isVisible();
+    const sLargo = await servidor('largo');
+    try {
+      const { ctx, p, consola } = await ent(sLargo, ADMIN);
+      // ---- El Diario del Libro
+      ok(await ver(p, '#diario'), '15A: el Diario del Libro está en el Resumen');
+      ok((await p.textContent('#t-diario')).trim().length > 8 && /^\d+ \w+ \d{4} · edición n\.º \d+$/.test((await p.textContent('#dia-edicion')).trim()), `15A diario: titular y edición (${await p.textContent('#dia-edicion')})`);
+      eq(await p.locator('#dia-clasif li').count(), 3, '15A diario: tres clasificados');
+      ok(await p.locator('#dia-grabado svg').count() === 1 && /Grabado de la montaña/.test(await p.getAttribute('#dia-grabado', 'aria-label')), '15A diario: el grabado de la montaña con su descripción');
+      ok(!/compra ahora|te conviene|recomend/i.test(await p.innerText('#diario')), '15A diario: no recomienda nada');
+      // ---- Cartas: ya hay una abierta (sembrada en el servidor de pruebas)
+      ok(await ver(p, '#capsulas') && await p.locator('#cap-lista .cap-item.abierta').count() === 1 && await p.locator('#cap-lista .cap-item.sellada').count() === 0, '15A cartas: el dueño ve la carta ya abierta');
+      ok(await ver(p, '#cap-nueva') && !(await ver(p, '#cap-pista')), '15A cartas: el dueño puede escribir otra (y no sale la pista, porque ya hay una)');
+      ok(await p.locator('#cap-lista .cap-nueva').count() === 1, '15A cartas: la carta abierta que no has leído lleva «Nueva»');
+      await p.click('#cap-lista button[data-leer]'); await p.waitForTimeout(500);
+      ok(await p.locator('#d-carta[open]').count() === 1 && /Querida familia/.test(await p.innerText('#carta-texto')) && /Con cariño, papá/.test(await p.innerText('#carta-texto')), '15A cartas: se lee la carta con sus saltos de línea');
+      ok(/^De Daf3r, escrita el /.test((await p.textContent('#carta-de')).trim()) && await p.locator('#carta-arte svg').count() === 1, '15A cartas: dice de quién es y trae su dibujo');
+      await p.click('#carta-ok'); await p.waitForTimeout(300);
+      ok(await p.locator('#cap-lista .cap-nueva').count() === 0, '15A cartas: tras leerla ya no dice «Nueva»');
+      // ---- Escribir una carta sellada
+      await p.click('#cap-nueva'); await p.waitForTimeout(400);
+      ok(await p.locator('#d-capsula[open]').count() === 1 && await p.locator('#cap-etapa option').count() >= 4 && await p.isDisabled('#cap-etapa'), '15A escribir: se abre el cuadro, con etapas por encima del saldo');
+      await p.click('#cap-sellar'); await p.waitForTimeout(200);
+      eq((await p.textContent('#cap-error')).trim(), 'Escribe la carta.', '15A escribir: una carta vacía no se sella');
+      await p.fill('#cap-texto', 'Hola futuro, aquí estamos.');
+      await p.click('#cap-sellar'); await p.waitForTimeout(200);
+      eq((await p.textContent('#cap-error')).trim(), 'Elige la fecha en que se abre.', '15A escribir: sin fecha tampoco');
+      ok(await p.getAttribute('#cap-fecha', 'min') > hoySV(), '15A escribir: la fecha mínima es mañana');
+      await p.check('input[name="cap-cuando"][value="etapa"]'); await p.waitForTimeout(100);
+      ok(!(await p.isDisabled('#cap-etapa')) && await p.isDisabled('#cap-fecha'), '15A escribir: elegir etapa apaga la fecha');
+      await p.click('#cap-sellar'); await p.waitForTimeout(800);
+      ok(await p.locator('#d-capsula[open]').count() === 0 && await p.locator('#cap-lista .cap-item.sellada').count() === 1, '15A escribir: la carta queda sellada');
+      ok(/^Se abre al llegar a /.test((await p.locator('#cap-lista .sellada small').first().textContent()).trim()), `15A escribir: dice a qué etapa se abre (${await p.locator('#cap-lista .sellada small').first().textContent()})`);
+      ok(/Carta sellada/.test(await p.textContent('#aviso-txt')) && await p.isVisible('#aviso-btn'), '15A escribir: avisa y deja «Deshacer»');
+      ok(!(await p.evaluate(() => document.body.innerText.includes('Hola futuro'))), '15A escribir: el texto de una carta sellada no está en la página');
+      await p.click('#cap-nueva'); await p.waitForTimeout(300);
+      await p.fill('#cap-texto', 'Para el domingo.');
+      await p.check('input[name="cap-cuando"][value="fecha"]');
+      await p.fill('#cap-fecha', `${Number(hoySV().slice(0, 4)) + 2}-06-15`);
+      await p.click('#cap-sellar'); await p.waitForTimeout(800);
+      eq(await p.locator('#cap-lista .cap-item.sellada').count(), 2, '15A escribir: una segunda carta, con fecha');
+      ok(/^Se abre el 15 jun \d{4}$/.test((await p.locator('#cap-lista .sellada small').nth(1).textContent()).trim()), '15A escribir: dice la fecha');
+      // Deshacer lo recién sellado
+      await p.click('#aviso-btn'); await p.waitForTimeout(800);
+      eq(await p.locator('#cap-lista .cap-item.sellada').count(), 1, '15A escribir: «Deshacer» anula la carta recién sellada');
+      // Anular una carta sellada (y deshacerlo)
+      await p.click('#cap-lista button[data-anular]'); await p.waitForTimeout(800);
+      eq(await p.locator('#cap-lista .cap-item.sellada').count(), 0, '15A cartas: el dueño anula una carta aún sellada');
+      await p.click('#aviso-btn'); await p.waitForTimeout(900);
+      eq(await p.locator('#cap-lista .cap-item.sellada').count(), 1, '15A cartas: «Deshacer» la sella otra vez');
+      // ---- Mensajes en la bandera
+      const info = await p.evaluate(async () => {
+        const saldo = (await (await fetch('/api/compras')).json()).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+        const pot = [1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11];
+        return { abajo: pot.filter((x) => x <= saldo).at(-1), arriba: pot.find((x) => x > saldo) };
+      });
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400);
+      await p.locator(`.m-bandera[data-m="${info.abajo}"]`).click({ force: true }); await p.waitForTimeout(500);
+      ok(await ver(p, '#m-escribir') && /^Escribir un mensaje$/.test((await p.textContent('#m-escribir')).trim()) && !(await ver(p, '#m-mensaje')), '15A mensaje: el dueño ve «Escribir un mensaje» en un campamento sin mensaje');
+      await p.click('#m-escribir'); await p.waitForTimeout(400);
+      ok(await p.locator('#d-mensaje[open]').count() === 1 && await p.isHidden('#msg-borrar'), '15A mensaje: se abre el cuadro (sin «Quitar», porque no hay mensaje)');
+      await p.fill('#msg-texto', 'Para mis hijos: sigan subiendo');
+      await p.click('#msg-guardar'); await p.waitForTimeout(900);
+      ok(await p.locator('#d-mensaje[open]').count() === 0 && /Mensaje guardado/.test(await p.textContent('#aviso-txt')), '15A mensaje: se guarda y avisa');
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400);
+      await p.locator(`.m-bandera[data-m="${info.abajo}"]`).click({ force: true }); await p.waitForTimeout(500);
+      ok(await ver(p, '#m-mensaje') && (await p.textContent('#m-mensaje')) === 'Para mis hijos: sigan subiendo' && /^Cambiar el mensaje$/.test((await p.textContent('#m-escribir')).trim()), '15A mensaje: la frase sale al tocar la bandera');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+      // uno en un campamento por alcanzar (sorpresa)
+      await p.locator(`.m-bandera[data-m="${info.arriba}"]`).click({ force: true }); await p.waitForTimeout(500);
+      await p.click('#m-escribir'); await p.fill('#msg-texto', 'Cuando llegues aquí, sonríe'); await p.click('#msg-guardar'); await p.waitForTimeout(900);
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(300);
+      await p.locator(`.m-bandera[data-m="${info.arriba}"]`).click({ force: true }); await p.waitForTimeout(500);
+      ok(/se revelará a los demás/.test(await p.textContent('#m-mensaje')), '15A mensaje: el dueño ve el del campamento por alcanzar, con su aviso');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+      // en «Tu historia»
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('#dc-historia-btn'); await p.waitForTimeout(900);
+      ok((await p.locator('#dh-linea .h-msg').allInnerTexts()).some((t) => t.includes('Para mis hijos: sigan subiendo')), '15A mensaje: la frase sale bajo su campamento en «Tu historia»');
+      // el historial del dueño cuenta lo que hizo
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('#dc-historial'); await p.waitForTimeout(900);
+      const hist = await p.innerText('#hist-lista');
+      ok(/dejó un mensaje en el campamento/.test(hist) && /selló una carta para/.test(hist) && /anuló una carta aún sellada/.test(hist), '15A historial: dice los mensajes y las cartas');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      eq(consola, [], `consola limpia (15A, dueño): ${consola.join(' | ')}`);
+      await ctx.close();
+      // ---- Una lectora
+      const l = await ent(sLargo, LECTOR);
+      ok(await ver(l.p, '#diario') && await l.p.locator('#dia-clasif li').count() === 3, '15A lectora: ve el Diario');
+      ok(await ver(l.p, '#capsulas') && !(await ver(l.p, '#cap-nueva')) && await l.p.locator('#cap-lista button[data-anular]').count() === 0, '15A lectora: ve las cartas pero no puede escribir ni anular');
+      eq(await l.p.locator('#cap-lista .cap-item.sellada').count(), 1, '15A lectora: ve que hay una carta sellada');
+      ok(!(await l.p.evaluate(() => document.body.innerText.includes('Hola futuro'))) && !JSON.stringify(await datos(l.p, '/api/capsulas')).includes('Hola futuro'), '15A lectora: el texto de la carta sellada no le llega');
+      await l.p.click('#cap-lista button[data-leer]'); await l.p.waitForTimeout(500);
+      ok(/Querida familia/.test(await l.p.innerText('#carta-texto')), '15A lectora: lee la carta que ya se abrió');
+      await l.p.click('#carta-ok'); await l.p.waitForTimeout(300);
+      await l.p.evaluate(() => window.scrollTo(0, 0)); await l.p.waitForTimeout(400);
+      await l.p.locator(`.m-bandera[data-m="${info.abajo}"]`).click({ force: true }); await l.p.waitForTimeout(500);
+      ok(/^Para mis hijos: sigan subiendo$/.test(await l.p.textContent('#m-mensaje')) && !(await ver(l.p, '#m-escribir')), '15A lectora: lee la frase de un campamento ya alcanzado y no puede cambiarla');
+      await l.p.keyboard.press('Escape'); await l.p.waitForTimeout(200);
+      await l.p.locator(`.m-bandera[data-m="${info.arriba}"]`).click({ force: true }); await l.p.waitForTimeout(500);
+      ok(/^Hay un mensaje esperándote en este campamento\.$/.test(await l.p.textContent('#m-mensaje')) && !(await l.p.evaluate(() => document.body.innerText.includes('sonríe'))), '15A lectora: el del campamento por alcanzar llega sellado, sin su texto');
+      await l.ctx.close();
+    } finally { sLargo.parar(); }
+    // Sin cartas: el dueño ve la invitación; una lectora no ve la tarjeta
+    const sHoy = await servidor('hoy');
+    try {
+      const a = await ent(sHoy, ADMIN);
+      ok(await ver(a.p, '#capsulas') && await ver(a.p, '#cap-pista') && await ver(a.p, '#cap-nueva'), '15A cartas: sin cartas, el dueño ve la invitación a escribir una');
+      ok(await ver(a.p, '#diario'), '15A diario: con una sola compra ya hay portada');
+      await a.ctx.close();
+      const l = await ent(sHoy, LECTOR);
+      ok(!(await ver(l.p, '#capsulas')), '15A cartas: sin cartas, una lectora no ve la tarjeta');
+      await l.ctx.close();
+    } finally { sHoy.parar(); }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {
