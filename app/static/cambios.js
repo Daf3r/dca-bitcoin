@@ -7,6 +7,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-j', fecha: '2026-11-15',
+    items: [
+      'En «Tu historia» puedes ver tu camino de tres maneras nuevas, además de la línea de tiempo.',
+      'El tronco: un anillo por año, más ancho cuanto más sumaste; las compras extra son nudos y las ventas, grietas ya cerradas.',
+      'La constelación: una estrella por compra, más brillante cuanto más grande, con las de cada año unidas en una figura.',
+      'El mojón: una piedra por compra, apiladas de la más vieja a la más nueva. Toca cualquier pieza para ver de qué compra es.',
+    ],
+  },
+  {
     id: '2026-11-i', fecha: '2026-11-14',
     items: [
       'Detrás de la montaña se ven ahora los volcanes de Occidente: el Izalco, el Santa Ana y el de San Salvador.',
