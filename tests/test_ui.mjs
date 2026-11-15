@@ -3206,7 +3206,7 @@ try {
     // ---- La tele: fiesta al anotarse una compra y sismógrafo (espera el minuto real de la actualización automática)
     const sTele = await servidor('anio');
     try {
-      const t = await ent(sTele, LECTOR, {}, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      const t = await ent(sTele, LECTOR, { viewport: { width: 1920, height: 1080 }, isMobile: false, hasTouch: false }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
       await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.waitForTimeout(800);
       ok(await t.p.evaluate(() => document.documentElement.dataset.tv === '1') && !(await ver(t.p, '#tv-fiesta')), '15B tele: en modo pantalla grande, sin fiesta todavía');
       const adm = await ent(sTele, ADMIN);
