@@ -126,8 +126,14 @@ html[data-ligero] .montana::after { content: none; }
 .lj-0 { stop-color: color-mix(in oklab, var(--lejos) 82%, var(--c4)); } .lj-1 { stop-color: color-mix(in oklab, var(--lejos) 42%, var(--c4)); }
 .md-0 { stop-color: var(--medio); } .md-1 { stop-color: color-mix(in oklab, var(--medio) 62%, var(--c4)); }
 /* La montaña: la cara que mira al astro recibe su luz; la del sendero queda en sombra y se funde con la bruma del valle. */
-.ld-0 { stop-color: color-mix(in oklab, var(--monte) 86%, var(--astro)); } .ld-1 { stop-color: var(--monte); } .ld-2 { stop-color: color-mix(in oklab, var(--monte-sombra) 72%, var(--medio)); }
-.cr-0 { stop-color: color-mix(in oklab, var(--monte) 76%, var(--astro)); } .cr-1 { stop-color: color-mix(in oklab, var(--monte) 92%, var(--astro)); } .cr-2 { stop-color: var(--monte); }
+.ld-0 { stop-color: color-mix(in oklab, var(--monte) 86%, var(--luz-roca, var(--astro))); } .ld-1 { stop-color: var(--monte); } .ld-2 { stop-color: color-mix(in oklab, var(--monte-sombra) 72%, var(--medio)); }
+.cr-0 { stop-color: color-mix(in oklab, var(--monte) 76%, var(--luz-roca, var(--astro))); } .cr-1 { stop-color: color-mix(in oklab, var(--monte) 92%, var(--luz-roca, var(--astro))); } .cr-2 { stop-color: var(--monte); }
+/* Relieve (rediseño Fable): espolones con su flanco en sombra, su flanco con luz y un filo en la cresta; al pie, el bosque de la falda. */
+.rel-sombra { fill: var(--monte-sombra); opacity: 0.2; } .rel-sombra.rs2 { opacity: 0.34; } .rel-sombra.rs3 { opacity: 0.5; }
+.rel-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.045; } .rel-luz.rl2 { opacity: 0.085; }
+.rel-filo { fill: none; stroke: var(--luz-roca, var(--astro)); stroke-opacity: 0.16; stroke-width: 1; stroke-linejoin: round; stroke-linecap: round; }
+.rel-bosque { fill: var(--pino1); opacity: 0.6; }
+.luna-mares { fill: var(--c2); opacity: 0.13; } .luna-limbo { fill: none; stroke: var(--c2); stroke-width: 2; opacity: 0.6; }
 .faceta { fill: var(--astro); opacity: 0.07; } .faceta.f1 { opacity: 0.05; } .faceta.f2 { opacity: 0.03; }
 .arista { fill: none; stroke: var(--astro); stroke-opacity: 0.32; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
 .nieve-sombra { fill: var(--monte-sombra); opacity: 0.32; }

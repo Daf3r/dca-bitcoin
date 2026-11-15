@@ -36,7 +36,67 @@ export function luna(cx, cy, r, fase) {
   const barrido = k > 0 ? 0 : 1;
   const espejo = fase > 0.5 ? ` transform="translate(${f1(2 * cx)} 0) scale(-1 1)"` : '';
   const luz = `M${f1(cx)} ${f1(cy - r)}A${f1(r)} ${f1(r)} 0 0 1 ${f1(cx)} ${f1(cy + r)}A${f1(rx)} ${f1(r)} 0 0 ${barrido} ${f1(cx)} ${f1(cy - r)}Z`;
-  return `<circle class="luna-sombra" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}"/><path class="astro" d="${luz}"${espejo}/>`;
+  // Los mares (rediseño Fable): unas manchas tenues, fijas, que solo se ven en la parte iluminada (se recortan con ella) y un
+  // borde algo más apagado (el limbo): la luna deja de ser un disco plano.
+  const mar = (dx, dy, rx2, ry2) => `<ellipse cx="${f1(cx + dx * r)}" cy="${f1(cy + dy * r)}" rx="${f1(rx2 * r)}" ry="${f1(ry2 * r)}"/>`;
+  const mares = mar(-0.4, -0.16, 0.3, 0.42) + mar(-0.06, -0.5, 0.32, 0.18) + mar(0.3, -0.3, 0.21, 0.17) + mar(0.44, 0.0, 0.16, 0.21) + mar(0.2, 0.22, 0.13, 0.1) + mar(-0.3, 0.5, 0.17, 0.1) + mar(0.62, -0.38, 0.07, 0.09);
+  return `<circle class="luna-sombra" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}"/><defs><clipPath id="m-luna-luz"><path d="${luz}"${espejo}/></clipPath></defs><path class="astro" d="${luz}"${espejo}/>`
+    + `<g class="luna-mares" clip-path="url(#m-luna-luz)">${mares}<circle class="luna-limbo" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.97)}"/></g>`;
+}
+
+/**
+ * Relieve de la montaña (rediseño Fable): la ladera dejaba de leerse como roca porque era un solo plano. Aquí van, en el mismo
+ * lenguaje de facetas de los árboles y las piedras, unos espolones que bajan de la arista central: cada uno tiene un flanco en
+ * sombra (el que da la espalda al astro) y otro que recibe algo de luz, y un filo fino en la cresta. En la cara iluminada, dos
+ * contrafuertes con su sombra. Y al pie, un bosque ralo que sube por la falda y da escala (la montaña se ve grande).
+ * Todo son puntos fijos en coordenadas de la propia ladera (u: de la arista a la silueta; v: de la cumbre al pie): no se gasta
+ * `rnd()` (el bosque usa su propio `azar`), así que la silueta, el sendero y los campamentos no cambian. Tonos muy bajos: el
+ * camino y los rótulos mandan.
+ */
+function relieve({ sx, sy, alto, izq, der, quiebre, W, H }) {
+  const enY = (pts, y) => { // x de una polilínea (ordenada por y) a esa altura
+    if (y <= pts[0][1]) return pts[0][0];
+    for (let i = 1; i < pts.length; i++) if (y <= pts[i][1]) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i]; return x0 + ((x1 - x0) * (y - y0)) / Math.max(1e-6, y1 - y0); }
+    return pts[pts.length - 1][0];
+  };
+  const L = [...izq].sort((a, b) => a[1] - b[1]), A = [[sx, sy], ...quiebre], R = [[sx, sy], ...der];
+  const pt = (lado, u, v) => { const y = sy + alto * v, xa = enY(A, y), xb = enY(lado < 0 ? L : R, y); return [xa + (xb - xa) * u, y]; };
+  const d = (pts) => pts.map((q, i) => `${i ? 'L' : 'M'}${f1(q[0])} ${f1(q[1])}`).join('');
+  // Una malla de planos por cara: nudos fijos (u, v) y triángulos con su tono (s = sombra, l = luz; el número, cuánto).
+  const cara = (lado, nudos, planos, filos) => {
+    const P = Object.fromEntries(Object.entries(nudos).map(([k, [u, v]]) => [k, pt(lado, u, v)]));
+    return planos.map(([a, b, c2, tono]) => `<path class="rel-${tono[0] === 's' ? 'sombra' : 'luz'} r${tono}" d="${d([P[a], P[b], P[c2]])}Z"/>`).join('')
+      + filos.map((f) => `<path class="rel-filo" d="${d(f.split(' ').map((k) => P[k]))}"/>`).join('');
+  };
+  let s = '<g class="relieve" clip-path="url(#m-silueta)">';
+  // Ladera del sendero (a la izquierda de la arista; la luz viene de la derecha): un espolón que baja de la cumbre (A0 · M1 · M3 · M5)
+  // y un valle entre él y la arista (A1 · M2 · M4). Lo que mira a la izquierda queda en sombra.
+  s += cara(-1, {
+    A0: [0, 0], A1: [0, 0.22], A2: [0, 0.5], A3: [0, 0.78], A4: [0, 1.05],
+    S1: [1, 0.3], S2: [1, 0.56], S3: [1, 0.8], S4: [1, 1.05],
+    M1: [0.52, 0.19], M2: [0.38, 0.44], M3: [0.64, 0.6], M4: [0.3, 0.8], M5: [0.7, 0.9],
+  }, [
+    ['A0', 'A1', 'M1', 'l2'], ['A0', 'M1', 'S1', 's3'], ['A1', 'M2', 'M1', 's1'], ['A1', 'A2', 'M2', 'l1'], ['M1', 'M2', 'M3', 'l2'],
+    ['M1', 'M3', 'S1', 's2'], ['S1', 'M3', 'S2', 's3'], ['A2', 'M4', 'M2', 's1'], ['A2', 'A3', 'M4', 'l1'], ['M3', 'M4', 'M5', 'l1'],
+    ['M3', 'M5', 'S2', 's2'], ['S2', 'M5', 'S3', 's3'], ['M4', 'A4', 'M5', 's1'], ['S3', 'M5', 'S4', 's2'],
+  ], ['A0 M1 M3 M5', 'A1 M2 M4']);
+  // Cara iluminada: dos contrafuertes con la sombra abajo a la izquierda.
+  s += cara(1, {
+    A0: [0, 0], A1: [0, 0.22], A2: [0, 0.5], A3: [0, 0.78], A4: [0, 1.05],
+    R1: [1, 0.3], R2: [1, 0.6], R3: [1, 1.05], N1: [0.5, 0.26], N2: [0.42, 0.54], N3: [0.6, 0.84],
+  }, [
+    ['A0', 'N1', 'A1', 'l2'], ['A1', 'N1', 'N2', 's2'], ['N1', 'R1', 'R2', 'l1'], ['A2', 'N2', 'N3', 's1'], ['N2', 'R2', 'N3', 'l1'], ['A3', 'N3', 'A4', 's1'], ['R2', 'R3', 'N3', 's1'],
+  ], ['A0 N1 N2 N3']);
+  // Bosque ralo de la falda: triangulitos que se van espaciando con la altura (un solo trazo).
+  const rnd = azar(11), k = Math.max(0.8, Math.min(1.9, Math.min(W, H) / 520));
+  let bosque = '';
+  for (let i = 0; i < Math.round(W / 2.6); i++) {
+    const v = 0.6 + 0.42 * rnd() ** 0.5, r1 = rnd(), r2 = rnd(), r3 = rnd(), y = sy + alto * v, t = Math.max(0, (v - 0.6) / 0.4);
+    if (r2 > t ** 1.7 * 1.25) continue; // menos árboles (y más chicos) cuanto más arriba
+    const x0 = enY(L, y), x1 = enY(R, y), x = x0 + (x1 - x0) * (0.03 + 0.94 * r1), a = k * (3.5 + 8 * t) * (0.75 + 0.5 * r3);
+    bosque += `M${f1(x)} ${f1(y - a)}l${f1(a * 0.36)} ${f1(a)}h${f1(-a * 0.72)}Z`;
+  }
+  return `${s}<path class="rel-bosque" d="${bosque}"/></g>`;
 }
 
 /**
@@ -215,6 +275,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const mx = (r1[0] + q[0]) / 2, my = (r1[1] + q[1]) / 2;
     return `<path class="faceta f${i}" d="M${f1(r1[0])} ${f1(r1[1])}L${f1(r2[0])} ${f1(r2[1])}L${f1(mx + (r2[0] - mx) * 0.3)} ${f1(my + (r2[1] - my) * 0.6)}Z"/>`;
   }).join('')}</g>`;
+  s += relieve({ sx: c.sx, sy: c.sy, alto, izq, der, quiebre, W, H });
   s += `<path class="arista" d="M${f1(cuerno[1][0])} ${f1(cuerno[1][1])}${[...cuerno.slice(2), ...der.filter((p) => p[0] > c.sx + 48 * ecC).slice(0, 4)].map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}"/>`;
   // Nieve: una franja irregular mucho más ancha que el pico, recortada por la silueta, para que
   // nunca sobresalga de las laderas.
