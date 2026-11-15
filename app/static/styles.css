@@ -1634,7 +1634,7 @@ html[data-tv]:not([data-tv-activo]) { cursor: none; }
 
 /* ------------------------------------------------------------- material de las tarjetas (pulido visual) */
 /* Todas las tarjetas comparten el mismo material: superficie con un velo de luz arriba, filo de luz y sombra en capas. */
-:is(.toca, .caida, .spd, .rep-const, .rep-curiosas, .ubicacion, .tramo, .comienzo) {
+:is(.toca, .caida, .spd, .rep-const, .rep-curiosas, .ubicacion, .tramo, .comienzo, .res-medallas, .pestanas) {
   background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra);
 }
 dialog, .hoja-panel { box-shadow: inset 0 1px 0 var(--filo), var(--sombra-alta); }
@@ -2193,25 +2193,205 @@ html:not([data-efectos="ninguno"]) .m-tarjeta:not([hidden]) .pt-astilla { animat
    Campamento 14 · pestañas (Resumen · Gráficos · Historia · Movimientos). Una vista a la vez: cada bloque de la página lleva `data-p`
    con su pestaña y `.cuerpo[data-pestana]` esconde los demás. Sin `data-pestana` («Todo junto») nada de esto se aplica.
    ============================================================================================================================ */
-.pestanas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 5px; border-radius: 18px; background: var(--s1); border: 1px solid var(--s3); }
+/* --- La barra de pestañas: un control segmentado de cuatro botones grandes, con dibujo y palabra. La activa se nota por tres cosas
+   (no solo el color): una píldora naranja rellena con sombra, la letra más gruesa y el dibujo relleno. Las demás quedan planas, con
+   tinta normal (no gris tenue). Pegajosa arriba mientras se baja (bajo la mini-cabecera si está a la vista). */
+html { --pe-top: 8px; --pe-alto: calc(var(--toque, 48px) + 22px); }
+html[data-minicab] { --pe-top: calc(49px + env(safe-area-inset-top)); }
+.pestanas {
+  --pe-cols: 4; --pe-pad: 6px; --pe-gap: 6px;
+  position: relative; display: grid; grid-template-columns: repeat(var(--pe-cols), minmax(0, 1fr)); gap: var(--pe-gap); padding: var(--pe-pad);
+  border-radius: 24px; background-color: var(--s1); border: 1px solid var(--s3);
+}
 .pestanas[hidden] { display: none; }
-.pestanas button { min-width: 0; min-height: var(--toque, 48px); padding: 0 4px; border: 0; border-radius: 13px; background: none; color: var(--txt2); font: 650 0.875rem var(--sans, inherit); cursor: pointer; }
-.pestanas button[aria-current="true"] { background: var(--naranja); color: #1d1206; }
+.pestanas button {
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-width: 0; min-height: calc(var(--toque, 48px) + 8px); padding: 6px 2px; border: 0; border-radius: 18px; background: none;
+  color: var(--txt); font: 600 0.8125rem/1.15 var(--sans, inherit); letter-spacing: -0.005em; text-align: center; cursor: pointer;
+}
+.pestanas .pe-txt { min-width: 0; max-width: 100%; }
+.pestanas button[aria-current="true"] { background: var(--naranja); color: #1d1206; font-weight: 800; box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.28); }
+@media (hover: hover) and (pointer: fine) { .pestanas button:not([aria-current="true"]):hover { background: var(--s2); } }
+.pestanas button:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+.pestanas button[aria-current="true"]:focus-visible { outline-color: var(--txt); }
+/* Dibujos en CSS puro (nada de iconos nuevos en el sprite): montaña (resumen), barras (gráficos), anillos de tronco (historia) y renglones (movimientos).
+   Contorno en la pestaña normal; relleno en la activa. */
+.pe-ico { position: relative; flex: none; width: 22px; height: 18px; color: inherit; }
+.pe-resumen { background: currentColor; clip-path: polygon(0 100%, 34% 30%, 50% 52%, 70% 8%, 100% 100%, 88% 100%, 70% 36%, 54% 74%, 50% 70%, 34% 52%, 13% 100%); }
+.pestanas [aria-current="true"] .pe-resumen { clip-path: polygon(0 100%, 34% 30%, 50% 52%, 70% 8%, 100% 100%); }
+.pe-graficos {
+  background:
+    linear-gradient(currentColor, currentColor) 1px 100% / 4px 45% no-repeat,
+    linear-gradient(currentColor, currentColor) 9px 100% / 4px 72% no-repeat,
+    linear-gradient(currentColor, currentColor) 17px 100% / 4px 100% no-repeat;
+  opacity: 0.85;
+}
+.pestanas [aria-current="true"] .pe-graficos { opacity: 1; }
+.pe-historia { width: 18px; border: 2px solid currentColor; border-radius: 50%; background: radial-gradient(circle, currentColor 0 1.6px, transparent 2.2px 4.2px, currentColor 4.6px 6px, transparent 6.4px); }
+.pestanas [aria-current="true"] .pe-historia { background: radial-gradient(circle, color-mix(in srgb, currentColor 0%, transparent) 0 1.6px, currentColor 2px 4.2px, transparent 4.6px 6px, currentColor 6.4px); }
+.pe-movimientos {
+  background:
+    linear-gradient(currentColor, currentColor) 0 1px / 4px 3px no-repeat, linear-gradient(currentColor, currentColor) 7px 1px / 15px 3px no-repeat,
+    linear-gradient(currentColor, currentColor) 0 8px / 4px 3px no-repeat, linear-gradient(currentColor, currentColor) 7px 8px / 11px 3px no-repeat,
+    linear-gradient(currentColor, currentColor) 0 15px / 4px 3px no-repeat, linear-gradient(currentColor, currentColor) 7px 15px / 13px 3px no-repeat;
+}
+/* Más ancho: dibujo y palabra en una línea, letra más grande. */
+@media (min-width: 700px) {
+  .pestanas button { flex-direction: row; gap: 9px; padding-inline: 8px; font-size: 0.9375rem; }
+}
+@media (min-width: 700px) and (max-width: 799px) { html[data-letra="muy-grande"] .pestanas button { flex-direction: column; gap: 4px; font-size: 0.8125rem; } }
+/* Poco ancho para cuatro (teléfono chico o letra grande): rejilla de 2 × 2 con las palabras completas, sin abreviar. */
+@media (max-width: 419px) {
+  .pestanas { --pe-cols: 2; }
+  .pestanas button { flex-direction: row; gap: 10px; font-size: 0.9375rem; }
+}
+@media (max-width: 479px) {
+  html[data-letra="grande"] .pestanas { --pe-cols: 2; }
+  html[data-letra="grande"] .pestanas button { flex-direction: row; gap: 10px; font-size: 0.9375rem; }
+}
+@media (max-width: 599px) {
+  html[data-letra="muy-grande"] .pestanas { --pe-cols: 2; }
+  html[data-letra="muy-grande"] .pestanas button { flex-direction: row; gap: 10px; font-size: 0.9375rem; }
+}
+/* La píldora que se desliza entre pestañas (pseudo-elemento: la barra solo tiene botones de hijos). Con :has() la mueve el CSS; sin él,
+   cada botón activo se pinta solo (la regla de arriba). Solo transform; sin transición con efectos «ninguno». */
+@supports selector(:has(*)) {
+  .pestanas { --ix: 0; --iy: 0; }
+  .pestanas:has([data-pestana="graficos"][aria-current="true"]) { --ix: 1; }
+  .pestanas:has([data-pestana="historia"][aria-current="true"]) { --ix: 2; }
+  .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { --ix: 3; }
+  .pestanas::before {
+    content: ""; position: absolute; z-index: 0; left: var(--pe-pad); top: var(--pe-pad);
+    width: calc((100% - 2 * var(--pe-pad) - (var(--pe-cols) - 1) * var(--pe-gap)) / var(--pe-cols));
+    height: calc(100% - 2 * var(--pe-pad)); border-radius: 18px; background: var(--naranja);
+    box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.28);
+    transform: translate(calc(var(--ix) * (100% + var(--pe-gap))), calc(var(--iy) * (100% + var(--pe-gap))));
+  }
+  .pestanas button[aria-current="true"] { background: none; box-shadow: none; }
+  html:is([data-efectos="todos"], [data-efectos="esenciales"]) .pestanas::before { transition: transform 0.42s var(--resorte, ease-out); }
+  /* 2 × 2: dos filas; historia y movimientos van abajo. */
+  @media (max-width: 419px) {
+    .pestanas::before { height: calc((100% - 2 * var(--pe-pad) - var(--pe-gap)) / 2); }
+    .pestanas:has([data-pestana="historia"][aria-current="true"]) { --ix: 0; --iy: 1; }
+    .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { --ix: 1; --iy: 1; }
+  }
+  @media (max-width: 479px) {
+    html[data-letra="grande"] .pestanas::before { height: calc((100% - 2 * var(--pe-pad) - var(--pe-gap)) / 2); }
+    html[data-letra="grande"] .pestanas:has([data-pestana="historia"][aria-current="true"]) { --ix: 0; --iy: 1; }
+    html[data-letra="grande"] .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { --ix: 1; --iy: 1; }
+  }
+  @media (max-width: 599px) {
+    html[data-letra="muy-grande"] .pestanas::before { height: calc((100% - 2 * var(--pe-pad) - var(--pe-gap)) / 2); }
+    html[data-letra="muy-grande"] .pestanas:has([data-pestana="historia"][aria-current="true"]) { --ix: 0; --iy: 1; }
+    html[data-letra="muy-grande"] .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { --ix: 1; --iy: 1; }
+  }
+}
+@media (forced-colors: active) {
+  .pestanas::before { display: none; }
+  .pestanas button[aria-current="true"] { outline: 3px solid Highlight; outline-offset: -3px; }
+}
+/* Pegajosa: queda arriba al bajar por el contenido (bajo la mini-cabecera, z-index 8; sobre «Anotar», 6). Cristal con respaldo sólido.
+   No en la rejilla de 2 × 2 ni en pantallas bajas: ahí ocuparía demasiado. */
+@media (min-width: 420px) and (min-height: 560px) {
+  html[data-pestanas] .pestanas { position: sticky; top: var(--pe-top); z-index: 7; }
+  html[data-pestanas] { scroll-padding-top: calc(var(--pe-top) + var(--pe-alto) + 20px); }
+}
+@media (min-width: 360px) and (max-width: 479px) and (min-height: 560px) { html[data-letra="grande"][data-pestanas] .pestanas { position: relative; top: auto; } html[data-letra="grande"][data-pestanas] { scroll-padding-top: 60px; } }
+@media (min-width: 360px) and (max-width: 599px) and (min-height: 560px) { html[data-letra="muy-grande"][data-pestanas] .pestanas { position: relative; top: auto; } html[data-letra="muy-grande"][data-pestanas] { scroll-padding-top: 60px; } }
+@supports (backdrop-filter: blur(1px)) {
+  html:not([data-ligero]) .pestanas { background-color: color-mix(in srgb, var(--s1) 90%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
+}
+html[data-pestanas] .indice { display: none; }
+
+/* --- Qué se ve en cada pestaña. */
 .cuerpo[data-pestana="resumen"] [data-p]:not([data-p="resumen"]),
 .cuerpo[data-pestana="graficos"] [data-p]:not([data-p="graficos"]),
 .cuerpo[data-pestana="historia"] [data-p]:not([data-p="historia"]),
 .cuerpo[data-pestana="movimientos"] [data-p]:not([data-p="movimientos"]) { display: none; }
 @media (min-width: 700px) { .pestanas, .historia-pg { grid-column: 1 / -1; } }
+
+/* Resumen: lo primero y más grande, «te toca» y la próxima etapa; la gran caída, discreta. Constancia ocupa su ancho (sola). */
+.cuerpo[data-pestana="resumen"] .toca { padding: 16px 18px; font-size: 1.0625rem; border-radius: 20px; }
+.cuerpo[data-pestana="resumen"] .toca i { width: 12px; height: 12px; }
+.cuerpo[data-pestana="resumen"] .caida { font-size: 0.875rem; }
+.cuerpo[data-pestana="resumen"] .reportes { grid-template-columns: minmax(0, 1fr); }
+.cuerpo[data-pestana="resumen"] .rep-const { grid-row: auto; }
+@media (min-width: 700px) {
+  .cuerpo[data-pestana="resumen"] .semanas { max-width: min(100%, 26rem); }
+}
+@media (min-width: 700px) and (max-width: 1099px) {
+  .cuerpo[data-pestana="resumen"] :is(.toca, .caida, .res-medallas) { grid-column: 1 / -1; }
+  /* «Dónde están tus sats» y «Ganancia» van lado a lado; si solo está una, a lo ancho. */
+  .cuerpo[data-pestana="resumen"] .col-lateral:not(:has(> .rep-ganancia:not([hidden]))) > .ubicacion,
+  .cuerpo[data-pestana="resumen"] .col-lateral:not(:has(> .ubicacion:not([hidden]))) > .rep-ganancia { grid-column: 1 / -1; }
+}
+/* Escritorio: arriba, a lo ancho, lo importante (te toca, gran caída, próxima etapa); debajo, medallas y constancia lado a lado. */
 @media (min-width: 1100px) {
+  .cuerpo[data-pestana="resumen"] .col-principal { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 28px; }
+  .cuerpo[data-pestana="resumen"] .col-principal > :not(.res-medallas, .reportes) { grid-column: 1 / -1; }
+  .cuerpo[data-pestana="resumen"] .col-principal > .reportes { grid-column: auto; align-self: stretch; }
+  .cuerpo[data-pestana="resumen"] .rep-const { align-self: stretch; }
+  .cuerpo[data-pestana="resumen"] .col-principal:has(> .reportes[hidden]) > .res-medallas { grid-column: 1 / -1; }
+  .cuerpo[data-pestana="resumen"] .med-rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cuerpo[data-pestana="resumen"] .res-med-ver { width: 100%; display: flex; }
+}
+
+/* --- Tus medallas (Resumen): una tarjeta con una rejilla visible que se envuelve (nada que deslizar) y un botón claro a la historia. */
+.res-medallas { padding: 20px; border-radius: 24px; background-color: var(--s1); }
+.res-medallas[hidden] { display: none; }
+.res-medallas h2 { font-size: 1.5rem; }
+.res-med-n { margin: 4px 0 14px; color: var(--txt2); font-size: 0.9375rem; }
+.med-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(7rem, calc(50% - 6px)), 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.med-rejilla .medalla { align-content: start; gap: 3px; min-width: 0; padding: 12px 8px 14px; border-radius: 18px; background: var(--s2); }
+.med-rejilla .medalla.bloq { background: none; border: 1.5px dashed var(--s3); }
+.med-rejilla .med { width: 48px; height: 57px; margin-bottom: 4px; }
+.med-rejilla .medalla b { font-size: 0.9375rem; line-height: 1.2; color: var(--txt); }
+.med-rejilla .medalla small { font-size: 0.8125rem; color: var(--txt2); }
+.res-med-ver {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: calc(var(--toque, 48px) + 4px); margin-top: 16px; padding: 0 22px;
+  border: 2px solid var(--naranja); border-radius: 999px; background: color-mix(in srgb, var(--naranja) 12%, var(--s1)); color: var(--txt);
+  font: 700 1rem var(--sans, inherit); cursor: pointer;
+}
+.res-med-ver::after { content: ""; flex: none; width: 8px; height: 8px; border: solid currentColor; border-width: 2.5px 2.5px 0 0; transform: rotate(45deg); }
+@media (hover: hover) and (pointer: fine) { .res-med-ver:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
+.res-med-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
+@media (min-width: 700px) {
+  .med-rejilla { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .res-med-ver { width: auto; display: inline-flex; }
+}
+
+/* --- Historia: una página propia (título, espacio) que en tablet y escritorio aprovecha el ancho. */
+.historia-pg { min-width: 0; }
+.historia-pg > h2 { margin-bottom: 14px; }
+.historia-pg .dh-lienzo { max-width: 28rem; }
+@media (min-width: 700px) {
+  .historia-pg .dh-lienzo { max-width: 34rem; }
+}
+@media (min-width: 1100px) {
+  .historia-pg .dh-vistas { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .historia-pg .dh-vistas button:first-child { grid-column: auto; }
+  .historia-pg .dh-vistas button { font-size: 0.875rem; }
+  /* Línea: medallas, sellos y pasaporte a la izquierda; «Cómo llegaste hasta aquí» a la derecha. */
+  .historia-pg #dh-v-linea { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; column-gap: 48px; align-items: start; }
+  .historia-pg #dh-v-linea > * { grid-column: 1; }
+  .historia-pg #dh-v-linea > h3:nth-last-child(2) { grid-column: 2; grid-row: 1; }
+  .historia-pg #dh-v-linea > ol:last-child { grid-column: 2; grid-row: 2 / -1; }
+  /* Dibujos: el lienzo a la izquierda, lo que dice a la derecha. */
+  .historia-pg .dh-objeto:not([hidden]) { display: grid; grid-template-columns: minmax(0, 34rem) minmax(0, 1fr); column-gap: 40px; align-items: start; }
+  .historia-pg .dh-objeto > * { grid-column: 2; }
+  .historia-pg .dh-objeto > .dh-lienzo { grid-column: 1; grid-row: 1 / span 6; margin: 0; }
+  .historia-pg .dh-objeto figcaption { margin-top: 0; font-size: 0.9375rem; }
+}
+
+/* --- Escritorio: cada pestaña usa las dos columnas de siempre; Movimientos e Historia, una (con «Anotar» al lado en Historia). */
+@media (min-width: 1100px) {
+  html[data-pestanas] .anotar { top: calc(var(--pe-top) + var(--pe-alto) + 16px); }
   .cuerpo[data-pestana="movimientos"] { grid-template-columns: minmax(0, 1fr); }
   .cuerpo[data-pestana="movimientos"] .col-principal { display: none; }
   .cuerpo[data-pestana="movimientos"] .col-lateral { max-width: 56rem; width: 100%; margin-inline: auto; }
-  .cuerpo[data-pestana="historia"] { grid-auto-flow: dense; }
+  .cuerpo[data-pestana="historia"] { grid-template-columns: minmax(0, 1fr) max-content; grid-auto-flow: dense; }
   .cuerpo[data-pestana="historia"] .col-principal { display: none; }
   .cuerpo[data-pestana="historia"] .historia-pg { grid-column: 1; }
   .cuerpo[data-pestana="historia"] .col-lateral { grid-column: 2; }
 }
-.res-medallas .sec-cab { margin-bottom: 8px; }
-.medallas-fila { display: flex; flex-wrap: wrap; gap: 10px 14px; }
-.medallas-fila .medalla { width: 5.2rem; }
-html[data-pestanas] .indice { display: none; }
+@media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; } }

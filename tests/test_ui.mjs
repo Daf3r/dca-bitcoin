@@ -1818,7 +1818,7 @@ try {
       ok(true, 'qué hay de nuevo: y queda marcado como visto en silencio');
       await p.click('#cuenta-btn');
       await p.click('#dc-historia-btn');
-      await p.waitForSelector('#dc-historia:not([hidden])');
+      await p.waitForSelector('#dh-cuerpo:not([hidden]), #dh-vacio:not([hidden])', { timeout: 4000 }); await p.waitForTimeout(500); // «Tu historia» ahora es una sección de la página (el botón de «Tu cuenta» lleva hasta ella)
       const h = await p.evaluate(() => ({
         medallas: document.querySelectorAll('#dh-medallas .medalla').length,
         ganadas: document.querySelectorAll('#dh-medallas .medalla.ganada').length,
@@ -1826,8 +1826,8 @@ try {
         eventos: [...document.querySelectorAll('#dh-linea .h-ev')].map((li) => ({ c: li.className, t: li.querySelector('time').dateTime })),
         primera: document.querySelector('#dh-linea .h-primera strong')?.textContent,
         hoy: document.querySelector('#dh-linea li:last-child strong')?.textContent,
-        desborda: document.getElementById('d-cuenta').scrollWidth > document.getElementById('d-cuenta').clientWidth + 1,
-        svgsDecor: [...document.querySelectorAll('#dc-historia svg')].every((s) => s.getAttribute('aria-hidden') === 'true'),
+        desborda: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+        svgsDecor: [...document.querySelectorAll('#historia svg')].every((s) => s.getAttribute('aria-hidden') === 'true'),
         textoMedalla: document.querySelector('#dh-medallas .medalla.bloq')?.innerText.replace(/\s+/g, ' '),
       }));
       ok(h.ganadas >= 3 && h.bloq >= 1 && h.bloq <= 2 && h.medallas === h.ganadas + h.bloq, `medallas: las ganadas (${h.ganadas}) y solo la siguiente de cada tipo (${h.bloq})`);
@@ -1874,7 +1874,7 @@ try {
       const { ctx, p } = await entrar(navegador, mil, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
       await p.click('#cuenta-btn');
       await p.click('#dc-historia-btn');
-      await p.waitForSelector('#dc-historia:not([hidden])');
+      await p.waitForSelector('#dh-cuerpo:not([hidden]), #dh-vacio:not([hidden])', { timeout: 4000 }); await p.waitForTimeout(500); // «Tu historia» ahora es una sección de la página (el botón de «Tu cuenta» lleva hasta ella)
       const m = await p.evaluate(() => ({ extras: document.querySelectorAll('#dh-linea .h-extra').length, mas: document.querySelector('#dh-linea .h-mas')?.textContent, ganadas: document.querySelectorAll('#dh-medallas .medalla.ganada').length, total: document.querySelectorAll('#dh-linea li').length }));
       ok(m.extras > 0 && m.extras <= 8 && /^Y \d+ compras extra más/.test(m.mas ?? ''), `historia: con muchas extra salen las 8 más recientes y se cuenta el resto (${m.extras} · «${m.mas}»)`);
       ok(m.ganadas >= 8 && m.total < 80, `historia con mil compras: ${m.ganadas} medallas y ${m.total} eventos (no crece con cada compra)`);
@@ -1887,7 +1887,7 @@ try {
       const { ctx, p } = await entrar(navegador, vac, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
       await p.click('#cuenta-btn');
       await p.click('#dc-historia-btn');
-      await p.waitForSelector('#dc-historia:not([hidden])');
+      await p.waitForSelector('#dh-cuerpo:not([hidden]), #dh-vacio:not([hidden])', { timeout: 4000 }); await p.waitForTimeout(500); // «Tu historia» ahora es una sección de la página (el botón de «Tu cuenta» lleva hasta ella)
       const v = await p.evaluate(() => ({ vacio: !document.getElementById('dh-vacio').hidden && !!document.querySelector('#dh-vacio .ilu'), cuerpo: document.getElementById('dh-cuerpo').hidden, txt: document.getElementById('dh-vacio').innerText }));
       ok(v.vacio && v.cuerpo && /primera compra/.test(v.txt), 'historia: sin compras dice que empieza con la primera, con su dibujo');
       await ctx.close();
@@ -2925,6 +2925,99 @@ try {
       ok(await p.locator('#dh-pasaporte li').count() === 1, 'pasaporte: con una compra, un sello');
       await ctx.close();
     } finally { sUna.parar(); }
+  }
+
+  // ---------------------------------------------------------------- campamento 14: pestañas (Resumen · Gráficos · Historia · Movimientos)
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const ent = async (srv, cuenta, opts = {}) => { const r = await entrar(navegador, srv, cuenta, { pestanas: true, ...opts }, sinAviso); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
+    const ver = (p, sel) => p.locator(sel).first().isVisible();
+    const sLargo = await servidor('largo');
+    try {
+      const { ctx, p, consola } = await ent(sLargo, ADMIN);
+      const activa = () => p.evaluate(() => document.getElementById('principal').dataset.pestana);
+      const solo = async (cual, visibles, ocultos, nombre) => {
+        for (const sel of visibles) ok(await ver(p, sel), `pestañas · ${nombre}: se ve ${sel}`);
+        for (const sel of ocultos) ok(!(await ver(p, sel)), `pestañas · ${nombre}: no se ve ${sel}`);
+        eq(await p.evaluate(() => document.querySelector('#pestanas [aria-current="true"]').dataset.pestana), cual, `pestañas · ${nombre}: la marcada es ${cual}`);
+        const sw = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+        ok(sw.sw <= sw.cw, `pestañas · ${nombre}: sin scroll horizontal (${sw.sw}/${sw.cw})`);
+        ok(await ver(p, '#anotar'), `pestañas · ${nombre}: «Anotar compra» sigue a la vista`);
+      };
+      ok(await ver(p, '#pestanas') && await p.locator('#pestanas button').count() === 4, 'pestañas: la barra tiene cuatro botones');
+      eq(await activa(), 'resumen', 'pestañas: por defecto se abre el Resumen');
+      await solo('resumen', ['#tramo', '#res-medallas', '.rep-const', '#ubicacion'], ['#compras', '#mercado', '#historia', '#rep-anios'], 'Resumen');
+      ok(await p.locator('#res-med-lista .medalla.ganada').count() >= 3, 'pestañas · Resumen: las medallas ganadas están a la vista');
+      ok(!/falta/i.test(await p.locator('#res-med-lista').innerText()), 'pestañas · Resumen: las medallas no dicen «te faltan» (reconocimiento, no presión)');
+      await p.click('#pestanas [data-pestana="graficos"]'); await p.waitForTimeout(500);
+      await solo('graficos', ['#mercado', '#vistas', '#rep-anios'], ['#tramo', '#compras', '#historia', '#res-medallas'], 'Gráficos');
+      eq(await p.evaluate(() => localStorage.getItem('libro.pestana')), 'graficos', 'pestañas: se recuerda la pestaña');
+      await p.click('#pestanas [data-pestana="historia"]'); await p.waitForTimeout(600);
+      await solo('historia', ['#historia', '#dh-vistas', '#dh-medallas'], ['#tramo', '#compras', '#mercado'], 'Historia');
+      ok(await p.locator('#dh-pasaporte li').count() >= 1 && await p.locator('#dh-linea .h-ev').count() >= 8, 'pestañas · Historia: trae el pasaporte y la línea de tiempo');
+      await p.click('#dh-vistas [data-vh="tronco"]'); await p.waitForTimeout(300);
+      ok(await p.locator('#dh-lienzo .pieza').count() >= 1, 'pestañas · Historia: los dibujos funcionan dentro de la pestaña');
+      await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(200);
+      await p.click('#pestanas [data-pestana="movimientos"]'); await p.waitForTimeout(500);
+      await solo('movimientos', ['#compras', '#lista'], ['#tramo', '#mercado', '#historia', '#res-medallas'], 'Movimientos');
+      ok(await p.locator('#lista li').count() >= 8, 'pestañas · Movimientos: la lista está completa');
+      // Se recuerda al recargar
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2500);
+      for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+      eq(await activa(), 'movimientos', 'pestañas: tras recargar sigue la última pestaña');
+      // «Ver mi historia» del Resumen y «Tu historia y medallas» de «Tu cuenta»
+      await p.click('#pestanas [data-pestana="resumen"]'); await p.waitForTimeout(400);
+      await p.click('#res-historia'); await p.waitForTimeout(500);
+      eq(await activa(), 'historia', 'pestañas: «Ver mi historia» lleva a la historia');
+      await p.click('#pestanas [data-pestana="resumen"]'); await p.waitForTimeout(400);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-historia-btn'); await p.waitForTimeout(700);
+      ok(await p.locator('#d-cuenta[open]').count() === 0 && await activa() === 'historia' && await ver(p, '#dh-vistas'), 'pestañas: «Tu historia y medallas» de «Tu cuenta» cierra el diálogo y abre la pestaña');
+      // Teclado: flechas entre pestañas
+      await p.focus('#pestanas [data-pestana="resumen"]');
+      await p.keyboard.press('ArrowRight'); await p.waitForTimeout(100);
+      eq(await p.evaluate(() => document.activeElement.dataset.pestana), 'graficos', 'pestañas: la flecha derecha pasa a la siguiente');
+      await p.keyboard.press('ArrowLeft'); await p.keyboard.press('ArrowLeft'); await p.waitForTimeout(100);
+      eq(await p.evaluate(() => document.activeElement.dataset.pestana), 'movimientos', 'pestañas: la flecha izquierda da la vuelta');
+      // «Pantalla: todo junto» devuelve la página larga
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      eq((await p.textContent('#dc-pestanas')).trim(), 'Pantalla: por pestañas', 'pestañas: «Tu cuenta» dice cómo está la pantalla');
+      await p.click('#dc-pestanas'); await p.waitForTimeout(300);
+      eq((await p.textContent('#dc-pestanas')).trim(), 'Pantalla: todo junto', 'pestañas: el botón la cambia a «todo junto»');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      ok(!(await ver(p, '#pestanas')) && await p.evaluate(() => document.getElementById('principal').dataset.pestana === undefined), 'todo junto: la barra se esconde');
+      for (const sel of ['#tramo', '#mercado', '#compras', '#historia']) ok(await ver(p, sel) || await p.locator(sel).evaluate((e) => e.offsetParent !== null), `todo junto: ${sel} está en la página`);
+      eq(await p.evaluate(() => localStorage.getItem('libro.pestanas')), 'todo', 'todo junto: se recuerda por dispositivo');
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-pestanas'); await p.waitForTimeout(300);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      ok(await ver(p, '#pestanas') && await activa() === 'historia', 'pestañas: se puede volver a las pestañas (y sigue la última pestaña)');
+      eq(consola, [], `consola limpia (pestañas): ${consola.join(' | ')}`);
+      await ctx.close();
+      // Una lectora también las ve (sin Anotar), con sus medallas
+      const l = await ent(sLargo, LECTOR);
+      ok(await ver(l.p, '#pestanas') && await ver(l.p, '#res-medallas'), 'pestañas: una lectora ve la barra y las medallas');
+      ok(!(await ver(l.p, '#anotar')), 'pestañas: una lectora no tiene «Anotar»');
+      await l.p.click('#pestanas [data-pestana="historia"]'); await l.p.waitForTimeout(600);
+      ok(await ver(l.p, '#dh-vistas') && await l.p.locator('#dh-pasaporte li').count() >= 1, 'pestañas: una lectora también ve la historia');
+      await l.ctx.close();
+    } finally { sLargo.parar(); }
+    // Sin compras y con una sola
+    for (const [esc, nombre] of [['vacio', 'sin compras'], ['hoy', 'una compra']]) {
+      const srv = await servidor(esc);
+      try {
+        const { ctx, p, consola } = await ent(srv, ADMIN);
+        for (const t of ['resumen', 'graficos', 'historia', 'movimientos']) {
+          await p.click(`#pestanas [data-pestana="${t}"]`); await p.waitForTimeout(400);
+          const sw = await p.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth);
+          ok(sw, `pestañas (${nombre}): ${t} sin scroll horizontal`);
+        }
+        await p.click('#pestanas [data-pestana="historia"]'); await p.waitForTimeout(400);
+        ok(esc === 'vacio' ? await ver(p, '#dh-vacio') : await ver(p, '#dh-vistas'), `pestañas (${nombre}): la historia dice lo que corresponde`);
+        eq(consola, [], `consola limpia (pestañas ${nombre}): ${consola.join(' | ')}`);
+        await ctx.close();
+      } finally { srv.parar(); }
+    }
   }
 
   // ---------------------------------------------------------------- una sola compra

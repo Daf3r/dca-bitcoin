@@ -7,6 +7,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-m', fecha: '2026-11-16',
+    items: [
+      'Lo de debajo de la montaña ahora está en cuatro pestañas: Resumen, Gráficos, Historia y Movimientos. Una sola cosa a la vez, sin tanto scroll.',
+      'Tus medallas están a la vista en el Resumen, y «Tu historia» tiene su propia pestaña (ya no hay que buscarla en «Tu cuenta»).',
+      'Quité lo que se repetía: la lista de etapas, que ya cuenta tu historia, y las cifras curiosas.',
+      'Si prefieres la página larga de antes, en «Tu cuenta» → «Pantalla» elige «todo junto».',
+    ],
+  },
+  {
     id: '2026-11-l', fecha: '2026-11-15',
     items: [
       'En «Tu historia» hay dos vistas nuevas: los estratos, una capa de tierra por cada mes (las compras extra son vetas de cuarzo), y la partitura, una nota por cada compra: más aguda cuanto más caro estaba BTC ese día. Toca «Tocar este año» y suena.',

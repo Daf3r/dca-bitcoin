@@ -35,15 +35,22 @@ export function irAPestana(cual, { desplazar = true } = {}) {
   actual = cual;
   guardar(CLAVE_PESTANA, cual === 'resumen' ? null : cual);
   aplicar();
-  if (desplazar && porPestanas) {
-    const barra = $('pestanas').getBoundingClientRect();
-    if (barra.top < 0) window.scrollTo({ top: window.scrollY + barra.top - 8, behavior: reducido() ? 'auto' : 'smooth' });
-  }
+  if (desplazar && porPestanas) subirAlInicio();
+}
+
+/** La barra puede ser pegajosa (no sirve para saber hasta dónde se bajó): se compara con el inicio natural del cuerpo. */
+function subirAlInicio() {
+  const arriba = $('principal').getBoundingClientRect().top;
+  if (arriba < 0) window.scrollTo({ top: window.scrollY + arriba, behavior: reducido() ? 'auto' : 'smooth' });
 }
 
 /** «Tu historia y medallas» de «Tu cuenta»: lleva a la pestaña (o, en «Todo junto», baja hasta la sección). */
 export function verHistoria() {
-  if (porPestanas) { irAPestana('historia', { desplazar: false }); window.scrollTo({ top: Math.max(0, window.scrollY + $('pestanas').getBoundingClientRect().top - 8), behavior: reducido() ? 'auto' : 'smooth' }); } else {
+  if (porPestanas) {
+    irAPestana('historia', { desplazar: false });
+    const arriba = $('principal').getBoundingClientRect().top;
+    window.scrollTo({ top: Math.max(0, window.scrollY + arriba), behavior: reducido() ? 'auto' : 'smooth' });
+  } else {
     refrescarHistoria();
     $('historia').scrollIntoView({ block: 'start', behavior: reducido() ? 'auto' : 'smooth' });
   }

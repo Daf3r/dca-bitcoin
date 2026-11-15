@@ -253,6 +253,18 @@ try {
       }
       await ctx.close();
     }
+    { // las pestañas (14): barra y cada pestaña (por defecto la app se audita en «todo junto»; aquí se quita esa preferencia)
+      const { ctx, p } = await nuevo(anio, ADMIN, () => { try { localStorage.removeItem('libro.pestanas'); } catch { /* sin almacenamiento */ } });
+      await cerrarOferta(p);
+      for (const t of ['resumen', 'graficos', 'historia', 'movimientos']) {
+        await p.click(`#pestanas [data-pestana="${t}"]`); await p.waitForTimeout(700);
+        await auditar(p, `pestaña ${t} ${esquema}`);
+      }
+      await p.click('#pestanas [data-pestana="historia"]'); await p.waitForTimeout(400);
+      await p.click('#dh-vistas [data-vh="estratos"]'); await p.waitForTimeout(400);
+      await auditar(p, `pestaña historia con estratos ${esquema}`);
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

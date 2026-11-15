@@ -188,19 +188,24 @@ export function refrescarHistoria({ forzar = false } = {}) {
   pintarHistoria();
 }
 
-/** Las medallas del Resumen: las ya ganadas y la que sigue, sin cuenta de lo que falta (un reconocimiento, no una presión). */
+/** Las medallas del Resumen: las tres más recientes ya ganadas y, apagada, la siguiente (sin «te faltan»: es un reconocimiento,
+ *  no una presión). Una rejilla visible que se envuelve, nada que haya que deslizar; el resto, con «Ver todas mis medallas». */
+const MED_RESUMEN = 3;
 export function pintarMedallasResumen() {
   const caja = $('res-medallas'), lista = $('res-med-lista');
   const ms = R?.items && R.nCompras ? medallas(R) : [];
-  const hay = ms.some((m) => m.ganada);
-  caja.hidden = !hay;
+  const ganadas = ms.filter((m) => m.ganada).sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
+  caja.hidden = !ganadas.length;
   lista.textContent = '';
-  if (!hay) return;
-  for (const m of ms) {
+  if (!ganadas.length) return;
+  $('res-med-n').textContent = ganadas.length === 1 ? 'Ya tienes 1 medalla.'
+    : ganadas.length > MED_RESUMEN ? `Ya tienes ${ganadas.length} medallas. Aquí, las más recientes.` : `Ya tienes ${ganadas.length} medallas.`;
+  const siguiente = ms.find((m) => !m.ganada && m.tipo === 'compras') ?? ms.find((m) => !m.ganada);
+  for (const m of [...ganadas.slice(0, MED_RESUMEN), ...(siguiente ? [siguiente] : [])]) {
     const li = nodo('li', `medalla ${m.ganada ? 'ganada' : 'bloq'}`);
     li.insertAdjacentHTML('beforeend', medalla(m));
     li.append(nodo('b', null, m.titulo));
-    if (m.ganada) li.append(nodo('small', null, fechaLarga(m.fecha)));
+    li.append(nodo('small', null, m.ganada ? fechaLarga(m.fecha) : 'La siguiente'));
     lista.append(li);
   }
 }
