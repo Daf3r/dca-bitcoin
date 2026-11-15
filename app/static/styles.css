@@ -1805,10 +1805,98 @@ html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infi
 .dh-anios button { min-height: var(--toque, 48px); min-width: 4.2rem; padding: 0 12px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt); font: 600 0.875rem var(--sans, inherit); font-variant-numeric: tabular-nums; }
 .dh-anios button[aria-pressed="true"] { border-color: var(--naranja); color: var(--naranja-txt); }
 .dh-detalle { min-height: 2.6em; margin: 4px 0 0; font-size: 0.875rem; color: var(--txt); }
+
+/* Campamento 13 · los dibujos de «Tu historia» (arte-historia.js): el tronco, la constelación y el mojón. Luz desde arriba a la
+   derecha como en la montaña; lo que no es una pieza no recibe el toque (el toque cae en la pieza de debajo). */
 .dh-lienzo .pieza { cursor: pointer; }
-.dh-lienzo .anillo { stroke: var(--naranja); opacity: 0.75; }
-.dh-lienzo .anillo.sel { stroke: var(--naranja-txt); opacity: 1; }
-.dh-lienzo .estrella { fill: var(--txt); }
-.dh-lienzo .estrella.sel { fill: var(--naranja); }
-.dh-lienzo .piedra { fill: var(--txt3); }
-.dh-lienzo .piedra.sel { fill: var(--naranja); }
+.dh-lienzo :is(.ht-sobre, .ht-suelo, .ht-canto, .ht-corteza, .ht-c-media, .ht-c-luz, .ht-c-sombra, .ht-c-grieta, .ht-medula, .h-marca, .h-marca-c, .hm-luz, .hm-media, .hm-sombra, .hm-filo, .hm-veta, .hm-contacto, .hm-guijarro, .hm-guijarro-luz, .hm-guijarro-sombra, .hm-lejos, .hm-loma, .hc-linea, .hc-halo, .hc-calido, .hc-tenue, .hc-media, .hc-viva, .hc-destello, .hc-nucleo-c, .hc-titilan) { pointer-events: none; }
+.dh-lienzo {
+  --ht-dur0: #8c5b34; --ht-dur1: #7b4f2d; --ht-alb0: #c99c68; --ht-alb1: #ba8b58; --ht-vivo: #dccb98;
+  --ht-tardia: #4a2b16; --ht-corteza: #3a2718; --ht-corteza-luz: #6f5036; --ht-corteza-media: #4e3624; --ht-corteza-sombra: #1f140c;
+  --ht-suelo: rgb(0 0 0 / 0.38);
+  --hm-s0: #1b2846; --hm-s1: #2e3758; --hm-s2: #6a4d4b; --hm-lejos: #2c3a5e; --hm-lejos-luz: #3b4c78; --hm-medio: #222c4a;
+  --hm-loma: #3d3229; --hm-loma-luz: #574735; --hm-contacto: #000; --hm-borde: #221d1a;
+  --hm-p0: #7f8188; --hm-p1: #8d7e6d; --hm-p2: #707b88; --hm-p3: #918367;
+}
+:root[data-tema="claro"] .dh-lienzo {
+  --ht-suelo: rgb(90 58 30 / 0.2); --ht-corteza: #4a3220; --ht-corteza-luz: #7d5c3e; --ht-corteza-media: #5c412b;
+  --hm-s0: #eadcc3; --hm-s1: #f4e8d3; --hm-s2: #f6d6b0; --hm-lejos: #dcc8a7; --hm-lejos-luz: #e9dbc2; --hm-medio: #cdb491;
+  --hm-loma: #b49670; --hm-loma-luz: #c8aa80; --hm-contacto: #3a2410; --hm-borde: #3b322b;
+  --hm-p0: #8f9096; --hm-p1: #9c8c79; --hm-p2: #808b98; --hm-p3: #a09173;
+}
+
+/* El tronco */
+.ht-suelo { fill: var(--ht-suelo); }
+.ht-canto { fill: color-mix(in oklab, var(--ht-corteza) 70%, #000); }
+.ht-corteza { fill: var(--ht-corteza); }
+.ht-c-media { fill: var(--ht-corteza-media); } .ht-c-luz { fill: var(--ht-corteza-luz); } .ht-c-sombra { fill: var(--ht-corteza-sombra); opacity: 0.8; }
+.ht-c-grieta { fill: none; stroke: var(--ht-corteza-sombra); stroke-width: 1; stroke-linecap: round; opacity: 0.8; }
+.h-anillo { transition: fill 0.25s ease; }
+.h-anillo.ht-dur0 { fill: var(--ht-dur0); } .h-anillo.ht-dur1 { fill: var(--ht-dur1); }
+.h-anillo.ht-alb0 { fill: var(--ht-alb0); } .h-anillo.ht-alb1 { fill: var(--ht-alb1); } .h-anillo.ht-vivo { fill: var(--ht-vivo); }
+.h-anillo.sel { fill: color-mix(in oklab, var(--naranja) 62%, #ffe3b8); }
+.ht-medula { fill: var(--ht-tardia); opacity: 0.85; }
+.ht-tardia { fill: none; stroke: var(--ht-tardia); stroke-width: 1.2; stroke-linejoin: round; opacity: 0.72; }
+.ht-veta { fill: none; stroke: var(--ht-tardia); stroke-width: 0.5; stroke-linejoin: round; opacity: 0.14; }
+.ht-radio { fill: none; stroke: #fff0d4; stroke-width: 0.6; stroke-linecap: round; opacity: 0.16; }
+.ht-luz { fill: url(#h-t-brillo); }
+.ht-b0 { stop-color: #fff4dc; stop-opacity: 0.26; } .ht-b1 { stop-color: #fff4dc; stop-opacity: 0; } .ht-b2 { stop-color: #1a0d05; stop-opacity: 0.3; }
+.ht-grieta { fill: none; stroke: var(--ht-tardia); stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+.ht-labio { fill: none; stroke: #ffeccc; stroke-width: 0.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.45; }
+.ht-nudo { fill: color-mix(in oklab, var(--ht-tardia) 75%, #000); stroke: color-mix(in oklab, var(--naranja) 70%, var(--ht-alb0)); stroke-width: 1; }
+.ht-nudo-luz { fill: none; stroke: var(--naranja); stroke-width: 12; stroke-linecap: round; opacity: 0.28; }
+.ht-nudo-brillo { fill: none; stroke: #ffd59a; stroke-width: 1.1; stroke-linecap: round; opacity: 0.8; }
+.ht-cambium { fill: none; stroke: #f4ffd8; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; }
+.ht-hoy { fill: none; stroke: #fffbe8; stroke-width: 3.4; stroke-linecap: round; }
+.ht-hoy-luz { fill: none; stroke: #f4ffd8; stroke-width: 9; stroke-linecap: round; opacity: 0; transform-box: fill-box; transform-origin: center; }
+html[data-efectos="todos"] .ht-hoy-luz { animation: ht-late 3.2s ease-in-out infinite; }
+@keyframes ht-late { 50% { opacity: 0.4; } }
+.ht-filo { fill: none; stroke: #f0c894; stroke-width: 1; stroke-linecap: round; opacity: 0.7; }
+.h-marca { fill: none; stroke: var(--naranja); stroke-width: 2.2; stroke-linejoin: round; }
+.h-tronco .h-marca { stroke: color-mix(in oklab, var(--naranja) 70%, #3a1a00); stroke-width: 1.6; }
+
+/* La constelación: siempre de noche, en su propio cielo. */
+.hc-s0 { stop-color: #1c2b5a; } .hc-s1 { stop-color: #0d1634; } .hc-s2 { stop-color: #050916; }
+.hc-cielo { fill: url(#h-c-cielo); }
+.hc-v0 { stop-color: #93a9ec; stop-opacity: 0.16; } .hc-v1 { stop-color: #93a9ec; stop-opacity: 0; }
+.hc-via { fill: url(#h-c-via); }
+.hc-polvo { fill: none; stroke: #c8d4ff; stroke-width: 0.8; stroke-linecap: round; opacity: 0.32; }
+.hc-polvo2 { fill: none; stroke: #c8d4ff; stroke-width: 1.2; stroke-linecap: round; opacity: 0.42; }
+.hc-aro { fill: none; stroke: #8ea0d0; stroke-width: 1.5; opacity: 0.4; }
+.hc-aro2 { fill: none; stroke: #8ea0d0; stroke-width: 0.6; opacity: 0.14; }
+.hc-marca { fill: none; stroke: #8ea0d0; stroke-width: 1; stroke-linecap: round; opacity: 0.4; }
+.hc-linea { fill: none; stroke: #a9bbf0; stroke-width: 0.6; stroke-linecap: round; opacity: 0.42; }
+.hc-tenue { fill: none; stroke: #b6c5f0; stroke-width: 1.6; stroke-linecap: round; opacity: 0.7; }
+.hc-media { fill: none; stroke: #e6ecff; stroke-width: 2.4; stroke-linecap: round; }
+.hc-viva { fill: none; stroke: #fff8e8; stroke-width: 3.2; stroke-linecap: round; }
+.hc-halo { fill: none; stroke: #fff1d6; stroke-width: 14; stroke-linecap: round; opacity: 0.1; }
+.densa .hc-tenue { stroke-width: 1.2; } .densa .hc-media { stroke-width: 1.8; } .densa .hc-viva { stroke-width: 2.5; } .densa .hc-calido { stroke-width: 6.5; } .densa .hc-nucleo-c { stroke-width: 2.4; }
+.hc-calido { fill: none; stroke: var(--naranja); stroke-width: 9; stroke-linecap: round; opacity: 0.42; }
+.hc-nucleo-c { fill: none; stroke: #ffc98a; stroke-width: 3.2; stroke-linecap: round; }
+.hc-destello { fill: #fffaf0; opacity: 0.85; }
+.hc-titila { fill: #fff; opacity: 0; transform-box: fill-box; transform-origin: center; }
+html[data-efectos="todos"] .hc-titila { animation: hc-titila 6s ease-in-out infinite; }
+html[data-efectos="todos"] .hc-titila.tw1 { animation-duration: 7.5s; animation-delay: -2s; }
+html[data-efectos="todos"] .hc-titila.tw2 { animation-duration: 5.2s; animation-delay: -3.4s; }
+html[data-efectos="todos"] .hc-titila.tw3 { animation-duration: 8.8s; animation-delay: -5s; }
+@keyframes hc-titila { 0%, 100% { opacity: 0; transform: scale(0.6) rotate(0deg); } 50% { opacity: 0.75; transform: scale(1.15) rotate(12deg); } }
+.h-estrella { fill: transparent; }
+.h-estrella.sel { fill: color-mix(in oklab, var(--naranja) 14%, transparent); stroke: var(--naranja); stroke-width: 1.6; }
+.h-marca-c { fill: none; stroke: var(--naranja); stroke-width: 1.4; stroke-linecap: round; }
+
+/* El mojón */
+.hm-s0 { stop-color: var(--hm-s0); } .hm-s1 { stop-color: var(--hm-s1); } .hm-s2 { stop-color: var(--hm-s2); }
+.hm-cielo { fill: url(#h-m-cielo); }
+.hm-lejos { fill: var(--hm-lejos); } .hm-lejos-luz { fill: var(--hm-lejos-luz); } .hm-medio { fill: var(--hm-medio); }
+.hm-loma { fill: var(--hm-loma); } .hm-loma-filo { fill: none; stroke: var(--hm-loma-luz); stroke-width: 2.5; }
+.hm-aro { fill: none; stroke: var(--s3); stroke-width: 1.5; }
+.hm-o0 { stop-color: var(--hm-contacto); stop-opacity: 0.5; } .hm-o1 { stop-color: var(--hm-contacto); stop-opacity: 0; }
+.hm-contacto { fill: url(#h-m-sombra); }
+.hm-guijarro { fill: var(--hm-p1); stroke: var(--hm-borde); stroke-width: 0.8; stroke-linejoin: round; }
+.h-piedra { stroke: var(--hm-borde); stroke-width: 0.9; stroke-linejoin: round; transition: fill 0.25s ease; }
+.h-piedra.hp-0 { fill: var(--hm-p0); } .h-piedra.hp-1 { fill: var(--hm-p1); } .h-piedra.hp-2 { fill: var(--hm-p2); } .h-piedra.hp-3 { fill: var(--hm-p3); }
+.h-piedra.sel { fill: color-mix(in oklab, var(--naranja) 58%, #ffe3b8); }
+.hm-luz { fill: #fff6e6; opacity: 0.34; } .hm-media { fill: #fff6e6; opacity: 0.13; } .hm-sombra { fill: #120c08; opacity: 0.34; }
+.hm-filo { fill: none; stroke: #fff3dc; stroke-width: 1; stroke-linecap: round; opacity: 0.7; }
+.hm-veta { fill: var(--naranja); opacity: 0.5; }
+.hm-guijarro-luz { fill: #fff6e6; opacity: 0.3; } .hm-guijarro-sombra { fill: #120c08; opacity: 0.3; }
