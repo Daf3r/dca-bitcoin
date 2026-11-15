@@ -297,6 +297,34 @@ try {
       await auditar(p, `escribir un mensaje ${esquema}`);
       await ctx.close();
     }
+    { // piedritas, cumpleaños y la tele (15B): lectora con una piedrita y su cumpleaños hoy; el dueño con su línea de la última piedrita
+      const { ctx, p } = await nuevo(anio, LECTOR, conPush);
+      await cerrarOferta(p);
+      const md = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date()).slice(5);
+      await p.evaluate(async (md) => {
+        const h = { 'Content-Type': 'application/json', 'X-Libro': '1' };
+        const compras = await (await fetch('/api/compras')).json();
+        const c = compras.filter((x) => x.tipo === 'compra').at(-1);
+        await fetch(`/api/piedritas/${c.id}`, { method: 'POST', headers: h });
+        await fetch('/api/yo/cumple', { method: 'PUT', headers: h, body: JSON.stringify({ cumple: md }) });
+      }, md);
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2500);
+      await cerrarOferta(p);
+      await auditar(p, `movimientos con una piedrita y farol de cumpleaños (lectora) ${esquema}`);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-cumple'); await p.waitForTimeout(600);
+      await auditar(p, `mi cumpleaños ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await p.evaluate(() => { location.hash = '#tv'; }); await p.waitForTimeout(1200);
+      await p.evaluate(() => { const f = document.getElementById('tv-fiesta'); document.getElementById('tvf-k').textContent = 'Compra nueva'; document.getElementById('tvf-txt').textContent = '+25,000 sats'; document.getElementById('tvf-sub').textContent = 'La montaña sube un paso más'; f.hidden = false; f.classList.add('va'); });
+      await p.waitForTimeout(900);
+      await auditar(p, `tele con la fiesta ${esquema}`);
+      await ctx.close();
+      const a = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(a.p);
+      await auditar(a.p, `resumen del dueño con la última piedrita ${esquema}`);
+      await a.ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

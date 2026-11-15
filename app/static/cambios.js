@@ -12,6 +12,9 @@ export const CAMBIOS = [
       'Llegó «El Diario del Libro»: una portada en el Resumen con lo que pasó, qué había hace un año, unos clasificados con humor y el pronóstico de la montaña.',
       'Ahora se pueden dejar cartas selladas para el futuro: se abren solas en una fecha o al llegar a una etapa, y toda la familia las lee cuando llega el momento.',
       'Cada campamento puede tener un mensaje: al tocar su bandera sale la frase, y también aparece en «Tu historia». Hasta que llegues, es una sorpresa.',
+      'Quien no anota puede dejar una piedrita en una compra, con un toque. Quien anota las ve, y le llega un aviso.',
+      'En «Tu cuenta» puedes poner tu cumpleaños: ese día el libro te saluda y la montaña enciende un farol con tu inicial.',
+      'En el modo pantalla grande hay fiesta cuando se anota una compra, un sismógrafo con el precio del día y un atardecer a las 6 de la tarde.',
     ],
   },
   {
