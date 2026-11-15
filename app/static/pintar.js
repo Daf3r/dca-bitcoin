@@ -14,6 +14,8 @@ import { actualizarIndice } from './indice.js';
 import { pintarLista } from './lista.js';
 import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
 import { pintarNovedades } from './novedades.js';
+import { pintarMedallasResumen, refrescarHistoria } from './historia.js';
+import { historiaVisible } from './pestanas.js';
 import { pintarCaida, pintarComienzo, pintarEquilibrio, pintarReportes, pintarToca, pintarUbicacion } from './reportes.js';
 
 // ---------------------------------------------------------------- pintar
@@ -37,6 +39,8 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   pintarUbicacion();
   pintarReportes();
   pintarComienzo();
+  pintarMedallasResumen();
+  if (historiaVisible()) refrescarHistoria();
   pintarNovedades();
   pintarDelDia();
   ofrecerAvisos();

@@ -41,10 +41,10 @@ async function servidor(escenario, env = {}) {
 
 /** Abre una página, entra con la cuenta dada y espera a que cargue. Recoge errores de consola. */
 async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
-  const { hora = 22, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche)
+  const { hora = 22, pestanas = false, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
   const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opcionesContexto });
   const p = await ctx.newPage();
-  await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, hora);
+  await p.addInitScript(([h, pes]) => { try { localStorage.setItem('libro.hora', String(h)); if (!pes) localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, [hora, pestanas]);
   if (init) await (Array.isArray(init) ? p.addInitScript(init[0], init[1]) : p.addInitScript(init));
   const consola = [];
   p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
@@ -748,7 +748,7 @@ try {
       for (const [hora, franja] of [[2, 'noche'], [12, 'dia']]) {
         const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
         const p = await ctx.newPage();
-        await p.addInitScript((h) => localStorage.setItem('libro.hora', String(h)), hora);
+        await p.addInitScript((h) => { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.pestanas', 'todo'); }, hora);
         await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
         eq(await p.evaluate(() => [document.documentElement.dataset.cielo, !!document.getElementById('saludo')]), [franja, false], `entrada ${hora} h: cielo ${franja} y sin saludo`);
         await ctx.close();
@@ -1730,7 +1730,7 @@ try {
     try {
       const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
       const p = await ctx.newPage();
-      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '22'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '22'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
       const consola = [];
       p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
       await p.goto(`${ent.url}/login`, { waitUntil: 'networkidle' });
@@ -1761,7 +1761,7 @@ try {
     try {
       const ctx = await navegador.newContext({ viewport: { width: 1983, height: 967 } });
       const p = await ctx.newPage();
-      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
       await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
       await p.fill('input[autocomplete="username"]', ADMIN[0]);
       await p.fill('input[autocomplete="current-password"]', ADMIN[1]);
@@ -2280,7 +2280,7 @@ try {
       for (const [w, h] of [[844, 390], [568, 320]]) {
         const ctx = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: w, height: h }, isMobile: true, hasTouch: true });
         const p = await ctx.newPage();
-        await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '22'); } catch { /* sin almacenamiento */ } });
+        await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '22'); localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } });
         await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
         const e = await p.evaluate(() => {
           const r = (s) => document.querySelector(s).getBoundingClientRect();

@@ -79,6 +79,7 @@
 <link rel="modulepreload" href="/wallets.js">
 <link rel="modulepreload" href="/sistema.js">
 <link rel="modulepreload" href="/historia.js">
+<link rel="modulepreload" href="/pestanas.js">
 <link rel="modulepreload" href="/arte-historia.js">
 <link rel="modulepreload" href="/arte-sellos.js">
 <script type="module" src="/app.js"></script>
@@ -135,23 +136,30 @@
   <button type="button" class="tv-salir" id="tv-salir">Salir de pantalla grande</button>
 </section>
 
-<main class="cuerpo" id="principal" tabindex="-1">
+<main class="cuerpo" id="principal" tabindex="-1" data-pestana="resumen">
   <p class="mant" id="mant" role="status" hidden>Mantenimiento: por ahora solo se puede mirar, no anotar. Vuelve en un rato.</p>
+  <!-- Pestañas (campamento 14): una sola vista a la vez. En «Todo junto» (Tu cuenta) se esconden y todo va en una página larga. -->
+  <nav class="pestanas" id="pestanas" aria-label="Secciones del libro">
+    <button type="button" data-pestana="resumen" aria-current="true">Resumen</button>
+    <button type="button" data-pestana="graficos">Gráficos</button>
+    <button type="button" data-pestana="historia">Historia</button>
+    <button type="button" data-pestana="movimientos">Movimientos</button>
+  </nav>
   <!-- Dos columnas en escritorio; en móvil y tablet los contenedores no cuentan (display: contents)
        y el orden visual es el del documento, igual que el de tabulación. -->
   <div class="col-principal">
   <!-- Formas grises donde irá cada cosa mientras llegan los datos (pintar.js las quita). -->
-  <div class="sk-cards" id="sk-cards" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="sk-cards" id="sk-cards" aria-hidden="true" data-p="resumen"><i></i><i></i><i></i></div>
   <!-- Recordatorio según tu ritmo (solo admin): al día, te toca, último día o racha reiniciada. -->
-  <p class="toca" id="toca" role="status" hidden><i aria-hidden="true"></i><span id="toca-txt"></span></p>
+  <p class="toca" id="toca" role="status" hidden data-p="resumen"><i aria-hidden="true"></i><span id="toca-txt"></span></p>
   <!-- Gran caída (opcional, solo admin): dice cuánto cayó el precio y qué haría reponer con una compra como las tuyas.
        Es información, no una recomendación; se puede ocultar por hoy. -->
-  <div class="caida" id="caida" role="status" hidden>
+  <div class="caida" id="caida" role="status" hidden data-p="resumen">
     <p id="caida-txt"></p>
     <button type="button" class="enlace" id="caida-ocultar">Ocultar hoy</button>
   </div>
 
-  <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden>
+  <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden data-p="resumen">
     <h2 class="sr" id="t-tramo">Siguiente meta</h2>
     <p class="tr-k">Próxima etapa</p>
     <p class="tr-v"><b id="t-meta"></b><span id="t-falta"></span></p>
@@ -159,8 +167,14 @@
     <div class="rueda tr-anillo" id="t-anillo" role="img" aria-label=""><svg id="t-anillo-svg"></svg><span class="an-centro" id="t-pct"></span></div>
   </section>
 
+  <!-- Tus medallas a la vista (campamento 14): las ya ganadas y, apagada, la que sigue. Es un reconocimiento, no una lista de pendientes. -->
+  <section class="res-medallas" id="res-medallas" data-p="resumen" aria-labelledby="t-res-med" hidden>
+    <div class="sec-cab"><h2 id="t-res-med">Tus medallas</h2><button type="button" class="enlace" id="res-historia">Ver mi historia</button></div>
+    <ul class="medallas medallas-fila" id="res-med-lista"></ul>
+  </section>
+
   <!-- Sats por dólar: cuántos sats compra $1 hoy y cómo ha cambiado en el último mes. Solo informa. -->
-  <section class="spd" id="spd" aria-labelledby="t-spd" hidden>
+  <section class="spd" id="spd" aria-labelledby="t-spd" hidden data-p="graficos">
     <h2 class="sr" id="t-spd">Sats por dólar</h2>
     <div class="spd-txt">
       <p class="spd-k">Hoy, $1 te compra</p>
@@ -171,11 +185,11 @@
   </section>
 
   <!-- Qué gráfico ver: Precio, Valor, Costo promedio o Sats. Solo salen las vistas con datos; se recuerda la última por dispositivo. -->
-  <div class="rangos vistas" id="vistas" role="group" aria-label="Qué gráfico ver" hidden>
+  <div class="rangos vistas" id="vistas" role="group" aria-label="Qué gráfico ver" hidden data-p="graficos">
     <button type="button" data-vista="precio" aria-pressed="true">Precio</button><button type="button" data-vista="valor" aria-pressed="false">Valor</button><button type="button" data-vista="costo" aria-pressed="false">Costo</button><button type="button" data-vista="sats" aria-pressed="false">Sats</button>
   </div>
 
-  <section class="mercado" id="mercado" aria-labelledby="t-mercado">
+  <section class="mercado" id="mercado" aria-labelledby="t-mercado" data-p="graficos">
     <div class="sec-cab">
       <h2 id="t-mercado">El precio y tus compras</h2>
       <div class="rangos" id="rangos" role="group" aria-label="Rango del gráfico">
@@ -207,7 +221,7 @@
   </section>
 
   <!-- Lo que pusiste (neto) frente a lo que vale tu saldo, día a día. Desde 3 compras y con histórico. -->
-  <section class="valor" id="valor" aria-labelledby="t-valor" hidden>
+  <section class="valor" id="valor" aria-labelledby="t-valor" hidden data-p="graficos">
     <div class="sec-cab"><h2 id="t-valor">Lo que pusiste y lo que vale</h2></div>
     <p class="lectura" id="v-lectura"></p>
     <p class="sr" id="v-sr" aria-live="polite"></p>
@@ -217,7 +231,7 @@
   </section>
 
   <!-- Cómo ha ido cambiando tu costo promedio con cada compra (desde 3 compras). -->
-  <section class="valor" id="costo-prom" aria-labelledby="t-costo" hidden>
+  <section class="valor" id="costo-prom" aria-labelledby="t-costo" hidden data-p="graficos">
     <div class="sec-cab"><h2 id="t-costo">Cómo cambia tu costo promedio</h2></div>
     <p class="lectura fija" id="c-lectura"></p>
     <p class="sr" id="c-sr" aria-live="polite"></p>
@@ -226,7 +240,7 @@
   </section>
 
   <!-- La escalera de tus sats: sube con cada compra y baja con cada venta (desde 2 movimientos). -->
-  <section class="valor" id="sats-acum" aria-labelledby="t-sats" hidden>
+  <section class="valor" id="sats-acum" aria-labelledby="t-sats" hidden data-p="graficos">
     <div class="sec-cab"><h2 id="t-sats">Tus sats, compra a compra</h2></div>
     <p class="lectura fija" id="s-lectura"></p>
     <p class="sr" id="s-sr" aria-live="polite"></p>
@@ -235,7 +249,7 @@
 
   <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>
     <h2 class="sr" id="t-rep">Reportes</h2>
-    <article class="rep rep-const">
+    <article class="rep rep-const" data-p="resumen">
       <h3>Constancia</h3>
       <div class="const-cab">
         <p class="const-cifra"><b id="const-racha"></b><span id="const-unidad"></span></p>
@@ -246,15 +260,15 @@
       <div class="semanas" id="semanas" tabindex="0" role="img" aria-label="Tus últimas semanas: las naranjas tuvieron compra. Toca una o usa las flechas para ver sus compras."></div>
       <p class="rep-txt sem-det" id="sem-det">Toca una semana para ver sus compras.</p>
     </article>
-    <article class="rep rep-curiosas" id="rep-curiosas">
+    <article class="rep rep-curiosas" id="rep-curiosas" data-p="ninguna">
       <h3>Cifras curiosas</h3>
       <ul class="curiosas" id="curiosas"></ul>
     </article>
-    <article class="rep rep-hitos">
+    <article class="rep rep-hitos" data-p="ninguna">
       <h3>Etapas</h3>
       <ol class="hitos" id="hitos"></ol>
     </article>
-    <article class="rep rep-ext" id="rep-ext">
+    <article class="rep rep-ext" id="rep-ext" data-p="graficos">
       <h3>Tu mejor y tu peor precio</h3>
       <div class="extremos" id="extremos"></div>
     </article>
@@ -264,7 +278,7 @@
   <div class="col-lateral">
   <button class="anotar" type="button" id="anotar">Anotar compra</button>
 
-  <section class="compras" id="compras" aria-labelledby="t-compras">
+  <section class="compras" id="compras" aria-labelledby="t-compras" data-p="movimientos">
     <div class="sec-cab">
       <h2 id="t-compras" tabindex="-1">Últimas compras</h2>
       <p class="csv">
@@ -298,7 +312,7 @@
 
   <!-- Dónde están tus sats: lo trasladado a tu wallet frente al saldo total. La ven todos cuando hay traslados;
        el admin, además, ve una pista para anotar el primero. -->
-  <section class="ubicacion" id="ubicacion" aria-labelledby="t-ubic" hidden>
+  <section class="ubicacion" id="ubicacion" aria-labelledby="t-ubic" hidden data-p="resumen">
     <h2 id="t-ubic">Dónde están tus sats</h2>
     <div id="ub-datos" hidden>
       <div class="rueda ub-dona" id="ub-dona" role="img" aria-label=""><svg id="ub-dona-svg"></svg><span class="an-centro"><b id="ub-pct"></b><small>wallet</small></span></div>
@@ -311,7 +325,7 @@
     <button type="button" class="com-boton" id="ub-anotar" hidden>Anotar un traslado</button>
   </section>
 
-  <section class="comienzo" id="comienzo" aria-labelledby="t-comienzo" hidden>
+  <section class="comienzo" id="comienzo" aria-labelledby="t-comienzo" hidden data-p="resumen">
     <p class="com-k">Siguiente paso</p>
     <h2 id="t-comienzo"></h2>
     <p class="com-txt" id="com-txt"></p>
@@ -322,7 +336,7 @@
     <button type="button" class="com-boton" id="com-anotar">Anotar la siguiente compra</button>
   </section>
 
-    <article class="rep rep-ganancia" id="rep-ganancia" aria-labelledby="t-ganancia" hidden>
+    <article class="rep rep-ganancia" id="rep-ganancia" aria-labelledby="t-ganancia" hidden data-p="resumen">
       <h3 id="t-ganancia">Ganancia</h3>
       <dl class="gan-lista">
         <div><dt>Realizada <small>(lo que ya vendiste)</small></dt><dd id="gan-real"></dd></div>
@@ -333,11 +347,52 @@
       <p class="h-nota">Costo promedio ponderado, sin impuestos. Un gasto cuenta como venta.</p>
     </article>
 
-    <article class="rep rep-anios" id="rep-anios" aria-labelledby="t-anios" hidden>
+    <article class="rep rep-anios" id="rep-anios" aria-labelledby="t-anios" hidden data-p="graficos">
       <h3 id="t-anios">Año por año</h3>
       <div id="anios"></div>
     </article>
   </div>
+
+  <!-- Tu historia (antes dentro de «Tu cuenta»): una pestaña de la página. historia.js la pinta. -->
+  <section class="historia-pg" id="historia" data-p="historia" aria-labelledby="t-historia">
+    <h2 id="t-historia">Tu historia</h2>
+    <p class="vacio con-ilu" id="dh-vacio" hidden></p>
+    <div id="dh-cuerpo">
+      <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia">
+        <button type="button" data-vh="linea" aria-pressed="true">Línea</button>
+        <button type="button" data-vh="tronco" aria-pressed="false">Tronco</button>
+        <button type="button" data-vh="constelacion" aria-pressed="false">Constelación</button>
+        <button type="button" data-vh="torre" aria-pressed="false">Piedras</button>
+        <button type="button" data-vh="manta" aria-pressed="false">Manta</button>
+        <button type="button" data-vh="estratos" aria-pressed="false">Estratos</button>
+        <button type="button" data-vh="partitura" aria-pressed="false">Partitura</button>
+      </div>
+      <div id="dh-v-linea">
+        <h3>Medallas</h3>
+        <ul class="medallas" id="dh-medallas"></ul>
+        <div id="dh-sellos-caja" hidden>
+          <h3>Sellos de lacre</h3>
+          <ul class="sellos" id="dh-sellos"></ul>
+        </div>
+        <div id="dh-pas-caja" hidden>
+          <h3>Pasaporte de semanas</h3>
+          <p class="dh-pas-txt" id="dh-pas-txt"></p>
+          <ul class="pasaporte" id="dh-pasaporte"></ul>
+          <button type="button" class="enlace" id="dh-pas-mas" hidden>Ver más</button>
+        </div>
+        <h3>Cómo llegaste hasta aquí</h3>
+        <ol class="historia" id="dh-linea"></ol>
+      </div>
+      <button type="button" class="enlace dh-cert-btn" id="dh-cert">Ver mi certificado de altitud</button>
+      <figure class="dh-objeto" id="dh-objeto" hidden>
+        <div class="dh-lienzo" id="dh-lienzo" role="img" aria-labelledby="dh-desc" tabindex="0"></div>
+        <figcaption id="dh-desc"></figcaption>
+        <ul class="dh-anios" id="dh-anios" hidden></ul>
+        <button type="button" class="enlace dh-tocar" id="dh-tocar" hidden>Tocar este año</button>
+        <p class="dh-detalle" id="dh-detalle" aria-live="polite"></p>
+      </figure>
+    </div>
+  </section>
 
   <footer class="pie">Tus datos viven en tu servidor, con respaldo diario. Precios de Coinbase (Kraken de reserva).</footer>
 </main>
@@ -441,6 +496,7 @@
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <h3 class="dc-grupo">En este dispositivo</h3>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
+      <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
       <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
       <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
@@ -455,46 +511,6 @@
       <button type="button" data-cuenta="cerrar">Cerrar</button>
     </div>
     <p class="dc-atajos" id="dc-atajos-lista">Atajos con el teclado: <kbd>A</kbd> anotar · <kbd>T</kbd> tema · <kbd>U</kbd> unidad del saldo · <kbd>/</kbd> buscar en la lista.</p>
-  </div>
-  <div class="dc-historia" id="dc-historia" hidden>
-    <h2>Tu historia</h2>
-    <p class="vacio con-ilu" id="dh-vacio" hidden></p>
-    <div id="dh-cuerpo">
-      <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia">
-        <button type="button" data-vh="linea" aria-pressed="true">Línea</button>
-        <button type="button" data-vh="tronco" aria-pressed="false">Tronco</button>
-        <button type="button" data-vh="constelacion" aria-pressed="false">Constelación</button>
-        <button type="button" data-vh="torre" aria-pressed="false">Piedras</button>
-        <button type="button" data-vh="manta" aria-pressed="false">Manta</button>
-        <button type="button" data-vh="estratos" aria-pressed="false">Estratos</button>
-        <button type="button" data-vh="partitura" aria-pressed="false">Partitura</button>
-      </div>
-      <div id="dh-v-linea">
-        <h3>Medallas</h3>
-        <ul class="medallas" id="dh-medallas"></ul>
-        <div id="dh-sellos-caja" hidden>
-          <h3>Sellos de lacre</h3>
-          <ul class="sellos" id="dh-sellos"></ul>
-        </div>
-        <div id="dh-pas-caja" hidden>
-          <h3>Pasaporte de semanas</h3>
-          <p class="dh-pas-txt" id="dh-pas-txt"></p>
-          <ul class="pasaporte" id="dh-pasaporte"></ul>
-          <button type="button" class="enlace" id="dh-pas-mas" hidden>Ver más</button>
-        </div>
-        <h3>Cómo llegaste hasta aquí</h3>
-        <ol class="historia" id="dh-linea"></ol>
-      </div>
-      <button type="button" class="enlace dh-cert-btn" id="dh-cert">Ver mi certificado de altitud</button>
-      <figure class="dh-objeto" id="dh-objeto" hidden>
-        <div class="dh-lienzo" id="dh-lienzo" role="img" aria-labelledby="dh-desc" tabindex="0"></div>
-        <figcaption id="dh-desc"></figcaption>
-        <ul class="dh-anios" id="dh-anios" hidden></ul>
-        <button type="button" class="enlace dh-tocar" id="dh-tocar" hidden>Tocar este año</button>
-        <p class="dh-detalle" id="dh-detalle" aria-live="polite"></p>
-      </figure>
-    </div>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <form class="dc-clave" id="f-clave" novalidate hidden>
     <h2>Cambiar contraseña</h2>

@@ -1536,8 +1536,8 @@ html[data-entrada="clave"] .pag-login .brillo-cima { opacity: 1; transform: scal
 html[data-entrada="clave"] .pag-login .campo .banderin { fill: var(--naranja); opacity: 1; animation: ondea 2.6s ease-in-out infinite; }
 
 /* ---------------------------------------------------------------- Campamento 6 (2/3): Tu historia, medallas y qué hay de nuevo */
-.dc-historia h3 { margin: 18px 0 8px; font: 650 0.9375rem var(--sans); color: var(--txt2); letter-spacing: 0.02em; }
-.dc-historia .vacio { text-align: center; color: var(--txt2); font: italic 400 1.0625rem var(--serif); }
+.dc-historia h3, .historia-pg h3 { margin: 18px 0 8px; font: 650 0.9375rem var(--sans); color: var(--txt2); letter-spacing: 0.02em; }
+.dc-historia .vacio, .historia-pg .vacio { text-align: center; color: var(--txt2); font: italic 400 1.0625rem var(--serif); }
 /* Medallas: con color las que ya tienes; de cada tipo solo se enseña la siguiente, en contorno. */
 .medallas { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: 12px 8px; margin: 0; padding: 0; list-style: none; }
 .medalla { display: grid; justify-items: center; gap: 2px; text-align: center; }
@@ -2188,3 +2188,30 @@ html:not([data-efectos="ninguno"]) .m-tarjeta:not([hidden]) .pt-astilla { animat
 @keyframes pt-graba { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes pt-aparece { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 @keyframes pt-salta { 0% { opacity: 0; transform: none; } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(0.6); } }
+
+/* ============================================================================================================================
+   Campamento 14 · pestañas (Resumen · Gráficos · Historia · Movimientos). Una vista a la vez: cada bloque de la página lleva `data-p`
+   con su pestaña y `.cuerpo[data-pestana]` esconde los demás. Sin `data-pestana` («Todo junto») nada de esto se aplica.
+   ============================================================================================================================ */
+.pestanas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 5px; border-radius: 18px; background: var(--s1); border: 1px solid var(--s3); }
+.pestanas[hidden] { display: none; }
+.pestanas button { min-width: 0; min-height: var(--toque, 48px); padding: 0 4px; border: 0; border-radius: 13px; background: none; color: var(--txt2); font: 650 0.875rem var(--sans, inherit); cursor: pointer; }
+.pestanas button[aria-current="true"] { background: var(--naranja); color: #1d1206; }
+.cuerpo[data-pestana="resumen"] [data-p]:not([data-p="resumen"]),
+.cuerpo[data-pestana="graficos"] [data-p]:not([data-p="graficos"]),
+.cuerpo[data-pestana="historia"] [data-p]:not([data-p="historia"]),
+.cuerpo[data-pestana="movimientos"] [data-p]:not([data-p="movimientos"]) { display: none; }
+@media (min-width: 700px) { .pestanas, .historia-pg { grid-column: 1 / -1; } }
+@media (min-width: 1100px) {
+  .cuerpo[data-pestana="movimientos"] { grid-template-columns: minmax(0, 1fr); }
+  .cuerpo[data-pestana="movimientos"] .col-principal { display: none; }
+  .cuerpo[data-pestana="movimientos"] .col-lateral { max-width: 56rem; width: 100%; margin-inline: auto; }
+  .cuerpo[data-pestana="historia"] { grid-auto-flow: dense; }
+  .cuerpo[data-pestana="historia"] .col-principal { display: none; }
+  .cuerpo[data-pestana="historia"] .historia-pg { grid-column: 1; }
+  .cuerpo[data-pestana="historia"] .col-lateral { grid-column: 2; }
+}
+.res-medallas .sec-cab { margin-bottom: 8px; }
+.medallas-fila { display: flex; flex-wrap: wrap; gap: 10px 14px; }
+.medallas-fila .medalla { width: 5.2rem; }
+html[data-pestanas] .indice { display: none; }

@@ -74,7 +74,7 @@ try {
         for (const [esquema, variante] of [['light', ''], ['dark', ''], ...(CON_LETRA.includes(esc) ? [['light', ' letra muy grande y alto contraste'], ['dark', ' letra muy grande y alto contraste']] : [])]) {
           const ctx = await navegador.newContext({ viewport: { width: w, height: h }, colorScheme: esquema });
           const p = await ctx.newPage();
-          await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 6 : 22);
+          await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 6 : 22);
           if (variante) await p.addInitScript(() => { try { localStorage.setItem('libro.letra', 'muy-grande'); localStorage.setItem('libro.contraste', 'alto'); } catch { /* sin almacenamiento */ } });
           const consola = [];
           p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));

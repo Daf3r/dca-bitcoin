@@ -176,6 +176,35 @@ function dibujarPasaporte(foco = false) {
 }
 $('dh-pas-mas').addEventListener('click', () => { pasVisibles += PAS_PASO; dibujarPasaporte(true); });
 
+/** Un nombre para lo que se pintó, para no rehacer la historia (y perder lo que se está leyendo) en cada refresco del precio. */
+let firmaHistoria = null;
+const firmaDe = () => `${R.items.length}:${R.sats}:${R.items.at(-1)?.id ?? 0}:${R.nCompras}:${R.racha}`;
+/** Pinta «Tu historia» solo si cambió algo desde la última vez (o si no se había pintado). La llaman `pintar()` y las pestañas. */
+export function refrescarHistoria({ forzar = false } = {}) {
+  if (!R?.items || !S.cargado) return;
+  const f = firmaDe();
+  if (!forzar && f === firmaHistoria) return;
+  firmaHistoria = f;
+  pintarHistoria();
+}
+
+/** Las medallas del Resumen: las ya ganadas y la que sigue, sin cuenta de lo que falta (un reconocimiento, no una presión). */
+export function pintarMedallasResumen() {
+  const caja = $('res-medallas'), lista = $('res-med-lista');
+  const ms = R?.items && R.nCompras ? medallas(R) : [];
+  const hay = ms.some((m) => m.ganada);
+  caja.hidden = !hay;
+  lista.textContent = '';
+  if (!hay) return;
+  for (const m of ms) {
+    const li = nodo('li', `medalla ${m.ganada ? 'ganada' : 'bloq'}`);
+    li.insertAdjacentHTML('beforeend', medalla(m));
+    li.append(nodo('b', null, m.titulo));
+    if (m.ganada) li.append(nodo('small', null, fechaLarga(m.fecha)));
+    lista.append(li);
+  }
+}
+
 export function pintarHistoria() {
   const lista = $('dh-linea'), med = $('dh-medallas');
   lista.textContent = '';
