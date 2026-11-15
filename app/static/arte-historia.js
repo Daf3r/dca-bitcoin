@@ -501,3 +501,19 @@ export function manta(datos, { sel = null } = {}) {
   }
   return `${s}</svg>`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 13C · estratos y partitura. (PROVISIONAL: dibujos mínimos para probar la integración.)
+// ---------------------------------------------------------------------------------------------
+/** Estratos: `lista` = `lib.estratosMes`; una capa por mes, la más vieja abajo. */
+export function estratos(lista, { sel = null } = {}) {
+  const n = lista.length || 1, h = 300 / n;
+  const capas = lista.map((e, k) => `<rect class="pieza${sel === e.i ? ' sel' : ''}" data-i="${e.i}" x="20" y="${f1(310 - (k + 1) * h)}" width="280" height="${f1(Math.max(1.5, h * (0.3 + e.espesor * 0.7)))}" fill="var(--naranja)" opacity="${0.35 + e.espesor * 0.6}"/>`).join('');
+  return `<svg ${MARCO}>${capas}</svg>`;
+}
+/** Partitura: `anio` = un elemento de `lib.partitura`; una nota por compra, más arriba cuanto más caro estaba BTC. */
+export function partitura(anio, { sel = null } = {}) {
+  const lineas = [2, 4, 6, 8, 10].map((p) => `<path d="M10 ${f1(180 - p * 12)}H310" stroke="var(--txt3)" stroke-width="1"/>`).join('');
+  const notas = anio.notas.map((n) => `<circle class="pieza${sel === n.i ? ' sel' : ''}" data-i="${n.i}" cx="${f1(20 + n.frac * 280)}" cy="${f1(180 - n.paso * 12)}" r="5" fill="var(--naranja)"/>`).join('');
+  return `<svg viewBox="0 0 320 200" aria-hidden="true" focusable="false">${lineas}${notas}</svg>`;
+}

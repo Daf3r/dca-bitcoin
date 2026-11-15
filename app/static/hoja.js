@@ -1,4 +1,4 @@
-import { nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
+import { nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
 import { avisar } from './avisar.js';
 import { celebrar, destello } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
@@ -468,7 +468,8 @@ $('guardar').addEventListener('click', async () => {
         repintarTrasDeshacer('Deshecho: lo que anotaste quedó anulado. Queda en el historial.');
       };
     conDeshacer(texto, deshacer, festejo && !reducido() ? MS_SUBIDA + 1300 : 0);
-    celebrar(antes, constancia);
+    // Si es la primera compra de su semana, nace el sello de esa semana (campamento 13C).
+    celebrar(antes, constancia, festejo ? selloNuevo(R.items, g.fecha) : null);
   } catch (err) {
     H.guardando = false;
     $('hoja-error').classList.remove('hoja-aviso');

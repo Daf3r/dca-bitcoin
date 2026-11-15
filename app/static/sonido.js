@@ -1,4 +1,4 @@
-import { etapasCruzadas } from './lib.js';
+import { PASOS_HZ, etapasCruzadas } from './lib.js';
 
 // Sonido corto y opcional al guardar una compra (idea 26): apagado por defecto, se activa en «Tu cuenta» (por dispositivo, `libro.sonido`).
 // Se genera en el momento con Web Audio (sin archivos de sonido) y solo suena como respuesta a un toque tuyo. Es discreto: volumen bajo y
@@ -43,3 +43,24 @@ export function sonar(tipo = 'compra', { forzar = false } = {}) {
 }
 /** El que corresponde a guardar una compra: con etapa cruzada suena más largo. */
 export const sonarGuardado = (satsAntes, satsDespues) => sonar(etapasCruzadas(satsAntes, satsDespues).length ? 'etapa' : 'compra');
+
+/**
+ * La partitura (campamento 13C): toca las notas de un año, una tras otra, como respuesta a tu toque en «Tocar» (por eso suena aunque el
+ * sonido al guardar esté apagado). `pasos` son posiciones 0–12 de `lib.PASOS_HZ`; el año entero cabe en unos 6 segundos como mucho.
+ * Devuelve una función para detenerla. `alNota(k)` avisa de la nota que suena y `alFin()` de que terminó o se detuvo.
+ */
+export function tocarPasos(pasos, { alNota = () => {}, alFin = () => {} } = {}) {
+  const c = (() => { try { return audio(); } catch { return null; } })();
+  if (!c || !pasos.length) { alFin(); return () => {}; }
+  const sep = Math.min(0.32, 6 / pasos.length), dur = Math.min(0.5, sep * 2.4);
+  let alarma = null, k = 0, parada = false;
+  const siguiente = () => {
+    if (parada) return;
+    if (k >= pasos.length) { alarma = setTimeout(() => { if (!parada) { parada = true; alFin(); } }, dur * 1000); return; }
+    try { nota(c, PASOS_HZ[Math.max(0, Math.min(12, pasos[k]))], 0, dur, 0.06); } catch { /* el sonido nunca rompe nada */ }
+    alNota(k++);
+    alarma = setTimeout(siguiente, sep * 1000);
+  };
+  siguiente();
+  return () => { if (parada) return; parada = true; clearTimeout(alarma); alFin(); };
+}

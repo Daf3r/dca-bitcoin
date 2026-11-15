@@ -215,3 +215,11 @@ export function certificado(d) {
   s += `<g transform="translate(206 ${pie - 40}) rotate(-8 34 34) scale(0.68)">${sel.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`;
   return `${s}</svg>`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 13C · sello de la semana. (PROVISIONAL: dibujo mínimo para probar la integración.)
+// ---------------------------------------------------------------------------------------------
+/** Sello de una semana con compras (`lib.sellosSemana`): `grande` para la tarjeta de celebración, `nuevo` si acaba de nacer. */
+export function selloSemana(s, { grande = false, nuevo = false } = {}) {
+  return `<svg class="sello-sem-ico${grande ? ' grande' : ''}${nuevo ? ' nuevo' : ''}" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="28" fill="none" stroke="var(--naranja)" stroke-width="3"/><text x="32" y="38" text-anchor="middle" font-size="18" fill="var(--naranja)">${s.numero}</text></svg>`;
+}

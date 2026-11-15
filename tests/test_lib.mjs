@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, ticksPrecio, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
-  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
+  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -812,5 +812,51 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   const ss = sellos(R);
   eq(ss.map((x) => [x.m, x.nombre, x.grande, x.fecha]), [[100000, '100k', true, '2025-12-29'], [250000, '250k', false, '2026-01-08']], 'sellos: solo las etapas que ya cruzaste');
   eq([textoSello(ss[0]), sellos({}).length], ['Sello de 100k sats, cruzado el ' + textoSello(ss[0]).split('cruzado el ')[1], 0], 'sellos: su texto y sin camino no hay sellos');
+}
+
+// Campamento 13C · estratos, pasaporte de semanas y partitura
+{
+  const it = [
+    { id: 1, fecha: '2026-01-05', tipo: 'compra', sats: 20000, precio: 100000, extra: 0 },
+    { id: 2, fecha: '2026-01-07', tipo: 'compra', sats: 10000, precio: 50000, extra: 0 },
+    { id: 3, fecha: '2026-03-20', tipo: 'venta', sats: 5000, precio: 80000, extra: 0 },
+    { id: 4, fecha: '2026-11-10', tipo: 'compra', sats: 30000, precio: 100000, extra: 1 },
+  ];
+  const e = estratosMes(it, '2026-11-15');
+  eq([e.length, e[0].mes, e.at(-1).mes, e.at(-1).enCurso, e[0].enCurso], [11, '2026-01', '2026-11', true, false], 'estratos: una capa por mes, de la primera compra a hoy (los meses sin compras cuentan)');
+  eq([e[0].espesor, e[1].espesor, e[10].espesor, e[1].nCompras], [1, 0, 1, 0], 'estratos: el espesor es lo comprado frente al mejor mes; un mes sin compras queda en cero (capa delgada, no hueco)');
+  eq([e[2].erosion, e[2].vendidos, e[2].nVentas, e[0].erosion], [1, 5000, 1, 0], 'estratos: una venta en un mes sin compras desgasta la capa por completo; sin ventas, nada');
+  eq([e[10].nExtras, e[10].satsExtra, e[0].nExtras], [1, 30000, 0], 'estratos: las compras extra son las vetas de cuarzo');
+  eq([e[0].saldoFin, e[2].saldoFin, e[10].saldoFin], [30000, 25000, 55000], 'estratos: el saldo al cerrar cada mes');
+  eq(estratosMes([], '2026-11-15'), [], 'estratos: sin compras no hay capas');
+  const una = estratosMes([{ id: 1, fecha: '2026-11-02', tipo: 'compra', sats: 100, precio: 1, extra: 0 }], '2026-11-15');
+  eq([una.length, una[0].espesor, una[0].erosion], [1, 1, 0], 'estratos: con una sola compra hay una sola capa');
+  const largo = estratosMes([{ id: 1, fecha: '2024-12-30', tipo: 'compra', sats: 100, precio: 1, extra: 0 }], '2026-02-01');
+  eq([largo.length, largo[1].mes, largo[2].mes], [15, '2025-01', '2025-02'], 'estratos: cruza el fin de año sin saltarse meses');
+  ok(/^Tus estratos tienen 11 capas, una por mes, de enero 2026 a noviembre 2026; 2 con compras\./.test(textoEstratos(e)) && textoEstratos([]) === 'Tus estratos empiezan con tu primera compra.', 'estratos: el texto general');
+  ok(/^enero 2026: 2 compras, \+30,000 sats · cerraste con 30,000 sats$/.test(textoEstrato(e[0])) && /^marzo 2026: sin compras · 1 venta \(−5,000 sats\) · cerraste con 25,000 sats$/.test(textoEstrato(e[2])) && /noviembre 2026 \(en curso\): 1 compra, \+30,000 sats · 1 extra \(\+30,000 sats\) · tienes 55,000 sats$/.test(textoEstrato(e[10])), 'estratos: el texto de un mes');
+
+  eq([nombreSemana('2026-11-09', '2026-11-15'), nombreSemana('2026-11-30', '2026-12-06'), nombreSemana('2026-12-28', '2027-01-03')], ['9 – 15 nov 2026', '30 nov – 6 dic 2026', '28 dic – 3 ene 2027'], 'pasaporte: el nombre de una semana (con su mes o dos)');
+  const ss = sellosSemana(it, '2026-11-15');
+  eq(ss.map((x) => [x.numero, x.desde, x.n, x.sats, x.extra, x.saldo]), [[1, '2026-01-05', 2, 30000, false, 30000], [2, '2026-11-09', 1, 30000, true, 55000]], 'pasaporte: un sello por semana con compras, con su saldo al cerrarla (las semanas sin compras no cuentan)');
+  ok(ss.every((x) => x.altitud >= 0 && x.altitud <= 1) && ss[1].altitud > ss[0].altitud, 'pasaporte: la altitud va de 0 a 1 y sube con el saldo');
+  eq(sellosSemana([], '2026-11-15'), [], 'pasaporte: sin compras no hay sellos');
+  eq(sellosSemana([{ id: 1, fecha: '2026-03-20', tipo: 'venta', sats: 5, precio: 1 }], '2026-11-15'), [], 'pasaporte: una venta sola no es un sello');
+  eq([selloNuevo(it, '2026-11-10', '2026-11-15')?.numero, selloNuevo(it, '2026-01-06', '2026-11-15'), selloNuevo(it, '2026-06-01', '2026-11-15')], [2, null, null], 'sello nuevo: solo si es la primera compra de su semana');
+  eq(sellosSemana(it, '2026-11-15').at(-1).saldo, 55000, 'pasaporte: la semana en curso cierra con el saldo de hoy');
+  ok(/^Sello n\.º 2: semana del 9 – 15 nov 2026, 1 compra, \+30,000 sats; al cerrar la semana tenías 55,000 sats$/.test(textoSelloSemana(ss[1])) && textoPasaporte(ss) === 'Tu pasaporte tiene 2 sellos, uno por cada semana en que compraste.' && textoPasaporte([]) === 'Tu pasaporte empieza con tu primera compra.' && /1 sello,/.test(textoPasaporte([ss[0]])), 'pasaporte: los textos');
+
+  const p = partitura(it);
+  eq([p.length, p[0].anio, p[0].notas.length, p[0].min, p[0].max], [1, 2026, 3, 50000, 100000], 'partitura: una pauta por año con una nota por compra (las ventas no suenan)');
+  eq(p[0].notas.map((x) => x.paso), [12, 0, 12], 'partitura: más caro = más agudo (escala logarítmica entre el mínimo y el máximo de todo)');
+  eq([p[0].notas[2].extra, p[0].notas[0].i, p[0].notas[2].i], [true, 0, 2], 'partitura: la nota lleva si fue extra y su índice');
+  ok(p[0].notas[0].frac < p[0].notas[2].frac && p[0].notas.every((x) => x.frac >= 0 && x.frac <= 1), 'partitura: el lugar en el año va de 0 a 1 y crece con la fecha');
+  eq(partitura([{ id: 1, fecha: '2026-01-05', tipo: 'compra', sats: 1, precio: 70000 }, { id: 2, fecha: '2026-02-05', tipo: 'compra', sats: 1, precio: 70000 }])[0].notas.map((x) => x.paso), [6, 6], 'partitura: con precios iguales las notas van a la mitad');
+  const dosAnios = partitura([{ id: 1, fecha: '2025-06-01', tipo: 'compra', sats: 1, precio: 100 }, { id: 2, fecha: '2026-06-01', tipo: 'compra', sats: 1, precio: 10000 }]);
+  eq([dosAnios.map((a) => a.anio), dosAnios[0].notas[0].paso, dosAnios[1].notas[0].paso], [[2025, 2026], 0, 12], 'partitura: la misma escala para todos los años, para compararlos');
+  eq(partitura([]), [], 'partitura: sin compras no hay pautas');
+  ok(partitura(it).every((a) => a.notas.every((x) => x.paso >= 0 && x.paso <= 12 && Number.isInteger(x.paso))) && PASOS_HZ.length === 13 && PASOS_HZ.every((h, i) => i === 0 || h > PASOS_HZ[i - 1]), 'partitura: trece pasos, de 0 a 12, y sus notas suben');
+  eq(JSON.stringify(partitura(it)), JSON.stringify(partitura(it)), 'partitura: siempre sale igual');
+  ok(/^Tu partitura tiene 1 pauta, una por año, y una nota por compra/.test(textoPartitura(p)) && textoPartitura([]) === 'Tu partitura empieza con tu primera compra.' && /^2026: 3 notas; BTC entre \$50,000 y \$100,000/.test(textoAnioPartitura(p[0])) && /\+30,000 sats · compra extra$/.test(textoNota(p[0].notas[2])), 'partitura: los textos');
 }
 console.log(`OK ${n} comprobaciones`);

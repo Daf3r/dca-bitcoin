@@ -2801,6 +2801,132 @@ try {
     } finally { sVac.parar(); }
   }
 
+  // ---------------------------------------------------------------- campamento 13C: estratos, partitura, pasaporte, petroglifo y sello de la semana
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const ent = async (...a) => { const r = await entrar(...a); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
+    const abrirHistoria = async (p) => { await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('[data-cuenta="historia"]'); await p.waitForTimeout(400); };
+    const L = await import('../app/static/lib.js');
+    const sLargo = await servidor('largo');
+    try {
+      const { ctx, p, consola } = await ent(navegador, sLargo, ADMIN, {}, sinAviso);
+      const todos = await datos(p, '/api/compras');
+      const compras = todos.filter((c) => c.tipo !== 'venta');
+      // ---- La montaña: el petroglifo (antes de abrir «Tu cuenta»)
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
+      const nBand = await p.locator('.m-bandera').count();
+      let conPiedra = 0, sinPiedra = 0;
+      for (let k = 0; k < nBand; k++) {
+        await p.locator('.m-bandera').nth(k).click({ force: true }); await p.waitForTimeout(500);
+        const piedra = await p.locator('#m-tarjeta.con-piedra').count();
+        if (piedra) {
+          conPiedra++;
+          ok(await p.locator('#m-tarjeta .m-pet svg').count() === 1 && /^Lo alcanzaste el /.test(await p.textContent('#m-tarjeta-p')), 'petroglifo: la piedra lleva su dibujo y el texto de siempre queda para los lectores');
+          const caja = await p.locator('#m-tarjeta-p').evaluate((e) => { const r = e.getBoundingClientRect(); return [r.width, r.height]; });
+          ok(caja[0] <= 2 || caja[1] <= 2, `petroglifo: el texto plano queda oculto a la vista, no a los lectores (${caja})`);
+          const cerrar = await p.locator('#m-tarjeta .m-tarjeta-x').boundingBox();
+          ok(cerrar && cerrar.height >= 47.5 && cerrar.width >= 44, `petroglifo: «Cerrar» sigue a la vista y de 48 px (${cerrar && Math.round(cerrar.height)})`);
+        } else {
+          sinPiedra++;
+          ok(await p.locator('#m-tarjeta .m-pet svg').count() === 0, 'petroglifo: un campamento por alcanzar sigue con su tarjeta plana');
+        }
+        await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+      }
+      ok(conPiedra >= 1 && sinPiedra >= 1, `petroglifo: los alcanzados se tallan (${conPiedra}) y los que faltan, no (${sinPiedra})`);
+      ok(await p.locator('#m-tarjeta').isHidden(), 'petroglifo: Esc cierra la tarjeta');
+
+      await abrirHistoria(p);
+      // ---- Estratos
+      await p.click('#dh-vistas [data-vh="estratos"]'); await p.waitForTimeout(300);
+      const meses = L.estratosMes(todos, hoySV());
+      eq(await p.locator('#dh-lienzo .pieza[data-i]').count(), meses.length, 'estratos: una capa por mes, también los meses sin compras');
+      ok(/^Tus estratos tienen \d+ capas, una por mes/.test(await p.textContent('#dh-desc')), 'estratos: el dibujo tiene su descripción');
+      await p.focus('#dh-lienzo'); await p.keyboard.press('Home'); await p.waitForTimeout(150);
+      ok(/^[a-záéíóú]+ \d{4}: /.test(await p.textContent('#dh-detalle')) && await p.locator('#dh-lienzo .pieza.sel').count() === 1, `estratos: las flechas leen un mes y lo marcan (${(await p.textContent('#dh-detalle')).slice(0, 50)})`);
+      await p.locator('#dh-lienzo .pieza').nth(Math.min(5, meses.length - 1)).click({ force: true }); await p.waitForTimeout(150);
+      ok(await p.locator('#dh-lienzo .pieza.sel').count() === 1, 'estratos: tocar una capa la elige');
+      // ---- Partitura
+      await p.click('#dh-vistas [data-vh="partitura"]'); await p.waitForTimeout(300);
+      const pautas = L.partitura(todos);
+      const ult = pautas.at(-1);
+      eq(await p.locator('#dh-anios button').count(), pautas.length, 'partitura: un botón por año');
+      eq(await p.locator('#dh-lienzo .pieza[data-i]').count(), ult.notas.length, `partitura: una nota por compra del último año (${ult.notas.length})`);
+      ok(await p.locator('#dh-tocar').isVisible() && /^Tocar este año$/.test((await p.textContent('#dh-tocar')).trim()), 'partitura: el botón «Tocar este año» está a la vista');
+      await p.focus('#dh-lienzo'); await p.keyboard.press('Home'); await p.waitForTimeout(150);
+      ok(/ · BTC a \$[\d,]+ · \+[\d,]+ sats/.test(await p.textContent('#dh-detalle')), 'partitura: las flechas leen una compra con su precio');
+      await p.click(`#dh-anios button[data-anio="${pautas[0].anio}"]`); await p.waitForTimeout(200);
+      eq(await p.locator('#dh-lienzo .pieza[data-i]').count(), pautas[0].notas.length, 'partitura: otro año, otra pauta');
+      await p.click('#dh-tocar'); await p.waitForTimeout(600);
+      ok(await p.locator('#dh-lienzo .pieza.sonando').count() >= 1 && /^Detener$/.test((await p.textContent('#dh-tocar')).trim()), 'partitura: al tocar suena una nota a la vez y el botón dice «Detener»');
+      await p.click('#dh-tocar'); await p.waitForTimeout(200);
+      ok(await p.locator('#dh-lienzo .pieza.sonando').count() === 0 && /^Tocar este año$/.test((await p.textContent('#dh-tocar')).trim()), 'partitura: «Detener» para la música');
+      await p.click('#dh-tocar'); await p.waitForTimeout(300);
+      await p.click('#dh-vistas [data-vh="estratos"]'); await p.waitForTimeout(200);
+      ok(await p.locator('#dh-tocar').isHidden(), 'partitura: cambiar de vista para la música y esconde el botón');
+      ok(await p.evaluate(() => localStorage.getItem('libro.historia.vista')) === 'estratos', 'historia: se recuerda la vista (estratos)');
+      // ---- Pasaporte de semanas
+      await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(200);
+      const pas = L.sellosSemana(todos, hoySV());
+      eq(await p.locator('#dh-pasaporte li').count(), Math.min(24, pas.length), `pasaporte: un sello por semana con compras, de a 24 (${pas.length} en total)`);
+      ok(await p.locator('#dh-pasaporte li svg').count() === Math.min(24, pas.length) && await p.locator('#dh-pas-txt').textContent() === L.textoPasaporte(pas), 'pasaporte: cada sello trae su dibujo y el texto cuenta todos');
+      ok((await p.locator('#dh-pasaporte li').first().getAttribute('title')).includes(`Sello n.º ${pas.length}:`), 'pasaporte: los más nuevos van primero');
+      if (pas.length > 24) {
+        ok(await p.locator('#dh-pas-mas').isVisible(), 'pasaporte: «Ver más» sale con más de 24 sellos');
+        await p.click('#dh-pas-mas'); await p.waitForTimeout(200);
+        eq(await p.locator('#dh-pasaporte li').count(), Math.min(48, pas.length), 'pasaporte: cada toque trae 24 más');
+        ok(await p.evaluate(() => document.activeElement?.closest?.('#dh-pasaporte') != null), 'pasaporte: el foco pasa al primer sello nuevo');
+      }
+      const sw = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+      ok(sw.sw <= sw.cw, 'pasaporte: sin scroll horizontal');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      // ---- El sello nace con la primera compra de su semana
+      const usadas = new Set(todos.map((c) => c.fecha));
+      const precio = (await datos(p, '/api/precio')).precio;
+      const sats = Math.round((20 / precio) * 1e8);
+      const anotar = async (fecha) => { await p.click('#anotar'); await p.waitForTimeout(400); await p.fill('#h-sats', String(sats)); await p.fill('#h-fecha', fecha); await p.click('#guardar'); await p.waitForTimeout(400); };
+      const lunes = '2019-01-07';
+      ok(!usadas.has(lunes), 'sello nuevo: la semana de prueba está sin compras');
+      await anotar(lunes);
+      await p.waitForFunction(() => !document.getElementById('hito-cel').hidden && document.getElementById('hc-k').textContent === 'Sello de la semana', null, { timeout: 12000 }).catch(() => {});
+      eq(await p.textContent('#hc-k'), 'Sello de la semana', 'sello nuevo: la primera compra de una semana la celebra con su sello');
+      ok(/^7 – 13 ene 2019$/.test(await p.textContent('#hc-txt')) && await p.locator('#hc-lacre svg').count() === 1 && await p.locator('#hito-cel.sello-semana').count() === 1, `sello nuevo: lleva el rango de la semana y su dibujo (${await p.textContent('#hc-txt')})`);
+      await p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
+      await p.waitForTimeout(6000);
+      await anotar('2019-01-09');
+      let vio = false;
+      for (let k = 0; k < 10; k++) { if (await p.evaluate(() => !document.getElementById('hito-cel').hidden && document.getElementById('hc-k').textContent === 'Sello de la semana')) vio = true; await p.waitForTimeout(350); }
+      ok(!vio, 'sello nuevo: una segunda compra de la misma semana no estrena otro sello');
+      eq((await datos(p, '/api/compras')).length, todos.length + 2, 'sello nuevo: las dos compras se guardaron');
+      await abrirHistoria(p);
+      await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(200);
+      ok(await p.locator('#dh-pasaporte li').count() >= 1 && (await p.textContent('#dh-pas-txt')).includes(`${pas.length + 1} sellos`), 'pasaporte: el sello nuevo ya está en la libreta');
+      eq(consola, [], `consola limpia (13C): ${consola.join(' | ')}`);
+      await ctx.close();
+      // Una lectora también los ve (sin el sello nuevo: ella no anota)
+      const l = await ent(navegador, sLargo, LECTOR, {}, sinAviso);
+      await abrirHistoria(l.p);
+      ok(await l.p.locator('#dh-pasaporte li').count() >= 1, 'pasaporte: una lectora también lo ve');
+      await l.p.click('#dh-vistas [data-vh="partitura"]'); await l.p.waitForTimeout(300);
+      ok(await l.p.locator('#dh-lienzo .pieza[data-i]').count() >= 1 && await l.p.locator('#dh-tocar').isVisible(), 'partitura: una lectora también la ve y la toca');
+      await l.p.click('#dh-vistas [data-vh="estratos"]'); await l.p.waitForTimeout(300);
+      ok(await l.p.locator('#dh-lienzo .pieza[data-i]').count() >= 1, 'estratos: una lectora también los ve');
+      await l.ctx.close();
+    } finally { sLargo.parar(); }
+    // Pocos datos: una sola compra
+    const sUna = await servidor('hoy');
+    try {
+      const { ctx, p } = await ent(navegador, sUna, ADMIN, {}, sinAviso);
+      await abrirHistoria(p);
+      await p.click('#dh-vistas [data-vh="estratos"]'); await p.waitForTimeout(300);
+      ok(await p.locator('#dh-lienzo .pieza[data-i]').count() >= 1, 'estratos: con pocas compras hay al menos una capa');
+      await p.click('#dh-vistas [data-vh="partitura"]'); await p.waitForTimeout(300);
+      ok(await p.locator('#dh-lienzo .pieza[data-i]').count() >= 1, 'partitura: con una compra hay una nota');
+      await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(200);
+      ok(await p.locator('#dh-pasaporte li').count() === 1, 'pasaporte: con una compra, un sello');
+      await ctx.close();
+    } finally { sUna.parar(); }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {

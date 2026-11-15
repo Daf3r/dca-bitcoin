@@ -273,3 +273,11 @@ export function monedaB(cx, cy, r, id = 'm-moneda-c') {
     + `<path class="moneda-grabado" transform="translate(0.035 0.045)" d="${signo}"/><path class="moneda-signo" d="${signo}"/>`
     + `<g clip-path="url(#${id})"><path class="moneda-brillo" d="M-0.5 -1.2L-0.2 -1.2L-0.9 1.2L-1.2 1.2Z"/></g></g></g>`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 13C · petroglifo del campamento alcanzado. (PROVISIONAL: dibujo mínimo para probar la integración.)
+// ---------------------------------------------------------------------------------------------
+/** La piedra tallada de la tarjeta de un campamento alcanzado: `cifra` («1M», «1 BTC»), `titulo` y `fecha` ya escrita («4 sept 2026»). */
+export function petroglifo({ cifra, titulo, fecha, cima = false }) {
+  return `<svg viewBox="0 0 240 120" aria-hidden="true" focusable="false"><rect x="4" y="4" width="232" height="112" rx="14" fill="var(--s2)" stroke="var(--s3)"/><text x="120" y="60" text-anchor="middle" font-size="34" fill="var(--txt)">${cifra}</text><text x="120" y="92" text-anchor="middle" font-size="14" fill="var(--txt2)">${fecha}</text></svg>`;
+}

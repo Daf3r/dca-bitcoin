@@ -1,6 +1,7 @@
-import { aniosTronco, datosCertificado, entero, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, piedrasTorre, sellos, semanasManta, textoAnio, textoCertificado, textoConstelacion, textoManta, textoSello, textoSemanaManta, textoTorre, textoTronco } from './lib.js';
-import { constelacion, manta, torre, tronco } from './arte-historia.js';
-import { certificado, lacre } from './arte-sellos.js';
+import { aniosTronco, datosCertificado, entero, estratosMes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, partitura, piedrasTorre, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco } from './lib.js';
+import { constelacion, estratos, manta, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
+import { certificado, lacre, selloSemana } from './arte-sellos.js';
+import { tocarPasos } from './sonido.js';
 import { ico, ilustracion, medalla } from './iconos.js';
 import { $, R, S, esAdmin } from './estado.js';
 
@@ -9,21 +10,27 @@ import { $, R, S, esAdmin } from './estado.js';
 const nodo = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
 
 const CLAVE_VISTA = 'libro.historia.vista';
-const VISTAS = ['linea', 'tronco', 'constelacion', 'torre', 'manta'];
+const VISTAS = ['linea', 'tronco', 'constelacion', 'torre', 'manta', 'estratos', 'partitura'];
 let vista = (() => { try { const v = localStorage.getItem(CLAVE_VISTA); return VISTAS.includes(v) ? v : 'linea'; } catch { return 'linea'; } })();
 let seleccion = null; // año (tronco) o índice (constelación y torre) que se está leyendo
 let datos = null; // lo que se dibujó, para leer una pieza al tocarla o recorrerla con el teclado
+let anioPartitura = null; // el año de la partitura que se ve (null = el último)
+let pararMusica = null; // detiene la partitura que está sonando
+const parar = () => { pararMusica?.(); pararMusica = null; };
 
 /** El dibujo de la vista elegida (tronco, constelación o torre de piedras) con su texto, y el detalle de lo seleccionado. */
 function pintarObjeto() {
+  parar();
   const fig = $('dh-objeto'), esLinea = vista === 'linea';
   $('dh-v-linea').hidden = !esLinea;
+  $('dh-tocar').hidden = vista !== 'partitura';
+  $('dh-tocar').textContent = 'Tocar este año';
   fig.hidden = esLinea;
   for (const b of $('dh-vistas').children) b.setAttribute('aria-pressed', String(b.dataset.vh === vista));
   if (esLinea) return;
   const hoy = hoyISO(), items = R.items;
   const anios = $('dh-anios');
-  anios.hidden = vista !== 'tronco';
+  anios.hidden = vista !== 'tronco' && vista !== 'partitura';
   anios.textContent = '';
   if (vista === 'tronco') {
     const t = aniosTronco(items, hoy);
@@ -47,6 +54,30 @@ function pintarObjeto() {
     $('dh-desc').textContent = textoConstelacion(e);
     const s = seleccion != null ? e[seleccion] : null;
     $('dh-detalle').textContent = s ? `${fechaLarga(s.fecha)} · +${entero(s.sats)} sats${s.extra ? ' · compra extra' : ''}` : 'Toca una estrella (o usa las flechas) para ver esa compra.';
+  } else if (vista === 'estratos') {
+    const e = estratosMes(items, hoy);
+    datos = { tipo: 'estratos', lista: e };
+    $('dh-lienzo').innerHTML = estratos(e, { sel: seleccion });
+    $('dh-desc').textContent = textoEstratos(e);
+    $('dh-detalle').textContent = seleccion != null ? textoEstrato(e[seleccion]) : 'Toca una capa (o usa las flechas) para ver ese mes.';
+  } else if (vista === 'partitura') {
+    const as = partitura(items);
+    const y = as.find((x) => x.anio === anioPartitura) ?? as.at(-1);
+    anioPartitura = y?.anio ?? null;
+    datos = { tipo: 'partitura', lista: y?.notas ?? [] };
+    $('dh-lienzo').innerHTML = y ? dibujarPartitura(y, { sel: seleccion }) : '';
+    $('dh-desc').textContent = textoPartitura(as);
+    for (const a of [...as].reverse()) {
+      const li = nodo('li');
+      const b = nodo('button', a.anio === anioPartitura ? 'sel' : '', `${a.anio}`);
+      b.type = 'button';
+      b.dataset.anio = a.anio;
+      b.setAttribute('aria-pressed', String(a.anio === anioPartitura));
+      li.append(b);
+      anios.append(li);
+    }
+    $('dh-tocar').hidden = !y;
+    $('dh-detalle').textContent = y ? (seleccion != null ? textoNota(y.notas[seleccion]) : `${textoAnioPartitura(y)}. Toca una nota para ver esa compra.`) : '';
   } else if (vista === 'manta') {
     const m = semanasManta(items, hoy);
     datos = { tipo: 'manta', lista: m.celdas };
@@ -76,7 +107,20 @@ $('dh-vistas').addEventListener('click', (e) => {
 });
 $('dh-anios').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-anio]');
-  if (b) elegir(Number(b.dataset.anio) === seleccion ? null : Number(b.dataset.anio));
+  if (!b) return;
+  if (vista === 'partitura') { anioPartitura = Number(b.dataset.anio); elegir(null); return; } // otro año = otra pauta
+  elegir(Number(b.dataset.anio) === seleccion ? null : Number(b.dataset.anio));
+});
+// «Tocar este año» (campamento 13C): suena como respuesta a este toque aunque el sonido al guardar esté apagado.
+$('dh-tocar').addEventListener('click', () => {
+  if (pararMusica) { parar(); return; }
+  const b = $('dh-tocar');
+  b.textContent = 'Detener';
+  let previa = null;
+  pararMusica = tocarPasos(datos.lista.map((n) => n.paso), {
+    alNota: (k) => { previa?.classList.remove('sonando'); previa = $('dh-lienzo').querySelector(`.pieza[data-i="${k}"]`); previa?.classList.add('sonando'); },
+    alFin: () => { previa?.classList.remove('sonando'); pararMusica = null; b.textContent = 'Tocar este año'; },
+  });
 });
 $('dh-lienzo').addEventListener('click', (e) => {
   const p = e.target.closest?.('.pieza');
@@ -88,6 +132,7 @@ $('dh-lienzo').addEventListener('keydown', (e) => {
   if (!datos || datos.tipo === 'tronco') return;
   const ult = datos.lista.length - 1, act = seleccion ?? ult;
   const paso = datos.tipo === 'manta' ? { ArrowLeft: act - 1, ArrowRight: act + 1, ArrowUp: act - 52, ArrowDown: act + 52 } : { ArrowLeft: act - 1, ArrowUp: act + 1, ArrowRight: act + 1, ArrowDown: act - 1 };
+  if (!datos.lista.length) return;
   const sig = { ...paso, Home: 0, End: ult }[e.key];
   if (sig == null) return;
   e.preventDefault();
@@ -102,6 +147,34 @@ $('dh-cert').addEventListener('click', () => {
   $('d-cert').showModal();
 });
 $('cert-ok').addEventListener('click', () => $('d-cert').close());
+
+// El pasaporte de semanas (campamento 13C): un sello por cada semana en que compraste, los más nuevos primero, de a 24.
+const PAS_PASO = 24;
+let pasVisibles = PAS_PASO;
+let pasSellos = [];
+function pintarPasaporte() {
+  pasSellos = sellosSemana(R.items, hoyISO()).reverse();
+  pasVisibles = PAS_PASO;
+  $('dh-pas-caja').hidden = !pasSellos.length;
+  $('dh-pas-txt').textContent = textoPasaporte(pasSellos);
+  dibujarPasaporte();
+}
+function dibujarPasaporte(foco = false) {
+  const lista = $('dh-pasaporte'), antes = lista.children.length;
+  lista.textContent = '';
+  for (const s of pasSellos.slice(0, pasVisibles)) {
+    const li = nodo('li', 'sello-sem');
+    li.insertAdjacentHTML('beforeend', selloSemana(s));
+    li.append(nodo('b', null, s.nombre), nodo('small', null, `+${entero(s.sats)} sats`));
+    li.title = textoSelloSemana(s);
+    lista.append(li);
+  }
+  const mas = $('dh-pas-mas');
+  mas.hidden = pasVisibles >= pasSellos.length;
+  mas.textContent = `Ver ${Math.min(PAS_PASO, pasSellos.length - pasVisibles)} más`;
+  if (foco && lista.children[antes]) { lista.children[antes].tabIndex = -1; lista.children[antes].focus(); }
+}
+$('dh-pas-mas').addEventListener('click', () => { pasVisibles += PAS_PASO; dibujarPasaporte(true); });
 
 export function pintarHistoria() {
   const lista = $('dh-linea'), med = $('dh-medallas');
@@ -130,6 +203,7 @@ export function pintarHistoria() {
     li.title = textoSello(x);
     caja.append(li);
   }
+  pintarPasaporte();
   const { eventos, extrasOcultas } = historia(R);
   for (const e of eventos) {
     const li = nodo('li', `h-ev h-${e.clase}`);
