@@ -622,7 +622,7 @@ check(any(x["accion"] == "alta" and '"venta"' in (x["despues"] or "") for x in a
 # --- Novedades: cuándo vio cada persona el resumen (un lector también puede marcarlo)
 _c = server.connect(); auth.crear_usuario(_c, "Luz", "clave-de-luz-2026", "lector", "prueba"); _c.close()
 luz = cliente("Luz", "clave-de-luz-2026")
-check(luz.get("/api/yo").get_json() == {"usuario": "Luz", "rol": "lector", "visto": None, "cambios": None, "mantenimiento": False}, "sin visita ni cambios vistos al principio")
+check(luz.get("/api/yo").get_json() == {"usuario": "Luz", "rol": "lector", "visto": None, "cambios": None, "cumple": None, "mantenimiento": False}, "sin visita ni cambios vistos al principio")
 check("visto_ts" in [r[1] for r in sql("PRAGMA table_info(usuarios)")], "columna visto_ts")
 r = luz.post("/api/visto"); v1 = r.get_json()["visto"]
 check(r.status_code == 200 and isinstance(v1, int) and abs(v1 - _tt.time() * 1000) < 5000, f"un lector puede marcar que vio las novedades {r.data}")
@@ -953,7 +953,7 @@ cats = r.get_json()["categorias"]
 check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False)], f"categorías del lector y sus valores por defecto {cats}")
 check(all(c["nombre"] and c["ayuda"] for c in cats), "cada categoría trae nombre y ayuda")
 r = adm.post("/api/push/suscribir", json=_sus(EP_ADM))
-check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("wallet", False)], "categorías del admin")
+check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("piedrita", True), ("wallet", False)], "categorías del admin")
 check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "suscribirse no da permiso de escribir")
 
 # Estado por dispositivo: solo el dueño ve el suyo
@@ -1185,7 +1185,7 @@ check(r["horario"] == _HDEF and r["horario_defecto"] == _HDEF, f"el horario por 
 check(luz.post("/api/push/estado", json={"endpoint": "https://fcm.googleapis.com/otro"}).get_json() == {"suscrito": False, "categorias": []}, "sin suscribir no hay horario")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
 check(r.status_code == 200 and r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, f"se guarda el horario del dispositivo {r.data}")
-check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "wallet"], "guardar el horario no cambia las categorías")
+check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "piedrita", "wallet"], "guardar el horario no cambia las categorías")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
 check(r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, "elegir categorías no borra el horario")
 adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
@@ -2235,5 +2235,42 @@ while _n < 30:
     _n += 1
 check(r.status_code == 400 and "selladas" in r.get_json()["error"] and 15 <= _n <= server.MAX_CAPSULAS, f"hay un tope de cartas selladas a la vez ({_n})")
 check(server.version_esquema(server.connect()) >= 13, "la base está al menos en la migración 13")
+
+# --- Campamento 15B: la apacheta (piedritas de los lectores) y los cumpleaños
+check(len(sql("SELECT name FROM sqlite_master WHERE name = 'piedritas'")) == 1 and "cumple" in [r[1] for r in sql("PRAGMA table_info(usuarios)")], "la tabla de piedritas y la columna del cumpleaños existen (migraciones 14 y 15)")
+_vig = [c for c in adm.get("/api/compras").get_json() if c["tipo"] == "compra"]
+_c1, _c2 = _vig[-1]["id"], _vig[-2]["id"]
+_venta = next((c["id"] for c in adm.get("/api/compras").get_json() if c["tipo"] == "venta"), None)
+check(adm.get("/api/piedritas").get_json() == [] and luz.get("/api/piedritas").status_code == 200 and anon.get("/api/piedritas").status_code == 401, "al principio no hay piedritas; las ven todos con sesión")
+check(adm.post(f"/api/piedritas/{_c1}").status_code == 403, "el dueño no se deja piedritas a sí mismo")
+check(anon.post(f"/api/piedritas/{_c1}").status_code in (401, 403), "sin sesión no se deja una piedrita")
+check(luz.post("/api/piedritas/999999").status_code == 404, "una compra que no existe")
+if _venta:
+    check(luz.post(f"/api/piedritas/{_venta}").status_code == 404, "una venta o gasto no recibe piedritas")
+r = luz.post(f"/api/piedritas/{_c1}")
+check(r.status_code == 201 and r.get_json()["quien"] == "Luz" and r.get_json()["compra_id"] == _c1, f"un lector deja una piedrita {r.data}")
+check(luz.post(f"/api/piedritas/{_c1}").status_code == 200, "repetirla no hace nada (una por persona y compra)")
+check([p["quien"] for p in adm.get("/api/piedritas").get_json()] == ["Luz"] and len(luz.get("/api/piedritas").get_json()) == 1, "la ven todos, con quién la dejó")
+check(luz.post(f"/api/piedritas/{_c2}").status_code == 201 and len(adm.get("/api/piedritas").get_json()) == 2, "una piedrita en otra compra")
+check(luz.delete(f"/api/piedritas/{_c2}").status_code == 204 and luz.delete(f"/api/piedritas/{_c2}").status_code == 404 and len(adm.get("/api/piedritas").get_json()) == 1, "se puede quitar la propia (una sola vez)")
+check(adm.delete(f"/api/piedritas/{_c1}").status_code == 404, "el dueño no quita las de otros desde ahí")
+# una compra anulada ya no muestra sus piedritas
+_cx = adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": 15000}).get_json()["id"]
+luz.post(f"/api/piedritas/{_cx}")
+check(any(p["compra_id"] == _cx for p in adm.get("/api/piedritas").get_json()), "la piedrita de una compra nueva aparece")
+adm.delete(f"/api/compras/{_cx}")
+check(not any(p["compra_id"] == _cx for p in adm.get("/api/piedritas").get_json()), "al anular la compra, su piedrita deja de verse")
+# el aviso push al dueño (categoría «piedrita»)
+check("piedrita" in push.categorias_de("admin") and "piedrita" not in push.categorias_de("lector"), "«Piedritas de tu familia» es un aviso del dueño")
+# cumpleaños
+check(adm.get("/api/cumples").get_json() == [] and luz.get("/api/cumples").status_code == 200, "al principio nadie puso su cumpleaños")
+for malo in ("3-14", "13-01", "02-30", "00-10", "xx", 314, "2026-03-14", "03/14"):
+    check(luz.put("/api/yo/cumple", json={"cumple": malo}).status_code == 400, f"cumpleaños rechazado: {malo!r}")
+r = luz.put("/api/yo/cumple", json={"cumple": "03-14"})
+check(r.status_code == 200 and r.get_json()["cumple"] == "03-14" and luz.get("/api/yo").get_json()["cumple"] == "03-14", f"un lector pone su cumpleaños {r.data}")
+check(adm.put("/api/yo/cumple", json={"cumple": "02-29"}).status_code == 200, "el 29 de febrero vale")
+check(adm.get("/api/cumples").get_json() == [{"nombre": "Daf3r", "cumple": "02-29"}, {"nombre": "Luz", "cumple": "03-14"}] and anon.get("/api/cumples").status_code == 401, "la familia ve los cumpleaños (solo nombre, mes y día)")
+check(luz.put("/api/yo/cumple", json={"cumple": None}).status_code == 200 and luz.get("/api/yo").get_json()["cumple"] is None and len(adm.get("/api/cumples").get_json()) == 1, "se puede quitar")
+check(server.version_esquema(server.connect()) >= 15, "la base está al menos en la migración 15")
 
 print("OK", ok, "comprobaciones")

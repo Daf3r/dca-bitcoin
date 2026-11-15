@@ -253,6 +253,22 @@ def _m_capsulas(conn: sqlite3.Connection) -> None:
     )""")
 
 
+def _m_piedritas(conn: sqlite3.Connection) -> None:
+    # Apacheta (idea 47): una piedrita por persona y compra, que deja un lector. Sin texto: un toque.
+    conn.execute("""CREATE TABLE IF NOT EXISTS piedritas (
+        compra_id  INTEGER NOT NULL REFERENCES compras(id),
+        usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+        creado     INTEGER NOT NULL,
+        PRIMARY KEY (compra_id, usuario_id)
+    )""")
+
+
+def _m_usuarios_cumple(conn: sqlite3.Connection) -> None:
+    # Farol por cumpleaños (idea 49): mes y día («MM-DD»), opcional; cada persona pone el suyo.
+    if "cumple" not in _columnas(conn, "usuarios"):
+        conn.execute("ALTER TABLE usuarios ADD COLUMN cumple TEXT")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -267,6 +283,8 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (11, "wallets y traslados.wallet_id (varias wallets)", _m_wallets),
     (12, "mensajes_bandera (una frase por campamento)", _m_mensajes_bandera),
     (13, "capsulas (cartas selladas que se abren en una fecha o con un saldo)", _m_capsulas),
+    (14, "piedritas (la apacheta: una por persona y compra)", _m_piedritas),
+    (15, "usuarios.cumple (farol por cumpleaños)", _m_usuarios_cumple),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -950,7 +968,7 @@ def exigir_sesion() -> Any:
         resp.headers["Retry-After"] = "60"
         return resp, 429
     if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto", "/api/cambios-visto", "/api/errores") \
-            and not ruta.startswith(("/api/push/", "/api/sesiones/")):
+            and not ruta.startswith(("/api/push/", "/api/sesiones/", "/api/piedritas/", "/api/yo/")):
         return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
 
@@ -1116,9 +1134,9 @@ def logout() -> Any:
 
 @app.get("/api/yo")
 def yo() -> Response:
-    fila = db().execute("SELECT visto_ts, cambios_visto FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
+    fila = db().execute("SELECT visto_ts, cambios_visto, cumple FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
     return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"], visto=fila["visto_ts"] if fila else None,
-                   cambios=fila["cambios_visto"] if fila else None, mantenimiento=SOLO_LECTURA)
+                   cambios=fila["cambios_visto"] if fila else None, cumple=fila["cumple"] if fila else None, mantenimiento=SOLO_LECTURA)
 
 
 @app.get("/api/sesiones")
@@ -1688,6 +1706,80 @@ def anular_capsula(cid: int) -> Any:
     auth.auditar(conn, quien(), "capsula_anulada", "capsula", cid, {"abre_fecha": r["abre_fecha"], "abre_sats": r["abre_sats"]}, None, auth.ip_resumida(ip_real()))
     conn.commit()
     return "", 204
+
+
+# ------------------------------------------------- la apacheta y los cumpleaños (campamento 15B)
+@app.get("/api/piedritas")
+def listar_piedritas() -> Response:
+    """Las piedritas que los lectores dejaron en las compras vigentes. Las ven todos (quién la dejó y cuándo)."""
+    rows = db().execute("""SELECT p.compra_id, u.nombre AS quien, p.creado FROM piedritas p
+        JOIN usuarios u ON u.id = p.usuario_id JOIN compras c ON c.id = p.compra_id
+        WHERE c.anulada_ts IS NULL AND c.tipo = 'compra' ORDER BY p.creado, p.compra_id""").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.post("/api/piedritas/<int:cid>")
+def dejar_piedrita(cid: int) -> Any:
+    """Un lector deja una piedrita en una compra (una por persona y compra; repetirla no hace nada). Es su primera escritura: un toque, sin texto."""
+    u = g.usuario
+    if u["rol"] == "admin":
+        return jsonify(error="Las piedritas las dejan los demás en tus compras."), 403
+    conn = db()
+    c = conn.execute("SELECT id, fecha FROM compras WHERE id = ? AND anulada_ts IS NULL AND tipo = 'compra'", (cid,)).fetchone()
+    if not c:
+        return jsonify(error="Esa compra no existe."), 404
+    cur = conn.execute("INSERT OR IGNORE INTO piedritas (compra_id, usuario_id, creado) VALUES (?, ?, ?)", (cid, u["id"], int(time.time())))
+    nueva = cur.rowcount > 0
+    conn.commit()
+    if nueva:
+        try:
+            push.notificar(conn, "piedrita", "Libro DCA", f"{u['nombre']} dejó una piedrita en tu compra del {c['fecha']}.", f"piedrita-{cid}-{u['id']}")
+        except Exception as e:  # noqa: BLE001 — avisar es secundario
+            print(f"push: no se pudo avisar de la piedrita ({type(e).__name__}: {e})", flush=True)
+    r = conn.execute("SELECT creado FROM piedritas WHERE compra_id = ? AND usuario_id = ?", (cid, u["id"])).fetchone()
+    return jsonify(compra_id=cid, quien=u["nombre"], creado=r["creado"]), 201 if nueva else 200
+
+
+@app.delete("/api/piedritas/<int:cid>")
+def quitar_piedrita(cid: int) -> Any:
+    conn = db()
+    cur = conn.execute("DELETE FROM piedritas WHERE compra_id = ? AND usuario_id = ?", (cid, g.usuario["id"]))
+    conn.commit()
+    return ("", 204) if cur.rowcount else (jsonify(error="No dejaste una piedrita ahí."), 404)
+
+
+def parse_cumple(v: Any) -> str | None:
+    """«MM-DD» (el 29 de febrero vale) o None para quitarlo."""
+    if v is None or v == "":
+        return None
+    if not isinstance(v, str) or not re.fullmatch(r"\d{2}-\d{2}", v):
+        raise ValueError("Elige el mes y el día de tu cumpleaños.")
+    try:
+        date.fromisoformat(f"2024-{v}")  # 2024 es bisiesto: el 29 de febrero es válido
+    except ValueError:
+        raise ValueError("Ese día no existe.") from None
+    return v
+
+
+@app.put("/api/yo/cumple")
+def guardar_cumple() -> Any:
+    """Cada persona pone su cumpleaños (mes y día), también un lector. Sirve para el saludo y el farol de ese día."""
+    body = request.get_json(silent=True)
+    try:
+        cumple = parse_cumple(body.get("cumple") if isinstance(body, dict) else None)
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    conn = db()
+    conn.execute("UPDATE usuarios SET cumple = ? WHERE id = ?", (cumple, g.usuario["id"]))
+    conn.commit()
+    return jsonify(cumple=cumple)
+
+
+@app.get("/api/cumples")
+def listar_cumples() -> Response:
+    """Los cumpleaños que la familia puso (solo nombre, mes y día) de las cuentas activas."""
+    rows = db().execute("SELECT nombre, cumple FROM usuarios WHERE activo = 1 AND cumple IS NOT NULL ORDER BY nombre").fetchall()
+    return jsonify([dict(r) for r in rows])
 
 
 @app.post("/api/traslados")
