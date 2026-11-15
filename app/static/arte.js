@@ -539,8 +539,14 @@ export function sismografo({ puntos = [], ancho = 600, alto = 120 } = {}) {
   for (let yy = bot, i = 0; yy > top; yy -= 6, i++) roto += `L${f1(x0 - 6 + (i % 3 === 1 ? 3.2 : i % 3 === 2 ? 1.2 : 0))} ${f1(Math.max(top, yy - 6))}`;
   const papel = `M${x0 - 6} ${top}H${rod + 4}V${bot}H${x0 - 6}${roto}Z`;
   let fina = '', gruesa = '', horas = '';
-  for (let x = x0 + 6; x < rod; x += 12) ((x - x0 - 6) % 60 === 0 ? (gruesa += `M${x} ${top + 4}V${bot - 4}`) : (fina += `M${x} ${top + 4}V${bot - 4}`));
-  for (let y = top + 6, i = 0; y < bot - 2; y += 12, i++) (i % 4 === 2 ? (gruesa += `M${x0 - 2} ${y}H${rod}`) : (fina += `M${x0 - 2} ${y}H${rod}`));
+  for (let x = x0 + 6; x < rod; x += 12) {
+    const raya = `M${x} ${top + 4}V${bot - 4}`;
+    if ((x - x0 - 6) % 60 === 0) gruesa += raya; else fina += raya;
+  }
+  for (let y = top + 6, i = 0; y < bot - 2; y += 12, i++) {
+    const raya = `M${x0 - 2} ${y}H${rod}`;
+    if (i % 4 === 2) gruesa += raya; else fina += raya;
+  }
   for (let x = x0 + 6; x < rod; x += 60) horas += `M${x} ${top}V${top + 5}M${x} ${bot}V${bot - 5}`;
   // El brazo: del eje en la caja a la pluma; la pluma es una cápsula a lo largo del brazo, cerca de la punta.
   const ex = ancho - 30, ey = alto / 2, dx = tx - ex, dy = ty - ey, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
