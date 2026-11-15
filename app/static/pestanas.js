@@ -16,13 +16,17 @@ let porPestanas = leer(CLAVE_MODO) !== 'todo';
 export const enPestanas = () => porPestanas;
 export const pestanaActual = () => actual;
 /** ¿Se ve ahora la pestaña de la historia? (en «Todo junto» siempre) */
-export const historiaVisible = () => !porPestanas || actual === 'historia';
+export const historiaVisible = () => (porPestanas ? actual === 'historia' : historiaPedida);
+// En «Todo junto» la historia no se pinta (son cientos de nodos que casi nadie mira ahí): sale, al final de la página, cuando se pide
+// desde «Tu cuenta → Tu historia y medallas».
+let historiaPedida = false;
 
 function aplicar() {
   const cuerpo = $('principal');
   if (porPestanas) cuerpo.dataset.pestana = actual; else delete cuerpo.dataset.pestana;
   document.documentElement.toggleAttribute('data-pestanas', porPestanas);
   $('pestanas').hidden = !porPestanas;
+  $('historia').hidden = !porPestanas && !historiaPedida; // con pestañas, el CSS la esconde cuando no es su turno
   for (const b of $('pestanas').children) {
     if (b.dataset.pestana === actual) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
   }
@@ -51,6 +55,8 @@ export function verHistoria() {
     const arriba = $('principal').getBoundingClientRect().top;
     window.scrollTo({ top: Math.max(0, window.scrollY + arriba), behavior: reducido() ? 'auto' : 'smooth' });
   } else {
+    historiaPedida = true;
+    $('historia').hidden = false;
     refrescarHistoria();
     $('historia').scrollIntoView({ block: 'start', behavior: reducido() ? 'auto' : 'smooth' });
   }

@@ -2986,7 +2986,11 @@ try {
       eq((await p.textContent('#dc-pestanas')).trim(), 'Pantalla: todo junto', 'pestañas: el botón la cambia a «todo junto»');
       await p.keyboard.press('Escape'); await p.waitForTimeout(300);
       ok(!(await ver(p, '#pestanas')) && await p.evaluate(() => document.getElementById('principal').dataset.pestana === undefined), 'todo junto: la barra se esconde');
-      for (const sel of ['#tramo', '#mercado', '#compras', '#historia']) ok(await ver(p, sel) || await p.locator(sel).evaluate((e) => e.offsetParent !== null), `todo junto: ${sel} está en la página`);
+      for (const sel of ['#tramo', '#mercado', '#compras']) ok(await ver(p, sel) || await p.locator(sel).evaluate((e) => e.offsetParent !== null), `todo junto: ${sel} está en la página`);
+      ok(!(await ver(p, '#historia')), 'todo junto: la historia no está en la página hasta que se pide');
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-historia-btn'); await p.waitForTimeout(800);
+      ok(await ver(p, '#historia') && await p.locator('#dh-pasaporte li').count() >= 1, 'todo junto: «Tu historia y medallas» la saca al final de la página');
       eq(await p.evaluate(() => localStorage.getItem('libro.pestanas')), 'todo', 'todo junto: se recuerda por dispositivo');
       await p.click('#cuenta-btn'); await p.waitForTimeout(300);
       await p.click('#dc-pestanas'); await p.waitForTimeout(300);

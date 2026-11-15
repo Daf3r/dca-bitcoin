@@ -2395,3 +2395,5 @@ html[data-pestanas] .indice { display: none; }
   .cuerpo[data-pestana="historia"] .col-lateral { grid-column: 2; }
 }
 @media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; } }
+
+.historia-pg[hidden] { display: none; }
