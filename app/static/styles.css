@@ -2953,7 +2953,7 @@ html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cie
 .hr-yo, .hr-fantasma { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-sizing: border-box; }
 .hr-yo { left: calc(var(--p, 0) * 100%); background: var(--naranja); box-shadow: 0 0 0 2px var(--s1); }
 .hr-fantasma { left: calc(var(--q, 0) * 100%); border: 2px dashed var(--naranja-txt); background: transparent; transition: left 0.35s var(--resorte, ease-out); }
-.ruta-txt { color: var(--txt2); }
+.hoja-calc .ruta-txt { display: block; margin-top: 2px; color: var(--txt2); }
 
 /* Perfil de altitud (16B, idea 4): la vista «Sats» en escala logarítmica, con faroles, anillos en las extra y «Tú». */
 .pf-halo { fill: var(--naranja); opacity: 0.2; }

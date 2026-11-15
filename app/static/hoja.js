@@ -262,7 +262,7 @@ function pintarHoja() {
     ruta.style.setProperty('--p', String(Math.max(0, Math.min(1, b > a ? (saldo - a) / (b - a) : 0)).toFixed(3)));
     ruta.style.setProperty('--q', String(Math.max(0, Math.min(1, q)).toFixed(3)));
     const t = document.createElement('span');
-    t.className = 'costo ruta-txt';
+    t.className = 'ruta-txt';
     t.textContent = tras >= b ? `Con esto llegarías a ${b >= 1e8 ? nombreHito(b) : `${nombreHito(b)} sats`}.` : `Quedarías al ${Math.round(q * 100)} % del camino a ${b >= 1e8 ? nombreHito(b) : `${nombreHito(b)} sats`}.`;
     $('hoja-calc').append(t);
   }
