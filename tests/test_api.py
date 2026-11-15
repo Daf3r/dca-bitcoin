@@ -1011,7 +1011,7 @@ _sig = next(m for m in ritmo.etapas_hasta(10**12) if m > _saldo)
 enviados.clear()
 adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": _sig - _saldo})
 _txt = [p["cuerpo"] for e, p in enviados]
-check(any(("Nueva etapa" in t or "Nuevo hito" in t) and ritmo.nombre_hito(_sig) in t for t in _txt), f"cruzar una etapa avisa a quien lo encendió {_txt}")
+check(any(("LLEGÓ A" in t and "STOP" in t) and ritmo.nombre_hito(_sig) in t for t in _txt), f"cruzar una etapa avisa a quien lo encendió {_txt}")
 
 # Horario: de noche se guarda y sale por la mañana (varios de una categoría, en uno solo)
 push.ahora = _de_noche

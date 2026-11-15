@@ -3265,6 +3265,53 @@ try {
     una.parar();
   }
 
+  // ---------------------------------------------------------------- campamento 16: lago, reloj de sol, «Tú» fantasma y perfil de altitud
+  {
+    const con = (dia, hora) => [([d, h]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, [dia, hora]];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const sMil = await servidor('mil');
+    try {
+      // ---- Reloj de sol: la sombra cae a un lado de mañana y al otro de tarde; de noche no hay
+      const sombra = (p) => p.evaluate(() => { const g = document.querySelector('.reloj'); const d = g.querySelector('.reloj-sombra').getAttribute('d'); const m = d.match(/M([\d.]+) .*?L([\d.-]+) /); return { d, sx: Number(g.dataset.sx), punta: m ? Number(m[2]) : null, visible: getComputedStyle(g).display !== 'none' }; });
+      const m = await entrar(navegador, sMil, ADMIN, { hora: 9 }, con('2026-08-20', 9)); await cerrar(m.p); await m.p.waitForTimeout(800);
+      const sm = await sombra(m.p);
+      ok(sm.visible && sm.punta !== null && sm.punta < sm.sx, '16A reloj de sol: de mañana la sombra cae hacia la izquierda');
+      ok(await m.p.locator('.reloj .reloj-piedra').count() === 11, '16A reloj de sol: once piedritas, de las 7 a las 17');
+      await m.ctx.close();
+      const t = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(t.p);
+      const st = await sombra(t.p);
+      ok(st.visible && st.punta > st.sx, '16A reloj de sol: de tarde la sombra cae hacia la derecha');
+      await t.ctx.close();
+      const n22 = await entrar(navegador, sMil, ADMIN, { hora: 22 }, con('2026-08-20', 22)); await cerrar(n22.p);
+      const sn = await sombra(n22.p);
+      ok(!sn.visible && sn.d === '', '16A reloj de sol: de noche no hay sombra');
+      // ---- El lago guarda lo vendido: una monedita por venta (hasta 5)
+      eq(await n22.p.locator('.lago-moneda').count(), 5, '16A lago: mil tiene ventas de sobra: cinco monedas');
+      await n22.ctx.close();
+      // ---- «Tú» fantasma en la hoja
+      const h = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(h.p);
+      await h.p.keyboard.press('a'); await h.p.waitForTimeout(600);
+      ok(await h.p.locator('#h-ruta').isHidden(), '16B fantasma: sin sats escritos no hay regla');
+      await h.p.fill('#h-sats', '2500000'); await h.p.waitForTimeout(600);
+      ok(await h.p.locator('#h-ruta').isVisible() && /Quedarías al \d+ % del camino a |Con esto llegarías a /.test(await h.p.textContent('#hoja-calc')), '16B fantasma: con sats escritos sale la regla y la frase');
+      const pq = await h.p.evaluate(() => { const r = document.getElementById('h-ruta'); return [Number(r.style.getPropertyValue('--p')), Number(r.style.getPropertyValue('--q'))]; });
+      ok(pq[1] > pq[0], '16B fantasma: el fantasma queda más adelante que tú');
+      await h.p.click('#h-tipo button[data-tipo="venta"]'); await h.p.waitForTimeout(400);
+      ok(await h.p.locator('#h-ruta').isHidden(), '16B fantasma: en una venta no hay regla');
+      eq(h.consola.filter((c) => !/503/.test(c)), [], '16 sin errores de consola');
+      await h.ctx.close();
+      // ---- Perfil de altitud: la vista Sats en escala logarítmica
+      const pf = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(pf.p);
+      await verVista(pf.p, 'sats');
+      ok(await pf.p.locator('#s-lienzo .pf-farol').count() >= 1, '16B perfil: hay faroles donde cruzaste un campamento');
+      ok(/^Tú$/.test((await pf.p.locator('#s-lienzo .pf-tu').textContent()).trim()), '16B perfil: «Tú» al final');
+      ok((await pf.p.locator('#s-lienzo .v-eje').allTextContents()).some((x) => /^1M$/.test(x)) && await pf.p.locator('#s-lienzo .pf-extra').count() >= 1, '16B perfil: etapas rotuladas y anillos en las extra');
+      await pf.ctx.close();
+    } finally {
+      sMil.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- sin histórico de precios
   const sinhist = await servidor('sinhist');
   try {

@@ -7,6 +7,24 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-p', fecha: '2026-11-18',
+    items: [
+      'La vista «Sats» se lee mejor: la línea se ve de punta a punta, también con muchas compras, y las cifras de las etapas tienen su propio margen.',
+      'Las monedas del lago parecen monedas y el reloj de sol se distingue mejor, sin tapar los árboles.',
+      'En la hoja de anotar, la regla del «Tú» fantasma marca a rayas lo que sumaría tu compra.',
+      'Varios retoques de orden: medallas y sellos alineados, el Diario a lo ancho en la tablet y la hora del precio sin cortes en teléfonos pequeños.',
+    ],
+  },
+  {
+    id: '2026-11-o', fecha: '2026-11-17',
+    items: [
+      'Al anotar una compra, la hoja te enseña un «Tú» fantasma: dónde quedarías en el camino a tu próxima etapa.',
+      'La vista «Sats» del gráfico ahora es un perfil de altitud, con las etapas rotuladas y un farol en cada campamento que cruzaste.',
+      'Tras una venta o un gasto, una monedita se hunde en el lago y queda brillando: se gastó, pero sigue siendo parte de tu historia.',
+      'De día, la sombra de la cumbre marca la hora en el suelo. Y el aviso de cada etapa llega por telegrama.',
+    ],
+  },
+  {
     id: '2026-11-n', fecha: '2026-11-16',
     items: [
       'Llegó «El Diario del Libro»: una portada en el Resumen con lo que pasó, qué había hace un año, unos clasificados con humor y el pronóstico de la montaña.',

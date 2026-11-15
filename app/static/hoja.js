@@ -1,4 +1,5 @@
-import { nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
+import { hundirMoneda } from './montana.js';
+import { etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
 import { avisar } from './avisar.js';
 import { celebrar, destello } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
@@ -253,6 +254,18 @@ function pintarHoja() {
       : `Tu costo promedio ${c.despues < c.antes ? 'baja' : 'sube'} de ${usd0(c.antes)} a ${usd0(c.despues)} (${pct(c.cambio)}).`;
     $('hoja-calc').append(s);
   }
+  // «Tú» fantasma (16B, idea 2): la regla de tu etapa con dónde quedarías si guardas esto (solo al anotar una compra).
+  const ruta = $('h-ruta'), verRuta = Boolean(d && !venta && !H.editando && d.sats > 0 && !sinSaldo);
+  ruta.hidden = !verRuta;
+  if (verRuta) {
+    const a = etapaAnterior(saldo), b = etapaSiguiente(saldo), tras = saldo + d.sats, q = b > a ? (tras - a) / (b - a) : 0;
+    ruta.style.setProperty('--p', String(Math.max(0, Math.min(1, b > a ? (saldo - a) / (b - a) : 0)).toFixed(3)));
+    ruta.style.setProperty('--q', String(Math.max(0, Math.min(1, q)).toFixed(3)));
+    const t = document.createElement('span');
+    t.className = 'ruta-txt';
+    t.textContent = tras >= b ? `Con esto llegarías a ${b >= 1e8 ? nombreHito(b) : `${nombreHito(b)} sats`}.` : `Quedarías al ${Math.round(q * 100)} % del camino a ${b >= 1e8 ? nombreHito(b) : `${nombreHito(b)} sats`}.`;
+    $('hoja-calc').append(t);
+  }
   $('guardar').disabled = !d || d.sinPrecio || sinSaldo || H.guardando;
   $('guardar').textContent = H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
 }
@@ -450,6 +463,7 @@ $('guardar').addEventListener('click', async () => {
       await new Promise((ok) => setTimeout(ok, 480));
     }
     pintar({ montana: true, desde: antes.sats, festejo });
+    if (!editando && g.tipo === 'venta' && g.nota !== 'Comisión de retiro' && !reducido()) hundirMoneda(); // 16A: la venta queda en el lago
     if (festejo) sonarGuardado(antes.sats, R.sats); // solo si lo activaste en «Tu cuenta»
     if (festejo && !reducido()) setTimeout(() => destello(), MS_SUBIDA);
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();

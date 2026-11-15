@@ -1320,8 +1320,8 @@ def _avisar_movimiento(conn: sqlite3.Connection, antes: list[Mov], cid: int, nue
         saldo = sum(-s if tipo == "venta" else s for _f, _i, tipo, s in antes)
         if cruzadas := ritmo.etapas_cruzadas(saldo, saldo + sats):
             m = cruzadas[-1]  # la más alta si fueron varias
-            nombre = "Nuevo hito" if ritmo.es_hito_grande(m) else "Nueva etapa"
-            push.notificar(conn, "hito", "Libro DCA", f"{nombre}: ya son {ritmo.nombre_hito(m)} en el libro.", f"hito-{cid}")
+            # Telegrama (idea 59): el aviso de etapa llega como en los viejos telegramas.
+            push.notificar(conn, "hito", "Libro DCA", f"LLEGÓ A {ritmo.nombre_hito(m)} STOP SIGUE EL SENDERO STOP", f"hito-{cid}")
         fechas = [f for f, _i, tipo, _s in antes if tipo == "compra"]
         for k, (clase, valor) in enumerate(ritmo.constancia_cruzada(fechas, [*fechas, nueva["fecha"]])):
             que = f"{valor} compras" if clase == "compras" else ritmo.nombre_hito_meses(valor)

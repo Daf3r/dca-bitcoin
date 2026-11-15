@@ -759,7 +759,7 @@ export const masMovieron = (serie, k = 3) => serie.filter((p) => p.pct != null).
  */
 export function serieSatsAcum(items, hoy = hoyISO()) {
   if (!items.length) return [];
-  const out = items.map((it, i) => ({ fecha: it.fecha, sats: it.satsAcum, delta: it.tipo === 'venta' ? -it.sats : it.sats, tipo: it.tipo, id: it.id, i }));
+  const out = items.map((it, i) => ({ fecha: it.fecha, sats: it.satsAcum, delta: it.tipo === 'venta' ? -it.sats : it.sats, tipo: it.tipo, id: it.id, i, extra: Boolean(it.extra) }));
   const u = out.at(-1);
   if (u.fecha < hoy) out.push({ fecha: hoy, sats: u.sats, delta: 0, tipo: null, id: null, hoy: true });
   return out;

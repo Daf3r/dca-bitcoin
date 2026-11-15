@@ -1,7 +1,7 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
-import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas } from './arte.js';
+import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 
 const f1 = (n) => n.toFixed(1);
 
@@ -91,7 +91,7 @@ function auroraBoreal(W, H, techo) {
  * reflejo sigue a `--luna-ilum`) y unas estrellas; con todos los efectos una ondulación leve. Se coloca bajo la luna,
  * por debajo del arranque del sendero y a un lado, así que nunca empuja el camino ni las etiquetas.
  */
-function lago(c, W, H) {
+function lago(c, W, H, ventas = 0) {
   const cx = c.lago ? c.lago[0] : Math.min(Math.max(c.sol[0], W * 0.2), W * 0.8), cy = W >= 1100 && !c.lago ? H * 0.9 : Math.min(H * 0.875, c.base[1] - 24); // en escritorio, al fondo del valle, tras los pinos
   const rx = c.lago ? c.lago[1] : Math.min(W * 0.16, 120), ry = Math.max(8, H * 0.016);
   const reflejo = [0, 1, 2, 3].map((i) => `<ellipse class="lago-reflejo" cx="${f1(cx + (i % 2 ? 3 : -3))}" cy="${f1(cy - ry * 0.35 + i * ry * 0.42)}" rx="${f1(rx * (0.26 - i * 0.045))}" ry="${f1(Math.max(1.1, ry * 0.12))}"/>`).join('');
@@ -105,13 +105,13 @@ function lago(c, W, H) {
     const t = (k / 24) * Math.PI * 2, onda = 1 + 0.08 * Math.sin(t * 3 + 0.6) + 0.05 * Math.sin(t * 5 + 1.3);
     orilla.push(`${k ? 'L' : 'M'}${f1(cx + Math.cos(t) * rx * onda)} ${f1(cy + Math.sin(t) * ry * (0.8 + 0.2 * Math.abs(Math.cos(t))) * onda)}`);
   }
-  return `<g class="lago" aria-hidden="true"><path class="lago-agua" d="${orilla.join('')}Z" fill="url(#m-lago)"/><g class="lago-luz">${sol}</g><g class="lago-luna">${reflejo}${estrellas}</g><ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><path class="lago-borde" d="M${f1(cx - rx * 0.85)} ${f1(cy - ry * 0.45)}Q${f1(cx)} ${f1(cy - ry * 1.25)} ${f1(cx + rx * 0.85)} ${f1(cy - ry * 0.45)}"/></g>`;
+  return `<g class="lago" aria-hidden="true"><path class="lago-agua" d="${orilla.join('')}Z" fill="url(#m-lago)"/><g class="lago-luz">${sol}</g><g class="lago-luna">${reflejo}${estrellas}</g>${monedasDelLago(cx, cy, rx, ry, ventas)}<ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><path class="lago-borde" d="M${f1(cx - rx * 0.85)} ${f1(cy - ry * 0.45)}Q${f1(cx)} ${f1(cy - ry * 1.25)} ${f1(cx + rx * 0.85)} ${f1(cy - ry * 0.45)}"/></g>`;
 }
 
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, mensajes = [], puedeEscribir = false, cumples = [] }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, cumples = [] }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
@@ -226,7 +226,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     // Facetas de la nieve: un plano más claro que baja del vértice hacia el astro y un pliegue en sombra al otro lado.
     + `<g clip-path="url(#m-nieve-c)"><path class="nieve-faceta" d="M${f1(picoC[0])} ${f1(picoC[1])}L${f1(picoC[0] + nieveMedidas.ancho * 0.3)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}L${f1(picoC[0] + nieveMedidas.ancho * 0.03)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}Z"/><path class="nieve-pliegue" d="M${f1(picoC[0] - 2)} ${f1(picoC[1] + 4)}L${f1(picoC[0] - nieveMedidas.ancho * 0.2)} ${f1(picoC[1] + nieveMedidas.nv * 2.1)}"/></g></g>`;
 
-  s += lago(c, W, H);
+  s += lago(c, W, H, ventas);
   s += luciernagas({ W, H, yH: c.sy }); // ambiente: luciérnagas en el valle al anochecer (campamento 15B) // 15B
   const [bx, by] = c.base;
   for (let fila = 0; fila < 2; fila++) {
@@ -280,6 +280,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   { const k = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1, dir = (pts[1]?.[0] ?? bx) > bx ? -1 : 1, n = Math.min(3, cumples.length), paso = Math.min(21 * k, Math.max(15 * k, ((dir < 0 ? bx : W - bx) - 34 * k) / Math.max(1, n - 1))); cumples.slice(0, 3).forEach((p, i) => { s += farolCumple({ inicial: p.inicial, x: Math.max(10 * k, Math.min(W - 10 * k, bx + dir * (24 * k + paso * i))), y: by + 2 + (i % 2) * 4 * k, k }); }); } // 15B
   s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   s += bosque(W, H, bx, compras, plantar, pts);
+  // Reloj de sol (16A): sobre los pinos de adorno, pero detrás de los árboles de honor (antes sus piedras quedaban encima de las copas).
+  const suelo = W < 1100 ? by - 4 : H * 0.93;
+  s += relojDeSol(c.sx, suelo, W); // 16A
   const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0]);
   s += `<rect class="suelo" x="0" y="${f1(H * 0.95)}" width="${W}" height="${f1(H * 0.05 + 1)}" fill="url(#m-suelo)"/>`;
   s += honor.svg; // por delante del suelo que funde el pie de la escena: sus troncos se ven
@@ -287,10 +290,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const anio = (window.libroCielo?.dia?.() ?? '').slice(0, 4) || String(new Date().getFullYear());
   const sitio = sitioPapel(W, H, by, pts, honor.cajas);
   if (sitio) s += papelPicado(sitio[0], sitio[1], sitio[2], anio, sitio[3], sitio[4]); // (acostado y sin sitio libre: mejor sin tira que encima de algo)
-  const suelo = W < 1100 ? by - 4 : H * 0.93, altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
+  const altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
   s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
   host.innerHTML = s + '</g></svg>';
+  colocarReloj(host);
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
 
   const camino = host.querySelector('#m-sendero');
@@ -886,4 +890,26 @@ function describir(sats, meta) {
   estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima) + (estado.compras ? ` Al pie crece tu bosque: un pino por compra (${estado.compras}).` : '')
     + (arbolesDe(estado.compras).length ? ` Entre los pinos crecen tus árboles de honor: ${arbolesDe(estado.compras).map((t) => ({ ceibo: 'un ceibo', amate: 'un amate', maquilishuat: 'un maquilishuat' })[t]).join(', ')}.` : '')
     + (estado.eco ? ` Tu eco, una sombra quieta en el sendero, marca dónde estabas hace un año: ${entero(estado.eco.sats)} sats.` : '');
+}
+
+// ---------------------------------------------------------------- campamento 16A
+/** La sombra de la cumbre según la hora de El Salvador (de 6 a 18; fuera de ahí no hay sombra). Cada piedrita es una hora. */
+export function colocarReloj(host = document.querySelector('.montana')) {
+  const g = host?.querySelector('.reloj');
+  const sombra = g?.querySelector('.reloj-sombra');
+  if (!g || !sombra) return;
+  const h = window.libroCielo?.hora?.() ?? 12;
+  if (h < 6 || h > 18) { sombra.setAttribute('d', ''); return; }
+  const sx = Number(g.dataset.sx), gy = Number(g.dataset.gy), alcance = Number(g.dataset.alcance);
+  const punta = sx + ((h - 12) / 5) * alcance, ancho = 3.2;
+  sombra.setAttribute('d', `M${sx.toFixed(1)} ${(gy - ancho).toFixed(1)}L${punta.toFixed(1)} ${gy.toFixed(1)}L${sx.toFixed(1)} ${(gy + ancho).toFixed(1)}Z`);
+}
+setInterval(() => { if (document.visibilityState === 'visible') colocarReloj(); }, 300_000);
+
+/** Tras una venta (idea 40): la última monedita del lago cae desde arriba y se queda brillando en el fondo. */
+export function hundirMoneda() {
+  const m = [...document.querySelectorAll('.lago-moneda')].at(-1);
+  if (!m) return;
+  m.classList.remove('hunde'); void m.getBoundingClientRect(); m.classList.add('hunde');
+  setTimeout(() => m.classList.remove('hunde'), 2200);
 }
