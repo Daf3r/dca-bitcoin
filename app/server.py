@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import hashlib
 import io
 import json
@@ -1003,6 +1004,9 @@ _REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.w
 _REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
 
 
+_GZ_CACHE: dict[tuple[str, str], bytes] = {}
+
+
 def _servir_versionado(nombre: str, tipo: str, patron: re.Pattern[str], cache: str) -> Any:
     ruta = os.path.join(ESTATICOS, nombre)
     with open(ruta, encoding="utf-8") as f:
@@ -1010,6 +1014,16 @@ def _servir_versionado(nombre: str, tipo: str, patron: re.Pattern[str], cache: s
     resp = Response(texto, mimetype=tipo)
     resp.headers["Cache-Control"] = cache
     resp.set_etag(f"{VERSION}-{nombre}")
+    # Comprimido aquí mismo (los archivos de la app no cambian sin cambiar VERSION): se hace una vez por archivo y se guarda en memoria.
+    # Caddy no vuelve a comprimir lo que ya trae `Content-Encoding`.
+    resp.vary.add("Accept-Encoding")
+    if "gzip" in request.headers.get("Accept-Encoding", "").lower():
+        clave = (VERSION, nombre)
+        if clave not in _GZ_CACHE:
+            _GZ_CACHE[clave] = gzip.compress(resp.get_data(), compresslevel=9, mtime=0)
+        resp.set_data(_GZ_CACHE[clave])
+        resp.headers["Content-Encoding"] = "gzip"
+        resp.set_etag(f"{VERSION}-{nombre}-gz")
     return resp.make_conditional(request)
 
 
@@ -2367,7 +2381,7 @@ def cabeceras(resp: Response) -> Response:
     elif "Cache-Control" not in resp.headers:
         resp.headers["Cache-Control"] = "no-store" if request.path.startswith("/api/") else "no-cache"
     if request.path == "/" or request.path.startswith("/api/"):
-        resp.headers["Vary"] = "Cookie"
+        resp.vary.add("Cookie")
     return resp
 
 

@@ -378,6 +378,13 @@ for pagina in ("/", "/login"):
 check("prefers-color-scheme" not in cl.get("/styles.css").get_data(as_text=True), "el CSS ya no depende de la consulta del sistema")
 check(anon.get("/icon-evil.js").status_code == 404 and anon.get("/api/compras").status_code == 401, "lo público no abre nada más")
 check(cl.get("/app.js", headers={"If-None-Match": f'"{V}-app.js"'}).status_code == 304, "304 con ETag")
+import gzip as _gz
+for _ruta in ("/app.js", "/styles.css"):  # los estáticos salen comprimidos si el navegador lo acepta, con la misma versión y su propio ETag
+    _plano = cl.get(_ruta).get_data(as_text=True)
+    _zz = cl.get(_ruta, headers={"Accept-Encoding": "gzip, br"})
+    check(_zz.headers.get("Content-Encoding") == "gzip" and "Accept-Encoding" in _zz.headers["Vary"] and _gz.decompress(_zz.get_data()).decode() == _plano and len(_zz.get_data()) < len(_plano) / 2, f"{_ruta}: gzip íntegro y más chico")
+    check(cl.get(_ruta, headers={"Accept-Encoding": "gzip", "If-None-Match": _zz.headers["ETag"]}).status_code == 304 and "Content-Encoding" not in cl.get(_ruta).headers, f"{_ruta}: 304 con el ETag comprimido y sin gzip sale plano")
+check("gzip" in cl.get("/", headers={"Accept-Encoding": "gzip"}).headers.get("Content-Encoding", "") and "Cookie" in cl.get("/", headers={"Accept-Encoding": "gzip"}).headers["Vary"], "la página también sale comprimida y conserva Vary: Cookie")
 check(cl.get("/../server.js").status_code == 404 and cl.get("/nada.js").status_code == 404, "solo módulos existentes")
 
 # --- Fase A: cuentas, sesiones, roles y auditoría
