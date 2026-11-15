@@ -203,7 +203,7 @@ export function historia(R, hoy = hoyISO(), { maxExtras = 8 } = {}) {
   ev.push({ fecha: p.fecha, clase: 'primera', orden: 0, titulo: 'Tu primera compra', detalle: `${entero(p.sats)} sats${p.precio ? ` a ${usd0(p.precio)}` : ''}` });
   for (const h of R.camino ?? []) {
     if (!h.fecha) continue;
-    ev.push({ fecha: h.fecha, clase: h.mayor ? 'hito' : 'etapa', orden: 1, titulo: h.mayor ? `Campamento ${nombreHito(h.m)}` : `Llegaste a ${metaTxt(h.m)}`, detalle: h.mayor ? `Llegaste a ${metaTxt(h.m)}` : '' });
+    ev.push({ m: h.m, fecha: h.fecha, clase: h.mayor ? 'hito' : 'etapa', orden: 1, titulo: h.mayor ? `Campamento ${nombreHito(h.m)}` : `Llegaste a ${metaTxt(h.m)}`, detalle: h.mayor ? `Llegaste a ${metaTxt(h.m)}` : '' });
   }
   for (const h of HITOS_COMPRAS) if (h <= compras.length) ev.push({ fecha: compras[h - 1].fecha, clase: 'constancia', orden: 2, titulo: `${h} compras`, detalle: 'Constancia' });
   for (const m of HITOS_MESES) {
@@ -1310,3 +1310,75 @@ export const textoPartitura = (anios) => (anios.length
   : 'Tu partitura empieza con tu primera compra.');
 export const textoAnioPartitura = (y) => `${y.anio}: ${y.notas.length} ${y.notas.length === 1 ? 'nota' : 'notas'}; BTC entre $${entero(y.min)} y $${entero(y.max)} en tus compras`;
 export const textoNota = (n) => `${fechaLarga(n.fecha)} · BTC a $${entero(n.precio)} · +${entero(n.sats)} sats${n.extra ? ' · compra extra' : ''}`;
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 15A · el Diario del Libro, mensajes en la bandera y cartas selladas: solo datos y textos (la pantalla vive en `diario.js`,
+// `capsulas.js` y `mensajes.js`). Todo informa o acompaña; nada recomienda ni presiona.
+// ---------------------------------------------------------------------------------------------
+
+/** Cuándo se abre una carta sellada, en palabras (sin cuentas de lo que falta: no es una presión). */
+export function textoApertura(c) {
+  if (c.abre_fecha) return `Se abre el ${fechaLarga(c.abre_fecha)}`;
+  return `Se abre al llegar a ${c.abre_sats >= 1e8 ? nombreHito(c.abre_sats) : `${nombreHito(c.abre_sats)} sats`}`;
+}
+/** Las próximas etapas por encima de tu saldo (para elegir a cuál se abre una carta). */
+export function etapasFuturas(sats, n = 6) {
+  const out = [];
+  let m = etapaSiguiente(sats);
+  while (out.length < n) { out.push(m); m = etapaSiguiente(m); }
+  return out;
+}
+/** La fecha de mañana (la primera en que puede abrirse una carta). */
+export function mananaISO(hoy = hoyISO()) {
+  const [y, m, d] = hoy.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+}
+const restarDias = (hoy, n) => {
+  const [y, m, d] = hoy.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
+};
+
+const PRONOSTICOS = {
+  lluviosa: ['lluvias por la tarde en el valle y la cumbre despejada', 'nubes bajas por la mañana, claros al mediodía', 'chubascos ligeros abajo y mucha luz arriba', 'tarde fresca, con olor a tierra mojada'],
+  seca: ['cielos limpios y brisa fresca en la cumbre', 'sol parejo todo el día y viento suave', 'mañana clara y tarde dorada', 'noche despejada, buena para mirar las estrellas'],
+};
+/**
+ * El Diario del Libro (idea 46): una portada con lo que pasó, escrita con los datos que ya existen. Siempre sale igual para un mismo día.
+ * `titular` y `sub` dependen de lo último que pasó (una etapa reciente, compras de la semana, o una semana tranquila, sin reproche);
+ * `haceUnAnio` solo existe si hay un año de historia; los `clasificados` son tres avisos con humor sobre tu camino; el `pronostico` es el
+ * clima de la montaña (de la época del año), **nunca del precio**. `altitud` (0 a 1) es para el grabado.
+ */
+export function diario(R, hoy = hoyISO()) {
+  if (!R || !R.nCompras) return null;
+  const compras = R.items.filter((c) => c.tipo !== 'venta');
+  const sem = semana(hoy);
+  const desde = restarDias(hoy, 7), desdeEtapa = restarDias(hoy, 14);
+  const recientes = compras.filter((c) => c.fecha > desde && c.fecha <= hoy);
+  const subidos = recientes.reduce((a, c) => a + c.sats, 0);
+  const etapaReciente = (R.camino ?? []).filter((h) => h.fecha && h.fecha > desdeEtapa && h.fecha <= hoy).at(-1);
+  let titular, sub;
+  if (etapaReciente) { titular = `Llegamos a ${metaTxt(etapaReciente.m)}`; sub = `La montaña ya cuenta ${entero(R.sats)} sats. El ${fechaLarga(etapaReciente.fecha)} quedó marcado en el sendero.`; }
+  else if (recientes.length) {
+    titular = recientes.length === 1 ? `Un paso más: la montaña subió ${entero(subidos)} sats` : `La montaña subió ${entero(subidos)} sats esta semana`;
+    sub = `${recientes.length === 1 ? 'Una compra' : `${recientes.length} compras`} en los últimos siete días. El libro suma ${entero(R.sats)} sats.`;
+  } else { titular = 'Semana tranquila en la montaña'; sub = `Nadie se apura: el camino sigue ahí, ${entero(R.sats)} sats arriba, esperando con paciencia.`; }
+  const e = eco(R.items, R.sats, hoy);
+  const haceAnio = e ? { fecha: e.fecha, sats: e.sats, hoy: R.sats, subiste: e.subiste,
+    texto: e.subiste > 0 ? `Hace un año el libro tenía ${entero(e.sats)} sats. Hoy tiene ${entero(R.sats)}: ${entero(e.subiste)} más.` : `Hace un año el libro tenía ${entero(e.sats)} sats. Hoy tiene ${entero(R.sats)}.` } : null;
+  const alcanzado = [...(R.camino ?? [])].filter((h) => h.mayor && h.fecha).at(-1);
+  const faltan = Math.max(0, Math.ceil(R.etapa - R.sats));
+  const unidad = R.paso === 2 ? 'quincenas' : 'semanas';
+  const clasificados = [
+    `SE BUSCAN ${entero(faltan)} sats para llegar a ${metaTxt(R.etapa)}. Sin prisa. Razón: la vista.`,
+    R.racha >= 2 ? `SE OFRECE racha de ${R.racha} ${unidad} seguidas. Poco uso, mucho cariño.` : 'SE ACEPTAN paciencia y buen humor. Experiencia no necesaria.',
+    alcanzado ? `SE REGALA vista desde el campamento ${nombreHito(alcanzado.m)}. Buenas condiciones, sin vecinos ruidosos.` : 'SE ALQUILA el primer campamento, con vista al sendero. Tienda incluida.',
+  ];
+  if (sem % 2) clasificados.reverse();
+  const epoca = Number(hoy.slice(5, 7)) >= 5 && Number(hoy.slice(5, 7)) <= 10 ? 'lluviosa' : 'seca';
+  const pronostico = `${PRONOSTICOS[epoca][sem % 4].replace(/^./, (ch) => ch.toUpperCase())}. Es el clima, no un consejo: la montaña no adivina nada.`;
+  const esc = escalaMontana(R.sats);
+  const primera = compras[0].fecha;
+  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, haceUnAnio: haceAnio, clasificados, pronostico,
+    altitud: altitud(R.sats, esc), sats: R.sats, valor: R.valor ?? null };
+}
+export const textoDiario = (d) => `El Diario del Libro, edición del ${d.edicion}. ${d.titular}. ${d.sub}`;

@@ -111,7 +111,7 @@ function lago(c, W, H) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0 }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, mensajes = [], puedeEscribir = false }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
@@ -342,7 +342,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, techo, ec, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, mensajes, puedeEscribir, techo, ec, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -525,8 +525,10 @@ function banderas(host, campos, W, H) {
   tarjeta.setAttribute('role', 'group');
   tarjeta.setAttribute('aria-labelledby', 'm-tarjeta-t');
   tarjeta.hidden = true;
-  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><button type="button" class="m-tarjeta-x">Cerrar</button>';
-  tarjeta.querySelector('button').addEventListener('click', () => cerrarTarjeta(true));
+  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><p class="m-mensaje" id="m-mensaje" hidden></p><button type="button" class="m-tarjeta-escribir" id="m-escribir" hidden></button><button type="button" class="m-tarjeta-x">Cerrar</button>';
+  tarjeta.querySelector('.m-tarjeta-x').addEventListener('click', () => cerrarTarjeta(true));
+  // El dueño escribe o cambia el mensaje de la bandera: la montaña solo avisa (mensajes.js abre el cuadro).
+  tarjeta.querySelector('#m-escribir').addEventListener('click', () => { if (abierta !== null) document.dispatchEvent(new CustomEvent('libro:mensaje', { detail: { hito: abierta } })); });
   caja.replaceChildren(...botones, tarjeta);
   abierta = null;
 }
@@ -544,6 +546,15 @@ function abrirTarjeta(m) {
   const fecha = fechas[m] ?? null, piedra = Boolean(t.alcanzado && fecha);
   tarjeta.querySelector('.m-pet').innerHTML = piedra ? petroglifo({ cifra: nombreHito(m), titulo: t.titulo, fecha: fechaLarga(fecha), cima: campo.cima }) : '';
   tarjeta.classList.toggle('con-piedra', piedra);
+  // El mensaje del dueño en esa bandera (15A): lo ven todos cuando el campamento ya se alcanzó; antes llega sellado (sin texto).
+  const msg = (estado.mensajes ?? []).find((x) => x.hito === m);
+  const pM = tarjeta.querySelector('#m-mensaje'), bE = tarjeta.querySelector('#m-escribir');
+  pM.hidden = !msg;
+  pM.dataset.sellado = msg?.sellado ? '1' : '';
+  pM.textContent = !msg ? '' : msg.sellado ? 'Hay un mensaje esperándote en este campamento.' : msg.texto;
+  if (msg && !msg.sellado && !t.alcanzado) pM.textContent = `${msg.texto} (se revelará a los demás cuando lleguen)`;
+  bE.hidden = !estado.puedeEscribir;
+  bE.textContent = msg ? 'Cambiar el mensaje' : 'Escribir un mensaje';
   tarjeta.style.setProperty('--cx', `${f1(campo.p.x)}px`);
   const abajo = campo.p.y < H * 0.62;
   tarjeta.style.top = abajo ? `${f1(campo.p.y + 18)}px` : 'auto';

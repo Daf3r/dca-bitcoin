@@ -273,3 +273,15 @@ export function selloSemana(s, { grande = false, nuevo = false } = {}) {
   if (nuevo) o += '<circle class="ss-golpe" cx="32" cy="32" r="29"/>';
   return `${o}</svg>`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 15A · cartas selladas. (PROVISIONAL: dibujos mínimos para probar la integración.)
+// ---------------------------------------------------------------------------------------------
+/** El sobre con su lacre de una carta aún sellada (`c`: la carta; el dibujo no depende de su texto, que ni siquiera está). */
+export function cartaSellada(c = {}) {
+  return `<svg class="carta-ico" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><rect x="2" y="6" width="60" height="38" rx="4" fill="var(--s2)" stroke="var(--s3)"/><circle cx="32" cy="26" r="8" fill="var(--naranja)"/></svg>`;
+}
+/** La carta abierta; `abriendo` anima el lacre al romperse (solo la primera vez que se lee). */
+export function cartaAbierta({ abriendo = false } = {}) {
+  return `<svg class="carta-ico${abriendo ? ' abriendo' : ''}" viewBox="0 0 64 48" aria-hidden="true" focusable="false"><rect x="10" y="4" width="44" height="40" rx="3" fill="var(--s1)" stroke="var(--s3)"/></svg>`;
+}

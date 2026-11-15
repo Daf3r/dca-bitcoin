@@ -80,6 +80,9 @@
 <link rel="modulepreload" href="/sistema.js">
 <link rel="modulepreload" href="/historia.js">
 <link rel="modulepreload" href="/pestanas.js">
+<link rel="modulepreload" href="/diario.js">
+<link rel="modulepreload" href="/capsulas.js">
+<link rel="modulepreload" href="/mensajes.js">
 <link rel="modulepreload" href="/arte-historia.js">
 <link rel="modulepreload" href="/arte-sellos.js">
 <script type="module" src="/app.js"></script>
@@ -158,6 +161,19 @@
     <p id="caida-txt"></p>
     <button type="button" class="enlace" id="caida-ocultar">Ocultar hoy</button>
   </div>
+
+  <!-- El Diario del Libro (campamento 15A): la portada de lo que pasó, para todos. diario.js la pinta. -->
+  <section class="diario" id="diario" data-p="resumen" aria-labelledby="t-diario" hidden>
+    <header class="dia-cab"><p class="dia-nombre">El Diario del Libro</p><p class="dia-edicion" id="dia-edicion"></p></header>
+    <h2 class="dia-titular" id="t-diario"></h2>
+    <p class="dia-sub" id="dia-sub"></p>
+    <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
+    <div class="dia-cols">
+      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p></section>
+      <section class="dia-bloque" aria-labelledby="t-dia-cla"><h3 id="t-dia-cla">Clasificados</h3><ul class="dia-clasif" id="dia-clasif"></ul></section>
+      <section class="dia-bloque" aria-labelledby="t-dia-pro"><h3 id="t-dia-pro">Pronóstico de la montaña</h3><p id="dia-pron"></p></section>
+    </div>
+  </section>
 
   <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden data-p="resumen">
     <h2 class="sr" id="t-tramo">Siguiente meta</h2>
@@ -325,6 +341,13 @@
     </div>
     <p class="ub-pista" id="ub-pista" hidden>¿Ya sacaste sats del exchange? Anótalo como «Traslado» para ver cuánto tienes en tu wallet.</p>
     <button type="button" class="com-boton" id="ub-anotar" hidden>Anotar un traslado</button>
+  </section>
+
+  <!-- Cartas para el futuro (campamento 15A): selladas hasta su fecha o su etapa. El texto de una carta sellada nunca llega a la página. -->
+  <section class="capsulas" id="capsulas" data-p="resumen" aria-labelledby="t-capsulas" hidden>
+    <div class="sec-cab"><h2 id="t-capsulas">Cartas para el futuro</h2><button type="button" class="enlace" id="cap-nueva" hidden>Escribir una carta</button></div>
+    <p class="cap-pista" id="cap-pista" hidden>Escribe una carta que se abra sola en una fecha o al llegar a una etapa. Toda la familia podrá leerla cuando llegue el momento.</p>
+    <ul class="cap-lista" id="cap-lista"></ul>
   </section>
 
   <section class="comienzo" id="comienzo" aria-labelledby="t-comienzo" hidden data-p="resumen">
@@ -642,6 +665,46 @@
   <div class="cert-lienzo" id="cert-lienzo" role="img" aria-labelledby="cert-desc"></div>
   <p class="cert-desc" id="cert-desc"></p>
   <div class="d-bot"><button type="button" id="cert-ok" autofocus>Cerrar</button></div>
+</dialog>
+
+<dialog id="d-carta" class="d-carta" aria-labelledby="carta-t">
+  <h2 id="carta-t">Una carta sellada</h2>
+  <div class="carta-arte" id="carta-arte" aria-hidden="true"></div>
+  <article class="carta-papel">
+    <p class="carta-de" id="carta-de"></p>
+    <p class="carta-texto" id="carta-texto"></p>
+  </article>
+  <div class="d-bot"><button type="button" id="carta-ok" autofocus>Cerrar</button></div>
+</dialog>
+
+<dialog id="d-capsula" class="d-capsula" aria-labelledby="cap-t">
+  <form id="f-capsula" novalidate>
+    <h2 id="cap-t">Escribir una carta para el futuro</h2>
+    <label for="cap-texto">Tu carta</label>
+    <textarea id="cap-texto" rows="7" maxlength="1000" placeholder="Para quien la abra…" required></textarea>
+    <p class="cap-cuenta" id="cap-cuenta" aria-live="polite">0 de 1,000</p>
+    <fieldset class="cap-cuando">
+      <legend>¿Cuándo se abre?</legend>
+      <label class="cap-op"><input type="radio" name="cap-cuando" value="fecha" checked> En una fecha</label>
+      <input type="date" id="cap-fecha" aria-label="Fecha en que se abre">
+      <label class="cap-op"><input type="radio" name="cap-cuando" value="etapa"> Al llegar a una etapa</label>
+      <select id="cap-etapa" aria-label="Etapa a la que se abre" disabled></select>
+    </fieldset>
+    <p class="hoja-error" id="cap-error" role="alert"></p>
+    <div class="d-bot"><button type="button" id="cap-cancelar">Cancelar</button><button type="submit" class="primario" id="cap-sellar">Sellar la carta</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-mensaje" class="d-mensaje" aria-labelledby="msg-t">
+  <form id="f-mensaje" novalidate>
+    <h2 id="msg-t">Un mensaje en la bandera</h2>
+    <p class="msg-ayuda" id="msg-ayuda"></p>
+    <label for="msg-texto">Tu mensaje</label>
+    <input id="msg-texto" type="text" maxlength="160" autocomplete="off" placeholder="Para mis hijos: sigan subiendo">
+    <p class="cap-cuenta" id="msg-cuenta" aria-live="polite">0 de 160</p>
+    <p class="hoja-error" id="msg-error" role="alert"></p>
+    <div class="d-bot"><button type="button" id="msg-cancelar">Cancelar</button><button type="button" id="msg-borrar" hidden>Quitar</button><button type="submit" class="primario" id="msg-guardar">Guardar</button></div>
+  </form>
 </dialog>
 
 <dialog id="d-grafico" class="d-grafico" aria-labelledby="dg-t">

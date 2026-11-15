@@ -364,3 +364,12 @@ export function petroglifo({ cifra, titulo, fecha, cima = false }) {
     + `<g class="pt-texto"><g class="pt-rel-osc" transform="translate(-0.9 1.1)">${textos}</g><g class="pt-rel-luz" transform="translate(0.7 -0.7)">${textos}</g><g class="pt-rel">${textos}</g></g>`
     + `<g class="pt-astillas">${astillas}</g></svg>`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 15A · grabado del Diario. (PROVISIONAL: dibujo mínimo para probar la integración.)
+// ---------------------------------------------------------------------------------------------
+/** Una montañita con tu punto a la altura `altitud` (0 a 1): el grabado de la portada del Diario y de las novedades. */
+export function miniMontana({ altitud = 0.5 } = {}) {
+  const y = 70 - altitud * 56;
+  return `<svg viewBox="0 0 160 80" aria-hidden="true" focusable="false"><path d="M6 76 80 8 154 76Z" fill="var(--s2)" stroke="var(--s3)"/><circle cx="${(80 - altitud * 0 + 0).toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="var(--naranja)"/></svg>`;
+}

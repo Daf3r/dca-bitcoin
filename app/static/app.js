@@ -18,6 +18,7 @@ import './minicab.js';
 import './atajos.js';
 import './indice.js';
 import './pestanas.js';
+import './mensajes.js';
 import './anotar.js';
 
 instalarParallax();
