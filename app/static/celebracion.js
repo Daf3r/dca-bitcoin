@@ -1,6 +1,6 @@
 import { cruzo1Btc, etapaAnterior, etapaSiguiente, etapasCruzadas, metaSiguiente, nombreHito, nombreHitoMeses } from './lib.js';
 import { avisar } from './avisar.js';
-import { lacre } from './arte-sellos.js';
+import { lacre, selloSemana } from './arte-sellos.js';
 import { dCuenta } from './cuenta.js';
 import { $, R, fijarR, reducido } from './estado.js';
 import { MS_SUBIDA, esHito, pintar, pintarMontana } from './pintar.js';
@@ -10,7 +10,7 @@ import { MS_SUBIDA, esHito, pintar, pintarMontana } from './pintar.js';
  * Solo cuando la acción de esta sesión cruza un hito; breve y sin bloquear nada. Si coinciden una etapa y un
  * hito de constancia (10 compras, 6 meses…), la tarjeta de la etapa sale primero y la de constancia después.
  */
-export function celebrar(antes, constancia = []) {
+export function celebrar(antes, constancia = [], sello = null) {
   const tarjetas = [];
   // Cualquier etapa (100k, 250k, 500k, 1M…) que se cruce hacia arriba; si son varias, la más alta.
   const m = etapasCruzadas(antes.sats, R.sats).at(-1);
@@ -20,6 +20,7 @@ export function celebrar(antes, constancia = []) {
     else tarjetas.push({ k: hito ? 'Nuevo hito' : 'Nueva etapa', txt: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, grande: hito, lacre: m });
   }
   for (const c of constancia.slice(-2)) tarjetas.push({ k: 'Constancia', txt: c.tipo === 'compras' ? `${c.valor} compras` : nombreHitoMeses(c.valor), grande: false });
+  if (sello) tarjetas.push({ k: 'Sello de la semana', txt: sello.nombre, grande: false, sello }); // el pasaporte de «Tu historia» (13C)
   if (!tarjetas.length) return;
   const el = $('hito-cel');
   clearTimeout(celebrar.t);
@@ -28,7 +29,8 @@ export function celebrar(antes, constancia = []) {
     const t = tarjetas[i];
     $('hc-k').textContent = t.k;
     $('hc-txt').textContent = t.txt;
-    $('hc-lacre').innerHTML = t.lacre ? lacre(t.lacre, { grande: true }) : ''; // el sello de lacre de la etapa que acabas de cruzar (13B)
+    $('hc-lacre').innerHTML = t.lacre ? lacre(t.lacre, { grande: true }) : t.sello ? selloSemana(t.sello, { grande: true, nuevo: true }) : ''; // el lacre de la etapa que cruzaste (13B) o el sello de la semana (13C)
+    el.classList.toggle('sello-semana', Boolean(t.sello));
     el.classList.toggle('grande', t.grande);
     // Siempre bajo el saldo, sin tapar la cabecera, la cifra ni la etiqueta de la cumbre. En móvil y tablet va
     // centrada; en escritorio, alineada a la izquierda con el saldo.

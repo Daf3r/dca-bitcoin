@@ -1206,3 +1206,107 @@ export function sellos(R) {
   return (R.camino ?? []).filter((h) => h.fecha).map((h) => ({ m: h.m, nombre: nombreHito(h.m), grande: Boolean(h.mayor), fecha: h.fecha }));
 }
 export const textoSello = (s) => `Sello de ${s.m >= 1e8 ? s.nombre : `${s.nombre} sats`}, cruzado el ${fechaLarga(s.fecha)}`;
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 13C · estratos, sellos de la semana y partitura: solo datos (los dibujos viven en `arte-historia.js`, `arte-sellos.js` y
+// `arte.js`). Cuentan lo que ya pasó; un mes o una semana sin compras es parte del paisaje, no una falta.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Los estratos: una capa por mes, desde el de tu primera compra hasta el de hoy (un mes sin compras es una capa delgada, nunca un hueco).
+ * `espesor` (0 a 1) es lo comprado ese mes frente al mes que más compraste; `erosion` (0 a 1) es la parte de lo comprado que se vendió o se
+ * gastó ese mes; `satsExtra` son las compras extra (las vetas de cuarzo). `saldoFin` es lo que tenías al cerrar el mes (o hoy).
+ */
+export function estratosMes(items, hoy = hoyISO()) {
+  const compras = items.filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return [];
+  const mes0 = compras.reduce((m, c) => (c.fecha < m ? c.fecha : m), compras[0].fecha).slice(0, 7), mesHoy = hoy.slice(0, 7);
+  const por = new Map();
+  let [y, m] = mes0.split('-').map(Number);
+  while (`${y}-${String(m).padStart(2, '0')}` <= mesHoy) {
+    const mes = `${y}-${String(m).padStart(2, '0')}`;
+    por.set(mes, { i: por.size, mes, anio: y, nombre: `${MESES[m - 1]} ${y}`, comprados: 0, vendidos: 0, nCompras: 0, nVentas: 0, nExtras: 0, satsExtra: 0, espesor: 0, erosion: 0, saldoFin: 0, enCurso: mes === mesHoy });
+    if (++m > 12) { m = 1; y++; }
+  }
+  for (const c of items) {
+    const e = por.get(c.fecha.slice(0, 7));
+    if (!e) continue;
+    if (c.tipo === 'venta') { e.vendidos += c.sats; e.nVentas++; }
+    else { e.comprados += c.sats; e.nCompras++; if (c.extra) { e.nExtras++; e.satsExtra += c.sats; } }
+  }
+  const tope = Math.max(1, ...[...por.values()].map((e) => e.comprados));
+  for (const e of por.values()) {
+    e.espesor = e.comprados / tope;
+    e.erosion = e.comprados ? Math.min(1, e.vendidos / e.comprados) : e.vendidos ? 1 : 0;
+    e.saldoFin = satsEn(items, e.enCurso ? hoy : `${e.mes}-31`);
+  }
+  return [...por.values()];
+}
+export function textoEstratos(e) {
+  if (!e.length) return 'Tus estratos empiezan con tu primera compra.';
+  const con = e.filter((x) => x.nCompras).length;
+  return `Tus estratos tienen ${e.length} ${e.length === 1 ? 'capa' : 'capas'}, una por mes, de ${e[0].nombre} a ${e.at(-1).nombre}; ${con} con compras. `
+    + 'Cuanto más gruesa la capa, más sats ese mes; las vetas de cuarzo son compras extra y lo desgastado, ventas o gastos.';
+}
+/** Un mes de los estratos, para leerlo al tocarlo. */
+export function textoEstrato(e) {
+  const partes = [`${e.nombre}${e.enCurso ? ' (en curso)' : ''}: ${e.nCompras ? `${e.nCompras} ${e.nCompras === 1 ? 'compra' : 'compras'}, +${entero(e.comprados)} sats` : 'sin compras'}`];
+  if (e.nExtras) partes.push(`${e.nExtras} extra (+${entero(e.satsExtra)} sats)`);
+  if (e.nVentas) partes.push(`${e.nVentas} ${e.nVentas === 1 ? 'venta' : 'ventas'} (−${entero(e.vendidos)} sats)`);
+  partes.push(`${e.enCurso ? 'tienes' : 'cerraste con'} ${entero(e.saldoFin)} sats`);
+  return partes.join(' · ');
+}
+
+/** «9 – 15 nov 2026» o «30 nov – 6 dic 2026»: el rango de una semana de lunes a domingo, con el año del domingo. */
+export function nombreSemana(desde, hasta) {
+  const d = fechaCorta(desde), h = fechaCorta(hasta);
+  const [dd, dm] = d.split(' '), [hd, hm] = h.split(' ');
+  return `${dm === hm ? dd : d} – ${hd} ${hm} ${hasta.slice(0, 4)}`;
+}
+/**
+ * El pasaporte: un sello por cada semana en que compraste algo (de la más vieja a la más nueva), con tu saldo y tu altitud (0 a 1) al
+ * cerrar esa semana. `numero` es el lugar del sello en el pasaporte. Una semana sin sello no es una falta: no se enseña ni se cuenta.
+ */
+export function sellosSemana(items, hoy = hoyISO()) {
+  return semanasManta(items, hoy).celdas.filter((c) => c.n).map((c, k) => {
+    const saldo = satsEn(items, c.hasta < hoy ? c.hasta : hoy);
+    return { idx: c.idx, numero: k + 1, desde: c.desde, hasta: c.hasta, nombre: nombreSemana(c.desde, c.hasta), sats: c.sats, n: c.n, extra: c.extra, saldo, altitud: altitud(saldo, escalaMontana(saldo)) };
+  });
+}
+/** El sello que nace al guardar una compra: solo si es la primera de su semana (si no, esa semana ya tenía su sello); si no, null. */
+export function selloNuevo(items, fecha, hoy = hoyISO()) {
+  const s = sellosSemana(items, hoy).find((x) => x.desde <= fecha && fecha <= x.hasta);
+  return s && s.n === 1 ? s : null;
+}
+export const textoSelloSemana = (s) => `Sello n.º ${s.numero}: semana del ${s.nombre}, ${s.n} ${s.n === 1 ? 'compra' : 'compras'}, +${entero(s.sats)} sats; al cerrar la semana tenías ${entero(s.saldo)} sats`;
+export const textoPasaporte = (ss) => (ss.length
+  ? `Tu pasaporte tiene ${ss.length} ${ss.length === 1 ? 'sello' : 'sellos'}, uno por cada semana en que compraste.`
+  : 'Tu pasaporte empieza con tu primera compra.');
+
+/** Las trece posiciones de la pauta (do 4 a la 5 sobre la quinta), de abajo arriba, en Hz: escala de do mayor. Las líneas son los pasos 2, 4, 6, 8 y 10. */
+export const PASOS_HZ = [261.63, 293.66, 329.63, 349.23, 392, 440, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99, 880];
+/**
+ * La partitura: un año por pauta y una nota por compra. Cuanto más caro estaba BTC ese día (`precio`, lo que pagaste por 1 BTC), más
+ * arriba la nota (`paso`, 0 a 12); la escala es logarítmica y la misma para todos los años, para que se puedan comparar. `frac` (0 a 1) es
+ * su lugar en el año. Con todos los precios iguales, las notas van a la mitad. Solo cuenta lo que ya pasó: ni predice ni recomienda.
+ */
+export function partitura(items) {
+  const compras = items.filter((c) => c.tipo !== 'venta' && c.precio > 0).sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.id ?? 0) - (b.id ?? 0)));
+  if (!compras.length) return [];
+  const logs = compras.map((c) => Math.log(c.precio));
+  const lo = Math.min(...logs), hi = Math.max(...logs);
+  const por = new Map();
+  compras.forEach((c, k) => {
+    const anio = Number(c.fecha.slice(0, 4));
+    const y = por.get(anio) ?? { anio, notas: [], min: Infinity, max: 0 };
+    y.notas.push({ i: y.notas.length, fecha: c.fecha, frac: fraccionAnio(c.fecha), precio: c.precio, sats: c.sats, extra: Boolean(c.extra), paso: hi > lo ? Math.round(((logs[k] - lo) / (hi - lo)) * 12) : 6 });
+    y.min = Math.min(y.min, c.precio); y.max = Math.max(y.max, c.precio);
+    por.set(anio, y);
+  });
+  return [...por.values()];
+}
+export const textoPartitura = (anios) => (anios.length
+  ? `Tu partitura tiene ${anios.length} ${anios.length === 1 ? 'pauta' : 'pautas'}, una por año, y una nota por compra: cuanto más caro estaba BTC ese día, más aguda la nota.`
+  : 'Tu partitura empieza con tu primera compra.');
+export const textoAnioPartitura = (y) => `${y.anio}: ${y.notas.length} ${y.notas.length === 1 ? 'nota' : 'notas'}; BTC entre $${entero(y.min)} y $${entero(y.max)} en tus compras`;
+export const textoNota = (n) => `${fechaLarga(n.fecha)} · BTC a $${entero(n.precio)} · +${entero(n.sats)} sats${n.extra ? ' · compra extra' : ''}`;

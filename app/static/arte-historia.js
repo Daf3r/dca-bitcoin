@@ -501,3 +501,291 @@ export function manta(datos, { sel = null } = {}) {
   }
   return `${s}</svg>`;
 }
+
+
+// ================================================================ los estratos (campamento 13C)
+// Un corte geológico: un bloque de tierra visto de lado y un poco desde arriba, con una capa por mes (la más vieja abajo, sobre la roca
+// madre). El grosor de cada capa son los sats de ese mes; un mes sin compras es una capa delgada, nunca un hueco. Cada año tiene su
+// tierra (arcilla, ocre, arena, roca…) y entre un año y otro queda una veta clara. Lo vendido o gastado desgasta la capa por la derecha
+// (un nicho que el agua fue comiendo); las compras extra son vetas de cuarzo que la cruzan. Arriba, la hierba de hoy.
+
+const TIERRAS = 6; // tonos de tierra que se turnan por año (clases he-a0 … he-a5)
+
+/** Estratos: `lista` = `lib.estratosMes`. Cada capa tocable es un `<path class="pieza he-capa">` con `data-i`. */
+export function estratos(lista, { sel = null } = {}) {
+  const n = lista.length;
+  if (!n) return `<svg class="h-estratos" ${MARCO}></svg>`;
+  const DX = 30, DY = -17; // la profundidad del bloque (su cara de arriba y su costado se ven hacia arriba a la derecha)
+  // Con pocos meses el bloque es una muestra pequeña y centrada (con más roca madre debajo, para que siga leyéndose como un bloque).
+  const W = 150 + 104 * Math.min(1, (n - 1) / 11);
+  const pesos = lista.map((e) => 0.24 + 0.76 * e.espesor);
+  const suma = pesos.reduce((a, b) => a + b, 0);
+  const u = Math.min(30, 192 / suma), H = u * suma;
+  const roca = Math.max(20, 100 - H);
+  const xL = (320 - W - DX) / 2, xR = xL + W;
+  const yT = 152 - (DY + H + roca) / 2; // arriba de la capa más nueva
+  const yB = yT + H; // abajo de la más vieja: empieza la roca madre
+  // Dónde va cada capa: de abajo arriba.
+  const capas = [];
+  let y = yB;
+  lista.forEach((e, k) => { const h = pesos[k] * u; capas.push({ e, y0: y - h, y1: y, h }); y -= h; });
+  const anio0 = lista[0].anio;
+  // Los estratos no son reglas: todas las juntas ondulan igual (un pliegue suave y un buzamiento leve), así nunca se cruzan.
+  const A = Math.min(3.4, 1.2 + H * 0.012);
+  // Impar respecto al centro (sube a un lado lo que baja al otro): así el centro de cada capa cae siempre dentro de ella.
+  const ola = (x) => { const t = (x - xL) / W - 0.5; return A * (0.7 * Math.sin(t * TAU) + 0.28 * Math.sin(t * TAU * 2.4)) - 2.2 * t; };
+  const PASOS = 14;
+  const xs = Array.from({ length: PASOS + 1 }, (_, k) => xL + (W * k) / PASOS);
+  /** Una junta ondulada a la altura `y` (de izquierda a derecha, o al revés). */
+  const junta = (y, rev = false, x0 = xL, x1 = xR) => (rev ? [...xs].reverse() : xs).filter((x) => x >= x0 - 0.01 && x <= x1 + 0.01).map((x) => [x, y + ola(x)]);
+  /** La banda entre dos juntas (el frente de una capa). */
+  const banda = (y0, y1, e = 0) => `${lin([...junta(y0 - e).map(([x, y], k, a) => [k === 0 ? x - e : k === a.length - 1 ? x + e : x, y]), ...junta(y1 + e, true).map(([x, y], k, a) => [k === 0 ? x + e : k === a.length - 1 ? x - e : x, y])])}Z`;
+  const oR = ola(xR);
+  const lado = (y0, y1) => `M${f1(xR)} ${f1(y0 + oR)}L${f1(xR + DX)} ${f1(y0 + oR + DY)}V${f1(y1 + oR + DY)}L${f1(xR)} ${f1(y1 + oR)}Z`;
+
+  let s = `<svg class="h-estratos" ${MARCO}><defs>`
+    + `<linearGradient id="h-e-luz" gradientUnits="userSpaceOnUse" x1="${f1(xR)}" y1="${f1(yT)}" x2="${f1(xL)}" y2="${f1(yB + roca)}"><stop class="he-l0" offset="0"/><stop class="he-l1" offset="0.45"/><stop class="he-l2" offset="1"/></linearGradient>`
+    + `<linearGradient id="h-e-lado" gradientUnits="userSpaceOnUse" x1="0" y1="${f1(yT + DY)}" x2="0" y2="${f1(yB + roca)}"><stop class="he-d0" offset="0"/><stop class="he-d1" offset="1"/></linearGradient>`
+    + '<radialGradient id="h-e-suelo" cx="0.5" cy="0.5" r="0.5"><stop class="he-s0" offset="0"/><stop class="he-s1" offset="1"/></radialGradient>'
+    + '</defs>';
+  // La sombra del bloque sobre el suelo.
+  const yS = yB + roca;
+  s += `<ellipse class="he-suelo" cx="${f1(xL + W / 2 + DX * 0.35)}" cy="${f1(yS + 2)}" rx="${f1(W * 0.66 + DX * 0.5)}" ry="${f1(10 + W * 0.04)}"/>`;
+
+  // La roca madre: el pie del bloque, gris y tallada (no es un mes: no se toca).
+  s += `<path class="he-roca" d="${lin([...junta(yB), [xR, yS], [xL, yS]])}Z"/><path class="he-roca-lado" d="M${f1(xR)} ${f1(yB + oR)}L${f1(xR + DX)} ${f1(yB + oR + DY)}V${f1(yS + DY)}L${f1(xR)} ${f1(yS)}Z"/>`;
+  // La roca madre en bloques: juntas casi verticales, y en cada bloque una cara de luz (arriba a la derecha) y una de sombra.
+  let grieta = '', facR = '', facS = '';
+  const nb = Math.max(3, Math.round(W / 46));
+  let xa = xL;
+  for (let k = 0; k <= nb; k++) {
+    const xb = k === nb ? xR : xL + (W * (k + 0.35 + 0.3 * fijo(k, 61))) / (nb + 0.6);
+    const top = (x) => yB + ola(x) + 1;
+    if (k < nb) grieta += `M${f1(xb)} ${f1(yS)}L${f1(xb + 2.5 * (fijo(k, 63) - 0.5))} ${f1((top(xb) + yS) / 2)}L${f1(xb + 1.5 * (fijo(k, 64) - 0.5))} ${f1(top(xb))}`;
+    // Cada bloque, tallado: un plano de luz arriba a la derecha y una cuña de sombra abajo a la izquierda.
+    const w = xb - xa, hh = yS - top(xb), f = fijo(k, 65);
+    facR += `${lin([[xa + w * (0.35 + 0.15 * f), top(xa + w * 0.4) + 0.4], [xb - 1, top(xb - 1) + 0.4], [xb - 1, top(xb) + hh * (0.4 + 0.2 * f)], [xa + w * (0.62 + 0.1 * f), top(xa + w * 0.6) + hh * 0.3]])}Z`;
+    facS += `${lin([[xa + 1, top(xa + 1) + hh * (0.45 + 0.2 * fijo(k, 66))], [xa + w * (0.4 + 0.15 * f), yS], [xa + 1, yS]])}Z`;
+    xa = xb;
+  }
+  s += `<path class="he-roca-cara" d="${facR}"/><path class="he-roca-sombra" d="${facS}"/><path class="he-roca-grieta" d="${grieta}"/>`;
+
+  // El costado del bloque: una banda por año (los meses de un año están juntos), en su misma tierra, iluminado.
+  const porAnio = new Map();
+  for (const c of capas) { const a = porAnio.get(c.e.anio); if (a) a.y0 = c.y0; else porAnio.set(c.e.anio, { y0: c.y0, y1: c.y1 }); }
+  for (const [a, r] of porAnio) s += `<path class="he-lado he-a${(a - anio0) % TIERRAS}" d="${lado(r.y0, r.y1)}"/>`;
+  let juntas = '', vetasLado = '';
+  capas.forEach((c, k) => {
+    if (!k) return;
+    const nuevoAnio = c.e.anio !== capas[k - 1].e.anio;
+    const d = `M${f1(xR)} ${f1(c.y1 + oR)}l${DX} ${DY}`;
+    if (nuevoAnio) vetasLado += d; else if (c.h > 1.6) juntas += d;
+  });
+  s += `<path class="he-lado-sombra" d="${lado(yT, yS)}"/><path class="he-junta" d="${juntas}"/><path class="he-veta-lado" d="${vetasLado}"/>`;
+
+  // La cara de arriba: la tierra de hoy, con su hierba.
+  const cima = `${lin([...junta(yT), ...junta(yT, true).map(([x, y]) => [x + DX, y + DY])])}Z`;
+  s += `<path class="he-cima" d="${cima}"/>`;
+
+  // Las capas: el frente de cada mes es la pieza tocable.
+  for (const c of capas) {
+    const a = (c.e.anio - anio0) % TIERRAS, par = Number(c.e.mes.slice(5)) % 2;
+    s += `<path class="pieza he-capa he-a${a}${par ? ' he-par' : ''}${c.e.i === sel ? ' sel' : ''}" data-i="${c.e.i}" d="${banda(c.y0, c.y1 + 0.05)}"/>`;
+  }
+
+  // Encima de las capas (sin recibir el toque): la textura, las vetas entre años, la erosión, el cuarzo, la luz y la hierba.
+  s += '<g class="he-sobre">';
+  let grano = '', lamina = '', veta = '', nicho = '', labio = '', cuarzo = '', cuarzoLuz = '', destellos = '', regla = '';
+  capas.forEach((c, k) => {
+    const { e, y0, y1, h } = c;
+    // Textura: guijarros y láminas finas en las capas que tienen sitio (fijos por mes).
+    if (h > 4.5) {
+      const nn = Math.min(4, Math.floor(h / 4));
+      for (let j = 0; j < nn; j++) {
+        const gx = xL + 6 + (W - 12) * fijo(e.i * 5 + j, 71), gy = y0 + ola(gx) + h * (0.25 + 0.5 * fijo(e.i * 5 + j, 72)), r = Math.min(h * 0.18, 0.7 + 1.6 * fijo(e.i * 5 + j, 73));
+        grano += `M${f1(gx - r)} ${f1(gy)}a${f1(r)} ${f1(r * 0.7)} 0 1 0 ${f1(2 * r)} 0a${f1(r)} ${f1(r * 0.7)} 0 1 0 ${f1(-2 * r)} 0Z`;
+      }
+      const lx = xL + W * (0.08 + 0.5 * fijo(e.i, 74)), lw = W * (0.18 + 0.25 * fijo(e.i, 76)), lf = h * (0.35 + 0.3 * fijo(e.i, 75));
+      lamina += lin(junta(y0 + lf, false, lx, lx + lw));
+      if (h > 10) lamina += lin(junta(y0 + lf + h * 0.22, false, lx + W * 0.24, lx + W * 0.46));
+    }
+    // La veta clara entre un año y el siguiente, y su muesca en la regla de la izquierda.
+    if (k && e.anio !== capas[k - 1].e.anio) {
+      veta += lin(junta(y1));
+      regla += `M${f1(xL - 4)} ${f1(y1 + ola(xL))}h-7`;
+    }
+    // La erosión: un nicho que entra por la derecha, tan ancho como lo vendido o gastado ese mes.
+    if (e.erosion > 0) {
+      const eh = Math.max(4, e.erosion * W * 0.34), a0 = y0 + oR, a1 = y1 + oR, m = a0 + h * 0.5;
+      const d = `M${f1(xR)} ${f1(a0 + h * 0.08)}C${f1(xR - eh * 0.55)} ${f1(a0 + h * 0.1)} ${f1(xR - eh)} ${f1(m - h * 0.2)} ${f1(xR - eh)} ${f1(m)}`
+        + `S${f1(xR - eh * 0.4)} ${f1(a1 - h * 0.04)} ${f1(xR)} ${f1(a1 - h * 0.02)}`;
+      nicho += `${d}Z`;
+      labio += d;
+    }
+    // El cuarzo de las compras extra: una veta de cristal que cruza la capa en diagonal, con su filo de luz y un destello.
+    for (let j = 0; j < Math.min(3, e.nExtras); j++) {
+      // Las vetas se meten un poco en las capas vecinas (así se ven aunque el mes sea delgado).
+      const t = 0.18 + 0.64 * fijo(e.i * 3 + j, 81), x0 = xL + (W - 20) * t, sl = Math.min(10, 4 + h * 0.6), w = 1.4 + Math.min(2.2, h * 0.12);
+      const top = y0 + ola(x0) - 2.6, bot = y1 + ola(x0 + sl) + 2.6;
+      cuarzo += `M${f1(x0 - w)} ${f1(top)}L${f1(x0 + w)} ${f1(top)}L${f1(x0 + sl * 0.55 + w * 0.6)} ${f1((top + bot) / 2)}L${f1(x0 + sl + w)} ${f1(bot)}L${f1(x0 + sl - w)} ${f1(bot)}L${f1(x0 + sl * 0.55 - w * 0.7)} ${f1((top + bot) / 2)}Z`;
+      cuarzoLuz += `M${f1(x0 + w * 0.6)} ${f1(top + 0.4)}L${f1(x0 + sl * 0.55 + w * 0.3)} ${f1((top + bot) / 2)}`;
+      const dl = 2.6 + Math.min(2.4, h * 0.2);
+      destellos += destello(x0 + sl * 0.55, (top + bot) / 2, dl, dl * 0.18);
+    }
+  });
+  s += `<path class="he-grano" d="${grano}"/><path class="he-lamina" d="${lamina}"/>`
+    + `<path class="he-luz" d="${banda(yT, yB)}"/>`
+    + `<path class="he-nicho" d="${nicho}"/><path class="he-nicho-labio" d="${labio}"/><path class="he-veta" d="${veta}"/>`
+    + `<path class="he-cuarzo" d="${cuarzo}"/><path class="he-cuarzo-luz" d="${cuarzoLuz}"/><path class="he-destello" d="${destellos}"/>`;
+  // El canto del bloque: el filo de luz de la esquina que mira al astro y el borde de arriba.
+  s += `<path class="he-filo" d="M${f1(xR)} ${f1(yS)}V${f1(yT + oR)}L${f1(xR + DX)} ${f1(yT + oR + DY)}"/>`;
+  // La regla de la izquierda: una muesca por cada cambio de año, sin texto (los años los dice el texto de abajo).
+  const oL = ola(xL);
+  s += `<path class="he-regla" d="M${f1(xL - 4)} ${f1(yT + oL)}V${f1(yB + oL)}${regla}M${f1(xL - 4)} ${f1(yT + oL)}h-4M${f1(xL - 4)} ${f1(yB + oL)}h-4"/>`;
+  // La hierba de hoy: matas en el borde de delante y unas pocas sobre la cara de arriba; el borde de la capa en curso, vivo.
+  let hierba = '';
+  const matas = Math.round(W / 9);
+  for (let k = 0; k < matas; k++) {
+    const hx = xL + 3 + ((W - 6) * (k + fijo(k, 91) * 0.6)) / matas, a = 2.2 + 2.6 * fijo(k, 92);
+    const hy = yT + ola(hx) + 0.6;
+    hierba += `M${f1(hx - 1.6)} ${f1(hy)}l${f1(0.6)} ${f1(-a)}M${f1(hx)} ${f1(hy)}l${f1(0.4 + fijo(k, 93))} ${f1(-a * 1.3)}M${f1(hx + 1.4)} ${f1(hy)}l${f1(1.2)} ${f1(-a * 0.8)}`;
+  }
+  for (let k = 0; k < 7; k++) {
+    const t = fijo(k, 94), d = 0.25 + 0.6 * fijo(k, 95), bx = xL + 10 + (W - 20) * t, hx = bx + DX * d, hy = yT + ola(bx) + DY * d;
+    hierba += `M${f1(hx)} ${f1(hy)}l-0.8 -2.4M${f1(hx + 1)} ${f1(hy)}l0.4 -3M${f1(hx + 2)} ${f1(hy)}l1 -2.2`;
+  }
+  s += `<path class="he-hierba" d="${hierba}"/>`;
+  const ult = capas.at(-1);
+  if (ult.e.enCurso) { const v = lin(junta(yT + 0.4)); s += `<path class="he-vivo" d="${v}l${DX} ${DY}"/><path class="he-vivo-luz efecto-ambiente" d="${v}"/>`; }
+  s += '</g>';
+
+  // La capa elegida: un marco naranja con un filo oscuro y una flecha en la regla (no reciben el toque).
+  const c = capas.find((x) => x.e.i === sel);
+  if (c) {
+    const m = banda(c.y0, c.y1, 1.2), ym = (c.y0 + c.y1) / 2 + ola(xL);
+    s += `<path class="he-sel-fondo" d="${m}"/><path class="he-sel" d="${m}"/>`
+      + `<path class="he-sel-flecha" d="M${f1(xL - 16)} ${f1(ym - 4.5)}L${f1(xL - 8)} ${f1(ym)}L${f1(xL - 16)} ${f1(ym + 4.5)}Z"/>`;
+  }
+  return `${s}</svg>`;
+}
+
+// ================================================================ la partitura (campamento 13C)
+// Una pauta por año y una nota por compra: cuanto más caro estaba BTC ese día, más aguda. Los meses son compases; las compras de un
+// mismo mes van unidas por su barra, como corcheas (dobles con cuatro o más). La clave es la montañita del logo. Con muchas compras el
+// año se parte en varios sistemas (dos semestres, tres cuatrimestres o cuatro trimestres), como una partitura de verdad.
+
+const PASO_P = 6; // media distancia entre dos líneas de la pauta
+const SISTEMA = 112; // alto de cada sistema (pauta con sus líneas adicionales y sus plicas)
+const X0P = 56, X1P = 308; // donde empiezan las notas (tras la clave) y donde acaba la pauta
+
+/** Una cabeza de nota: una elipse inclinada (dos arcos), como las de una partitura grabada. */
+function cabeza(x, y, rx, ry) {
+  const t = (-22 * Math.PI) / 180, dx = rx * Math.cos(t), dy = rx * Math.sin(t);
+  return `M${f1(x - dx)} ${f1(y - dy)}a${f1(rx)} ${f1(ry)} -22 1 0 ${f1(2 * dx)} ${f1(2 * dy)}a${f1(rx)} ${f1(ry)} -22 1 0 ${f1(-2 * dx)} ${f1(-2 * dy)}Z`;
+}
+
+/** La clave: la montañita del logo, alta como la pauta, con el sendero que la sube y el sol de la cumbre. */
+function clave(x, yc) {
+  // Ancha como el logo (no una aguja): del pie, bajo la pauta, a la cumbre, sobre la quinta línea; el sol junto al hombro derecho.
+  const k = 1.22, X = (d) => x + d * k;
+  const yb = yc + 4.3 * PASO_P, yp = yc - 4.5 * PASO_P;
+  const pts = [[X(-1), yb], [X(6), yc + 0.8 * PASO_P], [X(12.5), yp], [X(17.5), yc - 1.4 * PASO_P], [X(21), yc - 2.6 * PASO_P], [X(30), yb]];
+  const nieve = `M${f1(X(9.2))} ${f1(yc - 2.3 * PASO_P)}L${f1(X(12.5))} ${f1(yp)}L${f1(X(15.4))} ${f1(yc - 2.5 * PASO_P)}L${f1(X(13.6))} ${f1(yc - 2 * PASO_P)}L${f1(X(12))} ${f1(yc - 2.7 * PASO_P)}Z`;
+  const sendero = `M${f1(X(15))} ${f1(yb - 1.2)}L${f1(X(8))} ${f1(yc + 2.2 * PASO_P)}L${f1(X(16))} ${f1(yc + 0.4 * PASO_P)}L${f1(X(11))} ${f1(yc - 1.2 * PASO_P)}`;
+  return { cuerpo: `${lin(pts)}Z`, nieve, sendero, sol: `M${f1(X(24.5))} ${f1(yc - 4.6 * PASO_P)}h0.01` };
+}
+
+/** Partitura: `anio` = un elemento de `lib.partitura`. Cada nota tocable es un `<circle class="pieza hp-toque">` con `data-i`. */
+export function partitura(anio, { sel = null } = {}) {
+  const notas = anio?.notas ?? [];
+  const n = notas.length;
+  const S = n <= 40 ? 1 : n <= 80 ? 2 : n <= 120 ? 3 : 4; // sistemas
+  const H = Math.max(150, 24 + S * SISTEMA);
+  const yc = (j) => 12 + SISTEMA / 2 + j * SISTEMA + (S === 1 ? (H - 24 - SISTEMA) / 2 : 0);
+  const yN = (j, p) => yc(j) - (p - 6) * PASO_P;
+  const ancho = X1P - X0P - 10;
+  let s = `<svg class="h-partitura" viewBox="0 0 320 ${H}" aria-hidden="true" focusable="false"><defs>`
+    + `<linearGradient id="h-p-papel" x1="0.9" y1="0" x2="0.1" y2="1"><stop class="hp-p0" offset="0"/><stop class="hp-p1" offset="0.6"/><stop class="hp-p2" offset="1"/></linearGradient>`
+    + '</defs>';
+  s += `<rect class="hp-sombra" x="4" y="5" width="314" height="${H - 5}" rx="9"/><rect class="hp-papel" x="1" y="1" width="314" height="${H - 5}" rx="9"/>`;
+
+  // Dónde va cada nota: su sistema, su x (por su día del año) y su y (por su paso).
+  const pos = notas.map((nt) => {
+    const j = Math.min(S - 1, Math.floor(nt.frac * S));
+    return { nt, j, x: X0P + 5 + (nt.frac * S - j) * ancho, y: yN(j, nt.paso), mes: Math.min(11, Math.floor(nt.frac * 12)) };
+  });
+  // El tamaño de las cabezas según lo apretado que esté cada sistema, y un reparto sutil para que dos notas juntas no se tapen.
+  let rx = 4.2;
+  for (let j = 0; j < S; j++) { const m = pos.filter((p) => p.j === j).length; if (m) rx = Math.min(rx, Math.max(2.7, ((ancho / m) * 0.46))); }
+  const ry = rx * 0.72;
+  for (let j = 0; j < S; j++) {
+    const de = pos.filter((p) => p.j === j);
+    for (let k = 1; k < de.length; k++) {
+      const a = de[k - 1], b = de[k], hueco = Math.abs(a.nt.paso - b.nt.paso) <= 1 ? rx * 1.75 : rx * 0.95;
+      if (b.x - a.x < hueco) b.x = a.x + hueco;
+    }
+    // Si el reparto empujó el final fuera de la pauta, se aprieta todo hacia dentro.
+    const ult = de.at(-1);
+    if (ult && ult.x > X1P - 7) { const x0 = X0P + 5, k = (X1P - 7 - x0) / (ult.x - x0); for (const p of de) p.x = x0 + (p.x - x0) * k; }
+  }
+
+  // La pauta: cinco líneas por sistema, la barra de inicio, las de cada mes y la doble barra final.
+  let lineas = '', barras = '', fin = '';
+  const claves = { cuerpo: '', nieve: '', sendero: '', sol: '' };
+  for (let j = 0; j < S; j++) {
+    for (const p of [2, 4, 6, 8, 10]) lineas += `M12 ${f1(yN(j, p))}H${X1P}`;
+    barras += `M12 ${f1(yN(j, 10))}V${f1(yN(j, 2))}`;
+    const meses = 12 / S;
+    for (let m = 1; m < meses; m++) { const x = X0P + 5 + (m / meses) * ancho - 1.5; barras += `M${f1(x)} ${f1(yN(j, 10))}V${f1(yN(j, 2))}`; }
+    if (j < S - 1) barras += `M${X1P} ${f1(yN(j, 10))}V${f1(yN(j, 2))}`;
+    else fin = `M${X1P - 5} ${f1(yN(j, 10))}V${f1(yN(j, 2))}`;
+    const c = clave(15, yc(j));
+    for (const k of Object.keys(claves)) claves[k] += c[k];
+  }
+  s += `<path class="hp-linea" d="${lineas}"/><path class="hp-barra" d="${barras}"/><path class="hp-fin" d="${fin}"/>`
+    + `<path class="hp-final" d="M${X1P - 1.2} ${f1(yN(S - 1, 10))}V${f1(yN(S - 1, 2))}"/>`
+    + `<path class="hp-clave" d="${claves.cuerpo}"/><path class="hp-clave-nieve" d="${claves.nieve}"/><path class="hp-clave-sendero" d="${claves.sendero}"/><path class="hp-clave-sol" d="${claves.sol}"/>`;
+
+  // Las plicas y las barras: las notas de un mismo mes van unidas; una sola en su mes es una negra.
+  const L = 3.4 * PASO_P;
+  let plicas = '', vigas = '', adicionales = '', cabezas = '', extras = '', aros = '';
+  const grupos = [];
+  // Un mismo mes va unido, salvo un salto muy grande (más de una octava): ahí cada nota lleva su plica, como en un grabado cuidado.
+  for (const p of pos) {
+    const g = grupos.at(-1);
+    const junto = g && g[0].j === p.j && g[0].mes === p.mes && Math.max(p.nt.paso, ...g.map((q) => q.nt.paso)) - Math.min(p.nt.paso, ...g.map((q) => q.nt.paso)) <= 7;
+    if (junto) g.push(p); else grupos.push([p]);
+  }
+  for (const g of grupos) {
+    const media = g.reduce((a, p) => a + p.nt.paso, 0) / g.length, abajo = media >= 6, sx = abajo ? -rx * 0.86 : rx * 0.86;
+    if (g.length === 1) {
+      const p = g[0], abajo = p.nt.paso >= 6, sx = abajo ? -rx * 0.86 : rx * 0.86;
+      plicas += `M${f1(p.x + sx)} ${f1(p.y)}V${f1(p.y + (abajo ? L : -L))}`;
+      continue;
+    }
+    // La barra: con la pendiente de la primera a la última (moderada) y lo bastante lejos para que todas las plicas la alcancen.
+    const a = g[0], b = g.at(-1), xa = a.x + sx, xb = b.x + sx;
+    const pend = Math.max(-0.22, Math.min(0.22, (b.y - a.y) / Math.max(1, xb - xa)));
+    const base = g.map((p) => (abajo ? p.y + L * 0.85 : p.y - L * 0.85) - pend * (p.x + sx - xa));
+    const c0 = abajo ? Math.max(...base) : Math.min(...base);
+    const yv = (x) => c0 + pend * (x - xa);
+    for (const p of g) plicas += `M${f1(p.x + sx)} ${f1(p.y)}V${f1(yv(p.x + sx))}`;
+    const t = 2.4, dir = abajo ? -1 : 1;
+    const viga = (off) => `M${f1(xa - 0.5)} ${f1(yv(xa) + off)}L${f1(xb + 0.5)} ${f1(yv(xb) + off)}L${f1(xb + 0.5)} ${f1(yv(xb) + off + dir * t)}L${f1(xa - 0.5)} ${f1(yv(xa) + off + dir * t)}Z`;
+    vigas += viga(0);
+    if (g.length >= 4) vigas += viga(dir * 4.2); // semicorcheas: una segunda barra
+  }
+  // Las líneas adicionales (el do de abajo y el la de arriba), las cabezas y los aros de las compras extra.
+  for (const p of pos) {
+    if (p.nt.paso <= 0 || p.nt.paso >= 12) adicionales += `M${f1(p.x - rx - 2.6)} ${f1(p.y)}h${f1(2 * rx + 5.2)}`;
+    const c = cabeza(p.x, p.y, rx, ry);
+    if (p.nt.extra) { extras += c; aros += `M${f1(p.x - rx - 2.4)} ${f1(p.y)}a${f1(rx + 2.4)} ${f1(rx + 2.4)} 0 1 0 ${f1(2 * rx + 4.8)} 0a${f1(rx + 2.4)} ${f1(rx + 2.4)} 0 1 0 ${f1(-2 * rx - 4.8)} 0Z`; }
+    else cabezas += c;
+  }
+  s += `<path class="hp-adicional" d="${adicionales}"/><path class="hp-plica" d="${plicas}"/><path class="hp-viga" d="${vigas}"/>`
+    + `<path class="hp-cabeza" d="${cabezas}"/><path class="hp-aro" d="${aros}"/><path class="hp-cabeza hp-extra" d="${extras}"/>`;
+  // Las zonas para tocar: un círculo por nota (invisible; se enciende al elegirla o mientras suena).
+  s += '<g class="hp-toques">';
+  for (const p of pos) s += `<circle class="pieza hp-toque${p.nt.i === sel ? ' sel' : ''}" data-i="${p.nt.i}" cx="${f1(p.x)}" cy="${f1(p.y)}" r="9"/>`;
+  return `${s}</g></svg>`;
+}

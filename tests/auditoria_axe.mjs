@@ -235,6 +235,24 @@ try {
       await p.click('#cam-ok'); await p.waitForFunction(() => fetch('/api/yo').then((r) => r.json()).then((j) => j.cambios !== '0'), null, { timeout: 5000 }); // queda visto: los demás estados no lo ven
       await ctx.close();
     }
+    { // «Tu historia» en dibujos (13C): pasaporte, estratos, partitura (con una nota elegida) y la piedra de un campamento
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400);
+      const n = await p.locator('.m-bandera').count();
+      for (let k = n - 1; k >= 0; k--) { await p.locator('.m-bandera').nth(k).click({ force: true }); await p.waitForTimeout(900); if (await p.locator('#m-tarjeta.con-piedra').count()) break; }
+      await auditar(p, `petroglifo de un campamento ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-historia-btn'); await p.waitForTimeout(700);
+      await auditar(p, `pasaporte de semanas ${esquema}`);
+      for (const v of ['estratos', 'partitura']) {
+        await p.click(`#dh-vistas [data-vh="${v}"]`); await p.waitForTimeout(400);
+        await p.locator('#dh-lienzo .pieza').nth(2).click({ force: true }); await p.waitForTimeout(250);
+        await auditar(p, `${v} con una pieza elegida ${esquema}`);
+      }
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

@@ -7,6 +7,14 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-l', fecha: '2026-11-15',
+    items: [
+      'En «Tu historia» hay dos vistas nuevas: los estratos, una capa de tierra por cada mes (las compras extra son vetas de cuarzo), y la partitura, una nota por cada compra: más aguda cuanto más caro estaba BTC ese día. Toca «Tocar este año» y suena.',
+      'Cada semana en que compras se gana un sello, y se guardan en tu pasaporte de semanas. Una semana sin sello no es una falta: el pasaporte solo cuenta lo que ya hiciste.',
+      'Al tocar un campamento que ya alcanzaste, su fecha aparece tallada en una piedra.',
+    ],
+  },
+  {
     id: '2026-11-k', fecha: '2026-11-15',
     items: [
       'En «Tu historia» hay una vista nueva, la manta de añil: una celda por cada semana, más oscura cuanto más sumaste. Las semanas sin compras son algodón crudo, parte del tejido.',

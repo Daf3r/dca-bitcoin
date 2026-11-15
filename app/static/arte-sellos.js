@@ -215,3 +215,61 @@ export function certificado(d) {
   s += `<g transform="translate(206 ${pie - 40}) rotate(-8 34 34) scale(0.68)">${sel.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`;
   return `${s}</svg>`;
 }
+
+// ================================================================ el sello de la semana (campamento 13C)
+// Un matasellos de goma, como los de un pasaporte de senderista: doble aro con el rango de la semana en microtexto, la montañita con tu
+// punto a la altura que tenías esa semana y el número del sello. La tinta no es pareja (huecos fijos y un lado con menos presión), el
+// sello va un poco girado y el color cambia con la estación: añil (dic–feb), verde bosque (mar–may), cobre (jun–ago) y burdeos (sep–nov).
+
+const ESTACION = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 0]; // por mes (enero = 0)
+/** El sendero en zigzag por el que sube el punto dentro de la montañita del sello (de la base a la cumbre). */
+const SENDA = [[32.2, 42.6], [24.6, 38.3], [32.5, 33.9], [26.4, 29.5], [28.4, 24.4]];
+function enSenda(t) {
+  const tramos = SENDA.slice(1).map((p, k) => Math.hypot(p[0] - SENDA[k][0], p[1] - SENDA[k][1]));
+  let resto = Math.max(0, Math.min(1, t)) * tramos.reduce((a, b) => a + b, 0);
+  for (let k = 0; k < tramos.length; k++) {
+    if (resto <= tramos[k] || k === tramos.length - 1) { const u = Math.min(1, resto / tramos[k]), [a, b] = [SENDA[k], SENDA[k + 1]]; return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; }
+    resto -= tramos[k];
+  }
+  return SENDA.at(-1);
+}
+
+/** Sello de una semana con compras (`lib.sellosSemana`): `grande` para la tarjeta de celebración, `nuevo` si acaba de nacer (se estampa). */
+export function selloSemana(s, { grande = false, nuevo = false } = {}) {
+  const k = `ss-${s.idx}${grande ? 'g' : 'p'}`, num = s.numero ?? 1;
+  const tinta = ESTACION[(Number(String(s.desde ?? '').slice(5, 7)) || 1) - 1];
+  const giro = (fijo(num, 1) - 0.5) * 26;
+  // La presión de la mano: un lado del sello sale más cargado que el otro (la máscara pasa de blanco a gris).
+  const ang = fijo(num, 2) * TAU, gx = 0.5 + Math.cos(ang) * 0.5, gy = 0.5 + Math.sin(ang) * 0.5;
+  // Los huecos de la goma gastada: puntitos y un par de rayas donde no tomó la tinta (fijos por número).
+  let huecos = '';
+  for (let j = 0; j < 20; j++) {
+    const a = fijo(num, 10 + j) * TAU, r = 5 + 25 * Math.sqrt(fijo(num, 40 + j)), rr = 0.3 + 0.75 * fijo(num, 70 + j);
+    huecos += `M${f2(32 + Math.cos(a) * r - rr)} ${f2(32 + Math.sin(a) * r)}a${f2(rr)} ${f2(rr)} 0 1 0 ${f2(2 * rr)} 0a${f2(rr)} ${f2(rr)} 0 1 0 ${f2(-2 * rr)} 0Z`;
+  }
+  for (let j = 0; j < 2; j++) {
+    const a = fijo(num, 90 + j) * TAU, b = a + 0.35 + 0.3 * fijo(num, 92 + j), r = 27.5 + 1.6 * (fijo(num, 94 + j) - 0.5);
+    huecos += `M${f2(32 + Math.cos(a) * r)} ${f2(32 + Math.sin(a) * r)}A${r} ${r} 0 0 1 ${f2(32 + Math.cos(b) * r)} ${f2(32 + Math.sin(b) * r)}`;
+  }
+  const micro = `SEMANA · ${String(s.nombre ?? '').toUpperCase()} · LIBRO DCA ·`;
+  const [px, py] = enSenda(s.altitud ?? 0);
+  let o = `<svg class="sello-sem-ico ss-t${tinta}${grande ? ' grande' : ''}${nuevo ? ' nuevo' : ''}" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs>`
+    + `<linearGradient id="${k}-p" x1="${f2(gx)}" y1="${f2(gy)}" x2="${f2(1 - gx)}" y2="${f2(1 - gy)}"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#8c8c8c"/></linearGradient>`
+    + `<mask id="${k}-m" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="url(#${k}-p)"/>`
+    + `<path d="${huecos}" fill="#000" stroke="#000" stroke-width="0.7" stroke-linecap="round"/></mask>`
+    + `<path id="${k}-c" d="M8.2 32a23.8 23.8 0 1 1 47.6 0a23.8 23.8 0 1 1 -47.6 0"/></defs>`;
+  o += `<g class="ss-tinta" mask="url(#${k}-m)" transform="rotate(${f1(giro)} 32 32)">`
+    // El doble aro (el de fuera más grueso) y un segundo golpe muy tenue, corrido: la mano tembló al estampar.
+    + '<circle class="ss-aro" cx="32" cy="32" r="29"/><circle class="ss-aro2" cx="32" cy="32" r="21.6"/>'
+    + '<circle class="ss-eco" cx="32.7" cy="31.4" r="29"/>'
+    + `<text class="ss-micro"><textPath href="#${k}-c" textLength="146" lengthAdjust="spacing">${esc(micro)}</textPath></text>`
+    // La montañita (contorno, con la nieve de la cumbre), el sendero punteado y tu punto a la altura de esa semana.
+    + `<path class="ss-monte" d="M16.4 43L28.2 22.4L34.2 32.2L38.8 26.2L48 43Z"/><path class="ss-nieve" d="M24.8 28.3L28.2 22.4L31.6 28L29.6 26.9L27.4 29Z"/>`
+    + `<path class="ss-senda" d="${lin(SENDA)}"/><circle class="ss-yo" cx="${f1(px)}" cy="${f1(py)}" r="1.9"/>`
+    + `<text class="ss-num" x="32" y="50.8" text-anchor="middle">N.º ${esc(num)}</text>`;
+  if (s.extra) o += '<path class="ss-extra" d="M32 11.2Q32.5 13.1 34.4 13.6Q32.5 14.1 32 16Q31.5 14.1 29.6 13.6Q31.5 13.1 32 11.2Z"/>';
+  o += '</g>';
+  // El golpe al estamparse (solo se ve en la tarjeta del sello nuevo).
+  if (nuevo) o += '<circle class="ss-golpe" cx="32" cy="32" r="29"/>';
+  return `${o}</svg>`;
+}

@@ -1,7 +1,7 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
+import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
-import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB } from './arte.js';
+import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo } from './arte.js';
 
 const f1 = (n) => n.toFixed(1);
 
@@ -525,7 +525,7 @@ function banderas(host, campos, W, H) {
   tarjeta.setAttribute('role', 'group');
   tarjeta.setAttribute('aria-labelledby', 'm-tarjeta-t');
   tarjeta.hidden = true;
-  tarjeta.innerHTML = '<b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><button type="button" class="m-tarjeta-x">Cerrar</button>';
+  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><button type="button" class="m-tarjeta-x">Cerrar</button>';
   tarjeta.querySelector('button').addEventListener('click', () => cerrarTarjeta(true));
   caja.replaceChildren(...botones, tarjeta);
   abierta = null;
@@ -540,6 +540,10 @@ function abrirTarjeta(m) {
   tarjeta.querySelector('#m-tarjeta-t').textContent = t.titulo;
   tarjeta.querySelector('#m-tarjeta-p').textContent = t.texto;
   tarjeta.dataset.estado = t.alcanzado ? 'alcanzado' : 'futuro';
+  // Un campamento alcanzado, con su fecha conocida, se «talla» en piedra (campamento 13C); el texto de siempre queda para los lectores.
+  const fecha = fechas[m] ?? null, piedra = Boolean(t.alcanzado && fecha);
+  tarjeta.querySelector('.m-pet').innerHTML = piedra ? petroglifo({ cifra: nombreHito(m), titulo: t.titulo, fecha: fechaLarga(fecha), cima: campo.cima }) : '';
+  tarjeta.classList.toggle('con-piedra', piedra);
   tarjeta.style.setProperty('--cx', `${f1(campo.p.x)}px`);
   const abajo = campo.p.y < H * 0.62;
   tarjeta.style.top = abajo ? `${f1(campo.p.y + 18)}px` : 'auto';

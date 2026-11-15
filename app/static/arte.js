@@ -273,3 +273,94 @@ export function monedaB(cx, cy, r, id = 'm-moneda-c') {
     + `<path class="moneda-grabado" transform="translate(0.035 0.045)" d="${signo}"/><path class="moneda-signo" d="${signo}"/>`
     + `<g clip-path="url(#${id})"><path class="moneda-brillo" d="M-0.5 -1.2L-0.2 -1.2L-0.9 1.2L-1.2 1.2Z"/></g></g></g>`;
 }
+
+// ---------------------------------------------------------------- el petroglifo (campamento 13C)
+// La tarjeta de un campamento alcanzado es una laja de la misma roca facetada de la montaña: la cifra y la fecha en relieve (luz de
+// arriba a la derecha: una copia clara corrida hacia la luz, una de sombra hacia el otro lado y la cara encima) y, a la izquierda, un
+// glifo antiguo grabado a surco: la estación de luz (el hito de piedra con su farol) o, en la cumbre, el cuerno de roca con su bandera
+// y una espiral de sol. Al abrirse, el glifo se «talla» (sus trazos se dibujan) y saltan unas astillas (el CSS; solo transform, opacity
+// y el trazo).
+
+const escT = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+/** La laja: un contorno irregular fijo (no depende de los datos: todas las piedras son de la misma cantera). */
+const LAJA = [[12, 24], [30, 10], [70, 7], [118, 11], [168, 6], [212, 9], [230, 22], [234, 58], [231, 96], [218, 110], [168, 113], [112, 110], [56, 114], [20, 108], [8, 84], [6, 48]];
+
+/** Facetas de la laja (como `facetas`, pero para un contorno dado): un anillo interior a media distancia y un vértice alto hacia la luz. */
+function tallarLaja(v, cx, cy, rx, ry) {
+  const n = v.length, acc = { luz: '', media: '', sombra: '', filo: '' };
+  const w = v.map((_, i) => { const a = v[i], b = v[(i + 1) % n]; return [cx + ((a[0] + b[0]) / 2 - cx) * 0.74, cy + ((a[1] + b[1]) / 2 - cy) * 0.7]; });
+  const P = [cx + rx * 0.12, cy - ry * 0.18];
+  const tono = (pts, z) => {
+    const mx = (pts[0][0] + pts[1][0] + pts[2][0]) / 3, my = (pts[0][1] + pts[1][1] + pts[2][1]) / 3;
+    const d = ((mx - cx) / rx) * 0.55 + ((my - cy) / ry) * -0.62 + z * 0.56;
+    const tri = `${lin(pts)}Z`;
+    if (d > 0.58) acc.luz += tri; else if (d > 0.36) acc.media += tri; else if (d < 0.1) acc.sombra += tri;
+  };
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, wp = w[(i + n - 1) % n];
+    tono([wp, v[i], w[i]], 0.12);
+    tono([w[i], v[i], v[j]], 0.12);
+    tono([wp, w[i], P], 0.75);
+    const ex = v[j][0] - v[i][0], ey = v[j][1] - v[i][1], m = Math.hypot(ex, ey) || 1;
+    if ((ey / m) * 0.55 + (-ex / m) * -0.62 > 0.4) acc.filo += `M${f1(v[i][0])} ${f1(v[i][1])}L${f1(v[j][0])} ${f1(v[j][1])}`;
+  }
+  return acc;
+}
+
+/** El glifo grabado: la estación de luz (hito de piedra y farol con sus rayos) o, en la cumbre, el cuerno, la bandera y el sol. */
+function glifo(cima) {
+  if (cima) {
+    return 'M20 98H80'
+      + 'M23 98L38 60L44 68L56 34L64 52L77 98'        // el pico con su cuerno de roca
+      + 'M45 70L50 63L53 69'                           // el rellano de la cumbre
+      + 'M50 63V36M50 36L61 40L50 44'                  // la bandera
+      + 'M70 25a3 3 0 1 1 -3 -3a6 6 0 1 1 -6 6a9 9 0 0 1 9 -9'; // la espiral del sol, como en los grabados antiguos
+  }
+  return 'M18 98H82'
+    + 'M37 98L40.5 62H55.5L59 98'                      // el hito de piedra
+    + 'M39 86H57M40 74H56'                             // sus hiladas
+    + 'M42 62V50L48 44L54 50V62'                       // el farol
+    + 'M48 58.5Q45 55 48 51Q51 55 48 58.5'             // su llama
+    + 'M48 38V31M58.5 43.5L63.5 39M37.5 43.5L32.5 39M62 52H68M34 52H28' // los rayos de luz
+    + 'M22 98l-3 6M27 98l-3 6M70 98l3 6M76 98l3 6';    // la piedra donde se asienta
+}
+
+/** La laja tallada de la tarjeta de un campamento alcanzado: `cifra` («1M», «1 BTC»), `titulo` y `fecha` ya escrita («4 sept 2026»). */
+export function petroglifo({ cifra, titulo, fecha, cima = false }) {
+  const forma = `${lin(LAJA)}Z`;
+  const t = tallarLaja(LAJA, 120, 60, 114, 54);
+  // El grosor de la laja (su canto, visto abajo a la izquierda) y su sombra.
+  const canto = `${lin(LAJA.map(([x, y]) => [x - 3, y + 6]))}Z`;
+  // El grano de la piedra: puntitos oscuros y claros (fijos) y una grieta con su labio de luz.
+  let grano = '', granoLuz = '';
+  for (let k = 0; k < 46; k++) {
+    const x = 16 + 208 * ((k * 0.618034) % 1), y = 16 + 88 * ((k * 0.381966 + 0.13 * Math.sin(k)) % 1);
+    if (k % 3) grano += `M${f1(x)} ${f1(y)}h0.01`; else granoLuz += `M${f1(x)} ${f1(y)}h0.01`;
+  }
+  const grieta = 'M231 74L222 77L216 86L207 89';
+  const titular = String(titulo ?? '').split(/\s/)[0].toUpperCase() || (cima ? 'CUMBRE' : 'CAMPAMENTO');
+  const c = String(cifra ?? '');
+  const fs = Math.min(44, 132 / (Math.max(2, c.length) * 0.6));
+  const textos = `<text class="pt-titular" x="160" y="33" text-anchor="middle">${escT(titular)}</text>`
+    + `<text class="pt-cifra" x="160" y="${f1(58 + fs * 0.36)}" text-anchor="middle" font-size="${f1(fs)}">${escT(c)}</text>`
+    + `<text class="pt-fecha" x="160" y="99" text-anchor="middle">${escT(fecha)}</text>`;
+  const g = glifo(cima);
+  // Las astillas que saltan al tallar: siete lascas pequeñas (el CSS les da su rumbo con `.a0`…`.a6`).
+  const astillas = [[50, 40], [58, 62], [40, 80], [64, 92], [130, 70], [186, 52], [168, 96]]
+    .map(([x, y], k) => `<path class="pt-astilla a${k}" d="M${x} ${y}l${f1(2 + (k % 3))} ${f1(-1.2 - (k % 2))}l${f1(0.6 + (k % 2))} ${f1(2.4)}Z"/>`).join('');
+  return `<svg class="pt-laja${cima ? ' pt-cima' : ''}" viewBox="0 0 240 124" aria-hidden="true" focusable="false">`
+    + `<ellipse class="pt-suelo" cx="118" cy="118" rx="112" ry="6"/>`
+    + `<path class="pt-canto" d="${canto}"/><path class="pt-piedra" d="${forma}"/>`
+    + `<path class="pt-media" d="${t.media}"/><path class="pt-luz" d="${t.luz}"/><path class="pt-sombra" d="${t.sombra}"/>`
+    + `<path class="pt-grano" d="${grano}"/><path class="pt-grano-luz" d="${granoLuz}"/>`
+    + `<path class="pt-liquen" d="M14 92q4 -5 9 -2q3 5 -2 8q-5 1 -7 -6ZM198 12q6 -2 9 2q-2 4 -8 3ZM222 102q4 -1 5 2q-2 3 -5 1Z"/>`
+    + `<path class="pt-grieta" d="${grieta}"/><path class="pt-grieta-luz" d="${grieta}" transform="translate(0.8 -0.8)"/>`
+    + `<path class="pt-filo" d="${t.filo}"/>`
+    // El surco del glifo: la pared que mira a la luz (clara, abajo a la izquierda), la que no (oscura) y el fondo.
+    + `<g class="pt-glifo"><path class="pt-surco-luz" pathLength="1" transform="translate(-0.7 0.8)" d="${g}"/>`
+    + `<path class="pt-surco-osc" pathLength="1" transform="translate(0.6 -0.7)" d="${g}"/><path class="pt-surco" pathLength="1" d="${g}"/></g>`
+    + '<path class="pt-surco-osc pt-raya" pathLength="1" d="M92 26V100"/>'
+    // El relieve: cada texto tres veces.
+    + `<g class="pt-texto"><g class="pt-rel-osc" transform="translate(-0.9 1.1)">${textos}</g><g class="pt-rel-luz" transform="translate(0.7 -0.7)">${textos}</g><g class="pt-rel">${textos}</g></g>`
+    + `<g class="pt-astillas">${astillas}</g></svg>`;
+}
