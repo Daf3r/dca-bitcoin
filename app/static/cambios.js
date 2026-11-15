@@ -10,10 +10,11 @@ export const CAMBIOS = [
     id: '2026-11-q', fecha: '2026-11-19',
     items: [
       'La montaña tiene relieve: caras de roca con luz y sombra, un bosque que sube por la falda y, de noche, luz de luna. La luna ahora tiene sus mares.',
+      'El cielo también: al amanecer y al atardecer salen rayos de sol por detrás de la montaña y, de noche, se ve la Vía Láctea.',
+      'La app abre más rápido y se desliza con más soltura en el teléfono.',
       'Las pestañas van en una sola fila y se quedan arriba mientras bajas; la que estás viendo se marca con una rayita naranja.',
       'Los movimientos se leen como una bitácora del sendero: una marca por cada compra, la fecha a la vista y la altitud con que cerró cada mes.',
-      'Bajo el saldo, tu ganancia va en su propia píldora junto a la línea de los últimos 30 días.',
-      'En «Tu cuenta», cada ajuste enseña su valor a la derecha, y las vistas de «Tu historia» tienen su dibujito.',
+      'Bajo el saldo, tu ganancia va en su propia píldora; en «Tu cuenta», cada ajuste enseña su valor a la derecha.',
     ],
   },
   {

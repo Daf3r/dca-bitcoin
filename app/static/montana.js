@@ -45,6 +45,29 @@ export function luna(cx, cy, r, fase) {
 }
 
 /**
+ * Luz del cielo (rediseño Fable), todo quieto (sin animación: no cuesta nada al desplazar):
+ * - la **Vía Láctea**, de noche: una banda tenue en diagonal con polvo de estrellas (un solo trazo de puntos; `azar` propio);
+ * - **rayos crepusculares**, al amanecer y al atardecer: cinco haces que salen del sol por detrás de la montaña y se apagan con
+ *   la distancia: hacia arriba, justo antes del texto del saldo (`techo`); en escritorio su alcance no llega a la columna del
+ *   saldo. Nunca aclaran el fondo de una cifra.
+ * El CSS enseña una u otra según `html[data-cielo]`.
+ */
+function luzDelCielo(W, H, c, techo) {
+  const cx = W * 0.4, cy = H * 0.2, largo = Math.hypot(W, H) * 1.15, ancho = Math.max(80, Math.min(W, H) * 0.24);
+  const rnd = azar(23);
+  let polvo = '';
+  for (let i = 0; i < 80; i++) { const u = rnd() - 0.5, g = (rnd() + rnd() + rnd()) / 3 - 0.5; polvo += `M${f1(cx + u * largo)} ${f1(cy + g * ancho * 1.25)}h0.01`; }
+  const via = `<g class="via-lactea" transform="rotate(-27 ${f1(cx)} ${f1(cy)})"><rect x="${f1(cx - largo / 2)}" y="${f1(cy - ancho / 2)}" width="${f1(largo)}" height="${f1(ancho)}" fill="url(#m-via)"/><path class="via-polvo" d="${polvo}"/></g>`;
+  const [sx, sy] = c.sol, R = Math.min(Math.max(W, H) * 0.62, W >= 1100 ? W * 0.3 : Infinity);
+  const haz = (grados, abre) => { const a = (grados - abre / 2) * Math.PI / 180, b = (grados + abre / 2) * Math.PI / 180; return `<path d="M${f1(sx)} ${f1(sy)}L${f1(sx + Math.cos(a) * R)} ${f1(sy + Math.sin(a) * R)}L${f1(sx + Math.cos(b) * R)} ${f1(sy + Math.sin(b) * R)}Z"/>`; };
+  // El degradado es una elipse: a lo ancho llega lejos y hacia arriba se apaga justo antes del texto del saldo (sin corte seco).
+  const k = Math.min(1, Math.max(60, sy - techo - 10) / R);
+  const rayos = `<defs><radialGradient id="m-rayo" gradientUnits="userSpaceOnUse" cx="${f1(sx)}" cy="${f1(sy)}" r="${f1(R)}" gradientTransform="translate(${f1(sx)} ${f1(sy)}) scale(1 ${k.toFixed(3)}) translate(${f1(-sx)} ${f1(-sy)})"><stop offset="0" class="ry-0"/><stop offset="0.22" class="ry-1"/><stop offset="1" class="ry-2"/></radialGradient></defs>`
+    + `<g class="rayos" fill="url(#m-rayo)">${haz(196, 7)}${haz(218, 10)}${haz(244, 6)}${haz(268, 11)}${haz(296, 7)}${haz(322, 9)}${haz(172, 8)}</g>`;
+  return via + rayos;
+}
+
+/**
  * Relieve de la montaña (rediseño Fable): la ladera dejaba de leerse como roca porque era un solo plano. Aquí van, en el mismo
  * lenguaje de facetas de los árboles y las piedras, unos espolones que bajan de la arista central: cada uno tiene un flanco en
  * sombra (el que da la espalda al astro) y otro que recibe algo de luz, y un filo fino en la cresta. En la cara iluminada, dos
@@ -198,6 +221,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-suelo', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'sl-0'], [1, 'sl-1']])
     + grad('m-humo', 'x1="0" y1="1" x2="0" y2="0"', [[0, 'hm-0'], [1, 'hm-1']])
     + grad('m-ceniza', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ce-0'], [0.75, 'ce-1']])
+    + grad('m-via', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vl-0'], [0.5, 'vl-1'], [1, 'vl-0']])
     + grad('m-aire', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ai-0'], [0.62, 'ai-1'], [1, 'ai-0']]);
   let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
@@ -210,6 +234,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s += `<line class="fugaz" x1="${f1(W * 0.16)}" y1="${f1(H * 0.1)}" x2="${f1(W * 0.16 + 46)}" y2="${f1(H * 0.1 + 20)}"/>`;
   // Lluvia de estrellas real (idea 43): esa noche cruzan más (dos de más a los lados del máximo, cuatro la noche del máximo).
   for (let k = 0; k < Math.round(lluvia * 4); k++) { const x0 = W * (0.3 + 0.17 * k), y0 = H * (0.07 + 0.045 * ((k * 3) % 4)); s += `<line class="fugaz f${k + 2}" x1="${f1(x0)}" y1="${f1(y0)}" x2="${f1(x0 + 46)}" y2="${f1(y0 + 20)}"/>`; }
+  s += luzDelCielo(W, H, c, techo);
   // Sol (amanecer, día y atardecer) y luna con su fase real (noche): el CSS muestra uno u otro según `html[data-cielo]`.
   // El halo es un degradado radial (luz que se difumina), no un disco.
   const halo = `<circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 3.4)}" fill="url(#m-halo)"/>`;
