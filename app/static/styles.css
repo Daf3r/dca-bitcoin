@@ -3058,3 +3058,18 @@ html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb
   content: ""; flex: none; width: 8px; height: 8px; margin-left: auto; margin-right: 4px; border: solid var(--txt3); border-width: 2px 2px 0 0; transform: rotate(45deg);
 }
 .d-cuenta .dc-lista button[data-cuenta="cerrar"] { justify-content: center; }
+
+/* ---------------------------------------------------------------- Rediseño (Fable) · el botón principal
+   «Anotar compra» es LA acción de la app: un «+» en su círculo, un degradado leve y un filo de luz arriba (sin filtros ni mezclas). */
+.anotar { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding-left: 20px; background-image: linear-gradient(180deg, color-mix(in srgb, var(--naranja) 84%, #fff), var(--naranja) 62%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 14px 30px -12px rgb(0 0 0 / 0.6); }
+.anotar::before {
+  content: ""; flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 12px 2.5px no-repeat, linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 2.5px 12px no-repeat, var(--naranja-osc);
+}
+@media (forced-colors: active) { .anotar::before { display: none; } }
+/* Las vistas de «Tu historia» caben en una fila desde la tablet (antes, desde el escritorio). */
+@media (min-width: 700px) {
+  .historia-pg .dh-vistas { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .historia-pg .dh-vistas button:first-child { grid-column: auto; flex-direction: column; gap: 6px; min-height: calc(var(--toque, 48px) + 14px); }
+}
+@media (min-width: 700px) and (max-width: 899px) { html[data-letra="muy-grande"] .historia-pg .dh-vistas { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
