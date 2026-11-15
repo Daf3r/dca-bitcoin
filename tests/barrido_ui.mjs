@@ -62,6 +62,9 @@ const medir = () => {
   return out;
 };
 
+// `PESTANAS=1 node tests/barrido_ui.mjs rapido`: en vez de «todo junto» recorre cada pestaña (Resumen, Gráficos, Historia, Movimientos).
+const pestanasModo = process.env.PESTANAS === '1';
+const TABS = pestanasModo ? ['resumen', 'graficos', 'historia', 'movimientos'] : [null];
 const fallos = [];
 let revisados = 0;
 const navegador = await chromium.launch();
@@ -74,7 +77,7 @@ try {
         for (const [esquema, variante] of [['light', ''], ['dark', ''], ...(CON_LETRA.includes(esc) ? [['light', ' letra muy grande y alto contraste'], ['dark', ' letra muy grande y alto contraste']] : [])]) {
           const ctx = await navegador.newContext({ viewport: { width: w, height: h }, colorScheme: esquema });
           const p = await ctx.newPage();
-          await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 6 : 22);
+          await p.addInitScript(([hh, pes]) => { try { localStorage.setItem('libro.hora', String(hh)); if (!pes) localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, [esquema === 'light' ? 6 : 22, pestanasModo]);
           if (variante) await p.addInitScript(() => { try { localStorage.setItem('libro.letra', 'muy-grande'); localStorage.setItem('libro.contraste', 'alto'); } catch { /* sin almacenamiento */ } });
           const consola = [];
           p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
@@ -84,20 +87,23 @@ try {
           await p.fill('input[autocomplete="current-password"]', 'clave-de-prueba-12');
           await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
           await p.waitForTimeout(3000);
-          const m = await p.evaluate(medir);
-          const etiqueta = `${esc} ${w}×${h} ${esquema}${variante}`;
-          const problemas = [];
-          const ruido = esc === 'sinhist' ? /503/ : esc === 'sinprecio' ? /503/ : /$^/; // lo esperado en esos escenarios
-          const raros = consola.filter((c) => !ruido.test(c));
-          if (raros.length) problemas.push(`consola: ${raros[0].slice(0, 120)}`);
-          if (m.scrollX) problemas.push('scroll horizontal');
-          if (!m.saldo || m.saldo.w <= 0 || m.saldo.h <= 0 || !m.saldo.txt) problemas.push(`saldo no visible (${JSON.stringify(m.saldo)})`);
-          if (m.fuera.length) problemas.push(`fuera de la pantalla: ${[...new Set(m.fuera)].slice(0, 4).join(', ')}`);
-          if (m.toque.length) problemas.push(`zona de toque pequeña: ${[...new Set(m.toque)].slice(0, 4).join('; ')}`);
-          revisados++;
-          if (problemas.length) {
-            fallos.push(`${etiqueta}: ${problemas.join(' | ')}`);
-            await p.screenshot({ path: path.join(SALIDA, `${etiqueta.replace(/[ ×]/g, '_')}.png`), fullPage: false });
+          for (const tab of TABS) {
+            if (tab) { await p.click(`#pestanas [data-pestana="${tab}"]`); await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(600); } // arriba del todo, como en «todo junto»: la mini-cabecera (44 px a propósito) solo sale al bajar
+            const m = await p.evaluate(medir);
+            const etiqueta = `${esc} ${w}×${h} ${esquema}${variante}${tab ? ` [${tab}]` : ''}`;
+            const problemas = [];
+            const ruido = esc === 'sinhist' ? /503/ : esc === 'sinprecio' ? /503/ : /$^/; // lo esperado en esos escenarios
+            const raros = consola.filter((c) => !ruido.test(c));
+            if (raros.length) problemas.push(`consola: ${raros[0].slice(0, 120)}`);
+            if (m.scrollX) problemas.push('scroll horizontal');
+            if (!m.saldo || m.saldo.w <= 0 || m.saldo.h <= 0 || !m.saldo.txt) problemas.push(`saldo no visible (${JSON.stringify(m.saldo)})`);
+            if (m.fuera.length) problemas.push(`fuera de la pantalla: ${[...new Set(m.fuera)].slice(0, 4).join(', ')}`);
+            if (m.toque.length) problemas.push(`zona de toque pequeña: ${[...new Set(m.toque)].slice(0, 4).join('; ')}`);
+            revisados++;
+            if (problemas.length) {
+              fallos.push(`${etiqueta}: ${problemas.join(' | ')}`);
+              await p.screenshot({ path: path.join(SALIDA, `${etiqueta.replace(/[ ×]/g, '_')}.png`), fullPage: false });
+            }
           }
           await ctx.close();
         }

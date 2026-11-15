@@ -176,6 +176,40 @@ function dibujarPasaporte(foco = false) {
 }
 $('dh-pas-mas').addEventListener('click', () => { pasVisibles += PAS_PASO; dibujarPasaporte(true); });
 
+/** Un nombre para lo que se pintó, para no rehacer la historia (y perder lo que se está leyendo) en cada refresco del precio. */
+let firmaHistoria = null;
+const firmaDe = () => `${R.items.length}:${R.sats}:${R.items.at(-1)?.id ?? 0}:${R.nCompras}:${R.racha}`;
+/** Pinta «Tu historia» solo si cambió algo desde la última vez (o si no se había pintado). La llaman `pintar()` y las pestañas. */
+export function refrescarHistoria({ forzar = false } = {}) {
+  if (!R?.items || !S.cargado) return;
+  const f = firmaDe();
+  if (!forzar && f === firmaHistoria) return;
+  firmaHistoria = f;
+  pintarHistoria();
+}
+
+/** Las medallas del Resumen: las tres más recientes ya ganadas y, apagada, la siguiente (sin «te faltan»: es un reconocimiento,
+ *  no una presión). Una rejilla visible que se envuelve, nada que haya que deslizar; el resto, con «Ver todas mis medallas». */
+const MED_RESUMEN = 3;
+export function pintarMedallasResumen() {
+  const caja = $('res-medallas'), lista = $('res-med-lista');
+  const ms = R?.items && R.nCompras ? medallas(R) : [];
+  const ganadas = ms.filter((m) => m.ganada).sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
+  caja.hidden = !ganadas.length;
+  lista.textContent = '';
+  if (!ganadas.length) return;
+  $('res-med-n').textContent = ganadas.length === 1 ? 'Ya tienes 1 medalla.'
+    : ganadas.length > MED_RESUMEN ? `Ya tienes ${ganadas.length} medallas. Aquí, las más recientes.` : `Ya tienes ${ganadas.length} medallas.`;
+  const siguiente = ms.find((m) => !m.ganada && m.tipo === 'compras') ?? ms.find((m) => !m.ganada);
+  for (const m of [...ganadas.slice(0, MED_RESUMEN), ...(siguiente ? [siguiente] : [])]) {
+    const li = nodo('li', `medalla ${m.ganada ? 'ganada' : 'bloq'}`);
+    li.insertAdjacentHTML('beforeend', medalla(m));
+    li.append(nodo('b', null, m.titulo));
+    li.append(nodo('small', null, m.ganada ? fechaLarga(m.fecha) : 'La siguiente'));
+    lista.append(li);
+  }
+}
+
 export function pintarHistoria() {
   const lista = $('dh-linea'), med = $('dh-medallas');
   lista.textContent = '';

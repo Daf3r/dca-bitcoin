@@ -7,7 +7,7 @@ import { pintarSesiones } from './sesiones.js';
 import { pintarEnlaces } from './enlaces.js';
 import { pintarWallets } from './wallets.js';
 import { pintarSistema } from './sistema.js';
-import { pintarHistoria } from './historia.js';
+import { etiquetaModo, fijarModoPestanas, enPestanas, verHistoria } from './pestanas.js';
 import { avatar, ilustracion } from './iconos.js';
 import { avisar } from './avisar.js';
 import { $, S, api } from './estado.js';
@@ -26,7 +26,6 @@ function vistaCuenta(cual) {
   $('f-clave').hidden = cual !== 'clave';
   $('dc-hist').hidden = cual !== 'historial';
   $('dc-avisos').hidden = cual !== 'avisos';
-  $('dc-historia').hidden = cual !== 'historia';
   $('dc-datos').hidden = cual !== 'datos';
   $('dc-sistema').hidden = cual !== 'sistema';
   $('dc-sesiones').hidden = cual !== 'sesiones';
@@ -121,7 +120,7 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaMadrugada(); etiquetasAccesibilidad(); dCuenta.showModal(); });
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -225,7 +224,8 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'volver') irA('menu');
   else if (accion === 'clave') irA('clave', () => { $('fc-error').textContent = ''; $('fc-actual').focus(); });
   else if (accion === 'historial') irA('historial', cargarHistorial);
-  else if (accion === 'historia') irA('historia', pintarHistoria);
+  else if (accion === 'historia') { dCuenta.close(); setTimeout(verHistoria, 120); } // «Tu historia» ahora es una pestaña de la página
+  else if (accion === 'pestanas') { fijarModoPestanas(!enPestanas()); $('dc-pestanas').textContent = etiquetaModo(); }
   else if (accion === 'datos') irA('datos', pintarWallets);
   else if (accion === 'sistema') irA('sistema', pintarSistema);
   else if (accion === 'sesiones') irA('sesiones', pintarSesiones);

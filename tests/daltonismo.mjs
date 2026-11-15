@@ -26,7 +26,7 @@ for (let i = 0; i < 100; i++) { try { if ((await fetch(`${url}/healthz`)).ok) br
 const nav = await chromium.launch();
 try {
   const ctx = await nav.newContext({ ...devices['iPhone 13'], bypassCSP: true, deviceScaleFactor: 1 });
-  await ctx.addInitScript(() => { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.avisos.preguntado', '1'); });
+  await ctx.addInitScript(() => { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); });
   const p = await ctx.newPage();
   await p.goto(`${url}/login`, { waitUntil: 'networkidle' });
   await p.fill('input[autocomplete="username"]', 'Daf3r'); await p.fill('input[autocomplete="current-password"]', 'clave-de-prueba-12');

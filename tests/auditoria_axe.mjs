@@ -75,7 +75,7 @@ try {
     const nuevo = async (srv, cuenta, init = null, hora = esquema === 'light' ? 12 : 22) => {
       const ctx = await navegador.newContext({ ...devices['iPhone 13'], colorScheme: esquema, bypassCSP: true });
       const p = await ctx.newPage();
-      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, hora);
+      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, hora);
       if (init) await p.addInitScript(init);
       if (cuenta) await entrar(p, srv.url, cuenta);
       return { ctx, p };
@@ -253,6 +253,18 @@ try {
       }
       await ctx.close();
     }
+    { // las pestañas (14): barra y cada pestaña (por defecto la app se audita en «todo junto»; aquí se quita esa preferencia)
+      const { ctx, p } = await nuevo(anio, ADMIN, () => { try { localStorage.removeItem('libro.pestanas'); } catch { /* sin almacenamiento */ } });
+      await cerrarOferta(p);
+      for (const t of ['resumen', 'graficos', 'historia', 'movimientos']) {
+        await p.click(`#pestanas [data-pestana="${t}"]`); await p.waitForTimeout(700);
+        await auditar(p, `pestaña ${t} ${esquema}`);
+      }
+      await p.click('#pestanas [data-pestana="historia"]'); await p.waitForTimeout(400);
+      await p.click('#dh-vistas [data-vh="estratos"]'); await p.waitForTimeout(400);
+      await auditar(p, `pestaña historia con estratos ${esquema}`);
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
@@ -274,7 +286,7 @@ try {
     { // la tabla de movimientos (solo en pantalla ancha)
       const ctx = await navegador.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: esquema, bypassCSP: true });
       const p = await ctx.newPage();
-      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
       await entrar(p, anio.url, ADMIN);
       await p.click('#l-tabla'); await p.waitForSelector('#d-tabla[open]'); await p.waitForTimeout(300);
       await auditar(p, `tabla de movimientos ${esquema}`);
@@ -291,7 +303,7 @@ try {
     { // pantalla muy ancha: el índice lateral
       const ctx = await navegador.newContext({ viewport: { width: 1700, height: 900 }, colorScheme: esquema, bypassCSP: true });
       const p = await ctx.newPage();
-      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
       await entrar(p, anio.url, ADMIN);
       await cerrarOferta(p);
       await auditar(p, `índice lateral (pantalla ancha) ${esquema}`);
@@ -301,7 +313,7 @@ try {
       for (const [nombre, w, h, ruta] of [['app acostada 844×390', 844, 390, null], ['entrada acostada 568×320', 568, 320, '/login'], ['pantalla ultra ancha 3440×1440', 3440, 1440, null]]) {
         const ctx = await navegador.newContext({ viewport: { width: w, height: h }, colorScheme: esquema, bypassCSP: true });
         const p = await ctx.newPage();
-        await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+        await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
         if (ruta) { await p.goto(`${anio.url}${ruta}`, { waitUntil: 'networkidle' }); await p.waitForTimeout(800); }
         else { await entrar(p, anio.url, ADMIN); await cerrarOferta(p); }
         await auditar(p, `${nombre} ${esquema}`);
