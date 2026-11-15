@@ -525,7 +525,7 @@ function banderas(host, campos, W, H) {
   tarjeta.setAttribute('role', 'group');
   tarjeta.setAttribute('aria-labelledby', 'm-tarjeta-t');
   tarjeta.hidden = true;
-  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><p class="m-mensaje" id="m-mensaje" hidden></p><button type="button" class="m-tarjeta-escribir" id="m-escribir" hidden></button><button type="button" class="m-tarjeta-x">Cerrar</button>';
+  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><p class="m-mensaje" id="m-mensaje" hidden></p><small class="m-mensaje-nota" id="m-mensaje-nota" hidden></small><button type="button" class="m-tarjeta-escribir" id="m-escribir" hidden></button><button type="button" class="m-tarjeta-x">Cerrar</button>';
   tarjeta.querySelector('.m-tarjeta-x').addEventListener('click', () => cerrarTarjeta(true));
   // El dueño escribe o cambia el mensaje de la bandera: la montaña solo avisa (mensajes.js abre el cuadro).
   tarjeta.querySelector('#m-escribir').addEventListener('click', () => { if (abierta !== null) document.dispatchEvent(new CustomEvent('libro:mensaje', { detail: { hito: abierta } })); });
@@ -552,7 +552,10 @@ function abrirTarjeta(m) {
   pM.hidden = !msg;
   pM.dataset.sellado = msg?.sellado ? '1' : '';
   pM.textContent = !msg ? '' : msg.sellado ? 'Hay un mensaje esperándote en este campamento.' : msg.texto;
-  if (msg && !msg.sellado && !t.alcanzado) pM.textContent = `${msg.texto} (se revelará a los demás cuando lleguen)`;
+  // El dueño ve el de un campamento por alcanzar: la aclaración va aparte (fuera de la cita).
+  const nota = tarjeta.querySelector('#m-mensaje-nota');
+  nota.hidden = !(msg && !msg.sellado && !t.alcanzado);
+  nota.textContent = nota.hidden ? '' : 'Se revelará a los demás cuando lleguen a este campamento.';
   bE.hidden = !estado.puedeEscribir;
   bE.textContent = msg ? 'Cambiar el mensaje' : 'Escribir un mensaje';
   tarjeta.style.setProperty('--cx', `${f1(campo.p.x)}px`);
@@ -560,6 +563,12 @@ function abrirTarjeta(m) {
   tarjeta.style.top = abajo ? `${f1(campo.p.y + 18)}px` : 'auto';
   tarjeta.style.bottom = abajo ? 'auto' : `${f1(H - campo.p.y + 46)}px`;
   tarjeta.hidden = false;
+  // La tarjeta (con la piedra, la cinta del mensaje y los botones del dueño) puede ser alta: si abajo no cabe sin tapar «Anotar compra»,
+  // se abre hacia arriba; y si tampoco cabe arriba, se queda donde más espacio hay.
+  if (abajo) {
+    const alto = tarjeta.getBoundingClientRect().height, limite = H - 76;
+    if (campo.p.y + 18 + alto > limite && campo.p.y - 46 - alto > 8) { tarjeta.style.top = 'auto'; tarjeta.style.bottom = `${f1(H - campo.p.y + 46)}px`; }
+  }
   caja.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', String(Number(b.dataset.m) === m)));
   abierta = m;
 }

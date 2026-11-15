@@ -321,8 +321,9 @@ export function cartaSellada(c = {}) {
     + '<path class="ca-solapa-i" d="M5 10L45 41L5 63Z"/><path class="ca-solapa-d" d="M91 10L51 41L91 63Z"/>'
     + '<path class="ca-solapa-b" d="M6 64.5L48 36L90 64.5Z"/>'
     // La solapa de arriba cierra el sobre y proyecta su sombra sobre las demás.
-    + '<path class="ca-pliegue" d="M4.5 9L48 48L91.5 9Z"/>'
-    + '<path class="ca-solapa-a" d="M4 8.5L48 45.5L92 8.5Z"/>'
+    + '<path class="ca-pliegue" d="M5.5 9.5L48 48.5L90.5 9.5Z"/>'
+    + '<path class="ca-solapa-a" d="M5 9L48 45.5L91 9Z"/>'
+    + '<path class="ca-borde-solapa" d="M5 9L48 45.5L91 9"/>'
     + '<path class="ca-filo" d="M7.5 8.4H88.5M50 43.8L90 10.2"/>'
     + '<path class="ca-canto" d="M7.5 8h81a3.5 3.5 0 0 1 3.5 3.5v50a3.5 3.5 0 0 1 -3.5 3.5h-81a3.5 3.5 0 0 1 -3.5 -3.5v-50a3.5 3.5 0 0 1 3.5 -3.5Z"/>'
     + `<g transform="rotate(${f1(giro)} 48 45)">${ceraEntera(48, 45, 11.5, sem, etapa)}</g></svg>`;
@@ -333,13 +334,12 @@ const mitadCera = (cx, cy, r, sem, lado) => {
   const borde = gota(cx, cy, r, sem);
   const grieta = [borde(-Math.PI / 2), [cx + 1.4, cy - r * 0.5], [cx - 1.6, cy - r * 0.08], [cx + 1.2, cy + r * 0.38], [cx - 0.6, cy + r * 0.7], borde(Math.PI / 2)];
   const cuerpo = lado < 0 ? [...grieta, ...arco(borde, Math.PI / 2, 1.5 * Math.PI, 14).slice(1, -1)] : [...grieta, ...arco(borde, Math.PI / 2, -Math.PI / 2, 14).slice(1, -1)];
-  const hondo = (t) => [cx + Math.cos(t) * r * 0.66, cy + Math.sin(t) * r * 0.66];
-  const gr = grieta.slice(1, -1).filter(([, y]) => Math.abs(y - cy) < r * 0.6);
-  const dentro = lado < 0 ? [...gr, ...arco(hondo, 1.2, 1.5 * Math.PI + 0.6, 10)] : [...gr, ...arco(hondo, 1.95, -1.25, 10)];
+  const hondo = (t) => [cx + Math.cos(t) * r * 0.64, cy + Math.sin(t) * r * 0.64];
+  const aro = lado < 0 ? arco(hondo, 1.9, 4.2, 10) : arco(hondo, 1.25, -1.15, 10);
   return `<path class="lc-sombra" d="${lin(cuerpo, true)}" transform="translate(0.8 1.3)"/><path class="ca-cera-c" d="${lin(cuerpo, true)}"/>`
-    + `<path class="ca-hondo" d="${lin(dentro, true)}"/>`
-    + (lado > 0 ? `<path class="ca-cera-luz" d="${lin(arco(borde, -1.4, 0.2, 8))}"/>` : '')
-    // La cara de la rotura, de cera limpia: un filo claro a lo largo de la grieta.
+    // Lo que queda de la huella: medio aro hundido en cada mitad.
+    + `<path class="ca-aro-roto" d="${lin(aro)}"/>`
+    + `<path class="ca-cera-luz" d="${lin(lado > 0 ? arco(borde, -1.4, 0.2, 8) : arco(borde, -2.3, -1.7, 4))}"/>`
     + `<path class="ca-rotura" d="${lin(grieta)}"/>`;
 };
 
@@ -361,8 +361,8 @@ export function cartaAbierta({ abriendo = false } = {}) {
     + '<path class="ca-solapa-b" d="M5 80L48 55L91 80Z"/>'
     + '<path class="ca-canto" d="M4 37.5V76.5a3.5 3.5 0 0 0 3.5 3.5h81a3.5 3.5 0 0 0 3.5 -3.5V37.5M4 35L48 7L92 35"/>'
     // El lacre roto: una mitad se quedó a cada lado (la de fuera fija la posición; la de dentro es la que se anima).
-    + `<g transform="translate(-3.2 1.2) rotate(-13 48 58)"><g class="ca-mitad ca-mitad-i">${mitadCera(48, 58, 10.5, sem, -1)}</g></g>`
-    + `<g transform="translate(3.4 2) rotate(11 48 58)"><g class="ca-mitad ca-mitad-d">${mitadCera(48, 58, 10.5, sem, 1)}</g></g>`
+    + `<g transform="translate(-4.6 1.4) rotate(-17 48 58)"><g class="ca-mitad ca-mitad-i">${mitadCera(48, 58, 10.5, sem, -1)}</g></g>`
+    + `<g transform="translate(4.8 2.4) rotate(14 48 58)"><g class="ca-mitad ca-mitad-d">${mitadCera(48, 58, 10.5, sem, 1)}</g></g>`
     + (abriendo ? '<circle class="ca-destello" cx="48" cy="59" r="12"/><path class="ca-migas" d="M41 50h0.01M57 52h0.01M45 70h0.01M55 68h0.01"/>' : '')
     + '</svg>';
 }

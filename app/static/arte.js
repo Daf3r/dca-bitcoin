@@ -405,7 +405,7 @@ export function miniMontana({ altitud = 0.5 } = {}) {
   const pinos = [[36, 122, 9], [50, 122, 12], [62, 122, 8], [172, 122, 10], [186, 122, 13], [200, 122, 9]]
     .map(([x, y, h]) => `M${x} ${y}L${f1(x - h * 0.42)} ${f1(y - h * 0.4)}H${f1(x - h * 0.2)}L${x} ${y - h}L${f1(x + h * 0.2)} ${f1(y - h * 0.4)}H${f1(x + h * 0.42)}Z`).join('');
   return '<svg class="dm" viewBox="0 0 240 132" aria-hidden="true" focusable="false"><defs>'
-    + '<pattern id="dm-trama" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><path class="dm-tr" d="M0 1.6H3.2"/></pattern>'
+    + '<pattern id="dm-trama" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)"><rect class="dm-tr-fondo" width="3.2" height="3.2"/><path class="dm-tr" d="M0 1.6H3.2"/></pattern>'
     + '</defs>'
     + `<path class="dm-cielo" d="${cielo}"/>`
     + '<circle class="dm-sol" cx="198" cy="30" r="10"/>'

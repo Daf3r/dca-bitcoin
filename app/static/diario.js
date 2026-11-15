@@ -19,7 +19,12 @@ export function pintarDiario() {
   $('dia-hace').textContent = d.haceUnAnio?.texto ?? '';
   const lista = $('dia-clasif');
   lista.textContent = '';
-  for (const t of d.clasificados) { const li = document.createElement('li'); li.textContent = t; lista.append(li); }
+  for (const t of d.clasificados) {
+    const li = document.createElement('li');
+    const m = /^(SE [A-ZÁÉÍÓÚÑ]+)(.*)$/.exec(t); // «SE BUSCAN», «SE OFRECE»…: el encabezado del aviso va aparte (para darle su estilo)
+    if (m) { const b = document.createElement('b'); b.textContent = m[1]; li.append(b, document.createTextNode(m[2])); } else li.textContent = t;
+    lista.append(li);
+  }
   $('dia-pron').textContent = d.pronostico;
   caja.setAttribute('aria-description', textoDiario(d));
 }

@@ -2397,3 +2397,280 @@ html[data-pestanas] .indice { display: none; }
 @media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; } }
 
 .historia-pg[hidden] { display: none; }
+
+/* ================================================================ Campamento 15A · el Diario, las cartas y los mensajes */
+/* La paleta de la cera es la del lacre (bermellón; dorada desde 1 BTC): la comparten el sobre, el sello pequeño del mensaje y el botón «Sellar». */
+:is(.carta-ico, .m-mensaje, #cap-sellar) { --lc-0: #f0774a; --lc-1: #c8361f; --lc-2: #7d1a10; --lc-luz: #ffc3a0; --lc-osc: #4a0d06; --lc-sombra: rgb(30 6 2 / 0.4); }
+html[data-acento="oro"] :is(.carta-ico, .m-mensaje, #cap-sellar) { --lc-0: #f7d36a; --lc-1: #cf9a22; --lc-2: #7a5208; --lc-luz: #fff2c4; --lc-osc: #3f2a02; }
+
+/* --- El Diario del Libro: una portada de periódico. Papel tintado en oscuro, papel de periódico crema en claro; la tinta es la del texto
+   (así hereda el alto contraste). Filetes finos, cabecera con carácter (Fraunces) y nada de letra diminuta: el cuerpo va a 1rem o más. */
+.diario {
+  --dia-papel: color-mix(in srgb, var(--s1) 89%, #c9a978); --dia-tinta: var(--txt); --dia-tinta2: var(--txt2);
+  --dia-filo: color-mix(in srgb, var(--txt) 42%, transparent);
+  position: relative; padding: 18px 18px 20px; border-radius: 8px; color: var(--dia-tinta);
+  background-color: var(--dia-papel);
+  /* Un doblez apenas visible a media altura: el periódico vino doblado. */
+  background-image: linear-gradient(180deg, transparent 49.7%, rgb(0 0 0 / 0.06) 50%, rgb(255 255 255 / 0.03) 50.3%, transparent 50.8%), var(--velo-tarjeta);
+  box-shadow: inset 0 1px 0 var(--filo), var(--sombra);
+}
+:root[data-tema="claro"] .diario { --dia-papel: #f7eedb; --dia-filo: color-mix(in srgb, var(--txt) 48%, transparent); }
+.diario[hidden] { display: none; }
+.dia-cab { text-align: center; }
+.dia-nombre { display: flex; align-items: center; justify-content: center; gap: 0.4em; font: 700 clamp(1.5rem, 7.2vw, 2.25rem)/1.05 var(--serif); letter-spacing: -0.015em; color: var(--dia-tinta); }
+/* Dos cumbres del logo flanquean el nombre: la marca del libro, sin imagen (un recorte CSS). */
+.dia-nombre::before, .dia-nombre::after { content: ""; flex: none; width: 0.78em; height: 0.46em; background: var(--naranja); clip-path: polygon(0 100%, 30% 40%, 44% 62%, 66% 0, 100% 100%); }
+.dia-nombre::after { transform: scaleX(-1); }
+.dia-edicion { margin: 10px 0 0; padding: 6px 0 5px; border-top: 3px double var(--dia-tinta); border-bottom: 1px solid var(--dia-tinta); color: var(--dia-tinta2); font-size: 0.9375rem; line-height: 1.35; text-wrap: balance; }
+.dia-titular { margin: 16px 0 8px; font: 700 clamp(1.625rem, 6.6vw, 2.25rem)/1.1 var(--serif); letter-spacing: -0.015em; color: var(--dia-tinta); text-wrap: balance; }
+.dia-sub { margin: 0; font: 400 1.0625rem/1.5 var(--serif); color: var(--dia-tinta2); text-wrap: pretty; }
+.dia-grabado { margin: 16px 0 0; padding: 6px; border: 1px solid var(--dia-filo); border-radius: 3px; background: color-mix(in srgb, var(--dia-papel) 70%, var(--fondo)); }
+:root[data-tema="claro"] .dia-grabado { background: #fbf5e8; }
+.dia-grabado svg { display: block; width: 100%; height: auto; }
+.dia-cols { display: grid; margin-top: 18px; border-top: 2px solid var(--dia-tinta); }
+.dia-bloque { min-width: 0; padding: 12px 0 4px; }
+.dia-bloque + .dia-bloque { border-top: 1px solid var(--dia-filo); }
+.dia-bloque h3 { margin: 0 0 6px; font: 700 0.9375rem/1.3 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--naranja-txt); }
+.dia-bloque p { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--dia-tinta); }
+/* Clasificados: avisos uno tras otro, separados por un filete punteado dentro de un recuadro fino (como la página de anuncios). */
+.dia-clasif { margin: 0; padding: 2px 12px; border: 1px solid var(--dia-filo); border-radius: 2px; list-style: none; }
+.dia-clasif li { padding: 9px 0; font-size: 1rem; line-height: 1.45; text-wrap: pretty; }
+.dia-clasif li + li { border-top: 1px dotted var(--dia-filo); }
+/* Tablet y escritorio: titular y bajada a la izquierda, el grabado a la derecha; debajo, columnas con su filete vertical. */
+@media (min-width: 700px) {
+  .diario { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); column-gap: 24px; align-items: start; padding: 22px 24px 24px; }
+  .dia-cab, .dia-cols { grid-column: 1 / -1; }
+  .dia-titular { grid-column: 1; margin-top: 18px; }
+  .dia-sub { grid-column: 1; }
+  .dia-grabado { grid-column: 2; grid-row: 2 / span 2; margin-top: 18px; }
+}
+/* Las columnas de abajo se reparten según el ancho del propio periódico (en escritorio va en la columna principal, más estrecha). */
+.diario { container-type: inline-size; }
+@container (min-width: 30rem) {
+  .dia-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto 1fr; column-gap: 20px; }
+  .dia-bloque:nth-child(2) { grid-column: 2; grid-row: 1 / span 2; position: relative; }
+  .dia-bloque:not(:nth-child(2)) { grid-column: 1; }
+  .dia-bloque + .dia-bloque:nth-child(2), .dia-bloque[hidden] + .dia-bloque ~ .dia-bloque { border-top: 0; }
+  .dia-bloque:nth-child(2)::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 6px; border-left: 1px solid var(--dia-filo); }
+}
+@container (min-width: 44rem) {
+  .dia-cols { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .dia-bloque:nth-child(n) { grid-column: auto; grid-row: auto; position: relative; }
+  .dia-bloque + .dia-bloque { border-top: 0; }
+  .dia-bloque:nth-child(2)::before { content: none; }
+  .dia-bloque:not([hidden]) ~ .dia-bloque::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 6px; border-left: 1px solid var(--dia-filo); }
+}
+/* Con letra muy grande en tablet, titular y grabado van uno bajo otro (lado a lado no caben con aire). */
+@media (min-width: 700px) and (max-width: 1099px) {
+  html[data-letra="muy-grande"] .diario { display: block; }
+}
+
+/* El grabado (arte.js: miniMontana): tinta sobre papel; la cara en sombra rayada, la que mira al sol en papel con un lavado cálido. */
+.dm-tr { stroke: var(--dia-tinta); stroke-width: 0.75; }
+.dm-tr-fondo { fill: transparent; }
+/* En oscuro el grabado es tinta clara sobre papel oscuro: la cara en sombra lleva un fondo más hondo bajo la trama y la que mira al sol se
+   aclara, para que la luz siga viniendo de arriba a la derecha. */
+:root:not([data-tema="claro"]) .dm-tr-fondo { fill: color-mix(in srgb, var(--dia-papel) 55%, var(--fondo)); }
+:root:not([data-tema="claro"]) .dm-monte { fill: color-mix(in srgb, var(--dia-papel) 80%, var(--txt)); }
+:root:not([data-tema="claro"]) .dm-sombra { opacity: 1; }
+:root:not([data-tema="claro"]) .dm-tr { stroke-width: 0.6; stroke-opacity: 0.75; }
+.dm-cielo { fill: none; stroke: var(--dia-tinta); stroke-width: 0.55; opacity: 0.26; }
+.dm-sol { fill: color-mix(in srgb, var(--naranja) 55%, var(--dia-papel)); stroke: var(--dia-tinta); stroke-width: 0.9; }
+.dm-rayos { fill: none; stroke: var(--dia-tinta); stroke-width: 0.9; stroke-linecap: round; opacity: 0.7; }
+.dm-sierra { fill: url(#dm-trama); stroke: var(--dia-tinta); stroke-width: 0.7; stroke-linejoin: round; opacity: 0.34; }
+.dm-monte { fill: var(--dia-papel); }
+:root[data-tema="claro"] .dm-monte { fill: #fbf5e8; }
+.dm-luz { fill: var(--naranja); opacity: 0.16; }
+.dm-sombra { fill: url(#dm-trama); opacity: 0.8; }
+.dm-nieve { fill: color-mix(in srgb, var(--dia-papel) 60%, #fff); stroke: var(--dia-tinta); stroke-width: 0.8; stroke-linejoin: round; }
+:root:not([data-tema="claro"]) .dm-nieve { fill: color-mix(in srgb, var(--dia-papel) 40%, var(--txt)); }
+.dm-arista { fill: none; stroke: var(--dia-tinta); stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; }
+.dm-silueta { fill: none; stroke: var(--dia-tinta); stroke-width: 1.4; stroke-linejoin: round; }
+.dm-senda { fill: none; stroke: var(--dia-tinta); stroke-width: 1.7; stroke-dasharray: 0 3.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; }
+.dm-hecho { fill: none; stroke: var(--naranja); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.dm-pinos { fill: var(--dia-tinta); opacity: 0.85; }
+.dm-suelo { fill: none; stroke: var(--dia-tinta); stroke-width: 0.8; opacity: 0.5; }
+.dm-yo-halo { fill: var(--naranja); opacity: 0.25; }
+.dm-yo { fill: var(--naranja); stroke: var(--dia-tinta); stroke-width: 1.1; }
+
+/* --- Cartas para el futuro: una tarjeta con un sobre por carta. */
+.capsulas { padding: 20px; border-radius: 24px; background-color: var(--s1); }
+.capsulas[hidden] { display: none; }
+.capsulas h2 { font-size: 1.5rem; }
+.capsulas .sec-cab { align-items: center; }
+#cap-nueva { font-size: 1rem; }
+.cap-pista { margin: 0 0 4px; color: var(--txt2); font-size: 1rem; line-height: 1.5; }
+.cap-lista { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.cap-lista:empty { display: none; }
+.cap-item { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 16px; align-items: center; padding: 14px 16px 14px 12px; border-radius: 18px; background: var(--s2); }
+.cap-item.abierta:has(.cap-nueva) { box-shadow: inset 0 0 0 1.5px var(--naranja); }
+.cap-arte svg { display: block; width: 100%; height: auto; overflow: visible; }
+.cap-cuerpo { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; min-width: 0; }
+.cap-cuerpo b { flex: 1 0 100%; font: 600 1.0625rem/1.3 var(--serif); color: var(--txt); }
+.cap-cuerpo small { flex: 1 0 100%; font-size: 0.9375rem; line-height: 1.4; color: var(--txt2); }
+.cap-cuerpo .enlace { font-size: 0.9375rem; }
+.cap-nueva { order: -1; display: inline-flex; align-items: center; margin-bottom: 4px; padding: 2px 10px; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font: 700 0.875rem/1.4 var(--sans); }
+/* «Leer la carta» es lo que importa: un botón claro, no un enlace. */
+.cap-item.abierta .enlace { margin-top: 8px; padding: 0 18px; border: 2px solid var(--naranja); border-radius: 999px; background: color-mix(in srgb, var(--naranja) 12%, var(--s1)); text-decoration: none; font-size: 1rem; font-weight: 700; }
+@media (hover: hover) and (pointer: fine) { .cap-item.abierta .enlace:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
+@media (max-width: 379px) {
+  .capsulas { padding: 16px; }
+  .cap-item { grid-template-columns: 68px minmax(0, 1fr); column-gap: 12px; padding: 12px; }
+}
+html[data-letra="muy-grande"] .cap-item { grid-template-columns: 72px minmax(0, 1fr); }
+@media (max-width: 419px) {
+  html[data-letra="muy-grande"] .cap-item { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
+  html[data-letra="muy-grande"] .cap-arte { width: 84px; }
+}
+
+/* El sobre (arte-sellos.js: cartaSellada / cartaAbierta): papel propio y cálido, igual en los dos temas; la cera, la del lacre. */
+.carta-ico {
+  --ca-p0: #f5e7c9; --ca-p1: #d9c095; --ca-pb: #ead6af; --ca-pa: #e9d4ab; --ca-pl: #b99b6b; --ca-dentro: #8a704c;
+  --ca-hoja: #fffaf0; --ca-tinta: #6f5c45; --ca-canto: #6e5230; --ca-filo: #fff8e8; --ca-sombra: rgb(0 0 0 / 0.32);
+}
+:root[data-tema="claro"] .carta-ico { --ca-sombra: rgb(110 70 30 / 0.2); }
+.ca-sombra { fill: var(--ca-sombra); }
+.ca-papel { fill: var(--ca-p0); }
+.ca-solapa-i { fill: var(--ca-p1); }
+.ca-solapa-d { fill: var(--ca-p0); }
+.ca-solapa-b { fill: var(--ca-pb); }
+.ca-solapa-a { fill: var(--ca-pa); }
+.ca-solapa-abierta { fill: var(--ca-p1); }
+.ca-pliegue { fill: var(--ca-pl); opacity: 0.85; }
+.ca-dentro { fill: var(--ca-dentro); }
+.ca-filo { fill: none; stroke: var(--ca-filo); stroke-width: 0.8; stroke-linecap: round; opacity: 0.9; }
+.ca-canto { fill: none; stroke: var(--ca-canto); stroke-width: 0.8; stroke-linejoin: round; opacity: 0.55; }
+.ca-hoja { fill: var(--ca-hoja); stroke: var(--ca-canto); stroke-width: 0.5; stroke-opacity: 0.4; }
+.ca-renglon { fill: none; stroke: var(--ca-tinta); stroke-width: 1.3; stroke-linecap: round; opacity: 0.5; }
+.ca-firma { fill: none; stroke: var(--ca-tinta); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+.ca-cera-c { fill: var(--lc-1); }
+.ca-cera-luz { fill: none; stroke: var(--lc-0); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ca-hondo { fill: var(--lc-2); opacity: 0.45; }
+.ca-aro { fill: none; stroke: var(--lc-luz); stroke-width: 0.9; stroke-dasharray: 30 70; stroke-dashoffset: -70; opacity: 0.8; }
+.carta-ico :is(.lc-rel-osc, .lc-rel-luz, .lc-rel) { stroke-width: 0.9; stroke-linejoin: round; stroke-linecap: round; }
+.ca-brillo { fill: #fff; opacity: 0.5; }
+.ca-aro-roto { fill: none; stroke: var(--lc-2); stroke-width: 1.1; stroke-linecap: round; opacity: 0.6; }
+.ca-borde-solapa { fill: none; stroke: var(--ca-canto); stroke-width: 0.7; stroke-linejoin: round; opacity: 0.4; }
+.ca-rotura { fill: none; stroke: var(--lc-luz); stroke-width: 0.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+.ca-destello { fill: none; stroke: var(--lc-luz); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.ca-migas { fill: none; stroke: var(--lc-1); stroke-width: 2.6; stroke-linecap: round; opacity: 0; transform-box: view-box; transform-origin: 48px 59px; }
+/* Abrir la carta (solo la primera lectura; acompaña a una acción, así que también con «esenciales»): el lacre tiembla, se parte en dos
+   mitades que se separan, salta un destello con migas de cera y la carta asoma del sobre. */
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-mitad { transform-box: fill-box; transform-origin: 50% 50%; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-mitad-i { animation: ca-parte-i 0.75s cubic-bezier(0.3, 0, 0.2, 1) 0.2s both; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-mitad-d { animation: ca-parte-d 0.75s cubic-bezier(0.3, 0, 0.2, 1) 0.2s both; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-destello { animation: ca-destello 0.6s ease-out 0.5s both; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-migas { animation: ca-migas 0.7s ease-out 0.5s both; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-carta { animation: ca-asoma 0.8s var(--resorte) 0.75s both; }
+@keyframes ca-parte-i {
+  0% { transform: translate(4.6px, -1.4px) rotate(17deg); }
+  22% { transform: translate(4.6px, -1.4px) rotate(14deg); }
+  36% { transform: translate(4.6px, -1.4px) rotate(19deg); }
+  100% { transform: none; }
+}
+@keyframes ca-parte-d {
+  0% { transform: translate(-4.8px, -2.4px) rotate(-14deg); }
+  22% { transform: translate(-4.8px, -2.4px) rotate(-11deg); }
+  36% { transform: translate(-4.8px, -2.4px) rotate(-16deg); }
+  100% { transform: none; }
+}
+@keyframes ca-destello { 0% { opacity: 0.9; transform: scale(0.5); } 100% { opacity: 0; transform: scale(1.7); } }
+@keyframes ca-migas { 0% { opacity: 1; transform: scale(0.35); } 70% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25); } }
+@keyframes ca-asoma { 0% { transform: translateY(16px); } 100% { transform: none; } }
+
+/* --- Leer una carta: el sobre abierto arriba y la carta en su papel, con renglones y letra de carta. Papel claro en los dos temas. */
+.d-carta { width: min(calc(100vw - 24px), 34rem); padding: 22px 20px 20px; }
+.d-carta h2 { text-align: center; }
+.carta-arte { display: grid; place-items: center; margin: 10px 0 -22px; position: relative; z-index: 1; pointer-events: none; }
+.carta-arte svg { width: 128px; height: auto; overflow: visible; }
+.carta-papel {
+  position: relative; margin: 0 0 18px; padding: 30px 22px 22px; border-radius: 4px; color: #2b2118;
+  background-color: #fbf3e1; background-image: linear-gradient(180deg, rgb(255 255 255 / 0.7), transparent 40%), linear-gradient(90deg, rgb(120 80 30 / 0.05), transparent 12%, transparent 88%, rgb(120 80 30 / 0.05));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 1px 2px rgb(60 30 10 / 0.18), 0 16px 34px -18px rgb(0 0 0 / 0.6);
+}
+.d-carta .carta-de { margin: 0 0 12px; font: italic 500 1rem/1.4 var(--serif); color: #6b4527; }
+.d-carta .carta-texto {
+  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #2b2118; font: 400 1.1875rem/1.7 var(--serif);
+  /* Renglones: una línea fina azulada cada 1.7em, alineada con el texto aunque cambie el tamaño de letra. */
+  background-image: linear-gradient(transparent calc(1.7em - 1px), rgb(70 100 150 / 0.22) calc(1.7em - 1px)); background-size: 100% 1.7em;
+}
+html[data-contraste="alto"] .d-carta .carta-de { color: #3d2412; }
+html:not([data-efectos="ninguno"]) .d-carta.abriendo .carta-papel { transform-origin: 50% 0; animation: carta-sale 0.7s var(--resorte) 0.95s both; }
+@keyframes carta-sale { 0% { opacity: 0; transform: translateY(-22px) scaleY(0.6); } 100% { opacity: 1; transform: none; } }
+@media (max-width: 379px) { .d-carta { padding: 18px 14px 16px; } .carta-papel { padding: 28px 16px 18px; } .d-carta .carta-texto { font-size: 1.125rem; } }
+
+/* --- Escribir una carta y el mensaje de la bandera: formularios del dueño, con aire (campos de 16 px, toques de 48 px). */
+.d-capsula, .d-mensaje { width: min(calc(100vw - 24px), 30rem); }
+:is(#f-capsula, #f-mensaje) { display: grid; gap: 6px; }
+:is(#f-capsula, #f-mensaje) h2 { margin-bottom: 6px; }
+:is(#f-capsula, #f-mensaje) > label { margin-top: 4px; font: 650 1rem var(--sans); color: var(--txt); }
+.d-mensaje .msg-ayuda { margin: 0 0 6px; font-size: 1rem; line-height: 1.5; }
+.d-mensaje .msg-ayuda:empty { display: none; }
+#cap-texto, #msg-texto {
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  background: var(--s2); color: var(--txt); font: 400 1.0625rem/1.55 var(--serif);
+}
+#cap-texto { min-height: 9.5em; resize: vertical; }
+#msg-texto { font-style: italic; }
+:is(#cap-texto, #msg-texto)::placeholder { color: var(--txt3); opacity: 1; }
+:is(#cap-texto, #msg-texto):focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
+:is(.d-capsula, .d-mensaje) .cap-cuenta { margin: 0 0 4px; text-align: right; font-size: 0.875rem; color: var(--txt2); }
+.cap-cuando { display: grid; gap: 4px; margin: 6px 0 8px; padding: 12px 14px 14px; border: 0; border-radius: 16px; background: var(--s2); min-width: 0; }
+.cap-cuando legend { float: left; width: 100%; margin: 0 0 4px; padding: 0; font: 650 1rem var(--sans); color: var(--txt); }
+.cap-op { display: flex; align-items: center; gap: 12px; min-height: var(--toque); font-size: 1rem; color: var(--txt); cursor: pointer; }
+.cap-op input { appearance: none; -webkit-appearance: none; flex: none; display: grid; place-content: center; width: 24px; height: 24px; margin: 0; border: 2px solid var(--txt3); border-radius: 50%; background: var(--s1); cursor: pointer; }
+.cap-op input::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--naranja); transform: scale(0); transition: transform 0.12s ease-out; }
+.cap-op input:checked { border-color: var(--naranja); }
+.cap-op input:checked::before { transform: none; }
+.cap-op input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 3px; }
+@media (forced-colors: active) { .cap-op input { appearance: auto; } }
+#cap-fecha, #cap-etapa {
+  width: calc(100% - 36px); min-height: var(--toque); margin: 0 0 6px 36px; padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px;
+  background: var(--s1); color: var(--txt); font: 400 1rem var(--sans); min-width: 0;
+}
+:is(#cap-fecha, #cap-etapa):disabled { opacity: 0.45; }
+:is(#cap-fecha, #cap-etapa):focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+:is(.d-capsula, .d-mensaje) .d-bot { flex-wrap: wrap; margin-top: 4px; }
+/* «Sellar la carta» lleva una gota de cera: el gesto es sellar. */
+#cap-sellar { display: inline-flex; align-items: center; gap: 10px; }
+#cap-sellar::before { content: ""; flex: none; width: 16px; height: 16px; border-radius: 50% 46% 52% 48%; background: radial-gradient(circle at 64% 34%, var(--lc-luz) 0 12%, var(--lc-0) 24%, var(--lc-1) 58%, var(--lc-2)); box-shadow: 0 1px 0 rgb(0 0 0 / 0.25); }
+
+/* --- El mensaje en la bandera (montana.js: #m-tarjeta). En la tarjeta plana, una cita con filete naranja; bajo la laja tallada, una cinta
+   de papel que sale de debajo de la piedra. Si aún está sellado, una línea discreta con un sello de cera pequeño. */
+.m-tarjeta .m-mensaje { position: relative; margin: 10px 0 8px; padding: 8px 12px 8px 14px; border-left: 3px solid var(--naranja); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--naranja) 9%, transparent); color: var(--txt); font: italic 400 1.0625rem/1.45 var(--serif); }
+.m-tarjeta .m-mensaje:not([data-sellado="1"])::before { content: "«"; }
+.m-tarjeta .m-mensaje:not([data-sellado="1"])::after { content: "»"; }
+.m-tarjeta .m-mensaje[data-sellado="1"] { padding: 8px 10px 8px 38px; border: 1px dashed var(--s3); border-radius: 12px; background: none; color: var(--txt2); font: 600 0.9375rem/1.4 var(--sans); }
+.m-tarjeta .m-mensaje[data-sellado="1"]::before {
+  content: ""; position: absolute; left: 10px; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 52% 46% 50% 48%;
+  background: radial-gradient(circle at 50% 50%, transparent 0 34%, rgb(0 0 0 / 0.18) 36% 44%, transparent 46%), radial-gradient(circle at 64% 32%, var(--lc-luz) 0 10%, var(--lc-0) 22%, var(--lc-1) 58%, var(--lc-2));
+  box-shadow: 1px 1.5px 0 var(--lc-sombra);
+}
+.m-tarjeta-escribir {
+  min-height: var(--toque); margin: 0 6px 0 0; padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 999px; background: var(--s1);
+  color: var(--txt); font: 600 0.9375rem var(--sans); cursor: pointer;
+}
+.m-tarjeta-escribir[hidden] { display: none; }
+.m-tarjeta-escribir:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .m-tarjeta-escribir:hover { border-color: var(--naranja); } }
+/* Con la laja: la piedra, la cinta y, debajo, los botones a la derecha. */
+.m-tarjeta.con-piedra { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 8px; }
+.m-tarjeta.con-piedra > .m-pet { flex: 1 0 100%; position: relative; z-index: 1; }
+.m-tarjeta.con-piedra > .m-mensaje:not([hidden]) { flex: 1 0 calc(100% - 24px); margin: -18px 12px 2px; }
+.m-tarjeta.con-piedra .m-mensaje:not([data-sellado="1"]) {
+  padding: 24px 28px 12px; border: 0; border-radius: 0; color: #2b2118; text-align: center;
+  background-color: #f3e3c2; background-image: linear-gradient(180deg, rgb(70 40 10 / 0.35), rgb(70 40 10 / 0) 20px), linear-gradient(180deg, transparent 70%, rgb(120 80 30 / 0.12));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 58%, 100% 100%, 0 100%, 12px 58%);
+}
+.m-tarjeta.con-piedra .m-mensaje[data-sellado="1"] { margin-top: 6px; background: var(--s1); box-shadow: var(--sombra); }
+.m-tarjeta.con-piedra:has(> .m-mensaje:not([hidden])) .m-tarjeta-x, .m-tarjeta.con-piedra:has(> .m-tarjeta-escribir:not([hidden])) .m-tarjeta-x { margin: 0; padding: 0 14px; }
+.m-tarjeta.con-piedra .m-tarjeta-escribir { margin: 0; }
+.m-tarjeta.con-piedra .m-tarjeta-escribir { box-shadow: var(--sombra); }
+html[data-contraste="alto"] .m-tarjeta.con-piedra .m-mensaje:not([data-sellado="1"]) { color: #1a120b; }
+
+/* --- La frase del dueño en la línea de tiempo de «Tu historia»: una cita discreta bajo el campamento. */
+.h-ev .h-msg { margin: 6px 0 2px; padding: 3px 0 3px 12px; border-left: 3px solid var(--naranja); font: italic 400 1rem/1.45 var(--serif); color: var(--txt); }
+
+/* Material de las tarjetas nuevas (el Diario lleva el suyo arriba, sobre su papel). */
+.capsulas { background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
+:is(.d-capsula, .d-mensaje) .d-bot button { padding: 0 15px; }
