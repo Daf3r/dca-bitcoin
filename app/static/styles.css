@@ -366,7 +366,7 @@ html[data-tv] .esc-datos { display: none !important; }
 /* (Rediseño Fable) La ganancia con su mini línea: una píldora del color del cielo, como la cotización. En el teléfono va en su
    propia línea bajo «valen $…» (antes la mini línea quedaba sola, huérfana, en un renglón). */
 .sd-sep { font-style: normal; }
-.sd-gan { display: inline-flex; align-items: center; gap: 2px; padding: 1px 10px 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--c0) 38%, transparent); vertical-align: baseline; }
+.sd-gan { display: inline-flex; align-items: center; gap: 2px; padding: 1px 10px 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--cielo-sombra, transparent) 62%, transparent); vertical-align: baseline; } /* el velo es del color contrario a la tinta: sube el contraste de la cifra, nunca lo baja */
 .sd-gan .mini { margin-left: 6px; vertical-align: 0; }
 @media (max-width: 699px) {
   .sd-sep { display: block; height: 0; overflow: hidden; }
@@ -660,7 +660,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .anio + .anio { border-top: 1px solid var(--s3); }
 .an-y { grid-area: y; font: 400 1.75rem/1 var(--serif); color: var(--naranja-txt); }
 .an-barras { grid-area: b; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: end; gap: 4px; height: 64px; }
-.an-barras i { display: block; min-height: 3px; border-radius: 4px 4px 1px 1px; background: var(--naranja); }
+.an-barras i { display: block; min-height: 3px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, var(--naranja), color-mix(in srgb, var(--naranja) 58%, var(--fondo))); }
 .an-barras i.vacio { background: var(--s3); }
 .an-tot { grid-area: t; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 0.875rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
 .an-tot b { color: var(--txt); }
@@ -3043,3 +3043,18 @@ html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cie
 .lista li.mes-cab h3::before { content: ""; position: absolute; left: 0; bottom: 0.5rem; width: 16px; height: 20px; background: var(--fondo); }
 .lista li.resalte { border-radius: 14px; }
 @media (hover: hover) and (pointer: fine) { .fila:hover { background: var(--s1); } }
+
+/* ---------------------------------------------------------------- Rediseño (Fable) · «Tu cuenta»
+   Las filas se leen como una lista de ajustes: las que abren otra vista llevan una flechita; las que cambian un valor al tocarlas
+   lo enseñan a la derecha, resaltado (cuenta.js: vestirAjuste). */
+.d-cuenta .dc-lista button { display: flex; align-items: center; gap: 4px 12px; border-radius: 16px; }
+.d-cuenta .dc-lista button:has(.dc-v) { flex-wrap: wrap; }
+.d-cuenta .dc-lista button .ico { flex: none; }
+.dc-k { flex: 1 1 auto; min-width: 0; }
+.dc-dp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.dc-v { flex: 0 1 auto; margin-left: auto; max-width: 100%; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--naranja) 14%, transparent); color: var(--naranja-txt); font-weight: 650; font-size: 0.875rem; text-align: right; }
+html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb, var(--naranja) 22%, transparent); }
+.d-cuenta .dc-lista button:is([data-cuenta="clave"], [data-cuenta="historia"], [data-cuenta="historial"], [data-cuenta="datos"], [data-cuenta="enlaces"], [data-cuenta="sistema"], [data-cuenta="sesiones"], [data-cuenta="avisos"], [data-cuenta="cumple"], [data-cuenta="tv"])::after {
+  content: ""; flex: none; width: 8px; height: 8px; margin-left: auto; margin-right: 4px; border: solid var(--txt3); border-width: 2px 2px 0 0; transform: rotate(45deg);
+}
+.d-cuenta .dc-lista button[data-cuenta="cerrar"] { justify-content: center; }
