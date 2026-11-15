@@ -280,6 +280,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   { const k = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1, dir = (pts[1]?.[0] ?? bx) > bx ? -1 : 1, n = Math.min(3, cumples.length), paso = Math.min(21 * k, Math.max(15 * k, ((dir < 0 ? bx : W - bx) - 34 * k) / Math.max(1, n - 1))); cumples.slice(0, 3).forEach((p, i) => { s += farolCumple({ inicial: p.inicial, x: Math.max(10 * k, Math.min(W - 10 * k, bx + dir * (24 * k + paso * i))), y: by + 2 + (i % 2) * 4 * k, k }); }); } // 15B
   s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   s += bosque(W, H, bx, compras, plantar, pts);
+  // Reloj de sol (16A): sobre los pinos de adorno, pero detrás de los árboles de honor (antes sus piedras quedaban encima de las copas).
+  const suelo = W < 1100 ? by - 4 : H * 0.93;
+  s += relojDeSol(c.sx, suelo, W); // 16A
   const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0]);
   s += `<rect class="suelo" x="0" y="${f1(H * 0.95)}" width="${W}" height="${f1(H * 0.05 + 1)}" fill="url(#m-suelo)"/>`;
   s += honor.svg; // por delante del suelo que funde el pie de la escena: sus troncos se ven
@@ -287,10 +290,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const anio = (window.libroCielo?.dia?.() ?? '').slice(0, 4) || String(new Date().getFullYear());
   const sitio = sitioPapel(W, H, by, pts, honor.cajas);
   if (sitio) s += papelPicado(sitio[0], sitio[1], sitio[2], anio, sitio[3], sitio[4]); // (acostado y sin sitio libre: mejor sin tira que encima de algo)
-  const suelo = W < 1100 ? by - 4 : H * 0.93, altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
+  const altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
   s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
-  s += relojDeSol(c.sx, suelo, W); // 16A
   host.innerHTML = s + '</g></svg>';
   colocarReloj(host);
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
@@ -899,7 +901,7 @@ export function colocarReloj(host = document.querySelector('.montana')) {
   const h = window.libroCielo?.hora?.() ?? 12;
   if (h < 6 || h > 18) { sombra.setAttribute('d', ''); return; }
   const sx = Number(g.dataset.sx), gy = Number(g.dataset.gy), alcance = Number(g.dataset.alcance);
-  const punta = sx + ((h - 12) / 5) * alcance, ancho = 2.6;
+  const punta = sx + ((h - 12) / 5) * alcance, ancho = 3.2;
   sombra.setAttribute('d', `M${sx.toFixed(1)} ${(gy - ancho).toFixed(1)}L${punta.toFixed(1)} ${gy.toFixed(1)}L${sx.toFixed(1)} ${(gy + ancho).toFixed(1)}Z`);
 }
 setInterval(() => { if (document.visibilityState === 'visible') colocarReloj(); }, 300_000);

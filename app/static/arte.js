@@ -581,12 +581,16 @@ export function sismografo({ puntos = [], ancho = 600, alto = 120 } = {}) {
 export function relojDeSol(sx, gy, W) {
   const alcance = Math.max(30, Math.min(sx - 10, W - sx - 10, W * 0.42));
   let piedras = '';
-  for (let h = 7; h <= 17; h++) piedras += `<circle class="reloj-piedra${h === 12 ? ' reloj-medio' : ''}" cx="${f1(sx + ((h - 12) / 5) * alcance)}" cy="${f1(gy)}" r="${h === 12 ? 1.6 : 1.1}"/>`;
-  return `<g class="efecto-ambiente reloj" data-sx="${f1(sx)}" data-gy="${f1(gy)}" data-alcance="${f1(alcance)}" aria-hidden="true"><path class="reloj-sombra" d=""/>${piedras}</g>`;
+  // Once piedritas planas (en perspectiva: elipses), algo mayores a las 9, 12 y 15, y un gnomon corto en el centro.
+  for (let h = 7; h <= 17; h++) {
+    const g = h === 12 ? 1.5 : h % 3 === 0 ? 1.2 : 1;
+    piedras += `<ellipse class="reloj-piedra${h === 12 ? ' reloj-medio' : ''}" cx="${f1(sx + ((h - 12) / 5) * alcance)}" cy="${f1(gy)}" rx="${f1(2.3 * g)}" ry="${f1(1.1 * g)}"/>`;
+  }
+  return `<g class="efecto-ambiente reloj" data-sx="${f1(sx)}" data-gy="${f1(gy)}" data-alcance="${f1(alcance)}" aria-hidden="true"><path class="reloj-sombra" d=""/>${piedras}<path class="reloj-gnomon" d="M${f1(sx)} ${f1(gy)}v-7"/></g>`;
 }
 
 /** La monedita que queda brillando en el fondo del lago por cada venta (idea 40; hasta 5). */
 export function monedasDelLago(cx, cy, rx, ry, n) {
   const sitios = [[-0.35, 0.12], [0.12, 0.3], [0.4, 0.02], [-0.08, 0.34], [0.26, 0.2]];
-  return sitios.slice(0, Math.min(5, n)).map(([x, y], i) => `<g class="lago-moneda" transform="translate(${f1(cx + rx * x)} ${f1(cy + ry * y)})"><circle class="lm-brillo" r="4.2"/><circle class="lm-disco" r="2.1"/><path class="lm-raya" d="M-0.9 0h1.8"/></g>`.replace('class="lago-moneda"', `class="lago-moneda m${i}"`)).join('');
+  return sitios.slice(0, Math.min(5, n)).map(([x, y], i) => `<g class="lago-moneda" transform="translate(${f1(cx + rx * x)} ${f1(cy + ry * y)})"><ellipse class="lm-brillo" rx="5.6" ry="2.8"/><ellipse class="lm-disco" rx="2.9" ry="1.5"/><path class="lm-raya" d="M-1.7 -0.4q1.7 -1 3.4 0"/></g>`.replace('class="lago-moneda"', `class="lago-moneda m${i}"`)).join('');
 }

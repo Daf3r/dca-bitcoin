@@ -277,6 +277,7 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 /* En 320 px el precio va en su columna estrecha de siempre (una cosa por línea) para no empujar la marca ni el saludo. */
 @media (max-width: 399px) { .cotizacion { grid-template-columns: auto; justify-items: end; padding: 4px 8px 5px; margin: -4px -8px 0 0; } }
 @media (max-width: 359px) { .cotizacion { padding: 0; margin: 0; background: none; } }
+@media (max-width: 359px) { .cot-sep { display: none; } .cot-hace { display: block; } }
 .cot-k { font-size: 0.75rem; color: var(--cielo-txt2); white-space: nowrap; }
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
@@ -484,7 +485,6 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 /* Costo promedio y sats: línea o escalera naranja con sus puntos. */
 .sa-1 { stop-color: var(--naranja-txt); stop-opacity: 0.2; }
 .sa-2 { stop-color: var(--naranja-txt); stop-opacity: 0; }
-.s-area { fill: url(#s-grad); }
 .s-linea { fill: none; stroke: var(--naranja-txt); stroke-width: 2.2; stroke-linejoin: round; }
 .s-puntos { fill: var(--naranja); stroke: var(--compra-borde); stroke-width: 1.2; }
 .s-hoy { fill: var(--fondo); stroke: var(--naranja-txt); stroke-width: 2.5; }
@@ -1540,7 +1540,7 @@ html[data-entrada="clave"] .pag-login .campo .banderin { fill: var(--naranja); o
 .dc-historia .vacio, .historia-pg .vacio { text-align: center; color: var(--txt2); font: italic 400 1.0625rem var(--serif); }
 /* Medallas: con color las que ya tienes; de cada tipo solo se enseña la siguiente, en contorno. */
 .medallas { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: 12px 8px; margin: 0; padding: 0; list-style: none; }
-.medalla { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.medalla { display: grid; justify-items: center; align-content: start; gap: 2px; text-align: center; } /* arriba: los títulos de una fila quedan alineados aunque uno tenga dos líneas */
 .medalla b { font-size: 0.8125rem; line-height: 1.2; }
 .medalla small { font-size: 0.75rem; line-height: 1.25; color: var(--txt2); }
 .medalla.bloq .med { opacity: 0.8; } /* solo el dibujo: el texto conserva su contraste */
@@ -1909,7 +1909,7 @@ html[data-efectos="todos"] .hc-titila.tw3 { animation-duration: 8.8s; animation-
 /* Campamento 13B · sellos de lacre, certificado y manta (el dibujo vive en arte-sellos.js y arte-historia.js). */
 .dh-cert-btn { margin: 0 0 14px; }
 .sellos { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: 12px 8px; margin: 0 0 14px; padding: 0; list-style: none; }
-.sello { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.sello { display: grid; justify-items: center; align-content: start; gap: 2px; text-align: center; }
 .sello .lacre { width: 56px; height: 56px; }
 .sello b { font-size: 0.8125rem; line-height: 1.2; }
 .sello small { font-size: 0.75rem; line-height: 1.25; color: var(--txt2); }
@@ -2104,7 +2104,7 @@ html:not([data-efectos="ninguno"]) .hp-toque.sonando { animation: hp-suena 0.42s
 }
 :root[data-tema="claro"] .pasaporte { --ss-papel: #f4ead6; --ss-papel2: #fbf5e8; --ss-pliegue: rgb(90 60 30 / 0.16); --ss-pliegue-luz: rgb(255 255 255 / 0.7); }
 @media (max-width: 419px) { html[data-letra="muy-grande"] .pasaporte { background-size: 0 0, auto, auto; } } /* una sola columna: sin el pliegue */
-.pasaporte .sello-sem { display: grid; justify-items: center; gap: 2px; min-width: 0; text-align: center; }
+.pasaporte .sello-sem { display: grid; justify-items: center; align-content: start; gap: 2px; min-width: 0; text-align: center; }
 .pasaporte .sello-sem b { font-size: 0.75rem; line-height: 1.2; color: var(--txt); }
 .pasaporte .sello-sem small { font-size: 0.75rem; line-height: 1.25; color: var(--txt2); }
 .pasaporte .sello-sem-ico { width: 68px; height: 68px; }
@@ -2320,7 +2320,7 @@ html[data-pestanas] .indice { display: none; }
   .cuerpo[data-pestana="resumen"] .semanas { max-width: min(100%, 26rem); }
 }
 @media (min-width: 700px) and (max-width: 1099px) {
-  .cuerpo[data-pestana="resumen"] :is(.toca, .caida, .res-medallas) { grid-column: 1 / -1; }
+  .cuerpo[data-pestana="resumen"] :is(.toca, .caida, .res-medallas, .diario) { grid-column: 1 / -1; } /* el Diario a media página dejaba un hueco a su lado */
   /* «Dónde están tus sats» y «Ganancia» van lado a lado; si solo está una, a lo ancho. */
   .cuerpo[data-pestana="resumen"] .col-lateral:not(:has(> .rep-ganancia:not([hidden]))) > .ubicacion,
   .cuerpo[data-pestana="resumen"] .col-lateral:not(:has(> .ubicacion:not([hidden]))) > .rep-ganancia { grid-column: 1 / -1; }
@@ -2394,7 +2394,7 @@ html[data-pestanas] .indice { display: none; }
   .cuerpo[data-pestana="historia"] .historia-pg { grid-column: 1; }
   .cuerpo[data-pestana="historia"] .col-lateral { grid-column: 2; }
 }
-@media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; } }
+@media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; row-gap: 0; } .cuerpo[data-pestana="resumen"] .caida .enlace { margin-bottom: -8px; } } /* «Ocultar hoy» pegado al texto (su zona de toque de 48 px sigue entera) */
 
 .historia-pg[hidden] { display: none; }
 
@@ -2462,6 +2462,7 @@ html[data-acento="oro"] :is(.carta-ico, .m-mensaje, #cap-sellar) { --lc-0: #f7d3
 }
 /* Con letra muy grande en tablet, titular y grabado van uno bajo otro (lado a lado no caben con aire). */
 @media (min-width: 700px) and (max-width: 1099px) {
+  .diario { grid-column: 1 / -1; } /* tablet: a lo ancho (en una sola columna de la rejilla dejaba media página vacía) */
   html[data-letra="muy-grande"] .diario { display: block; }
 }
 
@@ -2927,29 +2928,34 @@ html[data-tv]:not([data-efectos="ninguno"]) .tv-sismo.arranca .sm-tira { animati
 /* Reloj de sol (35): la sombra de la cumbre marca la hora en el suelo; solo de día. */
 .reloj { display: none; pointer-events: none; }
 html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cielo="atardecer"] .reloj { display: inline; }
-.reloj-sombra { fill: var(--monte-sombra, #000); opacity: 0.5; }
-.reloj-piedra { fill: var(--txt, #fff); opacity: 0.4; }
-.reloj-medio { opacity: 0.45; }
+.reloj-sombra { fill: rgb(10 14 24); opacity: 0.42; }
+/* Las piedras toman el color de la nieve (sigue a la hora, no al tema) con un canto oscuro: se leen sobre la hierba sin brillar. */
+.reloj-piedra { fill: var(--nieve, #e8eef5); stroke: rgb(0 0 0 / 0.35); stroke-width: 0.6; opacity: 0.75; }
+.reloj-medio { opacity: 0.9; }
+.reloj-gnomon { stroke: var(--nieve, #e8eef5); stroke-width: 1.6; stroke-linecap: round; opacity: 0.85; }
 /* El lago guarda lo vendido (40): una monedita brillando en el fondo por cada venta; la última baja al guardar. */
-.lm-brillo { fill: var(--naranja, #ff9228); opacity: 0.22; }
-.lm-disco { fill: var(--naranja-txt, #ffb260); stroke: rgb(0 0 0 / 0.35); stroke-width: 0.5; }
-.lm-raya { stroke: rgb(0 0 0 / 0.4); stroke-width: 0.5; }
+/* Monedas tumbadas en el fondo (elipses, como el lago): disco dorado con canto oscuro y un filo de luz arriba. */
+.lm-brillo { fill: #ffd27a; opacity: 0.2; }
+.lm-disco { fill: #e7a93a; stroke: rgb(60 32 0 / 0.55); stroke-width: 0.6; }
+.lm-raya { fill: none; stroke: rgb(255 244 210 / 0.9); stroke-width: 0.7; stroke-linecap: round; }
 @keyframes moneda-hunde { 0% { translate: 0 -46px; opacity: 0; } 15% { opacity: 1; } 70% { translate: 0 0; } 100% { translate: 0 0; } }
 .lago-moneda.hunde { animation: moneda-hunde 1.7s cubic-bezier(.45, 0, .8, .6) 1 both; }
 
 /* «Tú» fantasma en la hoja de anotar (16B, idea 2): tu etapa como regla, con dónde quedarías al guardar. */
-.h-ruta { margin: 2px 0 6px; }
-.hr-pista { position: relative; display: block; height: 10px; border-radius: 5px; background: var(--s3, rgb(255 255 255 / 0.12)); }
-.hr-hecho { position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); border-radius: 5px; background: var(--naranja); opacity: 0.55; }
-.hr-yo, .hr-fantasma { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-sizing: border-box; }
+.h-ruta { margin: 4px 0 12px; }
+.hr-pista { position: relative; display: block; height: 8px; border-radius: 4px; background: var(--s3, rgb(255 255 255 / 0.12)); }
+.hr-hecho { position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); border-radius: 4px; background: var(--naranja); opacity: 0.55; }
+/* Lo que sumaría esta compra: un tramo a rayas entre «Tú» y el fantasma (se lee aunque el avance sea corto). */
+.hr-pista::after { content: ""; position: absolute; inset: 0 auto 0 calc(var(--p, 0) * 100%); width: calc(max(0, var(--q, 0) - var(--p, 0)) * 100%); border-radius: 4px; background: repeating-linear-gradient(-45deg, var(--naranja) 0 3px, transparent 3px 6px); opacity: 0.8; transition: width 0.35s var(--resorte, ease-out); }
+.hr-yo, .hr-fantasma { position: absolute; z-index: 1; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-sizing: border-box; }
 .hr-yo { left: calc(var(--p, 0) * 100%); background: var(--naranja); box-shadow: 0 0 0 2px var(--s1); }
-.hr-fantasma { left: calc(var(--q, 0) * 100%); border: 2px dashed var(--naranja-txt); background: transparent; transition: left 0.35s var(--resorte, ease-out); }
+.hr-fantasma { z-index: 2; width: 20px; height: 20px; margin: -10px 0 0 -10px; left: calc(var(--q, 0) * 100%); border: 2px dashed var(--naranja-txt); background: transparent; transition: left 0.35s var(--resorte, ease-out); }
 .hoja-calc .ruta-txt { display: block; margin-top: 2px; color: var(--txt2); }
 
 /* Perfil de altitud (16B, idea 4): la vista «Sats» en escala logarítmica, con faroles, anillos en las extra y «Tú». */
 .pf-halo { fill: var(--naranja); opacity: 0.2; }
 .pf-cuerpo { fill: var(--naranja-txt); stroke: var(--s1); stroke-width: 0.8; }
 .pf-techo { fill: var(--txt2); }
-.pf-extra { fill: none; stroke: var(--naranja); stroke-width: 1.6; }
+.pf-extra { fill: none; stroke: var(--naranja); stroke-width: 1.2; opacity: 0.75; }
 .pf-tu { fill: var(--naranja-txt); font-weight: 700; }
 .v-eje.pf-eje, .pf-eje { paint-order: stroke; stroke: var(--fondo, #070b15); stroke-width: 3px; stroke-linejoin: round; }

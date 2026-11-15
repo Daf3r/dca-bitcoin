@@ -95,6 +95,14 @@ export function pintarPrecio() {
     error: 'El mensajero no ha llegado',
     cargando: 'consultando…',
   }[estado];
+  // «Coinbase · hace 12 s»: el separador y la hora en sus piezas (el texto no cambia) para que en 320 px vaya «Coinbase» arriba y la
+  // hora abajo, sin un «·» colgando al final de la línea.
+  if (estado === 'vivo') {
+    const sep = document.createElement('span'), hace = document.createElement('span');
+    sep.className = 'cot-sep'; sep.textContent = ' · ';
+    hace.className = 'cot-hace'; hace.textContent = haceCuanto(S.precioTs);
+    $('precio-meta').replaceChildren(S.fuente, sep, hace);
+  }
   // Sin precio, en el hueco de la cifra planea el mensajero (un zopilote): decorativo; el texto de abajo lo dice todo y el «—» sigue ahí para los lectores.
   if (estado === 'error') $('precio').innerHTML = `${ico('zopilote')}<span class="sr">—</span>`;
   // Cuánto subió o bajó desde el cierre de ayer (con menos de 3 días de histórico, no se muestra).

@@ -35,7 +35,8 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
   const pad = perfil ? 0.08 : (hi - lo) * 0.12 || hi * 0.1 || 1;
   if (!desdeCero || perfil) lo -= pad;
   hi += pad;
-  const m = { t: 18, r: 12, b: 28, l: 10 };
+  // En el perfil, las cifras del eje van en su propio margen a la izquierda: dentro del dibujo se encimaban con los primeros puntos y faroles.
+  const m = { t: 18, r: 12, b: 28, l: perfil ? 46 : 10 };
   const t0 = aFecha(puntos[0].fecha).getTime(), t1 = aFecha(puntos.at(-1).fecha).getTime();
   const x = (f) => m.l + ((aFecha(f).getTime() - t0) / Math.max(1, t1 - t0)) * (W - m.l - m.r);
   const y = (v) => Math.min(H - m.b, m.t + (1 - (T(v) - lo) / (hi - lo)) * (H - m.t - m.b));
@@ -46,7 +47,7 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
     d += `L${f1(x(puntos[i].fecha))} ${f1(y(puntos[i].v))}`;
   }
   let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">`;
-  s += '<defs><linearGradient id="s-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sa-1"/><stop offset="1" class="sa-2"/></linearGradient></defs>';
+  s += `<defs><linearGradient id="s-grad-${host.id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="sa-1"/><stop offset="1" class="sa-2"/></linearGradient></defs>`; // id propio por gráfico: costo y sats lo repetían
   const n = W < 560 ? 3 : 5;
   for (let k = 0; k < n; k++) {
     const p = puntos[Math.round((k / (n - 1)) * (puntos.length - 1))];
@@ -54,16 +55,28 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
   }
   const pot = (e) => Number.isInteger(Math.log10(e));
   const apretadas = perfil && perfil.etapas.length > 1 && Math.abs(y(perfil.etapas[0]) - y(perfil.etapas[1])) < 17; // con poco alto, solo las potencias de 10
-  const ticks = perfil ? perfil.etapas.filter((v) => T(v) > lo && T(v) < hi && y(v) > m.t + 6 && (!apretadas || pot(v))) : marcas(lo, hi * 0.97).filter((v) => y(v) < base - 16); // la marca pegada a la base (p. ej. «0 sats») solo estorba al primer punto
+  const ticks = perfil ? perfil.etapas.filter((v) => T(v) > lo && T(v) < hi && y(v) > m.t + 6 && y(v) < base - 6 && (!apretadas || pot(v))) : marcas(lo, hi * 0.97).filter((v) => y(v) < base - 16); // la marca pegada a la base (p. ej. «0 sats») solo estorba al primer punto
   for (const v of ticks) s += `<line class="v-rej" x1="${m.l}" x2="${W - m.r}" y1="${f1(y(v))}" y2="${f1(y(v))}"/>`;
   s += `<line class="v-base" x1="${m.l}" x2="${W - m.r}" y1="${base}" y2="${base}"/>`;
-  if (desdeCero) s += `<path class="s-area" d="${d}L${f1(x(puntos.at(-1).fecha))} ${base}L${f1(x(puntos[0].fecha))} ${base}Z"/>`;
+  if (desdeCero) s += `<path class="s-area" fill="url(#s-grad-${host.id})" d="${d}L${f1(x(puntos.at(-1).fecha))} ${base}L${f1(x(puntos[0].fecha))} ${base}Z"/>`;
   s += `<path class="s-linea" d="${d}"/>`;
   const r = puntos.length > 120 ? 2.4 : puntos.length > 30 ? 3.2 : 4.5;
-  s += `<path class="s-puntos" d="${puntos.slice(0, -1).map((p) => `M${f1(x(p.fecha) - r)} ${f1(y(p.v))}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`).join('')}"/>`;
+  // Con muchas compras los puntos se tocan: el canto oscuro de cada uno tapaba a los vecinos y a la línea (con mil compras la
+  // curva desaparecía en una banda oscura). Solo se dibuja un punto si queda a más de un diámetro del anterior dibujado.
+  let px = -Infinity, py = -Infinity;
+  const visibles = puntos.slice(0, -1).filter((p) => {
+    const X = x(p.fecha), Y = y(p.v);
+    if (Math.hypot(X - px, Y - py) < 2 * r + 1.5) return false;
+    px = X; py = Y; return true;
+  });
+  s += `<path class="s-puntos" d="${visibles.map((p) => `M${f1(x(p.fecha) - r)} ${f1(y(p.v))}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`).join('')}"/>`;
   // La cifra va del lado donde la línea no pasa: a la izquierda si el valor sube, a la derecha si baja.
   const izq = puntos.at(-1).v >= puntos[0].v;
-  for (const v of ticks) s += `<text class="g-t v-eje${perfil ? ' pf-eje' : ''}" x="${izq ? m.l : W - m.r}" y="${f1(y(v) - 6)}"${izq ? '' : ' text-anchor="end"'}>${perfil ? nombreHito(v) : fmtEje(v)}</text>`;
+  for (const v of ticks) {
+    s += perfil
+      ? `<text class="g-t v-eje pf-eje" x="${m.l - 7}" y="${f1(y(v) + 4)}" text-anchor="end">${nombreHito(v)}</text>`
+      : `<text class="g-t v-eje" x="${izq ? m.l : W - m.r}" y="${f1(y(v) - 6)}"${izq ? '' : ' text-anchor="end"'}>${fmtEje(v)}</text>`;
+  }
   if (perfil) {
     // Faroles donde cruzaste un campamento (potencias de 10), anillos en las compras extra y «Tú» al final.
     for (const v of perfil.etapas.filter(pot)) {
