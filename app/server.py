@@ -228,6 +228,31 @@ def _m_wallets(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE traslados ADD COLUMN wallet_id INTEGER REFERENCES wallets(id)")
 
 
+def _m_mensajes_bandera(conn: sqlite3.Connection) -> None:
+    # Mensaje en la bandera (idea 16): una frase del dueño por campamento (100k, 1M, 10M…), que sale al tocar esa bandera.
+    conn.execute("""CREATE TABLE IF NOT EXISTS mensajes_bandera (
+        hito        INTEGER PRIMARY KEY,
+        texto       TEXT    NOT NULL CHECK (length(texto) BETWEEN 1 AND 160),
+        actualizado INTEGER NOT NULL,
+        por         TEXT    NOT NULL
+    )""")
+
+
+def _m_capsulas(conn: sqlite3.Connection) -> None:
+    # Cápsula sellada (idea 33): una carta que solo se abre en una fecha o al llegar a cierto saldo. Anular conserva la fila.
+    conn.execute("""CREATE TABLE IF NOT EXISTS capsulas (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        texto       TEXT    NOT NULL CHECK (length(texto) BETWEEN 1 AND 1000),
+        abre_fecha  TEXT,
+        abre_sats   INTEGER,
+        creado      INTEGER NOT NULL,
+        autor       TEXT    NOT NULL,
+        abierta_ts  INTEGER,
+        anulada_ts  INTEGER,
+        CHECK ((abre_fecha IS NULL) <> (abre_sats IS NULL))
+    )""")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -240,6 +265,8 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (9, "sesiones.compartida", _m_sesiones_compartida),
     (10, "tokens_api (enlaces de solo lectura para hojas de cálculo)", _m_tokens_api),
     (11, "wallets y traslados.wallet_id (varias wallets)", _m_wallets),
+    (12, "mensajes_bandera (una frase por campamento)", _m_mensajes_bandera),
+    (13, "capsulas (cartas selladas que se abren en una fecha o con un saldo)", _m_capsulas),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -1506,6 +1533,159 @@ def archivar_wallet(wid: int) -> Any:
         return jsonify(error=f"«{f['nombre']}» todavía tiene {queda:,} sats. Anota un traslado de vuelta al exchange o a otra wallet antes de archivarla."), 409
     conn.execute("UPDATE wallets SET archivada = ? WHERE id = ?", (int(time.time()), wid))
     auth.auditar(conn, quien(), "wallet_archivada", "wallet", wid, {"nombre": f["nombre"]}, None, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return "", 204
+
+
+# ------------------------------------------------- mensajes en la bandera y cápsulas selladas (campamento 15)
+HITOS_MENSAJE = tuple(10**n for n in range(5, 13))  # los campamentos: 100k, 1M, 10M… 1,000 BTC
+MAX_MENSAJE, MAX_CARTA, MAX_CAPSULAS = 160, 1000, 20
+MAX_SATS = 21_000_000 * 10**8
+
+
+def saldo_actual(conn: sqlite3.Connection) -> int:
+    return max(0, sum(-s if tipo == "venta" else s for _f, _i, tipo, s in movimientos(conn)))
+
+
+def parse_mensaje(v: Any) -> str:
+    """Una frase de hasta 160 caracteres, en una sola línea. Vacía = borrar el mensaje."""
+    if v is None:
+        return ""
+    if not isinstance(v, str):
+        raise ValueError("Mensaje inválido.")
+    t = " ".join("".join(ch for ch in v if ch.isprintable() or ch in "\t\n").split())
+    if len(t) > MAX_MENSAJE:
+        raise ValueError(f"El mensaje admite hasta {MAX_MENSAJE} caracteres.")
+    return t
+
+
+def parse_carta(v: Any) -> str:
+    """El texto de una carta: hasta 1,000 caracteres; se conservan los saltos de línea (pero no más de uno en blanco seguido)."""
+    if not isinstance(v, str):
+        raise ValueError("Escribe la carta.")
+    lineas = ["".join(ch for ch in ln if ch.isprintable() or ch == "\t").rstrip() for ln in v.replace("\r", "").split("\n")]
+    t = re.sub(r"\n{3,}", "\n\n", "\n".join(lineas)).strip()
+    if not t:
+        raise ValueError("Escribe la carta.")
+    if len(t) > MAX_CARTA:
+        raise ValueError(f"La carta admite hasta {MAX_CARTA} caracteres.")
+    return t
+
+
+@app.get("/api/mensajes")
+def listar_mensajes() -> Response:
+    """Las frases de las banderas. Las ven todos, pero la de un campamento que aún no alcanzas llega sellada (sin texto): es una sorpresa."""
+    conn = db()
+    admin = g.usuario["rol"] == "admin"
+    saldo = saldo_actual(conn)
+    out = []
+    for r in conn.execute("SELECT hito, texto, por FROM mensajes_bandera ORDER BY hito"):
+        visible = admin or saldo >= r["hito"]
+        out.append({"hito": r["hito"], "sellado": not visible, "texto": r["texto"] if visible else None, "por": r["por"]})
+    return jsonify(out)
+
+
+@app.put("/api/mensajes/<int:hito>")
+def guardar_mensaje(hito: int) -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    if hito not in HITOS_MENSAJE:
+        return jsonify(error="Ese campamento no existe."), 400
+    body = request.get_json(silent=True)
+    try:
+        texto = parse_mensaje(body.get("texto") if isinstance(body, dict) else None)
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    conn = db()
+    antes = conn.execute("SELECT texto FROM mensajes_bandera WHERE hito = ?", (hito,)).fetchone()
+    if not texto:
+        conn.execute("DELETE FROM mensajes_bandera WHERE hito = ?", (hito,))
+    else:
+        conn.execute("INSERT INTO mensajes_bandera (hito, texto, actualizado, por) VALUES (?, ?, ?, ?) "
+                     "ON CONFLICT(hito) DO UPDATE SET texto = excluded.texto, actualizado = excluded.actualizado, por = excluded.por",
+                     (hito, texto, int(time.time()), quien()))
+    auth.auditar(conn, quien(), "mensaje_bandera", "campamento", hito, {"texto": antes["texto"]} if antes else None, {"texto": texto} if texto else None,
+                 auth.ip_resumida(ip_real()))
+    conn.commit()
+    return jsonify(hito=hito, texto=texto or None)
+
+
+def _capsula_json(r: sqlite3.Row, saldo: int, hoy: str, admin: bool) -> dict[str, Any]:
+    abierta = bool(r["abierta_ts"]) or (r["abre_fecha"] is not None and hoy >= r["abre_fecha"]) or (r["abre_sats"] is not None and saldo >= r["abre_sats"])
+    return {"id": r["id"], "abre_fecha": r["abre_fecha"], "abre_sats": r["abre_sats"], "creado": r["creado"], "autor": r["autor"],
+            "abierta": abierta, "abierta_ts": r["abierta_ts"], "texto": r["texto"] if (abierta or admin) else None}
+
+
+@app.get("/api/capsulas")
+def listar_capsulas() -> Response:
+    """Las cartas selladas. Las ven todos; el texto solo llega cuando la carta ya se abrió (el dueño la ve siempre: la escribió él)."""
+    conn = db()
+    admin = g.usuario["rol"] == "admin"
+    saldo, hoy = saldo_actual(conn), date.today().isoformat()
+    out = []
+    for r in conn.execute("SELECT id, texto, abre_fecha, abre_sats, creado, autor, abierta_ts FROM capsulas WHERE anulada_ts IS NULL ORDER BY id"):
+        c = _capsula_json(r, saldo, hoy, admin)
+        if c["abierta"] and not r["abierta_ts"]:  # primera vez que se ve abierta: queda abierta aunque el saldo luego baje
+            ahora = int(time.time())
+            conn.execute("UPDATE capsulas SET abierta_ts = ? WHERE id = ? AND abierta_ts IS NULL", (ahora, r["id"]))
+            c["abierta_ts"] = ahora
+        out.append(c)
+    conn.commit()
+    return jsonify(out)
+
+
+@app.post("/api/capsulas")
+def sellar_capsula() -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    body: Any = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify(error="Datos inválidos."), 400
+    conn = db()
+    try:
+        texto = parse_carta(body.get("texto"))
+        fecha, sats = body.get("abre_fecha"), body.get("abre_sats")
+        if (fecha is None) == (sats is None):
+            raise ValueError("Elige cuándo se abre: una fecha o un saldo.")
+        if fecha is not None:
+            if not isinstance(fecha, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha):
+                raise ValueError("Fecha inválida.")
+            d = date.fromisoformat(fecha)
+            if d <= date.today():
+                raise ValueError("La fecha tiene que ser futura.")
+            if d > date.today() + timedelta(days=366 * 40):
+                raise ValueError("Esa fecha queda demasiado lejos.")
+        else:
+            if isinstance(sats, bool) or not isinstance(sats, int) or sats <= 0 or sats > MAX_SATS:
+                raise ValueError("Saldo inválido.")
+            if sats <= saldo_actual(conn):
+                raise ValueError("Ese saldo ya lo tienes: elige uno más arriba.")
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    if conn.execute("SELECT COUNT(*) FROM capsulas WHERE anulada_ts IS NULL AND abierta_ts IS NULL").fetchone()[0] >= MAX_CAPSULAS:
+        return jsonify(error=f"Ya hay {MAX_CAPSULAS} cartas selladas. Espera a que se abra alguna."), 400
+    cur = conn.execute("INSERT INTO capsulas (texto, abre_fecha, abre_sats, creado, autor) VALUES (?, ?, ?, ?, ?)",
+                       (texto, fecha, sats, int(time.time()), quien()))
+    cid = int(cur.lastrowid or 0)
+    auth.auditar(conn, quien(), "capsula_sellada", "capsula", cid, None, {"abre_fecha": fecha, "abre_sats": sats, "largo": len(texto)}, auth.ip_resumida(ip_real()))
+    conn.commit()
+    r = conn.execute("SELECT id, texto, abre_fecha, abre_sats, creado, autor, abierta_ts FROM capsulas WHERE id = ?", (cid,)).fetchone()
+    return jsonify(_capsula_json(r, saldo_actual(conn), date.today().isoformat(), True)), 201
+
+
+@app.delete("/api/capsulas/<int:cid>")
+def anular_capsula(cid: int) -> Any:
+    """Una carta aún sellada se puede anular (queda la fila). Una ya abierta es parte de la historia: no."""
+    if (e := _solo_admin()) is not None:
+        return e
+    conn = db()
+    r = conn.execute("SELECT id, texto, abre_fecha, abre_sats, creado, autor, abierta_ts FROM capsulas WHERE id = ? AND anulada_ts IS NULL", (cid,)).fetchone()
+    if not r:
+        return jsonify(error="Esa carta no existe."), 404
+    if _capsula_json(r, saldo_actual(conn), date.today().isoformat(), True)["abierta"]:
+        return jsonify(error="Esa carta ya se abrió: es parte de la historia y no se borra."), 409
+    conn.execute("UPDATE capsulas SET anulada_ts = ? WHERE id = ?", (int(time.time()), cid))
+    auth.auditar(conn, quien(), "capsula_anulada", "capsula", cid, {"abre_fecha": r["abre_fecha"], "abre_sats": r["abre_sats"]}, None, auth.ip_resumida(ip_real()))
     conn.commit()
     return "", 204
 

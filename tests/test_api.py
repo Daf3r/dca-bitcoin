@@ -2172,4 +2172,68 @@ for _pag, _raiz in (("/", "app.js"), ("/login", "login.js")):
     _pre = _re2.findall(r'<link rel="modulepreload" href="/([\w-]+\.js)\?v=[0-9a-f]+">', _html)
     check(sorted(_pre) == sorted(m for m in _grafo_js(_raiz) if m != _raiz), f"{_pag}: modulepreload de todos los módulos con su versión ({len(_pre)})")
 
+# --- Campamento 15A: mensajes en la bandera y cartas selladas
+check(len(sql("SELECT name FROM sqlite_master WHERE name IN ('mensajes_bandera', 'capsulas')")) == 2, "las tablas de mensajes y cápsulas existen (migraciones 12 y 13)")
+_saldo = server.saldo_actual(server.connect())
+_arriba = next(10**n for n in range(5, 13) if 10**n > _saldo)   # un campamento que aún no alcanzas
+_abajo = next(10**n for n in range(5, 13) if 10**(n + 1) > _saldo and 10**n <= _saldo)  # uno que ya pasaste
+check(adm.get("/api/mensajes").get_json() == [] and luz.get("/api/mensajes").status_code == 200 and anon.get("/api/mensajes").status_code == 401, "al principio no hay mensajes; los ven todos con sesión")
+check(luz.put(f"/api/mensajes/{_abajo}", json={"texto": "hola"}).status_code == 403, "un lector no escribe mensajes")
+for malo in (5, 100001, 10**13, 0):
+    check(adm.put(f"/api/mensajes/{malo}", json={"texto": "hola"}).status_code == 400, f"campamento inválido: {malo}")
+check(adm.put(f"/api/mensajes/{_abajo}", json={"texto": "x" * 161}).status_code == 400 and adm.put(f"/api/mensajes/{_abajo}", json={"texto": 5}).status_code == 400, "mensaje demasiado largo o no es texto")
+r = adm.put(f"/api/mensajes/{_abajo}", json={"texto": "  Para   mis hijos:\n  sigan subiendo  "})
+check(r.status_code == 200 and r.get_json()["texto"] == "Para mis hijos: sigan subiendo", f"se guarda en una línea y sin espacios de sobra {r.data}")
+check(adm.put(f"/api/mensajes/{_arriba}", json={"texto": "Sorpresa para cuando llegues"}).status_code == 200, "un mensaje en un campamento por alcanzar")
+_m_adm = {m["hito"]: m for m in adm.get("/api/mensajes").get_json()}
+_m_luz = {m["hito"]: m for m in luz.get("/api/mensajes").get_json()}
+check(_m_adm[_arriba]["texto"] == "Sorpresa para cuando llegues" and _m_adm[_arriba]["sellado"] is False, "el dueño ve todo")
+check(_m_luz[_abajo]["texto"] == "Para mis hijos: sigan subiendo" and _m_luz[_abajo]["sellado"] is False, "un lector ve el de un campamento ya alcanzado")
+check(_m_luz[_arriba]["texto"] is None and _m_luz[_arriba]["sellado"] is True and "Sorpresa" not in luz.get("/api/mensajes").get_data(as_text=True), "pero el de uno por alcanzar llega sellado: sin texto")
+check(len(audit("mensaje_bandera")) == 2, "los mensajes quedan en la auditoría")
+check(adm.put(f"/api/mensajes/{_arriba}", json={"texto": ""}).status_code == 200 and _arriba not in {m["hito"] for m in adm.get("/api/mensajes").get_json()}, "un mensaje vacío lo borra")
+
+check(adm.get("/api/capsulas").get_json() == [] and luz.get("/api/capsulas").status_code == 200 and anon.get("/api/capsulas").status_code == 401, "al principio no hay cartas; las ven todos con sesión")
+_fut = (date.today() + timedelta(days=30)).isoformat()
+check(luz.post("/api/capsulas", json={"texto": "hola", "abre_fecha": _fut}).status_code == 403 and luz.delete("/api/capsulas/1").status_code == 403, "un lector no sella ni anula cartas")
+for malo in ({}, {"texto": "hola"}, {"texto": "hola", "abre_fecha": _fut, "abre_sats": _saldo + 5}, {"texto": "", "abre_fecha": _fut}, {"texto": "   ", "abre_fecha": _fut},
+             {"texto": 5, "abre_fecha": _fut}, {"texto": "x" * 1001, "abre_fecha": _fut}, {"texto": "hola", "abre_fecha": today},
+             {"texto": "hola", "abre_fecha": "2020-01-01"}, {"texto": "hola", "abre_fecha": "ayer"}, {"texto": "hola", "abre_fecha": (date.today() + timedelta(days=366 * 41)).isoformat()},
+             {"texto": "hola", "abre_sats": _saldo}, {"texto": "hola", "abre_sats": True}, {"texto": "hola", "abre_sats": "9"}, {"texto": "hola", "abre_sats": 21_000_000 * 10**8 + 1}):
+    check(adm.post("/api/capsulas", json=malo).status_code == 400, f"carta rechazada: {str(malo)[:60]}")
+_carta = "Querida familia:\n\n\n\nSi leen esto, ya llegamos lejos.\nCon cariño, papá"
+r = adm.post("/api/capsulas", json={"texto": _carta, "abre_fecha": _fut})
+c_f = r.get_json()
+check(r.status_code == 201 and c_f["abierta"] is False and c_f["texto"].count("\n\n\n") == 0 and "Con cariño" in c_f["texto"], f"se sella una carta con fecha {r.data}")
+r = adm.post("/api/capsulas", json={"texto": "Para cuando llegues a esa altura", "abre_sats": _saldo + 1000})
+c_s = r.get_json()
+check(r.status_code == 201 and c_s["abierta"] is False and c_s["abre_sats"] == _saldo + 1000, f"y otra con un saldo {r.data}")
+_l = {c["id"]: c for c in luz.get("/api/capsulas").get_json()}
+check(_l[c_f["id"]]["texto"] is None and _l[c_s["id"]]["texto"] is None and _l[c_f["id"]]["abierta"] is False, "un lector ve que hay cartas selladas pero no lo que dicen")
+check("querida familia" not in luz.get("/api/capsulas").get_data(as_text=True).lower() and "Para cuando llegues" not in luz.get("/api/capsulas").get_data(as_text=True), "el texto no viaja en la respuesta")
+check({c["id"]: c["texto"] for c in adm.get("/api/capsulas").get_json()}[c_f["id"]].startswith("Querida familia"), "el dueño sí lee las suyas")
+_au = [dict(a) for a in audit("capsula_sellada")]
+check(len(_au) == 2 and all("largo" in a["despues"] and "Querida" not in a["despues"] for a in _au), "la auditoría guarda el largo, no la carta")
+# una carta que ya llegó a su fecha, y otra a cuyo saldo ya llegaste, se abren y se leen
+_cx = server.connect()
+_cx.execute("INSERT INTO capsulas (texto, abre_fecha, creado, autor) VALUES ('Ya es hora', '2020-01-01', 1, 'Daf3r')")
+_cx.execute("INSERT INTO capsulas (texto, abre_sats, creado, autor) VALUES ('Llegaste', 1, 1, 'Daf3r')")
+_cx.commit(); _cx.close()
+_l = luz.get("/api/capsulas").get_json()
+_ab = {c["texto"]: c for c in _l if c["abierta"]}
+check(set(_ab) == {"Ya es hora", "Llegaste"} and all(c["abierta_ts"] for c in _ab.values()), "las cartas cuya fecha o saldo ya llegó se abren para todos y queda anotado cuándo")
+check(adm.delete(f"/api/capsulas/{next(c['id'] for c in _l if c['texto'] == 'Ya es hora')}").status_code == 409, "una carta ya abierta no se anula (es parte de la historia)")
+check(adm.delete("/api/capsulas/99999").status_code == 404, "anular una carta que no existe")
+check(adm.delete(f"/api/capsulas/{c_f['id']}").status_code == 204 and c_f["id"] not in {c["id"] for c in adm.get("/api/capsulas").get_json()}, "una carta aún sellada sí se anula")
+check(sql("SELECT anulada_ts FROM capsulas WHERE id = ?", (c_f["id"],))[0][0] is not None and len(audit("capsula_anulada")) == 1, "queda la fila y el rastro")
+# el tope de cartas selladas a la vez
+_n = 0
+while _n < 30:
+    r = adm.post("/api/capsulas", json={"texto": f"carta {_n}", "abre_fecha": _fut})
+    if r.status_code != 201:
+        break
+    _n += 1
+check(r.status_code == 400 and "selladas" in r.get_json()["error"] and 15 <= _n <= server.MAX_CAPSULAS, f"hay un tope de cartas selladas a la vez ({_n})")
+check(server.version_esquema(server.connect()) >= 13, "la base está al menos en la migración 13")
+
 print("OK", ok, "comprobaciones")
