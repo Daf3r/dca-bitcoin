@@ -300,6 +300,7 @@ try {
     { // piedritas, cumpleaños y la tele (15B): lectora con una piedrita y su cumpleaños hoy; el dueño con su línea de la última piedrita
       const { ctx, p } = await nuevo(anio, LECTOR, conPush);
       await cerrarOferta(p);
+      await p.click('#nov-ok', { timeout: 4000 }).catch(() => {}); await p.waitForTimeout(400); // la bienvenida de la lectora
       const md = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date()).slice(5);
       await p.evaluate(async (md) => {
         const h = { 'Content-Type': 'application/json', 'X-Libro': '1' };
@@ -310,6 +311,7 @@ try {
       }, md);
       await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2500);
       await cerrarOferta(p);
+      await p.click('#nov-ok', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(400);
       await auditar(p, `movimientos con una piedrita y farol de cumpleaños (lectora) ${esquema}`);
       await p.click('#cuenta-btn'); await p.waitForTimeout(300);
       await p.click('#dc-cumple'); await p.waitForTimeout(600);
