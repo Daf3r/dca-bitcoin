@@ -41,6 +41,47 @@ export function salirTV() {
   try { bloqueo?.release(); } catch { /* ya liberado */ }
   bloqueo = null;
 }
+
+// --------------------------------------------------- el atardecer acelerado (campamento 15B, idea 60)
+// A las 18:00 de El Salvador la tele hace un atardecer de 20 segundos como ritual de cierre del día: el cielo pasa de la tarde a la noche
+// y vuelve a la hora real. Una vez por día; solo en modo pantalla grande, con efectos «todos» o «esenciales» y sin forzar la hora a mano.
+const CLAVE_RITUAL = 'libro.tv.atardecer';
+const DURACION_RITUAL = 20_000;
+let ritualEnCurso = false;
+/** Corre el atardecer acelerado: de las 17:00 a las 19:30 en 17 s y de vuelta a la hora real en 3 s (a unos 12 cuadros por segundo). */
+export function atardecerAcelerado() {
+  const cielo = window.libroCielo;
+  if (!cielo || ritualEnCurso) return false;
+  ritualEnCurso = true;
+  const real = cielo.hora();
+  const t0 = performance.now();
+  const paso = () => {
+    const t = performance.now() - t0;
+    if (!enTV() || t >= DURACION_RITUAL) { cielo.fijarHora(null); ritualEnCurso = false; return; }
+    const ida = Math.min(1, t / 17_000);
+    const vuelta = t > 17_000 ? (t - 17_000) / 3_000 : 0;
+    const base = 17 + 2.5 * (ida < 1 ? ida * ida * (3 - 2 * ida) : 1); // 17:00 → 19:30, con arranque y frenado suaves
+    cielo.fijarHora(base + (real - base) * (vuelta * vuelta * (3 - 2 * vuelta)));
+    setTimeout(paso, 80);
+  };
+  paso();
+  return true;
+}
+function vigilarAtardecer() {
+  if (!enTV() || ritualEnCurso || document.visibilityState !== 'visible') return;
+  const nivel = raiz.dataset.efectos;
+  if (nivel === 'ninguno') return;
+  const h = window.libroCielo?.hora();
+  let hoy = null;
+  try { hoy = localStorage.getItem(CLAVE_RITUAL); } catch { /* sin almacenamiento */ }
+  const dia = window.libroCielo?.dia();
+  if (h >= 18 && h < 18.05 && hoy !== dia) {
+    try { localStorage.setItem(CLAVE_RITUAL, dia); } catch { /* vale esta vez */ }
+    atardecerAcelerado();
+  }
+}
+setInterval(vigilarAtardecer, 20_000);
+
 $('tv-salir').addEventListener('click', salirTV);
 for (const ev of ['pointermove', 'pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, () => enTV() && mostrarControles(), { passive: true });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && enTV() && !document.fullscreenElement) salirTV(); });

@@ -1382,3 +1382,76 @@ export function diario(R, hoy = hoyISO()) {
     altitud: altitud(R.sats, esc), sats: R.sats, valor: R.valor ?? null };
 }
 export const textoDiario = (d) => `El Diario del Libro, edición del ${d.edicion}. ${d.titular}. ${d.sub}`;
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 15B · la apacheta (piedritas), los cumpleaños y la tele: solo datos y textos. Todo acompaña; nada presiona.
+// ---------------------------------------------------------------------------------------------
+
+/** Las piedritas agrupadas por compra: Map(compra_id → [{ quien, creado }]), en el orden en que se dejaron. */
+export function piedritasPorCompra(piedritas) {
+  const m = new Map();
+  for (const p of piedritas ?? []) m.set(p.compra_id, [...(m.get(p.compra_id) ?? []), { quien: p.quien, creado: p.creado }]);
+  return m;
+}
+/** «Mamá dejó una piedrita», «Mamá y Papá dejaron una piedrita», «Mamá, Papá y 1 más dejaron una piedrita». */
+export function textoPiedritas(lista) {
+  const n = lista?.length ?? 0;
+  if (!n) return '';
+  const q = lista.map((x) => x.quien);
+  if (n === 1) return `${q[0]} dejó una piedrita`;
+  if (n === 2) return `${q[0]} y ${q[1]} dejaron una piedrita`;
+  return `${q[0]}, ${q[1]} y ${n - 2} ${n === 3 ? 'más' : 'más'} dejaron una piedrita`;
+}
+/** La piedrita más reciente sobre una compra vigente: { quien, fecha (de la compra), creado }, o null. */
+export function ultimaPiedrita(piedritas, compras) {
+  const fechas = new Map((compras ?? []).filter((c) => c.tipo !== 'venta').map((c) => [c.id, c.fecha]));
+  const p = [...(piedritas ?? [])].filter((x) => fechas.has(x.compra_id)).sort((a, b) => b.creado - a.creado)[0];
+  return p ? { quien: p.quien, fecha: fechas.get(p.compra_id), creado: p.creado } : null;
+}
+
+/** ¿Quién cumple años hoy? `cumples`: [{ nombre, cumple: 'MM-DD' }]. El 29 de febrero se celebra el 28 en los años sin 29. */
+export function cumpleHoy(cumples, hoy = hoyISO()) {
+  const [y, m, d] = hoy.split('-').map(Number);
+  const bisiesto = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const md = `${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return (cumples ?? []).filter((c) => c.cumple === md || (c.cumple === '02-29' && !bisiesto && md === '02-28'))
+    .map((c) => ({ nombre: c.nombre, inicial: [...c.nombre.trim()][0]?.toUpperCase() ?? '?' }));
+}
+export const textoCumple = (nombre) => `Feliz cumpleaños, ${nombre}`;
+/** «14 mar» para el botón de «Tu cuenta». */
+export function textoCumpleFecha(cumple) {
+  if (!cumple) return '';
+  const [m, d] = cumple.split('-').map(Number);
+  return `${d} ${MESES[m - 1].slice(0, 3)}`;
+}
+
+/**
+ * El sismógrafo de la tele (idea 55): la tira de papel con el precio en vivo de las últimas horas. `muestras` = [{ t (ms), p }], de la más
+ * vieja a la más nueva. Devuelve los puntos ya en 0–1 (x: tiempo dentro de la ventana; y: precio entre el mínimo y el máximo de la tira,
+ * 1 arriba), con a lo más `max` puntos. Solo muestra lo que pasó: nunca predice. A medianoche de El Salvador la tira se arranca
+ * (`desdeMedianoche`).
+ */
+export function muestrasSismo(muestras, ahoraMs, { ventanaMs = 6 * 3600e3, max = 240, desdeMs = 0 } = {}) {
+  const desde = Math.max(ahoraMs - ventanaMs, desdeMs);
+  let m = (muestras ?? []).filter((x) => x.t >= desde && x.t <= ahoraMs && x.p > 0);
+  if (m.length > max) { const paso = m.length / max; m = Array.from({ length: max }, (_, i) => m[Math.floor(i * paso)]).concat(m.at(-1)); }
+  if (!m.length) return { puntos: [], min: null, max: null, ultima: null };
+  const lo = Math.min(...m.map((x) => x.p)), hi = Math.max(...m.map((x) => x.p));
+  const ancho = Math.max(1, ahoraMs - desde);
+  return { puntos: m.map((x) => ({ x: (x.t - desde) / ancho, y: hi > lo ? (x.p - lo) / (hi - lo) : 0.5, p: x.p })), min: lo, max: hi, ultima: m.at(-1).p };
+}
+/** Medianoche de El Salvador (UTC−6, sin horario de verano) más reciente, en ms. */
+export function medianocheSV(ahoraMs) {
+  const SV = 6 * 3600e3;
+  return Math.floor((ahoraMs - SV) / 864e5) * 864e5 + SV;
+}
+
+/** Lo que dice la tele cuando se anota una compra (idea 5): `antes`/`despues` son los saldos; `sats` lo que se compró. */
+export function tarjetaFiesta(antes, despues, sats) {
+  const m = etapasCruzadas(antes, despues).at(-1);
+  if (m) {
+    const grande = m >= 1e6 && Math.abs(Math.log10(m) - Math.round(Math.log10(m))) < 1e-9;
+    return { titulo: grande ? 'Nuevo hito' : 'Nueva etapa', texto: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, sub: `+${entero(sats)} sats`, grande };
+  }
+  return { titulo: 'Compra nueva', texto: `+${entero(sats)} sats`, sub: 'La montaña sube un paso más', grande: false };
+}
