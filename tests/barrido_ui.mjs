@@ -88,7 +88,7 @@ try {
           await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
           await p.waitForTimeout(3000);
           for (const tab of TABS) {
-            if (tab) { await p.click(`#pestanas [data-pestana="${tab}"]`); await p.waitForTimeout(600); }
+            if (tab) { await p.click(`#pestanas [data-pestana="${tab}"]`); await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(600); } // arriba del todo, como en «todo junto»: la mini-cabecera (44 px a propósito) solo sale al bajar
             const m = await p.evaluate(medir);
             const etiqueta = `${esc} ${w}×${h} ${esquema}${variante}${tab ? ` [${tab}]` : ''}`;
             const problemas = [];
