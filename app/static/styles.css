@@ -1794,15 +1794,12 @@ html[data-efectos="ninguno"] .luna.moneda :is(.moneda-gira, .moneda-brillo) { an
 html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infinite; }
 
 /* Campamento 13 · «Tu historia en objetos»: el selector de vistas y el lienzo del tronco, la constelación y el torre de piedras (el dibujo vive en arte-historia.js). */
-/* Cinco vistas en filas parejas: en el teléfono «Línea» sola arriba y los cuatro dibujos de dos en dos; desde 700 px, tres y dos. */
+/* Siete vistas: «Línea» (la de texto) sola arriba y los seis dibujos en rejilla, de dos en dos en el teléfono y de tres en tres desde
+   700 px; con letra muy grande bajo 420 px, uno por fila. Cada hijo lleva `min-width: 0` (si no, ensancha la página a 320 px). */
 .dh-vistas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0 0 14px; }
-.dh-vistas button:first-child { grid-column: span 2; }
-@media (min-width: 700px) {
-  .dh-vistas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .dh-vistas button { grid-column: span 2; }
-  .dh-vistas button:nth-child(n + 4) { grid-column: span 3; }
-}
-@media (max-width: 419px) { html[data-letra="muy-grande"] .dh-vistas { grid-template-columns: minmax(0, 1fr); } html[data-letra="muy-grande"] .dh-vistas button:first-child { grid-column: auto; } }
+.dh-vistas button:first-child { grid-column: 1 / -1; }
+@media (min-width: 700px) { .dh-vistas { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 419px) { html[data-letra="muy-grande"] .dh-vistas { grid-template-columns: minmax(0, 1fr); } }
 .dh-vistas button { min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
 .dh-vistas button[aria-pressed="true"] { background: var(--naranja); border-color: var(--naranja); color: #1d1206; }
 .dh-objeto { margin: 0; }
@@ -2012,3 +2009,182 @@ html:not([data-efectos="ninguno"]) .hito-cel.va .hc-lacre .lc-destello { animati
 .ha-cruz { fill: none; stroke: var(--naranja); stroke-width: 1.15; stroke-linecap: round; }
 .ha-sel-fondo { fill: none; stroke: #120a02; stroke-width: 3.2; opacity: 0.55; }
 .ha-sel { fill: color-mix(in oklab, var(--naranja) 22%, transparent); stroke: var(--naranja); stroke-width: 1.6; }
+
+/* Campamento 13C · estratos, partitura, pasaporte de semanas y petroglifo (el dibujo vive en arte-historia.js, arte-sellos.js y arte.js).
+   Luz de arriba a la derecha como en la montaña; lo que no es una pieza no recibe el toque. Las animaciones que acompañan a un toque
+   (estampar el sello, tallar la piedra, la nota que suena) se ven con «todos» y «esenciales»; con «ninguno», el estado final. */
+
+/* Los estratos: tierras propias por año (arcilla, ocre, arena, roca gris, terracota, pizarra), en los dos temas. */
+.dh-lienzo {
+  --he-roca: #5d5b5e; --he-roca-lado: #77736f; --he-cima: #5f6b3c; --he-hierba: #9fb16a; --he-suelo: rgb(0 0 0 / 0.42);
+  --he-tinta: #24150b;
+}
+:root[data-tema="claro"] .dh-lienzo { --he-roca: #7c7976; --he-roca-lado: #9a958e; --he-cima: #7d8a4c; --he-hierba: #5f7232; --he-suelo: rgb(70 44 18 / 0.24); }
+.h-estratos .he-a0 { --he-c: #a8643f; } .h-estratos .he-a1 { --he-c: #c49445; } .h-estratos .he-a2 { --he-c: #d6b97f; }
+.h-estratos .he-a3 { --he-c: #8b8277; } .h-estratos .he-a4 { --he-c: #7e4a33; } .h-estratos .he-a5 { --he-c: #b98a64; }
+.dh-lienzo :is(.he-sobre, .he-suelo, .he-roca, .he-roca-lado, .he-roca-cara, .he-roca-sombra, .he-roca-grieta, .he-lado, .he-lado-sombra, .he-junta, .he-veta-lado, .he-cima, .he-sel, .he-sel-fondo, .he-sel-flecha) { pointer-events: none; }
+.he-s0 { stop-color: var(--he-suelo); } .he-s1 { stop-color: var(--he-suelo); stop-opacity: 0; }
+.he-suelo { fill: url(#h-e-suelo); }
+.he-roca { fill: var(--he-roca); } .he-roca-lado { fill: var(--he-roca-lado); }
+.he-roca-cara { fill: #fff3e0; opacity: 0.13; } .he-roca-sombra { fill: #0d0906; opacity: 0.22; }
+.he-roca-grieta { fill: none; stroke: #16110d; stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; }
+.he-capa { fill: var(--he-c); transition: fill 0.25s ease; }
+.he-capa.he-par { fill: color-mix(in oklab, var(--he-c) 86%, #fff3dc); }
+.he-capa.sel { fill: color-mix(in oklab, var(--he-c) 55%, color-mix(in oklab, var(--naranja) 60%, #ffe3b8)); }
+.he-lado { fill: color-mix(in oklab, var(--he-c) 80%, #fff1d6); }
+.he-d0 { stop-color: #fff6e4; stop-opacity: 0.12; } .he-d1 { stop-color: #0d0805; stop-opacity: 0.12; }
+.he-lado-sombra { fill: url(#h-e-lado); }
+.he-junta { fill: none; stroke: var(--he-tinta); stroke-width: 0.45; opacity: 0.25; }
+.he-veta-lado { fill: none; stroke: #fff4dc; stroke-width: 1.1; opacity: 0.6; }
+.he-cima { fill: var(--he-cima); }
+.he-grano { fill: var(--he-tinta); opacity: 0.22; }
+.he-lamina { fill: none; stroke: #fff2d8; stroke-width: 0.55; stroke-linecap: round; opacity: 0.22; }
+.he-l0 { stop-color: #fff6e4; stop-opacity: 0.16; } .he-l1 { stop-color: #fff6e4; stop-opacity: 0; } .he-l2 { stop-color: #0d0805; stop-opacity: 0.26; }
+.he-luz { fill: url(#h-e-luz); }
+.he-veta { fill: none; stroke: #fff4dc; stroke-width: 1.2; opacity: 0.7; }
+.he-nicho { fill: #170c05; opacity: 0.46; }
+.he-nicho-labio { fill: none; stroke: #ffeccc; stroke-width: 0.7; stroke-linecap: round; opacity: 0.5; }
+.he-cuarzo { fill: color-mix(in oklab, var(--naranja) 78%, #fff3dc); stroke: color-mix(in oklab, var(--naranja) 60%, #3a1800); stroke-width: 0.5; stroke-linejoin: round; }
+.he-cuarzo-luz { fill: none; stroke: #fffaf0; stroke-width: 0.7; stroke-linecap: round; opacity: 0.9; }
+.he-destello { fill: #fffaf0; }
+.he-filo { fill: none; stroke: #fff0d0; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; }
+.he-regla { fill: none; stroke: var(--txt3, #8a8a8a); stroke-width: 1.1; stroke-linecap: round; }
+.he-hierba { fill: none; stroke: var(--he-hierba); stroke-width: 0.9; stroke-linecap: round; }
+.he-vivo { fill: none; stroke: #f5ffd8; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+.he-vivo-luz { fill: none; stroke: #f5ffd8; stroke-width: 4; stroke-linecap: round; opacity: 0; }
+html[data-efectos="todos"] .he-vivo-luz { animation: ht-late 3.6s ease-in-out infinite; }
+.he-sel-fondo { fill: none; stroke: #120a02; stroke-width: 3.2; opacity: 0.55; }
+.he-sel { fill: none; stroke: var(--naranja); stroke-width: 1.6; }
+.he-sel-flecha { fill: var(--naranja); }
+
+/* La partitura: papel de música cálido (algo más tenue en el tema oscuro) con tinta sepia; lo tuyo en un naranja tostado que se lee en el papel. */
+.h-partitura { --hp-p0: #f2e6cc; --hp-p1: #eadbbc; --hp-p2: #dcc8a2; --hp-tinta: #2a2016; --hp-naranja: color-mix(in oklab, var(--naranja) 62%, #4a1a00); }
+:root[data-tema="claro"] .h-partitura { --hp-p0: #fbf4e4; --hp-p1: #f5ead2; --hp-p2: #ead9b6; }
+.dh-lienzo :is(.hp-sombra, .hp-papel, .hp-linea, .hp-barra, .hp-fin, .hp-final, .hp-clave, .hp-clave-nieve, .hp-clave-sendero, .hp-clave-sol, .hp-adicional, .hp-plica, .hp-viga, .hp-cabeza, .hp-aro) { pointer-events: none; }
+.hp-p0 { stop-color: var(--hp-p0); } .hp-p1 { stop-color: var(--hp-p1); } .hp-p2 { stop-color: var(--hp-p2); }
+.hp-papel { fill: url(#h-p-papel); stroke: color-mix(in oklab, var(--hp-p2) 70%, var(--hp-tinta)); stroke-width: 0.6; }
+.hp-sombra { fill: rgb(0 0 0 / 0.3); }
+:root[data-tema="claro"] .hp-sombra { fill: rgb(70 44 18 / 0.16); }
+.hp-linea { fill: none; stroke: var(--hp-tinta); stroke-width: 0.7; opacity: 0.62; }
+.hp-barra { fill: none; stroke: var(--hp-tinta); stroke-width: 0.8; opacity: 0.6; }
+.hp-fin { fill: none; stroke: var(--hp-tinta); stroke-width: 0.8; }
+.hp-final { fill: none; stroke: var(--hp-tinta); stroke-width: 2.4; }
+.hp-clave { fill: var(--hp-tinta); }
+.hp-clave-nieve { fill: var(--hp-p0); }
+.hp-clave-sendero { fill: none; stroke: var(--hp-p0); stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1.6 1.4; }
+.hp-clave-sol { fill: none; stroke: var(--hp-naranja); stroke-width: 4.6; stroke-linecap: round; }
+.hp-adicional { fill: none; stroke: var(--hp-tinta); stroke-width: 0.8; opacity: 0.8; }
+.hp-plica { fill: none; stroke: var(--hp-tinta); stroke-width: 0.85; }
+.hp-viga { fill: var(--hp-tinta); }
+.hp-cabeza { fill: var(--hp-tinta); }
+.hp-cabeza.hp-extra { fill: var(--hp-naranja); }
+.hp-aro { fill: none; stroke: var(--hp-naranja); stroke-width: 1; }
+.hp-toque { fill: transparent; transform-box: fill-box; transform-origin: center; }
+.hp-toque.sel { fill: color-mix(in oklab, var(--naranja) 18%, transparent); stroke: var(--hp-naranja); stroke-width: 1.4; }
+.hp-toque.sonando { fill: color-mix(in oklab, var(--naranja) 50%, transparent); stroke: var(--hp-naranja); stroke-width: 2.2; }
+html:not([data-efectos="ninguno"]) .hp-toque.sonando { animation: hp-suena 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+@keyframes hp-suena { 0% { transform: scale(0.4); opacity: 0.2; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+
+/* «Tocar este año»: un botón secundario con su icono (triángulo; mientras suena, un cuadrado). */
+.dh-tocar { gap: 10px; min-height: var(--toque, 48px); margin: 0 0 4px; padding: 0 16px 0 12px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); text-decoration: none; }
+.dh-tocar::before { content: ""; width: 0.75rem; height: 0.875rem; background: var(--naranja-txt); clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.dh-objeto:has(.sonando) .dh-tocar::before { width: 0.75rem; height: 0.75rem; clip-path: inset(0 round 2px); }
+.dh-tocar[hidden] { display: none; }
+@media (hover: hover) and (pointer: fine) { .dh-tocar:hover { border-color: var(--naranja); } }
+
+/* El pasaporte de semanas: una página de papel con su pliegue al centro; cada sello, tinta de la estación sobre el papel. */
+.pasaporte {
+  --ss-papel: #161d30; --ss-papel2: #1b2338; --ss-pliegue: rgb(0 0 0 / 0.34); --ss-pliegue-luz: rgb(255 255 255 / 0.05);
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(5.6rem, 1fr)); gap: 14px 8px; margin: 0 0 8px; padding: 16px 10px; list-style: none;
+  border: 1px solid var(--s3); border-radius: 12px;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 10px), var(--ss-pliegue) 50%, var(--ss-pliegue-luz) calc(50% + 1px), transparent calc(50% + 12px)),
+    repeating-linear-gradient(0deg, transparent 0 22px, rgb(255 255 255 / 0.025) 22px 23px),
+    linear-gradient(160deg, var(--ss-papel2), var(--ss-papel));
+}
+:root[data-tema="claro"] .pasaporte { --ss-papel: #f4ead6; --ss-papel2: #fbf5e8; --ss-pliegue: rgb(90 60 30 / 0.16); --ss-pliegue-luz: rgb(255 255 255 / 0.7); }
+@media (max-width: 419px) { html[data-letra="muy-grande"] .pasaporte { background-size: 0 0, auto, auto; } } /* una sola columna: sin el pliegue */
+.pasaporte .sello-sem { display: grid; justify-items: center; gap: 2px; min-width: 0; text-align: center; }
+.pasaporte .sello-sem b { font-size: 0.75rem; line-height: 1.2; color: var(--txt); }
+.pasaporte .sello-sem small { font-size: 0.75rem; line-height: 1.25; color: var(--txt2); }
+.pasaporte .sello-sem-ico { width: 68px; height: 68px; }
+.dh-pas-txt { margin: 0 0 10px; font-size: 0.875rem; color: var(--txt2); }
+#dh-pas-mas { margin: 0 0 14px; }
+
+/* El sello: tinta por estación (más clara en el tema oscuro, más honda en el claro: siempre ≥ 3:1 sobre el papel y sobre las tarjetas). */
+.sello-sem-ico { --ss-t: #95aaf0; display: block; overflow: visible; }
+.sello-sem-ico.ss-t1 { --ss-t: #86c49c; } .sello-sem-ico.ss-t2 { --ss-t: #e8a06a; } .sello-sem-ico.ss-t3 { --ss-t: #ec90a3; }
+:root[data-tema="claro"] .sello-sem-ico { --ss-t: #2c3f8f; }
+:root[data-tema="claro"] .sello-sem-ico.ss-t1 { --ss-t: #2c5e3d; } :root[data-tema="claro"] .sello-sem-ico.ss-t2 { --ss-t: #94441a; } :root[data-tema="claro"] .sello-sem-ico.ss-t3 { --ss-t: #7d1f38; }
+.ss-tinta { opacity: 0.92; }
+.ss-aro { fill: none; stroke: var(--ss-t); stroke-width: 2.4; }
+.ss-aro2 { fill: none; stroke: var(--ss-t); stroke-width: 0.9; }
+.ss-eco { fill: none; stroke: var(--ss-t); stroke-width: 0.6; opacity: 0.35; }
+.ss-micro { fill: var(--ss-t); font: 700 4.1px var(--sans, sans-serif); letter-spacing: 0.04em; }
+.ss-monte { fill: none; stroke: var(--ss-t); stroke-width: 1.3; stroke-linejoin: round; }
+.ss-nieve { fill: var(--ss-t); }
+.ss-senda { fill: none; stroke: var(--ss-t); stroke-width: 0.8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.1 1.6; }
+.ss-yo { fill: var(--ss-t); stroke: var(--ss-t); stroke-width: 0.8; }
+.ss-num { fill: var(--ss-t); font: 700 6.2px var(--sans, sans-serif); letter-spacing: 0.02em; }
+.ss-extra { fill: var(--naranja); }
+.ss-golpe { fill: none; stroke: var(--ss-t); stroke-width: 1.4; opacity: 0; transform-box: fill-box; transform-origin: center; pointer-events: none; }
+/* El sello recién nacido se estampa: cae grande, se aplasta y rebota un poco (también con «esenciales»: acompaña a tu compra). */
+html:not([data-efectos="ninguno"]) .sello-sem-ico.nuevo { animation: ss-estampa 0.5s cubic-bezier(0.3, 0, 0.3, 1) 0.28s both; }
+html:not([data-efectos="ninguno"]) .sello-sem-ico.nuevo .ss-golpe { animation: ss-golpe 0.6s ease-out 0.5s both; }
+@keyframes ss-estampa {
+  0% { opacity: 0; transform: scale(1.25) rotate(-6deg); }
+  55% { opacity: 1; transform: scale(0.94) rotate(0deg); }
+  78% { transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ss-golpe { 0% { opacity: 0.6; transform: scale(0.9); } 100% { opacity: 0; transform: scale(1.3); } }
+
+/* La tarjeta de celebración del sello de la semana: el sello a la izquierda, como el lacre de las etapas. */
+.hito-cel.sello-semana .hc-lacre .sello-sem-ico { width: clamp(60px, 17vw, 72px); height: clamp(60px, 17vw, 72px); margin: -8px 0 -8px -4px; }
+.hito-cel.sello-semana b { font-size: 1.25rem; }
+
+/* El petroglifo: la laja sustituye al fondo de la tarjeta; el título y el texto quedan para los lectores (como `.sr`). */
+.m-tarjeta.con-piedra { padding: 0; border: 0; background: none; box-shadow: none; }
+.m-tarjeta.con-piedra :is(#m-tarjeta-t, #m-tarjeta-p) { position: absolute; width: 1px; height: 1px; margin: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.m-pet:empty { display: none; }
+.m-pet svg { display: block; width: 100%; height: auto; overflow: visible; }
+.m-tarjeta.con-piedra .m-tarjeta-x { display: flex; align-items: center; margin: -14px 6px 0 auto; padding: 0 16px; position: relative; border: 1px solid var(--s3); border-radius: 999px; background: var(--s1); color: var(--txt); box-shadow: var(--sombra); }
+.m-tarjeta.con-piedra .m-tarjeta-x:focus-visible { border-radius: 999px; }
+.pt-laja {
+  --pt-piedra: #6c645c; --pt-canto: #3b3530; --pt-luz: #b4a998; --pt-sombra: #25201c; --pt-surco: #2a2420; --pt-cara: #b3a894; --pt-liquen: #8f9a6a;
+}
+:root[data-tema="claro"] .pt-laja { --pt-piedra: #847b70; --pt-canto: #4d453e; --pt-luz: #d8cfbf; --pt-cara: #c2b7a3; }
+.pt-suelo { fill: rgb(0 0 0 / 0.3); }
+.pt-canto { fill: var(--pt-canto); }
+.pt-piedra { fill: var(--pt-piedra); }
+.pt-media { fill: var(--pt-luz); opacity: 0.16; } .pt-luz { fill: var(--pt-luz); opacity: 0.34; } .pt-sombra { fill: var(--pt-sombra); opacity: 0.3; }
+.pt-grano { fill: none; stroke: var(--pt-sombra); stroke-width: 1.3; stroke-linecap: round; opacity: 0.45; }
+.pt-grano-luz { fill: none; stroke: var(--pt-luz); stroke-width: 1.1; stroke-linecap: round; opacity: 0.6; }
+.pt-liquen { fill: var(--pt-liquen); opacity: 0.55; }
+.pt-grieta { fill: none; stroke: var(--pt-sombra); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+.pt-grieta-luz { fill: none; stroke: var(--pt-luz); stroke-width: 0.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.6; }
+.pt-filo { fill: none; stroke: #f3e7d0; stroke-width: 1.1; stroke-linecap: round; opacity: 0.6; }
+.pt-glifo path, .pt-raya { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.pt-surco-luz { stroke: var(--pt-luz); stroke-width: 2.2; opacity: 0.8; }
+.pt-surco-osc { stroke: var(--pt-sombra); stroke-width: 2.2; opacity: 0.85; }
+.pt-surco { stroke: var(--pt-surco); stroke-width: 1.7; }
+.pt-raya { stroke-width: 1.2; opacity: 0.5; }
+.pt-titular { font: 700 8px var(--sans, sans-serif); letter-spacing: 0.3em; }
+.pt-cifra { font-family: var(--sans, sans-serif); font-weight: 700; letter-spacing: -0.02em; }
+.pt-fecha { font: 600 13px var(--serif); letter-spacing: 0.01em; }
+.pt-rel-osc { fill: var(--pt-sombra); } .pt-rel-luz { fill: var(--pt-luz); } .pt-rel { fill: var(--pt-cara); }
+.pt-cima .pt-rel .pt-cifra { fill: color-mix(in oklab, var(--pt-cara) 65%, var(--naranja)); }
+.pt-astilla { fill: var(--pt-luz); opacity: 0; transform-box: fill-box; transform-origin: center; }
+.pt-astilla.a0 { --dx: -9px; --dy: -12px; --r: -140deg; } .pt-astilla.a1 { --dx: 12px; --dy: -8px; --r: 160deg; }
+.pt-astilla.a2 { --dx: -12px; --dy: 4px; --r: -90deg; } .pt-astilla.a3 { --dx: 10px; --dy: 6px; --r: 120deg; }
+.pt-astilla.a4 { --dx: -6px; --dy: -14px; --r: 200deg; } .pt-astilla.a5 { --dx: 11px; --dy: -11px; --r: -160deg; } .pt-astilla.a6 { --dx: 8px; --dy: 9px; --r: 90deg; }
+/* Tallar (acompaña a tu toque: también con «esenciales»): el glifo se graba, saltan las astillas y aparecen la cifra y la fecha. */
+html:not([data-efectos="ninguno"]) .m-tarjeta:not([hidden]) :is(.pt-glifo path, .pt-raya) { animation: pt-graba 0.9s cubic-bezier(0.4, 0, 0.3, 1) 0.1s both; }
+html:not([data-efectos="ninguno"]) .m-tarjeta:not([hidden]) .pt-texto { animation: pt-aparece 0.55s ease-out 0.55s both; }
+html:not([data-efectos="ninguno"]) .m-tarjeta:not([hidden]) .pt-astilla { animation: pt-salta 0.6s ease-out both; }
+.pt-astilla.a1 { animation-delay: 0.25s !important; } .pt-astilla.a2 { animation-delay: 0.4s !important; } .pt-astilla.a3 { animation-delay: 0.55s !important; }
+.pt-astilla.a4 { animation-delay: 0.6s !important; } .pt-astilla.a5 { animation-delay: 0.72s !important; } .pt-astilla.a6 { animation-delay: 0.84s !important; }
+.pt-astilla.a0 { animation-delay: 0.12s !important; }
+@keyframes pt-graba { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes pt-aparece { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+@keyframes pt-salta { 0% { opacity: 0; transform: none; } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(0.6); } }
