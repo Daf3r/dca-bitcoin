@@ -2720,7 +2720,7 @@ try {
   // ---------------------------------------------------------------- Tu historia en objetos: tronco, constelación y mojón (campamento 13)
   {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
-    const ent = async (...a) => { const r = await entrar(...a); if (await r.p.locator('#d-cambios[open]').count()) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(300); } return r; };
+    const ent = async (...a) => { const r = await entrar(...a); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
     const abrirHistoria = async (p) => { await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('[data-cuenta="historia"]'); await p.waitForTimeout(400); };
     const sLargo = await servidor('largo');
     try {
