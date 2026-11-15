@@ -366,3 +366,23 @@ export function torre(piedras, { sel = null } = {}) {
   if (marca) s += `<path class="h-marca" d="${marca}"/>`;
   return `${s}</svg>`;
 }
+
+/**
+ * Manta de añil (campamento 13B): una fila por año y una celda por semana. `datos` es la salida de `lib.semanasManta` (`anios[].semanas[]`
+ * con `col`, `tono` 0–4, `extra`, `antes`, `futura`, y `celdas`, la lista plana de semanas reales). El `viewBox` es el de la manta
+ * (`0 0 W H`; `W` fijo en 320 y `H` crece con las filas). Cada celda tocable es una `.pieza` con `data-i` = su índice en `datos.celdas`; la
+ * elegida lleva `sel`. Las celdas `antes` no se dibujan (no son parte de tu historia) y las `futura` son los flecos.
+ */
+export function manta(datos, { sel = null } = {}) {
+  const filas = datos.anios.length, ancho = 53, c = 320 / (ancho + 2), alto = c * (filas + 2) + 10;
+  const indice = new Map(datos.celdas.map((x, i) => [x.idx, i]));
+  let s = `<svg viewBox="0 0 320 ${f1(alto)}" aria-hidden="true" focusable="false">`;
+  datos.anios.forEach((a, fila) => {
+    for (const w of a.semanas) {
+      if (w.antes || w.futura) continue;
+      const i = indice.get(w.idx);
+      s += `<rect class="pieza celda tono-${w.tono}${w.extra ? ' extra' : ''}${i === sel ? ' sel' : ''}" data-i="${i}" x="${f1(c * (w.col + 1))}" y="${f1(c * (fila + 1))}" width="${f1(c - 0.6)}" height="${f1(c - 0.6)}"/>`;
+    }
+  });
+  return `${s}</svg>`;
+}

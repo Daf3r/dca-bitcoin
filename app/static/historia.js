@@ -1,14 +1,15 @@
-import { aniosTronco, entero, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, piedrasTorre, textoAnio, textoConstelacion, textoTorre, textoTronco } from './lib.js';
-import { constelacion, torre, tronco } from './arte-historia.js';
+import { aniosTronco, datosCertificado, entero, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, piedrasTorre, sellos, semanasManta, textoAnio, textoCertificado, textoConstelacion, textoManta, textoSello, textoSemanaManta, textoTorre, textoTronco } from './lib.js';
+import { constelacion, manta, torre, tronco } from './arte-historia.js';
+import { certificado, lacre } from './arte-sellos.js';
 import { ico, ilustracion, medalla } from './iconos.js';
-import { $, R } from './estado.js';
+import { $, R, S, esAdmin } from './estado.js';
 
 // «Tu historia» (ideas 37 y 38): en «Tu cuenta», las medallas de constancia y la línea de tiempo de cómo llegaste hasta aquí.
 // Todo sale de datos que ya existen (ver `lib.historia` y `lib.medallas`). El texto de las compras (notas) entra con `textContent`.
 const nodo = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
 
 const CLAVE_VISTA = 'libro.historia.vista';
-const VISTAS = ['linea', 'tronco', 'constelacion', 'torre'];
+const VISTAS = ['linea', 'tronco', 'constelacion', 'torre', 'manta'];
 let vista = (() => { try { const v = localStorage.getItem(CLAVE_VISTA); return VISTAS.includes(v) ? v : 'linea'; } catch { return 'linea'; } })();
 let seleccion = null; // año (tronco) o índice (constelación y torre) que se está leyendo
 let datos = null; // lo que se dibujó, para leer una pieza al tocarla o recorrerla con el teclado
@@ -46,6 +47,12 @@ function pintarObjeto() {
     $('dh-desc').textContent = textoConstelacion(e);
     const s = seleccion != null ? e[seleccion] : null;
     $('dh-detalle').textContent = s ? `${fechaLarga(s.fecha)} · +${entero(s.sats)} sats${s.extra ? ' · compra extra' : ''}` : 'Toca una estrella (o usa las flechas) para ver esa compra.';
+  } else if (vista === 'manta') {
+    const m = semanasManta(items, hoy);
+    datos = { tipo: 'manta', lista: m.celdas };
+    $('dh-lienzo').innerHTML = manta(m, { sel: seleccion });
+    $('dh-desc').textContent = textoManta(m);
+    $('dh-detalle').textContent = seleccion != null ? textoSemanaManta(m.celdas[seleccion]) : 'Toca una semana (o usa las flechas) para ver qué pasó.';
   } else {
     const p = piedrasTorre(items);
     datos = { tipo: 'torre', lista: p };
@@ -80,11 +87,21 @@ $('dh-lienzo').addEventListener('click', (e) => {
 $('dh-lienzo').addEventListener('keydown', (e) => {
   if (!datos || datos.tipo === 'tronco') return;
   const ult = datos.lista.length - 1, act = seleccion ?? ult;
-  const sig = { ArrowLeft: act - 1, ArrowUp: act + 1, ArrowRight: act + 1, ArrowDown: act - 1, Home: 0, End: ult }[e.key];
+  const paso = datos.tipo === 'manta' ? { ArrowLeft: act - 1, ArrowRight: act + 1, ArrowUp: act - 52, ArrowDown: act + 52 } : { ArrowLeft: act - 1, ArrowUp: act + 1, ArrowRight: act + 1, ArrowDown: act - 1 };
+  const sig = { ...paso, Home: 0, End: ult }[e.key];
   if (sig == null) return;
   e.preventDefault();
   elegir(Math.max(0, Math.min(ult, sig)));
 });
+
+// El certificado de altitud (campamento 13B): un diálogo con el grabado y su descripción.
+$('dh-cert').addEventListener('click', () => {
+  const d = datosCertificado(R, esAdmin() ? S.usuario : null, hoyISO());
+  $('cert-lienzo').innerHTML = certificado(d);
+  $('cert-desc').textContent = textoCertificado(d);
+  $('d-cert').showModal();
+});
+$('cert-ok').addEventListener('click', () => $('d-cert').close());
 
 export function pintarHistoria() {
   const lista = $('dh-linea'), med = $('dh-medallas');
@@ -101,6 +118,17 @@ export function pintarHistoria() {
     li.insertAdjacentHTML('beforeend', medalla(m));
     li.append(nodo('b', null, m.titulo), nodo('small', null, m.ganada ? fechaLarga(m.fecha) : `Próxima: te ${m.falta === 1 ? 'falta' : 'faltan'} ${m.falta} ${m.tipo === 'compras' ? (m.falta === 1 ? 'compra' : 'compras') : (m.falta === 1 ? 'mes' : 'meses')}`));
     med.append(li);
+  }
+  // Sellos de lacre (13B): uno por cada etapa que ya cruzaste.
+  const ss = sellos(R), caja = $('dh-sellos');
+  $('dh-sellos-caja').hidden = !ss.length;
+  caja.textContent = '';
+  for (const x of ss) {
+    const li = nodo('li', 'sello');
+    li.insertAdjacentHTML('beforeend', lacre(x.m));
+    li.append(nodo('b', null, x.m >= 1e8 ? x.nombre : `${x.nombre} sats`), nodo('small', null, fechaLarga(x.fecha)));
+    li.title = textoSello(x);
+    caja.append(li);
   }
   const { eventos, extrasOcultas } = historia(R);
   for (const e of eventos) {

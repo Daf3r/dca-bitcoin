@@ -1794,8 +1794,8 @@ html[data-efectos="ninguno"] .luna.moneda :is(.moneda-gira, .moneda-brillo) { an
 html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infinite; }
 
 /* Campamento 13 · «Tu historia en objetos»: el selector de vistas y el lienzo del tronco, la constelación y el torre de piedras (el dibujo vive en arte-historia.js). */
-.dh-vistas { display: flex; gap: 6px; margin: 0 0 14px; }
-.dh-vistas button { flex: 1 1 0; min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
+.dh-vistas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.dh-vistas button { flex: 1 1 6.5rem; min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
 .dh-vistas button[aria-pressed="true"] { background: var(--naranja); border-color: var(--naranja); color: #1d1206; }
 .dh-objeto { margin: 0; }
 .dh-lienzo { display: block; width: 100%; max-width: 26rem; margin: 0 auto; }
@@ -1900,3 +1900,27 @@ html[data-efectos="todos"] .hc-titila.tw3 { animation-duration: 8.8s; animation-
 .hm-filo { fill: none; stroke: #fff3dc; stroke-width: 1; stroke-linecap: round; opacity: 0.7; }
 .hm-veta { fill: var(--naranja); opacity: 0.5; }
 .hm-guijarro-luz { fill: #fff6e6; opacity: 0.3; } .hm-guijarro-sombra { fill: #120c08; opacity: 0.3; }
+
+/* Campamento 13B · sellos de lacre, certificado y manta (el dibujo vive en arte-sellos.js y arte-historia.js; estas son las reglas provisionales de su pantalla). */
+.dh-cert-btn { margin: 0 0 14px; }
+.sellos { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: 12px 8px; margin: 0 0 14px; padding: 0; list-style: none; }
+.sello { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.sello .lacre { width: 56px; height: 56px; }
+.sello b { font-size: 0.8125rem; line-height: 1.2; }
+.sello small { font-size: 0.75rem; line-height: 1.25; color: var(--txt2); }
+.lacre-cera { fill: var(--naranja-osc, #b5461b); }
+.lacre-cifra { fill: var(--txt); font: 700 22px var(--serif); }
+.hc-lacre { display: block; }
+.hc-lacre:empty { display: none; }
+.hc-lacre .lacre { width: 84px; height: 84px; margin-bottom: -22px; position: relative; z-index: 1; }
+.d-cert { width: min(92vw, 34rem); }
+.cert-lienzo svg { display: block; width: 100%; height: auto; }
+.cert-marco { fill: var(--s1); stroke: var(--naranja); stroke-width: 2; }
+.cert-t, .cert-n, .cert-l, .cert-f { fill: var(--txt); font: 600 20px var(--serif); }
+.cert-desc { margin: 10px 0 0; font-size: 0.8125rem; color: var(--txt2); }
+.dh-lienzo .celda { fill: var(--s3); }
+.dh-lienzo .celda.tono-1 { fill: #9fb4d6; }
+.dh-lienzo .celda.tono-2 { fill: #5d7fb8; }
+.dh-lienzo .celda.tono-3 { fill: #2f4f93; }
+.dh-lienzo .celda.tono-4 { fill: #17306b; }
+.dh-lienzo .celda.sel { stroke: var(--naranja); stroke-width: 1.2; }

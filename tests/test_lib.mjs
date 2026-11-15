@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, ticksPrecio, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
-  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
+  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -772,5 +772,45 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq([pm.length, pm.reduce((a, x) => a + x.n, 0), pm[0].n], [40, 1000, 25], 'torre: con 1,000 compras cada piedra junta 25 y no se pierde ninguna');
   ok(/Tu torre de piedras tiene 4 piedras, una por compra/.test(textoTorre(p)) && /Tu torre de piedras tiene 40 piedras, que juntan 1000 compras/.test(textoTorre(pm)), 'torre: texto para lectores');
   eq(piedrasTorre([]), [], 'torre: sin compras no hay piedras');
+}
+
+// Campamento 13B · la manta, el certificado y los sellos
+{
+  const L = (n) => enLetras(n);
+  eq([L(0), L(1), L(15), L(21), L(30), L(31), L(99), L(100), L(101), L(121)], ['cero', 'un', 'quince', 'veintiún', 'treinta', 'treinta y un', 'noventa y nueve', 'cien', 'ciento un', 'ciento veintiún'], 'letras: hasta el ciento veintiuno, con «un» antes de la cosa contada');
+  eq([L(1000), L(1001), L(1234), L(21000), L(100000), L(121567), L(999999)], ['mil', 'mil un', 'mil doscientos treinta y cuatro', 'veintiún mil', 'cien mil', 'ciento veintiún mil quinientos sesenta y siete', 'novecientos noventa y nueve mil novecientos noventa y nueve'], 'letras: los miles');
+  eq([L(1000000), L(2000000), L(1211769), L(21000000), L(100000000), L(1000000000), L(2100000000000000 / 1e3)], ['un millón', 'dos millones', 'un millón doscientos once mil setecientos sesenta y nueve', 'veintiún millones', 'cien millones', 'mil millones', 'dos billones cien mil millones'], 'letras: millones, mil millones y billones');
+  eq([L(16), L(22), L(23), L(26), L(40), L(500), L(700), L(900)], ['dieciséis', 'veintidós', 'veintitrés', 'veintiséis', 'cuarenta', 'quinientos', 'setecientos', 'novecientos'], 'letras: acentos y centenas');
+
+  const mov = [
+    { id: 1, fecha: '2025-12-29', tipo: 'compra', sats: 10000, extra: 0 }, // lunes de la semana que cierra 2025 y abre 2026 (su jueves es 1 ene 2026)
+    { id: 2, fecha: '2026-01-07', tipo: 'compra', sats: 30000, extra: 1 },
+    { id: 3, fecha: '2026-01-08', tipo: 'compra', sats: 20000, extra: 0 },
+    { id: 4, fecha: '2026-03-02', tipo: 'venta', sats: 5000, extra: 0 },
+    { id: 5, fecha: '2026-03-04', tipo: 'compra', sats: 5000, extra: 0 },
+  ];
+  const m = semanasManta(mov, '2026-03-12');
+  eq(m.anios.map((a) => a.anio), [2026], 'manta: la semana del 29 dic al 4 ene cuenta en 2026 (su jueves es de 2026)');
+  eq([m.celdas.length, m.semanasConCompra, m.celdas[0].desde, m.celdas.at(-1).hasta], [11, 3, '2025-12-29', '2026-03-15'], 'manta: de la semana de la primera compra a la de hoy');
+  eq(m.celdas.map((c) => c.n), [1, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0], 'manta: cuántas compras cayeron cada semana (la venta no cuenta)');
+  eq(m.celdas.map((c) => c.tono), [3, 4, 0, 0, 0, 0, 0, 0, 0, 1, 0], 'manta: las semanas sin compras son algodón crudo (tono 0) y la de más sats la más oscura');
+  ok(m.celdas.filter((c) => c.n).every((c) => c.tono >= 1 && c.tono <= 4) && m.celdas.filter((c) => c.n).some((c) => c.tono === 4), 'manta: las semanas con compra van del añil claro al oscuro');
+  ok(m.celdas[1].extra && !m.celdas[0].extra, 'manta: la semana con una compra extra lo dice');
+  ok(m.anios[0].semanas.some((c) => c.futura) && m.anios[0].semanas.every((c) => c.antes === (c.idx < m.celdas[0].idx)) && m.anios[0].enCurso, 'manta: las semanas que faltan del año son los flecos');
+  eq(semanasManta([], '2026-03-12').celdas, [], 'manta: sin compras no hay tejido');
+  const dos = semanasManta([{ id: 1, fecha: '2024-06-05', tipo: 'compra', sats: 100, extra: 0 }, { id: 2, fecha: '2026-03-04', tipo: 'compra', sats: 100, extra: 0 }], '2026-03-12');
+  eq([dos.anios.map((a) => a.anio), dos.anios[1].sats, dos.anios[1].semanasConCompra, dos.anios[1].nCompras], [[2024, 2025, 2026], 0, 0, 0], 'manta: un año sin compras es una fila de algodón crudo');
+  ok(dos.anios.every((a) => a.semanas.length === 52 || a.semanas.length === 53), 'manta: cada fila tiene 52 o 53 semanas');
+  ok(/3 filas, una por año, de 2024 a 2026, y \d+ semanas tejidas, 2 con compra/.test(textoManta(dos)) && /^Semana del .* al .*: sin compras\.$/.test(textoSemanaManta(m.celdas[2])) && /1 compra, \+10,000 sats\.$/.test(textoSemanaManta(m.celdas[0])) && /con una compra extra\.$/.test(textoSemanaManta(m.celdas[1])), 'manta: textos para lectores');
+
+  const R = { sats: 1234567, nCompras: 60, racha: 15, items: mov, camino: [{ m: 100000, mayor: true, fecha: '2025-12-29' }, { m: 250000, mayor: false, fecha: '2026-01-08' }, { m: 500000, mayor: false, fecha: null }] };
+  const d = datosCertificado(R, 'Daf3r', '2026-11-15');
+  eq([d.letras, d.nombre, d.lobulos, d.trenzas, d.nCompras, d.btc], ['Un millón doscientos treinta y cuatro mil quinientos sesenta y siete sats', 'Daf3r', 48, 12, 60, '0.01234567'], 'certificado: saldo en letras, lóbulos y trenzas acotados');
+  ok(d.altitud > 0 && d.altitud < 1 && datosCertificado({ ...R, sats: 1 }, null).letras === 'Un sat' && datosCertificado({ ...R, sats: 1 }, null).nombre === null && datosCertificado({ sats: 0, nCompras: 0 }, 'A').lobulos === 3, 'certificado: altitud entre 0 y 1, «un sat» y sin nombre para quien no es dueña');
+  eq(JSON.stringify(datosCertificado(R, 'Daf3r', '2026-11-15')), JSON.stringify(d), 'certificado: siempre sale igual');
+  ok(/^Certificado de altitud de Daf3r\. A .* el libro tiene Un millón/.test(textoCertificado(d)) && /^Certificado de altitud del Libro DCA\./.test(textoCertificado(datosCertificado(R, null))), 'certificado: texto para lectores');
+  const ss = sellos(R);
+  eq(ss.map((x) => [x.m, x.nombre, x.grande, x.fecha]), [[100000, '100k', true, '2025-12-29'], [250000, '250k', false, '2026-01-08']], 'sellos: solo las etapas que ya cruzaste');
+  eq([textoSello(ss[0]), sellos({}).length], ['Sello de 100k sats, cruzado el ' + textoSello(ss[0]).split('cruzado el ')[1], 0], 'sellos: su texto y sin camino no hay sellos');
 }
 console.log(`OK ${n} comprobaciones`);

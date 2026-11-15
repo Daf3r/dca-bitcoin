@@ -1,5 +1,6 @@
 import { cruzo1Btc, etapaAnterior, etapaSiguiente, etapasCruzadas, metaSiguiente, nombreHito, nombreHitoMeses } from './lib.js';
 import { avisar } from './avisar.js';
+import { lacre } from './arte-sellos.js';
 import { dCuenta } from './cuenta.js';
 import { $, R, fijarR, reducido } from './estado.js';
 import { MS_SUBIDA, esHito, pintar, pintarMontana } from './pintar.js';
@@ -16,7 +17,7 @@ export function celebrar(antes, constancia = []) {
   if (m) {
     const hito = esHito(m);
     if (cruzo1Btc(antes.sats, R.sats)) tarjetas.push({ k: 'Llegaste a la cumbre', txt: '1 BTC', grande: true, larga: true });
-    else tarjetas.push({ k: hito ? 'Nuevo hito' : 'Nueva etapa', txt: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, grande: hito });
+    else tarjetas.push({ k: hito ? 'Nuevo hito' : 'Nueva etapa', txt: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, grande: hito, lacre: m });
   }
   for (const c of constancia.slice(-2)) tarjetas.push({ k: 'Constancia', txt: c.tipo === 'compras' ? `${c.valor} compras` : nombreHitoMeses(c.valor), grande: false });
   if (!tarjetas.length) return;
@@ -27,6 +28,7 @@ export function celebrar(antes, constancia = []) {
     const t = tarjetas[i];
     $('hc-k').textContent = t.k;
     $('hc-txt').textContent = t.txt;
+    $('hc-lacre').innerHTML = t.lacre ? lacre(t.lacre, { grande: true }) : ''; // el sello de lacre de la etapa que acabas de cruzar (13B)
     el.classList.toggle('grande', t.grande);
     // Siempre bajo el saldo, sin tapar la cabecera, la cifra ni la etiqueta de la cumbre. En móvil y tablet va
     // centrada; en escritorio, alineada a la izquierda con el saldo.
