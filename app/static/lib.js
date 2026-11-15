@@ -973,3 +973,105 @@ export function enPupusas(valorUsd, precio = 0.75) {
 /** Árbol de honor (idea 52): la compra n.º 100, 500 y 1,000 plantan uno distinto entre los pinos. */
 export const ARBOLES = [{ desde: 1000, tipo: 'maquilishuat' }, { desde: 500, tipo: 'amate' }, { desde: 100, tipo: 'ceibo' }];
 export const arbolesDe = (nCompras) => ARBOLES.filter((a) => nCompras >= a.desde).map((a) => a.tipo).reverse();
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 13 · «Tu historia en objetos»: los datos de tres dibujos (el tronco, la constelación y el mojón). Son cuentas
+// puras: el dibujo vive en `arte-historia.js`. Nada de esto recomienda ni presiona: solo cuenta lo que ya pasó.
+// ---------------------------------------------------------------------------------------------
+
+/** Posición dentro del año (0 a 1) de una fecha AAAA-MM-DD, por día del año. */
+export function fraccionAnio(fecha) {
+  const [y, m, d] = fecha.split('-').map(Number);
+  const dia = (Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / 864e5;
+  const dias = (Date.UTC(y + 1, 0, 1) - Date.UTC(y, 0, 1)) / 864e5;
+  return Math.min(1, Math.max(0, dia / dias));
+}
+
+/**
+ * El tronco: un anillo por año, desde el de tu primera compra hasta el de hoy (un año sin compras es un anillo delgado, no un hueco).
+ * `comprados` es el ancho; `extras` son los nudos y `ventas` las grietas, cada uno con su posición en el año (`frac`, 0 a 1).
+ * `saldoFin` es lo que tenías al cerrar el año (o hoy, si es el año en curso: `completo` falso).
+ */
+export function aniosTronco(items, hoy = hoyISO()) {
+  const compras = items.filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return [];
+  const anioHoy = Number(hoy.slice(0, 4));
+  const primero = Math.min(...compras.map((c) => Number(c.fecha.slice(0, 4))));
+  const por = new Map();
+  for (let a = primero; a <= anioHoy; a++) por.set(a, { anio: a, comprados: 0, vendidos: 0, nCompras: 0, nExtras: 0, nVentas: 0, extras: [], ventas: [], completo: a < anioHoy, saldoFin: 0 });
+  for (const c of items) {
+    const y = por.get(Number(c.fecha.slice(0, 4)));
+    if (!y) continue;
+    const marca = { fecha: c.fecha, sats: c.sats, frac: fraccionAnio(c.fecha) };
+    if (c.tipo === 'venta') { y.vendidos += c.sats; y.nVentas++; y.ventas.push(marca); }
+    else { y.comprados += c.sats; y.nCompras++; if (c.extra) { y.nExtras++; y.extras.push(marca); } }
+  }
+  for (const y of por.values()) y.saldoFin = satsEn(items, y.completo ? `${y.anio}-12-31` : hoy);
+  return [...por.values()];
+}
+
+const ANGULO_AUREO = Math.PI * (3 - Math.sqrt(5));
+/**
+ * La constelación: una estrella por compra, en una espiral de girasol (ángulo áureo) para que el dibujo crezca hacia afuera con los
+ * años. `x` e `y` van de 0 a 1 (dentro del círculo unidad); `mag` (0.15 a 1) es el brillo según sus sats frente a la mediana. La
+ * escala es `sqrt(max(n, minEscala))`: con pocas compras la espiral ocupa poco y se va abriendo; pasadas `minEscala`, todo se ajusta.
+ */
+export function estrellasConstelacion(items, minEscala = 120) {
+  const compras = items.filter((c) => c.tipo !== 'venta').sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.id ?? 0) - (b.id ?? 0)));
+  const n = compras.length;
+  if (!n) return [];
+  const esc = Math.sqrt(Math.max(n, minEscala));
+  const orden = compras.map((c) => c.sats).sort((a, b) => a - b);
+  const mediana = orden[Math.floor(orden.length / 2)] || 1;
+  return compras.map((c, i) => {
+    const r = Math.sqrt(i + 0.5) / esc, a = i * ANGULO_AUREO;
+    return { i, fecha: c.fecha, anio: Number(c.fecha.slice(0, 4)), sats: c.sats, extra: Boolean(c.extra), x: 0.5 + 0.5 * r * Math.cos(a), y: 0.5 + 0.5 * r * Math.sin(a), mag: Math.min(1, Math.max(0.15, Math.sqrt(c.sats / mediana) / 2)) };
+  });
+}
+
+/**
+ * El mojón: una piedra por compra, de la más vieja (abajo) a la más nueva (arriba). Con más de `max` compras cada piedra junta varias
+ * seguidas (`n`), como en el bosque. `tam` (0.35 a 1) es su tamaño según los sats frente a la piedra más grande.
+ */
+export function piedrasMojon(items, max = 40) {
+  const compras = items.filter((c) => c.tipo !== 'venta').sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.id ?? 0) - (b.id ?? 0)));
+  if (!compras.length) return [];
+  const por = Math.ceil(compras.length / max);
+  const piedras = [];
+  for (let k = 0; k < compras.length; k += por) {
+    const g = compras.slice(k, k + por);
+    piedras.push({ i: piedras.length, desde: g[0].fecha, hasta: g.at(-1).fecha, n: g.length, sats: g.reduce((a, c) => a + c.sats, 0), extra: g.some((c) => c.extra), tam: 0 });
+  }
+  const mayor = Math.max(...piedras.map((p) => p.sats)) || 1;
+  for (const p of piedras) p.tam = Math.min(1, Math.max(0.35, p.sats / mayor));
+  return piedras;
+}
+
+/** Los textos que leen los lectores de pantalla (y los lectores de la familia) para cada dibujo. */
+export function textoTronco(anios) {
+  if (!anios.length) return 'Tu tronco empieza con tu primera compra.';
+  const mejor = anios.reduce((m, y) => (y.comprados > m.comprados ? y : m), anios[0]);
+  const nudos = anios.reduce((a, y) => a + y.nExtras, 0);
+  return `Tu tronco tiene ${anios.length} ${anios.length === 1 ? 'anillo' : 'anillos'}, uno por año, de ${anios[0].anio} a ${anios.at(-1).anio}. `
+    + `El más ancho es ${mejor.anio}, con ${entero(mejor.comprados)} sats.${nudos ? ` Hay ${nudos} ${nudos === 1 ? 'nudo' : 'nudos'}: las compras extra.` : ''}`;
+}
+export function textoConstelacion(estrellas) {
+  if (!estrellas.length) return 'Tu constelación empieza con tu primera compra.';
+  const ult = estrellas.at(-1);
+  return `Tu constelación tiene ${estrellas.length} ${estrellas.length === 1 ? 'estrella' : 'estrellas'}, una por compra. La más reciente es la del ${fechaLarga(ult.fecha)}.`;
+}
+export function textoMojon(piedras) {
+  if (!piedras.length) return 'Tu mojón empieza con tu primera compra.';
+  const n = piedras.reduce((a, p) => a + p.n, 0);
+  const junta = piedras.some((p) => p.n > 1);
+  return `Tu mojón tiene ${piedras.length} ${piedras.length === 1 ? 'piedra' : 'piedras'}${junta ? `, que juntan ${n} compras` : ', una por compra'}; las más grandes son las de más sats.`;
+}
+/** Resumen de un año del tronco, para leerlo al tocar su anillo. */
+export function textoAnio(y) {
+  const partes = [`${y.anio}${y.completo ? '' : ' (en curso)'}: ${y.nCompras} ${y.nCompras === 1 ? 'compra' : 'compras'}`];
+  if (y.comprados) partes.push(`+${entero(y.comprados)} sats`);
+  if (y.nExtras) partes.push(`${y.nExtras} extra`);
+  if (y.nVentas) partes.push(`${y.nVentas} ${y.nVentas === 1 ? 'venta' : 'ventas'} (−${entero(y.vendidos)} sats)`);
+  partes.push(`${y.completo ? 'cerraste' : 'tienes'} ${entero(y.saldoFin)} sats`);
+  return partes.join(' · ');
+}

@@ -2717,6 +2717,61 @@ try {
     } finally { sSin.parar(); }
   }
 
+  // ---------------------------------------------------------------- Tu historia en objetos: tronco, constelación y mojón (campamento 13)
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const ent = async (...a) => { const r = await entrar(...a); if (await r.p.locator('#d-cambios[open]').count()) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(300); } return r; };
+    const abrirHistoria = async (p) => { await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('[data-cuenta="historia"]'); await p.waitForTimeout(400); };
+    const sLargo = await servidor('largo');
+    try {
+      const { ctx, p, consola } = await ent(navegador, sLargo, ADMIN, {}, sinAviso);
+      await abrirHistoria(p);
+      ok(await p.locator('#dh-v-linea').isVisible() && await p.locator('#dh-objeto').isHidden(), 'historia: por defecto se ve la línea de tiempo');
+      const compras = (await datos(p, '/api/compras')).filter((c) => c.tipo !== 'venta');
+      const anios = new Set(compras.map((c) => c.fecha.slice(0, 4)));
+      const desde = Math.min(...[...anios].map(Number)), hasta = Number(new Date().getFullYear());
+      // Tronco
+      await p.click('#dh-vistas [data-vh="tronco"]'); await p.waitForTimeout(300);
+      ok(await p.locator('#dh-objeto').isVisible() && await p.locator('#dh-v-linea').isHidden(), 'tronco: la línea se esconde y sale el dibujo');
+      eq(await p.locator('#dh-lienzo .pieza[data-anio]').count(), hasta - desde + 1, 'tronco: un anillo por año, también los años sin compras');
+      eq(await p.locator('#dh-anios button').count(), hasta - desde + 1, 'tronco: un botón por año (para el teclado y los lectores)');
+      ok(/anillos, uno por año/.test(await p.textContent('#dh-desc')), 'tronco: el dibujo tiene su descripción');
+      await p.click(`#dh-anios button[data-anio="${desde}"]`); await p.waitForTimeout(200);
+      ok(new RegExp(`^${desde}: \\d+ compras?`).test(await p.textContent('#dh-detalle')) && await p.locator('#dh-lienzo .pieza.sel').count() === 1, 'tronco: tocar un año lo resume y marca su anillo');
+      ok(await p.evaluate(() => document.querySelector('#dh-anios button[aria-pressed="true"]') != null), 'tronco: el año elegido queda marcado');
+      // Constelación
+      await p.click('#dh-vistas [data-vh="constelacion"]'); await p.waitForTimeout(300);
+      eq(await p.locator('#dh-lienzo .pieza[data-i]').count(), compras.length, 'constelación: una estrella por compra');
+      await p.focus('#dh-lienzo'); await p.keyboard.press('Home'); await p.waitForTimeout(150);
+      ok(/^\d+ \w+ \d{4} · \+[\d,]+ sats/.test(await p.textContent('#dh-detalle')), `constelación: las flechas leen una compra (${await p.textContent('#dh-detalle')})`);
+      // Mojón
+      await p.click('#dh-vistas [data-vh="mojon"]'); await p.waitForTimeout(300);
+      const piedras = await p.locator('#dh-lienzo .pieza[data-i]').count();
+      ok(piedras >= 1 && piedras <= 40, `mojón: no pasa de 40 piedras (${piedras})`);
+      // Todo cabe en la pantalla y se recuerda la vista
+      const sw = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, w: Math.round(document.getElementById('dh-lienzo').getBoundingClientRect().width) }));
+      ok(sw.sw <= sw.cw && sw.w > 200, `historia: sin scroll horizontal y con el dibujo a la vista (${sw.w} px)`);
+      ok(await p.evaluate(() => localStorage.getItem('libro.historia.vista')) === 'mojon', 'historia: se recuerda la vista elegida');
+      await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(200);
+      ok(await p.locator('#dh-v-linea').isVisible(), 'historia: se puede volver a la línea');
+      eq(consola, [], `consola limpia (historia en objetos): ${consola.join(' | ')}`);
+      await ctx.close();
+      // Una lectora también los ve
+      const l = await ent(navegador, sLargo, LECTOR, {}, sinAviso);
+      await abrirHistoria(l.p);
+      await l.p.click('#dh-vistas [data-vh="tronco"]'); await l.p.waitForTimeout(300);
+      ok(await l.p.locator('#dh-lienzo .pieza[data-anio]').count() >= 1, 'historia: una lectora también ve el tronco');
+      await l.ctx.close();
+    } finally { sLargo.parar(); }
+    const sVac = await servidor('vacio');
+    try {
+      const { ctx, p } = await ent(navegador, sVac, ADMIN, {}, sinAviso);
+      await abrirHistoria(p);
+      ok(await p.locator('#dh-vistas').isHidden() || await p.locator('#dh-cuerpo').isHidden(), 'historia: sin compras no hay selector ni dibujos');
+      await ctx.close();
+    } finally { sVac.parar(); }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {

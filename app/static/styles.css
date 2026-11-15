@@ -1792,3 +1792,23 @@ html[data-efectos="ninguno"] .luna.moneda :is(.moneda-gira, .moneda-brillo) { an
 .cot-v .ico { width: 1.6em; height: 1.6em; margin: -0.66em 0; vertical-align: middle; color: var(--cielo-txt2); }
 @keyframes zopilote { 50% { transform: translate(-1.5px, -1px) rotate(-4deg); } }
 html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infinite; }
+
+/* Campamento 13 · «Tu historia en objetos»: el selector de vistas y el lienzo del tronco, la constelación y el mojón (el dibujo vive en arte-historia.js). */
+.dh-vistas { display: flex; gap: 6px; margin: 0 0 14px; }
+.dh-vistas button { flex: 1 1 0; min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
+.dh-vistas button[aria-pressed="true"] { background: var(--naranja); border-color: var(--naranja); color: #1d1206; }
+.dh-objeto { margin: 0; }
+.dh-lienzo { display: block; width: 100%; max-width: 26rem; margin: 0 auto; }
+.dh-lienzo svg { display: block; width: 100%; height: auto; }
+.dh-objeto figcaption { margin: 10px 0 6px; font-size: 0.8125rem; color: var(--txt2); }
+.dh-anios { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; padding: 0; list-style: none; }
+.dh-anios button { min-height: var(--toque, 48px); min-width: 4.2rem; padding: 0 12px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt); font: 600 0.875rem var(--sans, inherit); font-variant-numeric: tabular-nums; }
+.dh-anios button[aria-pressed="true"] { border-color: var(--naranja); color: var(--naranja-txt); }
+.dh-detalle { min-height: 2.6em; margin: 4px 0 0; font-size: 0.875rem; color: var(--txt); }
+.dh-lienzo .pieza { cursor: pointer; }
+.dh-lienzo .anillo { stroke: var(--naranja); opacity: 0.75; }
+.dh-lienzo .anillo.sel { stroke: var(--naranja-txt); opacity: 1; }
+.dh-lienzo .estrella { fill: var(--txt); }
+.dh-lienzo .estrella.sel { fill: var(--naranja); }
+.dh-lienzo .piedra { fill: var(--txt3); }
+.dh-lienzo .piedra.sel { fill: var(--naranja); }

@@ -79,6 +79,7 @@
 <link rel="modulepreload" href="/wallets.js">
 <link rel="modulepreload" href="/sistema.js">
 <link rel="modulepreload" href="/historia.js">
+<link rel="modulepreload" href="/arte-historia.js">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
@@ -458,10 +459,24 @@
     <h2>Tu historia</h2>
     <p class="vacio con-ilu" id="dh-vacio" hidden></p>
     <div id="dh-cuerpo">
-      <h3>Medallas</h3>
-      <ul class="medallas" id="dh-medallas"></ul>
-      <h3>Cómo llegaste hasta aquí</h3>
-      <ol class="historia" id="dh-linea"></ol>
+      <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia">
+        <button type="button" data-vh="linea" aria-pressed="true">Línea</button>
+        <button type="button" data-vh="tronco" aria-pressed="false">Tronco</button>
+        <button type="button" data-vh="constelacion" aria-pressed="false">Constelación</button>
+        <button type="button" data-vh="mojon" aria-pressed="false">Mojón</button>
+      </div>
+      <div id="dh-v-linea">
+        <h3>Medallas</h3>
+        <ul class="medallas" id="dh-medallas"></ul>
+        <h3>Cómo llegaste hasta aquí</h3>
+        <ol class="historia" id="dh-linea"></ol>
+      </div>
+      <figure class="dh-objeto" id="dh-objeto" hidden>
+        <div class="dh-lienzo" id="dh-lienzo" role="img" aria-labelledby="dh-desc" tabindex="0"></div>
+        <figcaption id="dh-desc"></figcaption>
+        <ul class="dh-anios" id="dh-anios" hidden></ul>
+        <p class="dh-detalle" id="dh-detalle" aria-live="polite"></p>
+      </figure>
     </div>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
