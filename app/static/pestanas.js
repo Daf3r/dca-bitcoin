@@ -45,7 +45,9 @@ export function irAPestana(cual, { desplazar = true } = {}) {
 /** La barra puede ser pegajosa (no sirve para saber hasta dónde se bajó): se compara con el inicio natural del cuerpo. */
 function subirAlInicio() {
   const arriba = $('principal').getBoundingClientRect().top;
-  if (arriba < 0) window.scrollTo({ top: window.scrollY + arriba, behavior: reducido() ? 'auto' : 'smooth' });
+  // Se deja un margen arriba: al bajar sale la mini-cabecera y la barra (pegajosa) se coloca bajo ella; sin ese margen la barra
+  // quedaba unos píxeles encima del primer título de la pestaña.
+  if (arriba < 0) window.scrollTo({ top: window.scrollY + arriba - 36, behavior: reducido() ? 'auto' : 'smooth' });
 }
 
 /** «Tu historia y medallas» de «Tu cuenta»: lleva a la pestaña (o, en «Todo junto», baja hasta la sección). */

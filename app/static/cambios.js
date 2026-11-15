@@ -7,6 +7,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-q', fecha: '2026-11-19',
+    items: [
+      'La montaña tiene relieve: caras de roca con luz y sombra, un bosque que sube por la falda y, de noche, luz de luna. La luna ahora tiene sus mares.',
+      'El cielo también: al amanecer y al atardecer salen rayos de sol por detrás de la montaña y, de noche, se ve la Vía Láctea.',
+      'La app abre más rápido y se desliza con más soltura en el teléfono.',
+      'Las pestañas van en una sola fila y se quedan arriba mientras bajas; la que estás viendo se marca con una rayita naranja.',
+      'Los movimientos se leen como una bitácora del sendero: una marca por cada compra, la fecha a la vista y la altitud con que cerró cada mes.',
+      'Bajo el saldo, tu ganancia va en su propia píldora; en «Tu cuenta», cada ajuste enseña su valor a la derecha.',
+    ],
+  },
+  {
     id: '2026-11-p', fecha: '2026-11-18',
     items: [
       'La vista «Sats» se lee mejor: la línea se ve de punta a punta, también con muchas compras, y las cifras de las etapas tienen su propio margen.',

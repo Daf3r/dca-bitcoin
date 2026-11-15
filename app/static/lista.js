@@ -49,6 +49,24 @@ function htmlExtras(m) {
   if (m.tipo === 'compra') partes.push(htmlPiedritas(m.id)); // la apacheta (15B): los demás dejan una piedrita; el dueño las ve
   return partes.length ? `<div class="f-txw">${partes.join('')}</div>` : '';
 }
+/** La fecha de la fila como una marca del sendero: el día grande y el mes debajo (el texto sigue siendo «11 nov»). */
+function htmlFecha(fecha) {
+  const [dia, ...mes] = fechaCorta(fecha).split(' ');
+  return `<span class="f-fecha"><b>${dia}</b> <small>${mes.join(' ')}</small></span>`;
+}
+/** Altitud (saldo en sats) al terminar cada mes, para la cota de la bitácora: { 'AAAA-MM': sats }, en orden. */
+function cotasPorMes() {
+  const cotas = new Map();
+  for (const it of R.items) cotas.set(it.fecha.slice(0, 7), it.satsAcum); // R.items va en orden: queda el último de cada mes
+  return cotas;
+}
+/** La cota de un mes: su saldo al cierre o, si ese mes no hubo compras ni ventas, el del último mes anterior que sí. */
+function cotaDe(cotas, mes) {
+  if (cotas.has(mes)) return cotas.get(mes);
+  let v = null;
+  for (const [k, sats] of cotas) { if (k > mes) break; v = sats; }
+  return v;
+}
 /** «Traslado a tu wallet»; con más de una wallet, a cuál («a «Ledger»»; la principal, «Mi wallet»). */
 function textoTraslado(t, aW) {
   const w = !S.wallets.length && !t.wallet_id ? 'tu wallet' : (t.wallet_id ? `«${esc(nombreWallet(S.wallets, t.wallet_id))}»` : 'Mi wallet');
@@ -61,7 +79,7 @@ function htmlTraslado(m) {
   const etiqueta = esAdmin() ? 'button type="button"' : 'div';
   const cierre = esAdmin() ? 'button' : 'div';
   return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-tras="${t.id}" data-tipo="traslado">` +
-    (esAdmin() ? '<span class="sr">Ver el traslado del </span>' : '') + `<span class="f-fecha">${fechaCorta(t.fecha)}</span>` +
+    (esAdmin() ? '<span class="sr">Ver el traslado del </span>' : '') + htmlFecha(t.fecha) +
     `<span class="f-sats">${ico('traslado')} ${entero(t.sats)} <small>sats</small></span>` +
     `<span class="f-det">${textoTraslado(t, aW)}${t.nota ? ` · ${esc(t.nota)}` : ''}</span>` +
     `<span class="f-var"></span></${cierre}>${htmlExtras(m)}</li>`;
@@ -74,8 +92,8 @@ function htmlFila(m) {
   const v = venta ? c.realizada : S.precio ? (S.precio / c.precio - 1) * 100 : null;
   const textoV = v == null ? '' : venta ? usdSigno(v) : pct(v);
   const etiqueta = esAdmin() ? 'button type="button"' : 'div';
-  return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}">` +
-    (esAdmin() ? `<span class="sr">Editar la ${venta ? 'venta' : 'compra'} del </span>` : '') + `<span class="f-fecha">${fechaCorta(c.fecha)}</span>` +
+  return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}"${c.extra ? ' data-extra="1"' : ''}>` +
+    (esAdmin() ? `<span class="sr">Editar la ${venta ? 'venta' : 'compra'} del </span>` : '') + htmlFecha(c.fecha) +
     `<span class="f-sats">${venta ? '−' : '+'}${entero(c.sats)} <small>sats</small></span>` +
     `<span class="f-det">${venta ? 'Venta · ' : ''}${c.extra ? `<b class="f-extra">${ico('rayo')} Extra</b> · ` : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}${c.etiquetas?.length ? ` · ${c.etiquetas.map((e) => `<span class="f-et">${esc(e)}</span>`).join(' ')}` : ''}</span>` +
     `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${textoV}</span></${esAdmin() ? 'button' : 'div'}>${htmlExtras(m)}</li>`;
@@ -180,10 +198,13 @@ export function pintarLista() {
   if (!filas.length) html.push('<li class="vacio">Nada coincide con esos filtros.</li>');
   else if (F.orden === 'recientes' || F.orden === 'antiguas') {
     // Encabezado de cada mes con el resumen del mes entero (no solo de lo que cabe en este tramo).
+    // Bitácora (rediseño Fable): cada mes lleva su cota, la altitud (el saldo) con que cerró.
     let pintadas = 0;
+    const cotas = cotasPorMes();
     for (const g of agruparPorMes(vistos)) {
       if (pintadas >= filas.length) break;
-      html.push(`<li class="mes-cab"><h3>${g.etiqueta} <small>· ${g.resumen}</small></h3></li>`);
+      const cota = cotaDe(cotas, g.mes);
+      html.push(`<li class="mes-cab"><h3>${g.etiqueta} <small>· ${g.resumen}</small></h3>${cota == null ? '' : `<p class="mes-cota"><span class="sr">Altitud al terminar el mes: </span><span aria-hidden="true">altitud </span><b>${entero(cota)}</b> sats</p>`}</li>`);
       for (const m of g.movs) { if (pintadas >= filas.length) break; html.push(htmlFila(m)); pintadas++; }
     }
   } else for (const m of filas) html.push(htmlFila(m));

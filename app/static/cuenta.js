@@ -259,3 +259,21 @@ $('f-clave').addEventListener('submit', async (e) => {
     $('fc-error').textContent = err.message;
   }
 });
+
+// (Rediseño Fable) Los ajustes de «Tu cuenta» que dicen «Nombre: valor» se visten en dos partes: el nombre a la izquierda y el
+// valor, resaltado, a la derecha. El texto del botón no cambia («Tema: automático»): los dos puntos siguen ahí, solo que no se ven.
+// Lo hace un observador porque cada etiqueta se escribe con `textContent` desde varios sitios (aquí, tv.js, pestanas.js…).
+function vestirAjuste(b) {
+  if (b.firstElementChild || b.dataset.cuenta === 'datos' || !b.textContent.includes(': ')) return; // ya vestido, con icono, sin valor o un título con dos puntos
+  const t = b.textContent, i = t.lastIndexOf(': ');
+  const parte = (clase, txt) => { const e = document.createElement('span'); e.className = clase; e.textContent = txt; return e; };
+  b.replaceChildren(parte('dc-k', t.slice(0, i)), parte('dc-dp', ': '), parte('dc-v', t.slice(i + 2)));
+}
+{
+  const lista = document.querySelector('#d-cuenta .dc-lista');
+  if (lista) {
+    const vestir = () => lista.querySelectorAll('button[data-cuenta]').forEach(vestirAjuste);
+    new MutationObserver(vestir).observe(lista, { childList: true, subtree: true, characterData: true });
+    vestir();
+  }
+}

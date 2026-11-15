@@ -112,6 +112,7 @@ button, input { font: inherit; color: inherit; }
    oscuras y da textura de papel. No se anima; fuera en modo ligero. */
 .montana::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: url("/grano.png") repeat; background-size: 96px 96px; opacity: 0.028; } /* motas claras y oscuras con transparencia (sin mix-blend-mode, que en iPhone obliga a recomponer toda la escena) */
 html[data-ligero] .montana::after { content: none; }
+@media (max-width: 699px) { .montana::after { content: none; } } /* (rendimiento) en el teléfono el grano, al 2.8 %, no se distingue en una pantalla densa y era una capa más del tamaño de la escena (y una descarga) */
 /* Hora dorada: el cielo es un degradado continuo de las cinco capas de cielo.js (antes, cinco franjas de borde duro) y la
    luz del astro se difumina (halo radial y resplandor sobre el horizonte). Todo sale de las variables de la hora. */
 .g-c0 { stop-color: var(--c0); } .g-c1 { stop-color: var(--c1); } .g-c2 { stop-color: var(--c2); } .g-c3 { stop-color: var(--c3); } .g-c4 { stop-color: var(--c4); }
@@ -126,8 +127,21 @@ html[data-ligero] .montana::after { content: none; }
 .lj-0 { stop-color: color-mix(in oklab, var(--lejos) 82%, var(--c4)); } .lj-1 { stop-color: color-mix(in oklab, var(--lejos) 42%, var(--c4)); }
 .md-0 { stop-color: var(--medio); } .md-1 { stop-color: color-mix(in oklab, var(--medio) 62%, var(--c4)); }
 /* La montaña: la cara que mira al astro recibe su luz; la del sendero queda en sombra y se funde con la bruma del valle. */
-.ld-0 { stop-color: color-mix(in oklab, var(--monte) 86%, var(--astro)); } .ld-1 { stop-color: var(--monte); } .ld-2 { stop-color: color-mix(in oklab, var(--monte-sombra) 72%, var(--medio)); }
-.cr-0 { stop-color: color-mix(in oklab, var(--monte) 76%, var(--astro)); } .cr-1 { stop-color: color-mix(in oklab, var(--monte) 92%, var(--astro)); } .cr-2 { stop-color: var(--monte); }
+.ld-0 { stop-color: color-mix(in oklab, var(--monte) 86%, var(--luz-roca, var(--astro))); } .ld-1 { stop-color: var(--monte); } .ld-2 { stop-color: color-mix(in oklab, var(--monte-sombra) 72%, var(--medio)); }
+.cr-0 { stop-color: color-mix(in oklab, var(--monte) 76%, var(--luz-roca, var(--astro))); } .cr-1 { stop-color: color-mix(in oklab, var(--monte) 92%, var(--luz-roca, var(--astro))); } .cr-2 { stop-color: var(--monte); }
+/* Relieve (rediseño Fable): espolones con su flanco en sombra, su flanco con luz y un filo en la cresta; al pie, el bosque de la falda. */
+.rel-sombra { fill: var(--monte-sombra); opacity: 0.2; } .rel-sombra.rs2 { opacity: 0.34; } .rel-sombra.rs3 { opacity: 0.5; }
+.rel-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.045; } .rel-luz.rl2 { opacity: 0.085; }
+.rel-filo { fill: none; stroke: var(--luz-roca, var(--astro)); stroke-opacity: 0.16; stroke-width: 1; stroke-linejoin: round; stroke-linecap: round; }
+.rel-bosque { fill: var(--pino1); opacity: 0.6; }
+.luna-mares { fill: var(--c2); opacity: 0.13; } .luna-limbo { fill: none; stroke: var(--c2); stroke-width: 2; opacity: 0.6; }
+/* Luz del cielo (rediseño Fable): la Vía Láctea de noche y los rayos del sol al amanecer y al atardecer. Quietos. */
+.via-lactea, .rayos { display: none; pointer-events: none; }
+html[data-cielo="noche"] .via-lactea { display: inline; }
+html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .rayos { display: inline; }
+.vl-0 { stop-color: #b8c6ff; stop-opacity: 0; } .vl-1 { stop-color: #b8c6ff; stop-opacity: 0.11; }
+.via-polvo { fill: none; stroke: var(--astro); stroke-width: 1.15; stroke-linecap: round; opacity: 0.6; }
+.ry-0 { stop-color: var(--astro); stop-opacity: 0; } .ry-1 { stop-color: var(--astro); stop-opacity: 0.2; } .ry-2 { stop-color: var(--astro); stop-opacity: 0; }
 .faceta { fill: var(--astro); opacity: 0.07; } .faceta.f1 { opacity: 0.05; } .faceta.f2 { opacity: 0.03; }
 .arista { fill: none; stroke: var(--astro); stroke-opacity: 0.32; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
 .nieve-sombra { fill: var(--monte-sombra); opacity: 0.32; }
@@ -150,6 +164,8 @@ html[data-efectos="todos"] .estrella.t1 { animation: titila 5.5s ease-in-out inf
 html[data-efectos="todos"] .estrella.t2 { animation: titila 7s ease-in-out -2s infinite; }
 html[data-efectos="todos"] .estrella.t3 { animation: titila 4.2s ease-in-out -1s infinite; }
 html[data-efectos="todos"] .estrella.t4 { animation: titila 8.5s ease-in-out -4s infinite; }
+/* (Rendimiento) De día y al amanecer las estrellas no se ven (`--estrellas: 0`): que no titilen a escondidas. */
+html[data-efectos="todos"]:is([data-cielo="dia"], [data-cielo="amanecer"]) .estrella { animation: none; }
 .fugaz { stroke: var(--astro); stroke-width: 1.6; stroke-linecap: round; opacity: 0; }
 @keyframes fugaz { 0%, 94% { opacity: 0; transform: translate(0, 0); } 95% { opacity: 0.9; } 100% { opacity: 0; transform: translate(190px, 84px); } }
 html[data-efectos="todos"][data-cielo="noche"] .fugaz { animation: fugaz 34s linear 9s infinite; }
@@ -357,6 +373,16 @@ html[data-tv] .esc-datos { display: none !important; }
 .curiosas b { font: 400 1.5rem/1.1 var(--serif); color: var(--txt); margin-right: 2px; white-space: nowrap; }
 .rep-curiosas { padding: 20px; border-radius: 24px; background: var(--s1); align-self: start; }
 .saldo-d b, .saldo-d span { white-space: nowrap; }
+/* (Rediseño Fable) La ganancia con su mini línea: una píldora del color del cielo, como la cotización. En el teléfono va en su
+   propia línea bajo «valen $…» (antes la mini línea quedaba sola, huérfana, en un renglón). */
+.sd-sep { font-style: normal; }
+.sd-gan { display: inline-flex; align-items: center; gap: 2px; padding: 1px 10px 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--cielo-sombra, transparent) 62%, transparent); vertical-align: baseline; } /* el velo es del color contrario a la tinta: sube el contraste de la cifra, nunca lo baja */
+.sd-gan .mini { margin-left: 6px; vertical-align: 0; }
+@media (max-width: 699px) {
+  .sd-sep { display: block; height: 0; overflow: hidden; }
+  .sd-gan { margin: 5px 0 0; padding-block: 3px; }
+}
+html[data-tv] .sd-gan { background: none; padding: 0; margin: 0; }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
 .saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
 .saldo-d [data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
@@ -644,7 +670,7 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .anio + .anio { border-top: 1px solid var(--s3); }
 .an-y { grid-area: y; font: 400 1.75rem/1 var(--serif); color: var(--naranja-txt); }
 .an-barras { grid-area: b; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: end; gap: 4px; height: 64px; }
-.an-barras i { display: block; min-height: 3px; border-radius: 4px 4px 1px 1px; background: var(--naranja); }
+.an-barras i { display: block; min-height: 3px; border-radius: 5px 5px 2px 2px; background: linear-gradient(180deg, var(--naranja), color-mix(in srgb, var(--naranja) 58%, var(--fondo))); }
 .an-barras i.vacio { background: var(--s3); }
 .an-tot { grid-area: t; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 0.875rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
 .an-tot b { color: var(--txt); }
@@ -1081,9 +1107,9 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 
 /* ------------------------------------------------------------ ventas y gastos */
 .g-ventas { fill: var(--fondo); stroke: var(--txt); stroke-width: 1.8; }
-.h-tipo { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; padding: 4px; border-radius: 14px; background: var(--s2); }
-.h-tipo button { min-height: var(--toque); padding: 0 4px; border: 0; border-radius: 10px; background: none; font-size: 0.875rem; font-weight: 650; cursor: pointer; touch-action: manipulation; }
-.h-tipo button[aria-pressed="true"] { background: var(--s1); box-shadow: inset 0 0 0 2px var(--naranja); }
+.h-tipo { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: var(--s2); }
+.h-tipo button { min-height: var(--toque); padding: 0 4px; border: 0; border-radius: 999px; background: none; color: var(--txt2); font-size: 0.875rem; font-weight: 650; cursor: pointer; touch-action: manipulation; transition: background-color 0.2s, color 0.2s; }
+.h-tipo button[aria-pressed="true"] { background: var(--txt); color: var(--fondo); box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.5); }
 .h-nota-campo { display: grid; gap: 4px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
 .h-nota-campo input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font: 400 1rem var(--sans); }
 .fila[data-tipo="venta"] .f-sats { color: var(--txt2); }
@@ -1174,7 +1200,7 @@ html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efe
 /* Mouse: respuesta sutil solo donde hay puntero fino (nunca en el toque). */
 @media (hover: hover) and (pointer: fine) {
   .anotar:hover { filter: brightness(1.07); box-shadow: 0 16px 34px -12px rgb(0 0 0 / 0.65); }
-  .cuenta-btn:hover, .rangos button:hover, .leyenda button:hover, .g-op:hover, .h-tipo button:hover, .d-bot button:hover, .cerrar:hover { background-color: color-mix(in srgb, var(--naranja) 12%, transparent); }
+  .cuenta-btn:hover, .rangos button:not([aria-pressed="true"]):hover, .leyenda button:hover, .g-op:hover, .h-tipo button:not([aria-pressed="true"]):hover, .d-bot button:hover, .cerrar:hover { background-color: color-mix(in srgb, var(--naranja) 12%, transparent); }
   .saldo-v[role="button"]:hover em { opacity: 1; }
   .fila { transition: background-color 0.15s, transform 0.15s; }
   .fila:hover { transform: translateX(2px); }
@@ -1264,9 +1290,9 @@ html[data-efectos="ninguno"] .lista li.sale { display: none; }
 html[data-minicab] .minicab { transform: none; visibility: visible; transition-delay: 0s; }
 html[data-minicab] .minicab:has(#minicab-saldo:empty) { display: none; }
 html[data-efectos="ninguno"] .minicab { transition: none; }
-@supports (backdrop-filter: blur(1px)) {
-  html:not([data-ligero]) .minicab { background: color-mix(in srgb, var(--fondo) 86%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
-}
+/* (Rendimiento) La mini-cabecera es fija: desenfocar lo que pasa por debajo costaba un desenfoque por fotograma al desplazar
+   (lo que más pesa en un iPhone). Queda casi opaca, sin desenfoque; el cristal sigue en la hoja y en los diálogos, que no se mueven. */
+.minicab { background: color-mix(in srgb, var(--fondo) 96%, transparent); }
 .minicab:focus-visible { outline: 2px solid var(--naranja); outline-offset: -4px; }
 /* Con la franja a la vista, lo que se enfoca o se lleva a la vista no queda debajo de ella. */
 html { scroll-padding-top: 60px; }
@@ -1796,12 +1822,33 @@ html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infi
 /* Campamento 13 · «Tu historia en objetos»: el selector de vistas y el lienzo del tronco, la constelación y el torre de piedras (el dibujo vive en arte-historia.js). */
 /* Siete vistas: «Línea» (la de texto) sola arriba y los seis dibujos en rejilla, de dos en dos en el teléfono y de tres en tres desde
    700 px; con letra muy grande bajo 420 px, uno por fila. Cada hijo lleva `min-width: 0` (si no, ensancha la página a 320 px). */
-.dh-vistas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0 0 14px; }
+.dh-vistas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0 0 18px; padding: 6px; border-radius: 22px; background: var(--s2); }
 .dh-vistas button:first-child { grid-column: 1 / -1; }
-@media (min-width: 700px) { .dh-vistas { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 419px) { html[data-letra="muy-grande"] .dh-vistas { grid-template-columns: minmax(0, 1fr); } }
-.dh-vistas button { min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
-.dh-vistas button[aria-pressed="true"] { background: var(--naranja); border-color: var(--naranja); color: #1d1206; }
+@media (max-width: 419px) { html[data-letra="muy-grande"] .dh-vistas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* (Rediseño Fable) Cada vista es una ficha con su dibujito (CSS puro, `currentColor`) y su nombre; la elegida, como en todos los
+   selectores de la app, es una píldora de tinta (no naranja: el naranja es para «Anotar» y para lo tuyo). */
+.dh-vistas button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: calc(var(--toque, 48px) + 14px); padding: 8px 4px;
+  border: 0; border-radius: 16px; background: none; color: var(--txt2); font: 650 0.8125rem/1.15 var(--sans, inherit); cursor: pointer; touch-action: manipulation;
+}
+.dh-vistas button:first-child { flex-direction: row; gap: 10px; min-height: var(--toque, 48px); }
+.dh-vistas button[aria-pressed="true"] { background: var(--txt); color: var(--fondo); box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.5); }
+@media (hover: hover) and (pointer: fine) { .dh-vistas button:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--naranja) 12%, transparent); color: var(--txt); } }
+.dh-vistas button::before { content: ""; flex: none; width: 22px; height: 22px; }
+/* línea: un hilo con tres cuentas */
+.dh-vistas [data-vh="linea"]::before { background: radial-gradient(circle at 4px 4px, currentColor 0 3px, transparent 3.6px), radial-gradient(circle at 4px 11px, currentColor 0 3px, transparent 3.6px), radial-gradient(circle at 4px 18px, currentColor 0 3px, transparent 3.6px), linear-gradient(currentColor, currentColor) 10px 3px / 12px 2.5px no-repeat, linear-gradient(currentColor, currentColor) 10px 10px / 9px 2.5px no-repeat, linear-gradient(currentColor, currentColor) 10px 17px / 11px 2.5px no-repeat; }
+/* tronco: anillos */
+.dh-vistas [data-vh="tronco"]::before { border-radius: 50%; background: radial-gradient(circle, currentColor 0 1.6px, transparent 2.2px 4.4px, currentColor 4.9px 6.3px, transparent 6.8px 8.9px, currentColor 9.4px 11px, transparent 11.4px); }
+/* constelación: cinco estrellas de tamaños distintos */
+.dh-vistas [data-vh="constelacion"]::before { background: radial-gradient(circle at 4px 6px, currentColor 0 2.2px, transparent 2.8px), radial-gradient(circle at 12px 3px, currentColor 0 1.4px, transparent 2px), radial-gradient(circle at 18px 9px, currentColor 0 2.6px, transparent 3.2px), radial-gradient(circle at 9px 14px, currentColor 0 1.6px, transparent 2.2px), radial-gradient(circle at 15px 19px, currentColor 0 2px, transparent 2.6px), radial-gradient(circle at 3px 19px, currentColor 0 1.2px, transparent 1.8px); }
+/* piedras: tres en equilibrio */
+.dh-vistas [data-vh="torre"]::before { background: radial-gradient(ellipse 4.5px 3px at 11px 4px, currentColor 0 96%, transparent), radial-gradient(ellipse 7px 3.6px at 11px 11px, currentColor 0 96%, transparent), radial-gradient(ellipse 10.5px 4px at 11px 18px, currentColor 0 96%, transparent); }
+/* manta: trama */
+.dh-vistas [data-vh="manta"]::before { border-radius: 3px; background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 6px); -webkit-mask: repeating-linear-gradient(0deg, #000 0 4px, transparent 4px 6px); mask: repeating-linear-gradient(0deg, #000 0 4px, transparent 4px 6px); }
+/* estratos: capas de grosor distinto */
+.dh-vistas [data-vh="estratos"]::before { border-radius: 3px; background: linear-gradient(currentColor, currentColor) 0 1px / 100% 3px no-repeat, linear-gradient(currentColor, currentColor) 0 6.5px / 100% 6px no-repeat, linear-gradient(currentColor, currentColor) 0 15px / 100% 2px no-repeat, linear-gradient(currentColor, currentColor) 0 19px / 100% 3px no-repeat; }
+/* partitura: pauta y una nota */
+.dh-vistas [data-vh="partitura"]::before { background: radial-gradient(ellipse 3.6px 2.8px at 14px 15.5px, currentColor 0 96%, transparent), linear-gradient(currentColor, currentColor) 16.4px 3px / 1.6px 12.5px no-repeat, repeating-linear-gradient(0deg, transparent 0 3.5px, color-mix(in srgb, currentColor 60%, transparent) 3.5px 4.7px) 0 1px / 100% 20px no-repeat; }
 .dh-objeto { margin: 0; }
 .dh-lienzo { display: block; width: 100%; max-width: 26rem; margin: 0 auto; }
 .dh-lienzo svg { display: block; width: 100%; height: auto; }
@@ -2193,27 +2240,35 @@ html:not([data-efectos="ninguno"]) .m-tarjeta:not([hidden]) .pt-astilla { animat
    Campamento 14 · pestañas (Resumen · Gráficos · Historia · Movimientos). Una vista a la vez: cada bloque de la página lleva `data-p`
    con su pestaña y `.cuerpo[data-pestana]` esconde los demás. Sin `data-pestana` («Todo junto») nada de esto se aplica.
    ============================================================================================================================ */
-/* --- La barra de pestañas: un control segmentado de cuatro botones grandes, con dibujo y palabra. La activa se nota por tres cosas
-   (no solo el color): una píldora naranja rellena con sombra, la letra más gruesa y el dibujo relleno. Las demás quedan planas, con
-   tinta normal (no gris tenue). Pegajosa arriba mientras se baja (bajo la mini-cabecera si está a la vista). */
-html { --pe-top: 8px; --pe-alto: calc(var(--toque, 48px) + 22px); }
+/* --- La barra de pestañas (rediseño Fable): una barra de navegación de una sola fila, con dibujo y palabra. Es navegación, no una
+   acción: por eso ya no es una píldora naranja rellena (competía con «Anotar compra», que sí es la acción). La activa se nota por
+   cuatro cosas (no solo el color): una píldora tintada con borde que se desliza, la letra más gruesa y con tinta plena, el dibujo
+   relleno en naranja y una rayita naranja debajo. Las demás quedan planas, con tinta secundaria (contraste > 7:1).
+   Pegajosa arriba mientras se baja (bajo la mini-cabecera si está a la vista). */
+html { --pe-top: 8px; --pe-alto: calc(var(--toque, 48px) + 20px); }
 html[data-minicab] { --pe-top: calc(49px + env(safe-area-inset-top)); }
 .pestanas {
-  --pe-cols: 4; --pe-pad: 6px; --pe-gap: 6px;
+  --pe-cols: 4; --pe-pad: 5px; --pe-gap: 2px;
+  --pe-activa: color-mix(in srgb, var(--naranja) 15%, var(--s2)); --pe-filo: color-mix(in srgb, var(--naranja) 42%, transparent);
   position: relative; display: grid; grid-template-columns: repeat(var(--pe-cols), minmax(0, 1fr)); gap: var(--pe-gap); padding: var(--pe-pad);
-  border-radius: 24px; background-color: var(--s1); border: 1px solid var(--s3);
+  border-radius: 22px; background-color: var(--s1); border: 1px solid var(--s3); box-shadow: var(--sombra);
 }
 .pestanas[hidden] { display: none; }
 .pestanas button {
-  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  min-width: 0; min-height: calc(var(--toque, 48px) + 8px); padding: 6px 2px; border: 0; border-radius: 18px; background: none;
-  color: var(--txt); font: 600 0.8125rem/1.15 var(--sans, inherit); letter-spacing: -0.005em; text-align: center; cursor: pointer;
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  min-width: 0; min-height: calc(var(--toque, 48px) + 8px); padding: 7px 2px 9px; border: 0; border-radius: 17px; background: none;
+  color: var(--txt2); font: 600 0.78rem/1.15 var(--sans, inherit); letter-spacing: -0.01em; text-align: center; cursor: pointer;
 }
 .pestanas .pe-txt { min-width: 0; max-width: 100%; }
-.pestanas button[aria-current="true"] { background: var(--naranja); color: #1d1206; font-weight: 800; box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.28); }
-@media (hover: hover) and (pointer: fine) { .pestanas button:not([aria-current="true"]):hover { background: var(--s2); } }
+.pestanas button[aria-current="true"] { background: var(--pe-activa); box-shadow: inset 0 0 0 1px var(--pe-filo); color: var(--txt); font-weight: 750; }
+.pestanas button[aria-current="true"] .pe-ico { color: var(--naranja-txt); }
+/* La rayita de la activa: bajo la palabra. */
+.pestanas button::after { content: ""; position: absolute; left: 50%; bottom: 4px; width: 18px; height: 3px; margin-left: -9px; border-radius: 2px; background: var(--naranja); opacity: 0; transform: scaleX(0.3); }
+.pestanas button[aria-current="true"]::after { opacity: 1; transform: none; }
+html:is([data-efectos="todos"], [data-efectos="esenciales"]) .pestanas button::after { transition: opacity 0.2s 0.12s, transform 0.3s 0.12s var(--resorte, ease-out); }
+html[data-tema="claro"] .pestanas button::after { background: var(--naranja-txt); }
+@media (hover: hover) and (pointer: fine) { .pestanas button:not([aria-current="true"]):hover { background: var(--s2); color: var(--txt); } }
 .pestanas button:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
-.pestanas button[aria-current="true"]:focus-visible { outline-color: var(--txt); }
 /* Dibujos en CSS puro (nada de iconos nuevos en el sprite): montaña (resumen), barras (gráficos), anillos de tronco (historia) y renglones (movimientos).
    Contorno en la pestaña normal; relleno en la activa. */
 .pe-ico { position: relative; flex: none; width: 22px; height: 18px; color: inherit; }
@@ -2235,23 +2290,25 @@ html[data-minicab] { --pe-top: calc(49px + env(safe-area-inset-top)); }
     linear-gradient(currentColor, currentColor) 0 8px / 4px 3px no-repeat, linear-gradient(currentColor, currentColor) 7px 8px / 11px 3px no-repeat,
     linear-gradient(currentColor, currentColor) 0 15px / 4px 3px no-repeat, linear-gradient(currentColor, currentColor) 7px 15px / 13px 3px no-repeat;
 }
-/* Más ancho: dibujo y palabra en una línea, letra más grande. */
+/* Más ancho: dibujo y palabra en una línea, letra más grande; la rayita va al pie de la píldora. */
 @media (min-width: 700px) {
-  .pestanas button { flex-direction: row; gap: 9px; padding-inline: 8px; font-size: 0.9375rem; }
+  .pestanas button { flex-direction: row; gap: 10px; padding: 6px 8px; font-size: 0.9375rem; }
+  .pestanas button::after { bottom: 3px; width: 24px; margin-left: -12px; }
 }
 @media (min-width: 700px) and (max-width: 799px) { html[data-letra="muy-grande"] .pestanas button { flex-direction: column; gap: 4px; font-size: 0.8125rem; } }
-/* Poco ancho para cuatro (teléfono chico o letra grande): rejilla de 2 × 2 con las palabras completas, sin abreviar. */
-@media (max-width: 419px) {
+@media (max-width: 389px) { .pestanas button { font-size: 0.74rem; letter-spacing: -0.015em; } }
+/* Poco ancho para cuatro en fila (teléfono muy chico o letra grande): rejilla de 2 × 2 con las palabras completas, sin abreviar. */
+@media (max-width: 359px) {
   .pestanas { --pe-cols: 2; }
-  .pestanas button { flex-direction: row; gap: 10px; font-size: 0.9375rem; }
+  .pestanas button { flex-direction: row; gap: 10px; padding: 6px 8px; font-size: 0.9375rem; }
 }
 @media (max-width: 479px) {
   html[data-letra="grande"] .pestanas { --pe-cols: 2; }
-  html[data-letra="grande"] .pestanas button { flex-direction: row; gap: 10px; font-size: 0.9375rem; }
+  html[data-letra="grande"] .pestanas button { flex-direction: row; gap: 10px; padding: 6px 8px; font-size: 0.9375rem; }
 }
 @media (max-width: 599px) {
   html[data-letra="muy-grande"] .pestanas { --pe-cols: 2; }
-  html[data-letra="muy-grande"] .pestanas button { flex-direction: row; gap: 10px; font-size: 0.9375rem; }
+  html[data-letra="muy-grande"] .pestanas button { flex-direction: row; gap: 10px; padding: 6px 8px; font-size: 0.9375rem; }
 }
 /* La píldora que se desliza entre pestañas (pseudo-elemento: la barra solo tiene botones de hijos). Con :has() la mueve el CSS; sin él,
    cada botón activo se pinta solo (la regla de arriba). Solo transform; sin transición con efectos «ninguno». */
@@ -2263,14 +2320,14 @@ html[data-minicab] { --pe-top: calc(49px + env(safe-area-inset-top)); }
   .pestanas::before {
     content: ""; position: absolute; z-index: 0; left: var(--pe-pad); top: var(--pe-pad);
     width: calc((100% - 2 * var(--pe-pad) - (var(--pe-cols) - 1) * var(--pe-gap)) / var(--pe-cols));
-    height: calc(100% - 2 * var(--pe-pad)); border-radius: 18px; background: var(--naranja);
-    box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.28);
+    height: calc(100% - 2 * var(--pe-pad)); border-radius: 17px; background: var(--pe-activa);
+    box-shadow: inset 0 0 0 1px var(--pe-filo), inset 0 1px 0 var(--filo);
     transform: translate(calc(var(--ix) * (100% + var(--pe-gap))), calc(var(--iy) * (100% + var(--pe-gap))));
   }
   .pestanas button[aria-current="true"] { background: none; box-shadow: none; }
   html:is([data-efectos="todos"], [data-efectos="esenciales"]) .pestanas::before { transition: transform 0.42s var(--resorte, ease-out); }
   /* 2 × 2: dos filas; historia y movimientos van abajo. */
-  @media (max-width: 419px) {
+  @media (max-width: 359px) {
     .pestanas::before { height: calc((100% - 2 * var(--pe-pad) - var(--pe-gap)) / 2); }
     .pestanas:has([data-pestana="historia"][aria-current="true"]) { --ix: 0; --iy: 1; }
     .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { --ix: 1; --iy: 1; }
@@ -2292,15 +2349,16 @@ html[data-minicab] { --pe-top: calc(49px + env(safe-area-inset-top)); }
 }
 /* Pegajosa: queda arriba al bajar por el contenido (bajo la mini-cabecera, z-index 8; sobre «Anotar», 6). Cristal con respaldo sólido.
    No en la rejilla de 2 × 2 ni en pantallas bajas: ahí ocuparía demasiado. */
-@media (min-width: 420px) and (min-height: 560px) {
+@media (min-width: 360px) and (min-height: 560px) {
   html[data-pestanas] .pestanas { position: sticky; top: var(--pe-top); z-index: 7; }
   html[data-pestanas] { scroll-padding-top: calc(var(--pe-top) + var(--pe-alto) + 20px); }
 }
 @media (min-width: 360px) and (max-width: 479px) and (min-height: 560px) { html[data-letra="grande"][data-pestanas] .pestanas { position: relative; top: auto; } html[data-letra="grande"][data-pestanas] { scroll-padding-top: 60px; } }
 @media (min-width: 360px) and (max-width: 599px) and (min-height: 560px) { html[data-letra="muy-grande"][data-pestanas] .pestanas { position: relative; top: auto; } html[data-letra="muy-grande"][data-pestanas] { scroll-padding-top: 60px; } }
-@supports (backdrop-filter: blur(1px)) {
-  html:not([data-ligero]) .pestanas { background-color: color-mix(in srgb, var(--s1) 90%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
-}
+/* (Rendimiento) La barra ya no desenfoca lo de atrás: con el 90 % de opacidad el efecto casi no se veía y, pegajosa, obligaba al
+   teléfono a desenfocar la página en cada fotograma del desplazamiento. Fondo sólido. */
+/* Con la mini-cabecera a la vista, la rendija entre ella y la barra se tapa con el color del fondo (antes asomaba el contenido). */
+html[data-pestanas][data-minicab] .pestanas { box-shadow: 0 -12px 0 0 var(--fondo), var(--sombra); }
 html[data-pestanas] .indice { display: none; }
 
 /* --- Qué se ve en cada pestaña. */
@@ -2369,7 +2427,7 @@ html[data-pestanas] .indice { display: none; }
 }
 @media (min-width: 1100px) {
   .historia-pg .dh-vistas { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-  .historia-pg .dh-vistas button:first-child { grid-column: auto; }
+  .historia-pg .dh-vistas button:first-child { grid-column: auto; flex-direction: column; gap: 6px; min-height: calc(var(--toque, 48px) + 14px); }
   .historia-pg .dh-vistas button { font-size: 0.875rem; }
   /* Línea: medallas, sellos y pasaporte a la izquierda; «Cómo llegaste hasta aquí» a la derecha. */
   .historia-pg #dh-v-linea { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; column-gap: 48px; align-items: start; }
@@ -2959,3 +3017,68 @@ html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cie
 .pf-extra { fill: none; stroke: var(--naranja); stroke-width: 1.2; opacity: 0.75; }
 .pf-tu { fill: var(--naranja-txt); font-weight: 700; }
 .v-eje.pf-eje, .pf-eje { paint-order: stroke; stroke: var(--fondo, #070b15); stroke-width: 3px; stroke-linejoin: round; }
+
+/* ============================================================================================================================
+   Rediseño y pulido (Fable) · la bitácora. La lista de movimientos se lee como el diario del sendero: un riel a la izquierda con
+   una marca por movimiento (compra: punto naranja; extra: con su anillo; venta: rombo hueco; traslado: aro gris), la fecha como
+   una cota (día grande, mes debajo) y, en cada mes, la altitud con que cerró. Sin rayas entre filas: el riel ordena.
+   ============================================================================================================================ */
+.lista { --f-riel: 22px; --f-fecha: 2.5rem; }
+.lista li + li { border-top: 0; }
+.lista li[data-clave] { position: relative; }
+/* El riel: un tramo por fila (se unen) y otro en la cabecera del mes. */
+.lista li[data-clave]::before, .lista li.mes-cab::before { content: ""; position: absolute; left: 7px; top: 0; bottom: -6px; width: 2px; background: var(--s3); } /* −6 px: el hueco entre filas de la rejilla */
+.lista li.mes-cab:first-child::before { top: 1.15rem; }
+.lista li[data-clave]:last-child::before { bottom: auto; height: 1.9rem; }
+.fila { position: relative; grid-template-columns: var(--f-fecha) minmax(0, 1fr) auto; gap: 0 10px; padding: 10px 4px 10px calc(var(--f-riel) + 4px); }
+/* La marca de cada movimiento, sobre el riel, a la altura de su primera línea. */
+.fila::before { content: ""; position: absolute; left: 2px; top: 1.1rem; width: 12px; height: 12px; border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 3px var(--fondo); }
+.fila[data-extra]::before { box-shadow: 0 0 0 2px var(--fondo), 0 0 0 3.5px var(--naranja); }
+.fila[data-tipo="venta"]::before { left: 3px; width: 10px; height: 10px; border-radius: 2px; background: var(--fondo); border: 2px solid var(--txt2); transform: rotate(45deg); box-shadow: 0 0 0 2px var(--fondo); }
+.fila[data-tipo="traslado"]::before { background: var(--fondo); border: 2px solid var(--txt3); }
+.f-fecha { display: grid; justify-items: start; align-self: start; padding-top: 1px; line-height: 1.1; }
+.f-fecha b { font: 650 1.0625rem/1.2 var(--sans); color: var(--txt); }
+.f-fecha small { font: 600 0.75rem/1.2 var(--sans); color: var(--txt3); text-transform: uppercase; letter-spacing: 0.06em; }
+.f-txw, .f-notaed { margin-left: calc(var(--f-riel) + var(--f-fecha) + 14px); }
+/* Cabecera del mes: el nombre en la letra de los títulos y, a la derecha, su cota. La marca es un pico. */
+.lista li.mes-cab { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; padding: 18px 4px 6px calc(var(--f-riel) + 4px); }
+.lista li.mes-cab:first-child { padding-top: 4px; }
+.mes-cab h3 { font: 600 1.125rem/1.25 var(--serif); letter-spacing: -0.005em; }
+.mes-cab h3 small { font: 500 0.8125rem var(--sans); letter-spacing: 0; }
+.lista li.mes-cab::after { content: ""; position: absolute; left: 0; bottom: 0.72rem; width: 16px; height: 13px; background: var(--txt2); clip-path: polygon(0 100%, 36% 28%, 52% 52%, 70% 0, 100% 100%); box-shadow: none; }
+.mes-cota { margin: 0; color: var(--txt3); font-size: 0.8125rem; white-space: nowrap; }
+.mes-cota b { color: var(--txt2); font-weight: 650; }
+/* El pico de la cabecera tapa el riel con el color del fondo por detrás (para que no lo cruce la raya). */
+.lista li.mes-cab h3::before { content: ""; position: absolute; left: 0; bottom: 0.5rem; width: 16px; height: 20px; background: var(--fondo); }
+.lista li.resalte { border-radius: 14px; }
+@media (hover: hover) and (pointer: fine) { .fila:hover { background: var(--s1); } }
+
+/* ---------------------------------------------------------------- Rediseño (Fable) · «Tu cuenta»
+   Las filas se leen como una lista de ajustes: las que abren otra vista llevan una flechita; las que cambian un valor al tocarlas
+   lo enseñan a la derecha, resaltado (cuenta.js: vestirAjuste). */
+.d-cuenta .dc-lista button { display: flex; align-items: center; gap: 4px 12px; border-radius: 16px; }
+.d-cuenta .dc-lista button:has(.dc-v) { flex-wrap: wrap; }
+.d-cuenta .dc-lista button .ico { flex: none; }
+.dc-k { flex: 1 1 auto; min-width: 0; }
+.dc-dp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.dc-v { flex: 0 1 auto; margin-left: auto; max-width: 100%; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--naranja) 14%, transparent); color: var(--naranja-txt); font-weight: 650; font-size: 0.875rem; text-align: right; }
+html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb, var(--naranja) 22%, transparent); }
+.d-cuenta .dc-lista button:is([data-cuenta="clave"], [data-cuenta="historia"], [data-cuenta="historial"], [data-cuenta="datos"], [data-cuenta="enlaces"], [data-cuenta="sistema"], [data-cuenta="sesiones"], [data-cuenta="avisos"], [data-cuenta="cumple"], [data-cuenta="tv"])::after {
+  content: ""; flex: none; width: 8px; height: 8px; margin-left: auto; margin-right: 4px; border: solid var(--txt3); border-width: 2px 2px 0 0; transform: rotate(45deg);
+}
+.d-cuenta .dc-lista button[data-cuenta="cerrar"] { justify-content: center; }
+
+/* ---------------------------------------------------------------- Rediseño (Fable) · el botón principal
+   «Anotar compra» es LA acción de la app: un «+» en su círculo, un degradado leve y un filo de luz arriba (sin filtros ni mezclas). */
+.anotar { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding-left: 20px; background-image: linear-gradient(180deg, color-mix(in srgb, var(--naranja) 84%, #fff), var(--naranja) 62%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 14px 30px -12px rgb(0 0 0 / 0.6); }
+.anotar::before {
+  content: ""; flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 12px 2.5px no-repeat, linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 2.5px 12px no-repeat, var(--naranja-osc);
+}
+@media (forced-colors: active) { .anotar::before { display: none; } }
+/* Las vistas de «Tu historia» caben en una fila desde la tablet (antes, desde el escritorio). */
+@media (min-width: 700px) {
+  .historia-pg .dh-vistas { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .historia-pg .dh-vistas button:first-child { grid-column: auto; flex-direction: column; gap: 6px; min-height: calc(var(--toque, 48px) + 14px); }
+}
+@media (min-width: 700px) and (max-width: 899px) { html[data-letra="muy-grande"] .historia-pg .dh-vistas { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
