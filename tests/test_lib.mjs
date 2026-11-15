@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, ticksPrecio, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
-  satsEn, haceUnAnio, eco, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
+  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -733,5 +733,44 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq([aniversario(mov, '2026-06-01'), aniversario(mov, '2026-06-02'), aniversario(mov, '2025-06-01'), aniversario(mov, '2027-06-01')], [{ anios: 1 }, null, null, { anios: 2 }], 'aniversario de la primera compra');
   eq([enPupusas(921.15), enPupusas(0), enPupusas(0.5)], [1228, null, 0], 'pupusas a $0.75');
   eq([arbolesDe(99), arbolesDe(100), arbolesDe(500), arbolesDe(1000)], [[], ['ceibo'], ['ceibo', 'amate'], ['ceibo', 'amate', 'maquilishuat']], 'árboles de honor por compra');
+}
+
+// Campamento 13 · el tronco, la constelación y la torre de piedras
+{
+  const mov = [
+    { id: 1, fecha: '2024-03-01', tipo: 'compra', sats: 10000, extra: 0 },
+    { id: 2, fecha: '2024-12-31', tipo: 'compra', sats: 30000, extra: 1 },
+    { id: 3, fecha: '2026-02-01', tipo: 'compra', sats: 20000, extra: 0 },
+    { id: 4, fecha: '2026-06-15', tipo: 'venta', sats: 5000, extra: 0 },
+    { id: 5, fecha: '2026-09-01', tipo: 'compra', sats: 40000, extra: 0 },
+  ];
+  eq([fraccionAnio('2026-01-01'), fraccionAnio('2026-12-31') > 0.99, fraccionAnio('2024-07-02') > 0.49 && fraccionAnio('2024-07-02') < 0.51], [0, true, true], 'fraccionAnio: día del año entre 0 y 1');
+  const t = aniosTronco(mov, '2026-11-15');
+  eq(t.map((y) => y.anio), [2024, 2025, 2026], 'tronco: un anillo por año, también el año sin compras');
+  eq(t.map((y) => [y.comprados, y.nCompras, y.nExtras, y.nVentas, y.vendidos, y.completo]), [[40000, 2, 1, 0, 0, true], [0, 0, 0, 0, 0, true], [60000, 2, 0, 1, 5000, false]], 'tronco: sats, compras, nudos, grietas y si el año cerró');
+  eq(t.map((y) => y.saldoFin), [40000, 40000, 95000], 'tronco: lo que tenías al cerrar cada año (y hoy)');
+  ok(t[0].extras[0].frac > 0.99 && t[2].ventas[0].frac > 0.4 && t[2].ventas[0].frac < 0.5, 'tronco: la posición de cada nudo y de cada grieta dentro del año');
+  eq(aniosTronco([], '2026-11-15'), [], 'tronco: sin compras no hay anillos');
+  eq(aniosTronco([{ id: 1, fecha: '2026-11-01', tipo: 'compra', sats: 5, extra: 0 }], '2026-11-15').length, 1, 'tronco: con una compra, un anillo');
+  ok(/3 anillos, uno por año, de 2024 a 2026\. El más ancho es 2026, con 60,000 sats\. Hay 1 nudo/.test(textoTronco(t)), `tronco: texto para lectores (${textoTronco(t)})`);
+  ok(/^2024: 2 compras · \+40,000 sats · 1 extra · cerraste 40,000 sats$/.test(textoAnio(t[0])) && /^2026 \(en curso\): 2 compras · \+60,000 sats · 1 venta \(−5,000 sats\) · tienes 95,000 sats$/.test(textoAnio(t[2])), 'tronco: resumen de un año');
+
+  const e = estrellasConstelacion(mov);
+  eq([e.length, e.map((x) => x.anio)], [4, [2024, 2024, 2026, 2026]], 'constelación: una estrella por compra (las ventas no cuentan)');
+  ok(e.every((x) => x.x >= 0 && x.x <= 1 && x.y >= 0 && x.y <= 1 && x.mag >= 0.15 && x.mag <= 1), 'constelación: todo cae dentro del círculo unidad y el brillo está acotado');
+  eq(JSON.stringify(estrellasConstelacion(mov)), JSON.stringify(e), 'constelación: siempre sale igual (sin azar)');
+  const muchas = Array.from({ length: 1000 }, (_, k) => ({ id: k + 1, fecha: `2025-${String(1 + (k % 12)).padStart(2, '0')}-10`, tipo: 'compra', sats: 1000 + k, extra: 0 }));
+  const em = estrellasConstelacion(muchas);
+  ok(em.length === 1000 && em.every((x) => x.x >= 0 && x.x <= 1 && x.y >= 0 && x.y <= 1), 'constelación: con 1,000 compras sigue dentro del círculo');
+  eq(estrellasConstelacion([]), [], 'constelación: sin compras no hay estrellas');
+  ok(/4 estrellas, una por compra\. La más reciente es la del/.test(textoConstelacion(e)), 'constelación: texto para lectores');
+
+  const p = piedrasTorre(mov);
+  eq([p.length, p.map((x) => x.n), p.map((x) => x.extra)], [4, [1, 1, 1, 1], [false, true, false, false]], 'torre: una piedra por compra, de la más vieja a la más nueva');
+  ok(p[3].tam === 1 && p.every((x) => x.tam >= 0.35 && x.tam <= 1), 'torre: la de más sats es la más grande y ninguna es diminuta');
+  const pm = piedrasTorre(muchas);
+  eq([pm.length, pm.reduce((a, x) => a + x.n, 0), pm[0].n], [40, 1000, 25], 'torre: con 1,000 compras cada piedra junta 25 y no se pierde ninguna');
+  ok(/Tu torre de piedras tiene 4 piedras, una por compra/.test(textoTorre(p)) && /Tu torre de piedras tiene 40 piedras, que juntan 1000 compras/.test(textoTorre(pm)), 'torre: texto para lectores');
+  eq(piedrasTorre([]), [], 'torre: sin compras no hay piedras');
 }
 console.log(`OK ${n} comprobaciones`);
