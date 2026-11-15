@@ -363,6 +363,16 @@ html[data-tv] .esc-datos { display: none !important; }
 .curiosas b { font: 400 1.5rem/1.1 var(--serif); color: var(--txt); margin-right: 2px; white-space: nowrap; }
 .rep-curiosas { padding: 20px; border-radius: 24px; background: var(--s1); align-self: start; }
 .saldo-d b, .saldo-d span { white-space: nowrap; }
+/* (Rediseño Fable) La ganancia con su mini línea: una píldora del color del cielo, como la cotización. En el teléfono va en su
+   propia línea bajo «valen $…» (antes la mini línea quedaba sola, huérfana, en un renglón). */
+.sd-sep { font-style: normal; }
+.sd-gan { display: inline-flex; align-items: center; gap: 2px; padding: 1px 10px 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--c0) 38%, transparent); vertical-align: baseline; }
+.sd-gan .mini { margin-left: 6px; vertical-align: 0; }
+@media (max-width: 699px) {
+  .sd-sep { display: block; height: 0; overflow: hidden; }
+  .sd-gan { margin: 5px 0 0; padding-block: 3px; }
+}
+html[data-tv] .sd-gan { background: none; padding: 0; margin: 0; }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
 .saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
 .saldo-d [data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
@@ -2338,6 +2348,8 @@ html[data-tema="claro"] .pestanas button::after { background: var(--naranja-txt)
 @supports (backdrop-filter: blur(1px)) {
   html:not([data-ligero]) .pestanas { background-color: color-mix(in srgb, var(--s1) 90%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
 }
+/* Con la mini-cabecera a la vista, la rendija entre ella y la barra se tapa con el color del fondo (antes asomaba el contenido). */
+html[data-pestanas][data-minicab] .pestanas { box-shadow: 0 -12px 0 0 var(--fondo), var(--sombra); }
 html[data-pestanas] .indice { display: none; }
 
 /* --- Qué se ve en cada pestaña. */
@@ -2996,3 +3008,38 @@ html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cie
 .pf-extra { fill: none; stroke: var(--naranja); stroke-width: 1.2; opacity: 0.75; }
 .pf-tu { fill: var(--naranja-txt); font-weight: 700; }
 .v-eje.pf-eje, .pf-eje { paint-order: stroke; stroke: var(--fondo, #070b15); stroke-width: 3px; stroke-linejoin: round; }
+
+/* ============================================================================================================================
+   Rediseño y pulido (Fable) · la bitácora. La lista de movimientos se lee como el diario del sendero: un riel a la izquierda con
+   una marca por movimiento (compra: punto naranja; extra: con su anillo; venta: rombo hueco; traslado: aro gris), la fecha como
+   una cota (día grande, mes debajo) y, en cada mes, la altitud con que cerró. Sin rayas entre filas: el riel ordena.
+   ============================================================================================================================ */
+.lista { --f-riel: 22px; --f-fecha: 2.5rem; }
+.lista li + li { border-top: 0; }
+.lista li[data-clave] { position: relative; }
+/* El riel: un tramo por fila (se unen) y otro en la cabecera del mes. */
+.lista li[data-clave]::before, .lista li.mes-cab::before { content: ""; position: absolute; left: 7px; top: 0; bottom: -6px; width: 2px; background: var(--s3); } /* −6 px: el hueco entre filas de la rejilla */
+.lista li.mes-cab:first-child::before { top: 1.15rem; }
+.lista li[data-clave]:last-child::before { bottom: auto; height: 1.9rem; }
+.fila { position: relative; grid-template-columns: var(--f-fecha) minmax(0, 1fr) auto; gap: 0 10px; padding: 10px 4px 10px calc(var(--f-riel) + 4px); }
+/* La marca de cada movimiento, sobre el riel, a la altura de su primera línea. */
+.fila::before { content: ""; position: absolute; left: 2px; top: 1.1rem; width: 12px; height: 12px; border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 3px var(--fondo); }
+.fila[data-extra]::before { box-shadow: 0 0 0 2px var(--fondo), 0 0 0 3.5px var(--naranja); }
+.fila[data-tipo="venta"]::before { left: 3px; width: 10px; height: 10px; border-radius: 2px; background: var(--fondo); border: 2px solid var(--txt2); transform: rotate(45deg); box-shadow: 0 0 0 2px var(--fondo); }
+.fila[data-tipo="traslado"]::before { background: var(--fondo); border: 2px solid var(--txt3); }
+.f-fecha { display: grid; justify-items: start; align-self: start; padding-top: 1px; line-height: 1.1; }
+.f-fecha b { font: 650 1.0625rem/1.2 var(--sans); color: var(--txt); }
+.f-fecha small { font: 600 0.75rem/1.2 var(--sans); color: var(--txt3); text-transform: uppercase; letter-spacing: 0.06em; }
+.f-txw, .f-notaed { margin-left: calc(var(--f-riel) + var(--f-fecha) + 14px); }
+/* Cabecera del mes: el nombre en la letra de los títulos y, a la derecha, su cota. La marca es un pico. */
+.lista li.mes-cab { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; padding: 18px 4px 6px calc(var(--f-riel) + 4px); }
+.lista li.mes-cab:first-child { padding-top: 4px; }
+.mes-cab h3 { font: 600 1.125rem/1.25 var(--serif); letter-spacing: -0.005em; }
+.mes-cab h3 small { font: 500 0.8125rem var(--sans); letter-spacing: 0; }
+.lista li.mes-cab::after { content: ""; position: absolute; left: 0; bottom: 0.72rem; width: 16px; height: 13px; background: var(--txt2); clip-path: polygon(0 100%, 36% 28%, 52% 52%, 70% 0, 100% 100%); box-shadow: none; }
+.mes-cota { margin: 0; color: var(--txt3); font-size: 0.8125rem; white-space: nowrap; }
+.mes-cota b { color: var(--txt2); font-weight: 650; }
+/* El pico de la cabecera tapa el riel con el color del fondo por detrás (para que no lo cruce la raya). */
+.lista li.mes-cab h3::before { content: ""; position: absolute; left: 0; bottom: 0.5rem; width: 16px; height: 20px; background: var(--fondo); }
+.lista li.resalte { border-radius: 14px; }
+@media (hover: hover) and (pointer: fine) { .fila:hover { background: var(--s1); } }

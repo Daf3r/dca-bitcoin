@@ -258,7 +258,14 @@ export function pintarLinea() {
   gan.dataset.tono = R.gan >= 0 ? 'sube' : 'baja';
   dual(gan, usdSigno(R.gan), usdSignoCorto(R.gan));
   if (R.pct != null) gan.append(` (${pct(R.pct)})`);
-  linea.append(' · ', gan);
+  // La ganancia y su mini línea van juntas en una píldora (`.sd-gan`); en el teléfono bajan a su propia línea (el «·» se esconde).
+  const sep = document.createElement('i');
+  sep.className = 'sd-sep';
+  sep.textContent = ' · ';
+  const grupo = document.createElement('span');
+  grupo.className = 'sd-gan';
+  grupo.append(gan);
+  linea.append(sep, grupo);
   if (R.nVentas) {
     const real = document.createElement('span');
     real.dataset.tono = R.realizada >= 0 ? 'sube' : 'baja';
@@ -269,7 +276,7 @@ export function pintarLinea() {
   if (R.nCompras >= 3 && S.histEstado === 'ok' && S.precio) {
     const serie = serieValor(R.items, S.historico, S.precio, hoyISO()).slice(-30);
     const mini = miniLinea(serie.map((d) => d.valor), serie.length ? `Valor de tu saldo en los últimos ${serie.length} días: de ${usd0(serie[0].valor)} a ${usd0(serie.at(-1).valor)}` : '');
-    if (mini) linea.append(mini);
+    if (mini) grupo.append(mini);
   }
 }
 
