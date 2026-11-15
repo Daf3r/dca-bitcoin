@@ -112,6 +112,7 @@ button, input { font: inherit; color: inherit; }
    oscuras y da textura de papel. No se anima; fuera en modo ligero. */
 .montana::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: url("/grano.png") repeat; background-size: 96px 96px; opacity: 0.028; } /* motas claras y oscuras con transparencia (sin mix-blend-mode, que en iPhone obliga a recomponer toda la escena) */
 html[data-ligero] .montana::after { content: none; }
+@media (max-width: 699px) { .montana::after { content: none; } } /* (rendimiento) en el teléfono el grano, al 2.8 %, no se distingue en una pantalla densa y era una capa más del tamaño de la escena (y una descarga) */
 /* Hora dorada: el cielo es un degradado continuo de las cinco capas de cielo.js (antes, cinco franjas de borde duro) y la
    luz del astro se difumina (halo radial y resplandor sobre el horizonte). Todo sale de las variables de la hora. */
 .g-c0 { stop-color: var(--c0); } .g-c1 { stop-color: var(--c1); } .g-c2 { stop-color: var(--c2); } .g-c3 { stop-color: var(--c3); } .g-c4 { stop-color: var(--c4); }
@@ -156,6 +157,8 @@ html[data-efectos="todos"] .estrella.t1 { animation: titila 5.5s ease-in-out inf
 html[data-efectos="todos"] .estrella.t2 { animation: titila 7s ease-in-out -2s infinite; }
 html[data-efectos="todos"] .estrella.t3 { animation: titila 4.2s ease-in-out -1s infinite; }
 html[data-efectos="todos"] .estrella.t4 { animation: titila 8.5s ease-in-out -4s infinite; }
+/* (Rendimiento) De día y al amanecer las estrellas no se ven (`--estrellas: 0`): que no titilen a escondidas. */
+html[data-efectos="todos"]:is([data-cielo="dia"], [data-cielo="amanecer"]) .estrella { animation: none; }
 .fugaz { stroke: var(--astro); stroke-width: 1.6; stroke-linecap: round; opacity: 0; }
 @keyframes fugaz { 0%, 94% { opacity: 0; transform: translate(0, 0); } 95% { opacity: 0.9; } 100% { opacity: 0; transform: translate(190px, 84px); } }
 html[data-efectos="todos"][data-cielo="noche"] .fugaz { animation: fugaz 34s linear 9s infinite; }
@@ -1280,9 +1283,9 @@ html[data-efectos="ninguno"] .lista li.sale { display: none; }
 html[data-minicab] .minicab { transform: none; visibility: visible; transition-delay: 0s; }
 html[data-minicab] .minicab:has(#minicab-saldo:empty) { display: none; }
 html[data-efectos="ninguno"] .minicab { transition: none; }
-@supports (backdrop-filter: blur(1px)) {
-  html:not([data-ligero]) .minicab { background: color-mix(in srgb, var(--fondo) 86%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
-}
+/* (Rendimiento) La mini-cabecera es fija: desenfocar lo que pasa por debajo costaba un desenfoque por fotograma al desplazar
+   (lo que más pesa en un iPhone). Queda casi opaca, sin desenfoque; el cristal sigue en la hoja y en los diálogos, que no se mueven. */
+.minicab { background: color-mix(in srgb, var(--fondo) 96%, transparent); }
 .minicab:focus-visible { outline: 2px solid var(--naranja); outline-offset: -4px; }
 /* Con la franja a la vista, lo que se enfoca o se lleva a la vista no queda debajo de ella. */
 html { scroll-padding-top: 60px; }
@@ -2345,9 +2348,8 @@ html[data-tema="claro"] .pestanas button::after { background: var(--naranja-txt)
 }
 @media (min-width: 360px) and (max-width: 479px) and (min-height: 560px) { html[data-letra="grande"][data-pestanas] .pestanas { position: relative; top: auto; } html[data-letra="grande"][data-pestanas] { scroll-padding-top: 60px; } }
 @media (min-width: 360px) and (max-width: 599px) and (min-height: 560px) { html[data-letra="muy-grande"][data-pestanas] .pestanas { position: relative; top: auto; } html[data-letra="muy-grande"][data-pestanas] { scroll-padding-top: 60px; } }
-@supports (backdrop-filter: blur(1px)) {
-  html:not([data-ligero]) .pestanas { background-color: color-mix(in srgb, var(--s1) 90%, transparent); backdrop-filter: blur(14px) saturate(1.2); }
-}
+/* (Rendimiento) La barra ya no desenfoca lo de atrás: con el 90 % de opacidad el efecto casi no se veía y, pegajosa, obligaba al
+   teléfono a desenfocar la página en cada fotograma del desplazamiento. Fondo sólido. */
 /* Con la mini-cabecera a la vista, la rendija entre ella y la barra se tapa con el color del fondo (antes asomaba el contenido). */
 html[data-pestanas][data-minicab] .pestanas { box-shadow: 0 -12px 0 0 var(--fondo), var(--sombra); }
 html[data-pestanas] .indice { display: none; }

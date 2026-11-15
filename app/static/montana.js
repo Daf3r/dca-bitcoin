@@ -314,12 +314,15 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // que se estrecha con la altura: más ancho abajo, más fino arriba, como visto en perspectiva).
   let d = `M${f1(bx)} ${f1(by)}`;
   const piezas = [];
+  const tramos = []; // los mismos tramos (recta o curva cuadrática) con sus números ya redondeados, para medir el trazo sin el navegador
+  const r1 = (n) => Number(f1(n));
   let desde = [bx, by];
   for (let i = 1; i < pts.length; i++) {
     const [x, y] = pts[i], [px, py] = pts[i - 1];
-    if (i === pts.length - 1) { d += `L${f1(x)} ${f1(y)}`; piezas.push(`M${f1(desde[0])} ${f1(desde[1])}L${f1(x)} ${f1(y)}`); break; }
+    if (i === pts.length - 1) { d += `L${f1(x)} ${f1(y)}`; tramos.push([r1(x), r1(y)]); piezas.push(`M${f1(desde[0])} ${f1(desde[1])}L${f1(x)} ${f1(y)}`); break; }
     const [nx, ny] = pts[i + 1], k = 0.22;
     const ax = x + (px - x) * k, ay = y + (py - y) * k, sx2 = x + (nx - x) * k, sy2 = y + (ny - y) * k;
+    tramos.push([r1(ax), r1(ay)], [r1(x), r1(y), r1(sx2), r1(sy2)]);
     d += `L${f1(ax)} ${f1(ay)}Q${f1(x)} ${f1(y)} ${f1(sx2)} ${f1(sy2)}`;
     piezas.push(`M${f1(desde[0])} ${f1(desde[1])}L${f1(ax)} ${f1(ay)}Q${f1(x)} ${f1(y)} ${f1(sx2)} ${f1(sy2)}`);
     desde = [sx2, sy2];
@@ -360,6 +363,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
 
   const camino = host.querySelector('#m-sendero');
   const L = camino.getTotalLength();
+  // Rendimiento: `getPointAtLength` del navegador recorre el trazo en cada llamada y aquí se le llamaba más de dos mil veces por
+  // dibujo (era, con diferencia, lo más caro de abrir la app en un teléfono). El trazo son rectas y curvas que ya conocemos: se
+  // aplana una vez en una tabla y esta función la reemplaza en este elemento (todo lo demás sigue llamando a `camino.getPointAtLength`).
+  camino.getPointAtLength = medidor([r1(bx), r1(by)], tramos, L);
   const enAltura = (alt) => {
     const yObj = by - (by - c.sy - 6) * alt;
     let lo = 0, hi = L;
@@ -666,6 +673,30 @@ function instalarCierre() {
  * humo en los ya alcanzados y una fogata que parpadea en el siguiente. Pequeños y al pie de la bandera, lejos de la etiqueta.
  */
 /**
+ * Mide un trazo hecho de rectas y curvas cuadráticas sin preguntar al navegador: lo aplana en una polilínea fina (24 pasos por
+ * curva) con su longitud acumulada y devuelve `(l) => { x, y }`, el punto a esa distancia del inicio (búsqueda binaria e
+ * interpolación). `largo` es la longitud que da el navegador: la tabla se escala a ella, así las distancias coinciden con las
+ * de `stroke-dasharray`. El error frente a `getPointAtLength` es de centésimas de píxel.
+ */
+function medidor(inicio, tramos, largo) {
+  const xs = [inicio[0]], ys = [inicio[1]], ls = [0];
+  const hasta = (x, y) => { const i = xs.length - 1; ls.push(ls[i] + Math.hypot(x - xs[i], y - ys[i])); xs.push(x); ys.push(y); };
+  for (const t of tramos) {
+    if (t.length === 2) { hasta(t[0], t[1]); continue; }
+    const x0 = xs[xs.length - 1], y0 = ys[ys.length - 1], [cx, cy, x1, y1] = t;
+    for (let k = 1; k <= 24; k++) { const u = k / 24, v = 1 - u; hasta(v * v * x0 + 2 * v * u * cx + u * u * x1, v * v * y0 + 2 * v * u * cy + u * u * y1); }
+  }
+  const n = xs.length - 1, total = ls[n] || 1, escala = total / (largo || total);
+  return (l) => {
+    const d = Math.min(total, Math.max(0, (Number(l) || 0) * escala));
+    let lo = 0, hi = n;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ls[m] <= d) lo = m; else hi = m; }
+    const f = (d - ls[lo]) / ((ls[hi] - ls[lo]) || 1);
+    return { x: xs[lo] + (xs[hi] - xs[lo]) * f, y: ys[lo] + (ys[hi] - ys[lo]) * f };
+  };
+}
+
+/**
  * Peldaños y piedras del sendero (paisaje, sin azar: la posición sale de la distancia recorrida). Un peldaño atraviesa la tierra
  * cada tanto y, alternando a cada lado del borde, una piedra pequeña; el ancho sigue a la perspectiva del camino.
  */
@@ -797,8 +828,15 @@ function colocar(sats, animado) {
   host.querySelectorAll('.campo').forEach((g) => g.classList.toggle('sig', Number(g.dataset.m) === sig));
   const sigEtapa = etapaSiguiente(sats);
   host.querySelectorAll('.etapa').forEach((g) => { g.classList.toggle('alcanzada', Number(g.dataset.m) <= sats); g.classList.toggle('sig', Number(g.dataset.m) === sigEtapa); });
-  const dn = trazoNieve(estado.nieveMedidas, altitud(sats, esc));
-  host.querySelectorAll('.nieve, .nieve-sombra, .nieve-luz, .nieve-mascara, .nieve-clip').forEach((n) => n.setAttribute('d', dn));
+  // Rendimiento: la nieve se usa de máscara y de recorte, así que cada cambio de su trazo obliga a volver a pintar medio monte.
+  // Mientras «Tú» sube se actualiza por escalones (16 en toda la montaña, no en cada fotograma) y, si no cambió, no se toca;
+  // al llegar (`animado` falso) queda con su valor exacto.
+  const altN = altitud(sats, esc);
+  const dn = trazoNieve(estado.nieveMedidas, animado ? Math.round(altN * 16) / 16 : altN);
+  if (dn !== estado.dNieve) {
+    estado.dNieve = dn;
+    host.querySelectorAll('.nieve, .nieve-sombra, .nieve-luz, .nieve-mascara, .nieve-clip').forEach((n) => n.setAttribute('d', dn));
+  }
   if (!animado) { etiquetar(p, sats); huellas(l); }
   return p;
 }
