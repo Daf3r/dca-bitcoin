@@ -236,7 +236,7 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 .banderin { fill: var(--nieve); opacity: 0.7; transform-box: fill-box; transform-origin: left center; }
 /* El campamento es parte de la escena: un claro sobre el sendero, los troncos del fogón (solo en los alcanzados) y su tienda o cabaña. */
 .sombra-contacto { fill: var(--monte-sombra); opacity: 0.55; }
-/* La cumbre: una cresta de roca nevada donde se apoyan el mástil, la fogata y el mojón; la cara que mira al astro, más clara. */
+/* La cumbre: una cresta de roca nevada donde se apoyan el mástil, la fogata y el torre de piedras; la cara que mira al astro, más clara. */
 .nieve-luz { fill: #fff; opacity: 0.22; }
 /* Las etiquetas van sobre una placa (legibles sobre cualquier cielo o ladera); «Tú» en naranja, lo tuyo. */
 /* Rótulos: texto limpio con un halo suave del color de la roca, sin cajas. */
@@ -1353,7 +1353,7 @@ html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { 
 .pag-login .huellas, .pag-login .linterna { display: none; }
 
 /* ---------------------------------------------------------------- Campamento 5 (2/3) */
-/* Un dibujo por campamento (tienda, cabaña, refugio, mojón): apagado hasta alcanzarlo. */
+/* Un dibujo por campamento (tienda, cabaña, refugio, torre de piedras): apagado hasta alcanzarlo. */
 /* Los hitos: piedra geométrica con su cara en sombra, el mismo trazo que el sendero, y un farol. Alcanzado = farol encendido con
    su halo; el siguiente, con la llama viva; pendiente = contorno tenue. Todo bajo la misma luz cálida. */
 .campo-ico { fill: color-mix(in oklab, var(--monte) 45%, #b9ab98); stroke: color-mix(in oklab, var(--monte-sombra) 70%, #241a12); stroke-width: 1.1; stroke-linejoin: round; }
@@ -1793,7 +1793,7 @@ html[data-efectos="ninguno"] .luna.moneda :is(.moneda-gira, .moneda-brillo) { an
 @keyframes zopilote { 50% { transform: translate(-1.5px, -1px) rotate(-4deg); } }
 html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infinite; }
 
-/* Campamento 13 · «Tu historia en objetos»: el selector de vistas y el lienzo del tronco, la constelación y el mojón (el dibujo vive en arte-historia.js). */
+/* Campamento 13 · «Tu historia en objetos»: el selector de vistas y el lienzo del tronco, la constelación y el torre de piedras (el dibujo vive en arte-historia.js). */
 .dh-vistas { display: flex; gap: 6px; margin: 0 0 14px; }
 .dh-vistas button { flex: 1 1 0; min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
 .dh-vistas button[aria-pressed="true"] { background: var(--naranja); border-color: var(--naranja); color: #1d1206; }
@@ -1806,7 +1806,7 @@ html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infi
 .dh-anios button[aria-pressed="true"] { border-color: var(--naranja); color: var(--naranja-txt); }
 .dh-detalle { min-height: 2.6em; margin: 4px 0 0; font-size: 0.875rem; color: var(--txt); }
 
-/* Campamento 13 · los dibujos de «Tu historia» (arte-historia.js): el tronco, la constelación y el mojón. Luz desde arriba a la
+/* Campamento 13 · los dibujos de «Tu historia» (arte-historia.js): el tronco, la constelación y el torre de piedras. Luz desde arriba a la
    derecha como en la montaña; lo que no es una pieza no recibe el toque (el toque cae en la pieza de debajo). */
 .dh-lienzo .pieza { cursor: pointer; }
 .dh-lienzo :is(.ht-sobre, .ht-suelo, .ht-canto, .ht-corteza, .ht-c-media, .ht-c-luz, .ht-c-sombra, .ht-c-grieta, .ht-medula, .h-marca, .h-marca-c, .hm-luz, .hm-media, .hm-sombra, .hm-filo, .hm-veta, .hm-contacto, .hm-guijarro, .hm-guijarro-luz, .hm-guijarro-sombra, .hm-lejos, .hm-loma, .hc-linea, .hc-halo, .hc-calido, .hc-tenue, .hc-media, .hc-viva, .hc-destello, .hc-nucleo-c, .hc-titilan) { pointer-events: none; }
@@ -1884,7 +1884,7 @@ html[data-efectos="todos"] .hc-titila.tw3 { animation-duration: 8.8s; animation-
 .h-estrella.sel { fill: color-mix(in oklab, var(--naranja) 14%, transparent); stroke: var(--naranja); stroke-width: 1.6; }
 .h-marca-c { fill: none; stroke: var(--naranja); stroke-width: 1.4; stroke-linecap: round; }
 
-/* El mojón */
+/* El torre de piedras */
 .hm-s0 { stop-color: var(--hm-s0); } .hm-s1 { stop-color: var(--hm-s1); } .hm-s2 { stop-color: var(--hm-s2); }
 .hm-cielo { fill: url(#h-m-cielo); }
 .hm-lejos { fill: var(--hm-lejos); } .hm-lejos-luz { fill: var(--hm-lejos-luz); } .hm-medio { fill: var(--hm-medio); }

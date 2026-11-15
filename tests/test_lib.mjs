@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {
   descripcionMontana, movimientosLista, ordenarMovimientos, filtrarMovimientos, agruparPorMes, serieCostoPromedio, masMovieron, serieSatsAcum, semanasDetalle, tramosCaida, variacionAyer, satsPorDolar, serieSatsPorDolar, usdSignoCorto, numCorto, etiquetasUsadas, partirEtiquetas,
   escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, ticksPrecio, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
-  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasMojon, textoTronco, textoConstelacion, textoMojon, textoAnio, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
+  satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 
 let n = 0;
@@ -735,7 +735,7 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq([arbolesDe(99), arbolesDe(100), arbolesDe(500), arbolesDe(1000)], [[], ['ceibo'], ['ceibo', 'amate'], ['ceibo', 'amate', 'maquilishuat']], 'árboles de honor por compra');
 }
 
-// Campamento 13 · el tronco, la constelación y el mojón
+// Campamento 13 · el tronco, la constelación y la torre de piedras
 {
   const mov = [
     { id: 1, fecha: '2024-03-01', tipo: 'compra', sats: 10000, extra: 0 },
@@ -765,12 +765,12 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq(estrellasConstelacion([]), [], 'constelación: sin compras no hay estrellas');
   ok(/4 estrellas, una por compra\. La más reciente es la del/.test(textoConstelacion(e)), 'constelación: texto para lectores');
 
-  const p = piedrasMojon(mov);
-  eq([p.length, p.map((x) => x.n), p.map((x) => x.extra)], [4, [1, 1, 1, 1], [false, true, false, false]], 'mojón: una piedra por compra, de la más vieja a la más nueva');
-  ok(p[3].tam === 1 && p.every((x) => x.tam >= 0.35 && x.tam <= 1), 'mojón: la de más sats es la más grande y ninguna es diminuta');
-  const pm = piedrasMojon(muchas);
-  eq([pm.length, pm.reduce((a, x) => a + x.n, 0), pm[0].n], [40, 1000, 25], 'mojón: con 1,000 compras cada piedra junta 25 y no se pierde ninguna');
-  ok(/4 piedras, una por compra/.test(textoMojon(p)) && /40 piedras, que juntan 1000 compras/.test(textoMojon(pm)), 'mojón: texto para lectores');
-  eq(piedrasMojon([]), [], 'mojón: sin compras no hay piedras');
+  const p = piedrasTorre(mov);
+  eq([p.length, p.map((x) => x.n), p.map((x) => x.extra)], [4, [1, 1, 1, 1], [false, true, false, false]], 'torre: una piedra por compra, de la más vieja a la más nueva');
+  ok(p[3].tam === 1 && p.every((x) => x.tam >= 0.35 && x.tam <= 1), 'torre: la de más sats es la más grande y ninguna es diminuta');
+  const pm = piedrasTorre(muchas);
+  eq([pm.length, pm.reduce((a, x) => a + x.n, 0), pm[0].n], [40, 1000, 25], 'torre: con 1,000 compras cada piedra junta 25 y no se pierde ninguna');
+  ok(/Tu torre de piedras tiene 4 piedras, una por compra/.test(textoTorre(p)) && /Tu torre de piedras tiene 40 piedras, que juntan 1000 compras/.test(textoTorre(pm)), 'torre: texto para lectores');
+  eq(piedrasTorre([]), [], 'torre: sin compras no hay piedras');
 }
 console.log(`OK ${n} comprobaciones`);

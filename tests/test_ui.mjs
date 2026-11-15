@@ -2717,7 +2717,7 @@ try {
     } finally { sSin.parar(); }
   }
 
-  // ---------------------------------------------------------------- Tu historia en objetos: tronco, constelación y mojón (campamento 13)
+  // ---------------------------------------------------------------- Tu historia en objetos: tronco, constelación y torre de piedras (campamento 13)
   {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const ent = async (...a) => { const r = await entrar(...a); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
@@ -2744,14 +2744,14 @@ try {
       eq(await p.locator('#dh-lienzo .pieza[data-i]').count(), compras.length, 'constelación: una estrella por compra');
       await p.focus('#dh-lienzo'); await p.keyboard.press('Home'); await p.waitForTimeout(150);
       ok(/^\d+ \w+ \d{4} · \+[\d,]+ sats/.test(await p.textContent('#dh-detalle')), `constelación: las flechas leen una compra (${await p.textContent('#dh-detalle')})`);
-      // Mojón
-      await p.click('#dh-vistas [data-vh="mojon"]'); await p.waitForTimeout(300);
+      // Torre de piedras
+      await p.click('#dh-vistas [data-vh="torre"]'); await p.waitForTimeout(300);
       const piedras = await p.locator('#dh-lienzo .pieza[data-i]').count();
-      ok(piedras >= 1 && piedras <= 40, `mojón: no pasa de 40 piedras (${piedras})`);
+      ok(piedras >= 1 && piedras <= 40, `torre: no pasa de 40 piedras (${piedras})`);
       // Todo cabe en la pantalla y se recuerda la vista
       const sw = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, w: Math.round(document.getElementById('dh-lienzo').getBoundingClientRect().width) }));
       ok(sw.sw <= sw.cw && sw.w > 200, `historia: sin scroll horizontal y con el dibujo a la vista (${sw.w} px)`);
-      ok(await p.evaluate(() => localStorage.getItem('libro.historia.vista')) === 'mojon', 'historia: se recuerda la vista elegida');
+      ok(await p.evaluate(() => localStorage.getItem('libro.historia.vista')) === 'torre', 'historia: se recuerda la vista elegida');
       await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(200);
       ok(await p.locator('#dh-v-linea').isVisible(), 'historia: se puede volver a la línea');
       eq(consola, [], `consola limpia (historia en objetos): ${consola.join(' | ')}`);

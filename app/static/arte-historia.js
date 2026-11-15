@@ -1,14 +1,14 @@
-// Los tres dibujos de «Tu historia» (campamento 13): el tronco, la constelación y el mojón. Funciones puras: reciben los datos que arma
-// `lib.js` (`aniosTronco`, `estrellasConstelacion`, `piedrasMojon`) y devuelven un `<svg>` como texto; no tocan el DOM ni usan azar.
+// Los tres dibujos de «Tu historia» (campamento 13): el tronco, la constelación y la torre de piedras. Funciones puras: reciben los datos que arma
+// `lib.js` (`aniosTronco`, `estrellasConstelacion`, `piedrasTorre`) y devuelven un `<svg>` como texto; no tocan el DOM ni usan azar.
 //
 // CONTRATO (lo usa `historia.js`; el dibujo es libre mientras se cumpla):
 //  · Cada función devuelve un solo `<svg viewBox="0 0 320 320" aria-hidden="true" focusable="false">` (el contenedor lleva el `role="img"`).
 //  · Cada pieza tocable lleva `data-anio` (anillo del tronco) o `data-i` (estrella o piedra, el índice del dato) y la clase `.pieza`.
-//  · `sel` es el año (tronco) o el índice (constelación, mojón) seleccionado, o null: la pieza elegida lleva además la clase `sel`.
+//  · `sel` es el año (tronco) o el índice (constelación, torre de piedras) seleccionado, o null: la pieza elegida lleva además la clase `sel`.
 //  · Colores solo con variables CSS (`var(--…)`) o clases del bloque «Campamento 13» de styles.css; sin estilos en línea (la CSP los
 //    bloquea); animaciones solo con transform/opacity y solo con efectos «todos» (clase `efecto-ambiente`).
 //  · Poco coste: el tronco, una pieza por año; la constelación hasta 1,000 estrellas (usa `<path>`s agrupados, no un nodo pesado por
-//    estrella); el mojón, hasta 40 piedras.
+//    estrella); la torre de piedras, hasta 40 piedras.
 //
 // El lenguaje es el de la montaña y los árboles de honor: formas facetadas, luz que llega desde arriba a la derecha (cara iluminada,
 // media luz y sombra, con un filo de luz en los bordes que miran al astro) y pocas piezas con intención. Lo que no se toca (vetas,
@@ -252,7 +252,7 @@ export function constelacion(estrellas, { sel = null } = {}) {
   return `${s}</svg>`;
 }
 
-// ================================================================ el mojón
+// ================================================================ la torre de piedras
 
 /** Una piedra: un polígono de 6 a 8 vértices fijos para su índice, algo más plano abajo (se asienta) y un poco ladeado. */
 function contornoPiedra(i, cx, cy, w, h) {
@@ -268,7 +268,7 @@ function contornoPiedra(i, cx, cy, w, h) {
 }
 
 /**
- * Dónde va cada piedra. Con pocas (hasta 6), una columna en equilibrio, como los mojones de los senderos; con más, un montón en
+ * Dónde va cada piedra. Con pocas (hasta 6), una columna en equilibrio, como las torres de piedras de los senderos; con más, un montón en
  * hileras que se angostan hacia arriba (la apacheta), de la más vieja abajo a la izquierda a la más nueva arriba.
  */
 function colocar(piedras) {
@@ -310,14 +310,14 @@ function colocar(piedras) {
   return out;
 }
 
-/** Mojón: una piedra por compra (o por grupo), de la más vieja abajo a la más nueva arriba; `tam` (0.35 a 1) es su tamaño. */
-export function mojon(piedras, { sel = null } = {}) {
+/** Torre de piedras: una piedra por compra (o por grupo), de la más vieja abajo a la más nueva arriba; `tam` (0.35 a 1) es su tamaño. */
+export function torre(piedras, { sel = null } = {}) {
   const suelo = 258;
-  let s = `<svg class="h-mojon" ${MARCO}><defs>`
+  let s = `<svg class="h-torre" ${MARCO}><defs>`
     + '<linearGradient id="h-m-cielo" x1="0" y1="0" x2="0" y2="1"><stop class="hm-s0" offset="0"/><stop class="hm-s1" offset="0.62"/><stop class="hm-s2" offset="1"/></linearGradient>'
     + '<radialGradient id="h-m-sombra" cx="0.5" cy="0.5" r="0.5"><stop class="hm-o0" offset="0"/><stop class="hm-o1" offset="1"/></radialGradient>'
     + '<clipPath id="h-m-disco"><circle cx="160" cy="160" r="152"/></clipPath></defs>';
-  // El fondo: un medallón de cielo suave con dos sierras lejanas facetadas y la loma donde se apila el mojón.
+  // El fondo: un medallón de cielo suave con dos sierras lejanas facetadas y la loma donde se apila la torre de piedras.
   s += '<g clip-path="url(#h-m-disco)"><rect class="hm-cielo" x="0" y="0" width="320" height="320"/>'
     + `<path class="hm-lejos" d="M0 ${suelo - 34}L38 ${suelo - 70}L64 ${suelo - 58}L96 ${suelo - 92}L128 ${suelo - 52}L150 ${suelo - 40}L190 ${suelo - 46}L224 ${suelo - 84}L252 ${suelo - 66}L284 ${suelo - 98}L320 ${suelo - 60}V320H0Z"/>`
     + `<path class="hm-lejos-luz" d="M96 ${suelo - 92}L128 ${suelo - 52}L112 ${suelo - 50}ZM284 ${suelo - 98}L320 ${suelo - 60}L300 ${suelo - 58}ZM224 ${suelo - 84}L252 ${suelo - 66}L240 ${suelo - 60}Z"/>`
@@ -327,7 +327,7 @@ export function mojon(piedras, { sel = null } = {}) {
     + '<circle class="hm-aro" cx="160" cy="160" r="151.25"/>';
   if (!piedras.length) return `${s}</svg>`;
 
-  // Escala: que el mojón quepa (hasta 210 de alto y 220 de ancho) y que una sola piedra no sea enorme.
+  // Escala: que la torre de piedras quepa (hasta 210 de alto y 220 de ancho) y que una sola piedra no sea enorme.
   const lugar = colocar(piedras);
   const alto = Math.max(...lugar.map((l) => -l.yb + l.h)), ancho = Math.max(...lugar.map((l) => Math.abs(l.x) + l.w / 2)) * 2;
   const U = Math.min(124, 196 / alto, 220 / ancho);

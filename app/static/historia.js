@@ -1,5 +1,5 @@
-import { aniosTronco, entero, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, piedrasMojon, textoAnio, textoConstelacion, textoMojon, textoTronco } from './lib.js';
-import { constelacion, mojon, tronco } from './arte-historia.js';
+import { aniosTronco, entero, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, piedrasTorre, textoAnio, textoConstelacion, textoTorre, textoTronco } from './lib.js';
+import { constelacion, torre, tronco } from './arte-historia.js';
 import { ico, ilustracion, medalla } from './iconos.js';
 import { $, R } from './estado.js';
 
@@ -8,12 +8,12 @@ import { $, R } from './estado.js';
 const nodo = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
 
 const CLAVE_VISTA = 'libro.historia.vista';
-const VISTAS = ['linea', 'tronco', 'constelacion', 'mojon'];
+const VISTAS = ['linea', 'tronco', 'constelacion', 'torre'];
 let vista = (() => { try { const v = localStorage.getItem(CLAVE_VISTA); return VISTAS.includes(v) ? v : 'linea'; } catch { return 'linea'; } })();
-let seleccion = null; // año (tronco) o índice (constelación y mojón) que se está leyendo
+let seleccion = null; // año (tronco) o índice (constelación y torre) que se está leyendo
 let datos = null; // lo que se dibujó, para leer una pieza al tocarla o recorrerla con el teclado
 
-/** El dibujo de la vista elegida (tronco, constelación o mojón) con su texto, y el detalle de lo seleccionado. */
+/** El dibujo de la vista elegida (tronco, constelación o torre de piedras) con su texto, y el detalle de lo seleccionado. */
 function pintarObjeto() {
   const fig = $('dh-objeto'), esLinea = vista === 'linea';
   $('dh-v-linea').hidden = !esLinea;
@@ -47,10 +47,10 @@ function pintarObjeto() {
     const s = seleccion != null ? e[seleccion] : null;
     $('dh-detalle').textContent = s ? `${fechaLarga(s.fecha)} · +${entero(s.sats)} sats${s.extra ? ' · compra extra' : ''}` : 'Toca una estrella (o usa las flechas) para ver esa compra.';
   } else {
-    const p = piedrasMojon(items);
-    datos = { tipo: 'mojon', lista: p };
-    $('dh-lienzo').innerHTML = mojon(p, { sel: seleccion });
-    $('dh-desc').textContent = textoMojon(p);
+    const p = piedrasTorre(items);
+    datos = { tipo: 'torre', lista: p };
+    $('dh-lienzo').innerHTML = torre(p, { sel: seleccion });
+    $('dh-desc').textContent = textoTorre(p);
     const s = seleccion != null ? p[seleccion] : null;
     $('dh-detalle').textContent = s ? `${s.n === 1 ? fechaLarga(s.desde) : `${fechaLarga(s.desde)} a ${fechaLarga(s.hasta)}`} · ${s.n} ${s.n === 1 ? 'compra' : 'compras'} · +${entero(s.sats)} sats${s.extra ? ' · incluye extra' : ''}` : 'Toca una piedra (o usa las flechas) para ver esa compra.';
   }

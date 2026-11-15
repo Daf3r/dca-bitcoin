@@ -975,7 +975,7 @@ export const ARBOLES = [{ desde: 1000, tipo: 'maquilishuat' }, { desde: 500, tip
 export const arbolesDe = (nCompras) => ARBOLES.filter((a) => nCompras >= a.desde).map((a) => a.tipo).reverse();
 
 // ---------------------------------------------------------------------------------------------
-// Campamento 13 · «Tu historia en objetos»: los datos de tres dibujos (el tronco, la constelación y el mojón). Son cuentas
+// Campamento 13 · «Tu historia en objetos»: los datos de tres dibujos (el tronco, la constelación y la torre de piedras). Son cuentas
 // puras: el dibujo vive en `arte-historia.js`. Nada de esto recomienda ni presiona: solo cuenta lo que ya pasó.
 // ---------------------------------------------------------------------------------------------
 
@@ -1030,10 +1030,10 @@ export function estrellasConstelacion(items, minEscala = 120) {
 }
 
 /**
- * El mojón: una piedra por compra, de la más vieja (abajo) a la más nueva (arriba). Con más de `max` compras cada piedra junta varias
+ * La torre de piedras: una piedra por compra, de la más vieja (abajo) a la más nueva (arriba). Con más de `max` compras cada piedra junta varias
  * seguidas (`n`), como en el bosque. `tam` (0.35 a 1) es su tamaño según los sats frente a la piedra más grande.
  */
-export function piedrasMojon(items, max = 40) {
+export function piedrasTorre(items, max = 40) {
   const compras = items.filter((c) => c.tipo !== 'venta').sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.id ?? 0) - (b.id ?? 0)));
   if (!compras.length) return [];
   const por = Math.ceil(compras.length / max);
@@ -1060,11 +1060,11 @@ export function textoConstelacion(estrellas) {
   const ult = estrellas.at(-1);
   return `Tu constelación tiene ${estrellas.length} ${estrellas.length === 1 ? 'estrella' : 'estrellas'}, una por compra. La más reciente es la del ${fechaLarga(ult.fecha)}.`;
 }
-export function textoMojon(piedras) {
-  if (!piedras.length) return 'Tu mojón empieza con tu primera compra.';
+export function textoTorre(piedras) {
+  if (!piedras.length) return 'Tu torre de piedras empieza con tu primera compra.';
   const n = piedras.reduce((a, p) => a + p.n, 0);
   const junta = piedras.some((p) => p.n > 1);
-  return `Tu mojón tiene ${piedras.length} ${piedras.length === 1 ? 'piedra' : 'piedras'}${junta ? `, que juntan ${n} compras` : ', una por compra'}; las más grandes son las de más sats.`;
+  return `Tu torre de piedras tiene ${piedras.length} ${piedras.length === 1 ? 'piedra' : 'piedras'}${junta ? `, que juntan ${n} compras` : ', una por compra'}; las más grandes son las de más sats.`;
 }
 /** Resumen de un año del tronco, para leerlo al tocar su anillo. */
 export function textoAnio(y) {

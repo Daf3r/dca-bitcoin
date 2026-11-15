@@ -12,7 +12,7 @@ export const CAMBIOS = [
       'En «Tu historia» puedes ver tu camino de tres maneras nuevas, además de la línea de tiempo.',
       'El tronco: un anillo por año, más ancho cuanto más sumaste; las compras extra son nudos y las ventas, grietas ya cerradas.',
       'La constelación: una estrella por compra, más brillante cuanto más grande, con las de cada año unidas en una figura.',
-      'El mojón: una piedra por compra, apiladas de la más vieja a la más nueva. Toca cualquier pieza para ver de qué compra es.',
+      'La torre de piedras: una piedra por compra, apiladas de la más vieja a la más nueva. Toca cualquier piedra para ver de qué compra es.',
     ],
   },
   {
