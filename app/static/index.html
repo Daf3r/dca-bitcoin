@@ -80,6 +80,7 @@
 <link rel="modulepreload" href="/sistema.js">
 <link rel="modulepreload" href="/historia.js">
 <link rel="modulepreload" href="/arte-historia.js">
+<link rel="modulepreload" href="/arte-sellos.js">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
@@ -464,13 +465,19 @@
         <button type="button" data-vh="tronco" aria-pressed="false">Tronco</button>
         <button type="button" data-vh="constelacion" aria-pressed="false">Constelación</button>
         <button type="button" data-vh="torre" aria-pressed="false">Piedras</button>
+        <button type="button" data-vh="manta" aria-pressed="false">Manta</button>
       </div>
       <div id="dh-v-linea">
         <h3>Medallas</h3>
         <ul class="medallas" id="dh-medallas"></ul>
+        <div id="dh-sellos-caja" hidden>
+          <h3>Sellos de lacre</h3>
+          <ul class="sellos" id="dh-sellos"></ul>
+        </div>
         <h3>Cómo llegaste hasta aquí</h3>
         <ol class="historia" id="dh-linea"></ol>
       </div>
+      <button type="button" class="enlace dh-cert-btn" id="dh-cert">Ver mi certificado de altitud</button>
       <figure class="dh-objeto" id="dh-objeto" hidden>
         <div class="dh-lienzo" id="dh-lienzo" role="img" aria-labelledby="dh-desc" tabindex="0"></div>
         <figcaption id="dh-desc"></figcaption>
@@ -603,6 +610,13 @@
   <div class="d-bot"><button type="button" id="cam-ok" autofocus>Entendido</button></div>
 </dialog>
 
+<dialog id="d-cert" class="d-cert" aria-labelledby="cert-t">
+  <h2 id="cert-t">Certificado de altitud</h2>
+  <div class="cert-lienzo" id="cert-lienzo" role="img" aria-labelledby="cert-desc"></div>
+  <p class="cert-desc" id="cert-desc"></p>
+  <div class="d-bot"><button type="button" id="cert-ok" autofocus>Cerrar</button></div>
+</dialog>
+
 <dialog id="d-grafico" class="d-grafico" aria-labelledby="dg-t">
   <div class="dg-cab">
     <h2 id="dg-t">El precio y tus compras</h2>
@@ -640,7 +654,7 @@
   </form>
 </dialog>
 
-<div class="hito-cel" id="hito-cel" hidden aria-live="polite"><p><small id="hc-k">Nueva etapa</small><b id="hc-txt"></b></p></div>
+<div class="hito-cel" id="hito-cel" hidden aria-live="polite"><p><span class="hc-lacre" id="hc-lacre" aria-hidden="true"></span><small id="hc-k">Nueva etapa</small><b id="hc-txt"></b></p></div>
 <div class="aviso" id="aviso" role="status" hidden><span id="aviso-txt"></span><button type="button" class="enlace" id="aviso-btn" hidden></button></div>
 </body>
 </html>

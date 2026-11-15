@@ -2748,10 +2748,27 @@ try {
       await p.click('#dh-vistas [data-vh="torre"]'); await p.waitForTimeout(300);
       const piedras = await p.locator('#dh-lienzo .pieza[data-i]').count();
       ok(piedras >= 1 && piedras <= 40, `torre: no pasa de 40 piedras (${piedras})`);
+      // Manta de añil (13B)
+      await p.click('#dh-vistas [data-vh="manta"]'); await p.waitForTimeout(300);
+      const celdas = await p.locator('#dh-lienzo .pieza[data-i]').count();
+      const semanasReales = await p.evaluate(() => { const hoy = new Date(); return hoy.getFullYear(); });
+      ok(celdas >= 52 * 5 && /filas, una por año, de \d{4} a \d{4}/.test(await p.textContent('#dh-desc')), `manta: una celda por semana tejida (${celdas}) y su descripción`);
+      await p.focus('#dh-lienzo'); await p.keyboard.press('End'); await p.waitForTimeout(150);
+      ok(/^Semana del .* al .*: /.test(await p.textContent('#dh-detalle')), `manta: las flechas leen una semana (${(await p.textContent('#dh-detalle')).slice(0, 60)})`);
+      ok(semanasReales > 2000 && await p.locator('#dh-lienzo .celda.tono-0').count() >= 0, 'manta: hay celdas de algodón crudo y de añil');
       // Todo cabe en la pantalla y se recuerda la vista
       const sw = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, w: Math.round(document.getElementById('dh-lienzo').getBoundingClientRect().width) }));
       ok(sw.sw <= sw.cw && sw.w > 200, `historia: sin scroll horizontal y con el dibujo a la vista (${sw.w} px)`);
-      ok(await p.evaluate(() => localStorage.getItem('libro.historia.vista')) === 'torre', 'historia: se recuerda la vista elegida');
+      // Certificado de altitud y sellos de lacre (13B)
+      await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(200);
+      const nSellos = await p.locator('#dh-sellos .sello').count();
+      ok(nSellos >= 3 && await p.locator('#dh-sellos .sello svg').count() === nSellos, `sellos: uno por etapa cruzada (${nSellos}) y con su dibujo`);
+      await p.click('#dh-cert'); await p.waitForTimeout(300);
+      ok(await p.locator('#d-cert[open]').count() === 1 && await p.locator('#cert-lienzo svg').count() === 1 && /^Certificado de altitud de Daf3r\. A .* el libro tiene /.test(await p.textContent('#cert-desc')), 'certificado: se abre con su grabado y su descripción (con el nombre del dueño)');
+      ok(!(await p.locator('#cert-lienzo').innerHTML()).includes('<script'), 'certificado: sin código dentro');
+      await p.click('#cert-ok'); await p.waitForTimeout(200);
+      ok(await p.locator('#d-cert[open]').count() === 0, 'certificado: se cierra');
+      ok(await p.evaluate(() => localStorage.getItem('libro.historia.vista')) === 'linea', 'historia: se recuerda la vista elegida (la última)');
       await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(200);
       ok(await p.locator('#dh-v-linea').isVisible(), 'historia: se puede volver a la línea');
       eq(consola, [], `consola limpia (historia en objetos): ${consola.join(' | ')}`);
@@ -2761,8 +2778,20 @@ try {
       await abrirHistoria(l.p);
       await l.p.click('#dh-vistas [data-vh="tronco"]'); await l.p.waitForTimeout(300);
       ok(await l.p.locator('#dh-lienzo .pieza[data-anio]').count() >= 1, 'historia: una lectora también ve el tronco');
+      await l.p.click('#dh-cert'); await l.p.waitForTimeout(300);
+      ok(/^Certificado de altitud del Libro DCA\./.test(await l.p.textContent('#cert-desc')), 'certificado: una lectora lo ve sin el nombre del dueño');
       await l.ctx.close();
     } finally { sLargo.parar(); }
+    // El lacre cae en la tarjeta al cruzar una etapa (vista previa)
+    const sLac = await servidor('anio');
+    try {
+      const r = await ent(navegador, sLac, ADMIN, { hora: 22 }, sinAviso);
+      await r.p.click('#cuenta-btn');
+      await r.p.click('[data-previa="etapa"]');
+      await r.p.waitForFunction(() => !document.getElementById('hito-cel').hidden && document.querySelector('#hc-lacre svg'), null, { timeout: 12000 });
+      ok(await r.p.locator('#hc-lacre svg.lacre.grande').count() === 1, 'lacre: un sello cae en la tarjeta de la etapa');
+      await r.ctx.close();
+    } finally { sLac.parar(); }
     const sVac = await servidor('vacio');
     try {
       const { ctx, p } = await ent(navegador, sVac, ADMIN, {}, sinAviso);

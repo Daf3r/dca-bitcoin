@@ -1075,3 +1075,134 @@ export function textoAnio(y) {
   partes.push(`${y.completo ? 'cerraste' : 'tienes'} ${entero(y.saldoFin)} sats`);
   return partes.join(' · ');
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 13B · la manta de añil, el certificado de altitud y los sellos de lacre: solo datos (el dibujo vive en `arte-historia.js`
+// y `arte-sellos.js`). Cuentan lo que ya pasó; una semana sin compras es parte del tejido, no una falta.
+// ---------------------------------------------------------------------------------------------
+
+const diaDeSemana = (idx, k) => new Date(SEMANA0 + (idx * 7 + k) * 864e5).toISOString().slice(0, 10);
+
+/**
+ * La manta: una fila por año y una celda por semana (lunes a domingo; cada semana va en el año de su jueves, como las semanas ISO).
+ * Cada celda trae sus `sats` (compras de esa semana; las ventas no se cuentan), cuántas compras fueron (`n`), si alguna fue extra
+ * y su `tono` de añil (0 = semana sin compras, algodón crudo; 1 a 4 = de más claro a más oscuro, por cuartiles de las semanas con
+ * compra). `antes` marca las celdas anteriores a tu primera semana y `futura` las que aún no llegan (los flecos del año en curso).
+ * `celdas` es la lista plana de las semanas reales (de la primera a hoy), en orden, para recorrerlas con el teclado.
+ */
+export function semanasManta(items, hoy = hoyISO()) {
+  const compras = items.filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return { anios: [], celdas: [], semanasConCompra: 0 };
+  const primera = semana(compras.reduce((m, c) => (c.fecha < m ? c.fecha : m), compras[0].fecha));
+  const actual = semana(hoy);
+  const porSemana = new Map();
+  for (const c of compras) {
+    const s = semana(c.fecha);
+    const o = porSemana.get(s) ?? { sats: 0, n: 0, extra: false };
+    o.sats += c.sats; o.n++; if (c.extra) o.extra = true;
+    porSemana.set(s, o);
+  }
+  const orden = [...porSemana.values()].map((o) => o.sats).sort((a, b) => a - b);
+  // El tono sale de la posición de la semana entre todas las que tuvieron compra (las iguales comparten el punto medio de su grupo):
+  // de 1 (añil claro) a 4 (añil oscuro); con una sola semana, un tono medio.
+  const tonoDe = (sats) => {
+    if (sats <= 0) return 0;
+    if (orden.length === 1) return 3;
+    const pos = (orden.indexOf(sats) + orden.lastIndexOf(sats)) / 2;
+    return 1 + Math.min(3, Math.floor((pos * 4) / (orden.length - 1)));
+  };
+  const anioDe = (idx) => Number(diaDeSemana(idx, 3).slice(0, 4)); // el año del jueves
+  const colDe = (idx) => { const j = diaDeSemana(idx, 3); return Math.floor((Date.UTC(Number(j.slice(0, 4)), Number(j.slice(5, 7)) - 1, Number(j.slice(8, 10))) - Date.UTC(Number(j.slice(0, 4)), 0, 1)) / (7 * 864e5)); };
+  const a0 = anioDe(primera), a1 = anioDe(actual);
+  const anios = [];
+  const celdas = [];
+  for (let a = a0; a <= a1; a++) {
+    // El número de columnas del año: las semanas cuyo jueves cae en él (52 o 53).
+    let desde = Number.NaN, hasta = Number.NaN;
+    for (let idx = semana(`${a}-01-01`) - 1; idx <= semana(`${a}-12-31`) + 1; idx++) if (anioDe(idx) === a) { if (Number.isNaN(desde)) desde = idx; hasta = idx; }
+    const semanas = [];
+    let satsAnio = 0, nAnio = 0, conCompra = 0;
+    for (let idx = desde; idx <= hasta; idx++) {
+      const o = porSemana.get(idx);
+      const celda = { idx, col: colDe(idx), desde: diaDeSemana(idx, 0), hasta: diaDeSemana(idx, 6), sats: o?.sats ?? 0, n: o?.n ?? 0, extra: Boolean(o?.extra), tono: tonoDe(o?.sats ?? 0), antes: idx < primera, futura: idx > actual, anio: a };
+      semanas.push(celda);
+      if (!celda.antes && !celda.futura) { celdas.push(celda); satsAnio += celda.sats; nAnio += celda.n; if (celda.n) conCompra++; }
+    }
+    anios.push({ anio: a, semanas, sats: satsAnio, nCompras: nAnio, semanasConCompra: conCompra, enCurso: a === a1 });
+  }
+  return { anios, celdas, semanasConCompra: celdas.filter((c) => c.n).length };
+}
+
+/** Lo que dice la manta en total, para los lectores de pantalla. */
+export function textoManta(m) {
+  if (!m.celdas.length) return 'Tu manta empieza con tu primera compra.';
+  const a = m.anios;
+  return `Tu manta tiene ${a.length} ${a.length === 1 ? 'fila' : 'filas'}, una por año, de ${a[0].anio} a ${a.at(-1).anio}, y ${m.celdas.length} semanas tejidas, `
+    + `${m.semanasConCompra} con compra. Cuanto más oscuro el añil, más sats esa semana; el algodón crudo es una semana sin compras.`;
+}
+/** Una semana de la manta, para leerla al tocarla. */
+export function textoSemanaManta(c) {
+  const rango = `${fechaLarga(c.desde)} al ${fechaLarga(c.hasta)}`;
+  if (!c.n) return `Semana del ${rango}: sin compras.`;
+  return `Semana del ${rango}: ${c.n} ${c.n === 1 ? 'compra' : 'compras'}, +${entero(c.sats)} sats${c.extra ? ', con una compra extra' : ''}.`;
+}
+
+const UNI = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve'];
+const VEINTI = ['veinte', 'veintiuno', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve'];
+const DECE = ['', '', '', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+const CENT = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+const apocope = (s) => s.replace(/veintiuno$/, 'veintiún').replace(/uno$/, 'un');
+function decenas(n) {
+  if (n < 20) return UNI[n];
+  if (n < 30) return VEINTI[n - 20];
+  return DECE[Math.floor(n / 10)] + (n % 10 ? ` y ${UNI[n % 10]}` : '');
+}
+function centenas(n) {
+  if (n === 100) return 'cien';
+  const c = Math.floor(n / 100), r = n % 100;
+  return [CENT[c], r ? decenas(r) : ''].filter(Boolean).join(' ');
+}
+/**
+ * Un número entero (0 a 999 billones) escrito en letras, en español: «mil doscientos treinta y cuatro». El «uno» pierde la o antes de
+ * una palabra («un millón», «veintiún mil», «un sat»), así que sirve tal cual delante de «sats».
+ */
+export function enLetras(n) {
+  n = Math.floor(n);
+  if (!(n >= 0) || n >= 1e15) return String(n);
+  if (n === 0) return 'cero';
+  const r = (x) => {
+    if (x < 1000) return apocope(centenas(x));
+    if (x < 1e6) { const m = Math.floor(x / 1e3), resto = x % 1e3; return `${m === 1 ? 'mil' : `${r(m)} mil`}${resto ? ` ${r(resto)}` : ''}`; }
+    if (x < 1e12) { const m = Math.floor(x / 1e6), resto = x % 1e6; return `${m === 1 ? 'un millón' : `${r(m)} millones`}${resto ? ` ${r(resto)}` : ''}`; }
+    const m = Math.floor(x / 1e12), resto = x % 1e12;
+    return `${m === 1 ? 'un billón' : `${r(m)} billones`}${resto ? ` ${r(resto)}` : ''}`;
+  };
+  return r(n);
+}
+
+/**
+ * Los datos del certificado de altitud: tu saldo en cifras y en letras, la fecha, cuántas compras y cuánta racha. Para el dibujo:
+ * `lobulos` (tus compras, de 3 a 48), `altitud` (0 a 1, dónde estás entre la base y la cima de tu montaña) y `trenzas` (tu racha,
+ * de 1 a 12). `nombre` es de quien mira (null para una persona que no es dueña del libro: sale «Libro DCA»). Todo sale igual cada vez.
+ */
+export function datosCertificado(R, nombre, hoy = hoyISO()) {
+  const sats = Math.max(0, R.sats ?? 0);
+  const letras = enLetras(sats);
+  const esc = escalaMontana(sats);
+  return {
+    nombre: nombre || null, hoy, fecha: fechaLarga(hoy), sats, btc: btc(sats),
+    letras: `${letras.charAt(0).toUpperCase()}${letras.slice(1)} ${sats === 1 ? 'sat' : 'sats'}`,
+    nCompras: R.nCompras ?? 0, racha: R.racha ?? 0, primera: R.items?.find((c) => c.tipo !== 'venta')?.fecha ?? null,
+    lobulos: Math.min(48, Math.max(3, R.nCompras ?? 0)), altitud: altitud(sats, esc), trenzas: Math.min(12, Math.max(1, R.racha ?? 1)),
+  };
+}
+export const textoCertificado = (d) => `Certificado de altitud${d.nombre ? ` de ${d.nombre}` : ' del Libro DCA'}. A ${d.fecha} el libro tiene ${d.letras}`
+  + `${d.nCompras ? `, de ${d.nCompras} ${d.nCompras === 1 ? 'compra' : 'compras'}` : ''}.`;
+
+/**
+ * Los sellos de lacre: uno por cada etapa que ya cruzaste (con su fecha); nunca los que faltan. `nombre` es la cifra del sello.
+ */
+export function sellos(R) {
+  return (R.camino ?? []).filter((h) => h.fecha).map((h) => ({ m: h.m, nombre: nombreHito(h.m), grande: Boolean(h.mayor), fecha: h.fecha }));
+}
+export const textoSello = (s) => `Sello de ${s.m >= 1e8 ? s.nombre : `${s.nombre} sats`}, cruzado el ${fechaLarga(s.fecha)}`;
