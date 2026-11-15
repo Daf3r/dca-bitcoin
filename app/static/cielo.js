@@ -75,24 +75,6 @@
     const md = f.slice(5);
     return (md === '12-31' && h >= 23 + 50 / 60) || (md === '01-01' && h < 0.5);
   }
-  /** Las bolas de fuego de Nejapa (idea 26): la noche del 31 de agosto (de las 19:00 a las 5:00 del 1 de septiembre). */
-  function nejapa(f, h) {
-    const md = f.slice(5);
-    return (md === '08-31' && h >= 19) || (md === '09-01' && h < 5);
-  }
-  let nejapaVista = '';
-  /** Se enseñan una sola vez por año y dispositivo (`libro.nejapa`); a los 12 s se quita la marca (la animación dura ~8 s). */
-  function marcarNejapa(f, h) {
-    if (!nejapa(f, h) || nejapaVista === f.slice(0, 4)) return;
-    let vista = '';
-    try { vista = localStorage.getItem('libro.nejapa') ?? ''; } catch { /* sin almacenamiento */ }
-    const anio = f.slice(0, 4);
-    if (vista === anio) return;
-    nejapaVista = anio;
-    try { localStorage.setItem('libro.nejapa', anio); } catch { /* vale esta visita */ }
-    raiz.setAttribute('data-nejapa', '');
-    setTimeout(() => raiz.removeAttribute('data-nejapa'), 12_000);
-  }
   /** La franja a la que pertenece la hora. */
   function franja(h) {
     if (h >= 19 || h < 5) return 'noche';
@@ -172,7 +154,6 @@
     if (fi) raiz.dataset.fiesta = fi; else delete raiz.dataset.fiesta;
     raiz.dataset.epoca = epoca(d);
     raiz.toggleAttribute('data-cohetes', cohetes(d, h));
-    marcarNejapa(d, h);
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
     raiz.dataset.tinta = ti;
@@ -191,5 +172,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, nejapa, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

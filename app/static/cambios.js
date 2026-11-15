@@ -13,7 +13,6 @@ export const CAMBIOS = [
       'La vista «Sats» del gráfico ahora es un perfil de altitud, con las etapas rotuladas y un farol en cada campamento que cruzaste.',
       'Tras una venta o un gasto, una monedita se hunde en el lago y queda brillando: se gastó, pero sigue siendo parte de tu historia.',
       'De día, la sombra de la cumbre marca la hora en el suelo. Y el aviso de cada etapa llega por telegrama.',
-      'Hay un secreto para la noche del 31 de agosto. Tienes que estar mirando.',
     ],
   },
   {

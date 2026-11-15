@@ -3265,9 +3265,9 @@ try {
     una.parar();
   }
 
-  // ---------------------------------------------------------------- campamento 16: lago, Nejapa, reloj de sol, «Tú» fantasma y perfil de altitud
+  // ---------------------------------------------------------------- campamento 16: lago, reloj de sol, «Tú» fantasma y perfil de altitud
   {
-    const con = (dia, hora) => [([d, h]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); if (location.pathname !== '/') localStorage.removeItem('libro.nejapa'); else if (!sessionStorage.getItem('t16')) { localStorage.removeItem('libro.nejapa'); sessionStorage.setItem('t16', '1'); } } catch { /* sin almacenamiento */ } }, [dia, hora]];
+    const con = (dia, hora) => [([d, h]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, [dia, hora]];
     const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
     const sMil = await servidor('mil');
     try {
@@ -3288,17 +3288,6 @@ try {
       // ---- El lago guarda lo vendido: una monedita por venta (hasta 5)
       eq(await n22.p.locator('.lago-moneda').count(), 5, '16A lago: mil tiene ventas de sobra: cinco monedas');
       await n22.ctx.close();
-      // ---- Bolas de fuego de Nejapa: la noche del 31 de agosto, una sola vez
-      const nj = await entrar(navegador, sMil, ADMIN, { hora: 22 }, con('2026-08-31', 22)); await cerrar(nj.p);
-      ok(await nj.p.evaluate(() => document.documentElement.hasAttribute('data-nejapa') && getComputedStyle(document.querySelector('.nejapa')).display !== 'none'), '16A Nejapa: el 31 de agosto de noche se ven las bolas de fuego');
-      ok(await nj.p.locator('.nejapa .nejapa-bola').count() === 2, '16A Nejapa: son dos');
-      await nj.p.evaluate(() => document.documentElement.removeAttribute('data-nejapa'));
-      await nj.p.reload({ waitUntil: 'networkidle' }); await nj.p.waitForTimeout(1500);
-      ok(await nj.p.evaluate(() => !document.documentElement.hasAttribute('data-nejapa')), '16A Nejapa: no vuelven en la misma noche (una vez por año y dispositivo)');
-      await nj.ctx.close();
-      const otro = await entrar(navegador, sMil, ADMIN, { hora: 22 }, con('2026-08-20', 22)); await cerrar(otro.p);
-      ok(await otro.p.evaluate(() => !document.documentElement.hasAttribute('data-nejapa')), '16A Nejapa: otro día no salen');
-      await otro.ctx.close();
       // ---- «Tú» fantasma en la hoja
       const h = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(h.p);
       await h.p.keyboard.press('a'); await h.p.waitForTimeout(600);

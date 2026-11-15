@@ -1,7 +1,7 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
-import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, bolasDeFuego, relojDeSol, monedasDelLago } from './arte.js';
+import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 
 const f1 = (n) => n.toFixed(1);
 
@@ -290,7 +290,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const suelo = W < 1100 ? by - 4 : H * 0.93, altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
   s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
-  s += relojDeSol(c.sx, suelo, W) + bolasDeFuego(c.sy); // 16A
+  s += relojDeSol(c.sx, suelo, W); // 16A
   host.innerHTML = s + '</g></svg>';
   colocarReloj(host);
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));

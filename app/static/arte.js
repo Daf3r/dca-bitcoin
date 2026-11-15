@@ -575,15 +575,6 @@ export function sismografo({ puntos = [], ancho = 600, alto = 120 } = {}) {
 
 // ---------------------------------------------------------------- campamento 16A
 /**
- * Las bolas de fuego de Nejapa (idea 26): la noche del 31 de agosto cruzan el cielo dos bolas con su estela. Se dibujan siempre y
- * el CSS las muestra solo con `html[data-nejapa]` (que `cielo.js` pone una vez por año y dispositivo). Ambiente.
- */
-export function bolasDeFuego(yH) {
-  const bola = (y, n) => `<g class="nejapa-bola nb${n}" transform="translate(-40 ${f1(y)})"><g class="nejapa-mueve"><path class="nejapa-cola" d="M-70 -22L-22 -6"/><path class="nejapa-cola2" d="M-46 -14L-10 -3"/><circle class="nejapa-cabeza" r="3.2"/></g></g>`;
-  return `<g class="efecto-ambiente nejapa" aria-hidden="true">${bola(Math.max(40, yH * 0.5), 1)}${bola(Math.max(60, yH * 0.78), 2)}</g>`;
-}
-
-/**
  * El reloj de sol (idea 35): la sombra de la cumbre cae sobre el suelo según la hora real de El Salvador y once piedritas marcan
  * de las 7 a las 17. La sombra (`.reloj-sombra`) la coloca `montana.js: colocarReloj` (cada 5 minutos). Ambiente.
  */

@@ -2924,15 +2924,6 @@ html[data-tv]:not([data-efectos="ninguno"]) .tv-sismo.arranca .sm-tira { animati
 .pie-ultima { background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
 
 /* ---------------------------------------------------------------- Campamento 16A */
-/* Bolas de fuego de Nejapa (31 de agosto, una vez por año): dos bolas con estela cruzan el cielo. */
-.nejapa { display: none; pointer-events: none; }
-html[data-nejapa] .nejapa { display: inline; }
-.nejapa-cabeza { fill: #ffd9a0; }
-.nejapa-cola { stroke: #ff9f5a; stroke-width: 2.4; stroke-linecap: round; opacity: 0.55; fill: none; }
-.nejapa-cola2 { stroke: #fff0cf; stroke-width: 1.2; stroke-linecap: round; opacity: 0.8; fill: none; }
-@keyframes nejapa { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translate(calc(var(--escena-w, 400px) + 160px), 70px); opacity: 0; } }
-.nejapa-mueve { opacity: 0; animation: nejapa 6.5s ease-in 1 both; }
-.nb2 .nejapa-mueve { animation-delay: 1.3s; animation-duration: 7.5s; }
 /* Reloj de sol (35): la sombra de la cumbre marca la hora en el suelo; solo de día. */
 .reloj { display: none; pointer-events: none; }
 html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cielo="atardecer"] .reloj { display: inline; }
