@@ -1081,9 +1081,9 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 
 /* ------------------------------------------------------------ ventas y gastos */
 .g-ventas { fill: var(--fondo); stroke: var(--txt); stroke-width: 1.8; }
-.h-tipo { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; padding: 4px; border-radius: 14px; background: var(--s2); }
-.h-tipo button { min-height: var(--toque); padding: 0 4px; border: 0; border-radius: 10px; background: none; font-size: 0.875rem; font-weight: 650; cursor: pointer; touch-action: manipulation; }
-.h-tipo button[aria-pressed="true"] { background: var(--s1); box-shadow: inset 0 0 0 2px var(--naranja); }
+.h-tipo { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: var(--s2); }
+.h-tipo button { min-height: var(--toque); padding: 0 4px; border: 0; border-radius: 999px; background: none; color: var(--txt2); font-size: 0.875rem; font-weight: 650; cursor: pointer; touch-action: manipulation; transition: background-color 0.2s, color 0.2s; }
+.h-tipo button[aria-pressed="true"] { background: var(--txt); color: var(--fondo); box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.5); }
 .h-nota-campo { display: grid; gap: 4px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
 .h-nota-campo input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font: 400 1rem var(--sans); }
 .fila[data-tipo="venta"] .f-sats { color: var(--txt2); }
@@ -1174,7 +1174,7 @@ html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efe
 /* Mouse: respuesta sutil solo donde hay puntero fino (nunca en el toque). */
 @media (hover: hover) and (pointer: fine) {
   .anotar:hover { filter: brightness(1.07); box-shadow: 0 16px 34px -12px rgb(0 0 0 / 0.65); }
-  .cuenta-btn:hover, .rangos button:hover, .leyenda button:hover, .g-op:hover, .h-tipo button:hover, .d-bot button:hover, .cerrar:hover { background-color: color-mix(in srgb, var(--naranja) 12%, transparent); }
+  .cuenta-btn:hover, .rangos button:not([aria-pressed="true"]):hover, .leyenda button:hover, .g-op:hover, .h-tipo button:not([aria-pressed="true"]):hover, .d-bot button:hover, .cerrar:hover { background-color: color-mix(in srgb, var(--naranja) 12%, transparent); }
   .saldo-v[role="button"]:hover em { opacity: 1; }
   .fila { transition: background-color 0.15s, transform 0.15s; }
   .fila:hover { transform: translateX(2px); }
@@ -1796,12 +1796,33 @@ html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infi
 /* Campamento 13 · «Tu historia en objetos»: el selector de vistas y el lienzo del tronco, la constelación y el torre de piedras (el dibujo vive en arte-historia.js). */
 /* Siete vistas: «Línea» (la de texto) sola arriba y los seis dibujos en rejilla, de dos en dos en el teléfono y de tres en tres desde
    700 px; con letra muy grande bajo 420 px, uno por fila. Cada hijo lleva `min-width: 0` (si no, ensancha la página a 320 px). */
-.dh-vistas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0 0 14px; }
+.dh-vistas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0 0 18px; padding: 6px; border-radius: 22px; background: var(--s2); }
 .dh-vistas button:first-child { grid-column: 1 / -1; }
-@media (min-width: 700px) { .dh-vistas { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 419px) { html[data-letra="muy-grande"] .dh-vistas { grid-template-columns: minmax(0, 1fr); } }
-.dh-vistas button { min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
-.dh-vistas button[aria-pressed="true"] { background: var(--naranja); border-color: var(--naranja); color: #1d1206; }
+@media (max-width: 419px) { html[data-letra="muy-grande"] .dh-vistas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* (Rediseño Fable) Cada vista es una ficha con su dibujito (CSS puro, `currentColor`) y su nombre; la elegida, como en todos los
+   selectores de la app, es una píldora de tinta (no naranja: el naranja es para «Anotar» y para lo tuyo). */
+.dh-vistas button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-width: 0; min-height: calc(var(--toque, 48px) + 14px); padding: 8px 4px;
+  border: 0; border-radius: 16px; background: none; color: var(--txt2); font: 650 0.8125rem/1.15 var(--sans, inherit); cursor: pointer; touch-action: manipulation;
+}
+.dh-vistas button:first-child { flex-direction: row; gap: 10px; min-height: var(--toque, 48px); }
+.dh-vistas button[aria-pressed="true"] { background: var(--txt); color: var(--fondo); box-shadow: 0 6px 14px -8px rgb(0 0 0 / 0.5); }
+@media (hover: hover) and (pointer: fine) { .dh-vistas button:not([aria-pressed="true"]):hover { background: color-mix(in srgb, var(--naranja) 12%, transparent); color: var(--txt); } }
+.dh-vistas button::before { content: ""; flex: none; width: 22px; height: 22px; }
+/* línea: un hilo con tres cuentas */
+.dh-vistas [data-vh="linea"]::before { background: radial-gradient(circle at 4px 4px, currentColor 0 3px, transparent 3.6px), radial-gradient(circle at 4px 11px, currentColor 0 3px, transparent 3.6px), radial-gradient(circle at 4px 18px, currentColor 0 3px, transparent 3.6px), linear-gradient(currentColor, currentColor) 10px 3px / 12px 2.5px no-repeat, linear-gradient(currentColor, currentColor) 10px 10px / 9px 2.5px no-repeat, linear-gradient(currentColor, currentColor) 10px 17px / 11px 2.5px no-repeat; }
+/* tronco: anillos */
+.dh-vistas [data-vh="tronco"]::before { border-radius: 50%; background: radial-gradient(circle, currentColor 0 1.6px, transparent 2.2px 4.4px, currentColor 4.9px 6.3px, transparent 6.8px 8.9px, currentColor 9.4px 11px, transparent 11.4px); }
+/* constelación: cinco estrellas de tamaños distintos */
+.dh-vistas [data-vh="constelacion"]::before { background: radial-gradient(circle at 4px 6px, currentColor 0 2.2px, transparent 2.8px), radial-gradient(circle at 12px 3px, currentColor 0 1.4px, transparent 2px), radial-gradient(circle at 18px 9px, currentColor 0 2.6px, transparent 3.2px), radial-gradient(circle at 9px 14px, currentColor 0 1.6px, transparent 2.2px), radial-gradient(circle at 15px 19px, currentColor 0 2px, transparent 2.6px), radial-gradient(circle at 3px 19px, currentColor 0 1.2px, transparent 1.8px); }
+/* piedras: tres en equilibrio */
+.dh-vistas [data-vh="torre"]::before { background: radial-gradient(ellipse 4.5px 3px at 11px 4px, currentColor 0 96%, transparent), radial-gradient(ellipse 7px 3.6px at 11px 11px, currentColor 0 96%, transparent), radial-gradient(ellipse 10.5px 4px at 11px 18px, currentColor 0 96%, transparent); }
+/* manta: trama */
+.dh-vistas [data-vh="manta"]::before { border-radius: 3px; background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 6px); -webkit-mask: repeating-linear-gradient(0deg, #000 0 4px, transparent 4px 6px); mask: repeating-linear-gradient(0deg, #000 0 4px, transparent 4px 6px); }
+/* estratos: capas de grosor distinto */
+.dh-vistas [data-vh="estratos"]::before { border-radius: 3px; background: linear-gradient(currentColor, currentColor) 0 1px / 100% 3px no-repeat, linear-gradient(currentColor, currentColor) 0 6.5px / 100% 6px no-repeat, linear-gradient(currentColor, currentColor) 0 15px / 100% 2px no-repeat, linear-gradient(currentColor, currentColor) 0 19px / 100% 3px no-repeat; }
+/* partitura: pauta y una nota */
+.dh-vistas [data-vh="partitura"]::before { background: radial-gradient(ellipse 3.6px 2.8px at 14px 15.5px, currentColor 0 96%, transparent), linear-gradient(currentColor, currentColor) 16.4px 3px / 1.6px 12.5px no-repeat, repeating-linear-gradient(0deg, transparent 0 3.5px, color-mix(in srgb, currentColor 60%, transparent) 3.5px 4.7px) 0 1px / 100% 20px no-repeat; }
 .dh-objeto { margin: 0; }
 .dh-lienzo { display: block; width: 100%; max-width: 26rem; margin: 0 auto; }
 .dh-lienzo svg { display: block; width: 100%; height: auto; }
@@ -2379,7 +2400,7 @@ html[data-pestanas] .indice { display: none; }
 }
 @media (min-width: 1100px) {
   .historia-pg .dh-vistas { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-  .historia-pg .dh-vistas button:first-child { grid-column: auto; }
+  .historia-pg .dh-vistas button:first-child { grid-column: auto; flex-direction: column; gap: 6px; min-height: calc(var(--toque, 48px) + 14px); }
   .historia-pg .dh-vistas button { font-size: 0.875rem; }
   /* Línea: medallas, sellos y pasaporte a la izquierda; «Cómo llegaste hasta aquí» a la derecha. */
   .historia-pg #dh-v-linea { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; column-gap: 48px; align-items: start; }
