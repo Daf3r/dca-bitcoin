@@ -273,3 +273,96 @@ export function selloSemana(s, { grande = false, nuevo = false } = {}) {
   if (nuevo) o += '<circle class="ss-golpe" cx="32" cy="32" r="29"/>';
   return `${o}</svg>`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 15A · cartas para el futuro: el sobre con su lacre
+// ---------------------------------------------------------------------------------------------
+// El sobre visto por detrás (las cuatro solapas, en tonos planos: la luz llega de arriba a la derecha, así que la solapa izquierda es la
+// más oscura) y en la punta de la solapa una gota de cera en el mismo lenguaje que `lacre()`: canto, huella hundida con su aro, figura en
+// relieve y brillo. Papel propio y cálido en los dos temas (clases `ca-…`); la cera usa la paleta del lacre (`--lc-…`, dorada desde
+// 1 BTC). Sin ids: nada de degradados ni recortes, así que pueden convivir muchos sobres en la página. El texto de la carta no existe aquí.
+
+/** El borde de una gota de cera de radio `r` en (cx, cy); `sem` le da su forma (siempre la misma para la misma carta). Devuelve t → [x, y]. */
+const gota = (cx, cy, r, sem) => {
+  const lenguas = [0.5 + fijo(sem, 1) * 0.9, 2.1 + fijo(sem, 2) * 0.9];
+  return (t) => {
+    let q = r * (1 + 0.05 * Math.sin(3 * t + fijo(sem, 3) * 6) + 0.035 * Math.sin(5 * t + fijo(sem, 4) * 6));
+    for (const [j, a] of lenguas.entries()) { let dt = Math.abs(t - a); dt = Math.min(dt, TAU - dt); q += r * (j ? 0.13 : 0.19) * Math.exp(-((dt / 0.2) ** 2)); }
+    return [cx + Math.cos(t) * q, cy + Math.sin(t) * q];
+  };
+};
+const arco = (borde, t0, t1, n) => Array.from({ length: n + 1 }, (_, k) => borde(t0 + ((t1 - t0) * k) / n));
+/** La figura en relieve del sello de la carta: una montañita si se abre con una etapa, una estrella de cuatro puntas si se abre en una fecha. */
+const figura = (cx, cy, r, etapa) => (etapa
+  ? montanita(cx, cy + r * 0.04, r * 0.82)
+  : `M${f1(cx)} ${f1(cy - r * 0.48)}Q${f1(cx + r * 0.08)} ${f1(cy - r * 0.08)} ${f1(cx + r * 0.48)} ${f1(cy)}Q${f1(cx + r * 0.08)} ${f1(cy + r * 0.08)} ${f1(cx)} ${f1(cy + r * 0.48)}`
+    + `Q${f1(cx - r * 0.08)} ${f1(cy + r * 0.08)} ${f1(cx - r * 0.48)} ${f1(cy)}Q${f1(cx - r * 0.08)} ${f1(cy - r * 0.08)} ${f1(cx)} ${f1(cy - r * 0.48)}Z`);
+/** El sello entero (sin romper). */
+const ceraEntera = (cx, cy, r, sem, etapa) => {
+  const borde = gota(cx, cy, r, sem);
+  const forma = suave(arco(borde, 0, TAU, 36).slice(0, 36));
+  return `<g class="ca-cera"><path class="lc-sombra" d="${forma}" transform="translate(0.9 1.5)"/><path class="ca-cera-c" d="${forma}"/>`
+    + `<path class="ca-cera-luz" d="${lin(arco(borde, -1.45, 0.25, 10))}"/>`
+    + `<circle class="ca-hondo" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.66)}"/>`
+    + `<circle class="ca-aro" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.74)}" pathLength="100"/>`
+    + `<path class="lc-rel-osc" d="${figura(cx, cy, r * 0.62, etapa)}" transform="translate(-0.5 0.6)"/><path class="lc-rel-luz" d="${figura(cx, cy, r * 0.62, etapa)}" transform="translate(0.4 -0.4)"/>`
+    + `<path class="lc-rel" d="${figura(cx, cy, r * 0.62, etapa)}"/>`
+    + `<ellipse class="ca-brillo" cx="${f1(cx + r * 0.42)}" cy="${f1(cy - r * 0.5)}" rx="${f1(r * 0.24)}" ry="${f1(r * 0.12)}" transform="rotate(-38 ${f1(cx + r * 0.42)} ${f1(cy - r * 0.5)})"/></g>`;
+};
+
+/** El sobre de una carta aún sellada (`c`: la carta; su id solo cambia la forma de la cera y su giro; la figura dice si espera una etapa o una fecha). */
+export function cartaSellada(c = {}) {
+  const sem = Number(c.id ?? 1) * 13 + 5;
+  const giro = (fijo(sem, 7) - 0.5) * 24;
+  const etapa = c.abre_sats != null && !c.abre_fecha;
+  return `<svg class="carta-ico sellada" viewBox="0 0 96 72" aria-hidden="true" focusable="false">`
+    + '<rect class="ca-sombra" x="6" y="11" width="88" height="57" rx="3.5"/>'
+    + '<rect class="ca-papel" x="4" y="8" width="88" height="57" rx="3.5"/>'
+    + '<path class="ca-solapa-i" d="M5 10L45 41L5 63Z"/><path class="ca-solapa-d" d="M91 10L51 41L91 63Z"/>'
+    + '<path class="ca-solapa-b" d="M6 64.5L48 36L90 64.5Z"/>'
+    // La solapa de arriba cierra el sobre y proyecta su sombra sobre las demás.
+    + '<path class="ca-pliegue" d="M5.5 9.5L48 48.5L90.5 9.5Z"/>'
+    + '<path class="ca-solapa-a" d="M5 9L48 45.5L91 9Z"/>'
+    + '<path class="ca-borde-solapa" d="M5 9L48 45.5L91 9"/>'
+    + '<path class="ca-filo" d="M7.5 8.4H88.5M50 43.8L90 10.2"/>'
+    + '<path class="ca-canto" d="M7.5 8h81a3.5 3.5 0 0 1 3.5 3.5v50a3.5 3.5 0 0 1 -3.5 3.5h-81a3.5 3.5 0 0 1 -3.5 -3.5v-50a3.5 3.5 0 0 1 3.5 -3.5Z"/>'
+    + `<g transform="rotate(${f1(giro)} 48 45)">${ceraEntera(48, 45, 11.5, sem, etapa)}</g></svg>`;
+}
+
+/** Media gota de cera rota: `lado` -1 (izquierda) o 1 (derecha); la grieta es la misma en las dos mitades. */
+const mitadCera = (cx, cy, r, sem, lado) => {
+  const borde = gota(cx, cy, r, sem);
+  const grieta = [borde(-Math.PI / 2), [cx + 1.4, cy - r * 0.5], [cx - 1.6, cy - r * 0.08], [cx + 1.2, cy + r * 0.38], [cx - 0.6, cy + r * 0.7], borde(Math.PI / 2)];
+  const cuerpo = lado < 0 ? [...grieta, ...arco(borde, Math.PI / 2, 1.5 * Math.PI, 14).slice(1, -1)] : [...grieta, ...arco(borde, Math.PI / 2, -Math.PI / 2, 14).slice(1, -1)];
+  const hondo = (t) => [cx + Math.cos(t) * r * 0.64, cy + Math.sin(t) * r * 0.64];
+  const aro = lado < 0 ? arco(hondo, 1.9, 4.2, 10) : arco(hondo, 1.25, -1.15, 10);
+  return `<path class="lc-sombra" d="${lin(cuerpo, true)}" transform="translate(0.8 1.3)"/><path class="ca-cera-c" d="${lin(cuerpo, true)}"/>`
+    // Lo que queda de la huella: medio aro hundido en cada mitad.
+    + `<path class="ca-aro-roto" d="${lin(aro)}"/>`
+    + `<path class="ca-cera-luz" d="${lin(lado > 0 ? arco(borde, -1.4, 0.2, 8) : arco(borde, -2.3, -1.7, 4))}"/>`
+    + `<path class="ca-rotura" d="${lin(grieta)}"/>`;
+};
+
+/** La carta abierta: la solapa levantada, la carta asomando y el lacre partido en dos. `abriendo` (solo la primera lectura) anima la rotura. */
+export function cartaAbierta({ abriendo = false } = {}) {
+  const sem = 31;
+  let lineas = '';
+  for (const [y, a, b] of [[25, 24, 72], [31, 24, 70], [37, 24, 72], [43, 24, 64], [49, 24, 71]]) lineas += `M${a} ${y}H${b}`;
+  return `<svg class="carta-ico abierta${abriendo ? ' abriendo' : ''}" viewBox="0 0 96 84" aria-hidden="true" focusable="false">`
+    + '<rect class="ca-sombra" x="6" y="37" width="88" height="45" rx="3.5"/>'
+    // El interior del sobre y la solapa abierta hacia arriba (se ve su cara de dentro).
+    + '<path class="ca-solapa-abierta" d="M4 35L48 7L92 35Z"/><path class="ca-filo" d="M48 7.6L89 34"/>'
+    + '<rect class="ca-dentro" x="4" y="34" width="88" height="46" rx="3.5"/>'
+    // La carta, que sube al abrirse.
+    + `<g class="ca-carta"><rect class="ca-hoja" x="15" y="14" width="66" height="58" rx="1.5"/><path class="ca-renglon" d="${lineas}"/>`
+    + '<path class="ca-firma" d="M54 55q3 -5 5 -1t5 -1q2 -3 4 0"/></g>'
+    // El bolsillo: las solapas de los lados y la de abajo, por delante de la carta.
+    + '<path class="ca-solapa-i" d="M4 35L46 59L4 80Z"/><path class="ca-solapa-d" d="M92 35L50 59L92 80Z"/>'
+    + '<path class="ca-solapa-b" d="M5 80L48 55L91 80Z"/>'
+    + '<path class="ca-canto" d="M4 37.5V76.5a3.5 3.5 0 0 0 3.5 3.5h81a3.5 3.5 0 0 0 3.5 -3.5V37.5M4 35L48 7L92 35"/>'
+    // El lacre roto: una mitad se quedó a cada lado (la de fuera fija la posición; la de dentro es la que se anima).
+    + `<g transform="translate(-4.6 1.4) rotate(-17 48 58)"><g class="ca-mitad ca-mitad-i">${mitadCera(48, 58, 10.5, sem, -1)}</g></g>`
+    + `<g transform="translate(4.8 2.4) rotate(14 48 58)"><g class="ca-mitad ca-mitad-d">${mitadCera(48, 58, 10.5, sem, 1)}</g></g>`
+    + (abriendo ? '<circle class="ca-destello" cx="48" cy="59" r="12"/><path class="ca-migas" d="M41 50h0.01M57 52h0.01M45 70h0.01M55 68h0.01"/>' : '')
+    + '</svg>';
+}

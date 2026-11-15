@@ -2397,3 +2397,528 @@ html[data-pestanas] .indice { display: none; }
 @media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; } }
 
 .historia-pg[hidden] { display: none; }
+
+/* ================================================================ Campamento 15A · el Diario, las cartas y los mensajes */
+/* La paleta de la cera es la del lacre (bermellón; dorada desde 1 BTC): la comparten el sobre, el sello pequeño del mensaje y el botón «Sellar». */
+:is(.carta-ico, .m-mensaje, #cap-sellar) { --lc-0: #f0774a; --lc-1: #c8361f; --lc-2: #7d1a10; --lc-luz: #ffc3a0; --lc-osc: #4a0d06; --lc-sombra: rgb(30 6 2 / 0.4); }
+html[data-acento="oro"] :is(.carta-ico, .m-mensaje, #cap-sellar) { --lc-0: #f7d36a; --lc-1: #cf9a22; --lc-2: #7a5208; --lc-luz: #fff2c4; --lc-osc: #3f2a02; }
+
+/* --- El Diario del Libro: una portada de periódico. Papel tintado en oscuro, papel de periódico crema en claro; la tinta es la del texto
+   (así hereda el alto contraste). Filetes finos, cabecera con carácter (Fraunces) y nada de letra diminuta: el cuerpo va a 1rem o más. */
+.diario {
+  --dia-papel: color-mix(in srgb, var(--s1) 89%, #c9a978); --dia-tinta: var(--txt); --dia-tinta2: var(--txt2);
+  --dia-filo: color-mix(in srgb, var(--txt) 42%, transparent);
+  position: relative; padding: 18px 18px 20px; border-radius: 8px; color: var(--dia-tinta);
+  background-color: var(--dia-papel);
+  /* Un doblez apenas visible a media altura: el periódico vino doblado. */
+  background-image: linear-gradient(180deg, transparent 49.7%, rgb(0 0 0 / 0.06) 50%, rgb(255 255 255 / 0.03) 50.3%, transparent 50.8%), var(--velo-tarjeta);
+  box-shadow: inset 0 1px 0 var(--filo), var(--sombra);
+}
+:root[data-tema="claro"] .diario { --dia-papel: #f7eedb; --dia-filo: color-mix(in srgb, var(--txt) 48%, transparent); }
+.diario[hidden] { display: none; }
+.dia-cab { text-align: center; }
+.dia-nombre { display: flex; align-items: center; justify-content: center; gap: 0.4em; font: 700 clamp(1.5rem, 7.2vw, 2.25rem)/1.05 var(--serif); letter-spacing: -0.015em; color: var(--dia-tinta); }
+/* Dos cumbres del logo flanquean el nombre: la marca del libro, sin imagen (un recorte CSS). */
+.dia-nombre::before, .dia-nombre::after { content: ""; flex: none; width: 0.78em; height: 0.46em; background: var(--naranja); clip-path: polygon(0 100%, 30% 40%, 44% 62%, 66% 0, 100% 100%); }
+.dia-nombre::after { transform: scaleX(-1); }
+.dia-edicion { margin: 10px 0 0; padding: 6px 0 5px; border-top: 3px double var(--dia-tinta); border-bottom: 1px solid var(--dia-tinta); color: var(--dia-tinta2); font-size: 0.9375rem; line-height: 1.35; text-wrap: balance; }
+.dia-titular { margin: 16px 0 8px; font: 700 clamp(1.625rem, 6.6vw, 2.25rem)/1.1 var(--serif); letter-spacing: -0.015em; color: var(--dia-tinta); text-wrap: balance; }
+.dia-sub { margin: 0; font: 400 1.0625rem/1.5 var(--serif); color: var(--dia-tinta2); text-wrap: pretty; }
+.dia-grabado { margin: 16px 0 0; padding: 6px; border: 1px solid var(--dia-filo); border-radius: 3px; background: color-mix(in srgb, var(--dia-papel) 70%, var(--fondo)); }
+:root[data-tema="claro"] .dia-grabado { background: #fbf5e8; }
+.dia-grabado svg { display: block; width: 100%; height: auto; }
+.dia-cols { display: grid; margin-top: 18px; border-top: 2px solid var(--dia-tinta); }
+.dia-bloque { min-width: 0; padding: 12px 0 4px; }
+.dia-bloque + .dia-bloque { border-top: 1px solid var(--dia-filo); }
+.dia-bloque h3 { margin: 0 0 6px; font: 700 0.9375rem/1.3 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--naranja-txt); }
+.dia-bloque p { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--dia-tinta); }
+/* Clasificados: avisos uno tras otro, separados por un filete punteado dentro de un recuadro fino (como la página de anuncios). */
+.dia-clasif { margin: 0; padding: 2px 12px; border: 1px solid var(--dia-filo); border-radius: 2px; list-style: none; }
+.dia-clasif li { padding: 9px 0; font-size: 1rem; line-height: 1.45; text-wrap: pretty; }
+.dia-clasif li + li { border-top: 1px dotted var(--dia-filo); }
+/* Tablet y escritorio: titular y bajada a la izquierda, el grabado a la derecha; debajo, columnas con su filete vertical. */
+@media (min-width: 700px) {
+  .diario { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); column-gap: 24px; align-items: start; padding: 22px 24px 24px; }
+  .dia-cab, .dia-cols { grid-column: 1 / -1; }
+  .dia-titular { grid-column: 1; margin-top: 18px; }
+  .dia-sub { grid-column: 1; }
+  .dia-grabado { grid-column: 2; grid-row: 2 / span 2; margin-top: 18px; }
+}
+/* Las columnas de abajo se reparten según el ancho del propio periódico (en escritorio va en la columna principal, más estrecha). */
+.diario { container-type: inline-size; }
+@container (min-width: 30rem) {
+  .dia-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto 1fr; column-gap: 20px; }
+  .dia-bloque:nth-child(2) { grid-column: 2; grid-row: 1 / span 2; position: relative; }
+  .dia-bloque:not(:nth-child(2)) { grid-column: 1; }
+  .dia-bloque + .dia-bloque:nth-child(2), .dia-bloque[hidden] + .dia-bloque ~ .dia-bloque { border-top: 0; }
+  .dia-bloque:nth-child(2)::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 6px; border-left: 1px solid var(--dia-filo); }
+}
+@container (min-width: 44rem) {
+  .dia-cols { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .dia-bloque:nth-child(n) { grid-column: auto; grid-row: auto; position: relative; }
+  .dia-bloque + .dia-bloque { border-top: 0; }
+  .dia-bloque:nth-child(2)::before { content: none; }
+  .dia-bloque:not([hidden]) ~ .dia-bloque::before { content: ""; position: absolute; left: -10px; top: 14px; bottom: 6px; border-left: 1px solid var(--dia-filo); }
+}
+/* Con letra muy grande en tablet, titular y grabado van uno bajo otro (lado a lado no caben con aire). */
+@media (min-width: 700px) and (max-width: 1099px) {
+  html[data-letra="muy-grande"] .diario { display: block; }
+}
+
+/* El grabado (arte.js: miniMontana): tinta sobre papel; la cara en sombra rayada, la que mira al sol en papel con un lavado cálido. */
+.dm-tr { stroke: var(--dia-tinta); stroke-width: 0.75; }
+.dm-tr-fondo { fill: transparent; }
+/* En oscuro el grabado es tinta clara sobre papel oscuro: la cara en sombra lleva un fondo más hondo bajo la trama y la que mira al sol se
+   aclara, para que la luz siga viniendo de arriba a la derecha. */
+:root:not([data-tema="claro"]) .dm-tr-fondo { fill: color-mix(in srgb, var(--dia-papel) 55%, var(--fondo)); }
+:root:not([data-tema="claro"]) .dm-monte { fill: color-mix(in srgb, var(--dia-papel) 80%, var(--txt)); }
+:root:not([data-tema="claro"]) .dm-sombra { opacity: 1; }
+:root:not([data-tema="claro"]) .dm-tr { stroke-width: 0.6; stroke-opacity: 0.75; }
+.dm-cielo { fill: none; stroke: var(--dia-tinta); stroke-width: 0.55; opacity: 0.26; }
+.dm-sol { fill: color-mix(in srgb, var(--naranja) 55%, var(--dia-papel)); stroke: var(--dia-tinta); stroke-width: 0.9; }
+.dm-rayos { fill: none; stroke: var(--dia-tinta); stroke-width: 0.9; stroke-linecap: round; opacity: 0.7; }
+.dm-sierra { fill: url(#dm-trama); stroke: var(--dia-tinta); stroke-width: 0.7; stroke-linejoin: round; opacity: 0.34; }
+.dm-monte { fill: var(--dia-papel); }
+:root[data-tema="claro"] .dm-monte { fill: #fbf5e8; }
+.dm-luz { fill: var(--naranja); opacity: 0.16; }
+.dm-sombra { fill: url(#dm-trama); opacity: 0.8; }
+.dm-nieve { fill: color-mix(in srgb, var(--dia-papel) 60%, #fff); stroke: var(--dia-tinta); stroke-width: 0.8; stroke-linejoin: round; }
+:root:not([data-tema="claro"]) .dm-nieve { fill: color-mix(in srgb, var(--dia-papel) 40%, var(--txt)); }
+.dm-arista { fill: none; stroke: var(--dia-tinta); stroke-width: 0.9; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; }
+.dm-silueta { fill: none; stroke: var(--dia-tinta); stroke-width: 1.4; stroke-linejoin: round; }
+.dm-senda { fill: none; stroke: var(--dia-tinta); stroke-width: 1.7; stroke-dasharray: 0 3.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; }
+.dm-hecho { fill: none; stroke: var(--naranja); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.dm-pinos { fill: var(--dia-tinta); opacity: 0.85; }
+.dm-suelo { fill: none; stroke: var(--dia-tinta); stroke-width: 0.8; opacity: 0.5; }
+.dm-yo-halo { fill: var(--naranja); opacity: 0.25; }
+.dm-yo { fill: var(--naranja); stroke: var(--dia-tinta); stroke-width: 1.1; }
+
+/* --- Cartas para el futuro: una tarjeta con un sobre por carta. */
+.capsulas { padding: 20px; border-radius: 24px; background-color: var(--s1); }
+.capsulas[hidden] { display: none; }
+.capsulas h2 { font-size: 1.5rem; }
+.capsulas .sec-cab { align-items: center; }
+#cap-nueva { font-size: 1rem; }
+.cap-pista { margin: 0 0 4px; color: var(--txt2); font-size: 1rem; line-height: 1.5; }
+.cap-lista { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.cap-lista:empty { display: none; }
+.cap-item { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 16px; align-items: center; padding: 14px 16px 14px 12px; border-radius: 18px; background: var(--s2); }
+.cap-item.abierta:has(.cap-nueva) { box-shadow: inset 0 0 0 1.5px var(--naranja); }
+.cap-arte svg { display: block; width: 100%; height: auto; overflow: visible; }
+.cap-cuerpo { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 12px; min-width: 0; }
+.cap-cuerpo b { flex: 1 0 100%; font: 600 1.0625rem/1.3 var(--serif); color: var(--txt); }
+.cap-cuerpo small { flex: 1 0 100%; font-size: 0.9375rem; line-height: 1.4; color: var(--txt2); }
+.cap-cuerpo .enlace { font-size: 0.9375rem; }
+.cap-nueva { order: -1; display: inline-flex; align-items: center; margin-bottom: 4px; padding: 2px 10px; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font: 700 0.875rem/1.4 var(--sans); }
+/* «Leer la carta» es lo que importa: un botón claro, no un enlace. */
+.cap-item.abierta .enlace { margin-top: 8px; padding: 0 18px; border: 2px solid var(--naranja); border-radius: 999px; background: color-mix(in srgb, var(--naranja) 12%, var(--s1)); text-decoration: none; font-size: 1rem; font-weight: 700; }
+@media (hover: hover) and (pointer: fine) { .cap-item.abierta .enlace:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
+@media (max-width: 379px) {
+  .capsulas { padding: 16px; }
+  .cap-item { grid-template-columns: 68px minmax(0, 1fr); column-gap: 12px; padding: 12px; }
+}
+html[data-letra="muy-grande"] .cap-item { grid-template-columns: 72px minmax(0, 1fr); }
+@media (max-width: 419px) {
+  html[data-letra="muy-grande"] .cap-item { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
+  html[data-letra="muy-grande"] .cap-arte { width: 84px; }
+}
+
+/* El sobre (arte-sellos.js: cartaSellada / cartaAbierta): papel propio y cálido, igual en los dos temas; la cera, la del lacre. */
+.carta-ico {
+  --ca-p0: #f5e7c9; --ca-p1: #d9c095; --ca-pb: #ead6af; --ca-pa: #e9d4ab; --ca-pl: #b99b6b; --ca-dentro: #8a704c;
+  --ca-hoja: #fffaf0; --ca-tinta: #6f5c45; --ca-canto: #6e5230; --ca-filo: #fff8e8; --ca-sombra: rgb(0 0 0 / 0.32);
+}
+:root[data-tema="claro"] .carta-ico { --ca-sombra: rgb(110 70 30 / 0.2); }
+.ca-sombra { fill: var(--ca-sombra); }
+.ca-papel { fill: var(--ca-p0); }
+.ca-solapa-i { fill: var(--ca-p1); }
+.ca-solapa-d { fill: var(--ca-p0); }
+.ca-solapa-b { fill: var(--ca-pb); }
+.ca-solapa-a { fill: var(--ca-pa); }
+.ca-solapa-abierta { fill: var(--ca-p1); }
+.ca-pliegue { fill: var(--ca-pl); opacity: 0.85; }
+.ca-dentro { fill: var(--ca-dentro); }
+.ca-filo { fill: none; stroke: var(--ca-filo); stroke-width: 0.8; stroke-linecap: round; opacity: 0.9; }
+.ca-canto { fill: none; stroke: var(--ca-canto); stroke-width: 0.8; stroke-linejoin: round; opacity: 0.55; }
+.ca-hoja { fill: var(--ca-hoja); stroke: var(--ca-canto); stroke-width: 0.5; stroke-opacity: 0.4; }
+.ca-renglon { fill: none; stroke: var(--ca-tinta); stroke-width: 1.3; stroke-linecap: round; opacity: 0.5; }
+.ca-firma { fill: none; stroke: var(--ca-tinta); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.8; }
+.ca-cera-c { fill: var(--lc-1); }
+.ca-cera-luz { fill: none; stroke: var(--lc-0); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ca-hondo { fill: var(--lc-2); opacity: 0.45; }
+.ca-aro { fill: none; stroke: var(--lc-luz); stroke-width: 0.9; stroke-dasharray: 30 70; stroke-dashoffset: -70; opacity: 0.8; }
+.carta-ico :is(.lc-rel-osc, .lc-rel-luz, .lc-rel) { stroke-width: 0.9; stroke-linejoin: round; stroke-linecap: round; }
+.ca-brillo { fill: #fff; opacity: 0.5; }
+.ca-aro-roto { fill: none; stroke: var(--lc-2); stroke-width: 1.1; stroke-linecap: round; opacity: 0.6; }
+.ca-borde-solapa { fill: none; stroke: var(--ca-canto); stroke-width: 0.7; stroke-linejoin: round; opacity: 0.4; }
+.ca-rotura { fill: none; stroke: var(--lc-luz); stroke-width: 0.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.85; }
+.ca-destello { fill: none; stroke: var(--lc-luz); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.ca-migas { fill: none; stroke: var(--lc-1); stroke-width: 2.6; stroke-linecap: round; opacity: 0; transform-box: view-box; transform-origin: 48px 59px; }
+/* Abrir la carta (solo la primera lectura; acompaña a una acción, así que también con «esenciales»): el lacre tiembla, se parte en dos
+   mitades que se separan, salta un destello con migas de cera y la carta asoma del sobre. */
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-mitad { transform-box: fill-box; transform-origin: 50% 50%; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-mitad-i { animation: ca-parte-i 0.75s cubic-bezier(0.3, 0, 0.2, 1) 0.2s both; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-mitad-d { animation: ca-parte-d 0.75s cubic-bezier(0.3, 0, 0.2, 1) 0.2s both; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-destello { animation: ca-destello 0.6s ease-out 0.5s both; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-migas { animation: ca-migas 0.7s ease-out 0.5s both; }
+html:not([data-efectos="ninguno"]) .carta-ico.abriendo .ca-carta { animation: ca-asoma 0.8s var(--resorte) 0.75s both; }
+@keyframes ca-parte-i {
+  0% { transform: translate(4.6px, -1.4px) rotate(17deg); }
+  22% { transform: translate(4.6px, -1.4px) rotate(14deg); }
+  36% { transform: translate(4.6px, -1.4px) rotate(19deg); }
+  100% { transform: none; }
+}
+@keyframes ca-parte-d {
+  0% { transform: translate(-4.8px, -2.4px) rotate(-14deg); }
+  22% { transform: translate(-4.8px, -2.4px) rotate(-11deg); }
+  36% { transform: translate(-4.8px, -2.4px) rotate(-16deg); }
+  100% { transform: none; }
+}
+@keyframes ca-destello { 0% { opacity: 0.9; transform: scale(0.5); } 100% { opacity: 0; transform: scale(1.7); } }
+@keyframes ca-migas { 0% { opacity: 1; transform: scale(0.35); } 70% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25); } }
+@keyframes ca-asoma { 0% { transform: translateY(16px); } 100% { transform: none; } }
+
+/* --- Leer una carta: el sobre abierto arriba y la carta en su papel, con renglones y letra de carta. Papel claro en los dos temas. */
+.d-carta { width: min(calc(100vw - 24px), 34rem); padding: 22px 20px 20px; }
+.d-carta h2 { text-align: center; }
+.carta-arte { display: grid; place-items: center; margin: 10px 0 -22px; position: relative; z-index: 1; pointer-events: none; }
+.carta-arte svg { width: 128px; height: auto; overflow: visible; }
+.carta-papel {
+  position: relative; margin: 0 0 18px; padding: 30px 22px 22px; border-radius: 4px; color: #2b2118;
+  background-color: #fbf3e1; background-image: linear-gradient(180deg, rgb(255 255 255 / 0.7), transparent 40%), linear-gradient(90deg, rgb(120 80 30 / 0.05), transparent 12%, transparent 88%, rgb(120 80 30 / 0.05));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 1px 2px rgb(60 30 10 / 0.18), 0 16px 34px -18px rgb(0 0 0 / 0.6);
+}
+.d-carta .carta-de { margin: 0 0 12px; font: italic 500 1rem/1.4 var(--serif); color: #6b4527; }
+.d-carta .carta-texto {
+  margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #2b2118; font: 400 1.1875rem/1.7 var(--serif);
+  /* Renglones: una línea fina azulada cada 1.7em, alineada con el texto aunque cambie el tamaño de letra. */
+  background-image: linear-gradient(transparent calc(1.7em - 1px), rgb(70 100 150 / 0.22) calc(1.7em - 1px)); background-size: 100% 1.7em;
+}
+html[data-contraste="alto"] .d-carta .carta-de { color: #3d2412; }
+html:not([data-efectos="ninguno"]) .d-carta.abriendo .carta-papel { transform-origin: 50% 0; animation: carta-sale 0.7s var(--resorte) 0.95s both; }
+@keyframes carta-sale { 0% { opacity: 0; transform: translateY(-22px) scaleY(0.6); } 100% { opacity: 1; transform: none; } }
+@media (max-width: 379px) { .d-carta { padding: 18px 14px 16px; } .carta-papel { padding: 28px 16px 18px; } .d-carta .carta-texto { font-size: 1.125rem; } }
+
+/* --- Escribir una carta y el mensaje de la bandera: formularios del dueño, con aire (campos de 16 px, toques de 48 px). */
+.d-capsula, .d-mensaje { width: min(calc(100vw - 24px), 30rem); }
+:is(#f-capsula, #f-mensaje) { display: grid; gap: 6px; }
+:is(#f-capsula, #f-mensaje) h2 { margin-bottom: 6px; }
+:is(#f-capsula, #f-mensaje) > label { margin-top: 4px; font: 650 1rem var(--sans); color: var(--txt); }
+.d-mensaje .msg-ayuda { margin: 0 0 6px; font-size: 1rem; line-height: 1.5; }
+.d-mensaje .msg-ayuda:empty { display: none; }
+#cap-texto, #msg-texto {
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  background: var(--s2); color: var(--txt); font: 400 1.0625rem/1.55 var(--serif);
+}
+#cap-texto { min-height: 9.5em; resize: vertical; }
+#msg-texto { font-style: italic; }
+:is(#cap-texto, #msg-texto)::placeholder { color: var(--txt3); opacity: 1; }
+:is(#cap-texto, #msg-texto):focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
+:is(.d-capsula, .d-mensaje) .cap-cuenta { margin: 0 0 4px; text-align: right; font-size: 0.875rem; color: var(--txt2); }
+.cap-cuando { display: grid; gap: 4px; margin: 6px 0 8px; padding: 12px 14px 14px; border: 0; border-radius: 16px; background: var(--s2); min-width: 0; }
+.cap-cuando legend { float: left; width: 100%; margin: 0 0 4px; padding: 0; font: 650 1rem var(--sans); color: var(--txt); }
+.cap-op { display: flex; align-items: center; gap: 12px; min-height: var(--toque); font-size: 1rem; color: var(--txt); cursor: pointer; }
+.cap-op input { appearance: none; -webkit-appearance: none; flex: none; display: grid; place-content: center; width: 24px; height: 24px; margin: 0; border: 2px solid var(--txt3); border-radius: 50%; background: var(--s1); cursor: pointer; }
+.cap-op input::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--naranja); transform: scale(0); transition: transform 0.12s ease-out; }
+.cap-op input:checked { border-color: var(--naranja); }
+.cap-op input:checked::before { transform: none; }
+.cap-op input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 3px; }
+@media (forced-colors: active) { .cap-op input { appearance: auto; } }
+#cap-fecha, #cap-etapa {
+  width: calc(100% - 36px); min-height: var(--toque); margin: 0 0 6px 36px; padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px;
+  background: var(--s1); color: var(--txt); font: 400 1rem var(--sans); min-width: 0;
+}
+:is(#cap-fecha, #cap-etapa):disabled { opacity: 0.45; }
+:is(#cap-fecha, #cap-etapa):focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+:is(.d-capsula, .d-mensaje) .d-bot { flex-wrap: wrap; margin-top: 4px; }
+/* «Sellar la carta» lleva una gota de cera: el gesto es sellar. */
+#cap-sellar { display: inline-flex; align-items: center; gap: 10px; }
+#cap-sellar::before { content: ""; flex: none; width: 16px; height: 16px; border-radius: 50% 46% 52% 48%; background: radial-gradient(circle at 64% 34%, var(--lc-luz) 0 12%, var(--lc-0) 24%, var(--lc-1) 58%, var(--lc-2)); box-shadow: 0 1px 0 rgb(0 0 0 / 0.25); }
+
+/* --- El mensaje en la bandera (montana.js: #m-tarjeta). En la tarjeta plana, una cita con filete naranja; bajo la laja tallada, una cinta
+   de papel que sale de debajo de la piedra. Si aún está sellado, una línea discreta con un sello de cera pequeño. */
+.m-tarjeta .m-mensaje { position: relative; margin: 10px 0 8px; padding: 8px 12px 8px 14px; border-left: 3px solid var(--naranja); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--naranja) 9%, transparent); color: var(--txt); font: italic 400 1.0625rem/1.45 var(--serif); }
+.m-tarjeta .m-mensaje:not([data-sellado="1"])::before { content: "«"; }
+.m-tarjeta .m-mensaje:not([data-sellado="1"])::after { content: "»"; }
+.m-tarjeta .m-mensaje[data-sellado="1"] { padding: 8px 10px 8px 38px; border: 1px dashed var(--s3); border-radius: 12px; background: none; color: var(--txt2); font: 600 0.9375rem/1.4 var(--sans); }
+.m-tarjeta .m-mensaje[data-sellado="1"]::before {
+  content: ""; position: absolute; left: 10px; top: 50%; width: 18px; height: 18px; margin-top: -9px; border-radius: 52% 46% 50% 48%;
+  background: radial-gradient(circle at 50% 50%, transparent 0 34%, rgb(0 0 0 / 0.18) 36% 44%, transparent 46%), radial-gradient(circle at 64% 32%, var(--lc-luz) 0 10%, var(--lc-0) 22%, var(--lc-1) 58%, var(--lc-2));
+  box-shadow: 1px 1.5px 0 var(--lc-sombra);
+}
+.m-tarjeta-escribir {
+  min-height: var(--toque); margin: 0 6px 0 0; padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 999px; background: var(--s1);
+  color: var(--txt); font: 600 0.9375rem var(--sans); cursor: pointer;
+}
+.m-tarjeta-escribir[hidden] { display: none; }
+.m-tarjeta-escribir:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .m-tarjeta-escribir:hover { border-color: var(--naranja); } }
+/* Con la laja: la piedra, la cinta y, debajo, los botones a la derecha. */
+.m-tarjeta.con-piedra { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px 8px; }
+.m-tarjeta.con-piedra > .m-pet { flex: 1 0 100%; position: relative; z-index: 1; }
+.m-tarjeta.con-piedra > .m-mensaje:not([hidden]) { flex: 1 0 calc(100% - 24px); margin: -18px 12px 2px; }
+.m-tarjeta.con-piedra .m-mensaje:not([data-sellado="1"]) {
+  padding: 24px 28px 12px; border: 0; border-radius: 0; color: #2b2118; text-align: center;
+  background-color: #f3e3c2; background-image: linear-gradient(180deg, rgb(70 40 10 / 0.35), rgb(70 40 10 / 0) 20px), linear-gradient(180deg, transparent 70%, rgb(120 80 30 / 0.12));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 58%, 100% 100%, 0 100%, 12px 58%);
+}
+.m-tarjeta.con-piedra .m-mensaje[data-sellado="1"] { margin-top: 6px; background: var(--s1); box-shadow: var(--sombra); }
+.m-tarjeta.con-piedra:has(> .m-mensaje:not([hidden])) .m-tarjeta-x, .m-tarjeta.con-piedra:has(> .m-tarjeta-escribir:not([hidden])) .m-tarjeta-x { margin: 0; padding: 0 14px; }
+.m-tarjeta.con-piedra .m-tarjeta-escribir { margin: 0; }
+.m-tarjeta.con-piedra .m-tarjeta-escribir { box-shadow: var(--sombra); }
+html[data-contraste="alto"] .m-tarjeta.con-piedra .m-mensaje:not([data-sellado="1"]) { color: #1a120b; }
+
+/* --- La frase del dueño en la línea de tiempo de «Tu historia»: una cita discreta bajo el campamento. */
+.h-ev .h-msg { margin: 6px 0 2px; padding: 3px 0 3px 12px; border-left: 3px solid var(--naranja); font: italic 400 1rem/1.45 var(--serif); color: var(--txt); }
+
+/* Material de las tarjetas nuevas (el Diario lleva el suyo arriba, sobre su papel). */
+.capsulas { background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
+:is(.d-capsula, .d-mensaje) .d-bot button { padding: 0 15px; }
+
+/* ================================================================ Campamento 15B · piedritas, farol de cumpleaños, luciérnagas y la tele */
+/* --- La piedra (arte.js: piedrita/apacheta). Tonos propios de piedra de río (iguales en los dos temas: es un objeto, no la interfaz),
+   con su cara al sol arriba a la derecha, su cara en sombra y una veta de cuarzo. */
+.pie-svg { display: block; width: 100%; height: 100%; overflow: visible;
+  --pi-c: #b39274; --pi-l: #e4cba9; --pi-s: #6b513d; --pi-o: #3b2a1d; --pi-v: #fbf3e4; --pi-f: #fff6e6; --pi-suelo: rgb(20 10 4 / 0.32); }
+.pi-t1 { --pi-c: #9d9890; --pi-l: #d3cdc2; --pi-s: #5b5650; }
+.pi-t2 { --pi-c: #b3826a; --pi-l: #e0b9a1; --pi-s: #6a4434; }
+.pi-cuerpo { fill: var(--pi-c); }
+.pi-luz { fill: var(--pi-l); opacity: 0.85; }
+.pi-som { fill: var(--pi-s); opacity: 0.55; }
+.pi-veta { fill: none; stroke: var(--pi-v); stroke-width: 1.1; stroke-linecap: round; opacity: 0.85; }
+.pi-filo { fill: none; stroke: var(--pi-f); stroke-width: 0.7; stroke-linecap: round; opacity: 0.8; }
+.pi-borde { fill: none; stroke: var(--pi-o); stroke-width: 0.8; stroke-linejoin: round; opacity: 0.75; }
+.pi-suelo { fill: var(--pi-suelo); }
+:root[data-tema="claro"] .pie-svg { --pi-suelo: rgb(90 55 20 / 0.22); }
+
+/* --- En la lista: «Dejar una piedrita». Una píldora de 48 px con la piedra en un hueco redondo. Sin dejar: contorno discreto y la
+   piedra gris; dejada: relleno cálido, borde naranja, la piedra con su color y una palomita (no depende solo del color: cambia el
+   texto, el borde y aparece la marca). */
+.f-pie-b {
+  display: inline-flex; align-items: center; gap: 10px; max-width: 100%; min-height: var(--toque); margin: 4px 0; padding: 0 18px 0 6px;
+  border: 1.5px solid var(--s3); border-radius: 999px; background: color-mix(in srgb, var(--s2) 60%, transparent); color: var(--txt);
+  font: 600 0.9375rem/1.25 var(--sans); text-align: left; cursor: pointer; touch-action: manipulation;
+}
+.f-pie-b .f-pie-ico { position: relative; flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--s2); }
+.f-pie-b .pie-svg { width: 28px; height: 28px; }
+.f-pie-b[aria-pressed="false"] .pie-svg { --pi-c: #8f8a84; --pi-l: #bdb7ae; --pi-s: #57524d; --pi-v: #d9d4cc; }
+.f-pie-b[aria-pressed="true"] { border: 2px solid var(--naranja); padding-left: 5px; background: color-mix(in srgb, var(--naranja) 15%, var(--s1)); }
+.f-pie-b[aria-pressed="true"] .f-pie-ico { background: color-mix(in srgb, var(--naranja) 26%, var(--s1)); }
+/* La palomita: un círculo naranja con la marca hecha de dos bordes. */
+.f-pie-b[aria-pressed="true"] .f-pie-ico::after {
+  content: ""; position: absolute; right: -3px; bottom: -2px; width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box;
+  border: 2px solid var(--s1); background: var(--naranja)
+    linear-gradient(var(--naranja-osc), var(--naranja-osc)) 3.5px 6px / 2px 4px no-repeat;
+}
+.f-pie-b[aria-pressed="true"] .f-pie-ico::before {
+  content: ""; position: absolute; z-index: 1; right: 2.2px; bottom: 2.6px; width: 3.5px; height: 7px; border: solid var(--naranja-osc); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.f-pie-b[aria-pressed="true"] .f-pie-ico::after { background-image: none; }
+.f-pie-b:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+.f-pie-b:disabled { opacity: 0.6; cursor: progress; }
+@media (hover: hover) and (pointer: fine) { .f-pie-b:hover { border-color: var(--naranja); } }
+/* Al dejarla (el botón recibe el foco tras el toque; con el teclado no se repite al tabular): la piedra cae, rebota y se asienta, y la
+   palomita aparece. Acompaña a una acción: también con «esenciales». */
+.f-pie-b .pi-una { transform-box: fill-box; transform-origin: 50% 100%; }
+html:not([data-efectos="ninguno"]) .f-pie-b[aria-pressed="true"]:is(:focus:not(:focus-visible), .recien) .pi-una { animation: pie-cae 0.62s cubic-bezier(0.3, 0, 0.25, 1) both; }
+html:not([data-efectos="ninguno"]) .f-pie-b[aria-pressed="true"]:is(:focus:not(:focus-visible), .recien) .f-pie-ico::after,
+html:not([data-efectos="ninguno"]) .f-pie-b[aria-pressed="true"]:is(:focus:not(:focus-visible), .recien) .f-pie-ico::before { animation: pie-marca 0.32s var(--resorte) 0.45s both; }
+@keyframes pie-cae {
+  0% { opacity: 0; transform: translateY(-11px) rotate(-16deg); }
+  45% { opacity: 1; transform: translateY(0) rotate(4deg) scale(1.04, 0.94); }
+  70% { transform: translateY(-1.5px) rotate(-2deg); }
+  100% { transform: none; }
+}
+@keyframes pie-marca { from { opacity: 0; scale: 0.3; } to { opacity: 1; scale: 1; } }
+/* Quién las dejó: texto sereno con la apacheta (el dueño) o, junto al botón, las de los demás. */
+.f-pie { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; margin: 4px 0; color: var(--txt2); font-size: 0.9375rem; line-height: 1.35; }
+.f-pie .f-pie-ico { flex: none; display: block; width: 30px; height: 30px; }
+.f-pie-otros { min-height: 0; font-size: 0.875rem; }
+html[data-contraste="alto"] .f-pie-b { border-color: var(--txt2); }
+html[data-contraste="alto"] .f-pie-b[aria-pressed="true"] { border-color: var(--naranja-txt); }
+@media (forced-colors: active) { .f-pie-b[aria-pressed="true"] { border-width: 3px; } }
+/* Línea del Resumen: la última piedrita, con la piedra en su hueco (el mismo material que «Te toca»). */
+.pie-ultima { display: flex; gap: 12px; align-items: center; margin: 0; padding: 12px 16px; border-radius: 16px; background-color: var(--s1); border: 1px solid var(--s3); color: var(--txt); font-size: 0.9375rem; line-height: 1.4; }
+.pie-ultima[hidden] { display: none; }
+.pie-ultima .pie-ico { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--s2); box-shadow: inset 0 1px 0 var(--filo); }
+.pie-ultima .pie-svg { width: 30px; height: 30px; }
+.cuerpo[data-pestana="resumen"] .pie-ultima { padding: 14px 18px; border-radius: 20px; font-size: 1.0625rem; }
+@media (min-width: 1100px) { .pie-ultima { align-self: start; } }
+
+/* --- El farol de cumpleaños (arte.js: farolCumple). Papel encendido con la inicial recortada en tinta; su luz es la de los faroles de
+   los campamentos (#m-luz) y pesa más de noche. Con «todos», la llama late y los papelitos flotan. */
+.fc-charco { opacity: 0.75; }
+.fc-halo { opacity: 0.45; }
+html[data-cielo="noche"] .fc-halo { opacity: 0.95; }
+html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .fc-halo { opacity: 0.7; }
+html[data-cielo="dia"] .fc-charco { opacity: 0.35; }
+.fc-piedra { fill: color-mix(in oklab, var(--monte) 45%, #b9ab98); stroke: color-mix(in oklab, var(--monte-sombra) 70%, #241a12); stroke-width: 0.8; stroke-linejoin: round; }
+.fc-piedra-som { fill: var(--monte-sombra); opacity: 0.35; }
+.fc-estaca { fill: none; stroke: #4a3020; stroke-width: 1.5; stroke-linecap: round; }
+.fc-papel { fill: #ffd68a; }
+.fc-brillo { fill: #fff4d2; opacity: 0.8; }
+.fc-cara-som { fill: #c46f22; opacity: 0.5; }
+.fc-cara-luz { fill: #fff2c8; opacity: 0.55; }
+.fc-costilla { fill: none; stroke: #9a5418; stroke-width: 0.5; opacity: 0.45; }
+.fc-borde { fill: none; stroke: #4f280a; stroke-width: 0.9; stroke-linejoin: round; }
+.fc-letra { fill: #3a1904; font: 700 13.5px var(--serif); letter-spacing: -0.02em; }
+.fc-aro { fill: #4f3420; }
+.fc-brasa { fill: #ff9a2e; }
+.fc-techo { fill: color-mix(in oklab, var(--monte-sombra) 55%, #2b1d12); stroke: #4f280a; stroke-width: 0.6; stroke-linejoin: round; }
+.fc-techo-luz { fill: #fff; opacity: 0.16; }
+.fc-argolla { fill: none; stroke: #4f280a; stroke-width: 0.9; stroke-linecap: round; }
+.fc-c1 { fill: var(--naranja); }
+.fc-c2 { fill: #f08bb4; }
+.fc-c3 { fill: #3fc1ad; }
+.fc-llama ellipse { fill: #ffcf6a; opacity: 0.5; }
+.fc-pulso, .fc-llama, .fc-fiesta { transform-box: fill-box; transform-origin: 50% 50%; }
+html[data-efectos="todos"] .fc-pulso { animation: fc-pulso 3.2s ease-in-out infinite alternate; }
+html[data-efectos="todos"] .fc-llama { animation: fc-llama 1.3s ease-in-out infinite alternate; }
+html[data-efectos="todos"] .fc-fiesta { animation: fc-flota 4.6s ease-in-out infinite alternate; }
+@keyframes fc-pulso { from { opacity: 0.15; transform: scale(0.85); } to { opacity: 0.55; transform: scale(1.15); } }
+@keyframes fc-llama { 0% { opacity: 0.55; transform: scale(0.9, 0.95); } 60% { opacity: 1; transform: scale(1.08, 1.12); } 100% { opacity: 0.75; transform: scale(0.96, 1.04); } }
+@keyframes fc-flota { from { transform: translateY(0.6px); } to { transform: translateY(-1.4px); } }
+
+/* --- «Mi cumpleaños»: dos selectores grandes, mes y día, con el farolito en el título. */
+.d-cumple { width: min(calc(100vw - 24px), 27rem); }
+#f-cumple { display: grid; gap: 6px; }
+#cu-t { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+#cu-t::before {
+  content: ""; flex: none; width: 18px; height: 24px; border-radius: 5px 5px 7px 7px; border-top: 4px solid #4f3420; border-bottom: 3px solid #4f3420;
+  background: radial-gradient(circle at 50% 55%, #fff4d2 0 22%, #ffd68a 50%, #e39a3e 100%);
+  box-shadow: 0 0 0 1px #4f280a, 0 0 18px 4px color-mix(in srgb, var(--naranja) 45%, transparent);
+}
+.d-cumple .msg-ayuda { margin: 0 0 8px; font-size: 1rem; line-height: 1.5; }
+.cu-campos { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-rows: auto auto; grid-auto-flow: column; gap: 6px 12px; margin: 4px 0 6px; }
+.cu-campos label { font: 650 1rem var(--sans); color: var(--txt); }
+.cu-campos select {
+  appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; min-height: 56px; padding: 0 40px 0 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  background: var(--s2) linear-gradient(45deg, transparent 50%, var(--txt2) 50%) calc(100% - 22px) 50% / 7px 7px no-repeat;
+  background-image: linear-gradient(45deg, transparent 50%, var(--txt2) 50%), linear-gradient(-45deg, transparent 50%, var(--txt2) 50%);
+  background-position: calc(100% - 25px) 50%, calc(100% - 18px) 50%; background-size: 7px 7px, 7px 7px; background-repeat: no-repeat;
+  color: var(--txt); font: 600 1.125rem var(--sans); cursor: pointer;
+}
+.cu-campos select:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; border-color: transparent; }
+@media (forced-colors: active) { .cu-campos select { appearance: auto; } }
+html[data-contraste="alto"] .cu-campos select { border-color: var(--txt2); }
+.d-cumple .d-bot { flex-wrap: wrap; margin-top: 6px; }
+.d-cumple .d-bot button { padding: 0 16px; }
+@media (max-width: 359px) { .cu-campos { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; } }
+@media (max-width: 479px) { html[data-letra="muy-grande"] .cu-campos { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; } }
+
+/* --- Luciérnagas (arte.js: luciernagas): al atardecer y de noche, solo con «todos» (llevan `efecto-ambiente`). Cada una deriva en un
+   lazo lento y se enciende a su ritmo; una gota de luz la sigue un instante atrás (la estela). Las cuatro últimas, en la época de lluvias. */
+.luciernagas { display: none; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) .luciernagas { display: inline; }
+html[data-cielo="atardecer"] .luciernagas { opacity: 0.75; }
+.luciernagas .lu:nth-child(n+9) { display: none; }
+html[data-epoca="lluviosa"] .luciernagas .lu:nth-child(n+9) { display: inline; }
+.lu-halo { opacity: 0.6; }
+.lu-luz { fill: #efffa8; }
+.lu-cola circle { fill: #dcf08c; opacity: 0.4; }
+.lu-v { opacity: 0.05; animation: lu-a var(--d, 9s) ease-in-out var(--r, 0s) infinite alternate, lu-brilla var(--b, 6s) linear var(--r, 0s) infinite; }
+.lu-cola { animation-delay: calc(var(--r, 0s) + 0.45s), calc(var(--r, 0s) + 0.3s); }
+.lu-1 { --d: 9.5s; --b: 6.4s; --r: -1.3s; } .lu-2 { --d: 11s; --b: 7.9s; --r: -4.1s; } .lu-3 { --d: 8.2s; --b: 5.3s; --r: -2.6s; }
+.lu-4 { --d: 12.4s; --b: 9.1s; --r: -6.2s; } .lu-5 { --d: 10.1s; --b: 6.9s; --r: -0.4s; } .lu-6 { --d: 13s; --b: 8.3s; --r: -7.7s; }
+.lu-7 { --d: 9s; --b: 7.2s; --r: -3.4s; } .lu-8 { --d: 11.7s; --b: 5.9s; --r: -5.1s; } .lu-9 { --d: 10.6s; --b: 8.8s; --r: -2.2s; }
+.lu-10 { --d: 8.7s; --b: 6.6s; --r: -6.9s; } .lu-11 { --d: 12s; --b: 7.5s; --r: -1.8s; } .lu-12 { --d: 9.8s; --b: 9.6s; --r: -4.6s; }
+.lu:nth-child(3n+2) .lu-v { animation-name: lu-b, lu-brilla; }
+.lu:nth-child(3n) .lu-v { animation-name: lu-c, lu-brilla; }
+@keyframes lu-a { 0% { transform: translate(0, 0); } 30% { transform: translate(7px, -5px); } 65% { transform: translate(3px, -11px); } 100% { transform: translate(-6px, -4px); } }
+@keyframes lu-b { 0% { transform: translate(0, 0); } 35% { transform: translate(-8px, -4px); } 70% { transform: translate(-2px, -9px); } 100% { transform: translate(6px, -2px); } }
+@keyframes lu-c { 0% { transform: translate(0, 0); } 40% { transform: translate(4px, 5px); } 75% { transform: translate(10px, -3px); } 100% { transform: translate(2px, -8px); } }
+/* Destellos irregulares: dos encendidos de distinto largo por ciclo y casi apagadas el resto. */
+@keyframes lu-brilla { 0%, 100% { opacity: 0.05; } 9% { opacity: 1; } 17% { opacity: 0.85; } 24% { opacity: 0.06; } 55% { opacity: 0.05; } 60% { opacity: 0.9; } 66% { opacity: 0.06; } }
+@media (max-width: 899px) { .lu-v { animation-timing-function: steps(36), steps(20); } }
+
+/* --- La tele: la fiesta y el sismógrafo. Fuera del modo pantalla grande no existen. */
+html:not([data-tv]) :is(.tv-fiesta, .tv-sismo) { display: none !important; }
+.tv-fiesta[hidden], .tv-sismo[hidden] { display: none !important; }
+/* La fiesta: una tarjeta grande bajo el saldo, a su izquierda (en pantallas angostas, centrada), que se lee desde el sofá. */
+html[data-tv] .tv-fiesta {
+  position: absolute; z-index: 4; left: max(24px, calc(50% - var(--medio-ancho))); top: 41vh; display: grid; justify-items: start; gap: 0.12em;
+  min-width: 13em; max-width: min(44vw, 30em); padding: 0.85em 1.4em 1em 1.3em; overflow: hidden; border-radius: 28px;
+  background: var(--s1); background: linear-gradient(160deg, color-mix(in srgb, var(--naranja) 18%, var(--s1)), var(--s1) 55%);
+  border: 2px solid color-mix(in srgb, var(--naranja) 70%, transparent); color: var(--txt);
+  box-shadow: inset 0 1px 0 var(--filo), 0 0 0 10px color-mix(in srgb, var(--naranja) 8%, transparent), var(--sombra-alta);
+}
+html[data-tv] .tv-fiesta small { display: inline-flex; align-items: center; gap: 0.5em; color: var(--naranja-txt); font: 700 1rem/1.2 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; }
+html[data-tv] .tv-fiesta small::before { content: ""; width: 0.55em; height: 0.55em; border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0.6em 0.15em color-mix(in srgb, var(--naranja) 70%, transparent); }
+html[data-tv] .tv-fiesta b { font: 700 3.3rem/1.05 var(--sans); letter-spacing: -0.02em; color: var(--txt); font-variant-numeric: tabular-nums lining-nums; }
+html[data-tv] .tv-fiesta span { font: 500 1.2rem/1.35 var(--serif); color: var(--txt2); }
+html[data-tv] .tv-fiesta.grande b { font-size: 4.2rem; color: var(--naranja-txt); }
+html[data-tv] .tv-fiesta.grande { border-width: 3px; border-color: var(--naranja); box-shadow: inset 0 1px 0 var(--filo), 0 0 0 14px color-mix(in srgb, var(--naranja) 14%, transparent), 0 0 80px 10px color-mix(in srgb, var(--naranja) 30%, transparent), var(--sombra-alta); }
+/* Brasas que suben desde el borde de abajo (solo en la entrada; más en un hito). */
+.tvf-brasas { position: absolute; inset: 0; pointer-events: none; }
+.tvf-brasas i { position: absolute; bottom: -8px; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle, #ffe3a3 0 30%, var(--naranja) 60%, transparent 72%); opacity: 0; }
+.tvf-brasas i:nth-child(1) { left: 12%; } .tvf-brasas i:nth-child(2) { left: 30%; width: 5px; height: 5px; } .tvf-brasas i:nth-child(3) { left: 47%; }
+.tvf-brasas i:nth-child(4) { left: 63%; width: 9px; height: 9px; } .tvf-brasas i:nth-child(5) { left: 78%; width: 5px; height: 5px; } .tvf-brasas i:nth-child(6) { left: 90%; }
+.tv-fiesta:not(.grande) .tvf-brasas i:nth-child(even) { display: none; }
+/* El destello que cruza la tarjeta una vez. */
+html[data-tv] .tv-fiesta::after { content: ""; position: absolute; inset: -20% auto -20% 0; width: 40%; background: linear-gradient(100deg, transparent, rgb(255 236 200 / 0.22), transparent); transform: translateX(-120%) skewX(-12deg); pointer-events: none; }
+html[data-tv]:not([data-efectos="ninguno"]) .tv-fiesta.va { animation: tvf-entra 0.9s var(--resorte) both; }
+html[data-tv]:not([data-efectos="ninguno"]) .tv-fiesta.va small { animation: tvf-sube 0.5s ease-out 0.15s both; }
+html[data-tv]:not([data-efectos="ninguno"]) .tv-fiesta.va b { animation: tvf-cifra 0.7s var(--resorte) 0.25s both; }
+html[data-tv]:not([data-efectos="ninguno"]) .tv-fiesta.va span:not(.tvf-brasas) { animation: tvf-sube 0.5s ease-out 0.45s both; }
+html[data-tv]:not([data-efectos="ninguno"]) .tv-fiesta.va::after { animation: tvf-destello 1.1s ease-in-out 0.55s both; }
+html[data-tv]:not([data-efectos="ninguno"]) .tv-fiesta.va .tvf-brasas i { animation: tvf-brasa 2.6s ease-out both; }
+.tv-fiesta.va .tvf-brasas i:nth-child(2) { animation-delay: 0.5s; } .tv-fiesta.va .tvf-brasas i:nth-child(3) { animation-delay: 0.25s; }
+.tv-fiesta.va .tvf-brasas i:nth-child(4) { animation-delay: 0.8s; } .tv-fiesta.va .tvf-brasas i:nth-child(5) { animation-delay: 0.35s; } .tv-fiesta.va .tvf-brasas i:nth-child(6) { animation-delay: 0.6s; }
+html[data-tv]:not([data-efectos="ninguno"]) .tv-fiesta.grande.va .tvf-brasas i { animation-iteration-count: 3; }
+@keyframes tvf-entra { 0% { opacity: 0; transform: translateY(40px) scale(0.92); } 100% { opacity: 1; transform: none; } }
+@keyframes tvf-sube { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes tvf-cifra { 0% { opacity: 0; transform: scale(1.18); } 100% { opacity: 1; transform: none; } }
+@keyframes tvf-destello { from { transform: translateX(-120%) skewX(-12deg); } to { transform: translateX(320%) skewX(-12deg); } }
+@keyframes tvf-brasa { 0% { opacity: 0; transform: translateY(0) scale(0.6); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateY(-160px) translateX(10px) scale(1); } }
+@media (max-width: 1099px) {
+  html[data-tv] .tv-fiesta { left: 50%; translate: -50% 0; top: auto; bottom: calc(3.5vh + 4.4em); max-width: calc(100% - 32px); min-width: 0; }
+  html[data-tv] .tv-fiesta b { font-size: 2.4rem; }
+  html[data-tv] .tv-fiesta.grande b { font-size: 2.9rem; }
+}
+
+/* El sismógrafo: a la derecha, bajo el precio, en el hueco del cielo junto a la ladera. Papel claro en los dos temas (como el
+   certificado), tinta de añil, el rodillo y la caja del aparato en metal azul tinta. */
+html[data-tv] .tv-sismo { position: absolute; z-index: 2; right: max(24px, calc(50% - var(--medio-ancho))); top: 47vh; display: block; width: max(280px, calc(var(--medio-ancho) * 0.76)); }
+.sm-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sm-sombra { fill: rgb(0 0 0 / 0.35); }
+.sm-papel { fill: #f5ebd3; }
+.sm-fina { fill: none; stroke: #c9a46d; stroke-width: 0.5; opacity: 0.45; }
+.sm-gruesa { fill: none; stroke: #b4864a; stroke-width: 0.8; opacity: 0.6; }
+.sm-hora { fill: none; stroke: #7a5226; stroke-width: 1.4; stroke-linecap: round; opacity: 0.8; }
+.sm-margen { fill: none; stroke: #b4864a; stroke-width: 0.9; opacity: 0.7; }
+.sm-luz { fill: none; stroke: #fff; stroke-width: 1; opacity: 0.6; }
+.sm-tinta-c { fill: none; stroke: #2a3a6e; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; opacity: 0.12; }
+.sm-tinta { fill: none; stroke: #1f2c58; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.sm-rodillo { fill: #3c445c; stroke: #161b29; stroke-width: 1; }
+.sm-rodillo-luz { fill: #a3acc4; opacity: 0.7; }
+.sm-rodillo-som { fill: none; stroke: #161b29; stroke-width: 2; opacity: 0.5; }
+.sm-caja { fill: #232b40; stroke: #10141f; stroke-width: 1; }
+.sm-caja-filo { fill: none; stroke: #6b7698; stroke-width: 1; stroke-linecap: round; }
+.sm-placa { fill: #b8913f; stroke: #5a4012; stroke-width: 0.7; }
+.sm-placa-l { fill: none; stroke: #5a4012; stroke-width: 1; stroke-dasharray: 2 1.5; opacity: 0.6; }
+.sm-tornillo { fill: #8a93ab; stroke: #10141f; stroke-width: 0.8; }
+.sm-brazo-s { fill: none; stroke: rgb(0 0 0 / 0.3); stroke-width: 3; stroke-linecap: round; }
+.sm-brazo { fill: none; stroke: #c9a04a; stroke-width: 2.4; stroke-linecap: round; }
+.sm-pluma { fill: #e2bf6a; stroke: #5a4012; stroke-width: 0.8; stroke-linejoin: round; }
+.sm-eje { fill: #c9a04a; stroke: #5a4012; stroke-width: 1; }
+.sm-eje-c { fill: #5a4012; }
+.sm-gota-h { fill: #1f2c58; opacity: 0.14; }
+.sm-gota { fill: #1f2c58; }
+.sm-gota-b { fill: #fff; opacity: 0.7; }
+/* La medianoche: la tira se desprende hacia la izquierda y entra papel nuevo por el rodillo. */
+.sm-tira { transform-box: fill-box; transform-origin: 100% 0; }
+html[data-tv]:not([data-efectos="ninguno"]) .tv-sismo.arranca .sm-tira { animation: sm-arranca 2s cubic-bezier(0.4, 0, 0.2, 1) both; }
+@keyframes sm-arranca {
+  0% { opacity: 1; transform: none; }
+  12% { transform: rotate(1.2deg); }
+  42% { opacity: 0; transform: translate(-22%, 14%) rotate(-7deg); }
+  43% { opacity: 0; transform: translateX(14%) scaleX(0.2); }
+  100% { opacity: 1; transform: none; }
+}
+@media (max-width: 1099px) {
+  html[data-tv] .tv-sismo { right: auto; left: 50%; translate: -50% 0; top: auto; bottom: calc(3.5vh + 4.6em); width: min(calc(100% - 32px), 30rem); }
+  html[data-tv] .tv-fiesta:not([hidden]) ~ .tv-sismo { visibility: hidden; }
+}
+
+/* Material de las tarjetas nuevas. */
+.pie-ultima { background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }

@@ -178,7 +178,7 @@ $('dh-pas-mas').addEventListener('click', () => { pasVisibles += PAS_PASO; dibuj
 
 /** Un nombre para lo que se pintó, para no rehacer la historia (y perder lo que se está leyendo) en cada refresco del precio. */
 let firmaHistoria = null;
-const firmaDe = () => `${R.items.length}:${R.sats}:${R.items.at(-1)?.id ?? 0}:${R.nCompras}:${R.racha}`;
+const firmaDe = () => `${R.items.length}:${R.sats}:${R.items.at(-1)?.id ?? 0}:${R.nCompras}:${R.racha}:${S.mensajes.map((m) => `${m.hito}${m.sellado ? 's' : (m.texto ?? '').length}`).join(',')}`;
 /** Pinta «Tu historia» solo si cambió algo desde la última vez (o si no se había pintado). La llaman `pintar()` y las pestañas. */
 export function refrescarHistoria({ forzar = false } = {}) {
   if (!R?.items || !S.cargado) return;
@@ -249,6 +249,8 @@ export function pintarHistoria() {
     tit.append(document.createTextNode(e.titulo));
     cuerpo.append(tit);
     if (e.detalle) cuerpo.append(nodo('p', null, e.detalle));
+    const msg = e.clase === 'hito' ? S.mensajes.find((x) => x.hito === e.m && !x.sellado)?.texto : null;
+    if (msg) cuerpo.append(nodo('p', 'h-msg', `«${msg}»`)); // la frase que dejó el dueño en esa bandera (15A)
     li.append(t, cuerpo);
     lista.append(li);
   }

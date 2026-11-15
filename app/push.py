@@ -72,6 +72,8 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
                  "ayuda": "Si el respaldo diario falla."},
     "caida": {"rol": "admin", "defecto": True, "nombre": "Gran caída",
               "ayuda": "Una vez por caída, cuando BTC baja 15 % o más de su máximo de 30 días. Solo informa, no recomienda."},
+    "piedrita": {"rol": "admin", "defecto": True, "nombre": "Piedritas de tu familia",
+                 "ayuda": "Cuando alguien de tu familia deja una piedrita en una de tus compras."},
     "wallet": {"rol": "admin", "defecto": False, "nombre": "Retirar a tu wallet",
                "ayuda": "Cuando en el exchange hay más sats del monto que tú elijas (abajo). Solo es un recordatorio de tu propio hábito."},
 }

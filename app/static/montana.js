@@ -1,7 +1,7 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
-import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo } from './arte.js';
+import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas } from './arte.js';
 
 const f1 = (n) => n.toFixed(1);
 
@@ -111,7 +111,7 @@ function lago(c, W, H) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0 }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, mensajes = [], puedeEscribir = false, cumples = [] }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
@@ -227,6 +227,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + `<g clip-path="url(#m-nieve-c)"><path class="nieve-faceta" d="M${f1(picoC[0])} ${f1(picoC[1])}L${f1(picoC[0] + nieveMedidas.ancho * 0.3)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}L${f1(picoC[0] + nieveMedidas.ancho * 0.03)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}Z"/><path class="nieve-pliegue" d="M${f1(picoC[0] - 2)} ${f1(picoC[1] + 4)}L${f1(picoC[0] - nieveMedidas.ancho * 0.2)} ${f1(picoC[1] + nieveMedidas.nv * 2.1)}"/></g></g>`;
 
   s += lago(c, W, H);
+  s += luciernagas({ W, H, yH: c.sy }); // ambiente: luciérnagas en el valle al anochecer (campamento 15B) // 15B
   const [bx, by] = c.base;
   for (let fila = 0; fila < 2; fila++) {
     const yb = H * (fila ? 1.005 : 0.975), alto = H * (fila ? 0.07 : 0.05);
@@ -275,6 +276,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-luz" id="m-luzhecha" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   if (aniv) s += `<circle class="salida-aniv" cx="${f1(bx)}" cy="${f1(by)}" r="26" fill="url(#m-luz)"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
+  // Farol por cumpleaños (campamento 15B): el día de un familiar, su inicial arde en un farol junto a la marca de salida. // 15B
+  { const k = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1, dir = (pts[1]?.[0] ?? bx) > bx ? -1 : 1, n = Math.min(3, cumples.length), paso = Math.min(21 * k, Math.max(15 * k, ((dir < 0 ? bx : W - bx) - 34 * k) / Math.max(1, n - 1))); cumples.slice(0, 3).forEach((p, i) => { s += farolCumple({ inicial: p.inicial, x: Math.max(10 * k, Math.min(W - 10 * k, bx + dir * (24 * k + paso * i))), y: by + 2 + (i % 2) * 4 * k, k }); }); } // 15B
   s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   s += bosque(W, H, bx, compras, plantar, pts);
   const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0]);
@@ -342,7 +345,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, techo, ec, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, mensajes, puedeEscribir, techo, ec, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -525,8 +528,10 @@ function banderas(host, campos, W, H) {
   tarjeta.setAttribute('role', 'group');
   tarjeta.setAttribute('aria-labelledby', 'm-tarjeta-t');
   tarjeta.hidden = true;
-  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><button type="button" class="m-tarjeta-x">Cerrar</button>';
-  tarjeta.querySelector('button').addEventListener('click', () => cerrarTarjeta(true));
+  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><p class="m-mensaje" id="m-mensaje" hidden></p><small class="m-mensaje-nota" id="m-mensaje-nota" hidden></small><button type="button" class="m-tarjeta-escribir" id="m-escribir" hidden></button><button type="button" class="m-tarjeta-x">Cerrar</button>';
+  tarjeta.querySelector('.m-tarjeta-x').addEventListener('click', () => cerrarTarjeta(true));
+  // El dueño escribe o cambia el mensaje de la bandera: la montaña solo avisa (mensajes.js abre el cuadro).
+  tarjeta.querySelector('#m-escribir').addEventListener('click', () => { if (abierta !== null) document.dispatchEvent(new CustomEvent('libro:mensaje', { detail: { hito: abierta } })); });
   caja.replaceChildren(...botones, tarjeta);
   abierta = null;
 }
@@ -544,11 +549,29 @@ function abrirTarjeta(m) {
   const fecha = fechas[m] ?? null, piedra = Boolean(t.alcanzado && fecha);
   tarjeta.querySelector('.m-pet').innerHTML = piedra ? petroglifo({ cifra: nombreHito(m), titulo: t.titulo, fecha: fechaLarga(fecha), cima: campo.cima }) : '';
   tarjeta.classList.toggle('con-piedra', piedra);
+  // El mensaje del dueño en esa bandera (15A): lo ven todos cuando el campamento ya se alcanzó; antes llega sellado (sin texto).
+  const msg = (estado.mensajes ?? []).find((x) => x.hito === m);
+  const pM = tarjeta.querySelector('#m-mensaje'), bE = tarjeta.querySelector('#m-escribir');
+  pM.hidden = !msg;
+  pM.dataset.sellado = msg?.sellado ? '1' : '';
+  pM.textContent = !msg ? '' : msg.sellado ? 'Hay un mensaje esperándote en este campamento.' : msg.texto;
+  // El dueño ve el de un campamento por alcanzar: la aclaración va aparte (fuera de la cita).
+  const nota = tarjeta.querySelector('#m-mensaje-nota');
+  nota.hidden = !(msg && !msg.sellado && !t.alcanzado);
+  nota.textContent = nota.hidden ? '' : 'Se revelará a los demás cuando lleguen a este campamento.';
+  bE.hidden = !estado.puedeEscribir;
+  bE.textContent = msg ? 'Cambiar el mensaje' : 'Escribir un mensaje';
   tarjeta.style.setProperty('--cx', `${f1(campo.p.x)}px`);
   const abajo = campo.p.y < H * 0.62;
   tarjeta.style.top = abajo ? `${f1(campo.p.y + 18)}px` : 'auto';
   tarjeta.style.bottom = abajo ? 'auto' : `${f1(H - campo.p.y + 46)}px`;
   tarjeta.hidden = false;
+  // La tarjeta (con la piedra, la cinta del mensaje y los botones del dueño) puede ser alta: si abajo no cabe sin tapar «Anotar compra»,
+  // se abre hacia arriba; y si tampoco cabe arriba, se queda donde más espacio hay.
+  if (abajo) {
+    const alto = tarjeta.getBoundingClientRect().height, limite = H - 76;
+    if (campo.p.y + 18 + alto > limite && campo.p.y - 46 - alto > 8) { tarjeta.style.top = 'auto'; tarjeta.style.bottom = `${f1(H - campo.p.y + 46)}px`; }
+  }
   caja.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', String(Number(b.dataset.m) === m)));
   abierta = m;
 }

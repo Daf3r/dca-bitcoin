@@ -151,6 +151,9 @@ elif esc in ("anio", "eco", "largo", "ballena"):
         comprar(d, round(base + r2.random() * base * 0.8, 2))
 auth.crear_usuario(conn, "Daf3r", "clave-de-prueba-12", "admin", "prueba")
 auth.crear_usuario(conn, "Ana", "lectora-de-prueba", "lector", "prueba")
+if esc in ("anio", "largo"):  # una carta que ya se abrió (campamento 15A), para probar cómo se lee
+    conn.execute("INSERT INTO capsulas (texto, abre_fecha, creado, autor) VALUES (?, ?, ?, ?)",
+                 ("Querida familia:\n\nSi leen esto, ya llegamos lejos.\nCon cariño, papá", (HOY - timedelta(days=20)).isoformat(), 1_700_000_000, "Daf3r"))
 conn.commit()
 conn.close()
 server.app.run(port=puerto, threaded=True)

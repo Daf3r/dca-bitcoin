@@ -40,7 +40,9 @@
   ];
 
   /** Hora decimal de El Salvador (0 a 24). Con `libro.hora` en localStorage, la que se pida (para probar). */
+  let horaTemporal = null; // la hora que pide la tele durante su atardecer acelerado (`fijarHora`)
   function hora(ahora = new Date()) {
+    if (horaTemporal !== null) return horaTemporal;
     try {
       const forzada = Number.parseFloat(localStorage.getItem('libro.hora'));
       if (forzada >= 0 && forzada < 24) return forzada;
@@ -162,8 +164,13 @@
     raiz.style.setProperty('--cielo-marca', t.marca);
     raiz.style.setProperty('--cielo-sombra', t.sombra); // un halo suave del color contrario: ayuda en los minutos de crepúsculo
   }
+  /** Un cielo a la hora que se pida (0 a 24) hasta que se llame con `null`: lo usa el atardecer acelerado de la tele (campamento 15B). */
+  function fijarHora(h) {
+    horaTemporal = h === null ? null : Math.min(23.99, Math.max(0, Number(h)));
+    aplicar();
+  }
   aplicar();
-  setInterval(() => { if (document.visibilityState === 'visible') aplicar(); }, 300_000);
+  setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

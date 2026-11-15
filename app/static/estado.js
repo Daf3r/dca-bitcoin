@@ -10,6 +10,11 @@ export const S = {
   historico: [], histEstado: 'cargando', histDesde: null, rango: null,
   traslados: [],
   wallets: [], // las wallets además de la principal (idea 156)
+  piedritas: [], // las piedritas de los lectores en las compras (15B): { compra_id, quien, creado }
+  cumples: [], // los cumpleaños que puso la familia (15B): { nombre, cumple: 'MM-DD' }
+  cumple: null, // el tuyo
+  mensajes: [], // las frases de las banderas (15A): { hito, texto, sellado, por }
+  capsulas: [], // las cartas selladas (15A): { id, abre_fecha, abre_sats, abierta, texto (solo si ya se abrió o eres el dueño), … }
   usuario: null, rol: null,
 };
 export let R = resumen([], null);

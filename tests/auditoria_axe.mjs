@@ -265,6 +265,68 @@ try {
       await auditar(p, `pestaña historia con estratos ${esquema}`);
       await ctx.close();
     }
+    { // el Diario, las cartas y los mensajes de las banderas (15A): dueño con datos sembrados y una lectora
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.evaluate(async () => {
+        const h = { 'Content-Type': 'application/json', 'X-Libro': '1' };
+        const compras = await (await fetch('/api/compras')).json();
+        const saldo = compras.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+        const pot = [1e5, 1e6, 1e7, 1e8, 1e9];
+        const abajo = pot.filter((x) => x <= saldo).at(-1), arriba = pot.find((x) => x > saldo);
+        await fetch(`/api/mensajes/${abajo}`, { method: 'PUT', headers: h, body: JSON.stringify({ texto: 'Para mis hijos: sigan subiendo, paso a paso.' }) });
+        await fetch(`/api/mensajes/${arriba}`, { method: 'PUT', headers: h, body: JSON.stringify({ texto: 'Cuando llegues aquí, mira atrás y sonríe.' }) });
+        await fetch('/api/capsulas', { method: 'POST', headers: h, body: JSON.stringify({ texto: 'Hasta pronto.', abre_sats: arriba }) });
+        window.__abajo = abajo;
+      });
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2500);
+      await cerrarOferta(p);
+      await auditar(p, `diario y cartas (dueño) ${esquema}`);
+      await p.click('#cap-lista button[data-leer]'); await p.waitForTimeout(700);
+      await auditar(p, `carta abierta ${esquema}`);
+      await p.click('#carta-ok'); await p.waitForTimeout(300);
+      await p.click('#cap-nueva'); await p.waitForTimeout(500);
+      await p.fill('#cap-texto', 'Querida familia: si leen esto, llegamos.');
+      await auditar(p, `escribir una carta ${esquema}`);
+      await p.click('#cap-cancelar'); await p.waitForTimeout(300);
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400);
+      const bandera = p.locator('.m-bandera').first();
+      await bandera.click({ force: true }); await p.waitForTimeout(800);
+      await auditar(p, `tarjeta de campamento con mensaje ${esquema}`);
+      await p.click('#m-escribir'); await p.waitForTimeout(500);
+      await auditar(p, `escribir un mensaje ${esquema}`);
+      await ctx.close();
+    }
+    { // piedritas, cumpleaños y la tele (15B): lectora con una piedrita y su cumpleaños hoy; el dueño con su línea de la última piedrita
+      const { ctx, p } = await nuevo(anio, LECTOR, conPush);
+      await cerrarOferta(p);
+      await p.click('#nov-ok', { timeout: 4000 }).catch(() => {}); await p.waitForTimeout(400); // la bienvenida de la lectora
+      const md = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date()).slice(5);
+      await p.evaluate(async (md) => {
+        const h = { 'Content-Type': 'application/json', 'X-Libro': '1' };
+        const compras = await (await fetch('/api/compras')).json();
+        const c = compras.filter((x) => x.tipo === 'compra').at(-1);
+        await fetch(`/api/piedritas/${c.id}`, { method: 'POST', headers: h });
+        await fetch('/api/yo/cumple', { method: 'PUT', headers: h, body: JSON.stringify({ cumple: md }) });
+      }, md);
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2500);
+      await cerrarOferta(p);
+      await p.click('#nov-ok', { timeout: 3000 }).catch(() => {}); await p.waitForTimeout(400);
+      await auditar(p, `movimientos con una piedrita y farol de cumpleaños (lectora) ${esquema}`);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-cumple'); await p.waitForTimeout(600);
+      await auditar(p, `mi cumpleaños ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await p.evaluate(() => { location.hash = '#tv'; }); await p.waitForTimeout(1200);
+      await p.evaluate(() => { const f = document.getElementById('tv-fiesta'); document.getElementById('tvf-k').textContent = 'Compra nueva'; document.getElementById('tvf-txt').textContent = '+25,000 sats'; document.getElementById('tvf-sub').textContent = 'La montaña sube un paso más'; f.hidden = false; f.classList.add('va'); });
+      await p.waitForTimeout(900);
+      await auditar(p, `tele con la fiesta ${esquema}`);
+      await ctx.close();
+      const a = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(a.p);
+      await auditar(a.p, `resumen del dueño con la última piedrita ${esquema}`);
+      await a.ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import hashlib
 import io
 import json
@@ -228,6 +229,47 @@ def _m_wallets(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE traslados ADD COLUMN wallet_id INTEGER REFERENCES wallets(id)")
 
 
+def _m_mensajes_bandera(conn: sqlite3.Connection) -> None:
+    # Mensaje en la bandera (idea 16): una frase del dueño por campamento (100k, 1M, 10M…), que sale al tocar esa bandera.
+    conn.execute("""CREATE TABLE IF NOT EXISTS mensajes_bandera (
+        hito        INTEGER PRIMARY KEY,
+        texto       TEXT    NOT NULL CHECK (length(texto) BETWEEN 1 AND 160),
+        actualizado INTEGER NOT NULL,
+        por         TEXT    NOT NULL
+    )""")
+
+
+def _m_capsulas(conn: sqlite3.Connection) -> None:
+    # Cápsula sellada (idea 33): una carta que solo se abre en una fecha o al llegar a cierto saldo. Anular conserva la fila.
+    conn.execute("""CREATE TABLE IF NOT EXISTS capsulas (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        texto       TEXT    NOT NULL CHECK (length(texto) BETWEEN 1 AND 1000),
+        abre_fecha  TEXT,
+        abre_sats   INTEGER,
+        creado      INTEGER NOT NULL,
+        autor       TEXT    NOT NULL,
+        abierta_ts  INTEGER,
+        anulada_ts  INTEGER,
+        CHECK ((abre_fecha IS NULL) <> (abre_sats IS NULL))
+    )""")
+
+
+def _m_piedritas(conn: sqlite3.Connection) -> None:
+    # Apacheta (idea 47): una piedrita por persona y compra, que deja un lector. Sin texto: un toque.
+    conn.execute("""CREATE TABLE IF NOT EXISTS piedritas (
+        compra_id  INTEGER NOT NULL REFERENCES compras(id),
+        usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+        creado     INTEGER NOT NULL,
+        PRIMARY KEY (compra_id, usuario_id)
+    )""")
+
+
+def _m_usuarios_cumple(conn: sqlite3.Connection) -> None:
+    # Farol por cumpleaños (idea 49): mes y día («MM-DD»), opcional; cada persona pone el suyo.
+    if "cumple" not in _columnas(conn, "usuarios"):
+        conn.execute("ALTER TABLE usuarios ADD COLUMN cumple TEXT")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -240,6 +282,10 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (9, "sesiones.compartida", _m_sesiones_compartida),
     (10, "tokens_api (enlaces de solo lectura para hojas de cálculo)", _m_tokens_api),
     (11, "wallets y traslados.wallet_id (varias wallets)", _m_wallets),
+    (12, "mensajes_bandera (una frase por campamento)", _m_mensajes_bandera),
+    (13, "capsulas (cartas selladas que se abren en una fecha o con un saldo)", _m_capsulas),
+    (14, "piedritas (la apacheta: una por persona y compra)", _m_piedritas),
+    (15, "usuarios.cumple (farol por cumpleaños)", _m_usuarios_cumple),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -923,7 +969,7 @@ def exigir_sesion() -> Any:
         resp.headers["Retry-After"] = "60"
         return resp, 429
     if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto", "/api/cambios-visto", "/api/errores") \
-            and not ruta.startswith(("/api/push/", "/api/sesiones/")):
+            and not ruta.startswith(("/api/push/", "/api/sesiones/", "/api/piedritas/", "/api/yo/")):
         return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
 
@@ -958,6 +1004,9 @@ _REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.w
 _REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
 
 
+_GZ_CACHE: dict[tuple[str, str], bytes] = {}
+
+
 def _servir_versionado(nombre: str, tipo: str, patron: re.Pattern[str], cache: str) -> Any:
     ruta = os.path.join(ESTATICOS, nombre)
     with open(ruta, encoding="utf-8") as f:
@@ -965,6 +1014,16 @@ def _servir_versionado(nombre: str, tipo: str, patron: re.Pattern[str], cache: s
     resp = Response(texto, mimetype=tipo)
     resp.headers["Cache-Control"] = cache
     resp.set_etag(f"{VERSION}-{nombre}")
+    # Comprimido aquí mismo (los archivos de la app no cambian sin cambiar VERSION): se hace una vez por archivo y se guarda en memoria.
+    # Caddy no vuelve a comprimir lo que ya trae `Content-Encoding`.
+    resp.vary.add("Accept-Encoding")
+    if "gzip" in request.headers.get("Accept-Encoding", "").lower():
+        clave = (VERSION, nombre)
+        if clave not in _GZ_CACHE:
+            _GZ_CACHE[clave] = gzip.compress(resp.get_data(), compresslevel=9, mtime=0)
+        resp.set_data(_GZ_CACHE[clave])
+        resp.headers["Content-Encoding"] = "gzip"
+        resp.set_etag(f"{VERSION}-{nombre}-gz")
     return resp.make_conditional(request)
 
 
@@ -1089,9 +1148,9 @@ def logout() -> Any:
 
 @app.get("/api/yo")
 def yo() -> Response:
-    fila = db().execute("SELECT visto_ts, cambios_visto FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
+    fila = db().execute("SELECT visto_ts, cambios_visto, cumple FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
     return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"], visto=fila["visto_ts"] if fila else None,
-                   cambios=fila["cambios_visto"] if fila else None, mantenimiento=SOLO_LECTURA)
+                   cambios=fila["cambios_visto"] if fila else None, cumple=fila["cumple"] if fila else None, mantenimiento=SOLO_LECTURA)
 
 
 @app.get("/api/sesiones")
@@ -1508,6 +1567,233 @@ def archivar_wallet(wid: int) -> Any:
     auth.auditar(conn, quien(), "wallet_archivada", "wallet", wid, {"nombre": f["nombre"]}, None, auth.ip_resumida(ip_real()))
     conn.commit()
     return "", 204
+
+
+# ------------------------------------------------- mensajes en la bandera y cápsulas selladas (campamento 15)
+HITOS_MENSAJE = tuple(10**n for n in range(5, 13))  # los campamentos: 100k, 1M, 10M… 1,000 BTC
+MAX_MENSAJE, MAX_CARTA, MAX_CAPSULAS = 160, 1000, 20
+MAX_SATS = 21_000_000 * 10**8
+
+
+def saldo_actual(conn: sqlite3.Connection) -> int:
+    return max(0, sum(-s if tipo == "venta" else s for _f, _i, tipo, s in movimientos(conn)))
+
+
+def parse_mensaje(v: Any) -> str:
+    """Una frase de hasta 160 caracteres, en una sola línea. Vacía = borrar el mensaje."""
+    if v is None:
+        return ""
+    if not isinstance(v, str):
+        raise ValueError("Mensaje inválido.")
+    t = " ".join("".join(ch for ch in v if ch.isprintable() or ch in "\t\n").split())
+    if len(t) > MAX_MENSAJE:
+        raise ValueError(f"El mensaje admite hasta {MAX_MENSAJE} caracteres.")
+    return t
+
+
+def parse_carta(v: Any) -> str:
+    """El texto de una carta: hasta 1,000 caracteres; se conservan los saltos de línea (pero no más de uno en blanco seguido)."""
+    if not isinstance(v, str):
+        raise ValueError("Escribe la carta.")
+    lineas = ["".join(ch for ch in ln if ch.isprintable() or ch == "\t").rstrip() for ln in v.replace("\r", "").split("\n")]
+    t = re.sub(r"\n{3,}", "\n\n", "\n".join(lineas)).strip()
+    if not t:
+        raise ValueError("Escribe la carta.")
+    if len(t) > MAX_CARTA:
+        raise ValueError(f"La carta admite hasta {MAX_CARTA} caracteres.")
+    return t
+
+
+@app.get("/api/mensajes")
+def listar_mensajes() -> Response:
+    """Las frases de las banderas. Las ven todos, pero la de un campamento que aún no alcanzas llega sellada (sin texto): es una sorpresa."""
+    conn = db()
+    admin = g.usuario["rol"] == "admin"
+    saldo = saldo_actual(conn)
+    out = []
+    for r in conn.execute("SELECT hito, texto, por FROM mensajes_bandera ORDER BY hito"):
+        visible = admin or saldo >= r["hito"]
+        out.append({"hito": r["hito"], "sellado": not visible, "texto": r["texto"] if visible else None, "por": r["por"]})
+    return jsonify(out)
+
+
+@app.put("/api/mensajes/<int:hito>")
+def guardar_mensaje(hito: int) -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    if hito not in HITOS_MENSAJE:
+        return jsonify(error="Ese campamento no existe."), 400
+    body = request.get_json(silent=True)
+    try:
+        texto = parse_mensaje(body.get("texto") if isinstance(body, dict) else None)
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    conn = db()
+    antes = conn.execute("SELECT texto FROM mensajes_bandera WHERE hito = ?", (hito,)).fetchone()
+    if not texto:
+        conn.execute("DELETE FROM mensajes_bandera WHERE hito = ?", (hito,))
+    else:
+        conn.execute("INSERT INTO mensajes_bandera (hito, texto, actualizado, por) VALUES (?, ?, ?, ?) "
+                     "ON CONFLICT(hito) DO UPDATE SET texto = excluded.texto, actualizado = excluded.actualizado, por = excluded.por",
+                     (hito, texto, int(time.time()), quien()))
+    auth.auditar(conn, quien(), "mensaje_bandera", "campamento", hito, {"texto": antes["texto"]} if antes else None, {"texto": texto} if texto else None,
+                 auth.ip_resumida(ip_real()))
+    conn.commit()
+    return jsonify(hito=hito, texto=texto or None)
+
+
+def _capsula_json(r: sqlite3.Row, saldo: int, hoy: str, admin: bool) -> dict[str, Any]:
+    abierta = bool(r["abierta_ts"]) or (r["abre_fecha"] is not None and hoy >= r["abre_fecha"]) or (r["abre_sats"] is not None and saldo >= r["abre_sats"])
+    return {"id": r["id"], "abre_fecha": r["abre_fecha"], "abre_sats": r["abre_sats"], "creado": r["creado"], "autor": r["autor"],
+            "abierta": abierta, "abierta_ts": r["abierta_ts"], "texto": r["texto"] if (abierta or admin) else None}
+
+
+@app.get("/api/capsulas")
+def listar_capsulas() -> Response:
+    """Las cartas selladas. Las ven todos; el texto solo llega cuando la carta ya se abrió (el dueño la ve siempre: la escribió él)."""
+    conn = db()
+    admin = g.usuario["rol"] == "admin"
+    saldo, hoy = saldo_actual(conn), date.today().isoformat()
+    out = []
+    for r in conn.execute("SELECT id, texto, abre_fecha, abre_sats, creado, autor, abierta_ts FROM capsulas WHERE anulada_ts IS NULL ORDER BY id"):
+        c = _capsula_json(r, saldo, hoy, admin)
+        if c["abierta"] and not r["abierta_ts"]:  # primera vez que se ve abierta: queda abierta aunque el saldo luego baje
+            ahora = int(time.time())
+            conn.execute("UPDATE capsulas SET abierta_ts = ? WHERE id = ? AND abierta_ts IS NULL", (ahora, r["id"]))
+            c["abierta_ts"] = ahora
+        out.append(c)
+    conn.commit()
+    return jsonify(out)
+
+
+@app.post("/api/capsulas")
+def sellar_capsula() -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    body: Any = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        return jsonify(error="Datos inválidos."), 400
+    conn = db()
+    try:
+        texto = parse_carta(body.get("texto"))
+        fecha, sats = body.get("abre_fecha"), body.get("abre_sats")
+        if (fecha is None) == (sats is None):
+            raise ValueError("Elige cuándo se abre: una fecha o un saldo.")
+        if fecha is not None:
+            if not isinstance(fecha, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fecha):
+                raise ValueError("Fecha inválida.")
+            d = date.fromisoformat(fecha)
+            if d <= date.today():
+                raise ValueError("La fecha tiene que ser futura.")
+            if d > date.today() + timedelta(days=366 * 40):
+                raise ValueError("Esa fecha queda demasiado lejos.")
+        else:
+            if isinstance(sats, bool) or not isinstance(sats, int) or sats <= 0 or sats > MAX_SATS:
+                raise ValueError("Saldo inválido.")
+            if sats <= saldo_actual(conn):
+                raise ValueError("Ese saldo ya lo tienes: elige uno más arriba.")
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    if conn.execute("SELECT COUNT(*) FROM capsulas WHERE anulada_ts IS NULL AND abierta_ts IS NULL").fetchone()[0] >= MAX_CAPSULAS:
+        return jsonify(error=f"Ya hay {MAX_CAPSULAS} cartas selladas. Espera a que se abra alguna."), 400
+    cur = conn.execute("INSERT INTO capsulas (texto, abre_fecha, abre_sats, creado, autor) VALUES (?, ?, ?, ?, ?)",
+                       (texto, fecha, sats, int(time.time()), quien()))
+    cid = int(cur.lastrowid or 0)
+    auth.auditar(conn, quien(), "capsula_sellada", "capsula", cid, None, {"abre_fecha": fecha, "abre_sats": sats, "largo": len(texto)}, auth.ip_resumida(ip_real()))
+    conn.commit()
+    r = conn.execute("SELECT id, texto, abre_fecha, abre_sats, creado, autor, abierta_ts FROM capsulas WHERE id = ?", (cid,)).fetchone()
+    return jsonify(_capsula_json(r, saldo_actual(conn), date.today().isoformat(), True)), 201
+
+
+@app.delete("/api/capsulas/<int:cid>")
+def anular_capsula(cid: int) -> Any:
+    """Una carta aún sellada se puede anular (queda la fila). Una ya abierta es parte de la historia: no."""
+    if (e := _solo_admin()) is not None:
+        return e
+    conn = db()
+    r = conn.execute("SELECT id, texto, abre_fecha, abre_sats, creado, autor, abierta_ts FROM capsulas WHERE id = ? AND anulada_ts IS NULL", (cid,)).fetchone()
+    if not r:
+        return jsonify(error="Esa carta no existe."), 404
+    if _capsula_json(r, saldo_actual(conn), date.today().isoformat(), True)["abierta"]:
+        return jsonify(error="Esa carta ya se abrió: es parte de la historia y no se borra."), 409
+    conn.execute("UPDATE capsulas SET anulada_ts = ? WHERE id = ?", (int(time.time()), cid))
+    auth.auditar(conn, quien(), "capsula_anulada", "capsula", cid, {"abre_fecha": r["abre_fecha"], "abre_sats": r["abre_sats"]}, None, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return "", 204
+
+
+# ------------------------------------------------- la apacheta y los cumpleaños (campamento 15B)
+@app.get("/api/piedritas")
+def listar_piedritas() -> Response:
+    """Las piedritas que los lectores dejaron en las compras vigentes. Las ven todos (quién la dejó y cuándo)."""
+    rows = db().execute("""SELECT p.compra_id, u.nombre AS quien, p.creado FROM piedritas p
+        JOIN usuarios u ON u.id = p.usuario_id JOIN compras c ON c.id = p.compra_id
+        WHERE c.anulada_ts IS NULL AND c.tipo = 'compra' ORDER BY p.creado, p.compra_id""").fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.post("/api/piedritas/<int:cid>")
+def dejar_piedrita(cid: int) -> Any:
+    """Un lector deja una piedrita en una compra (una por persona y compra; repetirla no hace nada). Es su primera escritura: un toque, sin texto."""
+    u = g.usuario
+    if u["rol"] == "admin":
+        return jsonify(error="Las piedritas las dejan los demás en tus compras."), 403
+    conn = db()
+    c = conn.execute("SELECT id, fecha FROM compras WHERE id = ? AND anulada_ts IS NULL AND tipo = 'compra'", (cid,)).fetchone()
+    if not c:
+        return jsonify(error="Esa compra no existe."), 404
+    cur = conn.execute("INSERT OR IGNORE INTO piedritas (compra_id, usuario_id, creado) VALUES (?, ?, ?)", (cid, u["id"], int(time.time())))
+    nueva = cur.rowcount > 0
+    conn.commit()
+    if nueva:
+        try:
+            push.notificar(conn, "piedrita", "Libro DCA", f"{u['nombre']} dejó una piedrita en tu compra del {c['fecha']}.", f"piedrita-{cid}-{u['id']}")
+        except Exception as e:  # noqa: BLE001 — avisar es secundario
+            print(f"push: no se pudo avisar de la piedrita ({type(e).__name__}: {e})", flush=True)
+    r = conn.execute("SELECT creado FROM piedritas WHERE compra_id = ? AND usuario_id = ?", (cid, u["id"])).fetchone()
+    return jsonify(compra_id=cid, quien=u["nombre"], creado=r["creado"]), 201 if nueva else 200
+
+
+@app.delete("/api/piedritas/<int:cid>")
+def quitar_piedrita(cid: int) -> Any:
+    conn = db()
+    cur = conn.execute("DELETE FROM piedritas WHERE compra_id = ? AND usuario_id = ?", (cid, g.usuario["id"]))
+    conn.commit()
+    return ("", 204) if cur.rowcount else (jsonify(error="No dejaste una piedrita ahí."), 404)
+
+
+def parse_cumple(v: Any) -> str | None:
+    """«MM-DD» (el 29 de febrero vale) o None para quitarlo."""
+    if v is None or v == "":
+        return None
+    if not isinstance(v, str) or not re.fullmatch(r"\d{2}-\d{2}", v):
+        raise ValueError("Elige el mes y el día de tu cumpleaños.")
+    try:
+        date.fromisoformat(f"2024-{v}")  # 2024 es bisiesto: el 29 de febrero es válido
+    except ValueError:
+        raise ValueError("Ese día no existe.") from None
+    return v
+
+
+@app.put("/api/yo/cumple")
+def guardar_cumple() -> Any:
+    """Cada persona pone su cumpleaños (mes y día), también un lector. Sirve para el saludo y el farol de ese día."""
+    body = request.get_json(silent=True)
+    try:
+        cumple = parse_cumple(body.get("cumple") if isinstance(body, dict) else None)
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    conn = db()
+    conn.execute("UPDATE usuarios SET cumple = ? WHERE id = ?", (cumple, g.usuario["id"]))
+    conn.commit()
+    return jsonify(cumple=cumple)
+
+
+@app.get("/api/cumples")
+def listar_cumples() -> Response:
+    """Los cumpleaños que la familia puso (solo nombre, mes y día) de las cuentas activas."""
+    rows = db().execute("SELECT nombre, cumple FROM usuarios WHERE activo = 1 AND cumple IS NOT NULL ORDER BY nombre").fetchall()
+    return jsonify([dict(r) for r in rows])
 
 
 @app.post("/api/traslados")
@@ -2095,7 +2381,7 @@ def cabeceras(resp: Response) -> Response:
     elif "Cache-Control" not in resp.headers:
         resp.headers["Cache-Control"] = "no-store" if request.path.startswith("/api/") else "no-cache"
     if request.path == "/" or request.path.startswith("/api/"):
-        resp.headers["Vary"] = "Cookie"
+        resp.vary.add("Cookie")
     return resp
 
 
