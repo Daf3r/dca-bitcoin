@@ -7,6 +7,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-k', fecha: '2026-11-15',
+    items: [
+      'En «Tu historia» hay una vista nueva, la manta de añil: una celda por cada semana, más oscura cuanto más sumaste. Las semanas sin compras son algodón crudo, parte del tejido.',
+      'Las compras extra llevan una puntada naranja en la manta, y lo que falta del año cuelga como flecos.',
+      'Ya puedes ver tu certificado de altitud: tu saldo escrito en letras, con un grabado hecho de tus compras.',
+      'Cada etapa que cruzas deja un sello de lacre en tu historia; al cruzar una nueva, el sello cae en la tarjeta de celebración.',
+    ],
+  },
+  {
     id: '2026-11-j', fecha: '2026-11-15',
     items: [
       'En «Tu historia» puedes ver tu camino de tres maneras nuevas, además de la línea de tiempo.',
