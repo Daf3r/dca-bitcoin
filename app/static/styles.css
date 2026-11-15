@@ -1794,8 +1794,16 @@ html[data-efectos="ninguno"] .luna.moneda :is(.moneda-gira, .moneda-brillo) { an
 html[data-efectos="todos"] .cot-v .ico { animation: zopilote 4s ease-in-out infinite; }
 
 /* Campamento 13 · «Tu historia en objetos»: el selector de vistas y el lienzo del tronco, la constelación y el torre de piedras (el dibujo vive en arte-historia.js). */
-.dh-vistas { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
-.dh-vistas button { flex: 1 1 6.5rem; min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
+/* Cinco vistas en filas parejas: en el teléfono «Línea» sola arriba y los cuatro dibujos de dos en dos; desde 700 px, tres y dos. */
+.dh-vistas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0 0 14px; }
+.dh-vistas button:first-child { grid-column: span 2; }
+@media (min-width: 700px) {
+  .dh-vistas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .dh-vistas button { grid-column: span 2; }
+  .dh-vistas button:nth-child(n + 4) { grid-column: span 3; }
+}
+@media (max-width: 419px) { html[data-letra="muy-grande"] .dh-vistas { grid-template-columns: minmax(0, 1fr); } html[data-letra="muy-grande"] .dh-vistas button:first-child { grid-column: auto; } }
+.dh-vistas button { min-width: 0; min-height: var(--toque, 48px); padding: 0 6px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt2); font: 600 0.8125rem var(--sans, inherit); }
 .dh-vistas button[aria-pressed="true"] { background: var(--naranja); border-color: var(--naranja); color: #1d1206; }
 .dh-objeto { margin: 0; }
 .dh-lienzo { display: block; width: 100%; max-width: 26rem; margin: 0 auto; }
@@ -1901,26 +1909,106 @@ html[data-efectos="todos"] .hc-titila.tw3 { animation-duration: 8.8s; animation-
 .hm-veta { fill: var(--naranja); opacity: 0.5; }
 .hm-guijarro-luz { fill: #fff6e6; opacity: 0.3; } .hm-guijarro-sombra { fill: #120c08; opacity: 0.3; }
 
-/* Campamento 13B · sellos de lacre, certificado y manta (el dibujo vive en arte-sellos.js y arte-historia.js; estas son las reglas provisionales de su pantalla). */
+/* Campamento 13B · sellos de lacre, certificado y manta (el dibujo vive en arte-sellos.js y arte-historia.js). */
 .dh-cert-btn { margin: 0 0 14px; }
 .sellos { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: 12px 8px; margin: 0 0 14px; padding: 0; list-style: none; }
 .sello { display: grid; justify-items: center; gap: 2px; text-align: center; }
 .sello .lacre { width: 56px; height: 56px; }
 .sello b { font-size: 0.8125rem; line-height: 1.2; }
 .sello small { font-size: 0.75rem; line-height: 1.25; color: var(--txt2); }
-.lacre-cera { fill: var(--naranja-osc, #b5461b); }
-.lacre-cifra { fill: var(--txt); font: 700 22px var(--serif); }
-.hc-lacre { display: block; }
+/* El sello de lacre: cera bermellón (dorada desde 1 BTC), con su huella y la cifra en relieve. Colores propios en los dos temas. */
+.lacre, .certificado { --lc-0: #f0774a; --lc-1: #c8361f; --lc-2: #7d1a10; --lc-luz: #ffc3a0; --lc-osc: #4a0d06; --lc-sombra: rgb(30 6 2 / 0.4); }
+html[data-acento="oro"] :is(.lacre, .certificado) { --lc-0: #f7d36a; --lc-1: #cf9a22; --lc-2: #7a5208; --lc-luz: #fff2c4; --lc-osc: #3f2a02; }
+.lacre { display: block; overflow: visible; }
+.lc-sombra { fill: var(--lc-sombra); }
+.lc-c0 { stop-color: var(--lc-0); } .lc-c1 { stop-color: var(--lc-1); } .lc-c2 { stop-color: var(--lc-2); }
+.lc-h0 { stop-color: var(--lc-2); } .lc-h1 { stop-color: var(--lc-0); }
+.lc-a0 { stop-color: var(--lc-luz); } .lc-a1 { stop-color: var(--lc-1); } .lc-a2 { stop-color: var(--lc-osc); }
+.lc-b0 { stop-color: #fff; stop-opacity: 0.55; } .lc-b1 { stop-color: #fff; stop-opacity: 0; }
+.lc-canto-luz { fill: none; stroke: var(--lc-luz); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; }
+.lc-aro { fill: none; stroke-width: 3.2; }
+.lc-hondo { opacity: 0.8; }
+.lc-grab-osc { fill: none; stroke: var(--lc-osc); stroke-width: 0.7; opacity: 0.55; } .lc-grab-luz { fill: none; stroke: var(--lc-luz); stroke-width: 0.6; opacity: 0.45; }
+.lc-grano { fill: none; stroke: var(--lc-luz); stroke-width: 1.1; stroke-linecap: round; opacity: 0.5; }
+.lc-rel-osc { fill: var(--lc-osc); stroke: var(--lc-osc); opacity: 0.85; } .lc-rel-luz { fill: var(--lc-luz); stroke: var(--lc-luz); } .lc-rel { fill: var(--lc-0); stroke: var(--lc-0); }
+.lacre :is(.lc-rel-osc, .lc-rel-luz, .lc-rel) path, .certificado :is(.lc-rel-osc, .lc-rel-luz, .lc-rel) path { stroke-width: 1.2; stroke-linejoin: round; stroke-linecap: round; }
+.lacre :is(.lc-rel-osc, .lc-rel-luz, .lc-rel) text, .certificado :is(.lc-rel-osc, .lc-rel-luz, .lc-rel) text { stroke: none; }
+.lc-cifra { font-family: var(--serif); font-weight: 700; letter-spacing: -0.02em; }
+.lc-unidad { font: 700 8.5px var(--sans, sans-serif); letter-spacing: 0.14em; }
+.lc-chispa { fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; opacity: 0.75; }
+.lc-destello { fill: none; stroke: var(--lc-luz); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; pointer-events: none; }
+.sello .lacre { width: 56px; height: 56px; }
+
+/* En la tarjeta de celebración: el sello va a la izquierda del texto, cae y se aplasta (acompaña a una acción: también con «esenciales»). */
+.hito-cel p { position: relative; }
+.hito-cel p:has(> .hc-lacre:not(:empty)) { grid-template-columns: auto auto; column-gap: 12px; align-items: center; padding-left: 14px; text-align: left; justify-items: start; }
+.hc-lacre { display: block; grid-column: 1; grid-row: 1 / span 2; }
 .hc-lacre:empty { display: none; }
-.hc-lacre .lacre { width: 84px; height: 84px; margin-bottom: -22px; position: relative; z-index: 1; }
+.hito-cel p:has(> .hc-lacre:not(:empty)) :is(small, b) { grid-column: 2; }
+.hc-lacre .lacre { width: clamp(64px, 19vw, 84px); height: clamp(64px, 19vw, 84px); margin: -14px 0 -12px -6px; transform: rotate(-9deg); }
+html:not([data-efectos="ninguno"]) .hito-cel.va .hc-lacre .lacre { animation: lacre-cae 0.62s cubic-bezier(0.3, 0, 0.25, 1) both; }
+html:not([data-efectos="ninguno"]) .hito-cel.va .hc-lacre .lc-destello { animation: lacre-destello 0.7s ease-out 0.42s both; }
+@keyframes lacre-cae {
+  0% { opacity: 0; transform: translateY(-46px) scale(1.25) rotate(-20deg); }
+  55% { opacity: 1; transform: translateY(0) scale(0.92, 0.88) rotate(-9deg); }
+  75% { transform: translateY(-2px) scale(1.04, 1.02) rotate(-9deg); }
+  100% { opacity: 1; transform: rotate(-9deg); }
+}
+@keyframes lacre-destello { 0% { opacity: 0.85; transform: scale(0.75); } 100% { opacity: 0; transform: scale(1.25); } }
+
+/* El certificado de altitud: un papel propio (siempre claro, como un diploma) con tinta de añil y un guilloché hecho de tus datos. */
 .d-cert { width: min(92vw, 34rem); }
+.cert-lienzo { border-radius: 10px; box-shadow: var(--sombra); }
 .cert-lienzo svg { display: block; width: 100%; height: auto; }
-.cert-marco { fill: var(--s1); stroke: var(--naranja); stroke-width: 2; }
-.cert-t, .cert-n, .cert-l, .cert-f { fill: var(--txt); font: 600 20px var(--serif); }
+.certificado { --c-papel0: #fbf6ea; --c-papel1: #f3e9d2; --c-papel2: #e6d5b2; --c-tinta: #1d2742; --c-tinta2: #4a4436; --c-cobre: #9a3d12; --c-linea: #36578f; }
+.c-p0 { stop-color: var(--c-papel0); } .c-p1 { stop-color: var(--c-papel1); } .c-p2 { stop-color: var(--c-papel2); }
+.c-papel { fill: url(#c-papel); }
+.c-hebra { fill: none; stroke: var(--c-linea); stroke-width: 0.5; opacity: 0.75; }
+.c-hebra-b { stroke: var(--c-cobre); opacity: 0.6; }
+.c-rosa { fill: none; stroke: var(--c-cobre); stroke-width: 0.5; opacity: 0.8; }
+.c-filete { fill: none; stroke: var(--c-tinta); stroke-width: 0.8; opacity: 0.7; }
+.c-micro { fill: var(--c-tinta); font: 600 4.4px var(--sans, sans-serif); letter-spacing: 0.06em; opacity: 0.55; }
+.c-rosa-a { fill: none; stroke: var(--c-linea); stroke-width: 0.5; opacity: 0.42; }
+.c-rosa-b { fill: none; stroke: var(--c-cobre); stroke-width: 0.5; opacity: 0.4; }
+.c-trenza { fill: none; stroke: var(--c-linea); stroke-width: 0.5; opacity: 0.5; }
+.c-rosa-c { fill: none; stroke: var(--c-cobre); stroke-width: 0.6; opacity: 0.4; }
+.c-titulo { fill: var(--c-tinta); font: 600 27px var(--serif); letter-spacing: 0.01em; }
+.c-regla { fill: none; stroke: var(--c-cobre); stroke-width: 0.9; }
+.c-pre { fill: var(--c-tinta2); font: italic 400 10.5px var(--serif); }
+.c-nombre { fill: var(--c-cobre); font: italic 600 24px var(--serif); }
+.c-letras { fill: var(--c-tinta); font-family: var(--serif); font-weight: 600; }
+.c-cifra { fill: var(--c-tinta2); font: 600 11px var(--sans, sans-serif); letter-spacing: 0.04em; }
+.c-linea { fill: none; stroke: var(--c-tinta); stroke-width: 0.7; opacity: 0.6; }
+.c-dato { fill: var(--c-tinta); font: 600 11px var(--sans, sans-serif); }
+.c-rotulo { fill: var(--c-tinta2); font: 700 6.5px var(--sans, sans-serif); letter-spacing: 0.2em; }
+.certificado :is(.c-titulo, .c-pre, .c-nombre, .c-letras, .c-cifra, .c-dato, .c-rotulo) { paint-order: stroke; stroke: var(--c-papel0); stroke-width: 3.2px; stroke-linejoin: round; }
 .cert-desc { margin: 10px 0 0; font-size: 0.8125rem; color: var(--txt2); }
-.dh-lienzo .celda { fill: var(--s3); }
-.dh-lienzo .celda.tono-1 { fill: #9fb4d6; }
-.dh-lienzo .celda.tono-2 { fill: #5d7fb8; }
-.dh-lienzo .celda.tono-3 { fill: #2f4f93; }
-.dh-lienzo .celda.tono-4 { fill: #17306b; }
-.dh-lienzo .celda.sel { stroke: var(--naranja); stroke-width: 1.2; }
+/* La manta de añil: la tela tiene sus colores propios (algodón crudo y añil) en los dos temas, como la madera del tronco. */
+.dh-lienzo { --ha-crudo: #eadcc0; --ha-t1: #a9bfdc; --ha-t2: #6e8fc2; --ha-t3: #3b5b98; --ha-t4: #1d2f66; --ha-hilo: #3a3326; --ha-fleco: #e3d3b2; --ha-sombra: rgb(0 0 0 / 0.42); }
+:root[data-tema="claro"] .dh-lienzo { --ha-fleco: #a88f68; --ha-sombra: rgb(70 44 18 / 0.22); }
+.h-manta .celda { fill: var(--ha-crudo); }
+.h-manta .celda.tono-1 { fill: var(--ha-t1); } .h-manta .celda.tono-2 { fill: var(--ha-t2); }
+.h-manta .celda.tono-3 { fill: var(--ha-t3); } .h-manta .celda.tono-4 { fill: var(--ha-t4); }
+.dh-lienzo :is(.ha-sobre, .ha-sombra, .ha-crudo, .ha-sel, .ha-sel-fondo) { pointer-events: none; }
+.ha-sombra { fill: var(--ha-sombra); }
+.ha-crudo { fill: var(--ha-crudo); }
+.ha-p-luz { fill: #fffaf0; opacity: 0.22; } .ha-p-sombra { fill: #15100a; opacity: 0.2; }
+.ha-trama { fill: url(#h-a-trama); }
+.ha-g-luz { stop-color: #fff6e4; stop-opacity: 0.07; } .ha-g-sombra { stop-color: #0c0a14; stop-opacity: 0.1; }
+.ha-pliegue { fill: url(#h-a-pliegue); }
+.ha-l0 { stop-color: #fff6e4; stop-opacity: 0.14; } .ha-l1 { stop-color: #fff6e4; stop-opacity: 0; } .ha-l2 { stop-color: #0c0a14; stop-opacity: 0.16; }
+.ha-luz { fill: url(#h-a-luz); }
+.ha-jaspe { fill: none; stroke: #e9f0ff; stroke-width: 0.6; stroke-linecap: round; opacity: 0.2; }
+.ha-jaspe-osc { fill: none; stroke: #0b1433; stroke-width: 0.6; stroke-linecap: round; opacity: 0.22; }
+.ha-pasada { fill: none; stroke: #120e1c; stroke-width: 0.9; opacity: 0.35; }
+.ha-orillo { fill: none; stroke: color-mix(in oklab, var(--ha-crudo) 55%, var(--ha-hilo)); stroke-width: 1.1; stroke-linecap: square; }
+.ha-cenefa { fill: color-mix(in oklab, var(--ha-crudo) 88%, var(--ha-hilo)); }
+.ha-greca { fill: var(--ha-t4); }
+.ha-rombo { fill: var(--naranja); }
+.ha-f0 { stop-color: var(--ha-fleco); stop-opacity: 0.45; } .ha-f1 { stop-color: var(--ha-fleco); stop-opacity: 0.95; } .ha-f2 { stop-color: var(--ha-fleco); stop-opacity: 0.6; }
+.ha-urdimbre { fill: none; stroke: url(#h-a-fleco); stroke-width: 0.75; stroke-linecap: round; }
+.ha-manojo { fill: none; stroke: color-mix(in oklab, var(--ha-fleco) 75%, var(--ha-hilo)); stroke-width: 2; stroke-linecap: round; }
+.ha-cruz-sombra { fill: none; stroke: #1a0c02; stroke-width: 2.1; stroke-linecap: round; opacity: 0.45; }
+.ha-cruz { fill: none; stroke: var(--naranja); stroke-width: 1.15; stroke-linecap: round; }
+.ha-sel-fondo { fill: none; stroke: #120a02; stroke-width: 3.2; opacity: 0.55; }
+.ha-sel { fill: color-mix(in oklab, var(--naranja) 22%, transparent); stroke: var(--naranja); stroke-width: 1.6; }
