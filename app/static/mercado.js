@@ -1,4 +1,4 @@
-import { aFecha, costoVsPromedio, entero, fechaLarga, hoyISO, masMovieron, numCorto, pct, satsPorDolar, serieCostoPromedio, serieGrafico, serieSatsAcum, serieSatsPorDolar, serieValor, usd0, usdSigno } from './lib.js';
+import { aFecha, costoVsPromedio, etapaSiguiente, etapasHasta, entero, fechaLarga, hoyISO, masMovieron, numCorto, pct, satsPorDolar, serieCostoPromedio, serieGrafico, serieSatsAcum, serieSatsPorDolar, serieValor, usd0, usdSigno } from './lib.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
 import { dibujarValor, instalarLecturaValor } from './valor.js';
 import { dibujarEscalera, instalarEscalera } from './escalera.js';
@@ -179,7 +179,7 @@ function pintarSatsAcum() {
   const h = $('s-lienzo');
   anchoSats = h.clientWidth;
   dibujarEscalera(h, $('s-lectura'), $('s-sr'), {
-    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, fmtEje: (v) => `${numCorto(v)} sats`,
+    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, perfil: { etapas: [...etapasHasta(etapaSiguiente(R.sats))] }, fmtEje: (v) => `${numCorto(v)} sats`,
     defecto: `Hoy tienes <b>${entero(R.sats)} sats</b>.`,
     texto: (p) => (p.hoy ? `Hoy · <b>${entero(p.sats)} sats</b>` : `${fechaLarga(p.fecha)} · ${p.delta >= 0 ? '+' : '−'}${entero(Math.abs(p.delta))} sats · <b>${entero(p.sats)}</b> en total${p.tipo === 'venta' ? ' (venta o gasto)' : ''}`),
     aria: 'Tus sats acumulados con cada compra. Usa las flechas para recorrerlo.',

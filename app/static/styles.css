@@ -2922,3 +2922,43 @@ html[data-tv]:not([data-efectos="ninguno"]) .tv-sismo.arranca .sm-tira { animati
 
 /* Material de las tarjetas nuevas. */
 .pie-ultima { background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
+
+/* ---------------------------------------------------------------- Campamento 16A */
+/* Bolas de fuego de Nejapa (31 de agosto, una vez por año): dos bolas con estela cruzan el cielo. */
+.nejapa { display: none; pointer-events: none; }
+html[data-nejapa] .nejapa { display: inline; }
+.nejapa-cabeza { fill: #ffd9a0; }
+.nejapa-cola { stroke: #ff9f5a; stroke-width: 2.4; stroke-linecap: round; opacity: 0.55; fill: none; }
+.nejapa-cola2 { stroke: #fff0cf; stroke-width: 1.2; stroke-linecap: round; opacity: 0.8; fill: none; }
+@keyframes nejapa { 0% { transform: translate(0, 0); opacity: 0; } 10% { opacity: 1; } 88% { opacity: 1; } 100% { transform: translate(calc(var(--escena-w, 400px) + 160px), 70px); opacity: 0; } }
+.nejapa-mueve { opacity: 0; animation: nejapa 6.5s ease-in 1 both; }
+.nb2 .nejapa-mueve { animation-delay: 1.3s; animation-duration: 7.5s; }
+/* Reloj de sol (35): la sombra de la cumbre marca la hora en el suelo; solo de día. */
+.reloj { display: none; pointer-events: none; }
+html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cielo="atardecer"] .reloj { display: inline; }
+.reloj-sombra { fill: var(--monte-sombra, #000); opacity: 0.5; }
+.reloj-piedra { fill: var(--txt, #fff); opacity: 0.4; }
+.reloj-medio { opacity: 0.45; }
+/* El lago guarda lo vendido (40): una monedita brillando en el fondo por cada venta; la última baja al guardar. */
+.lm-brillo { fill: var(--naranja, #ff9228); opacity: 0.22; }
+.lm-disco { fill: var(--naranja-txt, #ffb260); stroke: rgb(0 0 0 / 0.35); stroke-width: 0.5; }
+.lm-raya { stroke: rgb(0 0 0 / 0.4); stroke-width: 0.5; }
+@keyframes moneda-hunde { 0% { translate: 0 -46px; opacity: 0; } 15% { opacity: 1; } 70% { translate: 0 0; } 100% { translate: 0 0; } }
+.lago-moneda.hunde { animation: moneda-hunde 1.7s cubic-bezier(.45, 0, .8, .6) 1 both; }
+
+/* «Tú» fantasma en la hoja de anotar (16B, idea 2): tu etapa como regla, con dónde quedarías al guardar. */
+.h-ruta { margin: 2px 0 6px; }
+.hr-pista { position: relative; display: block; height: 10px; border-radius: 5px; background: var(--s3, rgb(255 255 255 / 0.12)); }
+.hr-hecho { position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); border-radius: 5px; background: var(--naranja); opacity: 0.55; }
+.hr-yo, .hr-fantasma { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-sizing: border-box; }
+.hr-yo { left: calc(var(--p, 0) * 100%); background: var(--naranja); box-shadow: 0 0 0 2px var(--s1); }
+.hr-fantasma { left: calc(var(--q, 0) * 100%); border: 2px dashed var(--naranja-txt); background: transparent; transition: left 0.35s var(--resorte, ease-out); }
+.ruta-txt { color: var(--txt2); }
+
+/* Perfil de altitud (16B, idea 4): la vista «Sats» en escala logarítmica, con faroles, anillos en las extra y «Tú». */
+.pf-halo { fill: var(--naranja); opacity: 0.2; }
+.pf-cuerpo { fill: var(--naranja-txt); stroke: var(--s1); stroke-width: 0.8; }
+.pf-techo { fill: var(--txt2); }
+.pf-extra { fill: none; stroke: var(--naranja); stroke-width: 1.6; }
+.pf-tu { fill: var(--naranja-txt); font-weight: 700; }
+.v-eje.pf-eje, .pf-eje { paint-order: stroke; stroke: var(--fondo, #070b15); stroke-width: 3px; stroke-linejoin: round; }

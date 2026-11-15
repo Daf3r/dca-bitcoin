@@ -572,3 +572,30 @@ export function sismografo({ puntos = [], ancho = 600, alto = 120 } = {}) {
     + `<circle class="sm-gota-h" cx="${f1(tx)}" cy="${f1(ty)}" r="6"/><circle class="sm-gota" cx="${f1(tx)}" cy="${f1(ty)}" r="3"/><circle class="sm-gota-b" cx="${f1(tx + 0.9)}" cy="${f1(ty - 1)}" r="0.9"/>`
     + '</svg>';
 }
+
+// ---------------------------------------------------------------- campamento 16A
+/**
+ * Las bolas de fuego de Nejapa (idea 26): la noche del 31 de agosto cruzan el cielo dos bolas con su estela. Se dibujan siempre y
+ * el CSS las muestra solo con `html[data-nejapa]` (que `cielo.js` pone una vez por año y dispositivo). Ambiente.
+ */
+export function bolasDeFuego(yH) {
+  const bola = (y, n) => `<g class="nejapa-bola nb${n}" transform="translate(-40 ${f1(y)})"><g class="nejapa-mueve"><path class="nejapa-cola" d="M-70 -22L-22 -6"/><path class="nejapa-cola2" d="M-46 -14L-10 -3"/><circle class="nejapa-cabeza" r="3.2"/></g></g>`;
+  return `<g class="efecto-ambiente nejapa" aria-hidden="true">${bola(Math.max(40, yH * 0.5), 1)}${bola(Math.max(60, yH * 0.78), 2)}</g>`;
+}
+
+/**
+ * El reloj de sol (idea 35): la sombra de la cumbre cae sobre el suelo según la hora real de El Salvador y once piedritas marcan
+ * de las 7 a las 17. La sombra (`.reloj-sombra`) la coloca `montana.js: colocarReloj` (cada 5 minutos). Ambiente.
+ */
+export function relojDeSol(sx, gy, W) {
+  const alcance = Math.max(30, Math.min(sx - 10, W - sx - 10, W * 0.42));
+  let piedras = '';
+  for (let h = 7; h <= 17; h++) piedras += `<circle class="reloj-piedra${h === 12 ? ' reloj-medio' : ''}" cx="${f1(sx + ((h - 12) / 5) * alcance)}" cy="${f1(gy)}" r="${h === 12 ? 1.6 : 1.1}"/>`;
+  return `<g class="efecto-ambiente reloj" data-sx="${f1(sx)}" data-gy="${f1(gy)}" data-alcance="${f1(alcance)}" aria-hidden="true"><path class="reloj-sombra" d=""/>${piedras}</g>`;
+}
+
+/** La monedita que queda brillando en el fondo del lago por cada venta (idea 40; hasta 5). */
+export function monedasDelLago(cx, cy, rx, ry, n) {
+  const sitios = [[-0.35, 0.12], [0.12, 0.3], [0.4, 0.02], [-0.08, 0.34], [0.26, 0.2]];
+  return sitios.slice(0, Math.min(5, n)).map(([x, y], i) => `<g class="lago-moneda" transform="translate(${f1(cx + rx * x)} ${f1(cy + ry * y)})"><circle class="lm-brillo" r="4.2"/><circle class="lm-disco" r="2.1"/><path class="lm-raya" d="M-0.9 0h1.8"/></g>`.replace('class="lago-moneda"', `class="lago-moneda m${i}"`)).join('');
+}

@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-o', fecha: '2026-11-17',
+    items: [
+      'Al anotar una compra, la hoja te enseña un «Tú» fantasma: dónde quedarías en el camino a tu próxima etapa.',
+      'La vista «Sats» del gráfico ahora es un perfil de altitud, con las etapas rotuladas y un farol en cada campamento que cruzaste.',
+      'Tras una venta o un gasto, una monedita se hunde en el lago y queda brillando: se gastó, pero sigue siendo parte de tu historia.',
+      'De día, la sombra de la cumbre marca la hora en el suelo. Y el aviso de cada etapa llega por telegrama.',
+      'Hay un secreto para la noche del 31 de agosto. Tienes que estar mirando.',
+    ],
+  },
+  {
     id: '2026-11-n', fecha: '2026-11-16',
     items: [
       'Llegó «El Diario del Libro»: una portada en el Resumen con lo que pasó, qué había hace un año, unos clasificados con humor y el pronóstico de la montaña.',

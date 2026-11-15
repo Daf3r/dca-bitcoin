@@ -1,6 +1,6 @@
 // Dos vistas del gráfico que comparten dibujo: «cómo cambia tu costo promedio» (línea entre compras) y «tus sats» (escalera
 // que sube con cada compra y baja con cada venta). Cada una es una serie de puntos con fecha; se lee con puntero y teclado.
-import { aFecha } from './lib.js';
+import { aFecha, nombreHito } from './lib.js';
 import { ilustracion } from './iconos.js';
 
 const f1 = (n) => n.toFixed(1);
@@ -24,19 +24,21 @@ function marcas(lo, hi) {
  * `desdeCero`: el eje parte de 0 (sats) o se ajusta al rango (costo); `fmtEje`: cómo escribir una marca; `texto(p)`: la lectura de un
  * punto; `defecto`: la lectura en reposo; `sr`: la zona que anuncia a los lectores de pantalla.
  */
-export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero, fmtEje, texto, defecto, aria }) {
+export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero, fmtEje, texto, defecto, aria, perfil = null }) {
   const W = Math.max(280, host.clientWidth);
   const H = W < 560 ? 220 : W < 900 ? 260 : 280;
   if (puntos.length < 2) { host.innerHTML = `<p class="g-vacio">${ilustracion('grafico')}Aún no hay suficientes compras para este gráfico.</p>`; EST.delete(host); lectura.textContent = ''; return; }
+  // Perfil de altitud (16B, idea 4): con `perfil` la escala es logarítmica (como la montaña) y las etapas son líneas rotuladas.
+  const T = perfil ? (v) => Math.log10(Math.max(1, v)) : (v) => v;
   const vs = puntos.map((p) => p.v);
-  let lo = desdeCero ? 0 : Math.min(...vs), hi = Math.max(...vs);
-  const pad = (hi - lo) * 0.12 || hi * 0.1 || 1;
-  if (!desdeCero) lo -= pad;
+  let lo = perfil ? T(Math.min(...vs.filter((v) => v > 0), perfil.etapas[0] ?? Infinity)) : desdeCero ? 0 : Math.min(...vs), hi = perfil ? T(Math.max(...vs, perfil.etapas.at(-1) ?? 0)) : Math.max(...vs);
+  const pad = perfil ? 0.08 : (hi - lo) * 0.12 || hi * 0.1 || 1;
+  if (!desdeCero || perfil) lo -= pad;
   hi += pad;
   const m = { t: 18, r: 12, b: 28, l: 10 };
   const t0 = aFecha(puntos[0].fecha).getTime(), t1 = aFecha(puntos.at(-1).fecha).getTime();
   const x = (f) => m.l + ((aFecha(f).getTime() - t0) / Math.max(1, t1 - t0)) * (W - m.l - m.r);
-  const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+  const y = (v) => Math.min(H - m.b, m.t + (1 - (T(v) - lo) / (hi - lo)) * (H - m.t - m.b));
   const base = H - m.b;
   let d = `M${f1(x(puntos[0].fecha))} ${f1(y(puntos[0].v))}`;
   for (let i = 1; i < puntos.length; i++) {
@@ -50,7 +52,9 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
     const p = puntos[Math.round((k / (n - 1)) * (puntos.length - 1))];
     s += `<text class="g-t" x="${f1(x(p.fecha))}" y="${H - 8}" text-anchor="${k === 0 ? 'start' : k === n - 1 ? 'end' : 'middle'}">${mes(p.fecha)}</text>`;
   }
-  const ticks = marcas(lo, hi * 0.97).filter((v) => y(v) < base - 16); // la marca pegada a la base (p. ej. «0 sats») solo estorba al primer punto
+  const pot = (e) => Number.isInteger(Math.log10(e));
+  const apretadas = perfil && perfil.etapas.length > 1 && Math.abs(y(perfil.etapas[0]) - y(perfil.etapas[1])) < 17; // con poco alto, solo las potencias de 10
+  const ticks = perfil ? perfil.etapas.filter((v) => T(v) > lo && T(v) < hi && y(v) > m.t + 6 && (!apretadas || pot(v))) : marcas(lo, hi * 0.97).filter((v) => y(v) < base - 16); // la marca pegada a la base (p. ej. «0 sats») solo estorba al primer punto
   for (const v of ticks) s += `<line class="v-rej" x1="${m.l}" x2="${W - m.r}" y1="${f1(y(v))}" y2="${f1(y(v))}"/>`;
   s += `<line class="v-base" x1="${m.l}" x2="${W - m.r}" y1="${base}" y2="${base}"/>`;
   if (desdeCero) s += `<path class="s-area" d="${d}L${f1(x(puntos.at(-1).fecha))} ${base}L${f1(x(puntos[0].fecha))} ${base}Z"/>`;
@@ -59,9 +63,18 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
   s += `<path class="s-puntos" d="${puntos.slice(0, -1).map((p) => `M${f1(x(p.fecha) - r)} ${f1(y(p.v))}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`).join('')}"/>`;
   // La cifra va del lado donde la línea no pasa: a la izquierda si el valor sube, a la derecha si baja.
   const izq = puntos.at(-1).v >= puntos[0].v;
-  for (const v of ticks) s += `<text class="g-t v-eje" x="${izq ? m.l : W - m.r}" y="${f1(y(v) - 6)}"${izq ? '' : ' text-anchor="end"'}>${fmtEje(v)}</text>`;
+  for (const v of ticks) s += `<text class="g-t v-eje${perfil ? ' pf-eje' : ''}" x="${izq ? m.l : W - m.r}" y="${f1(y(v) - 6)}"${izq ? '' : ' text-anchor="end"'}>${perfil ? nombreHito(v) : fmtEje(v)}</text>`;
+  if (perfil) {
+    // Faroles donde cruzaste un campamento (potencias de 10), anillos en las compras extra y «Tú» al final.
+    for (const v of perfil.etapas.filter(pot)) {
+      const i = puntos.findIndex((p) => p.v >= v);
+      if (i >= 0) s += `<g class="pf-farol" transform="translate(${f1(x(puntos[i].fecha))} ${f1(y(puntos[i].v))})"><circle class="pf-halo" r="8"/><rect class="pf-cuerpo" x="-2.6" y="-9" width="5.2" height="7" rx="1.2"/><path class="pf-techo" d="M-3.4 -9L0 -12.5L3.4 -9Z"/></g>`;
+    }
+    s += puntos.filter((p) => p.extra).slice(-60).map((p) => `<circle class="pf-extra" cx="${f1(x(p.fecha))}" cy="${f1(y(p.v))}" r="${r + 3}"/>`).join('');
+  }
   const u = puntos.at(-1);
   s += `<circle class="s-hoy" cx="${f1(x(u.fecha))}" cy="${f1(y(u.v))}" r="5"/>`;
+  if (perfil) s += `<text class="g-t pf-tu" x="${f1(Math.min(W - m.r, x(u.fecha)))}" y="${f1(y(u.v) - 11)}" text-anchor="end">Tú</text>`;
   s += `<g class="g-cursor" visibility="hidden"><line y1="${m.t}" y2="${base}"/><circle class="vc-v" r="5.5"/></g></svg>`;
   host.innerHTML = s;
   host.setAttribute('aria-label', aria);
