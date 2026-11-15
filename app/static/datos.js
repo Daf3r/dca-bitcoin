@@ -4,6 +4,7 @@ import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mer
 import { pintar, pintarLinea, pintarPrecio } from './pintar.js';
 import { entradaTarjetas } from './entrada.js';
 import { pintarCaida } from './reportes.js';
+import { enTV, fiestaTV } from './tv.js';
 
 /**
  * Cada minuto, con la app abierta y a la vista, mira si hay movimientos nuevos (los de otra persona, o los tuyos desde otro dispositivo)
@@ -17,14 +18,24 @@ export async function actualizarSuave() {
     const wallets = await api('/api/wallets').catch(() => S.wallets);
     const mensajes = await api('/api/mensajes').catch(() => S.mensajes);
     const capsulas = await api('/api/capsulas').catch(() => S.capsulas);
+    const piedritas = await api('/api/piedritas').catch(() => S.piedritas);
+    const cumples = await api('/api/cumples').catch(() => S.cumples);
+    if (JSON.stringify(piedritas) !== JSON.stringify(S.piedritas) || JSON.stringify(cumples) !== JSON.stringify(S.cumples)) { S.piedritas = piedritas; S.cumples = cumples; pintar(); }
     if (JSON.stringify(compras) === JSON.stringify(S.compras) && JSON.stringify(traslados) === JSON.stringify(S.traslados) && JSON.stringify(wallets) === JSON.stringify(S.wallets)
       && JSON.stringify(mensajes) === JSON.stringify(S.mensajes) && JSON.stringify(capsulas) === JSON.stringify(S.capsulas)) return;
+    // Una compra nueva con la tele a la vista (idea 5): se celebra entera, como al anotarla.
+    const antesSats = R.sats;
+    const nuevas = compras.filter((c) => c.tipo === 'compra' && !S.compras.some((x) => x.id === c.id));
     S.compras = compras;
     S.traslados = traslados;
     S.wallets = wallets;
     S.mensajes = mensajes;
     S.capsulas = capsulas;
-    pintar({ montana: true });
+    if (enTV() && nuevas.length) {
+      const delta = nuevas.reduce((a, c) => a + c.sats, 0);
+      pintar({ montana: true, desde: antesSats, festejo: { antes: antesSats, delta } });
+      fiestaTV(antesSats, R.sats, delta);
+    } else pintar({ montana: true });
   } catch { /* en silencio */ }
 }
 
@@ -36,6 +47,8 @@ export async function cargarCompras() {
     S.wallets = await api('/api/wallets').catch(() => S.wallets);
     S.mensajes = await api('/api/mensajes').catch(() => S.mensajes); // las frases de las banderas y las cartas selladas (15A); si fallan, lo demás sigue
     S.capsulas = await api('/api/capsulas').catch(() => S.capsulas);
+    S.piedritas = await api('/api/piedritas').catch(() => S.piedritas); // la apacheta y los cumpleaños (15B)
+    S.cumples = await api('/api/cumples').catch(() => S.cumples);
     S.errorCarga = false;
     if (teniaError) avisar(''); // solo se quita el aviso de error propio: un «Deshacer» o un «Reconectando…» a la vista se quedan
   } catch (e) {

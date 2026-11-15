@@ -1,4 +1,4 @@
-import { entero, fechaLarga, nombreHito, usd } from './lib.js';
+import { cumpleHoy, entero, fechaLarga, nombreHito, textoCumple, usd } from './lib.js';
 import { montarAvisos } from './avisos.js';
 import { cambiosPendientes, mostrarCambios } from './cambios.js';
 import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
@@ -8,6 +8,7 @@ import { pintarEnlaces } from './enlaces.js';
 import { pintarWallets } from './wallets.js';
 import { pintarSistema } from './sistema.js';
 import { etiquetaModo, fijarModoPestanas, enPestanas, verHistoria } from './pestanas.js';
+import { abrirCumple, etiquetaCumple } from './cumple.js';
 import { avatar, ilustracion } from './iconos.js';
 import { avisar } from './avisar.js';
 import { $, S, api } from './estado.js';
@@ -53,6 +54,7 @@ export async function cargarYo() {
     conAvatar($('cuenta-btn'), yo.usuario, yo.usuario);
     aclararCuenta();
     $('cuenta-btn').hidden = false;
+    S.cumple = yo.cumple ?? null;
     pintarSaludo(yo.usuario);
     conAvatar($('dc-quien'), yo.usuario, `${yo.usuario} · ${yo.rol === 'admin' ? 'administrador' : 'solo lectura'}`, { grande: true });
     $('dc-historial').hidden = yo.rol !== 'admin';
@@ -66,11 +68,13 @@ export async function cargarYo() {
 }
 /** «Buenas noches, Daf3r»: según la hora de El Salvador (cielo.js). Se renueva cada 5 minutos y al volver a la pestaña. */
 let nombreSaludo = '';
-function pintarSaludo(nombre = nombreSaludo) {
+export function pintarSaludo(nombre = nombreSaludo) {
   nombreSaludo = nombre;
   const cielo = window.libroCielo;
   if (!cielo || !nombre) return;
-  $('saludo').textContent = `${cielo.saludo(cielo.hora())}, ${nombre}`;
+  // El día de tu cumpleaños el saludo cambia (campamento 15B).
+  const cumple = S.cumple && cumpleHoy([{ nombre, cumple: S.cumple }], cielo.dia()).length;
+  $('saludo').textContent = cumple ? textoCumple(nombre) : `${cielo.saludo(cielo.hora())}, ${nombre}`;
 }
 setInterval(() => document.visibilityState === 'visible' && pintarSaludo(), 300_000);
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && pintarSaludo());
@@ -120,7 +124,7 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); etiquetasAccesibilidad(); dCuenta.showModal(); });
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -229,6 +233,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'clave') irA('clave', () => { $('fc-error').textContent = ''; $('fc-actual').focus(); });
   else if (accion === 'historial') irA('historial', cargarHistorial);
   else if (accion === 'historia') { dCuenta.close(); setTimeout(verHistoria, 120); } // «Tu historia» ahora es una pestaña de la página
+  else if (accion === 'cumple') { dCuenta.close(); setTimeout(abrirCumple, 120); }
   else if (accion === 'pestanas') { fijarModoPestanas(!enPestanas()); $('dc-pestanas').textContent = etiquetaModo(); }
   else if (accion === 'datos') irA('datos', pintarWallets);
   else if (accion === 'sistema') irA('sistema', pintarSistema);

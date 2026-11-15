@@ -83,6 +83,7 @@
 <link rel="modulepreload" href="/diario.js">
 <link rel="modulepreload" href="/capsulas.js">
 <link rel="modulepreload" href="/mensajes.js">
+<link rel="modulepreload" href="/cumple.js">
 <link rel="modulepreload" href="/arte-historia.js">
 <link rel="modulepreload" href="/arte-sellos.js">
 <script type="module" src="/app.js"></script>
@@ -135,6 +136,8 @@
   <!-- Banderas tocables de la montaña y su tarjeta (montana.js): van aquí, después del saldo, para que el orden de tabulación siga el visual. -->
   <div class="m-banderas" id="m-banderas"></div>
   <!-- Modo pantalla grande (tv.js): solo se ve con html[data-tv]. -->
+  <div class="tv-fiesta" id="tv-fiesta" hidden aria-live="polite"><small id="tvf-k"></small><b id="tvf-txt"></b><span id="tvf-sub"></span></div>
+  <div class="tv-sismo" id="tv-sismo" role="img" aria-label="" hidden></div>
   <p class="tv-pie" id="tv-ultimo" aria-live="polite"></p>
   <button type="button" class="tv-salir" id="tv-salir">Salir de pantalla grande</button>
 </section>
@@ -155,6 +158,9 @@
   <div class="sk-cards" id="sk-cards" aria-hidden="true" data-p="resumen"><i></i><i></i><i></i></div>
   <!-- Recordatorio según tu ritmo (solo admin): al día, te toca, último día o racha reiniciada. -->
   <p class="toca" id="toca" role="status" hidden data-p="resumen"><i aria-hidden="true"></i><span id="toca-txt"></span></p>
+  <!-- La última piedrita que dejó alguien de la familia en una compra (campamento 15B; solo el dueño). -->
+  <p class="pie-ultima" id="pie-ultima" data-p="resumen" hidden><span class="pie-ico" id="pie-ico" aria-hidden="true"></span><span id="pie-txt"></span></p>
+
   <!-- Gran caída (opcional, solo admin): dice cuánto cayó el precio y qué haría reponer con una compra como las tuyas.
        Es información, no una recomendación; se puede ocultar por hoy. -->
   <div class="caida" id="caida" role="status" hidden data-p="resumen">
@@ -521,6 +527,7 @@
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <h3 class="dc-grupo">En este dispositivo</h3>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
+      <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
       <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
       <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
@@ -704,6 +711,21 @@
     <p class="cap-cuenta" id="msg-cuenta" aria-live="polite">0 de 160</p>
     <p class="hoja-error" id="msg-error" role="alert"></p>
     <div class="d-bot"><button type="button" id="msg-cancelar">Cancelar</button><button type="button" id="msg-borrar" hidden>Quitar</button><button type="submit" class="primario" id="msg-guardar">Guardar</button></div>
+  </form>
+</dialog>
+
+<dialog id="d-cumple" class="d-cumple" aria-labelledby="cu-t">
+  <form id="f-cumple" novalidate>
+    <h2 id="cu-t">Mi cumpleaños</h2>
+    <p class="msg-ayuda">Ese día el libro te saluda y la montaña enciende un farol con tu inicial. Solo se guardan el mes y el día.</p>
+    <div class="cu-campos">
+      <label for="cu-mes">Mes</label>
+      <select id="cu-mes"><option value="">—</option></select>
+      <label for="cu-dia">Día</label>
+      <select id="cu-dia"><option value="">—</option></select>
+    </div>
+    <p class="hoja-error" id="cu-error" role="alert"></p>
+    <div class="d-bot"><button type="button" id="cu-cancelar">Cancelar</button><button type="button" id="cu-quitar" hidden>Quitar</button><button type="submit" class="primario" id="cu-guardar">Guardar</button></div>
   </form>
 </dialog>
 

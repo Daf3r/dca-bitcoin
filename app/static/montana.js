@@ -1,7 +1,7 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
-import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo } from './arte.js';
+import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas } from './arte.js';
 
 const f1 = (n) => n.toFixed(1);
 
@@ -111,7 +111,7 @@ function lago(c, W, H) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, mensajes = [], puedeEscribir = false }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, mensajes = [], puedeEscribir = false, cumples = [] }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo);
@@ -227,6 +227,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + `<g clip-path="url(#m-nieve-c)"><path class="nieve-faceta" d="M${f1(picoC[0])} ${f1(picoC[1])}L${f1(picoC[0] + nieveMedidas.ancho * 0.3)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}L${f1(picoC[0] + nieveMedidas.ancho * 0.03)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}Z"/><path class="nieve-pliegue" d="M${f1(picoC[0] - 2)} ${f1(picoC[1] + 4)}L${f1(picoC[0] - nieveMedidas.ancho * 0.2)} ${f1(picoC[1] + nieveMedidas.nv * 2.1)}"/></g></g>`;
 
   s += lago(c, W, H);
+  s += luciernagas({ W, H, yH: c.sy }); // ambiente: luciérnagas en el valle al anochecer (campamento 15B) // 15B
   const [bx, by] = c.base;
   for (let fila = 0; fila < 2; fila++) {
     const yb = H * (fila ? 1.005 : 0.975), alto = H * (fila ? 0.07 : 0.05);
@@ -275,6 +276,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-luz" id="m-luzhecha" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   if (aniv) s += `<circle class="salida-aniv" cx="${f1(bx)}" cy="${f1(by)}" r="26" fill="url(#m-luz)"/>`;
   s += `<circle class="salida" cx="${f1(bx)}" cy="${f1(by)}" r="5.5"/>`;
+  // Farol por cumpleaños (campamento 15B): el día de un familiar, su inicial arde en un farol junto a la marca de salida. // 15B
+  cumples.slice(0, 3).forEach((p, i) => { s += farolCumple({ inicial: p.inicial, x: bx + (i % 2 ? 1 : -1) * (30 + 22 * Math.floor((i + 1) / 2)), y: by + 3, k: W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1 }); });
   s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   s += bosque(W, H, bx, compras, plantar, pts);
   const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0]);

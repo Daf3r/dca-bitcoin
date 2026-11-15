@@ -1,5 +1,6 @@
-import { agruparPorMes, nombreWallet, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
+import { agruparPorMes, nombreWallet, piedritasPorCompra, textoPiedritas, ultimaPiedrita, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
 import { avisar } from './avisar.js';
+import { apacheta, piedrita } from './arte.js';
 import { copiarTexto } from './copiar.js';
 import { ico, ilustracion } from './iconos.js';
 import { $, R, S, api, esAdmin, normalizar, reducido } from './estado.js';
@@ -24,6 +25,18 @@ function quitarFiltros() {
   document.querySelectorAll('#l-chips button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === 'todos')));
 }
 
+/**
+ * La apacheta (campamento 15B, idea 47): un lector deja una piedrita en una compra con un toque (una por persona; otro toque la quita); el dueño
+ * ve quién las dejó. Una venta o un traslado no reciben piedritas.
+ */
+function htmlPiedritas(id) {
+  const lista = piedritasPorCompra(S.piedritas).get(id) ?? [];
+  const texto = textoPiedritas(lista);
+  if (esAdmin()) return lista.length ? `<span class="f-pie"><span class="f-pie-ico" aria-hidden="true">${apacheta(lista.length)}</span><span>${esc(texto)}</span></span>` : '';
+  const mia = lista.some((x) => x.quien === S.usuario);
+  return `<button type="button" class="f-pie-b" data-id="${id}" aria-pressed="${mia}"><span class="f-pie-ico" aria-hidden="true">${piedrita()}</span>${mia ? 'Dejaste una piedrita' : 'Dejar una piedrita'}</button>` +
+    (lista.length ? `<span class="f-pie f-pie-otros">${esc(texto)}</span>` : '');
+}
 /** Los traslados llevan su propia línea; el botón de TXID y el de la nota van en una fila aparte, hermana del botón de editar (no anidados). */
 function htmlExtras(m) {
   const partes = [];
@@ -32,6 +45,7 @@ function htmlExtras(m) {
     partes.push(`<button type="button" class="f-copiar" data-txid="${m.txid}">${ico('copiar')} Copiar TXID</button>`);
   }
   if (esAdmin() && m.tipo !== 'traslado' && m.nota) partes.push(`<button type="button" class="f-nota-b" data-id="${m.id}">${ico('lapiz')} Editar nota</button>`);
+  if (m.tipo === 'compra') partes.push(htmlPiedritas(m.id)); // la apacheta (15B): los demás dejan una piedrita; el dueño las ve
   return partes.length ? `<div class="f-txw">${partes.join('')}</div>` : '';
 }
 /** «Traslado a tu wallet»; con más de una wallet, a cuál («a «Ledger»»; la principal, «Mi wallet»). */
@@ -329,3 +343,26 @@ $('dt').addEventListener('click', (e) => {
   dTabla.close();
   abrirHoja(Number(b.dataset.id));
 });
+
+// ----------------------------------------------------- piedritas (campamento 15B)
+$('lista').addEventListener('click', async (e) => {
+  const b = e.target.closest('.f-pie-b');
+  if (!b || b.disabled) return;
+  b.disabled = true;
+  const id = Number(b.dataset.id), tenia = b.getAttribute('aria-pressed') === 'true';
+  try {
+    await api(`/api/piedritas/${id}`, { metodo: tenia ? 'DELETE' : 'POST' });
+    S.piedritas = await api('/api/piedritas').catch(() => S.piedritas);
+    pintarLista();
+    document.querySelector(`.f-pie-b[data-id="${id}"]`)?.focus();
+    avisar(tenia ? 'Quitaste tu piedrita.' : 'Dejaste una piedrita. Se la avisamos a quien anotó la compra.', null, true);
+  } catch (err) { b.disabled = false; avisar(err.message, null, true); }
+});
+/** La última piedrita que dejó alguien de la familia: una línea del Resumen para el dueño. */
+export function pintarUltimaPiedrita() {
+  const p = esAdmin() ? ultimaPiedrita(S.piedritas, S.compras) : null;
+  $('pie-ultima').hidden = !p;
+  if (!p) return;
+  $('pie-ico').innerHTML = piedrita();
+  $('pie-txt').textContent = `${p.quien} dejó una piedrita en tu compra del ${fechaLarga(p.fecha)}.`;
+}

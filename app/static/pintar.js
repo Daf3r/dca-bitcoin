@@ -1,4 +1,4 @@
-import { aFecha, acentoDe, aniversario, btc, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
@@ -11,7 +11,7 @@ import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos } from './cuenta.js';
 import { $, R, S, esAdmin, fijarR, reducido } from './estado.js';
 import { actualizarIndice } from './indice.js';
-import { pintarLista } from './lista.js';
+import { pintarLista, pintarUltimaPiedrita } from './lista.js';
 import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
 import { pintarNovedades } from './novedades.js';
 import { pintarMedallasResumen, refrescarHistoria } from './historia.js';
@@ -38,6 +38,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   pintarVistas();
   pintarEquilibrio();
   pintarLista();
+  pintarUltimaPiedrita();
   pintarUbicacion();
   pintarReportes();
   pintarComienzo();
@@ -320,7 +321,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
+  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     const m = etapasCruzadas(festejo.antes, R.sats).at(-1);

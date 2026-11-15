@@ -425,3 +425,29 @@ export function miniMontana({ altitud = 0.5 } = {}) {
     + `<circle class="dm-yo-halo" cx="${f1(p[0])}" cy="${f1(p[1])}" r="7"/><circle class="dm-yo" cx="${f1(p[0])}" cy="${f1(p[1])}" r="3.4"/>`
     + '</svg>';
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 15B · piedritas, farol de cumpleaños, luciérnagas y sismógrafo. (PROVISIONALES: dibujos mínimos para probar la integración.)
+// ---------------------------------------------------------------------------------------------
+/** Una piedrita (el gesto de la apacheta): una pequeña piedra lisa. */
+export function piedrita() {
+  return '<svg class="pie-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><ellipse cx="12" cy="15" rx="9" ry="6" fill="var(--s3)"/></svg>';
+}
+/** La apacheta de `n` piedritas (de 1 a 5 se apilan; más de 5 se quedan en 5). */
+export function apacheta(n = 1) {
+  const k = Math.min(5, Math.max(1, n));
+  return `<svg class="pie-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${Array.from({ length: k }, (_, i) => `<ellipse cx="12" cy="${20 - i * 4}" rx="${9 - i * 1.4}" ry="2.6" fill="var(--s3)"/>`).join('')}</svg>`;
+}
+/** El farol extra de un cumpleaños: su inicial arde junto a la marca de salida. Va dentro del SVG de la montaña (coordenadas de la escena). */
+export function farolCumple({ inicial = '?', x = 0, y = 0, k = 1 } = {}) {
+  return `<g class="farol-cumple" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${k})"><circle r="8" fill="var(--naranja)"/><text y="3.5" text-anchor="middle" font-size="10" fill="#1d1206">${inicial}</text></g>`;
+}
+/** Luciérnagas en el valle (ambiente: lleva `efecto-ambiente`; el CSS decide cuándo se ven). */
+export function luciernagas({ W = 300, H = 400, yH = 200 } = {}) {
+  return `<g class="luciernagas efecto-ambiente" aria-hidden="true"><circle cx="${(W * 0.3).toFixed(0)}" cy="${(H * 0.8).toFixed(0)}" r="1.5" fill="var(--naranja)"/></g>`;
+}
+/** La tira del sismógrafo de la tele: la aguja dibuja el precio en vivo. `datos` sale de `lib.muestrasSismo`. */
+export function sismografo({ puntos = [], ancho = 600, alto = 120 } = {}) {
+  const d = puntos.map((p, i) => `${i ? 'L' : 'M'}${(p.x * ancho).toFixed(1)} ${((1 - p.y) * (alto - 16) + 8).toFixed(1)}`).join('');
+  return `<svg viewBox="0 0 ${ancho} ${alto}" aria-hidden="true" focusable="false"><path d="${d}" fill="none" stroke="var(--naranja)" stroke-width="2"/></svg>`;
+}

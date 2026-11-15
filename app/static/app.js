@@ -19,6 +19,7 @@ import './atajos.js';
 import './indice.js';
 import './pestanas.js';
 import './mensajes.js';
+import './cumple.js';
 import './anotar.js';
 
 instalarParallax();

@@ -1,5 +1,6 @@
-import { $, R } from './estado.js';
-import { entero, fechaCorta, usd } from './lib.js';
+import { $, R, S } from './estado.js';
+import { entero, fechaCorta, medianocheSV, muestrasSismo, tarjetaFiesta, usd } from './lib.js';
+import { sismografo } from './arte.js';
 
 // Modo pantalla grande (idea 59): la montaña, el saldo y el último movimiento a pantalla completa, con letra grande y sin controles,
 // para dejar la app en un televisor de casa. Se entra desde «Tu cuenta» o abriendo la dirección con `#tv` (el televisor inicia sesión una
@@ -8,8 +9,45 @@ const raiz = document.documentElement;
 export const enTV = () => raiz.dataset.tv === '1';
 let bloqueo = null, reposo = null;
 
+// El sismógrafo (campamento 15B, idea 55): una tira de papel con el precio en vivo de las últimas horas (se toma una muestra con cada precio
+// nuevo, cada 30 s). A medianoche de El Salvador la tira se «arranca» y empieza otra. Solo muestra lo que pasó: nunca predice.
+let muestras = [], ultimaMuestra = 0, tiraDesde = 0;
+function pintarSismo() {
+  const caja = $('tv-sismo');
+  if (!S.precio) { caja.hidden = true; return; }
+  const ahora = Date.now();
+  const medianoche = medianocheSV(ahora);
+  if (tiraDesde && medianoche > tiraDesde) { // pasó la medianoche: se arranca la tira
+    muestras = [];
+    caja.classList.remove('arranca'); void caja.offsetWidth; caja.classList.add('arranca');
+  }
+  tiraDesde = medianoche;
+  if (S.precioTs && S.precioTs !== ultimaMuestra) { muestras.push({ t: ahora, p: S.precio }); ultimaMuestra = S.precioTs; if (muestras.length > 2000) muestras.shift(); }
+  const m = muestrasSismo(muestras, ahora, { desdeMs: medianoche });
+  caja.hidden = m.puntos.length < 2;
+  if (caja.hidden) return;
+  caja.innerHTML = sismografo({ puntos: m.puntos, ancho: 600, alto: 120 });
+  caja.setAttribute('aria-label', `Tira del precio de BTC desde la medianoche: ahora ${usd(m.ultima)}, entre ${usd(m.min)} y ${usd(m.max)}.`);
+}
+
+/** La fiesta de la tele (idea 5): al anotarse una compra, una tarjeta grande en la escena unos segundos (la montaña sube con su celebración). */
+let fiestaTimer = 0;
+export function fiestaTV(antes, despues, sats) {
+  const t = tarjetaFiesta(antes, despues, sats);
+  const caja = $('tv-fiesta');
+  $('tvf-k').textContent = t.titulo;
+  $('tvf-txt').textContent = t.texto;
+  $('tvf-sub').textContent = t.sub;
+  caja.classList.toggle('grande', t.grande);
+  caja.hidden = false;
+  caja.classList.remove('va'); void caja.offsetWidth; caja.classList.add('va');
+  clearTimeout(fiestaTimer);
+  fiestaTimer = setTimeout(() => { caja.hidden = true; }, t.grande ? 12_000 : 9_000);
+}
+
 export function pintarTV() {
   if (!enTV()) return;
+  pintarSismo();
   const u = R.items?.at(-1);
   $('tv-ultimo').textContent = u
     ? `Último movimiento: ${fechaCorta(u.fecha)} · ${u.tipo === 'venta' ? '−' : '+'}${entero(u.sats)} sats (${usd(u.monto)})${u.tipo === 'venta' ? ' · venta' : ''}`

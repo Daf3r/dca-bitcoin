@@ -3143,6 +3143,105 @@ try {
     } finally { sHoy.parar(); }
   }
 
+  // ---------------------------------------------------------------- campamento 15B: piedritas, cumpleaños y la tele
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const ent = async (srv, cuenta, opts = {}, init = sinAviso) => { const r = await entrar(navegador, srv, cuenta, opts, init); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
+    const ver = (p, sel) => p.locator(sel).first().isVisible();
+    const sLargo = await servidor('largo');
+    try {
+      // ---- La apacheta: una lectora deja una piedrita
+      const l = await ent(sLargo, LECTOR);
+      const fila = l.p.locator('#lista li[data-clave^="c"]:has(.fila[data-tipo="compra"])').first();
+      const idCompra = await fila.locator('.fila').getAttribute('data-id');
+      ok(await fila.locator('.f-pie-b').count() === 1 && /^Dejar una piedrita$/.test((await fila.locator('.f-pie-b').textContent()).trim()) && await fila.locator('.f-pie-b').getAttribute('aria-pressed') === 'false', '15B piedritas: una lectora ve «Dejar una piedrita» en una compra');
+      ok(await l.p.locator('#lista li[data-clave^="t"] .f-pie-b').count() === 0 && await l.p.locator('#lista li:has(.fila[data-tipo="venta"]) .f-pie-b').count() === 0, '15B piedritas: ni los traslados ni las ventas reciben piedritas');
+      await fila.locator('.f-pie-b').click(); await l.p.waitForTimeout(900);
+      ok(/Dejaste una piedrita/.test(await fila.locator('.f-pie-b').textContent()) && await fila.locator('.f-pie-b').getAttribute('aria-pressed') === 'true' && /Ana dejó una piedrita/.test(await fila.innerText()), '15B piedritas: queda dejada y el texto dice quién');
+      ok(/Dejaste una piedrita\./.test(await l.p.textContent('#aviso-txt')), '15B piedritas: avisa');
+      eq((await datos(l.p, '/api/piedritas')).length, 1, '15B piedritas: se guardó en el servidor');
+      ok(await l.p.evaluate(() => document.activeElement?.classList.contains('f-pie-b')), '15B piedritas: el foco se queda en el botón');
+      await l.ctx.close();
+      // ---- El dueño las ve, sin botón
+      const a = await ent(sLargo, ADMIN);
+      const filaA = a.p.locator(`#lista li:has(.fila[data-id="${idCompra}"])`).first();
+      ok(await a.p.locator('#lista .f-pie-b').count() === 0 && /Ana dejó una piedrita/.test(await filaA.innerText()), '15B piedritas: el dueño ve quién la dejó y no tiene botón');
+      ok(await ver(a.p, '#pie-ultima') && /^Ana dejó una piedrita en tu compra del /.test((await a.p.textContent('#pie-txt')).trim()), '15B piedritas: el Resumen del dueño dice la última');
+      await a.ctx.close();
+      // ---- Quitarla
+      const l2 = await ent(sLargo, LECTOR);
+      const fila2 = l2.p.locator(`#lista li:has(.fila[data-id="${idCompra}"])`).first();
+      ok(/Dejaste una piedrita/.test(await fila2.locator('.f-pie-b').textContent()), '15B piedritas: tras recargar sigue dejada');
+      await fila2.locator('.f-pie-b').click(); await l2.p.waitForTimeout(900);
+      ok(/^Dejar una piedrita$/.test((await fila2.locator('.f-pie-b').textContent()).trim()) && (await datos(l2.p, '/api/piedritas')).length === 0, '15B piedritas: un segundo toque la quita');
+      // ---- Mi cumpleaños
+      const md = hoySV().slice(5);
+      await l2.p.click('#cuenta-btn'); await l2.p.waitForTimeout(300);
+      eq((await l2.p.textContent('#dc-cumple')).trim(), 'Mi cumpleaños: sin poner', '15B cumpleaños: «Tu cuenta» dice que no está puesto');
+      await l2.p.click('#dc-cumple'); await l2.p.waitForTimeout(600);
+      ok(await l2.p.locator('#d-cumple[open]').count() === 1 && await l2.p.locator('#cu-mes option').count() === 13 && await l2.p.locator('#cu-dia option').count() === 32 && await l2.p.isHidden('#cu-quitar'), '15B cumpleaños: se abre el cuadro con los doce meses y los 31 días');
+      await l2.p.click('#cu-guardar'); await l2.p.waitForTimeout(200);
+      eq((await l2.p.textContent('#cu-error')).trim(), 'Elige el mes y el día.', '15B cumpleaños: sin elegir no se guarda');
+      await l2.p.selectOption('#cu-mes', md.slice(0, 2)); await l2.p.selectOption('#cu-dia', md.slice(3));
+      await l2.p.click('#cu-guardar'); await l2.p.waitForTimeout(900);
+      ok(await l2.p.locator('#d-cumple[open]').count() === 0 && (await datos(l2.p, '/api/cumples')).some((c) => c.nombre === 'Ana' && c.cumple === md), '15B cumpleaños: se guarda');
+      eq((await l2.p.textContent('#saludo')).trim(), 'Feliz cumpleaños, Ana', '15B cumpleaños: el día de tu cumpleaños el saludo cambia');
+      eq(await l2.p.locator('#montana .farol-cumple').count(), 1, '15B cumpleaños: la montaña enciende un farol');
+      ok(/^A$/.test((await l2.p.locator('#montana .farol-cumple').textContent()).trim()), '15B cumpleaños: con la inicial de Ana');
+      await l2.ctx.close();
+      // ---- Toda la familia ve el farol; el saludo de otra persona no cambia
+      const a2 = await ent(sLargo, ADMIN);
+      eq(await a2.p.locator('#montana .farol-cumple').count(), 1, '15B cumpleaños: el dueño también ve el farol de Ana');
+      ok(/^Buenas noches, Daf3r$/.test((await a2.p.textContent('#saludo')).trim()), '15B cumpleaños: y su saludo es el de siempre');
+      await a2.ctx.close();
+      const l3 = await ent(sLargo, LECTOR);
+      await l3.p.click('#cuenta-btn'); await l3.p.waitForTimeout(300);
+      ok(/Mi cumpleaños: \d+ \w+/.test((await l3.p.textContent('#dc-cumple')).trim()), '15B cumpleaños: «Tu cuenta» dice la fecha puesta');
+      await l3.p.click('#dc-cumple'); await l3.p.waitForTimeout(600);
+      await l3.p.click('#cu-quitar'); await l3.p.waitForTimeout(900);
+      ok((await datos(l3.p, '/api/cumples')).length === 0 && await l3.p.locator('#montana .farol-cumple').count() === 0, '15B cumpleaños: se quita y se apaga el farol');
+      await l3.ctx.close();
+    } finally { sLargo.parar(); }
+
+    // ---- La tele: fiesta al anotarse una compra y sismógrafo (espera el minuto real de la actualización automática)
+    const sTele = await servidor('anio');
+    try {
+      const t = await ent(sTele, LECTOR, {}, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.waitForTimeout(800);
+      ok(await t.p.evaluate(() => document.documentElement.dataset.tv === '1') && !(await ver(t.p, '#tv-fiesta')), '15B tele: en modo pantalla grande, sin fiesta todavía');
+      const adm = await ent(sTele, ADMIN);
+      const precio = (await datos(adm.p, '/api/precio')).precio;
+      const fecha = (await datos(adm.p, '/api/compras')).map((c) => c.fecha).sort().at(0);
+      const libre = (() => { for (let d = new Date(`${hoySV()}T12:00:00Z`); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (f < fecha) return f; } })();
+      await adm.p.evaluate(async ([f, p]) => { await fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: f, monto: 20, sats: Math.round((20 / p) * 1e8) }) }); }, [libre, precio]);
+      await adm.ctx.close();
+      await t.p.waitForFunction(() => !document.getElementById('tv-fiesta').hidden, null, { timeout: 80_000 });
+      ok(/^(Compra nueva|Nueva etapa|Nuevo hito)$/.test((await t.p.textContent('#tvf-k')).trim()) && /\+[\d,]+ sats|sats/.test(await t.p.textContent('#tvf-txt')), `15B tele: la fiesta dice qué pasó (${await t.p.textContent('#tvf-k')} · ${await t.p.textContent('#tvf-txt')})`);
+      ok(/\+[\d,]+ sats/.test(await t.p.textContent('#tvf-sub')) || /paso más/.test(await t.p.textContent('#tvf-sub')), '15B tele: y trae su línea de abajo');
+      // sismógrafo: con dos precios ya sale la tira
+      await t.p.waitForFunction(() => !document.getElementById('tv-sismo').hidden, null, { timeout: 70_000 }).catch(() => {});
+      ok(await ver(t.p, '#tv-sismo') && await t.p.locator('#tv-sismo svg path').count() >= 1 && /^Tira del precio de BTC desde la medianoche: ahora \$[\d,]+/.test(await t.p.getAttribute('#tv-sismo', 'aria-label')), '15B tele: el sismógrafo dibuja la tira del precio');
+      await t.ctx.close();
+    } finally { sTele.parar(); }
+
+    // ---- La tele a las 18:00: el atardecer acelerado
+    const sAtar = await servidor('hoy');
+    try {
+      const t = await ent(sAtar, LECTOR, { hora: 18.02 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } });
+      await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.waitForTimeout(500);
+      const franjas = new Set();
+      const inicio = Date.now();
+      while (Date.now() - inicio < 50_000) {
+        franjas.add(await t.p.evaluate(() => document.documentElement.dataset.cielo));
+        if (franjas.has('noche') && await t.p.evaluate(() => localStorage.getItem('libro.tv.atardecer')) && Date.now() - inicio > 20_000 && (await t.p.evaluate(() => document.documentElement.dataset.cielo)) === 'atardecer') break;
+        await t.p.waitForTimeout(500);
+      }
+      ok(franjas.has('noche') && await t.p.evaluate(() => document.documentElement.dataset.cielo) === 'atardecer', `15B tele: a las 18:00 el cielo hace su atardecer acelerado y vuelve a la hora real (${[...franjas].join(', ')})`);
+      ok(await t.p.evaluate(() => localStorage.getItem('libro.tv.atardecer') != null), '15B tele: y queda anotado que hoy ya lo hizo (una vez al día)');
+      await t.ctx.close();
+    } finally { sAtar.parar(); }
+  }
+
   // ---------------------------------------------------------------- una sola compra
   const una = await servidor('hoy');
   try {
