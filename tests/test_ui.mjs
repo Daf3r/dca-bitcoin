@@ -3101,7 +3101,7 @@ try {
       await p.click('#m-escribir'); await p.fill('#msg-texto', 'Cuando llegues aquí, sonríe'); await p.click('#msg-guardar'); await p.waitForTimeout(900);
       await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(300);
       await p.locator(`.m-bandera[data-m="${info.arriba}"]`).click({ force: true }); await p.waitForTimeout(500);
-      ok(/se revelará a los demás/.test(await p.textContent('#m-mensaje')), '15A mensaje: el dueño ve el del campamento por alcanzar, con su aviso');
+      ok(/^Cuando llegues aquí, sonríe$/.test(await p.textContent('#m-mensaje')) && /Se revelará a los demás/.test(await p.textContent('#m-mensaje-nota')) && await ver(p, '#m-mensaje-nota'), '15A mensaje: el dueño ve el del campamento por alcanzar, con su aclaración aparte');
       await p.keyboard.press('Escape'); await p.waitForTimeout(200);
       // en «Tu historia»
       await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('#dc-historia-btn'); await p.waitForTimeout(900);
