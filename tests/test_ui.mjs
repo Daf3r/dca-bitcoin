@@ -317,7 +317,7 @@ try {
       await p.waitForTimeout(400);
       ok(!(await p.locator('#anotar').isVisible()), 'el lector no ve «Anotar compra»');
       ok(!(await p.locator('#toca').isVisible()), 'el lector no ve «te toca comprar»');
-      eq((await p.textContent('#prox')).trim(), '', 'el lector no ve la línea de última y próxima compra');
+      eq((await p.textContent('#prox')).trim(), 'Lo anota Daf3r', 'el lector no ve la línea de última y próxima compra: en su sitio se dice quién lleva el libro (campamento 17)');
       ok(await p.locator('#t-anillo').isVisible() && await p.locator('#g-indicador').isVisible() && await p.locator('#rep-curiosas').isVisible(), 'el lector sí ve el anillo, el indicador del costo y las cifras curiosas');
       await verVista(p, 'valor');
       ok(await p.locator('#valor').isVisible(), 'el lector sí ve el gráfico de valor');
