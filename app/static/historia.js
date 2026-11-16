@@ -1,4 +1,4 @@
-import { aniosTronco, datosCertificado, entero, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, mantaPrimerAnio, mesesTronco, objetoDeHoy, partitura, piedrasTorre, primerAnio, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoMantaPrimer, textoMesTronco, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco, textoTroncoPrimer } from './lib.js';
+import { aniosTronco, datosCertificado, entero, nombreHito, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, mantaPrimerAnio, mesesTronco, objetoDeHoy, partitura, piedrasTorre, primerAnio, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoMantaPrimer, textoMesTronco, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco, textoTroncoPrimer } from './lib.js';
 import { constelacion, estratos, manta, mantaPrimer, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
@@ -303,6 +303,24 @@ export function pintarHistoria() {
     const t = nodo('time', null, fechaLarga(e.fecha));
     t.dateTime = e.fecha;
     const cuerpo = nodo('div');
+    if (e.clase === 'pasos') {
+      // Las etapas intermedias de un tramo ya cerrado (campamento 21): un renglón que se despliega con cada una y su fecha.
+      const det = nodo('details'), sum = nodo('summary');
+      sum.append(nodo('span', null, e.titulo), nodo('small', null, e.detalle.replace(/^Entre/, 'entre')));
+      const ul = nodo('ul');
+      for (const x of e.pasos) {
+        const li2 = nodo('li');
+        const tm = nodo('time', null, fechaLarga(x.fecha));
+        tm.dateTime = x.fecha;
+        li2.append(nodo('b', null, x.m >= 1e8 ? nombreHito(x.m) : `${nombreHito(x.m)} sats`), tm);
+        ul.append(li2);
+      }
+      det.append(sum, ul);
+      cuerpo.append(det);
+      li.append(t, cuerpo);
+      lista.append(li);
+      continue;
+    }
     const tit = nodo('strong');
     if (e.clase === 'extra') tit.insertAdjacentHTML('beforeend', `${ico('rayo')} `);
     tit.append(document.createTextNode(e.titulo));
