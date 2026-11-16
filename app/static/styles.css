@@ -3114,3 +3114,8 @@ html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb
   html[data-pestanas][data-boton]:not([data-tv]) .escena { height: calc(100vh - 164px); height: calc(100svh - 164px); --pie: 46; }
   html[data-pestanas][data-boton]:not([data-tv]) .cuerpo { padding-top: 14px; }
 }
+
+/* --- 2. «Saldo del libro» para quien solo mira. Los textos fijos llevan su otra forma en `data-libro` y pintar.js elige cuál se ve
+   (`html[data-voz]`). Si este dispositivo es de alguien que solo mira (`data-lector`, efectos.js), el texto de «tu…» no se
+   enseña mientras se cambia: nunca se ve un «Tu saldo» que luego salta a «Saldo del libro». */
+html[data-lector]:not([data-voz]) [data-libro] { visibility: hidden; }

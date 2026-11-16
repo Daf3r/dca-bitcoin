@@ -5,7 +5,7 @@ import { dibujarEscalera, instalarEscalera } from './escalera.js';
 import { caidaVisible } from './reportes.js';
 import { conTransicion } from './movimiento.js';
 import { abrirHoja } from './hoja.js';
-import { $, R, S, esAdmin } from './estado.js';
+import { $, R, S, esAdmin, vozLibro } from './estado.js';
 import { ilustracion } from './iconos.js';
 
 // --------------------------------------------------------------- gráfico
@@ -179,7 +179,7 @@ function pintarSatsAcum() {
   const h = $('s-lienzo');
   anchoSats = h.clientWidth;
   dibujarEscalera(h, $('s-lectura'), $('s-sr'), {
-    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, perfil: { etapas: [...etapasHasta(etapaSiguiente(R.sats))] }, fmtEje: (v) => `${numCorto(v)} sats`,
+    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, perfil: { etapas: [...etapasHasta(etapaSiguiente(R.sats))], rotulo: vozLibro() ? 'Vamos aquí' : 'Tú' }, fmtEje: (v) => `${numCorto(v)} sats`,
     defecto: `Hoy tienes <b>${entero(R.sats)} sats</b>.`,
     texto: (p) => (p.hoy ? `Hoy · <b>${entero(p.sats)} sats</b>` : `${fechaLarga(p.fecha)} · ${p.delta >= 0 ? '+' : '−'}${entero(Math.abs(p.delta))} sats · <b>${entero(p.sats)}</b> en total${p.tipo === 'venta' ? ' (venta o gasto)' : ''}`),
     aria: 'Tus sats acumulados con cada compra. Usa las flechas para recorrerlo.',

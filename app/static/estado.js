@@ -78,5 +78,15 @@ export async function api(ruta, { metodo = 'GET', cuerpo, tipo = 'application/js
 
 // Hasta saber el rol, la interfaz se muestra como solo lectura.
 export const esAdmin = () => S.rol === 'admin';
+/**
+ * ¿Se habla «del libro» y no de «ti»? (campamento 17) Sí para quien solo mira: el saldo no es suyo ni el punto del sendero es él.
+ * Mientras no llega la cuenta vale la pista del dispositivo (`html[data-lector]`, efectos.js) para que el rótulo no cambie al cargar.
+ */
+export const vozLibro = () => (S.rol ? S.rol !== 'admin' : document.documentElement.hasAttribute('data-lector'));
+/**
+ * Quién lleva el libro, si el navegador ya lo sabe: sale de las cartas y de los mensajes de las banderas (solo los escribe quien
+ * anota). No se le pregunta nada nuevo al servidor: sin ese dato, quien lo use dice «quien lleva el libro».
+ */
+export const quienAnota = () => S.capsulas?.findLast?.((c) => c.autor)?.autor ?? S.mensajes?.findLast?.((m) => m.por)?.por ?? null;
 
 export const normalizar = (c) => ({ ...c, id: Number(c.id), sats: c.sats > 0 ? c.sats : Math.round((c.monto / c.precio) * 1e8) });

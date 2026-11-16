@@ -3384,8 +3384,90 @@ try {
         ok(c.escena.abajo === 774 && c.barra.abajo <= 900, `17·1 escritorio: como antes, con la barra a la vista (${c.escena.abajo}, ${c.barra.abajo})`);
         await e.ctx.close();
       }
+      // ---- 2. «Saldo del libro» para quien solo mira (y «Vamos aquí» en el sendero); para el dueño nada cambia
+      const voz = (p) => p.evaluate(() => {
+        const t = (sel) => document.querySelector(sel)?.textContent.trim() ?? null;
+        const escena = document.querySelector('.escena').cloneNode(true);
+        escena.querySelector('#cuenta-btn')?.remove(); // «(tu cuenta)»: esa sí es suya
+        const pil = document.querySelector('#montana .eti-yo')?.getBoundingClientRect();
+        return {
+          saldo: t('#t-saldo'), prox: t('#prox'), punto: t('#montana .yo-txt'), desc: t('#m-desc'), ayuda: t('#s-saldo-ayuda'), marca: document.documentElement.dataset.voz,
+          banderas: [...document.querySelectorAll('.m-bandera')].map((b) => b.getAttribute('aria-label')).join(' | '),
+          todo: `${escena.textContent} ${document.title} ${t('#minicab')}`, medallas: t('#t-res-med'), pildora: pil ? [Math.round(pil.left), Math.round(pil.right)] : null, ancho: innerWidth,
+        };
+      });
+      const tuteo = /(^|[^\p{L}])(t[uú]s?|te|ti|tuy[oa]s?|estás|vas|llevas|tienes)([^\p{L}]|$)/iu;
+      {
+        const l = await ent(s17, LECTOR, { viewport: { width: 390, height: 844 }, ...fijo });
+        const v = await voz(l.p);
+        eq([v.saldo, v.punto, v.marca], ['Saldo del libro', 'Vamos aquí', 'libro'], '17·2 lectora: «Saldo del libro» y «Vamos aquí»');
+        eq(v.prox, 'Lo anota Daf3r', '17·2 lectora: dice quién lleva el libro (el nombre ya venía en la carta sembrada)');
+        ok(v.desc.startsWith('El libro está a 1,211,769 sats de altitud') && /Ya pasó 2 de 3 campamentos/.test(v.desc) && /Al pie crece el bosque del libro/.test(v.desc), `17·2 lectora: la descripción de la montaña habla del libro («${v.desc.slice(0, 70)}…»)`);
+        ok(v.ayuda.startsWith('Saldo del libro.') && /Se alcanzó el /.test(v.banderas) && /Faltan [\d,]+ sats para la cumbre\. El libro va al \d+%\./.test(v.banderas), `17·2 lectora: ayuda del saldo y banderas («${v.banderas.slice(0, 90)}»)`);
+        ok(!tuteo.test(v.todo) && !tuteo.test(v.desc) && !tuteo.test(v.banderas) && !tuteo.test(v.ayuda), `17·2 lectora: en la escena, el título y la mini-cabecera nada dice «tu» («${(tuteo.exec(`${v.todo} ${v.desc} ${v.banderas}`) ?? [''])[0]}»)`);
+        ok(v.pildora && v.pildora[0] >= 4 && v.pildora[1] <= v.ancho - 4, `17·2 lectora: la píldora «Vamos aquí» cabe en la escena (${v.pildora})`);
+        eq(v.medallas, 'Medallas del libro', '17·2 lectora: los títulos fijos también cambian');
+        // La tarjeta de una bandera por alcanzar.
+        await l.p.locator('.m-bandera').first().click(); await l.p.waitForTimeout(300);
+        ok(/^Faltan [\d,]+ sats para la cumbre\. El libro va al \d+%\.$/.test(await l.p.locator('#m-tarjeta-p').textContent()), '17·2 lectora: la tarjeta de la cumbre habla del libro');
+        await l.p.keyboard.press('Escape');
+        // El perfil de altitud (Gráficos → Sats).
+        await l.p.click('#pestanas [data-pestana="graficos"]'); await l.p.waitForTimeout(400); await verVista(l.p, 'sats');
+        eq((await l.p.locator('#s-lienzo .pf-tu').textContent()).trim(), 'Vamos aquí', '17·2 lectora: también en el perfil de altitud');
+        // La pista queda en el dispositivo: al recargar, el rótulo sale bien desde el primer pintado.
+        eq(await l.p.evaluate(() => localStorage.getItem('libro.rol')), 'lector', '17·2 lectora: el dispositivo recuerda la voz');
+        await l.p.reload({ waitUntil: 'domcontentloaded' });
+        const pronto = await l.p.evaluate(() => { const h = document.getElementById('t-saldo'); return { pista: document.documentElement.hasAttribute('data-lector'), seVeTu: h.textContent === 'Tu saldo' && getComputedStyle(h).visibility !== 'hidden' }; });
+        ok(pronto.pista && !pronto.seVeTu, '17·2 lectora: al recargar nunca se ve «Tu saldo»');
+        await l.p.waitForTimeout(2500); await cerrar(l.p);
+        eq((await voz(l.p)).saldo, 'Saldo del libro', '17·2 lectora: tras recargar, igual');
+        eq(l.consola.filter((x) => !/503/.test(x)), [], '17·2 lectora: consola limpia');
+        await l.ctx.close();
+      }
+      for (const [w, h] of [[320, 568], [844, 390], [1440, 900], [2560, 1300]]) {
+        const l = await ent(s17, LECTOR, { viewport: { width: w, height: h }, ...fijo });
+        const v = await voz(l.p);
+        ok(v.punto === 'Vamos aquí' && v.pildora[0] >= 4 && v.pildora[1] <= w - 4, `17·2 lectora ${w}×${h}: «Vamos aquí» cabe (${v.pildora})`);
+        const sw = await l.p.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+        ok(sw[0] <= sw[1], `17·2 lectora ${w}×${h}: sin scroll horizontal`);
+        await l.ctx.close();
+      }
+      {
+        // En modo pantalla grande (una tele con cuenta de lectora) también.
+        const t = await ent(s17, LECTOR, { viewport: { width: 1920, height: 1080 }, ...fijo });
+        await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.reload({ waitUntil: 'networkidle' }); await t.p.waitForTimeout(2500);
+        const v = await voz(t.p);
+        ok(await t.p.evaluate(() => document.documentElement.hasAttribute('data-tv')) && v.saldo === 'Saldo del libro' && v.punto === 'Vamos aquí' && !tuteo.test(v.todo), '17·2 pantalla grande con una lectora: habla del libro');
+        await t.ctx.close();
+      }
+      {
+        // El dueño: todo como siempre.
+        const a = await ent(s17, ADMIN, { viewport: { width: 390, height: 844 }, ...fijo });
+        const v = await voz(a.p);
+        eq([v.saldo, v.punto, v.marca, v.medallas], ['Tu saldo', 'Tú', 'yo', 'Tus medallas'], '17·2 dueño: «Tu saldo» y «Tú», como siempre');
+        ok(v.prox.startsWith('Última compra') && v.desc.startsWith('Estás a ') && v.ayuda.startsWith('Tu saldo.'), '17·2 dueño: sus textos no cambian');
+        await a.ctx.close();
+      }
     } finally {
       s17.parar();
+    }
+    // Sin carta ni mensajes el navegador no sabe quién lleva el libro: texto genérico (no se le pregunta nada nuevo al servidor).
+    const s17h = await servidor('hoy');
+    try {
+      const l = await ent(s17h, LECTOR, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      eq(await l.p.locator('#prox').textContent(), 'Lo anota quien lleva el libro', '17·2 lectora sin el dato: «quien lleva el libro»');
+      eq(await l.p.locator('#t-saldo').textContent(), 'Saldo del libro', '17·2 lectora con una sola compra: «Saldo del libro»');
+      await l.ctx.close();
+    } finally {
+      s17h.parar();
+    }
+    const s17v = await servidor('vacio');
+    try {
+      const l = await ent(s17v, LECTOR, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      eq([await l.p.locator('#s-valor').textContent(), await l.p.locator('#prox').textContent()], ['La montaña espera: el libro aún no tiene compras.', ''], '17·2 lectora con el libro vacío');
+      await l.ctx.close();
+    } finally {
+      s17v.parar();
     }
   }
 

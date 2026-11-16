@@ -54,6 +54,7 @@ export async function cargarYo() {
     // ¿Flota el botón «Anotar» en este dispositivo? El CSS lo usa para el alto de la escena (campamento 17). El rol se recuerda
     // (`libro.rol`) para que la próxima vez la escena salga ya con su alto (efectos.js). Solo es una pista de diseño: no da permisos.
     document.documentElement.toggleAttribute('data-boton', yo.rol === 'admin' && !yo.mantenimiento);
+    document.documentElement.toggleAttribute('data-lector', yo.rol !== 'admin');
     try { localStorage.setItem('libro.rol', yo.rol === 'admin' ? 'admin' : 'lector'); } catch { /* vale para esta visita */ }
     conAvatar($('cuenta-btn'), yo.usuario, yo.usuario);
     aclararCuenta();

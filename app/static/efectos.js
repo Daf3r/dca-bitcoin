@@ -17,7 +17,10 @@
   // cuenta.js en `libro.rol`). Es solo una pista para el alto de la escena; quién puede escribir lo decide siempre el servidor.
   try {
     if (localStorage.getItem('libro.pestanas') === 'todo') raiz.removeAttribute('data-pestanas');
-    if (localStorage.getItem('libro.rol') === 'admin') raiz.setAttribute('data-boton', '');
+    const rol = localStorage.getItem('libro.rol');
+    if (rol === 'admin') raiz.setAttribute('data-boton', '');
+    // `data-lector`: aquí entró por última vez alguien que solo mira; la página le habla «del libro» desde el primer pintado.
+    if (rol === 'lector') raiz.setAttribute('data-lector', '');
   } catch { /* sin almacenamiento: por pestañas y sin pista */ }
   const sistema = matchMedia('(prefers-reduced-motion: reduce)');
   const ahorro = matchMedia('(prefers-reduced-data: reduce)');
