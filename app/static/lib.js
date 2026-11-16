@@ -1188,18 +1188,18 @@ export function enLetras(n) {
  * `lobulos` (tus compras, de 3 a 48), `altitud` (0 a 1, dónde estás entre la base y la cima de tu montaña) y `trenzas` (tu racha,
  * de 1 a 12). `nombre` es de quien mira (null para una persona que no es dueña del libro: sale «Libro DCA»). Todo sale igual cada vez.
  */
-export function datosCertificado(R, nombre, hoy = hoyISO()) {
+export function datosCertificado(R, nombre, hoy = hoyISO(), { montana = null } = {}) {
   const sats = Math.max(0, R.sats ?? 0);
   const letras = enLetras(sats);
   const esc = escalaMontana(sats);
   return {
-    nombre: nombre || null, hoy, fecha: fechaLarga(hoy), sats, btc: btc(sats),
+    nombre: nombre || null, montana: montana || null, hoy, fecha: fechaLarga(hoy), sats, btc: btc(sats),
     letras: `${letras.charAt(0).toUpperCase()}${letras.slice(1)} ${sats === 1 ? 'sat' : 'sats'}`,
     nCompras: R.nCompras ?? 0, racha: R.racha ?? 0, primera: R.items?.find((c) => c.tipo !== 'venta')?.fecha ?? null,
     lobulos: Math.min(48, Math.max(3, R.nCompras ?? 0)), altitud: altitud(sats, esc), trenzas: Math.min(12, Math.max(1, R.racha ?? 1)),
   };
 }
-export const textoCertificado = (d) => `Certificado de altitud${d.nombre ? ` de ${d.nombre}` : ' del Libro DCA'}. A ${d.fecha} el libro tiene ${d.letras}`
+export const textoCertificado = (d) => `Certificado de altitud${d.nombre ? ` de ${d.nombre}` : ' del Libro DCA'}${d.montana ? `, en la montaña «${d.montana}»` : ''}. A ${d.fecha} el libro tiene ${d.letras}`
   + `${d.nCompras ? `, de ${d.nCompras} ${d.nCompras === 1 ? 'compra' : 'compras'}` : ''}.`;
 
 /**
@@ -1343,6 +1343,18 @@ const restarDias = (hoy, n) => {
 /** Suma (o resta, con `n` negativo) días a una fecha AAAA-MM-DD. */
 export const sumarDias = (f, n) => restarDias(f, -n);
 
+/**
+ * El titular del Diario sin cifras (campamento 19, idea 20): lo que dice el aviso del domingo. Una notificación se lee en la pantalla
+ * bloqueada, así que no lleva saldos, montos ni etapas: solo de qué fue la semana. `app/ritmo.py` tiene la misma tabla (y la misma regla
+ * para elegir la clase): `tests/test_api.py` compara las dos con `paridad_ritmo.mjs`. Si cambias una, cambia la otra.
+ */
+export const AVISO_DIARIO = {
+  etapa: 'Llegamos a una nueva etapa',
+  una: 'Un paso más en la montaña',
+  varias: 'La montaña subió esta semana',
+  tranquila: 'Semana tranquila en la montaña',
+};
+
 const PRONOSTICOS = {
   lluviosa: ['lluvias por la tarde en el valle y la cumbre despejada', 'nubes bajas por la mañana, claros al mediodía', 'chubascos ligeros abajo y mucha luz arriba', 'tarde fresca, con olor a tierra mojada'],
   seca: ['cielos limpios y brisa fresca en la cumbre', 'sol parejo todo el día y viento suave', 'mañana clara y tarde dorada', 'noche despejada, buena para mirar las estrellas'],
@@ -1361,12 +1373,14 @@ export function diario(R, hoy = hoyISO()) {
   const recientes = compras.filter((c) => c.fecha > desde && c.fecha <= hoy);
   const subidos = recientes.reduce((a, c) => a + c.sats, 0);
   const etapaReciente = (R.camino ?? []).filter((h) => h.fecha && h.fecha > desdeEtapa && h.fecha <= hoy).at(-1);
-  let titular, sub;
-  if (etapaReciente) { titular = `Llegamos a ${metaTxt(etapaReciente.m)}`; sub = `La montaña ya cuenta ${entero(R.sats)} sats. El ${fechaLarga(etapaReciente.fecha)} quedó marcado en el sendero.`; }
+  // `clase` dice de qué fue la semana (etapa · una · varias · tranquila): el aviso del domingo la usa sin cifras (`AVISO_DIARIO`).
+  let titular, sub, clase;
+  if (etapaReciente) { clase = 'etapa'; titular = `Llegamos a ${metaTxt(etapaReciente.m)}`; sub = `La montaña ya cuenta ${entero(R.sats)} sats. El ${fechaLarga(etapaReciente.fecha)} quedó marcado en el sendero.`; }
   else if (recientes.length) {
+    clase = recientes.length === 1 ? 'una' : 'varias';
     titular = recientes.length === 1 ? `Un paso más: la montaña subió ${entero(subidos)} sats` : `La montaña subió ${entero(subidos)} sats esta semana`;
     sub = `${recientes.length === 1 ? 'Una compra' : `${recientes.length} compras`} en los últimos siete días. El libro suma ${entero(R.sats)} sats.`;
-  } else { titular = 'Semana tranquila en la montaña'; sub = `Nadie se apura: el camino sigue ahí, ${entero(R.sats)} sats arriba, esperando con paciencia.`; }
+  } else { clase = 'tranquila'; titular = 'Semana tranquila en la montaña'; sub = `Nadie se apura: el camino sigue ahí, ${entero(R.sats)} sats arriba, esperando con paciencia.`; }
   const e = eco(R.items, R.sats, hoy);
   const haceAnio = e ? { fecha: e.fecha, sats: e.sats, hoy: R.sats, subiste: e.subiste,
     texto: e.subiste > 0 ? `Hace un año el libro tenía ${entero(e.sats)} sats. Hoy tiene ${entero(R.sats)}: ${entero(e.subiste)} más.` : `Hace un año el libro tenía ${entero(e.sats)} sats. Hoy tiene ${entero(R.sats)}.` } : null;
@@ -1383,10 +1397,75 @@ export function diario(R, hoy = hoyISO()) {
   const pronostico = `${PRONOSTICOS[epoca][sem % 4].replace(/^./, (ch) => ch.toUpperCase())}. Es el clima, no un consejo: la montaña no adivina nada.`;
   const esc = escalaMontana(R.sats);
   const primera = compras[0].fecha;
-  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
+  return { fecha: hoy, edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, clase, aviso: AVISO_DIARIO[clase], haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
     altitud: altitud(R.sats, esc), sats: R.sats, valor: R.valor ?? null };
 }
 export const textoDiario = (d) => `El Diario del Libro, edición del ${d.edicion}. ${d.titular}. ${d.sub}`;
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 19 · la familia: el Diario en voz alta, el libro de cumbre y el nombre de la montaña. Solo datos y textos.
+// ---------------------------------------------------------------------------------------------
+
+const MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+/** «15 de noviembre de 2026»: la fecha para decirla en voz alta (la abreviada, «15 nov», se leería «nov»). */
+export function fechaHablada(f) {
+  const [y, m, d] = f.split('-').map(Number);
+  return `${d} de ${MESES_L[m - 1]} de ${y}`;
+}
+/**
+ * Un texto de la app preparado para la voz del aparato (idea 33). Las cifras van sin comas (con voz en español «1,241,769» se leería
+ * como un decimal), «2.5M» y «100k» se dicen enteros («2,5 millones», «100 mil»), «BTC» se dice «bitcoin», los avisos en mayúsculas de
+ * los clasificados («SE BUSCAN») se escriben en minúsculas para que no se deletreen y el «·» es una pausa.
+ */
+export function paraOir(t) {
+  return String(t ?? '')
+    .replace(/n\.º/g, 'número')
+    .replace(/\d{1,3}(?:,\d{3})+/g, (x) => x.replace(/,/g, ''))
+    .replace(/\b(\d+(?:\.\d+)?)M\b( sats)?/g, (_, x, s) => `${x.replace('.', ',')} ${x === '1' ? 'millón' : 'millones'}${s ? ' de sats' : ''}`)
+    .replace(/\b(\d+(?:\.\d+)?)k\b/g, (_, x) => `${x.replace('.', ',')} mil`)
+    .replace(/\b(\d+(?:\.\d+)?) BTC\b/g, (_, x) => `${x.replace('.', ',')} bitcoin`)
+    .replace(/\bBTC\b/g, 'bitcoin')
+    .replace(/\b[A-ZÁÉÍÓÚÑ]{2,}\b/g, (w) => w.toLowerCase())
+    .replace(/\s*·\s*/g, ', ')
+    .replace(/[«»]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase());
+}
+/**
+ * El Diario dicho en voz alta (idea 33): la misma portada, en frases cortas (una voz larga de una sola vez se corta en algunos
+ * navegadores). `montana` es el nombre que le puso quien anota, si tiene. Nada que no esté ya escrito en el Diario.
+ */
+export function diarioParaOir(d, { montana = null } = {}) {
+  if (!d) return [];
+  const partes = [`El Diario del Libro${montana ? `, desde la montaña ${montana}` : ''}. Edición del ${fechaHablada(d.fecha)}, número ${d.numero}.`, `${d.titular}.`, d.sub];
+  if (d.haceUnAnio || d.notaAnio) {
+    partes.push('Hace un año.');
+    if (d.haceUnAnio) partes.push(d.haceUnAnio.texto);
+    if (d.notaAnio) partes.push(`El ${fechaHablada(d.notaAnio.fecha)} quedó anotado: ${d.notaAnio.nota}`);
+  }
+  partes.push('Clasificados.', ...d.clasificados, 'Pronóstico de la montaña.', d.pronostico);
+  return partes.map(paraOir).filter(Boolean).map((p) => (/[.!?:]$/.test(p) ? p : `${p}.`));
+}
+
+/** Las firmas del libro de cumbre de un campamento (idea 18), en el orden en que se firmaron. `firmas`: las de `GET /api/firmas`. */
+export function firmasDe(firmas, hito) {
+  return (firmas ?? []).filter((f) => f.hito === hito).sort((a, b) => a.creado - b.creado || a.id - b.id);
+}
+/** Quién firmó: «Firmó Ana», «Firmaste tú», «Firmaron tú y Ana», «Firmaron Ana, Papá y 2 más». Tu firma va primero (y no se pierde en «más»). */
+export function textoFirmantes(fs) {
+  const n = fs?.length ?? 0;
+  if (!n) return 'Nadie ha firmado todavía';
+  const nombres = [...fs].sort((a, b) => Number(Boolean(b.mia)) - Number(Boolean(a.mia))).map((f) => (f.mia ? 'tú' : f.quien));
+  if (n === 1) return fs[0].mia ? 'Firmaste tú' : `Firmó ${nombres[0]}`;
+  return `Firmaron ${n === 2 ? `${nombres[0]} y ${nombres[1]}` : n === 3 ? `${nombres[0]}, ${nombres[1]} y ${nombres[2]}` : `${nombres[0]}, ${nombres[1]} y ${n - 2} más`}`;
+}
+/** Lo que invita a hacer la tarjeta del campamento con su libro: firmar (si el libro llegó ahí), cambiar tu firma o solo leerlo. */
+export function accionFirmas(fs, alcanzado) {
+  if (!alcanzado) return 'Léelo';
+  if ((fs ?? []).some((f) => f.mia)) return 'Cambia tu firma';
+  return fs?.length ? 'Firma tú también' : 'Deja la primera firma';
+}
 
 // ---------------------------------------------------------------------------------------------
 // Campamento 15B · la apacheta (piedritas), los cumpleaños y la tele: solo datos y textos. Todo acompaña; nada presiona.

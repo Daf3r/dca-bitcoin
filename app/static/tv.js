@@ -48,6 +48,10 @@ export function fiestaTV(antes, despues, sats) {
 export function pintarTV() {
   if (!enTV()) return;
   pintarSismo();
+  // El nombre de la montaña (campamento 19), bajo la marca: lo que la familia ve en la sala.
+  const nom = $('tv-nombre');
+  nom.hidden = !S.montana;
+  nom.textContent = S.montana ? `Montaña «${S.montana}»` : '';
   const u = R.items?.at(-1);
   $('tv-ultimo').textContent = u
     ? `Último movimiento: ${fechaCorta(u.fecha)} · ${u.tipo === 'venta' ? '−' : '+'}${entero(u.sats)} sats (${usd(u.monto)})${u.tipo === 'venta' ? ' · venta' : ''}`
@@ -64,6 +68,7 @@ async function mantenerDespierta() {
 }
 export async function entrarTV({ pantallaCompleta = true } = {}) {
   raiz.dataset.tv = '1';
+  document.dispatchEvent(new CustomEvent('libro:tv')); // en la tele no hay Diario a la vista: si se estaba leyendo, se calla
   if (location.hash !== '#tv') history.replaceState(null, '', `${location.pathname}${location.search}#tv`);
   window.scrollTo(0, 0);
   pintarTV();

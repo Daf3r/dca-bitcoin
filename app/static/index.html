@@ -82,8 +82,11 @@
 <link rel="modulepreload" href="/historia.js">
 <link rel="modulepreload" href="/pestanas.js">
 <link rel="modulepreload" href="/diario.js">
+<link rel="modulepreload" href="/escuchar.js">
 <link rel="modulepreload" href="/capsulas.js">
 <link rel="modulepreload" href="/mensajes.js">
+<link rel="modulepreload" href="/firmas.js">
+<link rel="modulepreload" href="/bautizo.js">
 <link rel="modulepreload" href="/cumple.js">
 <link rel="modulepreload" href="/arte-historia.js">
 <link rel="modulepreload" href="/arte-sellos.js">
@@ -110,6 +113,8 @@
   <symbol id="i-sube" viewBox="0 0 24 24"><path d="M12 6 4 18h16z" fill="currentColor"/></symbol>
   <symbol id="i-baja" viewBox="0 0 24 24"><path d="M12 18 4 6h16z" fill="currentColor"/></symbol>
   <symbol id="i-zopilote" viewBox="0 0 24 24"><path d="M12 8.3c.9 0 1.3.8 1.3 1.6 2.8-.8 6-1.2 9.2-1.2-1.2 1.6-3.4 3-6.2 3.6l-2.2.6.7 3.1h-5.6l.7-3.1-2.2-.6C4.7 11.7 2.5 10.3 1.3 8.7c3.2 0 6.4.4 9.2 1.2 0-.8.6-1.6 1.5-1.6Z"/></symbol>
+  <symbol id="i-bocina" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/></symbol>
+  <symbol id="i-libro" viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.6 4 5v13c3-.4 6 0 8 1.5 2-1.5 5-1.9 8-1.5V5c-3-.4-6 0-8 1.5zM12 6.5v13"/></symbol>
 </svg>
 <section class="escena" aria-labelledby="t-saldo">
   <div class="montana" id="montana"></div>
@@ -118,6 +123,8 @@
       <p class="marca"><svg class="marca-ico" viewBox="0 0 24 18" aria-hidden="true"><path pathLength="1" d="M1.5 16.5 9 3.5l4 6.5 3-4 6.5 10.5Z"/></svg>Libro <b>DCA</b></p>
       <button type="button" class="cuenta-btn" id="cuenta-btn" hidden></button>
       <p class="saludo" id="saludo"></p>
+      <!-- El nombre de la montaña (campamento 19), solo en el modo pantalla grande: va donde en la app va el saludo. -->
+      <p class="tv-nombre" id="tv-nombre" hidden></p>
     </div>
     <p class="cotizacion" id="cotizacion" data-estado="cargando">
       <span class="cot-k">1 BTC</span> <b class="cot-v" id="precio">—</b>
@@ -182,6 +189,8 @@
     <header class="dia-cab"><p class="dia-nombre">El Diario del Libro</p><p class="dia-edicion" id="dia-edicion"></p></header>
     <h2 class="dia-titular" id="t-diario"></h2>
     <p class="dia-sub" id="dia-sub"></p>
+    <!-- «Escuchar» (campamento 19): el Diario leído con la voz del propio aparato. Solo sale si el aparato tiene una voz en español suya (diario.js). -->
+    <button type="button" class="dia-oir" id="dia-oir" aria-pressed="false" hidden><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-bocina"/></svg><span>Escuchar el Diario</span></button>
     <!-- En el teléfono el Diario sale en portada (titular y una línea) y este botón lo abre entero; en tablet y escritorio va siempre abierto (campamento 17). -->
     <button type="button" class="dia-abrir" id="dia-abrir" aria-expanded="false" aria-controls="dia-grabado dia-cols"><b id="dia-abrir-t">Leer el Diario de hoy</b><span id="dia-abrir-d"></span></button>
     <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
@@ -538,6 +547,7 @@
     <div class="dc-lista">
       <button type="button" data-cuenta="clave">Cambiar contraseña</button>
       <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
+      <button type="button" data-cuenta="montana" id="dc-montana" hidden>Nombre de la montaña: sin nombre</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
       <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
       <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
@@ -756,6 +766,40 @@
     <p class="cap-cuenta" id="msg-cuenta" aria-live="polite">0 de 160</p>
     <p class="hoja-error" id="msg-error" role="alert"></p>
     <div class="d-bot"><button type="button" id="msg-cancelar">Cancelar</button><button type="button" id="msg-borrar" hidden>Quitar</button><button type="submit" class="primario" id="msg-guardar">Guardar</button></div>
+  </form>
+</dialog>
+
+<!-- El libro de cumbre (campamento 19): las firmas de quien llegó a un campamento. Lo leen todos; firma cada persona la suya (también un
+     lector) y el dueño puede quitar cualquiera. Todo entra con textContent (firmas.js). El papel es claro en los dos temas, como un cuaderno. -->
+<dialog id="d-firmas" class="d-firmas" aria-labelledby="fi-t">
+  <article class="fi-papel">
+    <header class="fi-cab"><p class="fi-marca">Libro de cumbre</p><h2 id="fi-t" tabindex="-1"></h2><p class="fi-ayuda">Quien llega hasta aquí deja su firma. La lee toda la familia.</p></header>
+    <ol class="fi-lista" id="fi-lista"></ol>
+    <p class="fi-estado" id="fi-estado" role="status"></p>
+  </article>
+  <form id="f-firma" class="fi-form" novalidate>
+    <div class="fi-campos" id="fi-campos">
+      <label for="fi-texto">Tu firma</label>
+      <input id="fi-texto" type="text" maxlength="80" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: Aquí estuve, con frío y con ganas" aria-describedby="fi-cuenta">
+      <p class="cap-cuenta" id="fi-cuenta">0 de 80</p>
+    </div>
+    <p class="fi-cerrado" id="fi-cerrado" hidden>Este campamento se firma cuando el libro llega hasta aquí.</p>
+    <p class="hoja-error" id="fi-error" role="alert"></p>
+  </form>
+  <!-- Los botones van fuera del formulario (el de firmar con form="f-firma"): así se quedan pegados abajo aunque el libro sea largo. -->
+  <div class="d-bot"><button type="button" id="fi-cerrar">Cerrar</button><button type="button" id="fi-borrar" hidden>Borrar mi firma</button><button type="submit" form="f-firma" class="primario" id="fi-guardar">Firmar</button></div>
+</dialog>
+
+<!-- Bautizar la montaña (campamento 19): solo quien anota le pone nombre; sale en el Diario, el certificado y la tele, nunca en la entrada. -->
+<dialog id="d-montana" class="d-mensaje d-montana" aria-labelledby="mo-t">
+  <form id="f-montana" novalidate>
+    <h2 id="mo-t">El nombre de la montaña</h2>
+    <p class="msg-ayuda">Un nombre para la montaña del libro. Sale en el Diario, en el certificado de altitud y en la tele; en la pantalla de entrada, nunca.</p>
+    <label for="mo-nombre">Nombre</label>
+    <input id="mo-nombre" type="text" maxlength="32" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: La Ceiba" aria-describedby="mo-cuenta">
+    <p class="cap-cuenta" id="mo-cuenta">0 de 32</p>
+    <p class="hoja-error" id="mo-error" role="alert"></p>
+    <div class="d-bot"><button type="button" id="mo-cancelar">Cancelar</button><button type="button" id="mo-quitar" hidden>Quitar el nombre</button><button type="submit" class="primario" id="mo-guardar">Guardar</button></div>
   </form>
 </dialog>
 

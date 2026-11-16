@@ -337,6 +337,56 @@ try {
       await auditar(a.p, `resumen del dueño con la última piedrita ${esquema}`);
       await a.ctx.close();
     }
+    { // campamento 19: «Escuchar el Diario» (pulsado) con el nombre de la montaña, el libro de cumbre (lectora y dueño), el cuadro del nombre y la tele
+      // Voces de mentira (el navegador de pruebas no trae ninguna): una en español del aparato, que «habla» un rato largo.
+      const conVoces = () => {
+        try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ }
+        const s = new EventTarget();
+        Object.assign(s, { speaking: false, pending: false, paused: false, getVoices: () => [{ name: 'Paulina', lang: 'es-MX', localService: true, default: false, voiceURI: 'p' }],
+          speak() { s.speaking = true; }, cancel() { s.speaking = false; }, pause() {}, resume() {} });
+        Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: s });
+        window.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+      };
+      const h = { 'Content-Type': 'application/json', 'X-Libro': '1' };
+      const l = await nuevo(anio, LECTOR, conVoces);
+      await l.p.click('#nov-ok', { timeout: 4000 }).catch(() => {}); await l.p.waitForTimeout(400);
+      const abajo = await l.p.evaluate(async (hh) => {
+        const saldo = (await (await fetch('/api/compras')).json()).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+        const m = [1e5, 1e6, 1e7, 1e8, 1e9].filter((x) => x <= saldo).at(-1);
+        await fetch(`/api/firmas/${m}`, { method: 'PUT', headers: hh, body: JSON.stringify({ texto: 'Qué orgullo, hijo. Sigue así, paso a paso.' }) });
+        return m;
+      }, h);
+      await l.p.reload({ waitUntil: 'networkidle' }); await l.p.waitForTimeout(2500);
+      await l.p.click('#nov-ok', { timeout: 3000 }).catch(() => {}); await l.p.waitForTimeout(300);
+      await l.p.evaluate(() => window.scrollTo(0, 0)); await l.p.waitForTimeout(300);
+      await l.p.locator(`.m-bandera[data-m="${abajo}"]`).click({ force: true }); await l.p.waitForTimeout(900);
+      await auditar(l.p, `tarjeta de campamento con su libro de cumbre (lectora) ${esquema}`);
+      await l.p.click('#m-firmas'); await l.p.waitForTimeout(700);
+      await auditar(l.p, `libro de cumbre con la firma propia (lectora) ${esquema}`);
+      await l.ctx.close();
+      const { ctx, p } = await nuevo(anio, ADMIN, conVoces);
+      await cerrarOferta(p);
+      await p.evaluate(async (hh) => { await fetch('/api/montana', { method: 'PUT', headers: hh, body: JSON.stringify({ nombre: 'La Ceiba' }) }); }, h);
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2500);
+      await cerrarOferta(p);
+      await p.click('#dia-oir'); await p.waitForTimeout(300);
+      await auditar(p, `Diario leyéndose en voz alta, con el nombre de la montaña ${esquema}`);
+      await p.click('#dia-oir'); await p.waitForTimeout(200);
+      await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(300);
+      await p.locator(`.m-bandera[data-m="${abajo}"]`).click({ force: true }); await p.waitForTimeout(800);
+      await p.click('#m-firmas'); await p.waitForTimeout(700);
+      await p.locator('#fi-lista .fi-quitar').first().click(); await p.waitForTimeout(300);
+      await auditar(p, `libro de cumbre del dueño, quitando una firma (Sí, quitar) ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-montana'); await p.waitForTimeout(600);
+      await auditar(p, `el nombre de la montaña ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await p.evaluate(() => { location.hash = '#tv'; }); await p.waitForTimeout(1200);
+      await auditar(p, `tele con el nombre de la montaña ${esquema}`);
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

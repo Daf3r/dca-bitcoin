@@ -1,4 +1,4 @@
-import { aniosTronco, datosCertificado, entero, estratosMes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, partitura, piedrasTorre, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco } from './lib.js';
+import { aniosTronco, datosCertificado, entero, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, partitura, piedrasTorre, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco } from './lib.js';
 import { constelacion, estratos, manta, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
@@ -141,7 +141,7 @@ $('dh-lienzo').addEventListener('keydown', (e) => {
 
 // El certificado de altitud (campamento 13B): un diálogo con el grabado y su descripción.
 $('dh-cert').addEventListener('click', () => {
-  const d = datosCertificado(R, esAdmin() ? S.usuario : null, hoyISO());
+  const d = datosCertificado(R, esAdmin() ? S.usuario : null, hoyISO(), { montana: S.montana });
   $('cert-lienzo').innerHTML = certificado(d);
   $('cert-desc').textContent = textoCertificado(d);
   $('d-cert').showModal();
@@ -178,7 +178,8 @@ $('dh-pas-mas').addEventListener('click', () => { pasVisibles += PAS_PASO; dibuj
 
 /** Un nombre para lo que se pintó, para no rehacer la historia (y perder lo que se está leyendo) en cada refresco del precio. */
 let firmaHistoria = null;
-const firmaDe = () => `${R.items.length}:${R.sats}:${R.items.at(-1)?.id ?? 0}:${R.nCompras}:${R.racha}:${S.mensajes.map((m) => `${m.hito}${m.sellado ? 's' : (m.texto ?? '').length}`).join(',')}`;
+const firmaDe = () => `${R.items.length}:${R.sats}:${R.items.at(-1)?.id ?? 0}:${R.nCompras}:${R.racha}:${S.mensajes.map((m) => `${m.hito}${m.sellado ? 's' : (m.texto ?? '').length}`).join(',')}`
+  + `:${(S.firmas ?? []).map((f) => `${f.id}.${f.editado ?? f.creado}`).join(',')}`;
 /** Pinta «Tu historia» solo si cambió algo desde la última vez (o si no se había pintado). La llaman `pintar()` y las pestañas. */
 export function refrescarHistoria({ forzar = false } = {}) {
   if (!R?.items || !S.cargado) return;
@@ -252,6 +253,15 @@ export function pintarHistoria() {
     if (e.detalle) cuerpo.append(nodo('p', null, e.detalle));
     const msg = e.clase === 'hito' ? S.mensajes.find((x) => x.hito === e.m && !x.sellado)?.texto : null;
     if (msg) cuerpo.append(nodo('p', 'h-msg', `«${msg}»`)); // la frase que dejó el dueño en esa bandera (15A)
+    // El libro de cumbre de ese campamento (19): quién firmó y el botón para abrirlo. Aquí siguen a mano los campamentos de abajo, que la
+    // montaña deja de dibujar cuando el libro sube.
+    const fs = e.clase === 'hito' && [1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12].includes(e.m) ? firmasDe(S.firmas, e.m) : null;
+    if (fs && (fs.length || R.sats >= e.m)) {
+      const b = nodo('button', 'enlace h-firmas', `Libro de cumbre: ${textoFirmantes(fs).replace(/^./, (c) => c.toLowerCase())}`);
+      b.type = 'button';
+      b.addEventListener('click', () => document.dispatchEvent(new CustomEvent('libro:firmas', { detail: { hito: e.m, alcanzado: R.sats >= e.m } })));
+      cuerpo.append(b);
+    }
     li.append(t, cuerpo);
     lista.append(li);
   }

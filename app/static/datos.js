@@ -5,6 +5,7 @@ import { pintar, pintarLinea, pintarPrecio } from './pintar.js';
 import { entradaTarjetas } from './entrada.js';
 import { pintarCaida } from './reportes.js';
 import { enTV, fiestaTV } from './tv.js';
+import { actualizarFirmas } from './montana.js';
 
 /**
  * Cada minuto, con la app abierta y a la vista, mira si hay movimientos nuevos (los de otra persona, o los tuyos desde otro dispositivo)
@@ -14,7 +15,7 @@ export async function actualizarSuave() {
   if (!S.cargado || S.errorCarga) return;
   try {
     // (Las lecturas salen a la vez: ver `cargarCompras`.)
-    const [crudas, traslados, wallets, mensajes, capsulas, piedritas, cumples] = await Promise.all([
+    const [crudas, traslados, wallets, mensajes, capsulas, piedritas, cumples, firmas, montana] = await Promise.all([
       api('/api/compras'),
       api('/api/traslados'),
       api('/api/wallets').catch(() => S.wallets),
@@ -22,9 +23,16 @@ export async function actualizarSuave() {
       api('/api/capsulas').catch(() => S.capsulas),
       api('/api/piedritas').catch(() => S.piedritas),
       api('/api/cumples').catch(() => S.cumples),
+      api('/api/firmas').catch(() => S.firmas),
+      api('/api/montana').then((r) => r?.nombre ?? null).catch(() => S.montana),
     ]);
     const compras = crudas.map(normalizar);
-    if (JSON.stringify(piedritas) !== JSON.stringify(S.piedritas) || JSON.stringify(cumples) !== JSON.stringify(S.cumples)) { S.piedritas = piedritas; S.cumples = cumples; pintar(); }
+    // Piedritas, cumpleaños, firmas del libro de cumbre y el nombre de la montaña: se repinta lo que los enseña, sin redibujar la montaña.
+    if (JSON.stringify(piedritas) !== JSON.stringify(S.piedritas) || JSON.stringify(cumples) !== JSON.stringify(S.cumples) || JSON.stringify(firmas) !== JSON.stringify(S.firmas) || montana !== S.montana) {
+      S.piedritas = piedritas; S.cumples = cumples; S.firmas = firmas; S.montana = montana;
+      actualizarFirmas(firmas);
+      pintar();
+    }
     if (JSON.stringify(compras) === JSON.stringify(S.compras) && JSON.stringify(traslados) === JSON.stringify(S.traslados) && JSON.stringify(wallets) === JSON.stringify(S.wallets)
       && JSON.stringify(mensajes) === JSON.stringify(S.mensajes) && JSON.stringify(capsulas) === JSON.stringify(S.capsulas)) return;
     // Una compra nueva con la tele a la vista (idea 5): se celebra entera, como al anotarla.
@@ -46,10 +54,10 @@ export async function actualizarSuave() {
 export async function cargarCompras() {
   const teniaError = S.errorCarga;
   try {
-    // Rendimiento: las siete lecturas salen A LA VEZ (antes iban una tras otra: siete viajes de red antes de ver el saldo, lo que en
+    // Rendimiento: las lecturas salen A LA VEZ (antes iban una tras otra: siete viajes de red antes de ver el saldo, lo que en
     // un teléfono con datos móviles es más de un segundo de espera). Si fallan las compras, falla todo, como antes; cada una de las
     // demás conserva lo que había si falla (dónde están los sats, frases de las banderas y cartas, apacheta y cumpleaños).
-    const [compras, traslados, wallets, mensajes, capsulas, piedritas, cumples] = await Promise.all([
+    const [compras, traslados, wallets, mensajes, capsulas, piedritas, cumples, firmas, montana] = await Promise.all([
       api('/api/compras'),
       api('/api/traslados').catch(() => S.traslados),
       api('/api/wallets').catch(() => S.wallets),
@@ -57,6 +65,8 @@ export async function cargarCompras() {
       api('/api/capsulas').catch(() => S.capsulas),
       api('/api/piedritas').catch(() => S.piedritas),
       api('/api/cumples').catch(() => S.cumples),
+      api('/api/firmas').catch(() => S.firmas),
+      api('/api/montana').then((r) => r?.nombre ?? null).catch(() => S.montana),
     ]);
     S.compras = compras.map(normalizar);
     S.traslados = traslados;
@@ -65,6 +75,8 @@ export async function cargarCompras() {
     S.capsulas = capsulas;
     S.piedritas = piedritas;
     S.cumples = cumples;
+    S.firmas = firmas;
+    S.montana = montana;
     S.errorCarga = false;
     if (teniaError) avisar(''); // solo se quita el aviso de error propio: un «Deshacer» o un «Reconectando…» a la vista se quedan
   } catch (e) {

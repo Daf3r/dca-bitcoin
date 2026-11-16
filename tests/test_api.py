@@ -957,10 +957,10 @@ check(luz.post("/api/push/suscribir", json=[1]).status_code == 400, "cuerpo que 
 r = luz.post("/api/push/suscribir", json=_sus(EP_LUZ))
 check(r.status_code == 200 and r.get_json()["suscrito"] is True, f"un lector se suscribe {r.data}")
 cats = r.get_json()["categorias"]
-check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False)], f"categorías del lector y sus valores por defecto {cats}")
+check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False), ("diario", False)], f"categorías del lector y sus valores por defecto {cats}")
 check(all(c["nombre"] and c["ayuda"] for c in cats), "cada categoría trae nombre y ayuda")
 r = adm.post("/api/push/suscribir", json=_sus(EP_ADM))
-check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("piedrita", True), ("wallet", False)], "categorías del admin")
+check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("piedrita", True), ("diario", False), ("wallet", False)], "categorías del admin")
 check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "suscribirse no da permiso de escribir")
 
 # Estado por dispositivo: solo el dueño ve el suyo
@@ -1001,7 +1001,7 @@ check(not any(e == EP_ADM for e, _ in enviados), "el admin no recibe avisos de l
 
 # Categorías apagadas no reciben; «hito» está apagada por defecto y se enciende por dispositivo
 r = luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"movimiento": False}})
-check(r.status_code == 200 and [c["activo"] for c in r.get_json()["categorias"]] == [False, False], "se apaga una categoría")
+check(r.status_code == 200 and [c["activo"] for c in r.get_json()["categorias"]] == [False, False, False], "se apaga una categoría")
 enviados.clear()
 adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": 1000})
 check(not enviados, "con «movimiento» apagado no llega nada")
@@ -1119,7 +1119,21 @@ if _sh.which("node"):
             movs_.append({"fecha": (date(2025, 6, 1) + _td(days=i * _r.randrange(1, 9))).isoformat(), "monto": monto_, "sats": max(1, round(monto_ / precio_ * 1e8)),
                           "tipo": "venta" if _r.random() < 0.15 else "compra", "extra": _r.random() < 0.2})
         casos_repo.append({"movs": movs_, "vivo": round(_r.uniform(40000, 100000), 2), "hoy": "2026-11-01"})
-    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres, "caida": casos_caida, "reposicion": casos_repo}
+    # El Diario del domingo (campamento 19): de qué fue la semana (etapa · una · varias · tranquila) y su titular sin cifras.
+    casos_diario = []
+    for _ in range(220):
+        hoy_ = date(2026, 1, 4) + _td(days=_r.randrange(0, 330))
+        movs_ = []
+        for i in range(_r.randrange(0, 16)):
+            movs_.append({"id": i + 1, "fecha": (hoy_ - _td(days=_r.randrange(0, 45))).isoformat(), "tipo": "venta" if _r.random() < 0.15 else "compra",
+                          "sats": _r.choice([700, 30000, 60000, 150000, 240000, 900000, 2400000, 7000000])})
+        casos_diario.append({"movs": movs_, "hoy": hoy_.isoformat()})
+    casos_diario += [{"movs": [], "hoy": "2026-11-15"}, {"movs": [{"id": 1, "fecha": "2026-11-10", "tipo": "venta", "sats": 5}], "hoy": "2026-11-15"},
+                     {"movs": [{"id": 1, "fecha": "2026-11-01", "tipo": "compra", "sats": 99000}, {"id": 2, "fecha": "2026-11-08", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},  # cruzó 100k hace 7 días
+                     {"movs": [{"id": 1, "fecha": "2026-11-01", "tipo": "compra", "sats": 99000}, {"id": 2, "fecha": "2026-11-01", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},  # hace 14 días: ya no es etapa ni compra de la semana
+                     {"movs": [{"id": 1, "fecha": "2026-10-01", "tipo": "compra", "sats": 5000}, {"id": 2, "fecha": "2026-11-08", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},   # hace 7 días exactos: fuera
+                     {"movs": [{"id": 1, "fecha": "2026-10-01", "tipo": "compra", "sats": 5000}, {"id": 2, "fecha": "2026-11-09", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"}]
+    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres, "caida": casos_caida, "reposicion": casos_repo, "diario": casos_diario}
     p_ = subprocess.run(["node", os.path.join(os.path.dirname(os.path.abspath(__file__)), "paridad_ritmo.mjs")], input=json.dumps(entrada), capture_output=True, text=True)
     check(p_.returncode == 0, f"node calcula la paridad: {p_.stderr[:200]}")
     js = json.loads(p_.stdout)
@@ -1153,6 +1167,16 @@ if _sh.which("node"):
             mal_r.append((caso, r_, esperado))
     check(not mal_r, f"monto habitual y reposición igual que lib.js ({len(mal_r)} distintos de {len(casos_repo)}): {mal_r[:1]}")
     check(sum(1 for x in js["reposicion"] if x["r"]) > 20, "la paridad de la reposición prueba casos con resultado")
+    mal_d = []
+    for caso, esperado in zip(casos_diario, js["diario"], strict=True):
+        clase_ = ritmo.clase_diario([(m["fecha"], m["id"], m["tipo"], m["sats"]) for m in caso["movs"]], date.fromisoformat(caso["hoy"]))
+        mio = {"clase": clase_, "aviso": ritmo.AVISO_DIARIO[clase_]} if clase_ else None
+        if mio != esperado:
+            mal_d.append((caso, mio, esperado))
+    check(not mal_d, f"el titular del Diario igual que lib.js ({len(mal_d)} distintos de {len(casos_diario)}): {mal_d[:1]}")
+    check({x["clase"] for x in js["diario"] if x} == {"etapa", "una", "varias", "tranquila"} and js["diario"][-6] is None and js["diario"][-5] is None,
+          "la paridad del Diario prueba las cuatro clases y la semana sin Diario")
+    check([x["clase"] for x in js["diario"][-4:]] == ["etapa", "tranquila", "tranquila", "una"], f"el Diario mira 14 días para la etapa y 7 para las compras {js['diario'][-4:]}")
 else:
     print("(sin node: se omite la paridad con lib.js)")
 
@@ -1192,7 +1216,7 @@ check(r["horario"] == _HDEF and r["horario_defecto"] == _HDEF, f"el horario por 
 check(luz.post("/api/push/estado", json={"endpoint": "https://fcm.googleapis.com/otro"}).get_json() == {"suscrito": False, "categorias": []}, "sin suscribir no hay horario")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
 check(r.status_code == 200 and r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, f"se guarda el horario del dispositivo {r.data}")
-check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "piedrita", "wallet"], "guardar el horario no cambia las categorías")
+check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "piedrita", "diario", "wallet"], "guardar el horario no cambia las categorías")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
 check(r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, "elegir categorías no borra el horario")
 adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
@@ -2279,5 +2303,177 @@ check(adm.put("/api/yo/cumple", json={"cumple": "02-29"}).status_code == 200, "e
 check(adm.get("/api/cumples").get_json() == [{"nombre": "Daf3r", "cumple": "02-29"}, {"nombre": "Luz", "cumple": "03-14"}] and anon.get("/api/cumples").status_code == 401, "la familia ve los cumpleaños (solo nombre, mes y día)")
 check(luz.put("/api/yo/cumple", json={"cumple": None}).status_code == 200 and luz.get("/api/yo").get_json()["cumple"] is None and len(adm.get("/api/cumples").get_json()) == 1, "se puede quitar")
 check(server.version_esquema(server.connect()) >= 15, "la base está al menos en la migración 15")
+
+# --- Campamento 19 (1/4): el Diario llega el domingo (idea 20). Para todos, apagado por defecto, a las 18:00 del domingo y sin cifras.
+check("diario" in push.categorias_de("lector") and "diario" in push.categorias_de("admin") and push.CATEGORIAS["diario"]["defecto"] is False,
+      "«El Diario del domingo» es para toda la familia y nace apagado")
+EP_D1 = "https://fcm.googleapis.com/fcm/send/diario-luz"                   # lectora, con el Diario
+EP_D2 = "https://updates.push.services.mozilla.com/wpush/v2/diario-admin"  # el dueño, con el Diario
+EP_D3 = "https://fcm.googleapis.com/fcm/send/diario-apagado"               # lectora, sin el Diario
+EP_D4 = "https://fcm.googleapis.com/fcm/send/diario-dormido"               # lectora, con el Diario, pero a las 18:00 sus avisos duermen
+for _c, _ep in ((luz, EP_D1), (adm, EP_D2), (luz, EP_D3), (luz, EP_D4)):
+    _r = _c.post("/api/push/suscribir", json=_sus(_ep))
+    check(_r.status_code == 200 and ("diario", False) in [(x["id"], x["activo"]) for x in _r.get_json()["categorias"]], f"el Diario sale apagado al suscribirse {_ep[-14:]}")
+check(luz.put("/api/push/prefs", json={"endpoint": EP_D1, "prefs": {"diario": True}}).status_code == 200
+      and adm.put("/api/push/prefs", json={"endpoint": EP_D2, "prefs": {"diario": True}}).status_code == 200, "una lectora y el dueño encienden el Diario")
+check(luz.put("/api/push/prefs", json={"endpoint": EP_D4, "horario": {"desde": 6, "hasta": 17}, "prefs": {"diario": True}}).status_code == 200, "y otra con avisos de 6:00 a 17:00")
+_cx = server.connect()
+_cx.execute("DELETE FROM meta WHERE clave = 'aviso_diario'"); _cx.execute("DELETE FROM avisos_pendientes"); _cx.commit()
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 14, 18, 30, tzinfo=ritmo.ZONA)  # sábado
+check(avisos._diario(_cx) is False and not enviados, "el sábado no sale el Diario")
+push.ahora = lambda: _dtm(2026, 11, 15, 17, 59, tzinfo=ritmo.ZONA)  # domingo, un minuto antes
+check(avisos._diario(_cx) is False and not enviados, "el domingo antes de las 18:00 tampoco")
+push.ahora = lambda: _dtm(2026, 11, 15, 18, 2, tzinfo=ritmo.ZONA)
+check(avisos._diario(_cx) is True and _a_quien() == sorted([EP_D1, EP_D2]), f"el domingo a las 18:00 llega a quien lo encendió y está despierto {_a_quien()}")
+_pd = enviados[0][1]
+_movs = [(r["fecha"], r["id"], r["tipo"], r["sats"]) for r in _cx.execute(f"SELECT fecha, id, tipo, sats FROM compras WHERE {server.VIGENTES}")]
+check(_pd["titulo"] == "El Diario del domingo" and _pd["cuerpo"] == ritmo.aviso_diario(_movs, date(2026, 11, 15)) and _pd["etiqueta"] == "diario-2026-11-15",
+      f"dice el titular del Diario de ese domingo {_pd}")
+check(not re.search(r"\d", _pd["titulo"] + _pd["cuerpo"]) and all(not re.search(r"\d", t) for t in ritmo.AVISO_DIARIO.values()), "el aviso no lleva ninguna cifra")
+check("acciones" not in _pd, "el Diario no trae botones")
+_sid4 = sql("SELECT id FROM suscripciones WHERE endpoint = ?", (EP_D4,))[0][0]
+check([tuple(r) for r in sql("SELECT categoria, sus_id, cuerpo FROM avisos_pendientes")] == [("diario", _sid4, _pd["cuerpo"])], "al que duerme se le guarda, a su nombre")
+enviados.clear()
+check(avisos._diario(_cx) is False and not enviados, "una sola vez por domingo")
+push.ahora = lambda: _dtm(2026, 11, 15, 23, 50, tzinfo=ritmo.ZONA)
+check(avisos._diario(_cx) is False and not enviados, "tampoco más tarde ese domingo")
+push.ahora = lambda: _dtm(2026, 11, 16, 6, 5, tzinfo=ritmo.ZONA)  # lunes: el dormido despierta
+push.vaciar_pendientes(_cx)
+check(_a_quien() == [EP_D4] and enviados[0][1]["cuerpo"] == _pd["cuerpo"], f"el que dormía lo recibe al despertar {enviados}")
+check(avisos._diario(_cx) is False, "el lunes no hay Diario nuevo")
+# El domingo siguiente vuelve; quien apagó la categoría mientras dormía no lo recibe (lo guardado se descarta)
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 22, 18, 0, tzinfo=ritmo.ZONA)
+check(avisos._diario(_cx) is True and _a_quien() == sorted([EP_D1, EP_D2]), "el domingo siguiente sale otra vez")
+luz.put("/api/push/prefs", json={"endpoint": EP_D4, "prefs": {"diario": False}})
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 23, 6, 5, tzinfo=ritmo.ZONA)
+push.vaciar_pendientes(_cx)
+check(not enviados and not sql("SELECT 1 FROM avisos_pendientes WHERE categoria = 'diario'"), "si apagó el Diario mientras dormía, lo guardado se descarta")
+# Sin compras no hay Diario ni aviso
+check(ritmo.aviso_diario([], date(2026, 11, 15)) is None and ritmo.aviso_diario([("2026-11-10", 1, "venta", 5)], date(2026, 11, 15)) is None, "sin compras no hay Diario")
+_orig_av = ritmo.aviso_diario
+ritmo.aviso_diario = lambda movs, hoy: None
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 29, 18, 0, tzinfo=ritmo.ZONA)
+check(avisos._diario(_cx) is False and not enviados and server._meta(_cx, "aviso_diario") == "2026-11-29", "una semana sin Diario no avisa (y no lo vuelve a intentar)")
+ritmo.aviso_diario = _orig_av
+_cx.close()
+push.ahora = _de_dia
+
+# --- Campamento 19 (3/4): el libro de cumbre (idea 18). Una firma por persona y campamento alcanzado; también la deja un lector.
+check(len(sql("SELECT name FROM sqlite_master WHERE name = 'firmas'")) == 1 and server.version_esquema(server.connect()) >= 16, "la tabla del libro de cumbre existe (migración 16)")
+_cx = server.connect(); server._m_firmas(_cx); server._m_firmas(_cx); _cx.commit()
+check({r[1] for r in _cx.execute("PRAGMA table_info(firmas)")} == {"id", "hito", "usuario_id", "texto", "creado", "editado"}, "la migración 16 es idempotente (dos veces, la misma tabla)")
+_cx.close()
+_sal = server.saldo_actual(server.connect())
+_ab = max(m for m in server.HITOS_MENSAJE if m <= _sal)   # un campamento al que el libro ya llegó
+_ar = min(m for m in server.HITOS_MENSAJE if m > _sal)    # uno por alcanzar
+check(adm.get("/api/firmas").get_json() == [] and luz.get("/api/firmas").status_code == 200 and anon.get("/api/firmas").status_code == 401, "al principio no hay firmas; las leen todos con sesión")
+check(anon.put(f"/api/firmas/{_ab}", json={"texto": "hola"}).status_code in (401, 403), "sin sesión no se firma")
+for _malo in (5, 250000, 10**13, 0):
+    check(luz.put(f"/api/firmas/{_malo}", json={"texto": "hola"}).status_code == 400, f"campamento que no existe: {_malo}")
+for _malo in ({}, {"texto": ""}, {"texto": "   \n "}, {"texto": 5}, {"texto": None}, {"texto": "x" * 81}, {"texto": "🙂" * 81}, [1]):
+    check(luz.put(f"/api/firmas/{_ab}", json=_malo).status_code == 400, f"firma rechazada: {str(_malo)[:40]}")
+_r = luz.put(f"/api/firmas/{_ar}", json={"texto": "Ya casi"})
+check(_r.status_code == 400 and "todavía no llega" in _r.get_json()["error"], "un campamento por alcanzar no se firma")
+enviados.clear()
+_r = luz.put(f"/api/firmas/{_ab}", json={"texto": "  Qué orgullo,\n  hijo  "})
+_f = _r.get_json()
+check(_r.status_code == 201 and _f["texto"] == "Qué orgullo, hijo" and _f["nueva"] is True and _f["mia"] is True and _f["quien"] == "Luz" and _f["hito"] == _ab,
+      f"una lectora firma, en una línea y sin espacios de sobra {_r.data}")
+_txt_push = [p["cuerpo"] for _e, p in enviados]
+check(any(t == f"Luz firmó el libro de cumbre del campamento {ritmo.nombre_hito(_ab).replace(' sats', '')}." for t in _txt_push)
+      and all(_e not in (EP_D1, EP_D3, EP_D4) for _e, _p in enviados), f"la primera firma de alguien avisa al dueño, y solo al dueño {_txt_push}")
+check(all("Qué orgullo" not in t for t in _txt_push), "el aviso no lleva el texto de la firma")
+enviados.clear()
+_r = luz.put(f"/api/firmas/{_ab}", json={"texto": "Qué orgullo, hijo"})
+check(_r.status_code == 200 and _r.get_json()["nueva"] is False and len(audit("firma")) == 1 and not enviados, "firmar igual otra vez no hace nada (ni audita ni avisa)")
+_r = luz.put(f"/api/firmas/{_ab}", json={"texto": "Qué orgullo, hijo. Sigue así."})
+_au = [dict(a) for a in audit("firma")]
+check(_r.status_code == 200 and _r.get_json()["editado"] and len(_au) == 2 and json.loads(_au[-1]["antes"]) == {"texto": "Qué orgullo, hijo"}
+      and json.loads(_au[-1]["despues"]) == {"texto": "Qué orgullo, hijo. Sigue así."} and _au[-1]["usuario"] == "Luz" and _au[-1]["entidad_id"] == _ab,
+      "se puede reescribir la propia; la auditoría guarda lo de antes y lo de después")
+check(not enviados, "reescribir no avisa a nadie")
+check(sql("SELECT COUNT(*) FROM firmas WHERE usuario_id = (SELECT id FROM usuarios WHERE nombre = 'Luz')")[0][0] == 1, "una sola firma por persona y campamento")
+# Otra lectora y el dueño también firman; cada quien ve cuál es la suya
+check(ana.put(f"/api/firmas/{_ab}", json={"texto": "Aquí estuve 🙂"}).status_code == 201, "otra lectora firma el mismo campamento")
+enviados.clear()
+check(adm.put(f"/api/firmas/{_ab}", json={"texto": "Gracias por subir conmigo"}).status_code == 201 and not any("Daf3r firmó" in p["cuerpo"] for _e, p in enviados),
+      "el dueño también firma (y no se avisa a sí mismo)")
+_l = luz.get("/api/firmas").get_json()
+check([f["quien"] for f in _l] == ["Luz", "Ana", "Daf3r"] and [f["mia"] for f in _l] == [True, False, False], f"las firmas, en el orden en que se firmaron, con la propia marcada {_l}")
+check([f["mia"] for f in adm.get("/api/firmas").get_json()] == [False, False, True], "el dueño ve la suya marcada")
+check(set(_l[0]) == {"id", "hito", "quien", "texto", "creado", "editado", "mia"}, "la firma no lleva datos de la cuenta (solo el nombre)")
+# Caracteres raros: se guardan como texto (se pintan con textContent) y sin caracteres invisibles de control
+_r = ana.put(f"/api/firmas/{_ab}", json={"texto": "<b>hola</b> ‮​mundo \U0001F642" + "x" * 3})
+check(_r.status_code == 200 and _r.get_json()["texto"] == "<b>hola</b> mundo \U0001F642xxx", f"los caracteres de control se quitan y el resto queda como texto {_r.get_json()['texto']!r}")
+check(ana.put(f"/api/firmas/{_ab}", json={"texto": "🙂" * 80}).status_code == 200, "80 caracteres (aunque sean emojis) valen")
+# Borrar: la propia sí; la de otra persona, solo el dueño
+_ids = {f["quien"]: f["id"] for f in luz.get("/api/firmas").get_json()}
+check(ana.delete(f"/api/firmas/{_ab}/{_ids['Luz']}").status_code == 403, "una lectora no borra la firma de otra persona")
+check(luz.delete(f"/api/firmas/{_ab}/{_ids['Daf3r']}").status_code == 403, "ni la del dueño")
+check(luz.delete(f"/api/firmas/{_ar}/{_ids['Luz']}").status_code == 404, "la firma tiene que ser de ese campamento")
+check(luz.delete(f"/api/firmas/{_ab}/{_ids['Luz']}").status_code == 204 and luz.delete(f"/api/firmas/{_ab}/{_ids['Luz']}").status_code == 404, "la propia se borra (una vez)")
+check(adm.delete(f"/api/firmas/{_ab}/{_ids['Ana']}").status_code == 204, "el dueño quita la de otra persona")
+_au = [dict(a) for a in audit("firma_borrada")]
+check(len(_au) == 2 and json.loads(_au[0]["antes"])["de"] == "Luz" and _au[0]["usuario"] == "Luz" and json.loads(_au[1]["antes"]) == {"texto": "🙂" * 80, "de": "Ana"}
+      and _au[1]["usuario"] == "Daf3r" and _au[1]["despues"] is None, "cada borrado queda en la auditoría, con de quién era y quién la quitó")
+check([f["quien"] for f in luz.get("/api/firmas").get_json()] == ["Daf3r"], "quedan las que no se borraron")
+check(luz.put(f"/api/firmas/{_ab}", json={"texto": "Volví a firmar"}).status_code == 201, "tras borrarla se puede firmar de nuevo")
+# Dos personas a la vez, y la misma persona dos veces a la vez: nunca dos firmas suyas en el mismo campamento
+import threading as _th
+_otro = next(m for m in sorted(server.HITOS_MENSAJE) if m <= _sal and m != _ab) if any(m <= _sal and m != _ab for m in server.HITOS_MENSAJE) else _ab
+_res = []
+_barrera = _th.Barrier(4)
+def _firma_hilo(c_, t_):
+    _barrera.wait()
+    _res.append(c_.put(f"/api/firmas/{_otro}", json={"texto": t_}).status_code)
+_hs = [_th.Thread(target=_firma_hilo, args=a_) for a_ in ((cliente("Luz", "clave-de-luz-2026"), "uno"), (cliente("Luz", "clave-de-luz-2026"), "dos"), (cliente("Ana", "otra-clave-larga-1"), "tres"), (cliente(), "cuatro"))]
+for h_ in _hs: h_.start()
+for h_ in _hs: h_.join()
+_en = [r[0] for r in sql("SELECT u.nombre FROM firmas f JOIN usuarios u ON u.id = f.usuario_id WHERE f.hito = ?", (_otro,))]
+check(all(s_ in (200, 201) for s_ in _res) and sorted(_en).count("Luz") == 1 and "Ana" in _en and "Daf3r" in _en, f"a la vez: una firma por persona ({_res}, {_en})")
+# Si el saldo baja de un campamento ya firmado, lo firmado se lee pero no se firma ni se reescribe hasta volver
+_cx = server.connect()
+_cx.execute("INSERT INTO firmas (hito, usuario_id, texto, creado) VALUES (?, (SELECT id FROM usuarios WHERE nombre = 'Luz'), 'Estuve antes de la venta', 1)", (_ar,)); _cx.commit(); _cx.close()
+check(any(f["hito"] == _ar and f["texto"] == "Estuve antes de la venta" for f in ana.get("/api/firmas").get_json()), "las firmas de un campamento que el saldo ya no alcanza se siguen leyendo")
+check(luz.put(f"/api/firmas/{_ar}", json={"texto": "otra"}).status_code == 400, "pero no se reescriben hasta que el libro vuelva")
+_idar = next(f["id"] for f in luz.get("/api/firmas").get_json() if f["hito"] == _ar)
+check(luz.delete(f"/api/firmas/{_ar}/{_idar}").status_code == 204, "borrar la propia sí se puede siempre")
+# Límite propio de firmas (además del de escrituras): 20 cada 10 minutos por cuenta
+server._FIRMAS_RECIENTES.clear()
+_lim = server.FIRMA_MAX
+server.FIRMA_MAX = 3
+for _k in range(3):
+    luz.put(f"/api/firmas/{_ab}", json={"texto": f"firma {_k}"})
+_r = luz.put(f"/api/firmas/{_ab}", json={"texto": "una más"})
+check(_r.status_code == 429 and _r.headers.get("Retry-After") and ana.put(f"/api/firmas/{_ab}", json={"texto": "la mía"}).status_code in (200, 201), "demasiadas firmas seguidas: 429 para esa cuenta, no para las demás")
+server.FIRMA_MAX = _lim
+server._FIRMAS_RECIENTES.clear()
+check(push.CATEGORIAS["piedrita"]["nombre"] == "Piedritas y firmas de tu familia" and "firma" in push.CATEGORIAS["piedrita"]["ayuda"], "la categoría del dueño ahora habla también de las firmas")
+
+# --- Campamento 19 (4/4): bautizar la montaña (idea 21). Solo el nombre; lo pone el dueño; nunca sale en la entrada.
+check(adm.get("/api/montana").get_json() == {"nombre": None} and luz.get("/api/montana").get_json() == {"nombre": None}, "al principio la montaña no tiene nombre; lo leen todos con sesión")
+check(anon.get("/api/montana").status_code == 401 and anon.put("/api/montana", json={"nombre": "x"}).status_code in (401, 403), "sin sesión ni se lee ni se cambia")
+check(luz.put("/api/montana", json={"nombre": "La Ceiba"}).status_code == 403, "una lectora no bautiza la montaña")
+for _malo in ({}, {"otro": "La Ceiba"}, {"nombre": 5}, {"nombre": ["La Ceiba"]}, {"nombre": "x" * 33}, {"nombre": "🙂" * 33}, [1]):
+    check(adm.put("/api/montana", json=_malo).status_code == 400, f"nombre rechazado: {str(_malo)[:40]}")
+_r = adm.put("/api/montana", json={"nombre": "  La   Ceiba\n de ‮Abajo "})
+check(_r.status_code == 200 and _r.get_json() == {"nombre": "La Ceiba de Abajo"}, f"se guarda en una línea, sin espacios de sobra ni caracteres de control {_r.data}")
+check(luz.get("/api/montana").get_json() == {"nombre": "La Ceiba de Abajo"} and sql("SELECT valor FROM meta WHERE clave = 'nombre_montana'")[0][0] == "La Ceiba de Abajo", "lo lee toda la familia (vive en meta.nombre_montana)")
+check(adm.put("/api/montana", json={"nombre": "🙂" * 32}).status_code == 200 and adm.put("/api/montana", json={"nombre": "<b>Volcán</b> & «Cía»"}).get_json()["nombre"] == "<b>Volcán</b> & «Cía»",
+      "32 caracteres valen (aunque sean emojis) y los raros se guardan como texto")
+_au = [dict(a) for a in audit("montana_nombre")]
+check(len(_au) == 3 and _au[0]["antes"] is None and json.loads(_au[0]["despues"]) == {"nombre": "La Ceiba de Abajo"} and json.loads(_au[-1]["antes"]) == {"nombre": "🙂" * 32}
+      and _au[-1]["usuario"] == "Daf3r", "cada nombre queda en la auditoría, con el de antes")
+check(adm.put("/api/montana", json={"nombre": "<b>Volcán</b> & «Cía»"}).status_code == 200 and len(audit("montana_nombre")) == 3, "poner el mismo nombre no audita nada")
+# Nunca en la entrada: ni la página de entrada ni lo público lo dicen
+_pub = anon.get("/login").get_data(as_text=True) + anon.get("/login.js").get_data(as_text=True)
+check("Volcán" not in _pub and "/api/montana" not in _pub and anon.get("/api/estado").get_json() == {"abierto": True}, "la entrada nunca pide ni enseña el nombre de la montaña")
+check(adm.put("/api/montana", json={"nombre": ""}).get_json() == {"nombre": None} and adm.get("/api/montana").get_json() == {"nombre": None}
+      and not sql("SELECT 1 FROM meta WHERE clave = 'nombre_montana'") and json.loads(audit("montana_nombre")[-1]["despues"] or "null") is None, "vacío lo quita (y queda en la auditoría)")
+check(adm.put("/api/montana", json={"nombre": None}).status_code == 200 and len(audit("montana_nombre")) == 4, "quitarlo dos veces no audita dos veces")
 
 print("OK", ok, "comprobaciones")

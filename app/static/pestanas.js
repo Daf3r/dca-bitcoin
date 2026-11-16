@@ -39,6 +39,7 @@ export function irAPestana(cual, { desplazar = true } = {}) {
   actual = cual;
   guardar(CLAVE_PESTANA, cual === 'resumen' ? null : cual);
   aplicar();
+  document.dispatchEvent(new CustomEvent('libro:pestana', { detail: { pestana: cual } })); // quien lee en voz alta (el Diario) se calla
   if (desplazar && porPestanas) subirAlInicio();
 }
 
@@ -68,6 +69,7 @@ export function fijarModoPestanas(si) {
   porPestanas = si;
   guardar(CLAVE_MODO, si ? null : 'todo');
   aplicar();
+  document.dispatchEvent(new CustomEvent('libro:pestana', { detail: { pestana: si ? actual : null } }));
 }
 export const etiquetaModo = () => `Pantalla: ${porPestanas ? 'por pestañas' : 'todo junto'}`;
 

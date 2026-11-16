@@ -370,7 +370,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   // de abajo a las pestañas y el botón ya no flota sobre ella). Una lectura de estilo por dibujo.
   const pie = Number.parseFloat(getComputedStyle(host).getPropertyValue('--pie')) || 104;
   vozMontana = vozLibro();
-  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
+  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), firmas: S.firmas, cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     const m = etapasCruzadas(festejo.antes, R.sats).at(-1);

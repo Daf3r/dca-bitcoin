@@ -1,8 +1,8 @@
 """Reglas del libro que el servidor necesita para los avisos (el frontend las tiene en `static/lib.js`).
 
 Son las mismas reglas, escritas otra vez en Python porque un aviso sale cuando la app está cerrada: ritmo (semanal o
-quincenal), racha, «te toca comprar», etapas y constancia. `tests/test_api.py` compara estas funciones con `lib.js`
-para que no se separen.
+quincenal), racha, «te toca comprar», etapas, constancia y el titular (sin cifras) del Diario del domingo.
+`tests/test_api.py` compara estas funciones con `lib.js` para que no se separen.
 """
 from __future__ import annotations
 
@@ -150,6 +150,71 @@ def constancia_cruzada(antes: list[str], despues: list[str]) -> list[tuple[str, 
     if na > 0 and pa == pd:
         out += [("tiempo", m) for m in HITOS_MESES if ma < m <= md]
     return out
+
+
+# ------------------------------------------------------------------ el Diario del domingo (campamento 19, idea 20)
+# El titular del Diario SIN cifras: es lo que dice el aviso del domingo (una notificación se lee en la pantalla bloqueada). La misma tabla y
+# la misma regla que `lib.diario` (`clase` y `AVISO_DIARIO`); `tests/test_api.py` las compara con `paridad_ritmo.mjs`.
+AVISO_DIARIO = {
+    "etapa": "Llegamos a una nueva etapa",
+    "una": "Un paso más en la montaña",
+    "varias": "La montaña subió esta semana",
+    "tranquila": "Semana tranquila en la montaña",
+}
+
+
+def _hitos_hasta(tope: int) -> list[int]:
+    out, m = [], 10**5
+    while m <= tope:
+        out.append(m)
+        m *= 10
+    return out
+
+
+def meta_siguiente(sats: int) -> int:
+    """`lib.metaSiguiente`: el siguiente hito grande (potencia de 10 desde 100k) por encima del saldo."""
+    m = 10**5
+    while m <= sats:
+        m *= 10
+    return m
+
+
+def etapa_siguiente(sats: int) -> int:
+    """`lib.etapaSiguiente`: la primera etapa (1, 2.5 o 5 de cada potencia de 10 desde 100k) por encima del saldo."""
+    d = 10**5
+    while True:
+        for m in (d, d * 5 // 2, d * 5):
+            if m > sats:
+                return m
+        d *= 10
+
+
+def clase_diario(movs: list[tuple[str, int, str, int]], hoy: date) -> str | None:
+    """De qué fue la semana para el Diario (`lib.diario`): 'etapa' (se cruzó una en los últimos 14 días), 'una' o 'varias' (compras en los
+    últimos 7 días) o 'tranquila'. None sin compras (ese domingo no hay Diario). `movs` = (fecha, id, tipo, sats) de los movimientos vigentes."""
+    orden = sorted(movs, key=lambda m: (m[0], m[2] == "venta", m[1]))
+    compras = [m for m in orden if m[2] != "venta"]
+    if not compras:
+        return None
+    sats, acum = 0, []
+    for f, _i, tipo, s in orden:  # el saldo tras cada movimiento, como `satsAcum` en `lib.resumen` (nunca negativo)
+        sats = max(0, sats - s) if tipo == "venta" else sats + s
+        acum.append((f, sats))
+    h, desde, desde_etapa = hoy.isoformat(), (hoy - timedelta(days=7)).isoformat(), (hoy - timedelta(days=14)).isoformat()
+    camino = sorted(set(etapas_hasta(etapa_siguiente(sats))) | set(_hitos_hasta(max(10**8, meta_siguiente(sats)))))
+    for m in camino:  # `R.camino`: la fecha de una etapa es la del primer movimiento con el que el saldo la alcanzó
+        fecha = next((f for f, a in acum if a >= m), None)
+        if fecha is not None and desde_etapa < fecha <= h:
+            return "etapa"
+    recientes = [c for c in compras if desde < c[0] <= h]
+    if recientes:
+        return "una" if len(recientes) == 1 else "varias"
+    return "tranquila"
+
+
+def aviso_diario(movs: list[tuple[str, int, str, int]], hoy: date) -> str | None:
+    clase = clase_diario(movs, hoy)
+    return AVISO_DIARIO[clase] if clase else None
 
 
 # ------------------------------------------------------------------ gran caída

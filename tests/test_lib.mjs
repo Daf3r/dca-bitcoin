@@ -8,6 +8,8 @@ import {
   satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, textoApertura, etapasFuturas, mananaISO, diario, textoDiario, piedritasPorCompra, textoPiedritas, ultimaPiedrita, cumpleHoy, textoCumple, textoCumpleFecha, muestrasSismo, medianocheSV, tarjetaFiesta, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
+import { AVISO_DIARIO, accionFirmas, diarioParaOir, fechaHablada, firmasDe, paraOir, textoFirmantes } from '../app/static/lib.js';
+import { certificado } from '../app/static/arte-sellos.js';
 
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
@@ -952,5 +954,53 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq([c4.numero, c4.antes, c4.despues, c4.meta, c4.p, c4.q, c4.extra, c4.nota, c4.etiquetas, c4.txid.length], [3, 100000, 130000, 250000, 0, 0.2, true, 'cayó 20 %', ['bono'], 64], 'comprobante: extra, nota, etiquetas y TXID; del 0 % al 20 % del camino a 250k');
   ok(Math.abs(c4.hoy.valor - 30) < 1e-9 && Math.abs(c4.hoy.variacion - (100000 / 83333.33 - 1) * 100) < 1e-9, 'comprobante: lo que valen hoy esos sats y cuánto cambió el precio desde entonces');
   eq([comprobante(items, 4, { hoy: '2026-11-15' }).hoy, comprobante(items, 99), comprobante(null, 1)], [null, null, null], 'comprobante: sin precio no hay «hoy valen»; sin el movimiento, nada');
+}
+// ---------------------------------------------------------------- Campamento 19: la familia
+{
+  // El Diario del domingo: de qué fue la semana y su titular sin cifras (el mismo que manda el servidor: ver la paridad en test_api).
+  const c = (id, fecha, sats, tipo = 'compra') => ({ id, fecha, sats, monto: 10, precio: (10 * 1e8) / sats, tipo });
+  const una = diario(resumen([c(1, '2025-10-01', 20000), c(2, '2026-11-12', 10000)], null, '2026-11-15'), '2026-11-15');
+  eq([una.clase, una.aviso], ['una', 'Un paso más en la montaña'], 'diario: una compra en la semana');
+  const varias = diario(resumen([c(1, '2025-10-01', 20000), c(2, '2026-11-10', 10000), c(3, '2026-11-14', 10000)], null, '2026-11-15'), '2026-11-15');
+  eq([varias.clase, varias.aviso], ['varias', 'La montaña subió esta semana'], 'diario: varias compras en la semana');
+  const etapa = diario(resumen([c(1, '2026-10-01', 90000), c(2, '2026-11-14', 15000)], null, '2026-11-15'), '2026-11-15');
+  eq([etapa.clase, etapa.aviso, etapa.titular], ['etapa', 'Llegamos a una nueva etapa', 'Llegamos a 100k sats'], 'diario: una etapa en los últimos 14 días manda');
+  const quieta = diario(resumen([c(1, '2026-10-01', 90000)], null, '2026-11-15'), '2026-11-15');
+  eq([quieta.clase, quieta.aviso], ['tranquila', 'Semana tranquila en la montaña'], 'diario: una semana sin compras es tranquila');
+  ok(Object.values(AVISO_DIARIO).every((t) => !/\d/.test(t)) && Object.keys(AVISO_DIARIO).length === 4, 'diario: el titular del aviso nunca lleva cifras');
+  // Escuchar: el Diario en frases para la voz del aparato.
+  eq(fechaHablada('2026-11-15'), '15 de noviembre de 2026', 'oír: la fecha se dice entera');
+  eq(paraOir('La montaña subió 1,241,769 sats esta semana'), 'La montaña subió 1241769 sats esta semana', 'oír: las cifras sin comas (con voz en español se leerían como decimales)');
+  eq(paraOir('Llegamos a 2.5M sats'), 'Llegamos a 2,5 millones de sats', 'oír: «2.5M» se dice «2,5 millones»');
+  eq(paraOir('Llegamos a 1M sats'), 'Llegamos a 1 millón de sats', 'oír: «1M» se dice «1 millón»');
+  eq(paraOir('SE REGALA vista desde el campamento 100k. Buenas condiciones'), 'Se regala vista desde el campamento 100 mil. Buenas condiciones', 'oír: los avisos en mayúsculas no se deletrean y «100k» es «100 mil»');
+  eq(paraOir('15 nov 2026 · edición n.º 52 · 1 BTC y 1,000 BTC'), '15 nov 2026, edición número 52, 1 bitcoin y 1000 bitcoin', 'oír: «·» es una pausa, «n.º» es «número» y «BTC» es «bitcoin»');
+  const oido = diarioParaOir(una);
+  ok(oido[0] === `El Diario del Libro. Edición del ${fechaHablada(una.fecha)}, número ${una.numero}.` && oido[1] === 'Un paso más: la montaña subió 10000 sats.', `oír: la cabecera y el titular primero (${oido.slice(0, 2).join(' | ')})`);
+  ok(oido.includes('Clasificados.') && oido.includes('Pronóstico de la montaña.') && oido.every((f) => /[.!?:]$/.test(f) && !/\d,\d{3}/.test(f)), 'oír: los clasificados y el pronóstico, en frases cortas que terminan en punto');
+  ok(oido.indexOf('Hace un año.') > 1 && oido.some((f) => /^Hace un año el libro tenía 20000 sats/.test(f)), 'oír: con un año de historia, también «hace un año»');
+  ok(diarioParaOir(una, { montana: 'La Ceiba' })[0].startsWith('El Diario del Libro, desde la montaña La Ceiba. Edición'), 'oír: con nombre, la montaña se nombra en la cabecera');
+  eq(diarioParaOir(null), [], 'oír: sin Diario no hay nada que leer');
+  // El libro de cumbre: quién firmó y qué invita a hacer la tarjeta.
+  const f = (id, hito, quien, creado, mia = false) => ({ id, hito, quien, texto: 'x', creado, editado: null, mia });
+  const todas = [f(3, 1e6, 'Papá', 30), f(1, 1e6, 'Ana', 10), f(2, 1e7, 'Ana', 20), f(4, 1e6, 'Daf3r', 40, true), f(5, 1e6, 'Mamá', 50)];
+  eq(firmasDe(todas, 1e6).map((x) => x.id), [1, 3, 4, 5], 'cumbre: las firmas de un campamento, en el orden en que se firmaron');
+  eq(firmasDe(null, 1e6), [], 'cumbre: sin firmas, ninguna');
+  eq([textoFirmantes([]), textoFirmantes([f(1, 1e6, 'Ana', 1)]), textoFirmantes([f(1, 1e6, 'Ana', 1, true)])], ['Nadie ha firmado todavía', 'Firmó Ana', 'Firmaste tú'], 'cumbre: nadie, una persona o tú');
+  eq(textoFirmantes(firmasDe(todas, 1e6).slice(0, 2)), 'Firmaron Ana y Papá', 'cumbre: dos personas');
+  eq(textoFirmantes(firmasDe(todas, 1e6).slice(0, 3)), 'Firmaron tú, Ana y Papá', 'cumbre: tu firma va primero');
+  eq(textoFirmantes(firmasDe(todas, 1e6)), 'Firmaron tú, Ana y 2 más', 'cumbre: con muchas, dos nombres y cuántas más (la tuya nunca se pierde en «más»)');
+  eq([accionFirmas([], true), accionFirmas([f(1, 1e6, 'Ana', 1)], true), accionFirmas([f(1, 1e6, 'Ana', 1, true)], true), accionFirmas([f(1, 1e6, 'Ana', 1)], false)],
+    ['Deja la primera firma', 'Firma tú también', 'Cambia tu firma', 'Léelo'], 'cumbre: lo que invita a hacer la tarjeta (sin alcanzar, solo leer)');
+  // El nombre de la montaña en el certificado de altitud.
+  const Rc = resumen([c(1, '2026-01-05', 1_500_000), c(2, '2026-02-05', 300_000)], null, '2026-11-15');
+  const sinNombre = datosCertificado(Rc, 'Daf3r', '2026-11-15'), conNombre = datosCertificado(Rc, 'Daf3r', '2026-11-15', { montana: 'La Ceiba' });
+  eq([sinNombre.montana, conNombre.montana], [null, 'La Ceiba'], 'certificado: el nombre de la montaña es opcional');
+  ok(!/montaña/.test(textoCertificado(sinNombre)) && /^Certificado de altitud de Daf3r, en la montaña «La Ceiba»\. A /.test(textoCertificado(conNombre)), 'certificado: la descripción nombra la montaña');
+  const svgSin = certificado(sinNombre), svgCon = certificado(conNombre);
+  ok(svgSin.includes('>Se hace constar que</text>') && !svgSin.includes('montaña'), 'certificado: sin nombre, como siempre');
+  ok(svgCon.includes('>En la montaña «La Ceiba», se hace constar que</text>') && !svgCon.includes('c-montana'), 'certificado: con un nombre corto, en la primera línea');
+  const raro = certificado(datosCertificado(Rc, null, '2026-11-15', { montana: '<b>🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂</b>' }));
+  ok(raro.includes('class="c-pre c-montana"') && raro.includes('&lt;b&gt;') && !raro.includes('<b>') && raro.includes('>se hace constar que el</text>'), 'certificado: un nombre que no cabe va en su línea, escapado');
 }
 console.log(`OK ${n} comprobaciones`);
