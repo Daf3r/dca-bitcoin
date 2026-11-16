@@ -3356,15 +3356,15 @@ try {
         // El dueño, en pantalla alta: la barra y, debajo, el botón, sin taparse. Y la pista se recuerda: al recargar ya sale así.
         const a = await ent(s17, ADMIN, { viewport: { width: 390, height: 844 }, ...fijo });
         let c = await cajas(a.p);
-        ok(c.pista && c.escena.abajo === 844 - 164, `17·1 dueño 390×844: la escena deja 164 px (${c.escena.abajo})`);
-        ok(c.barra.arriba >= c.escena.abajo && c.barra.abajo < c.boton.arriba && c.boton.abajo <= 844, `17·1 dueño 390×844: barra (${c.barra.arriba}–${c.barra.abajo}) sobre el botón (${c.boton.arriba}–${c.boton.abajo}), sin taparse`);
+        ok(c.pista && c.escena.abajo === 844 - 178, `17·1 dueño 390×844: la escena deja 178 px (${c.escena.abajo})`);
+        ok(c.barra.arriba >= c.escena.abajo && c.barra.abajo + 20 <= c.boton.arriba && c.boton.abajo <= 844, `17·1 dueño 390×844: barra (${c.barra.arriba}–${c.barra.abajo}) sobre el botón (${c.boton.arriba}–${c.boton.abajo}), sin taparse`);
         ok(c.yo.abajo < c.escena.abajo && c.salida.abajo <= c.escena.abajo, '17·1 dueño 390×844: el sendero cabe en la escena');
         eq(await a.p.evaluate(() => localStorage.getItem('libro.rol')), 'admin', '17·1 dueño: el dispositivo recuerda que aquí flota el botón');
         await a.p.reload({ waitUntil: 'domcontentloaded' });
         ok(await a.p.evaluate(() => document.documentElement.hasAttribute('data-boton') && document.documentElement.hasAttribute('data-pestanas')), '17·1 dueño: al recargar, la escena sale con su alto desde el primer pintado');
         await a.p.waitForTimeout(2600); await cerrar(a.p);
         c = await cajas(a.p);
-        ok(c.escena.abajo === 844 - 164 && c.barra.abajo < c.boton.arriba, '17·1 dueño: tras recargar, igual');
+        ok(c.escena.abajo === 844 - 178 && c.barra.abajo < c.boton.arriba, '17·1 dueño: tras recargar, igual');
         // Al bajar, la barra queda pegada arriba y el botón abajo.
         await a.p.evaluate(() => window.scrollTo(0, 900)); await a.p.waitForTimeout(500);
         c = await cajas(a.p);
@@ -3389,7 +3389,7 @@ try {
         await g.ctx.close();
         const n = await ent(s17, ADMIN, { viewport: { width: 412, height: 780 }, ...fijo });
         const cn = await cajas(n.p);
-        ok(cn.escena.abajo === 780 - 164 && cn.barra.abajo < cn.boton.arriba && await tocable(n.p), `17·1 dueño 412×780: barra y botón, sin taparse (${cn.barra.abajo} < ${cn.boton.arriba})`);
+        ok(cn.escena.abajo === 780 - 178 && cn.barra.abajo < cn.boton.arriba && await tocable(n.p), `17·1 dueño 412×780: barra y botón, sin taparse (${cn.barra.abajo} < ${cn.boton.arriba})`);
         await n.ctx.close();
       }
       {

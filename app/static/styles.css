@@ -3144,15 +3144,19 @@ html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb
 /* Quien anota, en pantalla alta: caben la barra (de una fila) y, debajo, el botón. Donde la barra va en dos filas (menos de 360 px,
    o letra grande o muy grande en teléfonos) no caben: ahí queda como estaba, igual que en pantallas bajas. */
 @media (min-width: 360px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  /* `--reserva-boton`: el botón (56 px) + su distancia al borde de abajo (16 px, o la zona segura del iPhone, que es mayor) + 24 px de
+     aire entre él y la barra + los 14 px de relleno de `.cuerpo`. Antes eran 96 fijos: en un iPhone con barra de inicio el botón
+     (que sube por la zona segura) pisaba el borde de la barra (captura del dueño, 393×848). */
+  html[data-pestanas][data-boton] { --reserva-boton: calc(94px + max(16px, env(safe-area-inset-bottom))); }
+  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .escena { height: calc(100vh - var(--reserva-boton) - var(--pe-alto)); height: calc(100svh - var(--reserva-boton) - var(--pe-alto)); --pie: 46; }
   html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .cuerpo { padding-top: 14px; }
 }
 @media (min-width: 480px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .escena { height: calc(100vh - var(--reserva-boton) - var(--pe-alto)); height: calc(100svh - var(--reserva-boton) - var(--pe-alto)); --pie: 46; }
   html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
 }
 @media (min-width: 600px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .escena { height: calc(100vh - var(--reserva-boton) - var(--pe-alto)); height: calc(100svh - var(--reserva-boton) - var(--pe-alto)); --pie: 46; }
   html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
 }
 /* --- 2. «Saldo del libro» para quien solo mira. Los textos fijos llevan su otra forma en `data-libro` y pintar.js elige cuál se ve
