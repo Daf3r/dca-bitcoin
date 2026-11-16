@@ -225,7 +225,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-ceniza', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ce-0'], [0.75, 'ce-1']])
     + grad('m-via', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vl-0'], [0.5, 'vl-1'], [1, 'vl-0']])
     + grad('m-aire', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ai-0'], [0.62, 'ai-1'], [1, 'ai-0']]);
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><radialGradient id="m-farol"><stop offset="0" class="fa-0"/><stop offset="0.42" class="fa-1"/><stop offset="1" class="fa-2"/></radialGradient><linearGradient id="m-bano" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ba-0"/><stop offset="1" class="ba-1"/></linearGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
   // Capa del cielo (parallax): cielo, estrellas, fugaz, sol, luna, nubes y aves.
   s += '<g class="par par-cielo">';
@@ -419,7 +419,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   });
   // En pantallas grandes la montaña es mucho más alta: los campamentos crecen con ella (las cajas de las etiquetas también).
   const ec = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1;
-  host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec)).join('');
+  host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec, c.sol[0] >= c.sx ? 1 : -1)).join('');
   // Las etapas intermedias (250k, 500k…) que no son campamento van como una marca atravesada en el sendero: así se ve el avance entre
   // un campamento y el siguiente. Solo en la app (la entrada no enseña tus datos).
   const etapas = !tocable ? [] : etapasHasta(esc.cima).filter((m) => m < esc.cima && m > esc.base && !esc.campos.includes(m)).map((m) => {
@@ -451,50 +451,67 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
 }
 
 /**
- * Un campamento apoyado en el suelo: un rellano de tierra (o, en la cumbre, una cresta de roca y nieve) con sombras de contacto,
- * los troncos del fogón, el mástil con su banderín, la tienda o la cabaña a un lado y la fogata y el humo al otro. `lado` = −1
- * lo refleja para que la tienda quede del lado por donde no pasa el sendero. En la cumbre todo es un poco más grande y el
- * resplandor nace en la fogata.
+ * Un campamento es UN símbolo junto al sendero: un hito de piedra con su farol («estaciones de luz»). Está tallado en el mismo lenguaje
+ * que la montaña: cada piedra enseña dos caras (la que mira al astro y la que queda en sombra) y el plano de arriba, sin contornos de
+ * dibujo. Se apoya en un apartadero de tierra que sale del propio sendero (así no flota en la ladera) y su luz cae en el suelo.
+ * Alcanzado: el farol encendido, con su halo, su luz bajando por la piedra y sobre el suelo. Siguiente: la brasa dentro del farol
+ * (y la llama viva, ambiente) con medio halo. Pendiente: la piedra apagada, tenue. `lado` = −1 lo pone al otro lado del sendero;
+ * `sol` (±1) dice de qué lado llega la luz, para que la cara iluminada sea siempre la que mira al astro.
+ * La cumbre es el rellano resguardado por el cuerno: un mojón pequeño con la banderita de la meta y, a su pie, el mismo farol.
  */
-function campamento(m, p, cima, i, lado, ec = 1) {
-  // Un campamento es UN símbolo: un hito de piedra junto al sendero con un farol encima. Alcanzado, el farol está encendido
-  // (luz cálida y halo); el siguiente tiene la llama viva (`.fogata`, ambiente); los pendientes quedan en contorno tenue.
-  // La cumbre es el vértice con luz y una bandera pequeña clavada en una base de piedra.
-  const ico = icono(i);
-  const farol = (y) => `<g class="farol" transform="translate(0 ${y})"><circle class="farol-halo" cy="-4" r="20" fill="url(#m-luz)"/><circle class="efecto-ambiente humo" cy="-4" r="9"/>`
-    + '<path class="farol-cuerpo" d="M-3.6 0H3.6L3 -7.5H-3Z"/><path class="farol-techo" d="M-4.4 -7.5H4.4L0 -10.5Z"/>'
-    + '<g class="efecto-ambiente fogata"><path class="llama" d="M0 -1.2C-2 -3 -1.2 -5 0 -6.8C1.2 -5 2 -3 0 -1.2Z"/></g></g>';
+function campamento(m, p, cima, i, lado, ec = 1, sol = 1) {
+  const luz = (cima ? 1 : lado) * sol < 0 ? ' transform="scale(-1 1)"' : ''; // dentro del grupo (quizá reflejado), ¿la luz llega por la izquierda?
+  // El farol: repisa de piedra, la cámara de luz (una cara más viva que la otra) y un sombrero de dos aguas. El halo y su respiración
+  // son degradados radiales (sin aros ni filtros); la llama solo vive en el siguiente campamento.
+  const farol = (y, k = 1) => `<g class="farol" transform="translate(0 ${y})${k !== 1 ? ` scale(${k})` : ''}"><circle class="farol-halo" cy="-4.5" r="21" fill="url(#m-farol)"/><circle class="efecto-ambiente humo" cy="-4.5" r="13" fill="url(#m-farol)"/>`
+    + `<g${luz}><path class="hito-techo" d="M-3.9 0H3.9L3.3 -1.1H-3.3Z"/><path class="farol-lado" d="M-2.5 -1.1H-0.7V-6.2H-2.5Z"/><path class="farol-cuerpo" d="M-0.7 -1.1H2.5V-6.2H-0.7Z"/>`
+    + '<path class="farol-techo" d="M-4.4 -6.2L-0.3 -9.2L-0.7 -6.2Z"/><path class="farol-techo luz" d="M-0.7 -6.2L-0.3 -9.2L4.4 -6.2Z"/></g>'
+    + '<path class="efecto-ambiente fogata llama" d="M0.6 -1.5C-0.8 -2.8 -0.3 -4.2 0.6 -5.6C1.5 -4.2 2 -2.8 0.6 -1.5Z"/></g>';
   let dentro;
   if (cima) {
-    // La meta vive en el rellano de la cumbre, resguardada por el cuerno de roca (ver `cuerno`): una banderita cálida y corta
-    // clavada en el rellano (su tela queda delante de la roca, por debajo del cuerno) y una brasa al lado con su luz sobre la
-    // nieve. Nada sobresale contra el cielo. (Antes: baliza de piedra, lucero con hilo de luz y bandera alta: todo «encima».)
-    const yv = -6; // el rellano
-    dentro = `<ellipse class="cima-brasa" cx="-3" cy="${yv}" rx="12" ry="4"/><ellipse class="sombra-contacto" cx="0" cy="${yv + 0.3}" rx="4" ry="1"/>`
-      + '<path class="campo-ico" d="M-2.2 -5.6L-0.8 -7.6L1.6 -7.6L2.6 -5.6Z"/>'
-      + `<line class="cima-mastil" x1="0" x2="0" y1="${yv - 1}" y2="${yv - 15}"/><path class="banderin cima-banderin" d="M0 ${yv - 15}C4 ${yv - 16} 7 ${yv - 13} 11 ${yv - 13.6}L9.4 ${yv - 10.6}L11 ${yv - 7.8}C7 ${yv - 7.2} 4 ${yv - 9.6} 0 ${yv - 9}Z"/>`
-      + `<g transform="translate(-6 ${yv})"><circle class="farol-halo" cy="-2" r="9" fill="url(#m-luz)"/><g class="efecto-ambiente fogata"><path class="llama" d="M0 -0.4C-1.6 -2 -1 -3.8 0 -5.4C1 -3.8 1.6 -2 0 -0.4Z"/></g><circle class="efecto-ambiente humo" cy="-2" r="5"/><path class="fogon-cima" d="M-2.6 0.3L2.2 -1.2M-2.2 -1.2L2.6 0.3"/></g>`;
+    // La meta vive en el rellano de la cumbre, resguardada por el cuerno de roca (ver `cuerno`): un mojón de dos piedras con una
+    // banderita cálida y corta (su tela queda delante de la roca, por debajo del cuerno) y, a su pie, el farol con su luz sobre la
+    // nieve. Nada sobresale contra el cielo.
+    const yv = -6, y = (d = 0) => f1(yv + d); // el rellano; `y(d)` es una altura sobre él
+    dentro = `<ellipse class="cima-brasa" cx="-4" cy="${y(0.4)}" rx="15" ry="4.6" fill="url(#m-farol)"/><ellipse class="sombra-contacto" cx="0.4" cy="${y(0.2)}" rx="5" ry="1.1"/>`
+      + `<g transform="translate(-6.4 ${y(0.2)})">${farol(0, 0.72)}</g>`
+      + `<g${luz}>${piedra(bloque(yv, yv - 2.6, 3.8, 3, -0.5), bloque(yv - 2.6, yv - 4.8, 2.4, 1.7, -0.3))}</g>`
+      + `<line class="cima-mastil" x1="0.2" x2="0.2" y1="${y(-4.6)}" y2="${y(-15)}"/>`
+      + `<g class="banderin cima-banderin"><path d="M0.2 ${y(-15)}C4 ${y(-16.2)} 7.2 ${y(-13.2)} 11.6 ${y(-13.9)}L9.7 ${y(-11)}L11.4 ${y(-8.3)}C7.2 ${y(-7.6)} 4 ${y(-10)} 0.2 ${y(-9.2)}Z"/>`
+      + `<path class="banderin-pliegue" d="M0.2 ${y(-11.7)}C4 ${y(-12.7)} 7 ${y(-10.2)} 9.7 ${y(-11)}L11.4 ${y(-8.3)}C7.2 ${y(-7.6)} 4 ${y(-10)} 0.2 ${y(-9.2)}Z"/></g>`;
   } else {
-    dentro = `<g transform="translate(11 0)"><ellipse class="luz-suelo" cx="-2" cy="1" rx="18" ry="4.5"/><ellipse class="sombra-contacto" cx="0" cy="0.6" rx="7" ry="1.6"/>${ico.d}${farol(ico.cima)}</g>`; // la luz del farol cae sobre el suelo
+    const ico = icono(i);
+    // El apartadero sale del sendero (que pasa a 11 unidades) y llega hasta el pie del hito; su canto queda en sombra.
+    dentro = '<g transform="translate(11 0)"><ellipse class="luz-suelo" cx="-1.5" cy="1.4" rx="18" ry="5" fill="url(#m-farol)"/>'
+      + '<path class="hito-canto" d="M-8.2 2L6.4 2.3L8.8 0.6L8.2 2.4L5.6 3.9L-7 3.5Z"/><path class="hito-rellano" d="M-8.8 -0.5L6.8 -1L8.8 0.6L6.4 2.3L-8.2 2Z"/>'
+      + `<g${luz}>${ico.d}<path class="hito-bano" d="M${ico.xe} ${ico.cima}H${ico.b}L${f1(ico.b + 0.6)} ${f1(ico.cima + 8)}H${ico.xe}Z" fill="url(#m-bano)"/></g>${farol(ico.cima)}</g>`;
   }
   const brillo = cima ? '<ellipse class="brillo-cima" cx="-2" cy="-10" rx="24" ry="14" fill="url(#m-luz)"/>' : '';
   return `<g class="campo${cima ? ' es-cima' : ''}" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})${ec !== 1 ? ` scale(${ec})` : ''}">${brillo}${lado < 0 ? `<g transform="scale(-1 1)">${dentro}</g>` : dentro}</g>`;
 }
 
 /**
- * Un dibujo distinto por campamento (idea 63), al pie de la bandera y a su derecha, bajo la etiqueta (ocupa de y −13 a 0):
- * tienda, cabaña, refugio con almenas y, en la cumbre, un mojón de piedras. Se elige por el orden del campamento en la montaña.
+ * Una pieza de piedra vista de tres cuartos, con la luz por la derecha: la cara en sombra (de −a a la arista `xe`), la cara iluminada
+ * (de la arista a +a) y el plano de arriba. `y0` es la base y `y1` la cabeza; `a` y `b`, el medio ancho abajo y arriba. Devuelve los
+ * tres trazos; `piedra` junta los de varias piezas en tres caminos (así un hito entero son tres nodos).
+ */
+function bloque(y0, y1, a, b, xe) {
+  return [`M${-a} ${y0}L${-b} ${y1}H${xe}V${y0}Z`, `M${xe} ${y0}V${y1}H${b}L${a} ${y0}Z`, `M${-b} ${y1}L${f1(-b + 0.9)} ${f1(y1 - 1)}H${f1(b - 0.5)}L${b} ${y1}Z`];
+}
+const piedra = (...piezas) => `<path class="hito-sombra" d="${piezas.map((x) => x[0]).join('')}"/><path class="campo-ico" d="${piezas.map((x) => x[1]).join('')}"/><path class="hito-techo" d="${piezas.map((x) => x[2]).join('')}"/>`;
+
+/**
+ * Un hito distinto por campamento (idea 63), cada uno algo más alto que el anterior: un mojón de dos piedras, un pilar con su zócalo y
+ * su collar, y un obelisco. Todos en el mismo lenguaje (caras con luz y sombra). El origen es el pie; `cima` es dónde se apoya el
+ * farol; `b` y `xe`, el medio ancho y la arista de la piedra en ese punto (para la luz que baja por su cara iluminada).
  */
 function icono(i) {
-  // Hitos de piedra, geométricos como la montaña: un mojón bajo, un pilar y un obelisco (cada campamento más alto que el
-  // anterior), y en la cumbre la base de la bandera. El origen es el pie; `cima` es dónde va el farol.
   const formas = [
-    { cima: -12, d: '<path class="campo-ico" d="M-5 0L-4 -12H4L5 0Z"/><path class="ico-sombra" d="M0 0V-12H4L5 0Z"/>' },
-    { cima: -15, d: '<path class="campo-ico" d="M-5 0L-3.5 -15H3.5L5 0Z"/><path class="ico-sombra" d="M0 0V-15H3.5L5 0Z"/>' },
-    { cima: -18, d: '<path class="campo-ico" d="M-5 0L-3 -16L0 -18.5L3 -16L5 0Z"/><path class="ico-sombra" d="M0 0V-18.5L3 -16L5 0Z"/>' },
-    { cima: -5, d: '<path class="campo-ico" d="M-7 0L-5 -5H5L7 0Z"/><path class="ico-sombra" d="M0 0V-5H5L7 0Z"/>' },
+    { cima: -10.6, b: 3.6, xe: -0.8, d: piedra(bloque(0, -5.2, 6.2, 5.3, -1.1), bloque(-5.2, -10.6, 4.6, 3.6, -0.8)) },
+    { cima: -15.2, b: 3.8, xe: -0.8, d: piedra(bloque(0, -2.6, 6, 5.4, -1.1), bloque(-2.6, -13.2, 4.2, 3.4, -0.8), bloque(-13.2, -15.2, 4.3, 3.8, -0.8)) },
+    { cima: -18.4, b: 2.9, xe: -0.7, d: piedra(bloque(0, -2.4, 6, 5.4, -1.1), bloque(-2.4, -18.4, 4.5, 2.9, -0.7)) },
   ];
-  return formas[Math.min(Math.max(i, 0), 3)];
+  return formas[Math.min(Math.max(i, 0), 2)];
 }
 
 /**

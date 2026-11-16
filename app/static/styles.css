@@ -267,10 +267,11 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 .campo-txt { paint-order: stroke; stroke: color-mix(in oklab, var(--monte-sombra) 80%, transparent); stroke-width: 4px; stroke-linejoin: round; }
 @media (min-width: 1100px) { .campo-txt { font-size: 16px; } }
 /* Marcas de etapa (250k, 500k…) atravesadas en el sendero: apagadas, encendidas al llegar y la siguiente en naranja. */
-.etapa-sombra { stroke: rgba(10, 8, 5, 0.45); stroke-width: 4.5; stroke-linecap: round; }
-.etapa-tick { stroke: #f7e8cf; stroke-width: 2.2; stroke-linecap: round; opacity: 0.5; }
-.etapa.alcanzada .etapa-tick { opacity: 0.95; }
-.etapa.sig .etapa-tick { stroke: var(--naranja); opacity: 1; }
+.etapa-sombra { stroke: color-mix(in oklab, var(--monte-sombra) 70%, #0a0805); stroke-opacity: 0.4; stroke-width: 3.8; stroke-linecap: round; }
+.etapa-tick { stroke: color-mix(in oklab, var(--nieve) 60%, #cdbb9c); stroke-width: 1.8; stroke-linecap: round; opacity: 0.55; }
+.etapa.alcanzada .etapa-tick { stroke: #ffe0a3; opacity: 1; }
+.etapa.sig .etapa-sombra { stroke-width: 4.6; }
+.etapa.sig .etapa-tick { stroke: var(--naranja); stroke-width: 2.6; opacity: 1; }
 .campo-txt.cima { stroke: color-mix(in oklab, var(--c2) 55%, transparent); stroke-width: 3.5px; fill: var(--cielo-txt); }
 .yo-txt { fill: var(--naranja-osc); font-weight: 700; }
 .yo-punto { fill: var(--naranja); stroke: var(--nieve); stroke-width: 3; }
@@ -1395,40 +1396,54 @@ html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { 
 
 /* ---------------------------------------------------------------- Campamento 5 (2/3) */
 /* Un dibujo por campamento (tienda, cabaña, refugio, torre de piedras): apagado hasta alcanzarlo. */
-/* Los hitos: piedra geométrica con su cara en sombra, el mismo trazo que el sendero, y un farol. Alcanzado = farol encendido con
-   su halo; el siguiente, con la llama viva; pendiente = contorno tenue. Todo bajo la misma luz cálida. */
-.campo-ico { fill: color-mix(in oklab, var(--monte) 45%, #b9ab98); stroke: color-mix(in oklab, var(--monte-sombra) 70%, #241a12); stroke-width: 1.1; stroke-linejoin: round; }
-.ico-sombra { fill: var(--monte-sombra); opacity: 0.35; }
-.farol-cuerpo { fill: color-mix(in oklab, var(--monte) 60%, #3a2a1a); stroke: color-mix(in oklab, var(--nieve) 55%, transparent); stroke-width: 1; stroke-linejoin: round; }
-.farol-techo { fill: color-mix(in oklab, var(--monte-sombra) 70%, #241a12); stroke: color-mix(in oklab, var(--nieve) 45%, transparent); stroke-width: 0.8; stroke-linejoin: round; }
-.farol-halo { opacity: 0; }
-.campo.alcanzado .farol-cuerpo, .campo.sig .farol-cuerpo { fill: #ffd38a; stroke: #6b3e12; }
-.campo.alcanzado .farol-techo, .campo.sig .farol-techo { stroke: #6b3e12; }
-.campo.alcanzado .farol-halo { opacity: 0.9; }
-.campo.sig .farol-halo { opacity: 0.45; }
-.campo:not(.alcanzado):not(.sig) .campo-ico { fill: none; stroke: color-mix(in oklab, var(--nieve) 45%, transparent); }
-.es-cima .farol-halo { opacity: 0.8; }
-.es-cima .campo-ico { fill: color-mix(in oklab, var(--nieve) 35%, #9f927f); }
-.cima-junta { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 60%, #241a12); stroke-width: 0.9; opacity: 0.6; }
-.cima-brasa { fill: url(#m-luz); opacity: 0.85; }
-.cima-mastil { stroke: color-mix(in oklab, var(--monte-sombra) 60%, #3a2512); stroke-width: 1.4; }
-/* La banderita de la meta: cálida (se lee de día sobre la roca y el cielo claro), con su canto oscuro. */
-.es-cima .banderin { fill: #ffc46b; stroke: #6b3e12; stroke-width: 0.7; opacity: 1; }
-.fogon-cima { fill: none; stroke: #4a3020; stroke-width: 1.2; stroke-linecap: round; }
-.cima-hilo { stroke: #ffd38a; stroke-width: 1; opacity: 0.55; stroke-linecap: round; }
-.cima-lucero { fill: #fff2cf; }
-.cima-haz { fill: #ffd38a; opacity: 0.35; }
-.luz-suelo { fill: #ffb25e; opacity: 0; }
-.campo.alcanzado .luz-suelo { opacity: 0.22; } .campo.sig .luz-suelo { opacity: 0.12; }
+/* Los hitos (pasada de arte de los campamentos): piedra tallada en el lenguaje de la montaña, sin contornos de dibujo. Tres tonos
+   que salen de la roca y de la luz del astro (siguen a la hora sin redibujar): la cara que mira al astro (`campo-ico`), la cara en
+   sombra y el plano de arriba. Cada hito se apoya en un apartadero de tierra que sale del sendero. El farol es parte de la piedra:
+   apagado es roca; encendido, su cámara brilla, la luz baja por la piedra y cae en el suelo (degradados propios, `#m-farol` y
+   `#m-bano`: cálidos a cualquier hora y con cualquier tema). Alcanzado = encendido; siguiente = brasa y medio halo; pendiente = tenue. */
+.campo { --pd-media: color-mix(in oklab, var(--monte) 46%, #b6a995); --pd-luz: color-mix(in oklab, var(--pd-media) 56%, var(--luz-roca, var(--astro))); --pd-sombra: color-mix(in oklab, var(--monte-sombra) 90%, #0e0c0a); }
+.campo-ico { fill: var(--pd-luz); }
+.hito-sombra { fill: var(--pd-sombra); }
+.hito-techo { fill: color-mix(in oklab, var(--pd-luz) 76%, #fff); }
+.hito-rellano { fill: color-mix(in oklab, var(--monte) 52%, #a8865c); }
+.hito-canto { fill: var(--pd-sombra); opacity: 0.6; }
+.hito-bano { opacity: 0; pointer-events: none; }
+.ba-0 { stop-color: #ffcf7d; stop-opacity: 0.85; } .ba-1 { stop-color: #ffb056; stop-opacity: 0; }
+.fa-0 { stop-color: #ffe2a6; stop-opacity: 0.95; } .fa-1 { stop-color: #ffb357; stop-opacity: 0.36; } .fa-2 { stop-color: #ff9c3d; stop-opacity: 0; }
+.farol-cuerpo { fill: color-mix(in oklab, var(--pd-sombra) 78%, #000); } .farol-lado { fill: color-mix(in oklab, var(--pd-sombra) 90%, #000); }
+.farol-techo { fill: color-mix(in oklab, var(--pd-sombra) 82%, var(--pd-media)); } .farol-techo.luz { fill: color-mix(in oklab, var(--pd-media) 80%, var(--pd-sombra)); }
+.farol-halo, .luz-suelo, .cima-brasa { opacity: 0; pointer-events: none; }
+.campo.alcanzado .farol-cuerpo { fill: #ffe7ae; } .campo.alcanzado .farol-lado { fill: #f6b65a; }
+.campo.sig .farol-cuerpo { fill: #f0a148; } .campo.sig .farol-lado { fill: #c9762a; }
+.campo.alcanzado .farol-techo.luz, .campo.sig .farol-techo.luz { fill: color-mix(in oklab, var(--pd-media) 70%, #ffb866); }
+.campo.alcanzado .hito-bano { opacity: calc(var(--farol-a, 0.9) * 0.85); }
+.campo.alcanzado .farol-halo { opacity: var(--farol-a, 0.9); } .campo.sig .farol-halo { opacity: calc(var(--farol-a, 0.9) * 0.5); }
+.campo.alcanzado .luz-suelo { opacity: calc(var(--farol-a, 0.9) * 0.62); } .campo.sig .luz-suelo { opacity: calc(var(--farol-a, 0.9) * 0.3); }
+.campo.alcanzado .cima-brasa, .campo.sig .cima-brasa { opacity: calc(var(--farol-a, 0.9) * 0.7); }
+/* De día la luz de un farol casi no se ve: el halo baja para no lavar la roca; al amanecer y al atardecer, a medias. */
+html[data-cielo="dia"] .campo { --farol-a: 0.32; } html[data-cielo="amanecer"] .campo, html[data-cielo="atardecer"] .campo { --farol-a: 0.64; }
+.campo:not(.alcanzado):not(.sig) :is(.campo-ico, .hito-sombra, .hito-techo, .hito-rellano, .hito-canto, .farol-cuerpo, .farol-lado, .farol-techo) { opacity: 0.42; }
+.farol .llama { fill: #fff3cf; }
+/* Al alcanzar un campamento en esta sesión, su farol se enciende de golpe y se asienta (solo transform y opacity). */
+.campo.iza .farol-halo { transform-box: fill-box; transform-origin: center; animation: farol-enciende 1.3s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes farol-enciende { 0% { opacity: 0; transform: scale(0.3); } 45% { opacity: 1; transform: scale(1.35); } 100% { transform: scale(1); } }
+/* La cumbre: un mojón de dos piedras con la banderita de la meta (cálida, con un pliegue en sombra que le da cuerpo) y el farol a su pie. */
+.es-cima { --pd-media: color-mix(in oklab, var(--monte) 58%, #9c8f7c); }
+.campo .cima-mastil { stroke: color-mix(in oklab, var(--pd-sombra) 72%, #3a2512); stroke-width: 1.3; }
+.es-cima .banderin { fill: #ffc062; stroke: #6b3e12; stroke-width: 0.6; stroke-linejoin: round; opacity: 1; }
+.banderin-pliegue { fill: #6b3e12; fill-opacity: 0.24; stroke: none; }
 /* El sol: un disco de borde suave (degradado) que se funde con su halo, no una moneda plana. */
 .sol-disco { fill: url(#m-sol); }
 .so-0 { stop-color: color-mix(in oklab, var(--astro) 70%, #fff); } .so-1 { stop-color: var(--astro); } .so-2 { stop-color: var(--astro); stop-opacity: 0.35; }
 .nieve-faceta { fill: #fff; opacity: 0.28; } .nieve-pliegue { fill: none; stroke: var(--monte-sombra); stroke-width: 2; stroke-linecap: round; opacity: 0.18; }
-.humo { fill: none; stroke: #ffd38a; stroke-width: 1; opacity: 0; transform-box: fill-box; transform-origin: center; }
-html[data-efectos="todos"] .campo.alcanzado .humo { animation: farol-pulso 4.5s ease-out infinite; }
-@keyframes farol-pulso { 0% { opacity: 0.5; transform: scale(0.6); } 100% { opacity: 0; transform: scale(1.8); } }
+/* La luz del farol respira (ambiente): un segundo halo que crece y se apaga despacio, sin aros. En el teléfono va por pasos (se
+   redibuja unas pocas veces por segundo, como las nubes). */
+.humo { opacity: 0; transform-box: fill-box; transform-origin: center; pointer-events: none; }
+html[data-efectos="todos"] .campo.alcanzado .humo { animation: farol-respira 5.2s ease-in-out infinite; }
+html[data-efectos="todos"] .campo.alcanzado:nth-of-type(2n) .humo { animation-delay: -2.6s; }
+@keyframes farol-respira { 0%, 100% { opacity: 0; transform: scale(0.82); } 50% { opacity: calc(var(--farol-a, 0.9) * 0.6); transform: scale(1.2); } }
+@media (max-width: 899px) { html[data-efectos="todos"] .campo.alcanzado .humo { animation-timing-function: steps(9, end); } }
 .sendero-nieve path { fill: none; stroke: var(--monte-sombra); stroke-linecap: round; stroke-linejoin: round; opacity: 0.22; }
-.pag-login .campo-ico, .pag-login .campo-ico-d { display: none; }
 /* El bosque: un pino por compra, con un toque cálido para distinguirlo de los pinos de adorno. */
 .pino-2 { fill: var(--pino0); fill: color-mix(in srgb, var(--pino0) 72%, #3f8f55); }
 @keyframes planta { from { transform: scale(0); opacity: 0; } 70% { transform: scale(1.12); opacity: 1; } to { transform: scale(1); opacity: 1; } }
