@@ -56,6 +56,8 @@ async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
   await p.waitForTimeout(2800);
   return { ctx, p, consola };
 }
+/** Tocar una fila abre su comprobante (campamento 18); «Editar» (o «Anular», en un traslado) queda dentro, para quien anota. */
+const editarFila = async (p, fila) => { await (typeof fila === 'string' ? p.locator(fila) : fila).click(); await p.waitForTimeout(300); await p.click('#cp-editar'); };
 /** La fecha de la hoja de anotar: «Otro día» enseña el calendario (campamento 18) y ahí se escribe. */
 const ponerFecha = async (p, f) => { await p.click('#h-dia-otro'); await p.fill('#h-fecha', f); };
 const verVista = async (p, v) => { await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(400); };
@@ -300,7 +302,7 @@ try {
       eq(comprasAhora.length, antesT.length + 1, 'solo se creó ese gasto');
       // Anular un traslado desde la lista
       await p.waitForTimeout(6000);
-      await p.locator('#lista .fila[data-tras]').first().click();
+      await editarFila(p, p.locator('#lista .fila[data-tras]').first());
       await p.waitForTimeout(400);
       ok(/¿Anular este traslado\?/.test(await p.textContent('#d-titulo')), 'tocar un traslado ofrece anularlo');
       await p.click('#d-borrar button[value="si"]');
@@ -325,7 +327,10 @@ try {
       ok(await p.locator('#valor').isVisible(), 'el lector sí ve el gráfico de valor');
       await verVista(p, 'precio');
       ok(await p.locator('#ub-datos').isVisible() && !(await p.locator('#ub-anotar').isVisible()), 'el lector ve dónde están los sats pero no el botón de anotar');
-      eq(await p.locator('#lista .fila[data-tras]').evaluate((el) => el.tagName), 'DIV', 'el traslado es solo lectura para el lector (no es un botón)');
+      // La fila abre su comprobante también para el lector (campamento 18), pero sin «Anular» ni «Editar».
+      await p.locator('#lista .fila[data-tras]').click(); await p.waitForTimeout(400);
+      ok(await p.locator('#d-comp').evaluate((d) => d.open) && await p.locator('#cp-editar').isHidden(), 'el traslado es solo lectura para el lector: su comprobante no ofrece anularlo');
+      await p.click('#cp-cerrar'); await p.waitForTimeout(200);
       const r = await p.evaluate(() => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: '{}' }).then((x) => x.status));
       eq(r, 403, 'el servidor rechaza escribir a un lector');
       // El 403 de arriba es la prueba de que el servidor rechaza al lector: es lo esperado; nada más debe salir.
@@ -1065,7 +1070,7 @@ try {
       ok(true, 'resalte: la compra recién guardada brilla al verse en la lista');
 
       // Anular: la fila sale con su animación (queda un instante) y desaparece
-      await p.locator('#lista .fila').first().click();
+      await editarFila(p, p.locator('#lista .fila').first());
       await p.waitForTimeout(400);
       await p.click('#h-borrar');
       await p.click('#d-borrar button[value="si"]');
@@ -1185,7 +1190,7 @@ try {
       // Deshacer una anulación vuelve a anotar la compra con los mismos datos
       const antes = (await datos(p, '/api/compras')).at(-1);
       await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await p.locator('#lista .fila').first().click();
+      await editarFila(p, p.locator('#lista .fila').first());
       await p.waitForTimeout(400);
       await p.click('#h-borrar');
       await p.click('#d-borrar button[value="si"]');
@@ -1199,7 +1204,7 @@ try {
       await p.waitForTimeout(600);
 
       // Deshacer una corrección
-      await p.locator('#lista .fila').first().click();
+      await editarFila(p, p.locator('#lista .fila').first());
       await p.waitForTimeout(400);
       const satsAntes = await p.inputValue('#h-sats');
       await p.fill('#h-sats', '33333');
@@ -2367,7 +2372,7 @@ try {
       eq(ultima?.etiquetas, ['regalo', 'bono'], 'se guardan normalizadas (minúsculas, sin #)');
       eq(await r.p.locator('#l-etq option').count(), 4, 'la etiqueta nueva aparece en el selector');
       // Editarla: el campo viene con lo guardado y se conserva si no se toca
-      await r.p.click('#lista .fila[data-id="' + ultima.id + '"]');
+      await editarFila(r.p, '#lista .fila[data-id="' + ultima.id + '"]');
       await r.p.waitForTimeout(400);
       eq(await r.p.inputValue('#h-etq'), 'regalo, bono', 'al editar el campo trae las etiquetas');
       await r.p.fill('#h-etq', 'regalo');

@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="/styles.css">
 <!-- Los módulos se piden todos a la vez (en vez de descubrirlos uno tras otro al ejecutar el anterior): la app abre antes, sobre todo en el teléfono. -->
 <link rel="modulepreload" href="/estado.js">
+<link rel="modulepreload" href="/comprobante.js">
 <link rel="modulepreload" href="/favicon.js">
 <link rel="modulepreload" href="/datos.js">
 <link rel="modulepreload" href="/avisar.js">
@@ -694,6 +695,28 @@
   <div class="cert-lienzo" id="cert-lienzo" role="img" aria-labelledby="cert-desc"></div>
   <p class="cert-desc" id="cert-desc"></p>
   <div class="d-bot"><button type="button" id="cert-ok" autofocus>Cerrar</button></div>
+</dialog>
+
+<!-- Comprobante de un movimiento (campamento 18): tocar una fila de la lista abre su ficha en papel. La ven todos; «Editar» (o «Anular»,
+     en un traslado) solo quien anota. El papel es claro en los dos temas, como un ticket. -->
+<dialog id="d-comp" class="d-comp" aria-labelledby="cp-t">
+  <article class="cp-papel">
+    <header class="cp-cab">
+      <p class="cp-marca">Libro DCA · comprobante</p>
+      <h2 id="cp-t"></h2>
+      <p class="cp-fecha" id="cp-fecha"></p>
+    </header>
+    <p class="cp-sats"><span id="cp-sats"></span> <b class="cp-extra" id="cp-extra" hidden>Extra</b></p>
+    <dl class="cp-datos" id="cp-datos"></dl>
+    <div class="cp-alt" id="cp-alt" hidden><span class="cp-pista" aria-hidden="true"><i class="cp-antes"></i><i class="cp-despues"></i></span><p id="cp-alt-t"></p></div>
+    <p class="cp-nota" id="cp-nota" hidden></p>
+    <ul class="cp-etq" id="cp-etq" aria-label="Etiquetas" hidden></ul>
+    <div class="cp-sello" id="cp-sello" hidden><span class="cp-sello-ico" id="cp-sello-ico" aria-hidden="true"></span><p><b id="cp-sello-t"></b><span id="cp-sello-d"></span></p></div>
+    <div class="cp-tx" id="cp-tx" hidden></div>
+    <p class="cp-pie" id="cp-pie" hidden><span class="cp-pie-ico" id="cp-pie-ico" aria-hidden="true"></span><span id="cp-pie-t"></span></p>
+    <p class="cp-aviso" id="cp-aviso" role="status"></p>
+  </article>
+  <div class="d-bot"><button type="button" id="cp-editar" hidden>Editar</button><button type="button" id="cp-cerrar" autofocus>Cerrar</button></div>
 </dialog>
 
 <dialog id="d-carta" class="d-carta" aria-labelledby="carta-t">

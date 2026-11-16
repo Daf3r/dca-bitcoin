@@ -3211,3 +3211,73 @@ html[data-lector]:not([data-voz]) [data-libro] { visibility: hidden; }
    desplazarla; el botón se queda pegado al borde de abajo de la hoja, sobre un fondo liso, y lo enfocado nunca queda detrás de él. */
 .hoja-panel { --hp-b: max(18px, env(safe-area-inset-bottom)); --hp-l: max(18px, env(safe-area-inset-left)); --hp-r: max(18px, env(safe-area-inset-right)); scroll-padding-bottom: 104px; }
 .hoja-bot { position: sticky; bottom: calc(-1 * var(--hp-b)); z-index: 2; margin: -4px calc(-1 * var(--hp-r)) calc(-1 * var(--hp-b)) calc(-1 * var(--hp-l)); padding: 12px var(--hp-r) var(--hp-b) var(--hp-l); background: linear-gradient(to top, var(--s1) calc(100% - 12px), color-mix(in srgb, var(--s1) 0%, transparent)); }
+
+/* --- Comprobante de cada movimiento: un ticket de papel dentro de un diálogo. El papel lleva sus propios colores (claro en los dos
+   temas, como el certificado y las cartas): tinta ≥ 7:1 y acento ≥ 6:1 sobre el papel. Sin filtros ni mezclas; solo entra con un
+   breve deslizamiento (transform y opacity) cuando hay efectos. */
+.d-comp { width: min(calc(100vw - 24px), 23.5rem); padding: 14px 14px 16px; background: var(--s2); }
+.cp-papel {
+  --cp-papel: #fbf5e6; --cp-tinta: #2a2018; --cp-tinta2: #5e5142; --cp-linea: #b9a988; --cp-acento: #8a3f00;
+  position: relative; margin: 0 0 24px; padding: 18px 18px 12px; border-radius: 6px 6px 0 0; color: var(--cp-tinta); background-color: var(--cp-papel);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.55), transparent 30%); box-shadow: 0 1px 2px rgb(60 30 10 / 0.2); font-variant-numeric: tabular-nums lining-nums;
+}
+:root[data-tema="oscuro"] .cp-papel { --cp-papel: #f1e8d4; }
+html[data-contraste="alto"] .cp-papel { --cp-tinta: #17100a; --cp-tinta2: #3d3226; --cp-linea: #6b5d47; --cp-acento: #6a2f00; }
+/* El borde de abajo, dentado como un ticket arrancado: dos degradados que dejan triángulos de papel. */
+.cp-papel::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 7px; background: linear-gradient(135deg, var(--cp-papel) 5px, transparent 0) 0 0 / 14px 14px repeat-x, linear-gradient(225deg, var(--cp-papel) 5px, transparent 0) 0 0 / 14px 14px repeat-x; }
+.d-comp .cp-papel p { margin: 0; color: inherit; }
+.cp-cab { display: grid; gap: 2px; justify-items: center; padding-bottom: 12px; border-bottom: 1.5px dashed var(--cp-linea); text-align: center; }
+.d-comp .cp-papel .cp-marca { font: 700 0.6875rem/1.4 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--cp-tinta2); }
+.d-comp .cp-cab h2 { font-size: 1.375rem; line-height: 1.2; color: var(--cp-tinta); }
+.d-comp .cp-papel .cp-fecha { font-size: 0.9375rem; color: var(--cp-tinta2); }
+.d-comp .cp-papel .cp-sats { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 2px 10px; margin: 12px 0 10px; }
+.cp-sats b { font: 600 clamp(1.875rem, 9vw, 2.375rem)/1.1 var(--sans); letter-spacing: -0.02em; }
+.cp-sats small { font-size: 1rem; font-weight: 600; color: var(--cp-tinta2); }
+.cp-sats .cp-extra { align-self: center; padding: 2px 9px; border: 1.5px solid var(--cp-acento); border-radius: 999px; color: var(--cp-acento); font: 700 0.75rem/1.4 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; }
+.cp-extra[hidden] { display: none; }
+.cp-datos { display: grid; gap: 7px; margin: 0; padding: 12px 0; border-top: 1.5px dashed var(--cp-linea); font-size: 0.9375rem; }
+.cp-fila { display: flex; align-items: baseline; gap: 8px; }
+.cp-fila dt { flex: 1 1 auto; display: flex; align-items: baseline; gap: 8px; min-width: 0; color: var(--cp-tinta2); }
+.cp-fila dt::after { content: ""; flex: 1 1 12px; min-width: 12px; border-bottom: 1.5px dotted var(--cp-linea); translate: 0 -3px; }
+.cp-fila dd { flex: none; margin: 0; font-weight: 600; text-align: right; }
+.cp-var { white-space: nowrap; color: var(--cp-tinta2); }
+.cp-var .ico { width: 0.6em; height: 0.6em; margin-right: 2px; }
+/* La regla de la etapa: dónde estaba el saldo (aro) y dónde quedó (punto), con el tramo que subió entre los dos. */
+.cp-alt { display: grid; gap: 8px; padding: 4px 0 12px; font-size: 0.875rem; color: var(--cp-tinta2); }
+.cp-alt[hidden], .cp-nota[hidden], .cp-etq[hidden], .cp-sello[hidden], .cp-tx[hidden], .cp-pie[hidden] { display: none; }
+.cp-pista { position: relative; display: block; height: 6px; margin: 6px 8px 0; border-radius: 3px; background: color-mix(in srgb, var(--cp-linea) 55%, transparent); }
+.cp-pista::before { content: ""; position: absolute; inset: 0 auto 0 calc(var(--p, 0) * 100%); width: calc(max(0, var(--q, 0) - var(--p, 0)) * 100%); border-radius: 3px; background: var(--cp-acento); }
+.cp-antes, .cp-despues { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-sizing: border-box; }
+.cp-antes { left: calc(var(--p, 0) * 100%); border: 2px solid var(--cp-acento); background: var(--cp-papel); }
+.cp-despues { left: calc(var(--q, 0) * 100%); background: var(--cp-acento); box-shadow: 0 0 0 2px var(--cp-papel); }
+.d-comp .cp-papel .cp-alt p { color: var(--cp-tinta2); }
+.d-comp .cp-papel .cp-nota { padding: 10px 0 12px; border-top: 1.5px dashed var(--cp-linea); font: italic 500 1.125rem/1.4 var(--serif); overflow-wrap: anywhere; text-align: center; }
+.cp-etq { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: -4px 0 12px; padding: 0; list-style: none; }
+.cp-etq li { padding: 1px 9px; border: 1px solid var(--cp-linea); border-radius: 999px; font-size: 0.8125rem; color: var(--cp-tinta2); overflow-wrap: anywhere; }
+.cp-sello { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1.5px dashed var(--cp-linea); }
+.cp-sello-ico { flex: none; }
+.cp-sello .sello-sem-ico { width: 60px; height: 60px; --ss-t: #2c3f8f; }
+.cp-sello .sello-sem-ico.ss-t1 { --ss-t: #2c5e3d; } .cp-sello .sello-sem-ico.ss-t2 { --ss-t: #94441a; } .cp-sello .sello-sem-ico.ss-t3 { --ss-t: #7d1f38; }
+.cp-sello .ss-extra { fill: var(--cp-acento); }
+.d-comp .cp-papel .cp-sello p { display: grid; gap: 1px; min-width: 0; font-size: 0.875rem; color: var(--cp-tinta2); }
+.cp-sello p b { color: var(--cp-tinta); font-weight: 650; }
+.cp-tx { display: grid; gap: 2px; padding: 10px 0 2px; border-top: 1.5px dashed var(--cp-linea); font-size: 0.875rem; }
+.cp-tx-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.cp-k { font: 700 0.6875rem/1.4 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--cp-tinta2); }
+.cp-tx code { font: 600 0.875rem/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--cp-tinta); }
+.cp-tx-est { color: var(--cp-tinta2); }
+.cp-tx-bot { display: flex; flex-wrap: wrap; gap: 0 16px; }
+.cp-enlace { display: inline-flex; align-items: center; gap: 6px; min-height: var(--toque); padding: 0; border: 0; background: none; color: var(--cp-acento); font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.cp-enlace:focus-visible { outline: 2px solid var(--cp-tinta); outline-offset: 2px; border-radius: 4px; }
+.cp-enlace .ico { width: 1em; height: 1em; }
+.d-comp .cp-papel .cp-pie { display: flex; align-items: center; gap: 8px; padding: 8px 0 2px; border-top: 1.5px dashed var(--cp-linea); font-size: 0.875rem; color: var(--cp-tinta2); }
+.cp-pie-ico svg { display: block; width: 26px; height: auto; }
+.d-comp .cp-papel .cp-aviso { min-height: 1.4em; font-size: 0.8125rem; font-weight: 600; color: var(--cp-acento); text-align: center; }
+.cp-aviso:empty { display: none; }
+.d-comp .d-bot #cp-editar { margin-right: auto; }
+/* En teléfonos bajos el ticket es más alto que la pantalla: los botones se quedan pegados abajo, a mano, sobre el fondo del diálogo. */
+.d-comp { scroll-padding-bottom: 88px; }
+.d-comp .d-bot { position: sticky; bottom: -16px; z-index: 1; margin: -10px -14px -16px; padding: 10px 14px 16px; background: linear-gradient(to top, var(--s2) calc(100% - 10px), color-mix(in srgb, var(--s2) 0%, transparent)); }
+html[data-efectos="todos"] .d-comp[open] .cp-papel, html[data-efectos="esenciales"] .d-comp[open] .cp-papel { transform-origin: 50% 0; animation: cp-sale 0.42s var(--resorte, ease-out) 0.06s both; }
+@keyframes cp-sale { from { opacity: 0; transform: translateY(-12px) scaleY(0.94); } }
+@media (max-width: 359px) { .d-comp { padding: 10px 10px 12px; } .d-comp .d-bot { bottom: -12px; margin: -10px -10px -12px; padding: 10px 10px 12px; } .cp-papel { padding: 16px 12px 10px; } .cp-datos { font-size: 0.875rem; } }

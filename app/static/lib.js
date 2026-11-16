@@ -1485,3 +1485,29 @@ export function notaDeHaceUnAnio(items, hoy = hoyISO()) {
     .sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : (b.id ?? 0) - (a.id ?? 0)))[0];
   return c ? { fecha: c.fecha, nota: c.nota.trim() } : null;
 }
+
+/**
+ * El comprobante de una compra o de una venta (idea 17): lo que dice su ficha, armado con lo que ya se sabe. `items` son los de
+ * `resumen` (en orden y con `satsAcum`). `numero` cuenta las compras (o las ventas) por fecha; `antes` y `despues` son la altitud (el
+ * saldo) al anotarla; `p` y `q` (0 a 1) la sitúan en el tramo entre la etapa anterior y la siguiente (`meta`) y `etapa` es la etapa
+ * que cruzó, si cruzó alguna (la más alta). `sello` es el de su semana y `primeraDeSemana` dice si nació con ella. `hoy` (solo compras
+ * y con precio) es lo que valen hoy esos sats y cuánto cambió el precio desde entonces: informa, no recomienda. Sin el movimiento, null.
+ */
+export function comprobante(items, id, { precio = null, hoy = hoyISO() } = {}) {
+  const c = (items ?? []).find((x) => x.id === id);
+  if (!c) return null;
+  const venta = c.tipo === 'venta';
+  const pares = items.filter((x) => (x.tipo === 'venta') === venta);
+  const despues = c.satsAcum, antes = despues + (venta ? c.sats : -c.sats);
+  const a = etapaAnterior(antes), b = etapaSiguiente(antes);
+  const en = (s) => (b > a ? Math.max(0, Math.min(1, (s - a) / (b - a))) : 0);
+  const sello = venta ? null : sellosSemana(items, hoy).find((s) => s.desde <= c.fecha && c.fecha <= s.hasta) ?? null;
+  const primera = sello ? pares.find((x) => x.fecha >= sello.desde && x.fecha <= sello.hasta) : null;
+  return {
+    id: c.id, tipo: venta ? 'venta' : 'compra', numero: pares.indexOf(c) + 1, total: pares.length, fecha: c.fecha, sats: c.sats, monto: c.monto, precio: c.precio,
+    antes, despues, p: en(antes), q: en(despues), meta: b, etapa: venta ? null : etapasCruzadas(antes, despues).at(-1) ?? null,
+    sello, primeraDeSemana: Boolean(primera && primera.id === c.id),
+    hoy: !venta && precio && c.precio ? { valor: (c.sats * precio) / 1e8, variacion: (precio / c.precio - 1) * 100 } : null,
+    realizada: venta ? c.realizada ?? null : null, extra: !venta && Boolean(c.extra), nota: c.nota ?? '', etiquetas: c.etiquetas ?? [], txid: c.txid ?? '',
+  };
+}
