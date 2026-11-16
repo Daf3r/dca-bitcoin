@@ -56,6 +56,8 @@ export const hora = (ts) => dfHora.format(new Date(ts));
 /** Formas compactas (con signo, como usdSigno) para pantallas muy pequeñas (320 px): «+$1.2K», «−$79», «1.2M». Solo para cifras secundarias; el saldo nunca se abrevia. */
 export const usdSignoCorto = (n) => { const a = Math.abs(n); return signo(n) + (a < 1000 ? nfUSD0.format(a) : `$${nfComp.format(a)}`); };
 export const numCorto = (n) => nfComp.format(Math.round(n));
+/** Sats en forma corta: por encima de 1 BTC se habla en BTC («65.5 BTC»: «6.5B sats» es ambiguo en español). */
+export const satsCorto = (s) => (s >= 1e8 ? `${s >= 1e10 ? entero(s / 1e8) : (s / 1e8).toFixed(1)} BTC` : `${compacto(s)} sats`);
 
 // «Hoy» es siempre el de El Salvador, como en el servidor (TZ del contenedor): así la fecha
 // por defecto, la validación y la racha coinciden aunque el navegador esté en otra zona.

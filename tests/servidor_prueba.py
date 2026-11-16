@@ -2,6 +2,7 @@
 
 Uso: python tests/servidor_prueba.py PUERTO [ESCENARIO]
 Escenarios: hoy (1 compra), bonito (saldo capicúa), cero (vendió todo), aniv (hoy es el aniversario de su primera compra), eco (80 semanas), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
+milbtc (como ballena, con una compra de 600 BTC: más de 1,000 BTC, para probar las cifras más largas),
 mil (1,000 compras en casi seis años, con extras, ventas y traslados), vacio (sin compras), sinprecio,
 sinhist (sin histórico de precios).
 Cuentas: Daf3r / clave-de-prueba-12 (admin) y Ana / lectora-de-prueba (lector).
@@ -135,8 +136,8 @@ elif esc == "mil":
     for fecha, sentido, sats in ((HOY - timedelta(days=500), "a_wallet", 3_000_000), (HOY - timedelta(days=60), "a_wallet", 1_500_000)):
         conn.execute("INSERT INTO traslados (fecha, sats, sentido, creado) VALUES (?, ?, ?, ?)", (fecha.isoformat(), sats, sentido, 1))
     conn.commit()
-elif esc in ("anio", "eco", "largo", "ballena"):
-    semanas = {"anio": 52, "eco": 80, "largo": 300, "ballena": 300}[esc]
+elif esc in ("anio", "eco", "largo", "ballena", "milbtc"):
+    semanas = {"anio": 52, "eco": 80, "largo": 300, "ballena": 300, "milbtc": 300}[esc]
     r2 = random.Random(len(esc) * 13)
     for k in range(semanas - 1, -1, -1):
         if r2.random() < 0.06:
@@ -146,9 +147,11 @@ elif esc in ("anio", "eco", "largo", "ballena"):
         # —cuando HOY - 3 cae en lunes— la compra pasaba a la semana anterior y la racha se rompía sola.
         d = ref - timedelta(days=r2.randint(0, 1) if ref.weekday() > 0 else (r2.randint(0, 1) and 0))
         base = 14 if esc in ("anio", "eco") else 12 + (semanas - k) * 0.05
-        if esc == "ballena":
+        if esc in ("ballena", "milbtc"):
             base *= 2500
         comprar(d, round(base + r2.random() * base * 0.8, 2))
+    if esc == "milbtc":  # cifras largas (campamento 20): una compra de 600 BTC deja el saldo por encima de 1,000 BTC
+        comprar(HOY - timedelta(days=10), round(PRECIOS[HOY - timedelta(days=10)] * 600, 2), 60_000_000_000)
 if esc == "eco":  # la semana en una línea (campamento 18): la compra de hace un año lleva su nota, y el Diario la trae de vuelta
     ya = HOY.replace(year=HOY.year - 1, day=28) if (HOY.month == 2 and HOY.day == 29) else HOY.replace(year=HOY.year - 1)
     semana_ya = ((ya - timedelta(days=6)).isoformat(), ya.isoformat())

@@ -1,5 +1,6 @@
 import { agruparPorMes, nombreWallet, piedritasPorCompra, textoPiedritas, ultimaPiedrita, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
 import { avisar } from './avisar.js';
+import { pegarHtml } from './cifras.js';
 import { apacheta, piedrita } from './arte.js';
 import { copiarTexto } from './copiar.js';
 import { ico, ilustracion } from './iconos.js';
@@ -208,7 +209,7 @@ export function pintarLista() {
     for (const g of agruparPorMes(vistos)) {
       if (pintadas >= filas.length) break;
       const cota = cotaDe(cotas, g.mes);
-      html.push(`<li class="mes-cab"><h3>${g.etiqueta} <small>· ${g.resumen}</small></h3>${cota == null ? '' : `<p class="mes-cota"><span class="sr">Altitud al terminar el mes: </span><span aria-hidden="true">altitud </span><b>${entero(cota)}</b> sats</p>`}</li>`);
+      html.push(`<li class="mes-cab"><h3>${g.etiqueta} <small>· ${pegarHtml(g.resumen)}</small></h3>${cota == null ? '' : `<p class="mes-cota"><span class="sr">Altitud al terminar el mes: </span><span aria-hidden="true">altitud </span><b>${entero(cota)}</b> sats</p>`}</li>`);
       for (const m of g.movs) { if (pintadas >= filas.length) break; html.push(htmlFila(m)); pintadas++; }
     }
   } else for (const m of filas) html.push(htmlFila(m));

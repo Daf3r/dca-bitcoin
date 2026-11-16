@@ -7,6 +7,7 @@ import { conTransicion } from './movimiento.js';
 import { abrirHoja } from './hoja.js';
 import { $, R, S, esAdmin, vozLibro } from './estado.js';
 import { ilustracion } from './iconos.js';
+import { pegado } from './cifras.js';
 
 // --------------------------------------------------------------- gráfico
 const RANGOS = [30, 182, 365, 0];
@@ -128,9 +129,9 @@ export function pintarSatsDolar() {
   $('spd-v').textContent = entero(hoy);
   const inicio = serie[0], dias = Math.round((aFecha(serie.at(-1).fecha) - aFecha(inicio.fecha)) / 864e5);
   const cambio = (hoy / inicio.spd - 1) * 100;
-  $('spd-t').textContent = Math.abs(cambio) < 0.5
+  pegado($('spd-t'), Math.abs(cambio) < 0.5
     ? `Casi igual que hace ${dias} días (${entero(inicio.spd)} sats).`
-    : `Hace ${dias} días eran ${entero(inicio.spd)} sats: hoy son un ${Math.abs(cambio).toFixed(1)}% ${cambio > 0 ? 'más' : 'menos'}.`;
+    : `Hace ${dias} días eran ${entero(inicio.spd)} sats: hoy son un ${Math.abs(cambio).toFixed(1)}% ${cambio > 0 ? 'más' : 'menos'}.`);
   const lin = $('spd-l');
   const vals = serie.map((p) => p.spd);
   const mn = Math.min(...vals), mx = Math.max(...vals), rango = mx - mn || 1;

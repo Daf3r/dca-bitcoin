@@ -297,7 +297,9 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 /* En 320 px el precio va en su columna estrecha de siempre (una cosa por línea) para no empujar la marca ni el saludo. */
 @media (max-width: 399px) { .cotizacion { grid-template-columns: auto; justify-items: end; padding: 4px 8px 5px; margin: -4px -8px 0 0; } }
 @media (max-width: 359px) { .cotizacion { padding: 0; margin: 0; background: none; } }
-@media (max-width: 359px) { .cot-sep { display: none; } .cot-hace { display: block; } }
+/* (Campamento 20) En < 360 px la fuente («Coinbase») queda solo para los lectores de pantalla y la hora va sola: la cotización ocupa un
+   renglón menos y no baja hasta el renglón del saldo (con 1,000 BTC, «sats» chocaba con «ahora»). El texto es el mismo. */
+@media (max-width: 359px) { .cot-sep { display: none; } .cot-fuente { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }
 .cot-k { font-size: 0.75rem; color: var(--cielo-txt2); white-space: nowrap; }
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
@@ -306,6 +308,7 @@ html[data-ganancia="color"] .cot-24[data-tono="sube"] { color: var(--cielo-sube,
 html[data-ganancia="color"] .cot-24[data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
 /* Cifras secundarias con forma corta (cifras.js): en teléfonos de menos de 360 px se ve la corta. */
 .c-c { display: none; }
+.nw, .c-l, .c-c { white-space: nowrap; } /* una cifra pegada a su unidad (cifras.js: pegado, pegarHtml; campamento 20) */
 @media (max-width: 359px) { .c-l { display: none; } .c-c { display: inline; } }
 /* «En vivo» junto a USD: el valor sigue al precio. */
 .saldo-v em[data-vivo="1"]::before { content: ""; display: inline-block; width: 0.32em; height: 0.32em; margin-right: 0.3em; border-radius: 50%; background: var(--cielo-sube, var(--sube)); vertical-align: 0.12em; }
@@ -320,6 +323,7 @@ html[data-efectos="todos"] .saldo-v em[data-vivo="1"]::before { animation: latid
   left: max(20px, env(safe-area-inset-left)); right: max(20px, env(safe-area-inset-right));
   min-width: min(16rem, calc(100vw - 40px));
   color: var(--cielo-txt); container-type: inline-size;
+  --u-tam: clamp(1.3rem, 5vw, 2.1rem); /* el tamaño de la unidad («sats», «BTC», «USD»): la cifra le deja sitio en su renglón */
 }
 .saldo-k { font: 400 1rem var(--serif); color: var(--cielo-txt2); }
 .saldo-cab { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
@@ -329,12 +333,16 @@ html[data-efectos="todos"] .saldo-v em[data-vivo="1"]::before { animation: latid
 html:is([data-efectos="todos"], [data-efectos="esenciales"]) .saldo[data-bonito] .cifra-grande { animation: bonito-brillo 2.6s ease-out 1; }
 
 .saldo-v { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
-/* El tamaño sale del número de caracteres (dígito = 0.575 em, coma = 0.18 em en Bricolage
-   tabular), con suelo y techo: no se mide nada en JS y no puede quedar en 0. La cifra final,
-   invisible, reserva el ancho en la misma celda de la rejilla en la que cuenta la animada. */
+/* El tamaño sale del número de caracteres (`--n`: dígito = 0.575 em, coma = 0.18 em), con suelo y techo: no se mide nada en JS y no
+   puede quedar en 0. La cifra final, invisible, reserva el ancho en la misma celda de la rejilla en la que cuenta la animada.
+   (Campamento 20) Y nunca pasa de lo que cabe junto a su unidad (`--cg-cabe`): el ancho de la caja menos la unidad (su ancho en em,
+   `--u-em`) y el hueco, entre lo que mide la cifra final (`--a`, en em: la suma del ancho de cada carácter, de una tabla; pintar.js).
+   Así 10M, 100 BTC o 1,000 BTC no mandan «sats» al renglón de abajo ni se salen, tampoco con letra muy grande a 320 px; las cifras
+   cortas se ven igual que antes. El suelo baja a 1.25rem solo para que quepa lo más largo. */
 .cifra-grande {
   display: inline-grid;
-  font: 300 clamp(2.25rem, 94cqi / (var(--n, 7) * 0.575), 8rem) / 0.95 var(--sans);
+  --cg-cabe: calc((100cqi - var(--u-tam, 1.3rem) * var(--u-em, 3.4) - 14px) / (var(--a, 4.4) * 1.04));
+  font: 300 clamp(1.25rem, min(max(2.25rem, 94cqi / (var(--n, 7) * 0.575)), var(--cg-cabe)), 8rem) / 0.95 var(--sans);
   letter-spacing: -0.035em;
   white-space: nowrap;
 }
@@ -362,7 +370,7 @@ html:is([data-efectos="todos"], [data-efectos="esenciales"]) .saldo[data-bonito]
 .ind-costo { position: absolute; left: 50%; top: -5px; width: 2px; height: 16px; margin-left: -1px; border-radius: 1px; background: var(--txt2); }
 .ind-hoy { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--naranja); border: 2px solid var(--fondo); transform: translate(-50%, -50%); transition: left 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .ind-eti { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--txt2); font-size: 0.8125rem; }
-.saldo-v em { font: italic 400 clamp(1.3rem, 5vw, 2.1rem) var(--serif); color: var(--cielo-txt2); }
+.saldo-v em { font: italic 400 var(--u-tam, 1.3rem) var(--serif); color: var(--cielo-txt2); white-space: nowrap; }
 .saldo-d { margin-top: 8px; font-size: 1.0625rem; color: var(--cielo-txt2); }
 /* Última compra y cuánto falta para la próxima (solo admin). La altura se reserva siempre para que nada se mueva al aparecer. */
 .esc-datos { display: none; }
@@ -450,8 +458,9 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .an-centro b { font: 600 1.125rem/1.05 var(--sans); }
 .an-centro small { font-size: 0.6875rem; color: var(--txt3); font-weight: 400; }
 .tr-k { color: var(--txt3); font-size: 0.9375rem; }
-.tr-v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
-.tr-v b { font: 400 clamp(2.3rem, 10vw, 3.3rem)/1.05 var(--serif); letter-spacing: -0.02em; }
+.tr-v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; container-type: inline-size; }
+/* La meta («2.5M sats», «1,000 BTC») en un renglón: si no cabe en la columna, la letra baja (`--n`, los caracteres; pintar.js). */
+.tr-v b { font: 400 clamp(1.5rem, min(clamp(2.3rem, 10vw, 3.3rem), 100cqi / (var(--n, 7) * 0.56)), 3.3rem)/1.05 var(--serif); letter-spacing: -0.02em; white-space: nowrap; }
 .tr-v span { color: var(--txt2); }
 .tr-ritmo { margin-top: 10px; color: var(--txt2); }
 /* Sats por dólar: una cifra y su línea del mes, sin colores de alarma (es información, no una alerta). */
@@ -834,8 +843,8 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 @media (max-height: 680px) and (max-width: 699px) {
   .saldo { top: 80px; } /* el saludo termina hacia los 76 px */
   .saldo-k { font-size: 0.875rem; }
-  .cifra-grande { font-size: clamp(2.25rem, 94cqi / (var(--n, 7) * 0.575), 4.4rem); }
-  .saldo-v em { font-size: 1.25rem; }
+  .saldo { --u-tam: 1.25rem; }
+  .cifra-grande { font-size: clamp(1.25rem, min(max(2.25rem, 94cqi / (var(--n, 7) * 0.575)), var(--cg-cabe)), 4.4rem); }
   .saldo-d { margin-top: 4px; font-size: 0.9375rem; }
   .prox { font-size: 0.8125rem; }
 }
@@ -859,8 +868,8 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .escena { height: 100vh; height: 100svh; min-height: 0; max-height: none; }
   .saldo { top: 80px; left: max(24px, env(safe-area-inset-left)); right: auto; width: min(46%, 22rem); min-width: 0; }
   .saldo-k { font-size: 0.875rem; }
-  .cifra-grande { font-size: clamp(2.25rem, 40cqi / (var(--n, 7) * 0.575), 4.6rem); }
-  .saldo-v em { font-size: 1.25rem; }
+  .saldo { --u-tam: 1.25rem; }
+  .cifra-grande { font-size: clamp(1.25rem, min(max(2.25rem, 40cqi / (var(--n, 7) * 0.575)), var(--cg-cabe)), 4.6rem); }
   .saldo-d { margin-top: 4px; font-size: 0.9375rem; }
   .prox { font-size: 0.8125rem; }
   .anotar { left: max(24px, env(safe-area-inset-left)); transform: none; bottom: max(14px, env(safe-area-inset-bottom)); min-height: var(--toque); padding: 0 24px; }
@@ -873,7 +882,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .escena { height: 86vh; min-height: 620px; max-height: 880px; }
   .saldo { top: 110px; left: max(48px, calc(50% - var(--medio-ancho))); right: auto; width: min(52%, calc(var(--medio-ancho) * 1.2)); }
   /* Deja sitio a «sats» en la misma línea sin invadir la montaña. */
-  .cifra-grande { font-size: clamp(2.25rem, 80cqi / (var(--n, 7) * 0.575), 8rem); }
+  .cifra-grande { font-size: clamp(1.25rem, min(max(2.25rem, 80cqi / (var(--n, 7) * 0.575)), var(--cg-cabe)), 8rem); }
   .cima { padding-inline: max(48px, calc(50vw - var(--medio-ancho))); }
   /* Tres datos de tu camino bajo el saldo: llenan el hueco del cielo en pantallas anchas. */
   .esc-datos:not([hidden]) { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
@@ -1307,12 +1316,12 @@ html[data-ganancia="color"] .dt [data-tono="baja"] { color: var(--baja); }
   min-height: calc(44px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
   border: 0; border-bottom: 1px solid var(--s3); background: var(--fondo); color: var(--txt); font: inherit; text-align: left; cursor: pointer;
   transform: translateY(-100%); visibility: hidden; transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.2, 1), visibility 0s 0.25s; }
-.minicab b { font: 650 1.0625rem var(--sans); font-variant-numeric: tabular-nums; }
-.mc-alt { position: relative; flex: 0 0 clamp(44px, 18vw, 96px); height: 4px; border-radius: 2px; background: var(--s3); }
+.minicab b { font: 650 min(1.0625rem, 5.2vw) var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap; } /* en un renglón, también con 1,000 BTC a 320 px (campamento 20) */
+.mc-alt { position: relative; flex: 0 1 clamp(44px, 18vw, 96px); min-width: 20px; height: 4px; border-radius: 2px; background: var(--s3); }
 .mc-alt[hidden] { display: none; }
 .mc-alt::before { content: ""; position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); border-radius: 2px; background: var(--naranja); }
 .mc-punto { position: absolute; top: 50%; left: calc(var(--p, 0) * 100%); width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--fondo); border: 2.5px solid var(--naranja); }
-.minicab span { color: var(--txt2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.minicab span { color: var(--txt2); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 html[data-minicab] .minicab { transform: none; visibility: visible; transition-delay: 0s; }
 html[data-minicab] .minicab:has(#minicab-saldo:empty) { display: none; }
 html[data-efectos="ninguno"] .minicab { transition: none; }
@@ -2454,7 +2463,7 @@ html[data-pestanas] .indice { display: none; }
 @media (hover: hover) and (pointer: fine) { .res-med-ver:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
 .res-med-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
 @media (min-width: 700px) {
-  .med-rejilla { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .med-rejilla { grid-template-columns: repeat(auto-fit, minmax(min(7.5rem, 100%), 1fr)); } /* (campamento 20) antes 4 fijas: a media página, «5 años comprando» se salía */
   .res-med-ver { width: auto; display: inline-flex; }
 }
 

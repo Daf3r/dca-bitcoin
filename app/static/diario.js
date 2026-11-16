@@ -1,5 +1,6 @@
 import { diario, diarioParaOir, fechaLarga, textoDiario } from './lib.js';
 import { miniMontana } from './arte.js';
+import { pegado } from './cifras.js';
 import { alCambiarVoces, callar, leer, leyendo, vozEspanol } from './escuchar.js';
 import { $, R, S } from './estado.js';
 
@@ -69,12 +70,12 @@ export function pintarDiario() {
   ultimo = d;
   pintarPliegue();
   $('t-diario').textContent = d.titular;
-  $('dia-sub').textContent = d.sub;
+  pegado($('dia-sub'), d.sub); // la cifra y su unidad, en un renglón (campamento 20)
   const grab = $('dia-grabado');
   grab.innerHTML = miniMontana({ altitud: d.altitud });
   grab.setAttribute('aria-label', `Grabado de la montaña: vas al ${Math.round(d.altitud * 100)} % de la altura de la cima.`);
   $('dia-hace-b').hidden = !d.haceUnAnio && !d.notaAnio;
-  $('dia-hace').textContent = d.haceUnAnio?.texto ?? '';
+  pegado($('dia-hace'), d.haceUnAnio?.texto ?? '');
   // La semana en una línea (campamento 18): lo que se anotó con la compra de esa semana, hace un año. Siempre con `textContent`.
   $('dia-nota').hidden = !d.notaAnio;
   $('dia-nota-k').textContent = d.notaAnio ? `El ${fechaLarga(d.notaAnio.fecha)} quedó anotado:` : '';
@@ -84,7 +85,7 @@ export function pintarDiario() {
   for (const t of d.clasificados) {
     const li = document.createElement('li');
     const m = /^(SE [A-ZÁÉÍÓÚÑ]+)(.*)$/.exec(t); // «SE BUSCAN», «SE OFRECE»…: el encabezado del aviso va aparte (para darle su estilo)
-    if (m) { const b = document.createElement('b'); b.textContent = m[1]; li.append(b, document.createTextNode(m[2])); } else li.textContent = t;
+    if (m) { const b = document.createElement('b'); b.textContent = m[1]; const r = document.createElement('span'); pegado(r, m[2]); li.append(b, r); } else pegado(li, t); // la cifra con su unidad (campamento 20)
     lista.append(li);
   }
   $('dia-pron').textContent = d.pronostico;

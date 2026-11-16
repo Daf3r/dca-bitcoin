@@ -1,11 +1,11 @@
-import { aFecha, acentoDe, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
 import { ico } from './iconos.js';
 import { pintarInsignia } from './insignia.js';
 import { pintarTV } from './tv.js';
-import { dual, miniLinea } from './cifras.js';
+import { dual, miniLinea, pegado } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
 import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos } from './cuenta.js';
@@ -99,10 +99,11 @@ export function pintarPrecio() {
   // «Coinbase · hace 12 s»: el separador y la hora en sus piezas (el texto no cambia) para que en 320 px vaya «Coinbase» arriba y la
   // hora abajo, sin un «·» colgando al final de la línea.
   if (estado === 'vivo') {
-    const sep = document.createElement('span'), hace = document.createElement('span');
+    const fuente = document.createElement('span'), sep = document.createElement('span'), hace = document.createElement('span');
+    fuente.className = 'cot-fuente'; fuente.textContent = S.fuente;
     sep.className = 'cot-sep'; sep.textContent = ' · ';
     hace.className = 'cot-hace'; hace.textContent = haceCuanto(S.precioTs);
-    $('precio-meta').replaceChildren(S.fuente, sep, hace);
+    $('precio-meta').replaceChildren(fuente, sep, hace);
   }
   // Sin precio, en el hueco de la cifra planea el mensajero (un zopilote): decorativo; el texto de abajo lo dice todo y el «—» sigue ahí para los lectores.
   if (estado === 'error') $('precio').innerHTML = `${ico('zopilote')}<span class="sr">—</span>`;
@@ -126,8 +127,15 @@ function pintarCifraGrande(el, desde, hasta, ms = 1400, fmt = entero) {
   const final = fmt(hasta);
   // Caracteres en ancho de dígito tabular: dígito = 1, separador ≈ 0.31 (0.18 em / 0.575 em).
   el.style.setProperty('--n', (final.replace(/\D/g, '').length + final.replace(/\d/g, '').length * 0.31).toFixed(2));
+  el.style.setProperty('--a', anchoCifra(final).toFixed(3)); // lo que mide en em (campamento 20: el CSS le deja sitio a la unidad)
   pintarOdometro(el, desde, hasta, fmt, { ms });
 }
+// Lo que mide cada carácter de la cifra grande en em (Bricolage 300 con su `letter-spacing`; en el saldo los dígitos son
+// proporcionales: el «1» es estrecho). Es una tabla, no una medida de la página: con ella el CSS sabe cuánto ocupa la cifra final.
+const ANCHO_CIFRA = { 0: 0.608, 1: 0.25, 2: 0.536, 3: 0.557, 4: 0.56, 5: 0.549, 6: 0.595, 7: 0.478, 8: 0.601, 9: 0.588, ',': 0.097, '.': 0.154, $: 0.576 };
+export const anchoCifra = (t) => [...t].reduce((a, c) => a + (ANCHO_CIFRA[c] ?? 0.62), 0);
+// Lo que mide la unidad (con su «⇄», y el punto «en vivo» en dólares), en em de su propia letra.
+const ANCHO_UNIDAD = { sats: 2.45, btc: 2.67, usd: 3.36 };
 
 // El saldo se puede ver en sats, en BTC o en dólares (toque en la cifra, en ese orden); se recuerda por dispositivo.
 // En dólares es lo que vale hoy y cambia con el precio en vivo; sin precio se queda en sats.
@@ -148,6 +156,7 @@ function etiquetaUnidad() {
   const u = unidadVista();
   $('s-unidad').textContent = ETIQUETA_UNIDAD[u];
   $('s-unidad').dataset.vivo = u === 'usd' ? '1' : ''; // el punto «en vivo»: el valor sigue al precio
+  $('s-saldo-v').style.setProperty('--u-em', String(ANCHO_UNIDAD[u]));
   $('s-saldo-ayuda').textContent = `${vozLibro() ? 'Saldo del libro' : 'Tu saldo'}${u === 'usd' ? ' en dólares, al precio en vivo' : ''}. Toca para verlo en ${NOMBRE_SIGUIENTE[u]}.`;
 }
 // Huevo de pascua (idea 28): siete toques seguidos en el saldo y el libro dice cuántas pupusas son (a $0.75, solo es una cuenta curiosa).
@@ -307,7 +316,7 @@ function pintarProx() {
     const faltan = ((7 - aFecha(hoyISO()).getDay()) % 7) + 7 * R.venceSemanas; // hasta el domingo que mantiene la racha
     txt += faltan === 0 ? ' · próxima: hoy es el último día' : faltan === 1 ? ' · próxima: mañana es el último día' : ` · próxima, en ${faltan} días`;
   }
-  el.textContent = txt;
+  pegado(el, txt); // «en 6 días» no se parte (campamento 20)
 }
 
 /**
@@ -415,16 +424,18 @@ export const progresoEtapa = () => (R.sats - R.etapaPrev) / (R.etapa - R.etapaPr
 function pintarTramo() {
   $('tramo').hidden = !S.cargado || (S.errorCarga && !R.n);
   const prog = progresoEtapa();
-  $('t-meta').textContent = R.etapa >= 1e8 ? nombreHito(R.etapa) : `${nombreHito(R.etapa)} sats`;
+  const meta = R.etapa >= 1e8 ? nombreHito(R.etapa) : `${nombreHito(R.etapa)} sats`;
+  $('t-meta').textContent = meta;
+  $('t-meta').style.setProperty('--n', String(meta.length)); // la meta va en un renglón: con muchos caracteres, la letra baja (CSS)
   const falta = $('t-falta');
   falta.textContent = 'faltan ';
-  dual(falta, entero(R.etapa - R.sats), numCorto(R.etapa - R.sats));
+  dual(falta, entero(R.etapa - R.sats), R.etapa - R.sats >= 1e8 ? satsCorto(R.etapa - R.sats) : numCorto(R.etapa - R.sats)); // «6.5B» sería ambiguo: en BTC
   const p = Math.max(0, Math.min(1, prog));
   requestAnimationFrame(() => pintarAnillo($('t-anillo-svg'), [{ clase: 'an-naranja', desde: 0, hasta: p }]));
   $('t-pct').textContent = `${p > 0 && p < 0.01 ? '<1' : Math.floor(p * 100)}%`;
   $('t-anillo').setAttribute('aria-label', `${vozLibro() ? 'El libro va' : 'Vas'} en ${(p * 100).toFixed(1)}% del camino a ${nombreHito(R.etapa)}${R.etapa >= 1e8 ? '' : ' sats'}`);
-  $('t-ritmo').textContent = R.proyeccion
+  pegado($('t-ritmo'), R.proyeccion
     ? `Al ritmo de los últimos 6 meses${R.nExtra ? `, sin contar ${vozLibro() ? 'las' : 'tus'} compras extra,` : ''} (${entero(R.satsMes)} sats al mes) ${vozLibro() ? 'se llega' : 'llegas'} en ${plazo(R.proyeccion)}.`
-    : R.n ? `${vozLibro() ? 'El libro va' : 'Vas'} en ${(prog * 100).toFixed(1)}% de este tramo.` : 'La primera etapa está en 100k sats.';
+    : R.n ? `${vozLibro() ? 'El libro va' : 'Vas'} en ${(prog * 100).toFixed(1)}% de este tramo.` : 'La primera etapa está en 100k sats.');
 }
 export const plazo = (m) => (m < 1 ? 'menos de un mes' : `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}`);

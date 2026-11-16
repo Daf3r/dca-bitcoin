@@ -2,6 +2,7 @@
 import { usd, usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha, tramosCaida, ticksPrecio } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { ilustracion } from './iconos.js';
+import { pegarHtml } from './cifras.js';
 
 const f1 = (n) => n.toFixed(1);
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'short', year: 'numeric' });
@@ -163,8 +164,9 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
 
   const cambio = (u.p / pts[0].p - 1) * 100;
   const periodo = { 30: 'en el último mes', 182: 'en los últimos 6 meses', 365: 'en el último año' }[rango] ?? `desde ${mes(pts[0].fecha)}`;
-  const defecto = `BTC <b>${usd0(u.p)}</b> hoy, <b data-tono="${cambio >= 0 ? 'sube' : 'baja'}">${pct(cambio)}</b> ${periodo}.` +
-    (enRango.length ? ` <span class="lec-tuya">${enRango.length} ${enRango.length === 1 ? 'compra tuya' : 'compras tuyas'} aquí.</span>` : '');
+  // (Campamento 20) Sin cortes entre una cifra y su unidad («286 compras»).
+  const defecto = pegarHtml(`BTC <b>${usd0(u.p)}</b> hoy, <b data-tono="${cambio >= 0 ? 'sube' : 'baja'}">${pct(cambio)}</b> ${periodo}.` +
+    (enRango.length ? ` <span class="lec-tuya">${enRango.length} ${enRango.length === 1 ? 'compra tuya' : 'compras tuyas'} aquí.</span>` : ''));
   const est = { host, lectura, pts, x, y, W, H, visible, enRango, defecto, sel: null, rango, puntos, tarjeta, sr, editar, fijada: null };
   EST.set(host, est);
   lectura.innerHTML = defecto;

@@ -1,6 +1,6 @@
-import { aFecha, semanasDetalle, caidaGrande, compacto, entero, equilibrio, fechaLarga, hoyISO, nombreHito, nombreHitoMeses, pct, reposicion, textoMeses, tocaComprar, ubicacionSats, usd, usd0, usdSigno } from './lib.js';
+import { aFecha, semanasDetalle, caidaGrande, entero, satsCorto, equilibrio, fechaLarga, hoyISO, nombreHito, nombreHitoMeses, pct, reposicion, textoMeses, tocaComprar, ubicacionSats, usd, usd0, usdSigno } from './lib.js';
 import { pintarAnillo } from './anillo.js';
-import { dual } from './cifras.js';
+import { dual, pegado, pegarHtml } from './cifras.js';
 import { $, R, S, esAdmin } from './estado.js';
 import { abrirHoja } from './hoja.js';
 import { plazo } from './pintar.js';
@@ -12,8 +12,6 @@ export const nombreMeta = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} s
 export const semanas = (n) => `${n} ${n === 1 ? 'semana' : 'semanas'}`;
 // La racha cuenta semanas o quincenas según tu ritmo (`R.paso`).
 export const rachaTxt = (n) => (R.paso === 2 ? `${n} ${n === 1 ? 'quincena' : 'quincenas'}` : semanas(n));
-// Por encima de 1 BTC se habla en BTC: «4.8B sats» es ambiguo en español.
-const satsCorto = (s) => (s >= 1e8 ? `${(s / 1e8).toFixed(s >= 1e10 ? 0 : 1)} BTC` : `${compacto(s)} sats`);
 
 function pintarGanancia() {
   const ver = R.nVentas > 0;
@@ -34,7 +32,7 @@ export function pintarReportes() {
     const detalle = h.fecha ? `${fechaLarga(h.fecha)} · ${textoMeses(h.meses)}`
       : estado === 'siguiente' ? (R.proyeccion ? `faltan ${entero(h.m - R.sats)} sats · a tu ritmo, en ${plazo(R.proyeccion)}` : `faltan ${entero(h.m - R.sats)} sats`)
         : 'más arriba';
-    return `<li data-estado="${estado}"><b>${nombreMeta(h.m)}</b><span>${detalle}</span></li>`;
+    return `<li data-estado="${estado}"><b>${nombreMeta(h.m)}</b><span>${pegarHtml(detalle)}</span></li>`;
   }).join('');
 
   // Con un solo mes de compras no hay nada que comparar todavía.
@@ -67,18 +65,18 @@ export function pintarReportes() {
   const resumenSemanas = con === ventana.length && ventana.length < 52
     ? `Has comprado todas las semanas desde que empezaste (${ventana.length}). `
     : `Compraste en <b>${con}</b> de ${ventana.length === 52 ? 'las últimas 52 semanas' : `tus ${ventana.length} semanas`}. `;
-  $('const-txt').innerHTML = resumenSemanas +
-    (R.mejorRacha > R.racha ? `Tu mejor racha: <b>${rachaTxt(R.mejorRacha)}</b>.` : '') + (R.semanaEnCurso || !R.racha ? '' : ` Tu próxima compra, antes del ${domingo(R.venceSemanas)}, mantiene la racha.`);
+  $('const-txt').innerHTML = pegarHtml(resumenSemanas +
+    (R.mejorRacha > R.racha ? `Tu mejor racha: <b>${rachaTxt(R.mejorRacha)}</b>.` : '') + (R.semanaEnCurso || !R.racha ? '' : ` Tu próxima compra, antes del ${domingo(R.venceSemanas)}, mantiene la racha.`));
 
   // Cifras curiosas: pocas y bien elegidas.
   const dias = Math.max(1, Math.round((aFecha(hoyISO()) - aFecha(R.items[0].fecha)) / 864e5));
-  $('curiosas').innerHTML = `<li><b>${entero(dias)} días</b> desde tu primera compra.</li>` +
-    (R.sats > 0 ? `<li>Tu saldo suma en promedio <b>${entero(R.sats / dias)} sats</b> por día.</li>` : '');
+  $('curiosas').innerHTML = pegarHtml(`<li><b>${entero(dias)} días</b> desde tu primera compra.</li>` +
+    (R.sats > 0 ? `<li>Tu saldo suma en promedio <b>${entero(R.sats / dias)} sats</b> por día.</li>` : ''));
 
   const hc = R.constancia;
   const faltan = (n, uno, varios) => (n === 1 ? `falta 1 ${uno}` : `faltan ${n} ${varios}`);
   const proximos = [hc.compras && `${hc.compras.valor} compras (${faltan(hc.compras.faltan, 'compra', 'compras')})`, hc.tiempo && `${nombreHitoMeses(hc.tiempo.valor)} (${faltan(hc.tiempo.faltan, 'mes', 'meses')})`].filter(Boolean);
-  $('const-hito').innerHTML = proximos.length ? `Llevas <b>${hc.n} compras</b>. Próximos hitos: ${proximos.join(' · ')}.` : `Llevas <b>${hc.n} compras</b>.`;
+  $('const-hito').innerHTML = pegarHtml(proximos.length ? `Llevas <b>${hc.n} compras</b>. Próximos hitos: ${proximos.join(' · ')}.` : `Llevas <b>${hc.n} compras</b>.`);
 
   const ext = $('extremos');
   const tarjeta = (c, titulo) => {
@@ -86,7 +84,7 @@ export function pintarReportes() {
     return `<div class="ext"><small>${titulo}</small><b>${usd0(c.precio)}</b><span>${fechaLarga(c.fecha)} · ${entero(c.sats)} sats</span>` +
       (v == null ? '' : `<span data-tono="${v >= 0 ? 'sube' : 'baja'}">${pct(v)} desde entonces</span>`) + '</div>';
   };
-  ext.innerHTML = tarjeta(R.mejor, 'Mejor precio') + tarjeta(R.peor, 'Precio más alto');
+  ext.innerHTML = pegarHtml(tarjeta(R.mejor, 'Mejor precio') + tarjeta(R.peor, 'Precio más alto'));
 }
 
 // ------------------------------------------------------- tira de semanas: detalle al tocar
@@ -145,7 +143,7 @@ export function pintarToca() {
   $('toca').hidden = !t;
   if (!t) return;
   $('toca').dataset.estado = t.estado;
-  $('toca-txt').textContent = textoToca(t);
+  pegado($('toca-txt'), textoToca(t));
 }
 
 // ------------------------------------------------------ dónde están tus sats
@@ -242,8 +240,8 @@ export function pintarCaida() {
   $('caida').hidden = !c;
   if (!c) return;
   const r = reposicion(R, S.precio);
-  $('caida-txt').textContent = `BTC está ${Math.round(c.caida)}% por debajo de su máximo de los últimos ${c.dias} días.` +
-    (r ? ` Si decides reponer con una compra como las tuyas (${usd0(r.monto)}), tu costo promedio ${r.despues < r.antes ? 'bajaría' : 'subiría'} de ${usd0(r.antes)} a ${usd0(r.despues)}. Es opcional.` : '');
+  pegado($('caida-txt'), `BTC está ${Math.round(c.caida)}% por debajo de su máximo de los últimos ${c.dias} días.` +
+    (r ? ` Si decides reponer con una compra como las tuyas (${usd0(r.monto)}), tu costo promedio ${r.despues < r.antes ? 'bajaría' : 'subiría'} de ${usd0(r.antes)} a ${usd0(r.despues)}. Es opcional.` : ''));
 }
 $('caida-ocultar').addEventListener('click', () => {
   try { localStorage.setItem(CLAVE_CAIDA, hoyISO()); } catch { /* sin almacenamiento: se oculta solo ahora */ }
@@ -267,7 +265,7 @@ export function pintarComienzo() {
   const porCompra = R.nHabituales ? R.satsHabituales / R.nHabituales : R.satsComprados / R.nCompras; // sin las extra
   const compras = Math.max(1, Math.ceil(falta / porCompra));
   $('t-comienzo').textContent = `${compras === 1 ? 'Una compra más' : `${compras} compras más`} para ${R.etapa === 1e5 ? 'tu primera etapa' : `los ${nombreMeta(R.etapa)}`}`;
-  $('com-txt').textContent = `Te faltan ${entero(falta)} sats para ${nombreMeta(R.etapa)}. Tus compras rondan ${entero(porCompra)} sats cada una.`;
+  pegado($('com-txt'), `Te faltan ${entero(falta)} sats para ${nombreMeta(R.etapa)}. Tus compras rondan ${entero(porCompra)} sats cada una.`);
   $('com-racha').textContent = rachaTxt(R.racha);
   $('com-racha-sub').textContent = R.racha
     ? `sigue si vuelves a comprar antes del ${domingo(R.venceSemanas)}`
