@@ -948,6 +948,7 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
   estado.sats = hasta;
   if (sinMovimiento() || desde === hasta) { colocar(hasta, false); return; }
   estado.host.querySelector('#m-etiquetas').innerHTML = '';
+  estado.host.querySelectorAll('#m-etapas .etapa[visibility]').forEach((g) => g.removeAttribute('visibility')); // sin rótulos, se ven todas (campamento 21)
   const { esc, enAltura, L, host } = estado;
   host.querySelector('#m-huellas').innerHTML = ''; // se vuelven a poner al llegar
   const a0 = altitud(desde, esc), a1 = altitud(hasta, esc);
