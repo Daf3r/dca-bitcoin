@@ -443,7 +443,7 @@ function pintarTramo() {
     if (esc.children.length !== tr.pasos.length) esc.replaceChildren(...tr.pasos.map(() => document.createElement('i')));
     esc.style.setProperty('--n', String(tr.pasos.length));
     [...esc.children].forEach((el, i) => { el.className = i < tr.hechas ? 'hecha' : i === tr.hechas ? 'sig' : ''; el.style.setProperty('--p', i === tr.hechas ? p.toFixed(3) : '0'); });
-    pegado($('t-pasos-t'), `De ${nombreHito(tr.desde)} a ${nombreHito(tr.hasta)}${tr.hasta >= 1e8 ? '' : ' sats'}: ${tr.hechas} de ${tr.pasos.length} etapas`);
+    pegado($('t-pasos-t'), `Etapa ${tr.hechas + 1} de ${tr.pasos.length} del tramo de ${nombreHito(tr.desde)} a ${nombreHito(tr.hasta)}${tr.hasta >= 1e8 ? '' : ' sats'}`);
   }
   pegado($('t-ritmo'), R.proyeccion
     ? `Al ritmo de los últimos 6 meses${R.nExtra ? `, sin contar ${vozLibro() ? 'las' : 'tus'} compras extra,` : ''} (${entero(R.satsMes)} sats al mes) ${vozLibro() ? 'se llega' : 'llegas'} en ${plazo(R.proyeccion)}.`
