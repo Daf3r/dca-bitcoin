@@ -4301,7 +4301,7 @@ try {
         eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas', 'cerrar'], '20·cuenta: «Administrar» y, al final, salir');
         ok(await a.p.locator('#dc-menu [data-previa]').count() === 0, '20·cuenta: la vista previa ya no está en el menú');
         await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(600);
-        ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 5 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus cinco botones');
+        ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 6 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus seis botones (campamento 21: etapa y etapa con sello)');
         ok(!/temporal/i.test(await a.p.textContent('#dc-sistema')), '20·cuenta: ya no se llama temporal');
         const alto = await a.p.evaluate(() => [...document.querySelectorAll('#dc-previa button')].every((b) => b.getBoundingClientRect().height >= 47.5));
         ok(alto, '20·cuenta: sus botones miden 48 px');

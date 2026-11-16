@@ -1,4 +1,4 @@
-import { aFecha, acentoDe, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapaCelebrada, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, rangoEtapa, resumen, numCorto, tramoEtapas, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
@@ -392,8 +392,10 @@ export function pintarMontana(animar, desde, festejo = null) {
   dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), firmas: S.firmas, cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
-    const m = etapasCruzadas(festejo.antes, R.sats).at(-1);
-    f = { delta: festejo.delta, etapa: m, nivel: cruzo1Btc(festejo.antes, R.sats) ? 'epico' : !m ? 'compra' : esHito(m) ? 'hito' : 'etapa' };
+    // La celebración va en proporción (campamento 21): una etapa intermedia sube como una compra (su marca se enciende al pasar y la
+    // tarjeta es breve); una principal planta su bandera con cometa; un campamento desde 1M trae el amanecer; 1 BTC, lo épico.
+    const m = etapaCelebrada(festejo.antes, R.sats);
+    f = { delta: festejo.delta, etapa: m, nivel: cruzo1Btc(festejo.antes, R.sats) ? 'epico' : !m || rangoEtapa(m) === 'intermedia' ? 'compra' : esHito(m) ? 'hito' : 'etapa' };
     // El acento dorado llega cuando acaba la celebración de 1 BTC, no antes.
     if (f.nivel === 'epico') { acentoRetenido = true; setTimeout(() => { acentoRetenido = false; pintarAcento(); }, reducido() ? 0 : MS_SUBIDA + 1800); }
   }
@@ -434,6 +436,15 @@ function pintarTramo() {
   requestAnimationFrame(() => pintarAnillo($('t-anillo-svg'), [{ clase: 'an-naranja', desde: 0, hasta: p }]));
   $('t-pct').textContent = `${p > 0 && p < 0.01 ? '<1' : Math.floor(p * 100)}%`;
   $('t-anillo').setAttribute('aria-label', `${vozLibro() ? 'El libro va' : 'Vas'} en ${(p * 100).toFixed(1)}% del camino a ${nombreHito(R.etapa)}${R.etapa >= 1e8 ? '' : ' sats'}`);
+  // La escalerita del tramo (campamento 21): las etapas entre la última con sello y la siguiente; la que sigue se llena con el avance.
+  const tr = tramoEtapas(R.sats), esc = $('t-esc');
+  $('t-pasos').hidden = !R.n || tr.pasos.length < 2;
+  if (!$('t-pasos').hidden) {
+    if (esc.children.length !== tr.pasos.length) esc.replaceChildren(...tr.pasos.map(() => document.createElement('i')));
+    esc.style.setProperty('--n', String(tr.pasos.length));
+    [...esc.children].forEach((el, i) => { el.className = i < tr.hechas ? 'hecha' : i === tr.hechas ? 'sig' : ''; el.style.setProperty('--p', i === tr.hechas ? p.toFixed(3) : '0'); });
+    pegado($('t-pasos-t'), `De ${nombreHito(tr.desde)} a ${nombreHito(tr.hasta)}${tr.hasta >= 1e8 ? '' : ' sats'}: ${tr.hechas} de ${tr.pasos.length} etapas`);
+  }
   pegado($('t-ritmo'), R.proyeccion
     ? `Al ritmo de los últimos 6 meses${R.nExtra ? `, sin contar ${vozLibro() ? 'las' : 'tus'} compras extra,` : ''} (${entero(R.satsMes)} sats al mes) ${vozLibro() ? 'se llega' : 'llegas'} en ${plazo(R.proyeccion)}.`
     : R.n ? `${vozLibro() ? 'El libro va' : 'Vas'} en ${(prog * 100).toFixed(1)}% de este tramo.` : 'La primera etapa está en 100k sats.');

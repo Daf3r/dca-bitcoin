@@ -154,6 +154,15 @@ export const etapaCelebrada = (antes, despues) => etapaDestacada(etapasCruzadas(
 /** La última etapa con sello (principal o campamento) a la que llega `sats`, o 0. */
 export const etapaConSelloAnterior = (sats) => etapasHasta(sats).filter((m) => rangoEtapa(m) !== 'intermedia').at(-1) ?? 0;
 /**
+ * El tramo en curso (campamento 21): de la última etapa con sello (`desde`, 0 al empezar) a la siguiente (`hasta`), con las etapas que lo
+ * forman (`pasos`, la última es `hasta`) y cuántas ya alcanza el saldo (`hechas`). Es la escalerita de «Próxima etapa»: 1M → 2.5M en seis.
+ */
+export function tramoEtapas(sats) {
+  const desde = etapaConSelloAnterior(sats), pasos = [];
+  for (let m = etapaSiguiente(desde); Number.isFinite(m); m = etapaSiguiente(m)) { pasos.push(m); if (rangoEtapa(m) !== 'intermedia') break; }
+  return { desde, hasta: pasos.at(-1), pasos, hechas: pasos.filter((m) => m <= sats).length };
+}
+/**
  * El camino «para leer» (reporte de etapas y «Tu historia»): los campamentos y las etapas principales siempre; de las intermedias, solo
  * las del tramo en curso (después de la última principal o campamento alcanzado) y las que aún faltan. Las demás se cuentan en `ocultas`.
  */
