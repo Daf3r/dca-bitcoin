@@ -383,8 +383,8 @@
     <article class="rep rep-ganancia" id="rep-ganancia" aria-labelledby="t-ganancia" hidden data-p="resumen">
       <h3 id="t-ganancia">Ganancia</h3>
       <dl class="gan-lista">
-        <div><dt>Realizada <small>(lo que ya vendiste)</small></dt><dd id="gan-real"></dd></div>
-        <div><dt>No realizada <small>(lo que aún tienes)</small></dt><dd id="gan-noreal"></dd></div>
+        <div><dt>Realizada <small data-libro="(lo que ya se vendió)">(lo que ya vendiste)</small></dt><dd id="gan-real"></dd></div>
+        <div><dt>No realizada <small data-libro="(lo que el libro aún tiene)">(lo que aún tienes)</small></dt><dd id="gan-noreal"></dd></div>
         <div class="gan-total"><dt>Total</dt><dd id="gan-total"></dd></div>
         <div><dt>Invertido neto</dt><dd id="gan-inv"></dd></div>
       </dl>
@@ -424,7 +424,7 @@
           <ul class="pasaporte" id="dh-pasaporte"></ul>
           <button type="button" class="enlace" id="dh-pas-mas" hidden>Ver más</button>
         </div>
-        <h3>Cómo llegaste hasta aquí</h3>
+        <h3 data-libro="Cómo llegó el libro hasta aquí">Cómo llegaste hasta aquí</h3>
         <ol class="historia" id="dh-linea"></ol>
       </div>
       <button type="button" class="enlace dh-cert-btn" id="dh-cert" data-libro="Ver el certificado de altitud">Ver mi certificado de altitud</button>

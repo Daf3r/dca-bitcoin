@@ -2,7 +2,7 @@ import { diario, diarioParaOir, fechaLarga, textoDiario } from './lib.js';
 import { miniMontana } from './arte.js';
 import { pegado } from './cifras.js';
 import { alCambiarVoces, callar, leer, leyendo, vozEspanol } from './escuchar.js';
-import { $, R, S } from './estado.js';
+import { $, R, S, vozLibro } from './estado.js';
 
 // El Diario del Libro (campamento 15A, idea 46): una portada con lo que pasó, para todos (también los lectores). Es una tarjeta del
 // Resumen. Se arma con datos que ya existen (`lib.diario`); sin sección de «quién abrió y cuándo»: eso se sentiría como vigilancia.
@@ -73,7 +73,7 @@ export function pintarDiario() {
   pegado($('dia-sub'), d.sub); // la cifra y su unidad, en un renglón (campamento 20)
   const grab = $('dia-grabado');
   grab.innerHTML = miniMontana({ altitud: d.altitud });
-  grab.setAttribute('aria-label', `Grabado de la montaña: vas al ${Math.round(d.altitud * 100)} % de la altura de la cima.`);
+  grab.setAttribute('aria-label', `Grabado de la montaña: ${vozLibro() ? 'el libro va' : 'vas'} al ${Math.round(d.altitud * 100)} % de la altura de la cima.`);
   $('dia-hace-b').hidden = !d.haceUnAnio && !d.notaAnio;
   pegado($('dia-hace'), d.haceUnAnio?.texto ?? '');
   // La semana en una línea (campamento 18): lo que se anotó con la compra de esa semana, hace un año. Siempre con `textContent`.

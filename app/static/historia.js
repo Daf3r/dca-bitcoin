@@ -36,7 +36,7 @@ function pintarObjeto() {
     const t = aniosTronco(items, hoy);
     datos = { tipo: 'tronco', lista: t };
     $('dh-lienzo').innerHTML = tronco(t, { sel: seleccion });
-    $('dh-desc').textContent = textoTronco(t);
+    $('dh-desc').textContent = textoTronco(t, vozLibro());
     for (const y of [...t].reverse()) {
       const li = nodo('li');
       const b = nodo('button', y.anio === seleccion ? 'sel' : '', `${y.anio}`);
@@ -46,27 +46,27 @@ function pintarObjeto() {
       li.append(b);
       anios.append(li);
     }
-    $('dh-detalle').textContent = seleccion != null ? textoAnio(t.find((y) => y.anio === seleccion)) : 'Toca un anillo o un año para ver cómo fue.';
+    $('dh-detalle').textContent = seleccion != null ? textoAnio(t.find((y) => y.anio === seleccion), vozLibro()) : 'Toca un anillo o un año para ver cómo fue.';
   } else if (vista === 'constelacion') {
     const e = estrellasConstelacion(items);
     datos = { tipo: 'constelacion', lista: e };
     $('dh-lienzo').innerHTML = constelacion(e, { sel: seleccion });
-    $('dh-desc').textContent = textoConstelacion(e);
+    $('dh-desc').textContent = textoConstelacion(e, vozLibro());
     const s = seleccion != null ? e[seleccion] : null;
     $('dh-detalle').textContent = s ? `${fechaLarga(s.fecha)} · +${entero(s.sats)} sats${s.extra ? ' · compra extra' : ''}` : 'Toca una estrella (o usa las flechas) para ver esa compra.';
   } else if (vista === 'estratos') {
     const e = estratosMes(items, hoy);
     datos = { tipo: 'estratos', lista: e };
     $('dh-lienzo').innerHTML = estratos(e, { sel: seleccion });
-    $('dh-desc').textContent = textoEstratos(e);
-    $('dh-detalle').textContent = seleccion != null ? textoEstrato(e[seleccion]) : 'Toca una capa (o usa las flechas) para ver ese mes.';
+    $('dh-desc').textContent = textoEstratos(e, vozLibro());
+    $('dh-detalle').textContent = seleccion != null ? textoEstrato(e[seleccion], vozLibro()) : 'Toca una capa (o usa las flechas) para ver ese mes.';
   } else if (vista === 'partitura') {
     const as = partitura(items);
     const y = as.find((x) => x.anio === anioPartitura) ?? as.at(-1);
     anioPartitura = y?.anio ?? null;
     datos = { tipo: 'partitura', lista: y?.notas ?? [] };
     $('dh-lienzo').innerHTML = y ? dibujarPartitura(y, { sel: seleccion }) : '';
-    $('dh-desc').textContent = textoPartitura(as);
+    $('dh-desc').textContent = textoPartitura(as, vozLibro());
     for (const a of [...as].reverse()) {
       const li = nodo('li');
       const b = nodo('button', a.anio === anioPartitura ? 'sel' : '', `${a.anio}`);
@@ -77,18 +77,18 @@ function pintarObjeto() {
       anios.append(li);
     }
     $('dh-tocar').hidden = !y;
-    $('dh-detalle').textContent = y ? (seleccion != null ? textoNota(y.notas[seleccion]) : `${textoAnioPartitura(y)}. Toca una nota para ver esa compra.`) : '';
+    $('dh-detalle').textContent = y ? (seleccion != null ? textoNota(y.notas[seleccion]) : `${textoAnioPartitura(y, vozLibro())}. Toca una nota para ver esa compra.`) : '';
   } else if (vista === 'manta') {
     const m = semanasManta(items, hoy);
     datos = { tipo: 'manta', lista: m.celdas };
     $('dh-lienzo').innerHTML = manta(m, { sel: seleccion });
-    $('dh-desc').textContent = textoManta(m);
+    $('dh-desc').textContent = textoManta(m, vozLibro());
     $('dh-detalle').textContent = seleccion != null ? textoSemanaManta(m.celdas[seleccion]) : 'Toca una semana (o usa las flechas) para ver qué pasó.';
   } else {
     const p = piedrasTorre(items);
     datos = { tipo: 'torre', lista: p };
     $('dh-lienzo').innerHTML = torre(p, { sel: seleccion });
-    $('dh-desc').textContent = textoTorre(p);
+    $('dh-desc').textContent = textoTorre(p, vozLibro());
     const s = seleccion != null ? p[seleccion] : null;
     $('dh-detalle').textContent = s ? `${s.n === 1 ? fechaLarga(s.desde) : `${fechaLarga(s.desde)} a ${fechaLarga(s.hasta)}`} · ${s.n} ${s.n === 1 ? 'compra' : 'compras'} · +${entero(s.sats)} sats${s.extra ? ' · incluye extra' : ''}` : 'Toca una piedra (o usa las flechas) para ver esa compra.';
   }
@@ -156,7 +156,7 @@ function pintarPasaporte() {
   pasSellos = sellosSemana(R.items, hoyISO()).reverse();
   pasVisibles = PAS_PASO;
   $('dh-pas-caja').hidden = !pasSellos.length;
-  $('dh-pas-txt').textContent = textoPasaporte(pasSellos);
+  $('dh-pas-txt').textContent = textoPasaporte(pasSellos, vozLibro());
   dibujarPasaporte();
 }
 function dibujarPasaporte(foco = false) {
@@ -166,7 +166,7 @@ function dibujarPasaporte(foco = false) {
     const li = nodo('li', 'sello-sem');
     li.insertAdjacentHTML('beforeend', selloSemana(s));
     li.append(nodo('b', null, s.nombre), nodo('small', null, `+${entero(s.sats)} sats`));
-    li.title = textoSelloSemana(s);
+    li.title = textoSelloSemana(s, vozLibro());
     lista.append(li);
   }
   const mas = $('dh-pas-mas');
@@ -179,7 +179,8 @@ $('dh-pas-mas').addEventListener('click', () => { pasVisibles += PAS_PASO; dibuj
 /** Un nombre para lo que se pintó, para no rehacer la historia (y perder lo que se está leyendo) en cada refresco del precio. */
 let firmaHistoria = null;
 const firmaDe = () => `${R.items.length}:${R.sats}:${R.items.at(-1)?.id ?? 0}:${R.nCompras}:${R.racha}:${S.mensajes.map((m) => `${m.hito}${m.sellado ? 's' : (m.texto ?? '').length}`).join(',')}`
-  + `:${(S.firmas ?? []).map((f) => `${f.id}.${f.editado ?? f.creado}`).join(',')}`;
+  + `:${(S.firmas ?? []).map((f) => `${f.id}.${f.editado ?? f.creado}`).join(',')}`
+  + `:${vozLibro() ? 'libro' : 'yo'}`; // si la cuenta llega después, se repinta con la voz que toca (campamento 20)
 /** Pinta «Tu historia» solo si cambió algo desde la última vez (o si no se había pintado). La llaman `pintar()` y las pestañas. */
 export function refrescarHistoria({ forzar = false } = {}) {
   if (!R?.items || !S.cargado) return;
@@ -217,7 +218,7 @@ export function pintarHistoria() {
   lista.textContent = '';
   med.textContent = '';
   $('dh-vacio').hidden = R.nCompras > 0;
-  if (!R.nCompras) $('dh-vacio').innerHTML = `${ilustracion('montana')}Tu historia empieza con tu primera compra.`;
+  if (!R.nCompras) $('dh-vacio').innerHTML = `${ilustracion('montana')}${vozLibro() ? 'La historia del libro empieza con su primera compra.' : 'Tu historia empieza con tu primera compra.'}`;
   $('dh-cuerpo').hidden = !R.nCompras;
   if (!R.nCompras) return;
   seleccion = null;
@@ -225,7 +226,7 @@ export function pintarHistoria() {
   for (const m of medallas(R)) {
     const li = nodo('li', `medalla ${m.ganada ? 'ganada' : 'bloq'}`);
     li.insertAdjacentHTML('beforeend', medalla(m));
-    li.append(nodo('b', null, m.titulo), nodo('small', null, m.ganada ? fechaLarga(m.fecha) : `Próxima: te ${m.falta === 1 ? 'falta' : 'faltan'} ${m.falta} ${m.tipo === 'compras' ? (m.falta === 1 ? 'compra' : 'compras') : (m.falta === 1 ? 'mes' : 'meses')}`));
+    li.append(nodo('b', null, m.titulo), nodo('small', null, m.ganada ? fechaLarga(m.fecha) : `Próxima: ${vozLibro() ? '' : 'te '}${m.falta === 1 ? 'falta' : 'faltan'} ${m.falta} ${m.tipo === 'compras' ? (m.falta === 1 ? 'compra' : 'compras') : (m.falta === 1 ? 'mes' : 'meses')}`));
     med.append(li);
   }
   // Sellos de lacre (13B): uno por cada etapa que ya cruzaste.
@@ -240,7 +241,7 @@ export function pintarHistoria() {
     caja.append(li);
   }
   pintarPasaporte();
-  const { eventos, extrasOcultas } = historia(R);
+  const { eventos, extrasOcultas } = historia(R, undefined, { libro: vozLibro() });
   for (const e of eventos) {
     const li = nodo('li', `h-ev h-${e.clase}`);
     const t = nodo('time', null, fechaLarga(e.fecha));

@@ -10,7 +10,7 @@ let V = null;
 let primeraVez = true;
 
 /** serie: salida de `serieValor` (con el precio vivo en el último punto). */
-export function dibujarValor(host, lectura, { serie }) {
+export function dibujarValor(host, lectura, { serie, libro = false }) {
   const W = Math.max(280, host.clientWidth);
   const H = W < 560 ? 220 : W < 900 ? 260 : 280;
   if (serie.length < 2) { host.innerHTML = `<p class="g-vacio">${ilustracion('grafico')}Aún no hay suficiente histórico para este gráfico.</p>`; V = null; return; }
@@ -43,9 +43,10 @@ export function dibujarValor(host, lectura, { serie }) {
   host.innerHTML = s;
 
   const gan = u.valor - u.inv, p = u.inv ? (gan / u.inv) * 100 : null;
-  const defecto = `Hoy pusiste <b>${usd0(u.inv)}</b> y tu saldo vale <b>${usd0(u.valor)}</b>` +
+  // A quien solo mira se le habla del libro (campamento 20): «se ha puesto» y «el saldo».
+  const defecto = (libro ? `Hoy se ha puesto <b>${usd0(u.inv)}</b> y el saldo vale <b>${usd0(u.valor)}</b>` : `Hoy pusiste <b>${usd0(u.inv)}</b> y tu saldo vale <b>${usd0(u.valor)}</b>`) +
     (p == null ? '.' : ` (<b data-tono="${gan >= 0 ? 'sube' : 'baja'}">${pct(p)}</b>).`);
-  V = { host, lectura, pts, x, y, W, defecto, sel: null };
+  V = { host, lectura, pts, x, y, W, defecto, sel: null, libro };
   lectura.innerHTML = defecto;
   // La primera vez, la línea del valor se dibuja de izquierda a derecha (sin movimiento reducido).
   if (primeraVez && !sinMovimiento()) {
@@ -73,7 +74,7 @@ function marcar(i, anunciar = false) {
   cv.setAttribute('cx', f1(px)); cv.setAttribute('cy', f1(V.y(p.valor)));
   ci.setAttribute('cx', f1(px)); ci.setAttribute('cy', f1(V.y(p.inv)));
   const gan = p.valor - p.inv;
-  V.lectura.innerHTML = `${p.vivo ? 'Ahora' : fechaLarga(p.fecha)} · pusiste <b>${usd0(p.inv)}</b>, valía <b>${usd0(p.valor)}</b>` +
+  V.lectura.innerHTML = `${p.vivo ? 'Ahora' : fechaLarga(p.fecha)} · ${V.libro ? 'se había puesto' : 'pusiste'} <b>${usd0(p.inv)}</b>, valía <b>${usd0(p.valor)}</b>` +
     (p.inv ? ` (<b data-tono="${gan >= 0 ? 'sube' : 'baja'}">${usdSigno(gan)}</b>)` : '');
   if (anunciar) document.getElementById('v-sr').textContent = V.lectura.textContent;
 }

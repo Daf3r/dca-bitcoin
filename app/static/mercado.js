@@ -33,6 +33,7 @@ const editar = (id) => { if (esAdmin()) { if ($('d-grafico').open) $('d-grafico'
 const datosGrafico = () => ({
   serie: serieGrafico(S.historico, S.precio, hoyISO()), compras: R.items.filter((c) => c.tipo !== 'venta'), ventas: R.items.filter((c) => c.tipo === 'venta'),
   promedio: R.promedio, rango: S.rango, hoy: hoyISO(), maximo30: caidaVisible(), log: S.rango === 0 && escalaLog, editar: esAdmin() ? editar : null,
+  libro: vozLibro(), // a quien solo mira, las lecturas le hablan del libro (campamento 20)
 });
 export function pintarMercado() {
   const host = $('lienzo');
@@ -90,7 +91,7 @@ export function pintarValor() {
   $('valor').hidden = serie.length < 2;
   if (serie.length < 2) return;
   anchoValor = $('v-lienzo').clientWidth;
-  dibujarValor($('v-lienzo'), $('v-lectura'), { serie });
+  dibujarValor($('v-lienzo'), $('v-lectura'), { serie, libro: vozLibro() });
   const c = costoVsPromedio(R, S.historico, S.precio, hoyISO());
   $('v-vs').hidden = !c;
   if (c) $('v-vs').textContent = textoVs(c);
@@ -99,13 +100,14 @@ export function pintarValor() {
 function textoVs(c) {
   const meses = Math.round(c.dias / 30.44);
   const periodo = c.dias < 60 ? `estas ${Math.round(c.dias / 7)} semanas` : `estos ${meses} meses`;
-  const base = `Tu costo promedio (${usd0(c.costo)})`;
+  const lb = vozLibro();
+  const base = `${lb ? 'El costo promedio del libro' : 'Tu costo promedio'} (${usd0(c.costo)})`;
   const prom = `precio promedio de ${periodo} (${usd0(c.promedio)})`;
   if (Math.abs(c.cambio) < 0.5) return `${base} es casi igual al ${prom}.`;
   const p = Math.abs(c.cambio).toFixed(1);
   return c.cambio < 0
     ? `${base} está un ${p}% por debajo del ${prom}. Es el efecto de comprar poco y seguido: cuando el precio baja, los mismos dólares compran más sats.`
-    : `${base} está un ${p}% por encima del ${prom}. Pasa según en qué momentos coincidieron tus compras con las subidas y bajadas del precio.`;
+    : `${base} está un ${p}% por encima del ${prom}. Pasa según en qué momentos coincidieron ${lb ? 'las compras' : 'tus compras'} con las subidas y bajadas del precio.`;
 }
 instalarLecturaValor($('v-lienzo'));
 new ResizeObserver(() => { if ($('v-lienzo').clientWidth && $('v-lienzo').clientWidth !== anchoValor) pintarValor(); }).observe($('v-lienzo'));
@@ -165,12 +167,13 @@ function pintarCosto() {
   const u = serie.at(-1), p0 = serie[0];
   const dif = u && p0 ? (u.costo / p0.costo - 1) * 100 : 0;
   const mov = masMovieron(serie, 3);
+  const lb = vozLibro();
   dibujarEscalera(h, $('c-lectura'), $('c-sr'), {
     puntos: serie.map((p) => ({ ...p, v: p.costo })), escalon: false, desdeCero: false, fmtEje: usd0,
-    defecto: u ? `Tu costo promedio empezó en <b>${usd0(p0.costo)}</b> y hoy es <b>${usd0(u.costo)}</b> (${pct(dif)}).` : '',
+    defecto: u ? `${lb ? 'El costo promedio' : 'Tu costo promedio'} empezó en <b>${usd0(p0.costo)}</b> y hoy es <b>${usd0(u.costo)}</b> (${pct(dif)}).` : '',
     texto: (p) => `${fechaLarga(p.fecha)} · costo promedio <b>${usd0(p.costo)}</b>` +
-      (p.cambio == null ? ' (tu primera compra)' : ` · esta compra lo ${p.cambio <= 0 ? 'bajó' : 'subió'} <b>${usdSigno(Math.abs(p.cambio)).replace('+', '')}</b> (${pct(p.pct)})`),
-    aria: 'Tu costo promedio con cada compra. Usa las flechas para recorrerlo.',
+      (p.cambio == null ? (lb ? ' (la primera compra)' : ' (tu primera compra)') : ` · esta compra lo ${p.cambio <= 0 ? 'bajó' : 'subió'} <b>${usdSigno(Math.abs(p.cambio)).replace('+', '')}</b> (${pct(p.pct)})`),
+    aria: lb ? 'El costo promedio del libro con cada compra. Usa las flechas para recorrerlo.' : 'Tu costo promedio con cada compra. Usa las flechas para recorrerlo.',
   });
   $('c-mov').textContent = mov.length ? `Las compras que más lo movieron: ${mov.map((p) => `${fechaLarga(p.fecha)} (${pct(p.pct)})`).join(' · ')}.` : '';
 }
@@ -179,11 +182,12 @@ function pintarSatsAcum() {
   const serie = R.nCompras >= 2 ? serieSatsAcum(R.items, hoyISO()) : [];
   const h = $('s-lienzo');
   anchoSats = h.clientWidth;
+  const lb = vozLibro();
   dibujarEscalera(h, $('s-lectura'), $('s-sr'), {
-    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, perfil: { etapas: [...etapasHasta(etapaSiguiente(R.sats))], rotulo: vozLibro() ? 'Vamos aquí' : 'Tú' }, fmtEje: (v) => `${numCorto(v)} sats`,
-    defecto: `Hoy tienes <b>${entero(R.sats)} sats</b>.`,
+    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, perfil: { etapas: [...etapasHasta(etapaSiguiente(R.sats))], rotulo: lb ? 'Vamos aquí' : 'Tú' }, fmtEje: (v) => `${numCorto(v)} sats`,
+    defecto: lb ? `Hoy el libro tiene <b>${entero(R.sats)} sats</b>.` : `Hoy tienes <b>${entero(R.sats)} sats</b>.`,
     texto: (p) => (p.hoy ? `Hoy · <b>${entero(p.sats)} sats</b>` : `${fechaLarga(p.fecha)} · ${p.delta >= 0 ? '+' : '−'}${entero(Math.abs(p.delta))} sats · <b>${entero(p.sats)}</b> en total${p.tipo === 'venta' ? ' (venta o gasto)' : ''}`),
-    aria: 'Tus sats acumulados con cada compra. Usa las flechas para recorrerlo.',
+    aria: lb ? 'Los sats del libro, acumulados con cada compra. Usa las flechas para recorrerlo.' : 'Tus sats acumulados con cada compra. Usa las flechas para recorrerlo.',
   });
 }
 

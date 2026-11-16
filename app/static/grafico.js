@@ -17,7 +17,7 @@ let primeraVez = true;
  * flotante y la zona que anuncia a los lectores de pantalla (fuera del contenedor, que es `role="img"`). `editar(id)`: abrir una
  * compra para editarla (solo el admin).
  */
-export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], promedio, rango, hoy, maximo30 = null, log = false, alto = null, tarjeta = null, sr = null, editar = null }) {
+export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], promedio, rango, hoy, maximo30 = null, log = false, alto = null, tarjeta = null, sr = null, editar = null, libro = false }) {
   const W = Math.max(280, host.clientWidth);
   const H = alto ? Math.max(200, Math.round(alto)) : W < 560 ? 250 : W < 900 ? 300 : 340;
   const previo = EST.get(host) ?? null;
@@ -101,7 +101,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   if (promedio) {
     const yp = promDentro ? y(promedio) : f(promedio) < lo ? H - m.b - 4 : m.t + 4;
     if (promDentro) s += `<line class="g-prom" x1="${m.l}" x2="${W - m.r}" y1="${f1(yp)}" y2="${f1(yp)}"/>`;
-    const txt = `Tu costo ${usd0(promedio)}${promDentro ? '' : f(promedio) < lo ? ' ↓' : ' ↑'}`;
+    const txt = `${libro ? 'Costo' : 'Tu costo'} ${usd0(promedio)}${promDentro ? '' : f(promedio) < lo ? ' ↓' : ' ↑'}`;
     const ty = promDentro ? yp - 24 : f(promedio) < lo ? yp - 22 : yp;
     etiquetaCosto = `<g class="g-prom-tag"><rect x="${m.l}" y="${f1(ty)}" width="${f1(txt.length * 7 + 16)}" height="20" rx="10"/><text x="${m.l + 8}" y="${f1(ty + 14)}">${txt}</text></g>`;
   }
@@ -124,7 +124,7 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   if (promedio) s += etiquetaCosto;
   if (enRango.length && enRango.length <= 2) {
     const c = enRango.at(-1), [cx, cy] = cxy.at(-1);
-    const k = compras.length === 1 ? 'Tu primera compra' : 'Tu última compra';
+    const k = compras.length === 1 ? (libro ? 'La primera compra' : 'Tu primera compra') : libro ? 'La última compra' : 'Tu última compra';
     const l2 = `a ${usd0(c.precio)} · ${fechaCorta(c.fecha)}`;
     const ancho = Math.max(k.length * 7.6, l2.length * 7.2) + 8;
     // Se prueban varias posiciones (a cada lado y a distintas alturas, incluida la pegada al fondo o al techo) y gana la que
@@ -166,8 +166,8 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   const periodo = { 30: 'en el último mes', 182: 'en los últimos 6 meses', 365: 'en el último año' }[rango] ?? `desde ${mes(pts[0].fecha)}`;
   // (Campamento 20) Sin cortes entre una cifra y su unidad («286 compras»).
   const defecto = pegarHtml(`BTC <b>${usd0(u.p)}</b> hoy, <b data-tono="${cambio >= 0 ? 'sube' : 'baja'}">${pct(cambio)}</b> ${periodo}.` +
-    (enRango.length ? ` <span class="lec-tuya">${enRango.length} ${enRango.length === 1 ? 'compra tuya' : 'compras tuyas'} aquí.</span>` : ''));
-  const est = { host, lectura, pts, x, y, W, H, visible, enRango, defecto, sel: null, rango, puntos, tarjeta, sr, editar, fijada: null };
+    (enRango.length ? ` <span class="lec-tuya">${enRango.length} ${enRango.length === 1 ? (libro ? 'compra del libro' : 'compra tuya') : libro ? 'compras del libro' : 'compras tuyas'} aquí.</span>` : ''));
+  const est = { host, lectura, pts, x, y, W, H, visible, enRango, defecto, sel: null, rango, puntos, tarjeta, sr, editar, fijada: null, libro };
   EST.set(host, est);
   lectura.innerHTML = defecto;
   // Si había una compra fijada y sigue ahí tras repintar (el precio se refresca cada 30 s), se conserva su tarjeta.
@@ -206,7 +206,7 @@ function tarjetaLectura(g, p, compra, desde) {
   tx(t, '.gt-fecha', p.vivo ? 'Ahora' : fechaLarga(p.fecha));
   tx(t, '.gt-precio', `BTC ${usd0(p.p)}`);
   tx(t, '.gt-sub', p.vivo ? '' : `Desde entonces ${pct(desde)}`);
-  tx(t, '.gt-nota', compra ? `Compraste ${entero(compra.sats)} sats a ${usd0(compra.precio)}` : '');
+  tx(t, '.gt-nota', compra ? `${g.libro ? 'Se compraron' : 'Compraste'} ${entero(compra.sats)} sats a ${usd0(compra.precio)}` : '');
   posicionar(t, g.x(p.fecha));
   t.hidden = false;
 }
@@ -267,7 +267,7 @@ function marcar(host, i, teclado = false) {
   // El dato va en la tarjeta y se anuncia a los lectores de pantalla; el texto de arriba NO cambia (si cambiara de alto, el gráfico
   // y la leyenda se correrían bajo el dedo y el toque caería en otro sitio). Sin tarjeta, se escribe ahí como antes.
   const texto = `${p.vivo ? 'Ahora' : fechaLarga(p.fecha)} · BTC ${usd0(p.p)}${p.vivo ? '' : ` · desde entonces ${pct(desde)}`}` +
-    (compra ? `. Compraste ${entero(compra.sats)} sats a ${usd0(compra.precio)} el ${fechaCorta(compra.fecha)} (hoy ${usdSigno((compra.sats / 1e8) * g.pts.at(-1).p - compra.monto)})` : '');
+    (compra ? `. ${g.libro ? 'Se compraron' : 'Compraste'} ${entero(compra.sats)} sats a ${usd0(compra.precio)} el ${fechaCorta(compra.fecha)} (hoy ${usdSigno((compra.sats / 1e8) * g.pts.at(-1).p - compra.monto)})` : '');
   if (!g.tarjeta) g.lectura.textContent = texto;
   tarjetaLectura(g, p, compra, desde);
   if (teclado && g.sr) g.sr.textContent = texto;

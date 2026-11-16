@@ -1,5 +1,5 @@
 import { avisar } from './avisar.js';
-import { R, S, api, normalizar } from './estado.js';
+import { R, S, api, normalizar, vozLibro } from './estado.js';
 import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
 import { pintar, pintarLinea, pintarPrecio } from './pintar.js';
 import { entradaTarjetas } from './entrada.js';
@@ -81,7 +81,7 @@ export async function cargarCompras() {
     if (teniaError) avisar(''); // solo se quita el aviso de error propio: un «Deshacer» o un «Reconectando…» a la vista se quedan
   } catch (e) {
     S.errorCarga = true;
-    avisar(`No se pudieron cargar tus compras. ${e.status === 0 ? e.message : ''}`.trim(), cargarCompras);
+    avisar(`No se pudieron cargar ${vozLibro() ? 'las compras' : 'tus compras'}. ${e.status === 0 ? e.message : ''}`.trim(), cargarCompras);
   }
   const primeraVez = !S.cargado;
   S.cargado = true;
