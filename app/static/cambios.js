@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-w', fecha: '2026-11-25',
+    items: [
+      'La montaña se ve de una pieza: cada campamento está en un rellano tallado en la ladera, con su roca detrás y su sombra, y su nombre se apoya en esa misma repisa.',
+      'El camino también va tallado en la roca: se nota el corte por arriba y el borde por abajo.',
+      'La cumbre cambió: la bandera de la meta está en un escalón de nieve, resguardada por la roca, y ya no parece puesta encima.',
+      'La nieve sigue los pliegues de la montaña y baja en lenguas desiguales; su lado en sombra toma el color del cielo.',
+      'Las marcas de las etapas en el camino son más finas y nunca se amontonan: la siguiente siempre se ve, en naranja.',
+    ],
+  },
+  {
     id: '2026-11-v', fecha: '2026-11-24',
     items: [
       'En el teléfono, las pestañas y «Anotar» van juntas en una sola barra abajo, al alcance del pulgar: «Anotar» es el botón naranja del centro. Tocar una pestaña enseña su contenido desde el principio; tocar la que ya estás sube a la montaña.',
