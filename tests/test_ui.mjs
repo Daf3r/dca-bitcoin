@@ -2549,7 +2549,8 @@ try {
     } finally { sBon.parar(); }
     const sAnio = await servidor('anio');
     try {
-      const { ctx, p } = await ent(navegador, sAnio, ADMIN, {}, sinAviso);
+      // Con un día fijo: la víspera de las Leónidas (16 nov) trae estrellas fugaces de más y rompería la cuenta.
+      const { ctx, p } = await ent(navegador, sAnio, ADMIN, {}, fijarDia('2026-03-10'));
       ok(await p.locator('#s-bonito').isHidden() && await p.locator('.arbol-honor').count() === 0 && await p.locator('.fugaz').count() === 1, 'un saldo corriente no es bonito, no hay árboles de honor y hay una sola fugaz');
       // Pupusas (28): siete toques seguidos al saldo.
       for (let i = 0; i < 7; i++) await p.click('#s-saldo-v');
