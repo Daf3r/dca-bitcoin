@@ -505,7 +505,7 @@ const DH = 15, RELLANO_CIMA = 7.2;
  */
 function terrazas(campos, e, sol, [sx, sy]) {
   const t = { sombra: '', pie: '', corte: '', corteLuz: '', muro: '', muroLuz: '', suelo: '', nieve: '', nieveS: '' };
-  for (const { m, p, cima, lado } of campos) {
+  for (const { p, cima, lado } of campos) {
     if (cima) {
       const d = (pts) => `M${pts.map(([x, y]) => `${f1(sx + x * e)} ${f1(sy + y * e)}`).join('L')}Z`, r = RELLANO_CIMA;
       t.corte += d([[-8, r - 2.2], [-6, r - 7], [0, r - 9.5], [7, r - 8.5], [11.5, r - 2.6]]);

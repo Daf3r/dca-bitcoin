@@ -3953,7 +3953,7 @@ try {
     }
   }
 
-  // ---------------------------------------------------------------- campamentos (arte): hitos tallados, farol, apartadero y cumbre
+  // ---------------------------------------------------------------- campamentos (arte) y campamento 21: hitos tallados, farol, rellanos, cumbre y marcas de etapa
   {
     const srv = await servidor('ballena');
     try {
@@ -3964,7 +3964,18 @@ try {
           cima: g.classList.contains('es-cima'), alcanzado: g.classList.contains('alcanzado'), sig: g.classList.contains('sig'),
           luzALaDerecha: cx(g.querySelector('.campo-ico')) > cx(g.querySelector('.hito-sombra')),
           piedra: [g.querySelectorAll('.campo-ico').length, g.querySelectorAll('.hito-sombra').length],
-          apartadero: g.querySelectorAll('.hito-rellano').length, contornos: [...g.querySelectorAll('.campo-ico, .hito-sombra, .hito-techo, .farol-cuerpo, .farol-techo')].filter((e) => getComputedStyle(e).stroke !== 'none').length,
+          contornos: [...g.querySelectorAll('.campo-ico, .hito-sombra, .hito-techo, .farol-cuerpo, .farol-techo')].filter((e) => getComputedStyle(e).stroke !== 'none').length,
+          ...(() => { // campamento 21: el pie del hito pisa su rellano (en la cumbre, el escalón de nieve), con su sombra al lado contrario del astro, y el rótulo queda pegado
+            const svg = document.querySelector('.montana svg'), inv = svg.getScreenCTM().inverse();
+            const pt = (x, y) => new DOMPoint(x, y).matrixTransform(inv);
+            const r = g.querySelector('.hito-sombra').getBoundingClientRect(), r2 = g.querySelector('.campo-ico').getBoundingClientRect();
+            const px = (Math.min(r.left, r2.left) + Math.max(r.right, r2.right)) / 2, py = Math.max(r.bottom, r2.bottom);
+            const suelo = document.querySelector(g.classList.contains('es-cima') ? '.tz-nieve' : '.tz-suelo'), pie = document.querySelector('.tz-pie');
+            const sol = [...document.querySelectorAll('.montana .halo')].map((h) => h.getBoundingClientRect()).find((q) => q.width > 0);
+            const haciaSombra = sol.left + sol.width / 2 > px ? -1 : 1, e = r2.height / 12;
+            const caja = g.getBoundingClientRect(), nombre = g.dataset.m;
+            return { enRellano: suelo.isPointInFill(pt(px, py + 0.5)), conSombra: pie.isPointInFill(pt(px + haciaSombra * 6 * Math.max(1, e / 1.4), py + 1.2 * Math.max(1, e / 1.4))), px, py, caja: [caja.left, caja.top, caja.right, caja.bottom], nombre };
+          })(),
           vidrio: getComputedStyle(g.querySelector('.farol-cuerpo')).fill, halo: op(g.querySelector('.farol-halo')), suelo: g.querySelector('.luz-suelo') ? op(g.querySelector('.luz-suelo')) : null,
           bano: g.querySelector('.hito-bano') ? op(g.querySelector('.hito-bano')) : null, pulso: [g.querySelector('.humo').getAttribute('fill'), getComputedStyle(g.querySelector('.humo')).stroke],
           alto: Math.round(g.querySelector('.campo-ico').getBoundingClientRect().height),
@@ -3973,7 +3984,12 @@ try {
         const sol = [...document.querySelectorAll('.montana .halo')].map((h) => h.getBoundingClientRect()).find((q) => q.width > 0), pico = cima.querySelector('.cima-mastil').getBoundingClientRect();
         return { campos, solALaDerecha: sol.left + sol.width / 2 > pico.left + pico.width / 2, bandera: cima.querySelector('.banderin').tagName.toLowerCase(), pliegue: cima.querySelectorAll('.banderin .banderin-pliegue').length,
           mastil: getComputedStyle(cima.querySelector('.cima-mastil')).stroke, nieve: getComputedStyle(document.querySelector('.nieve')).fill, nodos: document.querySelectorAll('.montana svg *').length,
-          aros: document.querySelectorAll('#m-campos circle[stroke], #m-campos .humo:not([fill])').length };
+          aros: document.querySelectorAll('#m-campos circle[stroke], #m-campos .humo:not([fill])').length,
+          terrazas: { nodos: document.querySelectorAll('#m-terrazas *').length, recorte: document.getElementById('m-terrazas').getAttribute('clip-path'), rellanos: (document.querySelector('.tz-suelo').getAttribute('d').match(/M/g) || []).length, cortes: (document.querySelector('.tz-corte').getAttribute('d').match(/M/g) || []).length, repisas: (document.getElementById('m-repisa').getAttribute('d') || '').length > 0 },
+          rotulos: [...document.querySelectorAll('#m-etiquetas .campo-txt:not(.etapa-txt)')].map((t) => { const r = t.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; }),
+          etapas: [...document.querySelectorAll('#m-etapas > *')].map((e) => e.tagName.toLowerCase()).join(), camino: [document.querySelectorAll('.sendero-corte path').length, document.querySelectorAll('.sendero-talud path').length, document.querySelectorAll('.sendero-tierra path').length],
+          bandera2: (() => { const svg = document.querySelector('.montana svg'), inv = svg.getScreenCTM().inverse(), b = cima.querySelector('.banderin').getBoundingClientRect(), monte = document.querySelector('.monte');
+            return [[b.left + 1, b.top + b.height / 2], [b.right - 2.5, b.top + b.height / 2], [b.left + b.width / 2, b.top + 2]].every(([x, y]) => monte.isPointInFill(new DOMPoint(x, y).matrixTransform(inv))); })() };
       });
       const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
       const efectos = () => { try { localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
@@ -3984,7 +4000,17 @@ try {
       eq([hitos.length, hitos.every((c) => c.alcanzado), cima.sig], [3, true, true], 'arte: tres hitos alcanzados y la cumbre como siguiente');
       ok(a.campos.every((c) => c.piedra.join() === '1,1' && c.contornos === 0), `arte: cada hito es un solo trazo por cara (luz y sombra), sin contornos de dibujo (${a.campos.map((c) => c.piedra.join('/')).join(' ')})`);
       ok(a.campos.every((c) => c.luzALaDerecha === a.solALaDerecha), 'arte: la cara iluminada de cada hito mira al astro, esté a un lado u otro del sendero');
-      ok(hitos.every((c) => c.apartadero === 1), 'arte: cada hito se apoya en su apartadero');
+      // Campamento 21: cada campamento se asienta en un rellano tallado (terreno, recortado por la silueta, pocos nodos) y su rótulo queda pegado a él.
+      const pegados = (m) => m.campos.map((c) => Math.min(...m.rotulos.map(([l, t, r, b]) => Math.hypot(Math.max(c.caja[0] - r, l - c.caja[2], 0), Math.max(c.caja[1] - b, t - c.caja[3], 0)))));
+      ok(a.campos.every((c) => c.enRellano), `montaña asentada: el pie de cada hito pisa su rellano; en la cumbre, el escalón de nieve (${a.campos.map((c) => c.enRellano)})`);
+      ok(hitos.every((c) => c.conSombra), `montaña asentada: cada hito echa su sombra en el rellano, al lado contrario del astro (${hitos.map((c) => c.conSombra)})`);
+      eq([a.terrazas.rellanos, a.terrazas.cortes, a.terrazas.recorte], [3, 4, 'url(#m-silueta)'], 'montaña asentada: un rellano con su corte de roca por campamento (y el de la cumbre), recortados por la silueta');
+      ok(a.terrazas.nodos <= 12, `montaña asentada: los rellanos son terreno de pocos nodos, un trazo por tono (${a.terrazas.nodos})`);
+      ok(a.rotulos.length === 4 && pegados(a).every((d) => d <= 30), `montaña asentada: cada rótulo queda pegado a su campamento (${pegados(a).map(Math.round)} px)`);
+      ok(a.terrazas.repisas, 'montaña asentada: la repisa se alarga bajo el rótulo que se apoya en ella');
+      ok(a.bandera2, 'montaña asentada: la bandera de la meta tiene montaña detrás (no asoma contra el cielo)');
+      eq(a.etapas, 'path,path,path,path', 'montaña asentada: las marcas de etapa son cuatro trazos, haya las etapas que haya');
+      ok(a.camino[0] === a.camino[2] && a.camino[1] === a.camino[2] && a.camino[2] >= 5, `montaña asentada: el camino está tallado (corte arriba y talud abajo en cada tramo: ${a.camino})`);
       ok(hitos[0].alto < hitos[1].alto && hitos[1].alto < hitos[2].alto, `arte: cada campamento es más alto que el anterior (${hitos.map((c) => c.alto)})`);
       ok(hitos.every((c) => c.vidrio === 'rgb(255, 231, 174)' && c.halo > 0.8 && c.suelo > 0.4 && c.bano > 0.6), `arte: alcanzado = farol encendido, con halo, luz en el suelo y luz bajando por la piedra (${hitos[0].halo}, ${hitos[0].suelo})`);
       ok(cima.vidrio === 'rgb(240, 161, 72)' && Math.abs(cima.halo - hitos[0].halo / 2) < 0.02, `arte: el siguiente lleva la brasa y medio halo (${cima.vidrio}, ${cima.halo})`);
@@ -4002,6 +4028,7 @@ try {
       const t = await entrar(navegador, srv, ADMIN, { hora: 20 }, () => { try { localStorage.setItem('libro.efectos', 'esenciales'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }); await cerrar(t.p);
       const c = await medir(t.p);
       const quieto = await t.p.evaluate(() => [...document.querySelectorAll('#m-campos .humo, #m-campos .fogata')].every((e) => getComputedStyle(e).display === 'none'));
+      ok(c.campos.every((x) => x.enRellano) && c.bandera2, 'montaña asentada: en el teléfono también, cada hito en su rellano y la bandera con montaña detrás');
       ok(c.nodos < 800 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
       await t.ctx.close();
     } finally {

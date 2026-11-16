@@ -1064,4 +1064,20 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(mes[0].grupo && mes[0].id === 'm-2026-01' && mes[0].nombre === 'enero de 2026' && !mes[0].extra, 'un punto por mes: se sabe que es un mes y cuál');
   eq(L.UMBRAL_POR_MES, 150, 'un punto por mes: desde más de 150 compras a la vista');
 }
+{
+  // Campamento 21: las marcas de etapa de la montaña no se amontonan (aunque la escalera de etapas sea densa).
+  const L = await import('../app/static/lib.js');
+  eq([250_000, 500_000, 2.5e8, 5e9].map(L.etapaMayor), [true, true, true, true], 'marcas de etapa: 2.5 y 5 de cada potencia son las mayores');
+  eq([100_000, 150_000, 200_000, 300_000, 750_000, 0].map(L.etapaMayor), [false, false, false, false, false, false], 'marcas de etapa: las demás (y un valor vacío) no');
+  // Una escalera densa (1.5, 2, 2.5, 3, 4, 5, 6, 7.5) en escala logarítmica sobre 120 px de sendero por década.
+  const marcas = [1.5, 2, 2.5, 3, 4, 5, 6, 7.5].map((k) => ({ m: k * 1e6, l: Math.log10(k) * 120, mayor: L.etapaMayor(k * 1e6) }));
+  const vistas = L.marcasEtapa(marcas, 4e6, 11);
+  const ls = vistas.map((x) => x.l).sort((a, b) => a - b);
+  ok(ls.slice(1).every((l, i) => l - ls[i] >= 11 || vistas.some((x) => x.m === 4e6 && (x.l === l || x.l === ls[i]))), 'marcas de etapa: entre dos marcas dibujadas quedan 11 px o más (salvo junto a la siguiente)');
+  ok(vistas.some((x) => x.m === 4e6) && vistas.some((x) => x.m === 2.5e6) && vistas.some((x) => x.m === 5e6), 'marcas de etapa: la siguiente y las mayores entran siempre que caben');
+  ok(vistas.length < marcas.length && !vistas.some((x) => x.m === 3e6 || x.m === 6e6), `marcas de etapa: las que quedarían encimadas no se dibujan (${vistas.length} de ${marcas.length})`);
+  eq(L.marcasEtapa(marcas, 6e6, 0).length, marcas.length, 'marcas de etapa: sin hueco mínimo entran todas');
+  eq(L.marcasEtapa([{ m: 1, l: 0, mayor: false }, { m: 2, l: 1, mayor: false }], 2, 50).map((x) => x.m), [2], 'marcas de etapa: la siguiente gana el sitio a una marca vecina');
+  eq(L.marcasEtapa([], 5, 11), [], 'marcas de etapa: sin etapas, nada');
+}
 console.log(`OK ${n} comprobaciones`);
