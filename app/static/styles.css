@@ -3426,7 +3426,8 @@ html[data-tv] .tv-nombre:not([hidden]) { display: block; flex-basis: 100%; margi
 .c-montana { letter-spacing: 0.01em; }
 
 
-/* ======================================================= Campamento 20 · «Tu historia»: el dibujo de hoy y las secciones plegadas (5a). */
+/* ======================================================= Campamento 20 · «Tu historia»: el dibujo de hoy y las secciones plegadas (5a)
+   y el primer año del tronco y la manta (5b). */
 /* El dibujo de hoy: una portada arriba de la historia. El dibujo no se toca aquí (se abre abajo con «Verlo de cerca»). */
 .dh-hoy { display: grid; gap: 4px 20px; margin: 0 0 16px; padding: 18px 18px 20px; border-radius: 24px; background-color: var(--s1); }
 .dh-hoy[hidden] { display: none; }
@@ -3466,3 +3467,11 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
 .dh-sec > :not(summary) { margin-inline: 18px; }
 .dh-sec .historia { margin-top: 6px; }
 @media (max-width: 359px) { .dh-sec > summary { padding-left: 14px; } .dh-sec > :not(summary) { margin-inline: 12px; } }
+
+/* El tronco del primer año: la vuelta que falta para cerrar el primer anillo, punteada y tenue (no se toca). */
+.ht-falta { fill: none; stroke: var(--ht-vivo, #e9d9a6); stroke-width: 1.4; stroke-dasharray: 2 5; stroke-linecap: round; opacity: 0.55; pointer-events: none; }
+/* Entre un mes y otro, una línea fina y clara (la de un año es la madera tardía, oscura): que no se lea como trece años. */
+.h-tronco-primer .ht-tardia { stroke: var(--ht-vivo, #e9d9a6); stroke-width: 0.7; opacity: 0.5; }
+/* La manta del primer año: la urdimbre del telar se ve donde aún no hay tela. */
+.ha-telar { opacity: 0.85; }
+.dh-lienzo :is(.ha-telar, .ht-falta) { pointer-events: none; }

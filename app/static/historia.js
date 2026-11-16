@@ -1,5 +1,5 @@
-import { aniosTronco, datosCertificado, entero, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, objetoDeHoy, partitura, piedrasTorre, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco } from './lib.js';
-import { constelacion, estratos, manta, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
+import { aniosTronco, datosCertificado, entero, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, mantaPrimerAnio, mesesTronco, objetoDeHoy, partitura, piedrasTorre, primerAnio, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoMantaPrimer, textoMesTronco, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco, textoTroncoPrimer } from './lib.js';
+import { constelacion, estratos, manta, mantaPrimer, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
 import { ico, ilustracion, medalla } from './iconos.js';
@@ -20,11 +20,16 @@ const parar = () => { pararMusica?.(); pararMusica = null; };
 
 /**
  * El dibujo de una vista, con su texto (lo usan el selector y la portada del dibujo de hoy). `tipo` y `lista` sirven para leer una
- * pieza al tocarla o con el teclado.
+ * pieza al tocarla o con el teclado. (Campamento 20) En el primer año del libro, el tronco y la manta tienen su forma propia
+ * (`lib.primerAnio`): el tronco por meses y la manta como una pieza de cuatro hileras.
  */
 function dibujoDe(vh, sel = null) {
   const hoy = hoyISO(), items = R.items, lb = vozLibro();
   if (vh === 'tronco') {
+    if (primerAnio(items, hoy)) {
+      const t = mesesTronco(items, hoy);
+      return { tipo: 'tronco-mes', lista: t.meses, svg: tronco(t.meses, { sel, primer: t }), desc: textoTroncoPrimer(t, lb) };
+    }
     const t = aniosTronco(items, hoy);
     return { tipo: 'tronco', lista: t, svg: tronco(t, { sel }), desc: textoTronco(t, lb) };
   }
@@ -36,6 +41,7 @@ function dibujoDe(vh, sel = null) {
     return { tipo: vh, lista: y?.notas ?? [], anios: as, anio: y, svg: y ? dibujarPartitura(y, { sel }) : '', desc: textoPartitura(as, lb) };
   }
   if (vh === 'manta') {
+    if (primerAnio(items, hoy)) { const m = mantaPrimerAnio(items, hoy); return { tipo: 'manta', cols: m.cols, lista: m.celdas, svg: mantaPrimer(m, { sel }), desc: textoMantaPrimer(m, lb) }; }
     const m = semanasManta(items, hoy);
     return { tipo: 'manta', cols: 52, lista: m.celdas, svg: manta(m, { sel }), desc: textoManta(m, lb) };
   }
@@ -74,6 +80,8 @@ function pintarObjeto() {
   if (d.tipo === 'tronco') {
     for (const y of [...d.lista].reverse()) boton(y.anio, y.anio === seleccion);
     $('dh-detalle').textContent = seleccion != null ? textoAnio(d.lista.find((y) => y.anio === seleccion), lb) : 'Toca un anillo o un año para ver cómo fue.';
+  } else if (d.tipo === 'tronco-mes') {
+    $('dh-detalle').textContent = s ? textoMesTronco(s, lb) : 'Toca una banda (o usa las flechas) para ver ese mes.';
   } else if (d.tipo === 'constelacion') {
     $('dh-detalle').textContent = s ? `${fechaLarga(s.fecha)} · +${entero(s.sats)} sats${s.extra ? ' · compra extra' : ''}` : 'Toca una estrella (o usa las flechas) para ver esa compra.';
   } else if (d.tipo === 'estratos') {

@@ -1595,7 +1595,7 @@ export function comprobante(items, id, { precio = null, hoy = hoyISO() } = {}) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Campamento 20 · «Tu historia»: el dibujo de hoy (5a). Solo datos y textos.
+// Campamento 20 · «Tu historia»: el dibujo de hoy (5a) y el primer año del tronco y la manta (5b). Solo datos y textos.
 // ---------------------------------------------------------------------------------------------
 
 /** Los dibujos de «Tu historia», en el orden del selector, con el nombre que se les da en la portada. */
@@ -1629,4 +1629,79 @@ export function objetoDeHoy(items, hoy = hoyISO()) {
   if (!listos.length) return null;
   const [y, m, d] = hoy.split('-').map(Number);
   return listos[Math.round(Date.UTC(y, m - 1, d) / 864e5) % listos.length];
+}
+
+/** ¿El libro está en su primer año? Sí desde la primera compra hasta la víspera de su primer aniversario. */
+export function primerAnio(items, hoy = hoyISO()) {
+  const f = (items ?? []).filter((c) => c.tipo !== 'venta').map((c) => c.fecha).sort();
+  return Boolean(f.length) && sumarMeses(f[0], 12) > hoy;
+}
+
+/**
+ * El tronco del primer año (5b): un árbol joven todavía no tiene anillos de años, así que se dibuja por meses: una banda por mes, de
+ * la primera compra a hoy (el más viejo en el centro). Cada mes trae lo de `aniosTronco` (comprados, extras, ventas, saldo al cerrar)
+ * y sus marcas llevan `frac`, su lugar en el primer año (0 = la primera compra, 1 = el aniversario): así la vuelta del tronco es ese
+ * año y se cierra al cumplirlo. `fr` es cuánto del primer año ya pasó (para el borde vivo).
+ */
+export function mesesTronco(items, hoy = hoyISO()) {
+  const compras = (items ?? []).filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return { meses: [], fr: 0 };
+  const p = compras.map((c) => c.fecha).sort()[0];
+  const aniv = sumarMeses(p, 12);
+  const largo = (aFecha(aniv).getTime() - aFecha(p).getTime()) / 864e5;
+  const frDe = (f) => Math.min(1, Math.max(0, (aFecha(f).getTime() - aFecha(p).getTime()) / 864e5 / largo));
+  const mesHoy = hoy.slice(0, 7);
+  const meses = [];
+  for (let k = 0, f = `${p.slice(0, 7)}-01`; k < 13 && f.slice(0, 7) <= mesHoy; k++, f = sumarMeses(f, 1)) {
+    const [y, m] = f.split('-').map(Number);
+    meses.push({ i: k, mes: f.slice(0, 7), nombre: `${MESES_L[m - 1]} de ${y}`, comprados: 0, vendidos: 0, nCompras: 0, nExtras: 0, nVentas: 0, extras: [], ventas: [],
+      completo: f.slice(0, 7) < mesHoy, saldoFin: 0 });
+  }
+  for (const c of items) {
+    const y = meses.find((x) => x.mes === c.fecha.slice(0, 7));
+    if (!y) continue;
+    const marca = { fecha: c.fecha, sats: c.sats, frac: frDe(c.fecha) };
+    if (c.tipo === 'venta') { y.vendidos += c.sats; y.nVentas++; y.ventas.push(marca); }
+    else { y.comprados += c.sats; y.nCompras++; if (c.extra) { y.nExtras++; y.extras.push(marca); } }
+  }
+  for (const y of meses) y.saldoFin = satsEn(items, y.completo ? restarDias(sumarMeses(`${y.mes}-01`, 1), 1) : hoy); // al cerrar el mes (su último día)
+  return { meses, fr: frDe(hoy), desde: p, aniversario: aniv };
+}
+/** Lo que dice el tronco del primer año, para los lectores de pantalla y la portada. */
+export function textoTroncoPrimer(t, libro = false) {
+  const ms = t.meses;
+  if (!ms.length) return textoTronco([], libro);
+  const mejor = ms.reduce((m, y) => (y.comprados > m.comprados ? y : m), ms[0]);
+  const nudos = ms.reduce((a, y) => a + y.nExtras, 0);
+  return `${libro ? 'El tronco del libro' : 'Tu tronco'} está en su primer año: una banda por mes (${ms.length}), de ${ms[0].nombre} a ${ms.at(-1).nombre}. `
+    + `La más ancha es ${mejor.nombre}, con ${entero(mejor.comprados)} sats. Al cumplir un año, la primera vuelta se cierra y desde ahí cada anillo es un año.`
+    + (nudos ? ` Hay ${nudos} ${nudos === 1 ? 'nudo' : 'nudos'}: las compras extra.` : '');
+}
+/** Un mes del tronco del primer año, para leerlo al tocar su banda. */
+export function textoMesTronco(y, libro = false) {
+  const partes = [`${y.nombre.replace(/^./, (c) => c.toUpperCase())}${y.completo ? '' : ' (en curso)'}: ${y.nCompras} ${y.nCompras === 1 ? 'compra' : 'compras'}`];
+  if (y.comprados) partes.push(`+${entero(y.comprados)} sats`);
+  if (y.nExtras) partes.push(`${y.nExtras} extra`);
+  if (y.nVentas) partes.push(`${y.nVentas} ${y.nVentas === 1 ? 'venta' : 'ventas'} (−${entero(y.vendidos)} sats)`);
+  partes.push(libro ? `${y.completo ? 'cerró con' : 'hoy tiene'} ${entero(y.saldoFin)} sats` : `${y.completo ? 'cerraste con' : 'tienes'} ${entero(y.saldoFin)} sats`);
+  return partes.join(' · ');
+}
+
+/**
+ * La manta del primer año (5b): en vez de una fila por año del calendario (que dejaba una tira de unas semanas arriba y otra abajo),
+ * el primer año del libro se teje como una sola pieza de 4 hileras (una por trimestre del libro) de 13 semanas, de la primera semana
+ * a la del aniversario. Lo tejido son las semanas reales (las mismas celdas que `semanasManta`, con su tono); lo que falta es la
+ * urdimbre aún sin tejer. `cols` es 13 (14 si el año del libro abarca 53 semanas).
+ */
+export function mantaPrimerAnio(items, hoy = hoyISO()) {
+  const m = semanasManta(items, hoy);
+  const total = Math.max(52, m.celdas.length);
+  const cols = Math.ceil(total / 4);
+  return { primer: true, cols, filas: 4, total: cols * 4, celdas: m.celdas, semanasConCompra: m.semanasConCompra, futuras: cols * 4 - m.celdas.length };
+}
+/** Lo que dice la manta del primer año. */
+export function textoMantaPrimer(m, libro = false) {
+  if (!m.celdas.length) return textoManta({ celdas: [], anios: [] }, libro);
+  return `${libro ? 'La manta del libro' : 'Tu manta'} está en su primer año: 4 hileras de ${m.cols} semanas, ${m.celdas.length} ya tejidas `
+    + `(${m.semanasConCompra} con compra) y ${m.futuras} en el telar. Cuanto más oscuro el añil, más sats esa semana; el algodón crudo es una semana sin compras.`;
 }
