@@ -3701,6 +3701,264 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- campamento 18: el ritual de anotar
+  {
+    const srv = await servidor('anio');
+    try {
+      const ayerSV = () => { const [y, m, d] = hoySV().split('-').map(Number); return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10); };
+      // ---- 39 · Fecha con «Hoy · Ayer · Otro día»
+      {
+        const { ctx, p, consola } = await entrar(navegador, srv, ADMIN);
+        await p.click('#anotar'); await p.waitForTimeout(400);
+        const estado = () => p.evaluate(() => ({ pres: [...document.querySelectorAll('#h-dia button')].map((b) => b.getAttribute('aria-pressed')).join(','), otro: !document.getElementById('h-fecha-otro').hidden,
+          valor: document.getElementById('h-fecha').value, txt: document.getElementById('h-fecha-txt').textContent }));
+        let e = await estado();
+        eq([e.pres, e.otro, e.valor], ['true,false,false', false, hoySV()], '18·fecha: al abrir, «Hoy» y sin calendario a la vista');
+        ok(/^(lunes|martes|miércoles|jueves|viernes|sábado|domingo) \d{1,2} de [a-záéíóú]+$/.test(e.txt), `18·fecha: la fecha va escrita como aquí («${e.txt}»)`);
+        const altos = await p.evaluate(() => [...document.querySelectorAll('#h-dia button')].map((b) => Math.round(b.getBoundingClientRect().height)));
+        ok(altos.every((a) => a >= 47.5), `18·fecha: los tres botones miden 48 px (${altos})`);
+        await p.click('#h-dia [data-dia="ayer"]'); await p.waitForTimeout(150);
+        e = await estado();
+        eq([e.pres, e.otro, e.valor], ['false,true,false', false, ayerSV()], '18·fecha: «Ayer» pone la fecha de ayer');
+        await p.click('#h-dia-otro'); await p.waitForTimeout(200);
+        e = await estado();
+        ok(e.pres === 'false,false,true' && e.otro && await p.locator('#h-fecha').isVisible(), '18·fecha: «Otro día» enseña el calendario');
+        eq(await p.evaluate(() => document.activeElement.id), 'h-fecha', '18·fecha: y le da el foco');
+        await p.fill('#h-fecha', '2025-03-08'); await p.waitForTimeout(150);
+        e = await estado();
+        eq([e.txt, e.pres], ['sábado 8 de marzo de 2025', 'false,false,true'], '18·fecha: otro año se escribe con su año');
+        await p.click('#h-dia [data-dia="hoy"]'); await p.waitForTimeout(150);
+        e = await estado();
+        eq([e.pres, e.otro, e.valor], ['true,false,false', false, hoySV()], '18·fecha: «Hoy» vuelve a hoy y guarda el calendario');
+        // Con teclado: Espacio elige.
+        await p.focus('#h-dia [data-dia="ayer"]'); await p.keyboard.press('Space'); await p.waitForTimeout(150);
+        eq((await estado()).valor, ayerSV(), '18·fecha: se elige también con el teclado');
+        await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+        // Al editar una compra de otro día, sale en «Otro día» con su fecha.
+        const vieja = (await datos(p, '/api/compras'))[0];
+        await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+        await p.evaluate(() => { document.getElementById('l-orden').value = 'antiguas'; document.getElementById('l-orden').dispatchEvent(new Event('change')); }); await p.waitForTimeout(400);
+        await editarFila(p, `#lista .fila[data-id="${vieja.id}"]`); await p.waitForTimeout(500);
+        e = await estado();
+        eq([e.pres, e.otro, e.valor], ['false,false,true', true, vieja.fecha], '18·fecha: al editar una compra de otro día sale «Otro día» con su fecha');
+        await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+        await p.evaluate(() => { try { localStorage.removeItem('libro.lista.orden'); } catch { /* nada */ } });
+        eq(consola, [], `18·fecha: consola limpia: ${consola.join(' | ')}`);
+        await ctx.close();
+      }
+      // ---- 10 · Una respuesta, no tres renglones
+      {
+        const { ctx, p, consola } = await entrar(navegador, srv, ADMIN);
+        const saldoAntes = (await datos(p, '/api/compras')).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+        await p.click('#anotar'); await p.waitForTimeout(400);
+        const hoja = () => p.evaluate(() => ({ uno: document.getElementById('hc-uno').textContent, resp: document.getElementById('hc-uno').dataset.resp, pie: document.getElementById('hc-pie').hidden ? null : document.getElementById('hc-pie').textContent,
+          mas: !document.getElementById('h-cambia').hidden, abierto: document.getElementById('h-cambia').open, lineas: [...document.querySelectorAll('#hc-lineas > span')].map((x) => `${x.className}:${x.textContent}`),
+          guardado: localStorage.getItem('libro.hoja.cambia') }));
+        let h = await hoja();
+        ok(h.resp === '' && /^Escribe los sats que recibiste/.test(h.uno) && !h.mas && h.pie === null, '18·respuesta: sin sats, la ayuda de siempre y nada plegado');
+        ok(!/son ≈/.test(h.uno) && /Hoy \$1 = [\d,]+ sats\.$/.test(h.uno) && await p.locator('#h-habitual').isVisible(), '18·respuesta: con «Compra de siempre» a la vista, la ayuda no repite su cifra');
+        await p.fill('#h-sats', '30000'); await p.waitForTimeout(300);
+        h = await hoja();
+        eq([h.resp, h.uno.replace(/\$[\d,.]+/, '$N')], ['1', `≈ $N · quedas en ${entero(saldoAntes + 30000)} sats`], '18·respuesta: un renglón con los dólares y cómo queda el saldo');
+        ok(h.mas && !h.abierto && h.pie === null && await p.locator('#h-ruta').isHidden() && h.guardado === null, '18·respuesta: en el teléfono, «Qué cambia con esta compra» va cerrado');
+        eq(h.lineas.map((x) => x.split(':')[0]), ['ruta-txt', 'costo', 'hc-precio'], '18·respuesta: dentro van la etapa, el costo promedio y el precio');
+        const altoResumen = await p.evaluate(() => Math.round(document.querySelector('#h-cambia summary').getBoundingClientRect().height));
+        ok(altoResumen >= 47.5, `18·respuesta: el resumen mide 48 px (${altoResumen})`);
+        await p.click('#h-cambia summary'); await p.waitForTimeout(300);
+        h = await hoja();
+        ok(h.abierto && h.guardado === '1' && await p.locator('#h-ruta').isVisible() && await p.locator('#hoja-calc .costo').isVisible() && /^hc-precio:Precio de ahora: 1 BTC a \$[\d,]+\.$/.test(h.lineas[2]), `18·respuesta: un toque lo abre y el dispositivo lo recuerda («${h.lineas[2]}»)`);
+        // Con dólares escritos, el precio es el que pagaste.
+        await p.click('#h-avanzado summary'); await p.fill('#h-usd', '25'); await p.waitForTimeout(250);
+        h = await hoja();
+        ok(/^\$25\.00 · quedas en /.test(h.uno) && /^hc-precio:Precio que pagaste: 1 BTC a \$/.test(h.lineas[2]), `18·respuesta: con dólares exactos no hay «≈» y el precio es el pagado («${h.uno}»)`);
+        await p.fill('#h-usd', ''); await p.click('#h-avanzado summary'); await p.waitForTimeout(200);
+        // Ayer: el precio es un cierre y por eso va a la vista.
+        await p.click('#h-dia [data-dia="ayer"]'); await p.waitForTimeout(300);
+        h = await hoja();
+        ok(/^1 BTC a \$[\d,]+ \(cierre del \d+ [a-z]+\)$/.test(h.pie ?? '') && !h.lineas.some((x) => x.startsWith('hc-precio')), `18·respuesta: con otro día, el precio usado queda a la vista («${h.pie}»)`);
+        // Venta: una respuesta y el precio; nada plegado.
+        await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(300);
+        h = await hoja();
+        ok(/^≈ \$[\d,.]+ por la venta · quedas en [\d,]+ sats$/.test(h.uno) && !h.mas && /^1 BTC a /.test(h.pie ?? ''), `18·respuesta: una venta dice lo que queda y su precio («${h.uno}»)`);
+        await p.click('#h-tipo button[data-tipo="compra"]'); await p.waitForTimeout(200); // el borrador recuerda el tipo: se deja en compra
+        await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+        // Al volver a abrir, sigue abierto; cerrarlo también se recuerda.
+        await p.click('#anotar'); await p.waitForTimeout(400);
+        await p.fill('#h-sats', '30000'); await p.waitForTimeout(300);
+        ok((await hoja()).abierto, '18·respuesta: al volver a anotar sigue abierto');
+        await p.click('#h-cambia summary'); await p.waitForTimeout(250);
+        h = await hoja();
+        ok(!h.abierto && h.guardado === '0', '18·respuesta: y cerrarlo también se recuerda');
+        await p.fill('#h-sats', ''); await p.waitForTimeout(150); // sin borrador para las pruebas siguientes
+        await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+        eq(consola, [], `18·respuesta: consola limpia: ${consola.join(' | ')}`);
+        await ctx.close();
+      }
+      // En pantallas anchas va abierto desde el principio; y «Guardar» queda siempre a mano, también en un teléfono bajo o acostado.
+      for (const [w, alto] of [[1280, 800], [320, 568], [844, 390]]) {
+        const { ctx, p } = await entrar(navegador, srv, ADMIN, { viewport: { width: w, height: alto }, isMobile: false, hasTouch: false });
+        await p.click('#anotar'); await p.waitForTimeout(400);
+        await p.fill('#h-sats', '30000'); await p.waitForTimeout(400);
+        const m = await p.evaluate(() => {
+          const panel = document.querySelector('.hoja-panel'), g = document.getElementById('guardar').getBoundingClientRect();
+          return { abierto: document.getElementById('h-cambia').open, desborda: panel.scrollHeight > panel.clientHeight + 1, gAbajo: Math.round(g.bottom), gArriba: Math.round(g.top), alto: innerHeight, sw: panel.scrollWidth, cw: panel.clientWidth,
+            encima: document.elementFromPoint(g.left + g.width / 2, g.top + g.height / 2)?.id };
+        });
+        if (w >= 700 && alto > 520) ok(m.abierto, `18·respuesta: a ${w} px «Qué cambia…» va abierto`);
+        ok(m.gArriba >= 0 && m.gAbajo <= m.alto && m.encima === 'guardar', `18·hoja: «Guardar» se ve y se puede tocar a ${w}×${alto} (${m.gArriba}–${m.gAbajo} de ${m.alto}${m.desborda ? ', con la hoja desplazable' : ''})`);
+        ok(m.sw <= m.cw, `18·hoja: sin desborde horizontal a ${w}×${alto}`);
+        // Lo enfocado no queda detrás del botón pegado abajo.
+        await p.focus('#h-nota'); await p.waitForTimeout(250);
+        const f = await p.evaluate(() => { const n = document.getElementById('h-nota').getBoundingClientRect(), b = document.querySelector('.hoja-bot').getBoundingClientRect(); return { nAbajo: Math.round(n.bottom), bArriba: Math.round(b.top), nArriba: Math.round(n.top) }; });
+        ok(f.nAbajo <= f.bArriba + 12 && f.nArriba >= 0, `18·hoja: el campo enfocado no queda bajo «Guardar» a ${w}×${alto} (${f.nAbajo} ≤ ${f.bArriba})`);
+        await p.fill('#h-sats', ''); await p.waitForTimeout(150);
+        await ctx.close();
+      }
+      // ---- 16 · La semana en una línea
+      {
+        const { ctx, p, consola } = await entrar(navegador, srv, ADMIN);
+        await p.click('#anotar'); await p.waitForTimeout(400);
+        const campo = () => p.evaluate(() => ({ t: document.getElementById('h-nota-t').textContent, ay: !document.getElementById('h-nota-ay').hidden, vis: document.getElementById('h-nota').getBoundingClientRect().height, max: document.getElementById('h-nota').maxLength,
+          dentro: !!document.getElementById('h-nota').closest('details'), viejo: !!document.getElementById('h-nota-c') }));
+        let c = await campo();
+        eq([c.t, c.ay, c.max, c.dentro, c.viejo], ['¿Qué pasó esta semana en casa?', true, 120, false, false], '18·semana: en una compra la nota es la pregunta de la semana, a la vista y con 120 caracteres');
+        ok(c.vis >= 47.5 && /la ve toda la familia/.test(await p.textContent('#h-nota-ay')), '18·semana: el campo mide 48 px y dice que la ve toda la familia');
+        await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
+        c = await campo();
+        eq([c.t, c.ay], ['Nota (opcional)', false], '18·semana: en una venta sigue siendo «Nota»');
+        await p.click('#h-tipo button[data-tipo="traslado"]'); await p.waitForTimeout(200);
+        eq((await campo()).t, 'Nota (opcional)', '18·semana: y en un traslado');
+        await p.click('#h-tipo button[data-tipo="compra"]'); await p.waitForTimeout(200);
+        await p.fill('#h-sats', '21000');
+        await p.fill('#h-nota', 'Estrenamos la hamaca <b>nueva</b>');
+        await p.keyboard.press('Enter'); // Enter en el campo guarda, como en los demás
+        await p.waitForTimeout(1500);
+        if (await p.locator('#guardar').isVisible() && (await p.textContent('#guardar')).trim() === 'Sí, guardar así') { await p.click('#guardar'); await p.waitForTimeout(1500); } // «ya anotaste otra compra ese día»
+        const guardada = (await datos(p, '/api/compras')).find((x) => x.nota === 'Estrenamos la hamaca <b>nueva</b>');
+        ok(guardada && guardada.sats === 21000 && guardada.fecha === hoySV(), '18·semana: se guarda como la nota de la compra de hoy');
+        await p.waitForTimeout(6500);
+        await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' })); await p.waitForTimeout(300);
+        ok((await p.textContent(`#lista .fila[data-id="${guardada.id}"]`)).includes('Estrenamos la hamaca <b>nueva</b>'), '18·semana: la lista la enseña como texto (sin interpretar etiquetas)');
+        ok(await p.locator('#dia-nota').isHidden(), '18·semana: sin nota de hace un año, el Diario no cita nada');
+        eq(consola, [], `18·semana: consola limpia: ${consola.join(' | ')}`);
+        await ctx.close();
+      }
+      {
+        const eco = await servidor('eco');
+        try {
+          for (const cuenta of [ADMIN, LECTOR]) {
+            const { ctx, p, consola } = await entrar(navegador, eco, cuenta, { pestanas: true });
+            if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
+            const d = await p.evaluate(() => ({ plegado: document.getElementById('dia-abrir-d').textContent, k: document.getElementById('dia-nota-k').textContent, q: document.getElementById('dia-nota-q').textContent, oculto: document.getElementById('dia-nota').hidden }));
+            ok(!d.oculto && d.q === '«Sofi perdió su primer diente»' && /^El \d{1,2} [a-z]{3} \d{4} quedó anotado:$/.test(d.k), `18·semana: un año después el Diario la trae de vuelta (${cuenta[0]}: ${d.k} ${d.q})`);
+            ok(/hace un año, /.test(d.plegado), '18·semana: la portada plegada avisa de «hace un año»');
+            await p.click('#dia-abrir'); await p.waitForTimeout(400);
+            ok(await p.locator('#dia-nota').isVisible(), '18·semana: al abrir el Diario se lee la cita');
+            const sw = await p.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+            ok(sw[0] <= sw[1], '18·semana: el Diario con la cita no desborda');
+            eq(consola, [], `18·semana: consola limpia en el Diario: ${consola.join(' | ')}`);
+            await ctx.close();
+          }
+        } finally { eco.parar(); }
+      }
+      // ---- 17 · Comprobante de cada movimiento
+      {
+        const { ctx, p, consola } = await entrar(navegador, srv, ADMIN);
+        const txid = '0123456789abcdef'.repeat(4);
+        const st = await p.evaluate(([t, f]) => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: f, sats: 20000, monto: 15, txid: t, nota: 'Con su TXID', etiquetas: ['bono'], extra: true }) }).then((r) => r.status), [txid, ayerSV()]);
+        eq(st, 201, '18·comprobante: se anota una compra con TXID, nota y etiqueta');
+        await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2600);
+        const compras = (await datos(p, '/api/compras')).filter((x) => x.tipo !== 'venta').sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id - b.id));
+        const saldoHoy = compras.reduce((a, x) => a + x.sats, 0);
+        await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' })); await p.waitForTimeout(300);
+        const filas = await p.evaluate(() => [...document.querySelectorAll('#lista .fila')].map((f) => [f.tagName, f.textContent.trim().slice(0, 6)]));
+        ok(filas.length > 0 && filas.every(([t, x]) => t === 'BUTTON' && x === 'Ver la'), '18·comprobante: cada fila es un botón «Ver la compra del…»');
+        const ultima = compras.at(-1);
+        await p.click(`#lista .fila[data-id="${ultima.id}"]`); await p.waitForTimeout(500);
+        const leer = () => p.evaluate(() => ({ abierto: document.getElementById('d-comp').open, t: document.getElementById('cp-t').textContent, fecha: document.getElementById('cp-fecha').textContent, sats: document.getElementById('cp-sats').textContent,
+          extra: !document.getElementById('cp-extra').hidden, datos: Object.fromEntries([...document.querySelectorAll('#cp-datos .cp-fila')].map((f) => [f.querySelector('dt').textContent, f.querySelector('dd').textContent.replace(/\s+/g, ' ').trim()])),
+          alt: document.getElementById('cp-alt').hidden ? null : document.getElementById('cp-alt-t').textContent, nota: document.getElementById('cp-nota').hidden ? null : document.getElementById('cp-nota').textContent,
+          etq: document.getElementById('cp-etq').hidden ? [] : [...document.querySelectorAll('#cp-etq li')].map((x) => x.textContent), sello: document.getElementById('cp-sello').hidden ? null : `${document.getElementById('cp-sello-t').textContent} · ${document.getElementById('cp-sello-d').textContent}`,
+          tx: document.getElementById('cp-tx').hidden ? null : document.getElementById('cp-tx').textContent.replace(/\s+/g, ' ').trim(), editar: document.getElementById('cp-editar').hidden ? null : document.getElementById('cp-editar').textContent, foco: document.activeElement?.id }));
+        let c = await leer();
+        ok(c.abierto && c.t === `Compra n.º ${compras.length}` && c.sats === `+${entero(ultima.sats)} sats`, `18·comprobante: tocar la fila abre su comprobante («${c.t}», ${c.sats})`);
+        ok(/^(lunes|martes|miércoles|jueves|viernes|sábado|domingo) \d{1,2} de [a-záéíóú]+ de \d{4}$/.test(c.fecha), `18·comprobante: con la fecha escrita y su año («${c.fecha}»)`);
+        const num = (t) => Number(String(t).replace(/[^\d.]/g, ''));
+        eq([num(c.datos['Altitud después']), num(c.datos['Altitud después']) - num(c.datos['Altitud antes'])], [saldoHoy, ultima.sats], '18·comprobante: la altitud de antes y de después cuadran con el saldo');
+        ok(/^\$[\d,]+\.\d\d$/.test(c.datos.Pagaste) && /^\$[\d,]+$/.test(c.datos['Precio de BTC ese día']) && /^\$[\d,]+\.\d\d ((sube|baja) )?[+−]?\d+\.\d%$/.test(c.datos['Hoy valen']), `18·comprobante: lo que pagaste, el precio de ese día y lo que valen hoy (${c.datos.Pagaste} · ${c.datos['Hoy valen']})`);
+        ok(/^(De \d+ % a \d+ % del camino a |Con esta compra llegaste a )/.test(c.alt ?? ''), `18·comprobante: dónde quedó en la etapa («${c.alt}»)`);
+        ok(/^Sello de la semana n\.º \d+ · \d/.test(c.sello ?? '') && await p.locator('#cp-sello-ico svg').count() === 1, `18·comprobante: el sello de su semana («${c.sello}»)`);
+        eq([c.editar, c.foco], ['Editar', 'cp-cerrar'], '18·comprobante: quien anota ve «Editar» y el foco empieza en «Cerrar»');
+        const tinta = await p.evaluate(() => getComputedStyle(document.querySelector('#cp-datos dd .cp-var')).color === getComputedStyle(document.querySelector('#cp-datos dt')).color);
+        ok(tinta, '18·comprobante: la variación va en tinta neutra (ni verde ni rojo)');
+        const toques = await p.evaluate(() => [...document.querySelectorAll('#d-comp button, #d-comp a')].filter((b) => b.offsetParent).map((b) => Math.round(b.getBoundingClientRect().height)));
+        ok(toques.every((a) => a >= 47.5), `18·comprobante: todo lo tocable mide 48 px (${toques})`);
+        // Esc cierra y el foco vuelve a la fila.
+        await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+        eq(await p.evaluate(() => [document.getElementById('d-comp').open, document.activeElement?.dataset?.id]), [false, String(ultima.id)], '18·comprobante: Esc lo cierra y el foco vuelve a su fila');
+        // La compra con TXID, nota, etiqueta y marca de extra.
+        const conTx = compras.find((x) => x.txid === txid);
+        await p.click(`#lista .fila[data-id="${conTx.id}"]`); await p.waitForTimeout(900);
+        c = await leer();
+        ok(c.extra && c.nota === '«Con su TXID»' && c.etq.join() === 'bono', `18·comprobante: marca de extra, nota y etiquetas (${c.nota}, ${c.etq})`);
+        ok(/^TXID\s*01234567…abcdef\s*Confirmada/.test(c.tx ?? '') && /Ver en mempool\.space/.test(c.tx) && /Copiar TXID/.test(c.tx), `18·comprobante: el TXID con su estado y sus botones («${c.tx}»)`);
+        eq(await p.getAttribute('#cp-tx a', 'href'), `https://mempool.space/tx/${txid}`, '18·comprobante: el enlace va a mempool.space');
+        eq(await p.getAttribute('#cp-tx a', 'rel'), 'noopener noreferrer', '18·comprobante: y se abre aparte, sin referente');
+        // «Editar» cierra el comprobante y abre la hoja con esa compra.
+        await p.click('#cp-editar'); await p.waitForTimeout(500);
+        eq([await p.evaluate(() => document.getElementById('d-comp').open), await p.inputValue('#h-sats'), (await p.textContent('#hoja-t')).trim(), await p.inputValue('#h-nota')], [false, '20,000', 'Editar compra', 'Con su TXID'], '18·comprobante: «Editar» abre la hoja con esa compra');
+        await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+        // Tocar fuera cierra.
+        await p.click(`#lista .fila[data-id="${ultima.id}"]`); await p.waitForTimeout(400);
+        await p.mouse.click(5, 5); await p.waitForTimeout(300);
+        ok(!(await p.evaluate(() => document.getElementById('d-comp').open)), '18·comprobante: tocar fuera lo cierra');
+        eq(consola, [], `18·comprobante: consola limpia: ${consola.join(' | ')}`);
+        await ctx.close();
+      }
+      // Quien solo mira también lo abre, sin «Editar» y con la voz del libro; a 320 px nada se sale y «Cerrar» queda a mano.
+      {
+        const { ctx, p, consola } = await entrar(navegador, srv, LECTOR, { viewport: { width: 320, height: 568 }, isMobile: false, hasTouch: false });
+        if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
+        await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' })); await p.waitForTimeout(300);
+        eq(await p.locator('#lista .fila').first().evaluate((el) => el.tagName), 'BUTTON', '18·comprobante: para quien solo mira la fila también es un botón');
+        await p.locator('#lista .fila[data-tipo="compra"]').first().click(); await p.waitForTimeout(500);
+        const m = await p.evaluate(() => { const d = document.getElementById('d-comp'), b = document.getElementById('cp-cerrar').getBoundingClientRect();
+          return { abierto: d.open, editar: !document.getElementById('cp-editar').hidden, pago: document.querySelector('#cp-datos dt').textContent, sw: d.scrollWidth, cw: d.clientWidth, bAbajo: Math.round(b.bottom), alto: innerHeight, docW: document.documentElement.scrollWidth, docC: document.documentElement.clientWidth }; });
+        ok(m.abierto && !m.editar && m.pago === 'Se pagó', '18·comprobante: quien solo mira lo abre, sin «Editar» y sin tuteo');
+        ok(m.sw <= m.cw && m.docW <= m.docC && m.bAbajo <= m.alto, `18·comprobante: a 320 px nada se sale y «Cerrar» queda a la vista (${m.bAbajo} ≤ ${m.alto})`);
+        await p.click('#cp-cerrar'); await p.waitForTimeout(200);
+        eq(consola, [], `18·comprobante: consola limpia para quien solo mira: ${consola.join(' | ')}`);
+        await ctx.close();
+      }
+    } finally {
+      srv.parar();
+    }
+  }
+  // Ventas y traslados también tienen su comprobante (escenario «mil»).
+  {
+    const mil18 = await servidor('mil');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, mil18, ADMIN);
+      await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' })); await p.waitForTimeout(300);
+      await p.click('#l-chips button[data-f="venta"]'); await p.waitForTimeout(400);
+      await p.locator('#lista .fila[data-tipo="venta"]').first().click(); await p.waitForTimeout(500);
+      const v = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, sats: document.getElementById('cp-sats').textContent, dts: [...document.querySelectorAll('#cp-datos dt')].map((x) => x.textContent), sello: document.getElementById('cp-sello').hidden, alt: document.getElementById('cp-alt').hidden, nota: document.getElementById('cp-nota').textContent }));
+      ok(/^Venta o gasto n\.º \d+$/.test(v.t) && /^−[\d,]+ sats$/.test(v.sats) && v.dts.join('|') === 'Recibiste|Precio de BTC ese día|Altitud antes|Altitud después|Ganancia realizada' && v.sello && v.alt && v.nota === '«Gasto»', `18·comprobante: una venta dice lo que salió y su ganancia realizada, sin sello («${v.t}»)`);
+      await p.click('#cp-cerrar'); await p.waitForTimeout(200);
+      await p.click('#l-chips button[data-f="traslado"]'); await p.waitForTimeout(400);
+      await p.locator('#lista .fila[data-tipo="traslado"]').first().click(); await p.waitForTimeout(500);
+      const t = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, filas: [...document.querySelectorAll('#cp-datos .cp-fila')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), editar: document.getElementById('cp-editar').textContent }));
+      eq([t.t, t.filas, t.editar], ['Traslado', ['Salieron de: el exchange', 'Llegaron a: tu wallet', 'El saldo: no cambia'], 'Anular'], '18·comprobante: un traslado dice de dónde a dónde y ofrece anularlo');
+      await p.click('#cp-editar'); await p.waitForTimeout(400);
+      ok(/¿Anular este traslado\?/.test(await p.textContent('#d-titulo')) && !(await p.evaluate(() => document.getElementById('d-comp').open)), '18·comprobante: «Anular» lleva a la confirmación de siempre');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      eq(consola, [], `18·comprobante: consola limpia con mil compras: ${consola.join(' | ')}`);
+      await ctx.close();
+    } finally {
+      mil18.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- sin histórico de precios
   const sinhist = await servidor('sinhist');
   try {

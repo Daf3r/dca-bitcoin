@@ -1,7 +1,6 @@
 import { comprobante, entero, fechaEscrita, mempoolUrl, nombreHito, nombreWallet, pct, piedritasPorCompra, textoPiedritas, usd, usd0, usdSigno } from './lib.js';
 import { apacheta } from './arte.js';
 import { selloSemana } from './arte-sellos.js';
-import { avisar } from './avisar.js';
 import { copiarTexto } from './copiar.js';
 import { ico } from './iconos.js';
 import { $, R, S, esAdmin, vozLibro } from './estado.js';
