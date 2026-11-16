@@ -1914,6 +1914,53 @@ def borrar_firma(hito: int, fid: int) -> Any:
     return "", 204
 
 
+# ------------------------------------------------- bautizar la montaña (campamento 19, idea 21)
+# Solo el nombre (la bandera de la cumbre no se elige). Lo pone el dueño; lo lee toda la familia en el Diario, el certificado y la tele.
+# Nunca sale en la entrada: esta ruta pide sesión como todas (no está en PUBLICAS) y la entrada no la llama.
+MAX_NOMBRE_MONTANA = 32
+
+
+def parse_nombre_montana(v: Any) -> str:
+    """Hasta 32 caracteres en una línea, sin caracteres de control. Vacío (o None) = quitar el nombre."""
+    if v is None:
+        return ""
+    if not isinstance(v, str):
+        raise ValueError("Nombre inválido.")
+    t = " ".join("".join(ch for ch in v if ch.isprintable() or ch in "\t\n").split())
+    if len(t) > MAX_NOMBRE_MONTANA:
+        raise ValueError(f"El nombre admite hasta {MAX_NOMBRE_MONTANA} caracteres.")
+    return t
+
+
+@app.get("/api/montana")
+def ver_nombre_montana() -> Response:
+    return jsonify(nombre=_meta(db(), "nombre_montana"))
+
+
+@app.put("/api/montana")
+def bautizar_montana() -> Any:
+    if (e := _solo_admin()) is not None:
+        return e
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or "nombre" not in body:
+        return jsonify(error="Falta el nombre (vacío lo quita)."), 400
+    try:
+        nombre = parse_nombre_montana(body["nombre"])
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    conn = db()
+    antes = _meta(conn, "nombre_montana")
+    if (antes or "") != nombre:  # el mismo nombre otra vez no cambia nada ni se audita
+        if nombre:
+            _meta_poner(conn, "nombre_montana", nombre)
+        else:
+            conn.execute("DELETE FROM meta WHERE clave = 'nombre_montana'")
+        auth.auditar(conn, quien(), "montana_nombre", "libro", None, {"nombre": antes} if antes else None, {"nombre": nombre} if nombre else None,
+                     auth.ip_resumida(ip_real()))
+        conn.commit()
+    return jsonify(nombre=nombre or None)
+
+
 @app.post("/api/traslados")
 def crear_traslado() -> Any:
     body: Any = request.get_json(silent=True)

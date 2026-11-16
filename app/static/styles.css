@@ -3093,10 +3093,14 @@ html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cie
 .dc-dp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .dc-v { flex: 0 1 auto; margin-left: auto; max-width: 100%; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--naranja) 14%, transparent); color: var(--naranja-txt); font-weight: 650; font-size: 0.875rem; text-align: right; }
 html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb, var(--naranja) 22%, transparent); }
-.d-cuenta .dc-lista button:is([data-cuenta="clave"], [data-cuenta="historia"], [data-cuenta="historial"], [data-cuenta="datos"], [data-cuenta="enlaces"], [data-cuenta="sistema"], [data-cuenta="sesiones"], [data-cuenta="avisos"], [data-cuenta="cumple"], [data-cuenta="tv"])::after {
+.d-cuenta .dc-lista button:is([data-cuenta="clave"], [data-cuenta="historia"], [data-cuenta="historial"], [data-cuenta="datos"], [data-cuenta="enlaces"], [data-cuenta="sistema"], [data-cuenta="sesiones"], [data-cuenta="avisos"], [data-cuenta="cumple"], [data-cuenta="montana"], [data-cuenta="tv"])::after {
   content: ""; flex: none; width: 8px; height: 8px; margin-left: auto; margin-right: 4px; border: solid var(--txt3); border-width: 2px 2px 0 0; transform: rotate(45deg);
 }
 .d-cuenta .dc-lista button[data-cuenta="cerrar"] { justify-content: center; }
+/* Una fila que abre otra cosa Y enseña un valor (el cumpleaños, el nombre de la montaña): la flechita va fija a la derecha, centrada; si el
+   valor no cabe junto al nombre baja a su renglón, pero la flechita nunca se queda sola en uno (campamento 19). */
+.d-cuenta .dc-lista button:is([data-cuenta="cumple"], [data-cuenta="montana"]):has(.dc-v) { position: relative; padding-right: 40px; }
+.d-cuenta .dc-lista button:is([data-cuenta="cumple"], [data-cuenta="montana"]):has(.dc-v)::after { position: absolute; right: 18px; top: calc(50% - 5px); margin: 0; }
 
 /* ---------------------------------------------------------------- Rediseño (Fable) · el botón principal
    «Anotar compra» es LA acción de la app: un «+» en su círculo, un degradado leve y un filo de luz arriba (sin filtros ni mezclas). */
@@ -3350,11 +3354,12 @@ html[data-contraste="alto"] .fi-papel { --fi-tinta: #17100a; --fi-tinta2: #3d322
 .d-firmas .fi-cab h2:focus-visible { outline: 2px solid var(--fi-tinta); outline-offset: 3px; border-radius: 4px; }
 .d-firmas .fi-papel .fi-ayuda { font-size: 0.875rem; line-height: 1.4; color: var(--fi-tinta2); }
 .fi-lista { margin: 0; padding: 0; list-style: none; }
-.fi-firma { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--fi-linea); }
+.fi-firma { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--fi-linea); }
 .fi-firma .avatar { margin-top: 3px; }
 .d-firmas .fi-papel .fi-quien { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font-size: 0.8125rem; color: var(--fi-tinta2); }
 .fi-quien b { color: var(--fi-tinta); font-size: 0.875rem; font-weight: 650; }
 .d-firmas .fi-papel .fi-txt { margin-top: 1px; font: italic 500 1.125rem/1.4 var(--serif); color: var(--fi-tinta); overflow-wrap: anywhere; }
+.fi-quien .fi-quitar { margin: -6px 0 -2px auto; }
 .fi-quitar { min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--fi-linea); border-radius: 999px; background: transparent; color: var(--fi-acento); font: 650 0.875rem var(--sans); white-space: nowrap; cursor: pointer; }
 .fi-quitar[data-confirmar] { border-color: var(--fi-acento); background: var(--fi-acento); color: var(--fi-papel); }
 .fi-quitar:focus-visible { outline: 2px solid var(--fi-tinta); outline-offset: 2px; }
@@ -3373,13 +3378,30 @@ html[data-contraste="alto"] .fi-papel { --fi-tinta: #17100a; --fi-tinta2: #3d322
 .d-firmas .cap-cuenta { margin: 0; text-align: right; font-size: 0.875rem; color: var(--txt2); }
 .d-firmas .fi-cerrado { margin: 0 0 4px; font-size: 0.9375rem; line-height: 1.45; color: var(--txt2); }
 .d-firmas .hoja-error { margin: 0; }
-.d-firmas .d-bot { flex-wrap: wrap; margin-top: 4px; }
+.d-firmas .d-bot { flex-wrap: wrap; }
 .d-firmas .d-bot button { padding: 0 15px; }
 .d-firmas .d-bot #fi-cerrar { margin-right: auto; }
 /* Con muchas firmas (o el teclado abierto) el cuaderno se desplaza: los botones se quedan a mano, abajo. */
 .d-firmas { scroll-padding-bottom: 80px; }
-.d-firmas .d-bot { position: sticky; bottom: 0; z-index: 1; margin: 4px -14px -16px; padding: 10px 14px 16px; background: linear-gradient(to top, var(--s2) calc(100% - 10px), color-mix(in srgb, var(--s2) 0%, transparent)); }
+.d-firmas .d-bot { position: sticky; bottom: -16px; z-index: 1; margin: 10px -14px -16px; padding: 10px 14px 16px; background: linear-gradient(to top, var(--s2) calc(100% - 10px), color-mix(in srgb, var(--s2) 0%, transparent)); }
 html[data-efectos="todos"] .d-firmas[open] .fi-papel, html[data-efectos="esenciales"] .d-firmas[open] .fi-papel { transform-origin: 50% 0; animation: cp-sale 0.42s var(--resorte, ease-out) 0.06s both; }
-@media (max-width: 359px) { .d-firmas { padding: 10px 10px 12px; } .d-firmas .d-bot { margin: 4px -10px -12px; padding: 10px 10px 12px; } .fi-papel { padding: 14px 12px 8px; } }
+@media (max-width: 359px) { .d-firmas { padding: 10px 10px 12px; } .d-firmas .d-bot { bottom: -12px; margin: 10px -10px -12px; padding: 10px 10px 12px; } .fi-papel { padding: 14px 12px 8px; } }
 /* «Tu historia»: el libro de cumbre bajo su campamento (también los de abajo, que la montaña deja de dibujar al subir). */
 .h-ev .h-firmas { margin-top: 2px; text-align: left; line-height: 1.35; }
+
+/* --- El nombre de la montaña (bautizo.js). En el Diario, como el lugar de la edición; en la tele, bajo la marca, donde va el saludo (en la
+   tele no hay saludo); en el certificado, en su primera línea (arte-sellos.js). El cuadro para ponerlo es el del mensaje de la bandera. */
+.dia-lugar { font-family: var(--serif); font-style: italic; font-weight: 500; color: var(--dia-tinta); overflow-wrap: anywhere; }
+.dia-fecha { white-space: nowrap; }
+.tv-nombre { display: none; }
+html[data-tv] .tv-nombre:not([hidden]) { display: block; flex-basis: 100%; margin: -6px 0 0; font: italic 500 1.0625rem/1.3 var(--serif); color: var(--cielo-txt2); overflow-wrap: anywhere; }
+#f-montana { display: grid; gap: 6px; }
+#f-montana h2 { margin-bottom: 6px; }
+#f-montana > label { margin-top: 4px; font: 650 1rem var(--sans); color: var(--txt); }
+#mo-nombre {
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  background: var(--s2); color: var(--txt); font: italic 400 1.0625rem/1.55 var(--serif);
+}
+#mo-nombre::placeholder { color: var(--txt3); opacity: 1; }
+#mo-nombre:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
+.c-montana { letter-spacing: 0.01em; }

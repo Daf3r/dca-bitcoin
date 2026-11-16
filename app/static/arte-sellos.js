@@ -189,9 +189,16 @@ export function certificado(d) {
 
   // Los textos: el título, a quién, el saldo en letras (una o dos líneas, el tamaño baja con el largo) y la cifra.
   const nombre = esc(d.nombre ?? 'Libro DCA');
+  // El nombre de la montaña (campamento 19) abre la primera línea: «En la montaña «La Ceiba», se hace constar que…». Si no cabe (un nombre
+  // largo, emojis), va en su propia línea, encima.
+  const pre = d.nombre ? 'Se hace constar que' : 'Se hace constar que el';
+  const unidades = (t) => [...t].reduce((a, ch) => a + (ch.codePointAt(0) > 0x2fff ? 2 : 1), 0); // un emoji mide como dos letras
+  const enMontana = d.montana ? `En la montaña «${d.montana}»` : '';
+  const juntos = enMontana && unidades(`${enMontana}, ${pre}`) * 10.5 * 0.46 <= 380;
   s += '<text class="c-titulo" x="240" y="78" text-anchor="middle">Certificado de altitud</text>'
     + '<path class="c-regla" d="M168 92H226M254 92H312M240 87l4 5l-4 5l-4 -5Z"/>'
-    + `<text class="c-pre" x="240" y="114" text-anchor="middle">${d.nombre ? 'Se hace constar que' : 'Se hace constar que el'}</text>`
+    + (enMontana && !juntos ? `<text class="c-pre c-montana" x="240" y="104" text-anchor="middle">${esc(enMontana)},</text>` : '')
+    + `<text class="c-pre" x="240" y="${enMontana && !juntos ? 117 : 114}" text-anchor="middle">${esc(juntos ? `${enMontana}, ${pre.charAt(0).toLowerCase()}${pre.slice(1)}` : enMontana ? pre.charAt(0).toLowerCase() + pre.slice(1) : pre)}</text>`
     + `<text class="c-nombre" x="240" y="140" text-anchor="middle">${nombre}</text>`
     + '<text class="c-pre" x="240" y="162" text-anchor="middle">ha subido, compra a compra, hasta</text>';
   const letras = String(d.letras ?? '');

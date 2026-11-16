@@ -2454,4 +2454,26 @@ server.FIRMA_MAX = _lim
 server._FIRMAS_RECIENTES.clear()
 check(push.CATEGORIAS["piedrita"]["nombre"] == "Piedritas y firmas de tu familia" and "firma" in push.CATEGORIAS["piedrita"]["ayuda"], "la categoría del dueño ahora habla también de las firmas")
 
+# --- Campamento 19 (4/4): bautizar la montaña (idea 21). Solo el nombre; lo pone el dueño; nunca sale en la entrada.
+check(adm.get("/api/montana").get_json() == {"nombre": None} and luz.get("/api/montana").get_json() == {"nombre": None}, "al principio la montaña no tiene nombre; lo leen todos con sesión")
+check(anon.get("/api/montana").status_code == 401 and anon.put("/api/montana", json={"nombre": "x"}).status_code in (401, 403), "sin sesión ni se lee ni se cambia")
+check(luz.put("/api/montana", json={"nombre": "La Ceiba"}).status_code == 403, "una lectora no bautiza la montaña")
+for _malo in ({}, {"otro": "La Ceiba"}, {"nombre": 5}, {"nombre": ["La Ceiba"]}, {"nombre": "x" * 33}, {"nombre": "🙂" * 33}, [1]):
+    check(adm.put("/api/montana", json=_malo).status_code == 400, f"nombre rechazado: {str(_malo)[:40]}")
+_r = adm.put("/api/montana", json={"nombre": "  La   Ceiba\n de ‮Abajo "})
+check(_r.status_code == 200 and _r.get_json() == {"nombre": "La Ceiba de Abajo"}, f"se guarda en una línea, sin espacios de sobra ni caracteres de control {_r.data}")
+check(luz.get("/api/montana").get_json() == {"nombre": "La Ceiba de Abajo"} and sql("SELECT valor FROM meta WHERE clave = 'nombre_montana'")[0][0] == "La Ceiba de Abajo", "lo lee toda la familia (vive en meta.nombre_montana)")
+check(adm.put("/api/montana", json={"nombre": "🙂" * 32}).status_code == 200 and adm.put("/api/montana", json={"nombre": "<b>Volcán</b> & «Cía»"}).get_json()["nombre"] == "<b>Volcán</b> & «Cía»",
+      "32 caracteres valen (aunque sean emojis) y los raros se guardan como texto")
+_au = [dict(a) for a in audit("montana_nombre")]
+check(len(_au) == 3 and _au[0]["antes"] is None and json.loads(_au[0]["despues"]) == {"nombre": "La Ceiba de Abajo"} and json.loads(_au[-1]["antes"]) == {"nombre": "🙂" * 32}
+      and _au[-1]["usuario"] == "Daf3r", "cada nombre queda en la auditoría, con el de antes")
+check(adm.put("/api/montana", json={"nombre": "<b>Volcán</b> & «Cía»"}).status_code == 200 and len(audit("montana_nombre")) == 3, "poner el mismo nombre no audita nada")
+# Nunca en la entrada: ni la página de entrada ni lo público lo dicen
+_pub = anon.get("/login").get_data(as_text=True) + anon.get("/login.js").get_data(as_text=True)
+check("Volcán" not in _pub and "/api/montana" not in _pub and anon.get("/api/estado").get_json() == {"abierto": True}, "la entrada nunca pide ni enseña el nombre de la montaña")
+check(adm.put("/api/montana", json={"nombre": ""}).get_json() == {"nombre": None} and adm.get("/api/montana").get_json() == {"nombre": None}
+      and not sql("SELECT 1 FROM meta WHERE clave = 'nombre_montana'") and json.loads(audit("montana_nombre")[-1]["despues"] or "null") is None, "vacío lo quita (y queda en la auditoría)")
+check(adm.put("/api/montana", json={"nombre": None}).status_code == 200 and len(audit("montana_nombre")) == 4, "quitarlo dos veces no audita dos veces")
+
 print("OK", ok, "comprobaciones")

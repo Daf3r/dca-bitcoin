@@ -9,6 +9,7 @@ import {
 } from '../app/static/lib.js';
 import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
 import { AVISO_DIARIO, accionFirmas, diarioParaOir, fechaHablada, firmasDe, paraOir, textoFirmantes } from '../app/static/lib.js';
+import { certificado } from '../app/static/arte-sellos.js';
 
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
@@ -991,5 +992,15 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq(textoFirmantes(firmasDe(todas, 1e6)), 'Firmaron tú, Ana y 2 más', 'cumbre: con muchas, dos nombres y cuántas más (la tuya nunca se pierde en «más»)');
   eq([accionFirmas([], true), accionFirmas([f(1, 1e6, 'Ana', 1)], true), accionFirmas([f(1, 1e6, 'Ana', 1, true)], true), accionFirmas([f(1, 1e6, 'Ana', 1)], false)],
     ['Deja la primera firma', 'Firma tú también', 'Cambia tu firma', 'Léelo'], 'cumbre: lo que invita a hacer la tarjeta (sin alcanzar, solo leer)');
+  // El nombre de la montaña en el certificado de altitud.
+  const Rc = resumen([c(1, '2026-01-05', 1_500_000), c(2, '2026-02-05', 300_000)], null, '2026-11-15');
+  const sinNombre = datosCertificado(Rc, 'Daf3r', '2026-11-15'), conNombre = datosCertificado(Rc, 'Daf3r', '2026-11-15', { montana: 'La Ceiba' });
+  eq([sinNombre.montana, conNombre.montana], [null, 'La Ceiba'], 'certificado: el nombre de la montaña es opcional');
+  ok(!/montaña/.test(textoCertificado(sinNombre)) && /^Certificado de altitud de Daf3r, en la montaña «La Ceiba»\. A /.test(textoCertificado(conNombre)), 'certificado: la descripción nombra la montaña');
+  const svgSin = certificado(sinNombre), svgCon = certificado(conNombre);
+  ok(svgSin.includes('>Se hace constar que</text>') && !svgSin.includes('montaña'), 'certificado: sin nombre, como siempre');
+  ok(svgCon.includes('>En la montaña «La Ceiba», se hace constar que</text>') && !svgCon.includes('c-montana'), 'certificado: con un nombre corto, en la primera línea');
+  const raro = certificado(datosCertificado(Rc, null, '2026-11-15', { montana: '<b>🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂</b>' }));
+  ok(raro.includes('class="c-pre c-montana"') && raro.includes('&lt;b&gt;') && !raro.includes('<b>') && raro.includes('>se hace constar que el</text>'), 'certificado: un nombre que no cabe va en su línea, escapado');
 }
 console.log(`OK ${n} comprobaciones`);

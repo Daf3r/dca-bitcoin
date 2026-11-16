@@ -28,16 +28,18 @@ function pintarLista() {
     const cuerpo = nodo('div', 'fi-cuerpo');
     const cab = nodo('p', 'fi-quien');
     cab.append(nodo('b', null, f.mia ? `${f.quien} (tú)` : f.quien), nodo('time', null, dia(f.editado ?? f.creado)));
-    cuerpo.append(cab, nodo('p', 'fi-txt', f.texto));
-    li.append(cuerpo);
-    if (esAdmin() && !f.mia) { // quien anota puede quitar la firma de otra persona (con un segundo toque para confirmar)
+    // Quien anota puede quitar la firma de otra persona (con un segundo toque para confirmar). El botón va en el renglón del nombre: así el
+    // texto de la firma tiene todo el ancho (con letra grande en un teléfono estrecho, a su lado quedaba en una columna de una palabra).
+    if (esAdmin() && !f.mia) {
       const b = nodo('button', 'fi-quitar');
       b.type = 'button';
       b.dataset.id = String(f.id);
       b.dataset.quien = f.quien;
       b.append(nodo('span', 'fi-quitar-t', 'Quitar'), nodo('span', 'sr', ` la firma de ${f.quien}`));
-      li.append(b);
+      cab.append(b);
     }
+    cuerpo.append(cab, nodo('p', 'fi-txt', f.texto));
+    li.append(cuerpo);
     lista.append(li);
   }
 }

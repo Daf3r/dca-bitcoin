@@ -20,6 +20,7 @@ import './indice.js';
 import './pestanas.js';
 import './mensajes.js';
 import './firmas.js';
+import './bautizo.js';
 import './cumple.js';
 import './anotar.js';
 

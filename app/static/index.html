@@ -86,6 +86,7 @@
 <link rel="modulepreload" href="/capsulas.js">
 <link rel="modulepreload" href="/mensajes.js">
 <link rel="modulepreload" href="/firmas.js">
+<link rel="modulepreload" href="/bautizo.js">
 <link rel="modulepreload" href="/cumple.js">
 <link rel="modulepreload" href="/arte-historia.js">
 <link rel="modulepreload" href="/arte-sellos.js">
@@ -122,6 +123,8 @@
       <p class="marca"><svg class="marca-ico" viewBox="0 0 24 18" aria-hidden="true"><path pathLength="1" d="M1.5 16.5 9 3.5l4 6.5 3-4 6.5 10.5Z"/></svg>Libro <b>DCA</b></p>
       <button type="button" class="cuenta-btn" id="cuenta-btn" hidden></button>
       <p class="saludo" id="saludo"></p>
+      <!-- El nombre de la montaña (campamento 19), solo en el modo pantalla grande: va donde en la app va el saludo. -->
+      <p class="tv-nombre" id="tv-nombre" hidden></p>
     </div>
     <p class="cotizacion" id="cotizacion" data-estado="cargando">
       <span class="cot-k">1 BTC</span> <b class="cot-v" id="precio">—</b>
@@ -544,6 +547,7 @@
     <div class="dc-lista">
       <button type="button" data-cuenta="clave">Cambiar contraseña</button>
       <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
+      <button type="button" data-cuenta="montana" id="dc-montana" hidden>Nombre de la montaña: sin nombre</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
       <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
       <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
@@ -781,7 +785,21 @@
     </div>
     <p class="fi-cerrado" id="fi-cerrado" hidden>Este campamento se firma cuando el libro llega hasta aquí.</p>
     <p class="hoja-error" id="fi-error" role="alert"></p>
-    <div class="d-bot"><button type="button" id="fi-cerrar">Cerrar</button><button type="button" id="fi-borrar" hidden>Borrar mi firma</button><button type="submit" class="primario" id="fi-guardar">Firmar</button></div>
+  </form>
+  <!-- Los botones van fuera del formulario (el de firmar con form="f-firma"): así se quedan pegados abajo aunque el libro sea largo. -->
+  <div class="d-bot"><button type="button" id="fi-cerrar">Cerrar</button><button type="button" id="fi-borrar" hidden>Borrar mi firma</button><button type="submit" form="f-firma" class="primario" id="fi-guardar">Firmar</button></div>
+</dialog>
+
+<!-- Bautizar la montaña (campamento 19): solo quien anota le pone nombre; sale en el Diario, el certificado y la tele, nunca en la entrada. -->
+<dialog id="d-montana" class="d-mensaje d-montana" aria-labelledby="mo-t">
+  <form id="f-montana" novalidate>
+    <h2 id="mo-t">El nombre de la montaña</h2>
+    <p class="msg-ayuda">Un nombre para la montaña del libro. Sale en el Diario, en el certificado de altitud y en la tele; en la pantalla de entrada, nunca.</p>
+    <label for="mo-nombre">Nombre</label>
+    <input id="mo-nombre" type="text" maxlength="32" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: La Ceiba" aria-describedby="mo-cuenta">
+    <p class="cap-cuenta" id="mo-cuenta">0 de 32</p>
+    <p class="hoja-error" id="mo-error" role="alert"></p>
+    <div class="d-bot"><button type="button" id="mo-cancelar">Cancelar</button><button type="button" id="mo-quitar" hidden>Quitar el nombre</button><button type="submit" class="primario" id="mo-guardar">Guardar</button></div>
   </form>
 </dialog>
 

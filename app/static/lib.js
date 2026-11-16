@@ -1188,18 +1188,18 @@ export function enLetras(n) {
  * `lobulos` (tus compras, de 3 a 48), `altitud` (0 a 1, dónde estás entre la base y la cima de tu montaña) y `trenzas` (tu racha,
  * de 1 a 12). `nombre` es de quien mira (null para una persona que no es dueña del libro: sale «Libro DCA»). Todo sale igual cada vez.
  */
-export function datosCertificado(R, nombre, hoy = hoyISO()) {
+export function datosCertificado(R, nombre, hoy = hoyISO(), { montana = null } = {}) {
   const sats = Math.max(0, R.sats ?? 0);
   const letras = enLetras(sats);
   const esc = escalaMontana(sats);
   return {
-    nombre: nombre || null, hoy, fecha: fechaLarga(hoy), sats, btc: btc(sats),
+    nombre: nombre || null, montana: montana || null, hoy, fecha: fechaLarga(hoy), sats, btc: btc(sats),
     letras: `${letras.charAt(0).toUpperCase()}${letras.slice(1)} ${sats === 1 ? 'sat' : 'sats'}`,
     nCompras: R.nCompras ?? 0, racha: R.racha ?? 0, primera: R.items?.find((c) => c.tipo !== 'venta')?.fecha ?? null,
     lobulos: Math.min(48, Math.max(3, R.nCompras ?? 0)), altitud: altitud(sats, esc), trenzas: Math.min(12, Math.max(1, R.racha ?? 1)),
   };
 }
-export const textoCertificado = (d) => `Certificado de altitud${d.nombre ? ` de ${d.nombre}` : ' del Libro DCA'}. A ${d.fecha} el libro tiene ${d.letras}`
+export const textoCertificado = (d) => `Certificado de altitud${d.nombre ? ` de ${d.nombre}` : ' del Libro DCA'}${d.montana ? `, en la montaña «${d.montana}»` : ''}. A ${d.fecha} el libro tiene ${d.letras}`
   + `${d.nCompras ? `, de ${d.nCompras} ${d.nCompras === 1 ? 'compra' : 'compras'}` : ''}.`;
 
 /**

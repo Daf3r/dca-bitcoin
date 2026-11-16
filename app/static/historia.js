@@ -141,7 +141,7 @@ $('dh-lienzo').addEventListener('keydown', (e) => {
 
 // El certificado de altitud (campamento 13B): un diálogo con el grabado y su descripción.
 $('dh-cert').addEventListener('click', () => {
-  const d = datosCertificado(R, esAdmin() ? S.usuario : null, hoyISO());
+  const d = datosCertificado(R, esAdmin() ? S.usuario : null, hoyISO(), { montana: S.montana });
   $('cert-lienzo').innerHTML = certificado(d);
   $('cert-desc').textContent = textoCertificado(d);
   $('d-cert').showModal();

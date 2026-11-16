@@ -15,6 +15,7 @@ export const S = {
   cumple: null, // el tuyo
   mensajes: [], // las frases de las banderas (15A): { hito, texto, sellado, por }
   firmas: [], // el libro de cumbre (19): { id, hito, quien, texto, creado, editado, mia }
+  montana: null, // el nombre de la montaña (19), si quien anota le puso uno
   capsulas: [], // las cartas selladas (15A): { id, abre_fecha, abre_sats, abierta, texto (solo si ya se abrió o eres el dueño), … }
   usuario: null, rol: null,
 };

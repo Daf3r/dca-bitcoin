@@ -44,7 +44,7 @@ function pintarOir() {
 bOir.addEventListener('click', () => {
   if (leyendo()) { callar(); return; }
   if (!ultimo) return;
-  if (leer(diarioParaOir(ultimo), { alTerminar: () => { marcarOir(false); edicionLeida = null; } })) { marcarOir(true); edicionLeida = ultimo.edicion; }
+  if (leer(diarioParaOir(ultimo, { montana: S.montana }), { alTerminar: () => { marcarOir(false); edicionLeida = null; } })) { marcarOir(true); edicionLeida = ultimo.edicion; }
   else pintarOir(); // la voz ya no está (el sistema la quitó): fuera el botón
 });
 alCambiarVoces(pintarOir);
@@ -58,7 +58,14 @@ export function pintarDiario() {
   caja.hidden = !d;
   if (!d) { ultimo = null; pintarOir(); return; }
   if (edicionLeida && edicionLeida !== d.edicion) callar(); // pasó la medianoche mientras se leía: la de ayer ya no es la portada
-  $('dia-edicion').textContent = `${d.edicion} · edición n.º ${d.numero}`;
+  // El nombre de la montaña (campamento 19), si quien anota le puso uno, va delante de la fecha: como el lugar desde donde escribe un periódico.
+  // Va en piezas que no se parten por dentro («16 / nov 2026») y el «·» queda al final de su renglón, nunca al principio del siguiente;
+  // el texto sigue siendo el mismo («Desde «La Ceiba» · 16 nov 2026 · edición n.º 301»).
+  const pieza = (clase, txt) => { const e = document.createElement('span'); e.className = clase; e.textContent = txt; return e; };
+  const ed = $('dia-edicion');
+  ed.textContent = '';
+  if (S.montana) ed.append(pieza('dia-lugar', `Desde «${S.montana}»\u00a0·`), ' '); // el «·» va pegado al nombre (espacio que no se parte)
+  ed.append(pieza('dia-fecha', `${d.edicion} ·`), ' ', pieza('dia-fecha', `edición n.º ${d.numero}`));
   ultimo = d;
   pintarPliegue();
   $('t-diario').textContent = d.titular;

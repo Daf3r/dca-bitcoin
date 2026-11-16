@@ -15,7 +15,7 @@ export async function actualizarSuave() {
   if (!S.cargado || S.errorCarga) return;
   try {
     // (Las lecturas salen a la vez: ver `cargarCompras`.)
-    const [crudas, traslados, wallets, mensajes, capsulas, piedritas, cumples, firmas] = await Promise.all([
+    const [crudas, traslados, wallets, mensajes, capsulas, piedritas, cumples, firmas, montana] = await Promise.all([
       api('/api/compras'),
       api('/api/traslados'),
       api('/api/wallets').catch(() => S.wallets),
@@ -24,11 +24,12 @@ export async function actualizarSuave() {
       api('/api/piedritas').catch(() => S.piedritas),
       api('/api/cumples').catch(() => S.cumples),
       api('/api/firmas').catch(() => S.firmas),
+      api('/api/montana').then((r) => r?.nombre ?? null).catch(() => S.montana),
     ]);
     const compras = crudas.map(normalizar);
-    // Piedritas, cumpleaños y firmas del libro de cumbre: se repinta lo que las enseña, sin redibujar la montaña.
-    if (JSON.stringify(piedritas) !== JSON.stringify(S.piedritas) || JSON.stringify(cumples) !== JSON.stringify(S.cumples) || JSON.stringify(firmas) !== JSON.stringify(S.firmas)) {
-      S.piedritas = piedritas; S.cumples = cumples; S.firmas = firmas;
+    // Piedritas, cumpleaños, firmas del libro de cumbre y el nombre de la montaña: se repinta lo que los enseña, sin redibujar la montaña.
+    if (JSON.stringify(piedritas) !== JSON.stringify(S.piedritas) || JSON.stringify(cumples) !== JSON.stringify(S.cumples) || JSON.stringify(firmas) !== JSON.stringify(S.firmas) || montana !== S.montana) {
+      S.piedritas = piedritas; S.cumples = cumples; S.firmas = firmas; S.montana = montana;
       actualizarFirmas(firmas);
       pintar();
     }
@@ -56,7 +57,7 @@ export async function cargarCompras() {
     // Rendimiento: las lecturas salen A LA VEZ (antes iban una tras otra: siete viajes de red antes de ver el saldo, lo que en
     // un teléfono con datos móviles es más de un segundo de espera). Si fallan las compras, falla todo, como antes; cada una de las
     // demás conserva lo que había si falla (dónde están los sats, frases de las banderas y cartas, apacheta y cumpleaños).
-    const [compras, traslados, wallets, mensajes, capsulas, piedritas, cumples, firmas] = await Promise.all([
+    const [compras, traslados, wallets, mensajes, capsulas, piedritas, cumples, firmas, montana] = await Promise.all([
       api('/api/compras'),
       api('/api/traslados').catch(() => S.traslados),
       api('/api/wallets').catch(() => S.wallets),
@@ -65,6 +66,7 @@ export async function cargarCompras() {
       api('/api/piedritas').catch(() => S.piedritas),
       api('/api/cumples').catch(() => S.cumples),
       api('/api/firmas').catch(() => S.firmas),
+      api('/api/montana').then((r) => r?.nombre ?? null).catch(() => S.montana),
     ]);
     S.compras = compras.map(normalizar);
     S.traslados = traslados;
@@ -74,6 +76,7 @@ export async function cargarCompras() {
     S.piedritas = piedritas;
     S.cumples = cumples;
     S.firmas = firmas;
+    S.montana = montana;
     S.errorCarga = false;
     if (teniaError) avisar(''); // solo se quita el aviso de error propio: un «Deshacer» o un «Reconectando…» a la vista se quedan
   } catch (e) {
