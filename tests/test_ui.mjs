@@ -3959,6 +3959,62 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- campamentos (arte): hitos tallados, farol, apartadero y cumbre
+  {
+    const srv = await servidor('ballena');
+    try {
+      const medir = (p) => p.evaluate(() => {
+        const cx = (el) => { const r = el.getBoundingClientRect(); return r.left + r.width / 2; };
+        const op = (el) => Number(getComputedStyle(el).opacity);
+        const campos = [...document.querySelectorAll('#m-campos .campo')].map((g) => ({
+          cima: g.classList.contains('es-cima'), alcanzado: g.classList.contains('alcanzado'), sig: g.classList.contains('sig'),
+          luzALaDerecha: cx(g.querySelector('.campo-ico')) > cx(g.querySelector('.hito-sombra')),
+          piedra: [g.querySelectorAll('.campo-ico').length, g.querySelectorAll('.hito-sombra').length],
+          apartadero: g.querySelectorAll('.hito-rellano').length, contornos: [...g.querySelectorAll('.campo-ico, .hito-sombra, .hito-techo, .farol-cuerpo, .farol-techo')].filter((e) => getComputedStyle(e).stroke !== 'none').length,
+          vidrio: getComputedStyle(g.querySelector('.farol-cuerpo')).fill, halo: op(g.querySelector('.farol-halo')), suelo: g.querySelector('.luz-suelo') ? op(g.querySelector('.luz-suelo')) : null,
+          bano: g.querySelector('.hito-bano') ? op(g.querySelector('.hito-bano')) : null, pulso: [g.querySelector('.humo').getAttribute('fill'), getComputedStyle(g.querySelector('.humo')).stroke],
+          alto: Math.round(g.querySelector('.campo-ico').getBoundingClientRect().height),
+        }));
+        const cima = document.querySelector('#m-campos .es-cima');
+        const sol = [...document.querySelectorAll('.montana .halo')].map((h) => h.getBoundingClientRect()).find((q) => q.width > 0), pico = cima.querySelector('.cima-mastil').getBoundingClientRect();
+        return { campos, solALaDerecha: sol.left + sol.width / 2 > pico.left + pico.width / 2, bandera: cima.querySelector('.banderin').tagName.toLowerCase(), pliegue: cima.querySelectorAll('.banderin .banderin-pliegue').length,
+          mastil: getComputedStyle(cima.querySelector('.cima-mastil')).stroke, nieve: getComputedStyle(document.querySelector('.nieve')).fill, nodos: document.querySelectorAll('.montana svg *').length,
+          aros: document.querySelectorAll('#m-campos circle[stroke], #m-campos .humo:not([fill])').length };
+      });
+      const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+      const efectos = () => { try { localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      // Escritorio, de noche: tres hitos alcanzados (mojón, pilar y obelisco, cada uno más alto) y la cumbre como siguiente.
+      const n = await entrar(navegador, srv, ADMIN, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false, hora: 20 }, efectos); await cerrar(n.p);
+      const a = await medir(n.p);
+      const hitos = a.campos.filter((c) => !c.cima), cima = a.campos.find((c) => c.cima);
+      eq([hitos.length, hitos.every((c) => c.alcanzado), cima.sig], [3, true, true], 'arte: tres hitos alcanzados y la cumbre como siguiente');
+      ok(a.campos.every((c) => c.piedra.join() === '1,1' && c.contornos === 0), `arte: cada hito es un solo trazo por cara (luz y sombra), sin contornos de dibujo (${a.campos.map((c) => c.piedra.join('/')).join(' ')})`);
+      ok(a.campos.every((c) => c.luzALaDerecha === a.solALaDerecha), 'arte: la cara iluminada de cada hito mira al astro, esté a un lado u otro del sendero');
+      ok(hitos.every((c) => c.apartadero === 1), 'arte: cada hito se apoya en su apartadero');
+      ok(hitos[0].alto < hitos[1].alto && hitos[1].alto < hitos[2].alto, `arte: cada campamento es más alto que el anterior (${hitos.map((c) => c.alto)})`);
+      ok(hitos.every((c) => c.vidrio === 'rgb(255, 231, 174)' && c.halo > 0.8 && c.suelo > 0.4 && c.bano > 0.6), `arte: alcanzado = farol encendido, con halo, luz en el suelo y luz bajando por la piedra (${hitos[0].halo}, ${hitos[0].suelo})`);
+      ok(cima.vidrio === 'rgb(240, 161, 72)' && Math.abs(cima.halo - hitos[0].halo / 2) < 0.02, `arte: el siguiente lleva la brasa y medio halo (${cima.vidrio}, ${cima.halo})`);
+      ok(a.aros === 0 && a.campos.every((c) => c.pulso[0] === 'url(#m-farol)' && c.pulso[1] === 'none'), 'arte: la luz respira con un degradado, sin aros');
+      ok(a.bandera === 'g' && a.pliegue === 1 && a.mastil !== a.nieve, `arte: la banderita de la cumbre tiene su pliegue y un mástil que se ve sobre la nieve (${a.mastil})`);
+      eq(n.consola, [], `arte: consola limpia: ${n.consola.join(' | ')}`);
+      await n.ctx.close();
+      // De día la luz de los faroles baja para no lavar la roca; los estados se siguen leyendo.
+      const d = await entrar(navegador, srv, ADMIN, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false, hora: 12 }, efectos); await cerrar(d.p);
+      const b = await medir(d.p);
+      const hd = b.campos.filter((c) => !c.cima);
+      ok(hd[0].halo < 0.4 && hd[0].halo > 0.2 && hd[0].vidrio === 'rgb(255, 231, 174)', `arte: de día el halo baja (${hd[0].halo}) y el farol sigue encendido`);
+      await d.ctx.close();
+      // En el teléfono: pocos nodos y nada de ambiente con efectos «esenciales».
+      const t = await entrar(navegador, srv, ADMIN, { hora: 20 }, () => { try { localStorage.setItem('libro.efectos', 'esenciales'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }); await cerrar(t.p);
+      const c = await medir(t.p);
+      const quieto = await t.p.evaluate(() => [...document.querySelectorAll('#m-campos .humo, #m-campos .fogata')].every((e) => getComputedStyle(e).display === 'none'));
+      ok(c.nodos < 800 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
+      await t.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- sin histórico de precios
   const sinhist = await servidor('sinhist');
   try {
