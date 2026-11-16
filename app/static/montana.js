@@ -1,5 +1,5 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, firmasDe, textoFirmantes, accionFirmas } from './lib.js';
+import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, firmasDe, textoFirmantes, accionFirmas, etapaMayor, marcasEtapa } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 
@@ -145,13 +145,15 @@ function niebla(W, H, y) {
 let estado = null;
 
 /** La franja de nieve de la cumbre: más honda cuanto más cerca de la meta (la altitud va de 0 a 1 hasta la cumbre). */
-const DIENTES = [0.95, 0.7, 1.1, 0.8, 1.15, 0.75, 1.05, 0.9];
+// La línea de nieve, de derecha a izquierda: [posición a lo ancho (0 a 1), hondura]. Lenguas largas por las canales y roca que sube
+// entre ellas, a pasos desiguales (antes eran ocho dientes parejos y la nieve parecía un glaseado).
+const DIENTES = [[0.03, 0.6], [0.12, 0.98], [0.19, 0.7], [0.29, 1.18], [0.36, 0.84], [0.42, 0.95], [0.47, 0.62], [0.535, 1.02], [0.6, 0.68], [0.69, 1.24], [0.76, 0.86], [0.83, 1.05], [0.9, 0.7], [0.97, 0.9]];
 const NIEVE_MIN = 0.55; // con la altitud en cero: una capa fina
 const NIEVE_MAX = 1.5;  // llegando a la cumbre: la cumbre bien cubierta
 function trazoNieve({ sx, sy, ancho, nv }, alt) {
   const hondo = nv * (NIEVE_MIN + (NIEVE_MAX - NIEVE_MIN) * Math.min(1, Math.max(0, alt)));
   let d = `M${f1(sx - ancho)} ${f1(sy - 60)}L${f1(sx + ancho)} ${f1(sy - 60)}`;
-  DIENTES.forEach((k, i) => { d += `L${f1(sx + ancho - (2 * ancho * (i + 0.5)) / DIENTES.length)} ${f1(sy + hondo * k)}`; });
+  for (const [u, k] of DIENTES) d += `L${f1(sx + ancho - 2 * ancho * u)} ${f1(sy + hondo * k)}`;
   return `${d}Z`;
 }
 
@@ -277,12 +279,17 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   }
   // La cumbre no es una aguja: el sendero llega a un rellano (la meta) y, a su derecha, un cuerno de roca un poco más alto
   // la resguarda. Así la bandera de la meta queda por debajo del cuerno, dentro de la silueta, y no sobresale contra el cielo.
-  const ecC = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1;
+  // Los campamentos y el detalle de la cumbre crecen con la escena, y encogen si la montaña es baja (teléfono pequeño o acostado).
+  const ec = Math.min(W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1, Math.max(0.74, (piso - c.sy) / 300)), ecC = ec;
   // El cuerno es una pequeña cima con hombro (no una aguja): sube en dos tramos, tiene su pico y baja por la cara derecha en
   // pendiente, así que se lee como parte de la montaña. Todo son puntos fijos que crecen con la escena (sin `rnd()`).
-  const cuerno = [[c.sx - 10 * ecC, c.sy + 3 * ecC], [c.sx + 7 * ecC, c.sy], [c.sx + 12 * ecC, c.sy - 10 * ecC], [c.sx + 18 * ecC, c.sy - 15 * ecC],
-    [c.sx + 25 * ecC, c.sy - 28 * ecC], [c.sx + 35 * ecC, c.sy - 12 * ecC], [c.sx + 45 * ecC, c.sy + 6 * ecC]];
-  const picoC = cuerno[4];
+  // (Montaña: campamentos asentados) A la izquierda del cuerno la arista sube a una antecima baja: entre las dos queda un collado
+  // y, por delante, en la propia cara, el rellano de la meta. Así la bandera tiene nieve y roca detrás, no cielo.
+  const CUERNO = [[-14, 2], [-9.5, -6.5], [-3.5, -11.5], [4, -10], [9, -13], [14, -17.5], [19, -21.5], [25, -31], [35, -13], [45, 6]];
+  const enC = ([x, y]) => [c.sx + x * ecC, c.sy + y * ecC];
+  const cuerno = CUERNO.map(enC);
+  const N_CARA = 3; // desde este punto del cuerno hacia la derecha, la cara que mira al astro
+  const picoC = cuerno[7];
   const cimaPts = [...izq.slice(0, 10), ...cuerno, ...der.filter((p) => p[0] > c.sx + 48 * ecC)];
   const contorno = cimaPts.map((p, i) => `${i ? 'L' : 'M'}${f1(p[0])} ${f1(p[1])}`).join('');
   const silueta = `${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z`;
@@ -291,7 +298,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const quiebre = [[0.012, 0.07], [0.034, 0.13], [0.018, 0.2], [0.046, 0.29], [0.03, 0.38], [0.06, 0.52], [0.05, 0.7], [0.075, 1]]
     .map(([dx, dy]) => [c.sx + W * dx, c.sy + alto * dy]);
   const arista = quiebre.map((p) => `L${f1(p[0])} ${f1(p[1])}`);
-  const cara = `M${f1(c.sx)} ${f1(c.sy)}${cuerno.slice(1).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}${der.filter((p) => p[0] > c.sx + 48 * ecC).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}${[...arista].reverse().join('')}Z`;
+  const cara = `M${f1(c.sx)} ${f1(c.sy)}${cuerno.slice(N_CARA).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}${der.filter((p) => p[0] > c.sx + 48 * ecC).map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}L${f1(derX + W)} ${H}${[...arista].reverse().join('')}Z`;
   // Lo que queda a la izquierda de la arista central: ahí la nieve está en sombra.
   const izqArista = `M${f1(c.sx)} ${f1(-H)}L${f1(c.sx)} ${f1(c.sy)}${arista.join('')}L${f1(c.sx + W * 0.075)} ${H}L${f1(-W)} ${H}L${f1(-W)} ${f1(-H)}Z`;
   s += `<defs><clipPath id="m-silueta"><path d="${silueta}"/></clipPath><clipPath id="m-izq"><path d="${izqArista}"/></clipPath></defs><path class="monte" d="${silueta}" fill="url(#m-ladera)"/>`;
@@ -302,8 +309,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const mx = (r1[0] + q[0]) / 2, my = (r1[1] + q[1]) / 2;
     return `<path class="faceta f${i}" d="M${f1(r1[0])} ${f1(r1[1])}L${f1(r2[0])} ${f1(r2[1])}L${f1(mx + (r2[0] - mx) * 0.3)} ${f1(my + (r2[1] - my) * 0.6)}Z"/>`;
   }).join('')}</g>`;
-  s += relieve({ sx: c.sx, sy: c.sy, alto, izq, der, quiebre, W, H });
-  s += `<path class="arista" d="M${f1(cuerno[1][0])} ${f1(cuerno[1][1])}${[...cuerno.slice(2), ...der.filter((p) => p[0] > c.sx + 48 * ecC).slice(0, 4)].map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}"/>`;
+  s += `<path class="arista" d="M${f1(cuerno[4][0])} ${f1(cuerno[4][1])}${[...cuerno.slice(5), ...der.filter((p) => p[0] > c.sx + 48 * ecC).slice(0, 4)].map((p) => `L${f1(p[0])} ${f1(p[1])}`).join('')}"/>`;
   // Nieve: una franja irregular mucho más ancha que el pico, recortada por la silueta, para que
   // nunca sobresalga de las laderas.
   // Su profundidad sigue a tu altitud (`colocar` la actualiza), así que la cumbre se va cubriendo a medida que subes.
@@ -311,8 +317,12 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const dNieve = trazoNieve(nieveMedidas, altitud(inicio, esc));
   // La nieve con luz y sombra: el lado de la arista que mira al astro brilla un poco más y el otro queda en sombra.
   s += `<defs><clipPath id="m-der"><path d="${cara}"/></clipPath></defs><path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/><path class="nieve-luz" clip-path="url(#m-der)" d="${dNieve}"/>`
+    + `<path class="cuerno-sombra" d="M${[[25, -31], [19, -21.5], [14, -17.5], [9, -13], [4, -10], [1, -2], [9, 7], [17, 1]].map((q) => enC(q).map(f1).join(' ')).join('L')}Z"/>`
     // Facetas de la nieve: un plano más claro que baja del vértice hacia el astro y un pliegue en sombra al otro lado.
     + `<g clip-path="url(#m-nieve-c)"><path class="nieve-faceta" d="M${f1(picoC[0])} ${f1(picoC[1])}L${f1(picoC[0] + nieveMedidas.ancho * 0.3)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}L${f1(picoC[0] + nieveMedidas.ancho * 0.03)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}Z"/><path class="nieve-pliegue" d="M${f1(picoC[0] - 2)} ${f1(picoC[1] + 4)}L${f1(picoC[0] - nieveMedidas.ancho * 0.2)} ${f1(picoC[1] + nieveMedidas.nv * 2.1)}"/></g></g>`;
+
+  // El relieve va encima de la nieve: los mismos planos de luz y sombra tallan la roca y la nieve (antes la nieve era una capa lisa).
+  s += relieve({ sx: c.sx, sy: c.sy, alto, izq, der, quiebre, W, H });
 
   s += lago(c, W, H, ventas);
   s += luciernagas({ W, H, yH: c.sy }); // ambiente: luciérnagas en el valle al anochecer (campamento 15B) // 15B
@@ -357,12 +367,14 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const anchoAbajo = Math.min(12, Math.max(7, W / 60)), anchoArriba = anchoAbajo * 0.42;
   const ancho = (i) => anchoAbajo + (anchoArriba - anchoAbajo) * (piezas.length > 1 ? i / (piezas.length - 1) : 0);
   const capa = (clase, extra, dx = 0, dy = 0) => `<g class="${clase}"${dx || dy ? ` transform="translate(${dx} ${dy})"` : ''}>${piezas.map((pz, i) => `<path d="${pz}" stroke-width="${f1(ancho(i) + extra)}"/>`).join('')}</g>`;
-  // Sombra sobre la roca, borde, tierra y peldaños/piedras (se ponen al medir el trazo); encima, lo que falta (a trazos) y lo
+  // El camino está tallado en la ladera: por encima queda el corte de roca (en sombra) y por debajo el talud que lo sostiene (recibe
+  // la luz). Después, borde, tierra y peldaños/piedras (se ponen al medir el trazo); encima, lo que falta (a trazos) y lo
   // recorrido (cálido, con su luz). Es paisaje: se ve con cualquier nivel de efectos.
   // Sobre la nieve el camino no es de tierra: la máscara la quita ahí y queda una huella hundida en la nieve (`.sendero-nieve`).
+  s += '<g id="m-terrazas" clip-path="url(#m-silueta)"></g>';
   s += `<defs><mask id="m-tierra" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="#fff"/><path class="nieve-mascara" d="${dNieve}" fill="#000"/></mask>`
     + `<clipPath id="m-nieve-c"><path class="nieve-clip" d="${dNieve}"/></clipPath></defs>`
-    + `<g mask="url(#m-tierra)">${capa('sendero-sombra', 3, 1.5, 2.5)}${capa('sendero-borde', 2.6)}${capa('sendero-tierra', 0)}<g class="sendero-detalle" id="m-piedras"></g></g>`
+    + `<g mask="url(#m-tierra)">${capa('sendero-talud', 5, 0, 3.6)}${capa('sendero-corte', 4, 0, -3.2)}${capa('sendero-borde', 2.6)}${capa('sendero-tierra', 0)}<g class="sendero-detalle" id="m-piedras"></g></g>`
     + `<g clip-path="url(#m-silueta)"><g clip-path="url(#m-nieve-c)">${capa('sendero-nieve', 0)}</g></g>`;
   s += `<path class="sendero" id="m-sendero" d="${d}"/><path class="sendero-luz" id="m-luzhecha" d="${d}"/><path class="sendero-hecho" id="m-hecho" d="${d}"/><path class="estela" id="m-estela" d="${d}"/>`;
   if (aniv) s += `<circle class="salida-aniv" cx="${f1(bx)}" cy="${f1(by)}" r="26" fill="url(#m-luz)"/>`;
@@ -411,27 +423,22 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
       let min = Infinity;
       for (let d = -70; d <= 70; d += 7) {
         const q = camino.getPointAtLength(Math.min(L, Math.max(0, l + d)));
-        min = Math.min(min, Math.hypot(q.x - (p.x + 11 * lado), q.y - (p.y - 8)));
+        for (const dx of [DH, DH + 12]) min = Math.min(min, Math.hypot(q.x - (p.x + dx * ec * lado), q.y - (p.y - 6)));
       }
       return min;
     };
     return { m, p, cima: m === esc.cima, lado: lejania(-1) > lejania(1) + 0.5 ? -1 : 1 };
   });
-  // En pantallas grandes la montaña es mucho más alta: los campamentos crecen con ella (las cajas de las etiquetas también).
-  const ec = W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1;
+  host.querySelector('#m-terrazas').innerHTML = terrazas(campos, ec, c.sol[0] >= c.sx ? 1 : -1, [c.sx, c.sy]);
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec, c.sol[0] >= c.sx ? 1 : -1)).join('');
   // Las etapas intermedias (250k, 500k…) que no son campamento van como una marca atravesada en el sendero: así se ve el avance entre
   // un campamento y el siguiente. Solo en la app (la entrada no enseña tus datos).
   const etapas = !tocable ? [] : etapasHasta(esc.cima).filter((m) => m < esc.cima && m > esc.base && !esc.campos.includes(m)).map((m) => {
     const alt = altitud(m, esc), l = enAltura(alt), p = camino.getPointAtLength(l);
     const a = camino.getPointAtLength(Math.max(0, l - 4)), b = camino.getPointAtLength(Math.min(L, l + 4));
-    return { m, p, ang: Math.atan2(b.y - a.y, b.x - a.x), mitad: (anchoAbajo * (1 - 0.58 * alt)) / 2 + 4 };
+    return { m, l, p, ang: Math.atan2(b.y - a.y, b.x - a.x), mitad: (anchoAbajo * (1 - 0.58 * alt)) / 2, mayor: etapaMayor(m) };
   });
-  host.querySelector('#m-etapas').innerHTML = etapas.map(({ m, p, ang, mitad }) => {
-    const dx = -Math.sin(ang) * mitad, dy = Math.cos(ang) * mitad;
-    const l = `x1="${f1(p.x - dx)}" y1="${f1(p.y - dy)}" x2="${f1(p.x + dx)}" y2="${f1(p.y + dy)}"`;
-    return `<g class="etapa" data-m="${m}"><line class="etapa-sombra" ${l}/><line class="etapa-tick" ${l}/></g>`;
-  }).join('');
+  host.querySelector('#m-etapas').innerHTML = '<path class="etapa-sombra"/><path class="etapa-tick"/><path class="etapa-tick alcanzada"/><path class="etapa-tick sig"/>';
   // Tu eco (idea 31): un «Tú» translúcido y quieto donde estabas hace un año. Solo si de ahí hasta hoy hay camino que se vea.
   let ecoP = null, ecoTramo = null;
   if (eco && eco.sats > 0 && eco.sats < sats) {
@@ -444,7 +451,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, mensajes, puedeEscribir, firmas, techo, ec, libro, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, etapasVistas: [], sats, meta, c, nieveMedidas, fechas, compras, caja: null, mensajes, puedeEscribir, firmas, techo, ec, libro, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -461,33 +468,66 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
  */
 function campamento(m, p, cima, i, lado, ec = 1, sol = 1) {
   const luz = (cima ? 1 : lado) * sol < 0 ? ' transform="scale(-1 1)"' : ''; // dentro del grupo (quizá reflejado), ¿la luz llega por la izquierda?
-  // El farol: repisa de piedra, la cámara de luz (una cara más viva que la otra) y un sombrero de dos aguas. El halo y su respiración
-  // son degradados radiales (sin aros ni filtros); la llama solo vive en el siguiente campamento.
-  const farol = (y, k = 1) => `<g class="farol" transform="translate(0 ${y})${k !== 1 ? ` scale(${k})` : ''}"><circle class="farol-halo" cy="-4.5" r="21" fill="url(#m-farol)"/><circle class="efecto-ambiente humo" cy="-4.5" r="13" fill="url(#m-farol)"/>`
-    + `<g${luz}><path class="hito-techo" d="M-3.9 0H3.9L3.3 -1.1H-3.3Z"/><path class="farol-lado" d="M-2.5 -1.1H-0.7V-6.2H-2.5Z"/><path class="farol-cuerpo" d="M-0.7 -1.1H2.5V-6.2H-0.7Z"/>`
-    + '<path class="farol-techo" d="M-4.4 -6.2L-0.3 -9.2L-0.7 -6.2Z"/><path class="farol-techo luz" d="M-0.7 -6.2L-0.3 -9.2L4.4 -6.2Z"/></g>'
-    + '<path class="efecto-ambiente fogata llama" d="M0.6 -1.5C-0.8 -2.8 -0.3 -4.2 0.6 -5.6C1.5 -4.2 2 -2.8 0.6 -1.5Z"/></g>';
+  // El farol es un hueco en la propia piedra: la cámara de luz (una cara más viva que la otra) entre el fuste y la losa que lo
+  // cubre. El halo y su respiración son degradados radiales (sin aros ni filtros); la llama solo vive en el siguiente campamento.
+  const farol = (y, a = 2.9, xe = -0.7, h = 3.4, r = 21) => `<g class="farol" transform="translate(0 ${y})"><circle class="farol-halo" cy="${f1(-h / 2)}" r="${r}" fill="url(#m-farol)"/><circle class="efecto-ambiente humo" cy="${f1(-h / 2)}" r="${f1(r * 0.62)}" fill="url(#m-farol)"/>`
+    + `<g${luz}><path class="farol-lado" d="M${-a} 0H${xe}V${-h}H${-a}Z"/><path class="farol-cuerpo" d="M${xe} 0H${a}V${-h}H${xe}Z"/></g>`
+    + `<path class="efecto-ambiente fogata llama" d="M0.6 -0.3C-0.6 -1.2 -0.2 -2.2 0.6 ${f1(-h + 0.2)}C1.4 -2.2 1.8 -1.2 0.6 -0.3Z"/></g>`;
   let dentro;
   if (cima) {
-    // La meta vive en el rellano de la cumbre, resguardada por el cuerno de roca (ver `cuerno`): un mojón de dos piedras con una
-    // banderita cálida y corta (su tela queda delante de la roca, por debajo del cuerno) y, a su pie, el farol con su luz sobre la
-    // nieve. Nada sobresale contra el cielo.
-    const yv = -6, y = (d = 0) => f1(yv + d); // el rellano; `y(d)` es una altura sobre él
-    dentro = `<ellipse class="cima-brasa" cx="-4" cy="${y(0.4)}" rx="15" ry="4.6" fill="url(#m-farol)"/><ellipse class="sombra-contacto" cx="0.4" cy="${y(0.2)}" rx="5" ry="1.1"/>`
-      + `<g transform="translate(-6.4 ${y(0.2)})">${farol(0, 0.72)}</g>`
-      + `<g${luz}>${piedra(bloque(yv, yv - 2.6, 3.8, 3, -0.5), bloque(yv - 2.6, yv - 4.8, 2.4, 1.7, -0.3))}</g>`
-      + `<line class="cima-mastil" x1="0.2" x2="0.2" y1="${y(-4.6)}" y2="${y(-15)}"/>`
-      + `<g class="banderin cima-banderin"><path d="M0.2 ${y(-15)}C4 ${y(-16.2)} 7.2 ${y(-13.2)} 11.6 ${y(-13.9)}L9.7 ${y(-11)}L11.4 ${y(-8.3)}C7.2 ${y(-7.6)} 4 ${y(-10)} 0.2 ${y(-9.2)}Z"/>`
-      + `<path class="banderin-pliegue" d="M0.2 ${y(-11.7)}C4 ${y(-12.7)} 7 ${y(-10.2)} 9.7 ${y(-11)}L11.4 ${y(-8.3)}C7.2 ${y(-7.6)} 4 ${y(-10)} 0.2 ${y(-9.2)}Z"/></g>`;
+    // La meta vive en el rellano tallado bajo el collado de la cumbre (ver `terrazas`): un mojón con su farol y una banderita cálida
+    // y corta. Detrás tiene la nieve en sombra del cuerno y la antecima: nada asoma contra el cielo.
+    const yv = RELLANO_CIMA - 6 / ec, y = (d = 0) => f1(yv + d); // el suelo del rellano (el sendero acaba 6 px bajo la cumbre); `y(d)` es una altura sobre él
+    dentro = `<ellipse class="cima-brasa" cx="-1" cy="${y(0.2)}" rx="13" ry="4" fill="url(#m-farol)"/>`
+      + `<g transform="translate(0 ${y()})"><g${luz}>${piedra(bloque(0, -2.8, 5, 4.3, -0.9), bloque(-5.6, -7.4, 3.9, 2.7, -0.7))}</g>${farol(-2.8, 2.7, -0.7, 2.8, 14)}</g>`
+      + `<line class="cima-mastil" x1="0.2" x2="0.2" y1="${y(-7.6)}" y2="${y(-17.5)}"/><g transform="translate(0 1.5)">`
+      + `<g class="banderin cima-banderin"><path d="M0.2 ${y(-19)}C4 ${y(-20.2)} 7.2 ${y(-17.2)} 11.6 ${y(-17.9)}L9.7 ${y(-15)}L11.4 ${y(-12.3)}C7.2 ${y(-11.6)} 4 ${y(-14)} 0.2 ${y(-13.2)}Z"/>`
+      + `<path class="banderin-pliegue" d="M0.2 ${y(-15.7)}C4 ${y(-16.7)} 7 ${y(-14.2)} 9.7 ${y(-15)}L11.4 ${y(-12.3)}C7.2 ${y(-11.6)} 4 ${y(-14)} 0.2 ${y(-13.2)}Z"/></g></g>`;
   } else {
     const ico = icono(i);
-    // El apartadero sale del sendero (que pasa a 11 unidades) y llega hasta el pie del hito; su canto queda en sombra.
-    dentro = '<g transform="translate(11 0)"><ellipse class="luz-suelo" cx="-1.5" cy="1.4" rx="18" ry="5" fill="url(#m-farol)"/>'
-      + '<path class="hito-canto" d="M-8.2 2L6.4 2.3L8.8 0.6L8.2 2.4L5.6 3.9L-7 3.5Z"/><path class="hito-rellano" d="M-8.8 -0.5L6.8 -1L8.8 0.6L6.4 2.3L-8.2 2Z"/>'
-      + `<g${luz}>${ico.d}<path class="hito-bano" d="M${ico.xe} ${ico.cima}H${ico.b}L${f1(ico.b + 0.6)} ${f1(ico.cima + 8)}H${ico.xe}Z" fill="url(#m-bano)"/></g>${farol(ico.cima)}</g>`;
+    dentro = `<g transform="translate(${DH} 0)"><ellipse class="luz-suelo" cx="-1" cy="0.6" rx="19" ry="4.6" fill="url(#m-farol)"/>`
+      + `<g${luz}>${ico.d}<path class="hito-bano" d="M${ico.xe} ${ico.farol}H${ico.b}L${f1(ico.b + 0.8)} ${f1(ico.farol + 8)}H${ico.xe}Z" fill="url(#m-bano)"/></g>${farol(ico.farol, ico.b - 0.5, ico.xe)}</g>`;
   }
-  const brillo = cima ? '<ellipse class="brillo-cima" cx="-2" cy="-10" rx="24" ry="14" fill="url(#m-luz)"/>' : '';
+  const brillo = cima ? `<ellipse class="brillo-cima" cx="2" cy="${f1(RELLANO_CIMA - 6 / ec - 10)}" rx="22" ry="13" fill="url(#m-luz)"/>` : '';
   return `<g class="campo${cima ? ' es-cima' : ''}" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})${ec !== 1 ? ` scale(${ec})` : ''}">${brillo}${lado < 0 ? `<g transform="scale(-1 1)">${dentro}</g>` : dentro}</g>`;
+}
+
+/** A cuántas unidades del sendero se planta el hito de un campamento (hacia el lado libre) y a qué altura, bajo la cumbre, queda su rellano. */
+const DH = 15, RELLANO_CIMA = 7.2;
+
+/**
+ * Los rellanos (Montaña: campamentos asentados). Cada campamento se asienta en una repisa tallada en la ladera: el suelo (el plano que
+ * más luz recibe), el corte de roca que queda detrás (en sombra, con una cara que recibe algo de luz), la roca que lo sostiene por
+ * debajo y la sombra que echa sobre la ladera. La repisa sigue hacia fuera, cada vez más fina, hasta donde llega el rótulo del
+ * campamento, que se apoya en ella. El sendero pasa por encima. La sombra del hito cae en el suelo, al lado contrario del astro.
+ * Es terreno, no un dibujo del campamento: va en coordenadas de la escena, recortado por la silueta, con un trazo por tono para
+ * todos los campamentos (pocos nodos) y no se apaga con los campamentos pendientes. En la cumbre, el rellano está tallado en la nieve.
+ */
+function terrazas(campos, e, sol, [sx, sy]) {
+  const t = { sombra: '', pie: '', corte: '', corteLuz: '', muro: '', muroLuz: '', suelo: '', nieve: '', nieveS: '' };
+  for (const { m, p, cima, lado } of campos) {
+    if (cima) {
+      const d = (pts) => `M${pts.map(([x, y]) => `${f1(sx + x * e)} ${f1(sy + y * e)}`).join('L')}Z`, r = RELLANO_CIMA;
+      t.corte += d([[-8, r - 2.2], [-6, r - 7], [0, r - 9.5], [7, r - 8.5], [11.5, r - 2.6]]);
+      t.corteLuz += sol > 0 ? d([[-8, r - 2.2], [-6, r - 7], [0, r - 9.5], [-1, r - 2.3]]) : d([[0, r - 9.5], [7, r - 8.5], [11.5, r - 2.6], [3, r - 2.4]]);
+      t.nieveS += d([[-9, r + 2.4], [10, r + 2.1], [14.5, r - 0.2], [12, r + 3.8], [-7, r + 4.8], [-12.5, r + 2]]);
+      t.nieve += d([[-13.5, r + 1], [-8, r - 2.2], [11.5, r - 2.6], [14.5, r - 0.2], [10, r + 2.1], [-9, r + 2.4]]);
+      t.pie += d([[-4, r + 0.3], [4.4, r + 0.3], [4.4 - sol * 9, r + 1.8], [-4 - sol * 9, r + 1.8]]);
+      continue;
+    }
+    const d = (pts) => `M${pts.map(([x, y]) => `${f1(p.x + x * lado * e)} ${f1(p.y + y * e)}`).join('L')}Z`;
+    const s = sol * lado; // +1: el astro queda hacia +x (hacia fuera del sendero)
+    const fin = 39; // la repisa se afina hacia fuera; si el rótulo se apoya en ella, `etiquetar` la alarga hasta él
+    t.corte += d([[-3, -2.6], [1, -10.5], [9, -15.5], [20, -14], [26, -8.5], [33, -3.1]]);
+    t.corteLuz += s > 0 ? d([[-3, -2.6], [1, -10.5], [9, -15.5], [8, -2.8]]) : d([[20, -14], [26, -8.5], [33, -3.1], [21, -2.9]]);
+    t.muro += d([[-4, 3], [32, 2.3], [fin, -0.9], [30 + (fin - 30) * 0.5, 4.2], [27, 8.6], [13, 10.6], [1, 9.4], [-7, 5.2]]);
+    t.muroLuz += s > 0 ? d([[16, 2.6], [32, 2.3], [fin, -0.9], [30 + (fin - 30) * 0.5, 4.2], [27, 8.6], [14, 10.5]]) : d([[-4, 3], [13, 2.7], [12, 10.5], [1, 9.4], [-7, 5.2]]);
+    t.sombra += d([[-7, 5.2], [1, 9.4], [13, 10.6], [27, 8.6], [30 + (fin - 30) * 0.5, 4.2], [29 - s * 3, 11], [18 - s * 4, 15.5], [5 - s * 4, 14], [-5 - s * 2, 10]]);
+    t.pie += d([[DH - 5.6, 0.2], [DH + 5.6, 0.2], [DH + 5.6 - s * 12, 2], [DH - 5.6 - s * 12, 2]]);
+    t.suelo += d([[-9, 0.4], [-3, -2.6], [33, -3.1], [fin, -0.9], [32, 2.3], [-4, 3]]);
+  }
+  return `<path class="tz-sombra" d="${t.sombra}"/><path class="tz-corte" d="${t.corte}"/><path class="tz-corte-luz" d="${t.corteLuz}"/><path class="tz-muro" d="${t.muro}"/><path class="tz-muro-luz" d="${t.muroLuz}"/>`
+    + `<path class="tz-muro" id="m-repisa-m"/><path class="tz-suelo" d="${t.suelo}"/><path class="tz-suelo" id="m-repisa"/><path class="tz-nieve-s" d="${t.nieveS}"/><g clip-path="url(#m-nieve-c)"><path class="tz-nieve" d="${t.suelo}${t.nieve}"/></g><path class="tz-pie" d="${t.pie}"/>`;
 }
 
 /**
@@ -501,17 +541,14 @@ function bloque(y0, y1, a, b, xe) {
 const piedra = (...piezas) => `<path class="hito-sombra" d="${piezas.map((x) => x[0]).join('')}"/><path class="campo-ico" d="${piezas.map((x) => x[1]).join('')}"/><path class="hito-techo" d="${piezas.map((x) => x[2]).join('')}"/>`;
 
 /**
- * Un hito distinto por campamento (idea 63), cada uno algo más alto que el anterior: un mojón de dos piedras, un pilar con su zócalo y
- * su collar, y un obelisco. Todos en el mismo lenguaje (caras con luz y sombra). El origen es el pie; `cima` es dónde se apoya el
- * farol; `b` y `xe`, el medio ancho y la arista de la piedra en ese punto (para la luz que baja por su cara iluminada).
+ * Un hito distinto por campamento (idea 63), cada uno algo más alto que el anterior: un mojón, un pilar y un obelisco. Todos son un
+ * zócalo, un fuste, el hueco del farol y la losa que lo cubre, en el mismo lenguaje (caras con luz y sombra). El origen es el pie;
+ * `farol` es el suelo del hueco; `b` y `xe`, el medio ancho y la arista de la piedra ahí (para la cámara y la luz que baja por la cara).
  */
 function icono(i) {
-  const formas = [
-    { cima: -10.6, b: 3.6, xe: -0.8, d: piedra(bloque(0, -5.2, 6.2, 5.3, -1.1), bloque(-5.2, -10.6, 4.6, 3.6, -0.8)) },
-    { cima: -15.2, b: 3.8, xe: -0.8, d: piedra(bloque(0, -2.6, 6, 5.4, -1.1), bloque(-2.6, -13.2, 4.2, 3.4, -0.8), bloque(-13.2, -15.2, 4.3, 3.8, -0.8)) },
-    { cima: -18.4, b: 2.9, xe: -0.7, d: piedra(bloque(0, -2.4, 6, 5.4, -1.1), bloque(-2.4, -18.4, 4.5, 2.9, -0.7)) },
-  ];
-  return formas[Math.min(Math.max(i, 0), 2)];
+  const forma = (zoc, fuste, a, b, tapa) => ({ farol: -fuste, b, xe: -0.8,
+    d: piedra(bloque(0, -zoc, 6.8, 6, -1.2), bloque(-zoc, -fuste, a, b, -0.8), bloque(-fuste - 3.4, -fuste - 3.4 - tapa, b + 1.1, b - 0.5, -0.8)) });
+  return [forma(4.4, 7.6, 5, 4.2, 2.4), forma(3, 11.6, 4.7, 3.8, 2.4), forma(2.6, 15.4, 4.8, 3.3, 2.6)][Math.min(Math.max(i, 0), 2)];
 }
 
 /**
@@ -633,8 +670,8 @@ function banderas(host, campos, W, H) {
     b.setAttribute('aria-controls', 'm-tarjeta');
     b.setAttribute('aria-label', `${t.titulo}. ${t.texto}`);
     const e = estado.ec || 1;
-    b.style.left = `${f1(Math.min(Math.max(p.x + (cima ? 3 : 11 * lado) * e - TOQUE / 2, 0), W - TOQUE))}px`;
-    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - (cima ? 14 : 12) * e, 0), H - TOQUE))}px`;
+    b.style.left = `${f1(Math.min(Math.max(p.x + (cima ? 3 : DH * lado) * e - TOQUE / 2, 0), W - TOQUE))}px`;
+    b.style.top = `${f1(Math.min(Math.max(p.y - TOQUE / 2 - (cima ? 5 : 11) * e, 0), H - TOQUE))}px`;
     b.addEventListener('click', () => (abierta === m ? cerrarTarjeta() : abrirTarjeta(m)));
     return b;
   });
@@ -808,11 +845,11 @@ function etiquetar(yo, sats = estado.sats) {
   const { campos, W, host } = estado;
   // Cada campamento (mástil, banderín y tienda) y el punto de «Tú» ocupan su sitio: ninguna etiqueta se les encima.
   const e = estado.ec || 1;
-  const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 12 * e, y: p.y - 30 * e, w: 40 * e, h: 30 * e, m } : { x: p.x + (lado < 0 ? -30 : -2) * e, y: p.y - 38 * e, w: 32 * e, h: 42 * e, m }));
+  const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 12 * e, y: p.y - 24 * e, w: 40 * e, h: 34 * e, m } : { x: p.x + (lado < 0 ? -32 : 0) * e, y: p.y - 38 * e, w: 32 * e, h: 42 * e, m }));
   cajas.push({ x: yo.x - 18, y: yo.y - 18, w: 36, h: 36 });
   if (estado.eco) cajas.push({ x: estado.eco.p.x - 12, y: estado.eco.p.y - 12, w: 24, h: 24 });
   // Las marcas de etapa también ocupan su sitio (solo la siguiente lleva rótulo).
-  for (const { m, p } of estado.etapas || []) cajas.push({ x: p.x - 9, y: p.y - 9, w: 18, h: 18, m });
+  for (const { m, p } of estado.etapasVistas || []) cajas.push({ x: p.x - 9, y: p.y - 9, w: 18, h: 18, m });
   // En el teléfono y la tablet el saldo ocupa todo el ancho de arriba: ninguna etiqueta sube por encima de él.
   const techoEt = W < 1100 && !estado.c.lago ? (estado.techo || 0) + 4 : 0;
   const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || b.y < Math.max(4, techoEt) || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
@@ -839,15 +876,17 @@ function etiquetar(yo, sats = estado.sats) {
   cajas.push(yb);
   const prioridad = (m) => (m === estado.esc.cima ? 0 : m === estado.meta ? 1 : 2);
   const orden = [...campos].sort((a, b) => prioridad(a.m) - prioridad(b.m));
+  let repisa = '', repisaM = '';
   let s = `<text class="yo-txt" x="${f1(yb.tx)}" y="${f1(yb.y + 17)}" text-anchor="${yb.anclaje}">${rotulo}</text>`;
   for (const { m, p, cima, lado } of orden) {
     const txt = nombreHito(m);
     const w = txt.length * 8.2 + 6;
     // Un letrero junto al campamento: por fuera (del lado de la tienda), encima, del otro lado del camino o debajo.
     // El rótulo es texto con un halo suave sobre la roca, junto al hito: por fuera del camino, al otro lado, encima o debajo.
-    const xc = cima ? p.x : p.x + 11 * lado * e;
-    const yt = p.y - (cima ? 22 : 22) * e;
-    const dx = (cima ? 26 : 14) * e;
+    // El de un campamento se apoya en su repisa (que sigue hasta ahí: ver `terrazas`); el de la cumbre, pegado a la antecima.
+    const xc = cima ? p.x : p.x + DH * lado * e;
+    const yt = cima ? p.y - 22 * e : p.y - 19 - 1.5 * e;
+    const dx = (cima ? 19 : 16) * e;
     const fuera = { x: lado > 0 || cima ? xc + dx : xc - dx - w, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'start' : 'end', tx: lado > 0 || cima ? xc + dx + 3 : xc - dx - 3 };
     const otro = { x: lado > 0 || cima ? xc - dx - w : xc + dx, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'end' : 'start', tx: lado > 0 || cima ? xc - dx - 3 : xc + dx + 3 };
     const encima = { x: xc - w / 2, y: p.y - (cima ? 52 : 46) * e, w, h: 20, anclaje: 'middle', tx: xc };
@@ -856,6 +895,11 @@ function etiquetar(yo, sats = estado.sats) {
     const b = opciones.find((o) => !choca(o, m));
     if (!b) continue;
     cajas.push(b);
+    if (b === fuera && !cima) { // el rótulo se apoya en la repisa de su campamento: se alarga, cada vez más fina, hasta él
+      const fin = (b.w + dx + DH * e) / e + 3, q = ([x, y]) => `${f1(p.x + x * lado * e)} ${f1(p.y + y * e)}`;
+      repisa += `M${[[33, -3.1], [fin, -0.9], [32, 2.3]].map(q).join('L')}Z`;
+      repisaM += `M${[[32, 2.3], [fin, -0.9], [33 + (fin - 33) * 0.45, 3.4], [27, 8.6]].map(q).join('L')}Z`;
+    }
     s += `<text class="campo-txt${cima ? ' cima' : ''}" x="${f1(b.tx)}" y="${f1(b.y + 15)}" text-anchor="${b.anclaje}">${txt}</text>`;
   }
   // El rótulo del eco, pequeño y sin placa, donde quepa (si no cabe, el eco queda sin letrero: la descripción de la montaña lo dice).
@@ -885,6 +929,8 @@ function etiquetar(yo, sats = estado.sats) {
   }
   const caja = host.querySelector('#m-etiquetas');
   caja.innerHTML = s;
+  host.querySelector('#m-repisa')?.setAttribute('d', repisa);
+  host.querySelector('#m-repisa-m')?.setAttribute('d', repisaM);
   // Cada etiqueta lleva detrás una placa redondeada (se mide el texto ya dibujado: legible sobre cualquier cielo o ladera).
   for (const t of caja.querySelectorAll('text.yo-txt')) {
     const bb = t.getBBox();
@@ -896,6 +942,34 @@ function etiquetar(yo, sats = estado.sats) {
     r.setAttribute('rx', f1((bb.height + 3) / 2));
     caja.insertBefore(r, t);
   }
+}
+
+/**
+ * Las marcas de etapa (las metas intermedias que no son campamento). Pueden ser muchas y, con la escala logarítmica, las altas quedan
+ * muy juntas: `lib.marcasEtapa` elige cuáles caben (la siguiente siempre; luego las mayores —2.5 y 5 de cada potencia— y luego las
+ * demás, si quedan a `HUECO_ETAPA` px de sendero o más de las que ya entraron). Las mayores cruzan el camino
+ * y asoman a los lados; las menores son una muesca del ancho del camino. Todo son cuatro trazos (sombra, pendientes, alcanzadas y
+ * la siguiente), haya las etapas que haya; solo se rehacen cuando cambia cuántas llevas.
+ */
+const HUECO_ETAPA = 11;
+function pintarEtapas(sats) {
+  const { etapas, host } = estado;
+  if (!etapas?.length) return;
+  const sig = etapaSiguiente(sats), hechas = etapas.filter((x) => x.m <= sats).length;
+  const clave = `${sig}|${hechas}`;
+  if (estado.claveEtapas === clave) return;
+  estado.claveEtapas = clave;
+  const vistas = marcasEtapa(etapas, sig, HUECO_ETAPA);
+  estado.etapasVistas = vistas;
+  const d = { sombra: '', resto: '', alcanzada: '', sig: '' };
+  for (const { m, p, ang, mitad, mayor } of vistas) {
+    const largo = mayor || m === sig ? mitad + 4 : mitad + 0.6, dx = -Math.sin(ang) * largo, dy = Math.cos(ang) * largo;
+    const l = `M${f1(p.x - dx)} ${f1(p.y - dy)}L${f1(p.x + dx)} ${f1(p.y + dy)}`;
+    if (mayor || m === sig) d.sombra += l;
+    d[m === sig ? 'sig' : m <= sats ? 'alcanzada' : 'resto'] += l;
+  }
+  const [a, b, c2, e] = host.querySelectorAll('#m-etapas path');
+  a.setAttribute('d', d.sombra); b.setAttribute('d', d.resto); c2.setAttribute('d', d.alcanzada); e.setAttribute('d', d.sig);
 }
 
 function colocar(sats, animado) {
@@ -912,8 +986,7 @@ function colocar(sats, animado) {
   // La fogata y el humo: el siguiente campamento es el primero que aún no alcanzaste.
   const sig = estado.campos.find((x) => x.m > sats)?.m;
   host.querySelectorAll('.campo').forEach((g) => g.classList.toggle('sig', Number(g.dataset.m) === sig));
-  const sigEtapa = etapaSiguiente(sats);
-  host.querySelectorAll('.etapa').forEach((g) => { g.classList.toggle('alcanzada', Number(g.dataset.m) <= sats); g.classList.toggle('sig', Number(g.dataset.m) === sigEtapa); });
+  pintarEtapas(sats);
   // Rendimiento: la nieve se usa de máscara y de recorte, así que cada cambio de su trazo obliga a volver a pintar medio monte.
   // Mientras «Tú» sube se actualiza por escalones (16 en toda la montaña, no en cada fotograma) y, si no cambió, no se toca;
   // al llegar (`animado` falso) queda con su valor exacto.

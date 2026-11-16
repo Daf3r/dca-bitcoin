@@ -147,7 +147,7 @@ html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .rayos { display: inl
 .ry-0 { stop-color: var(--astro); stop-opacity: 0; } .ry-1 { stop-color: var(--astro); stop-opacity: 0.2; } .ry-2 { stop-color: var(--astro); stop-opacity: 0; }
 .faceta { fill: var(--astro); opacity: 0.07; } .faceta.f1 { opacity: 0.05; } .faceta.f2 { opacity: 0.03; }
 .arista { fill: none; stroke: var(--astro); stroke-opacity: 0.32; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
-.nieve-sombra { fill: var(--monte-sombra); opacity: 0.32; }
+.nieve-sombra { fill: var(--nieve-s); opacity: 0.4; }
 .nb-0 { stop-color: var(--nube); } .nb-1 { stop-color: color-mix(in oklab, var(--nube) 55%, transparent); }
 .nl-0 { stop-color: var(--nube); stop-opacity: 0; } .nl-1 { stop-color: var(--nube); }
 .lg-0 { stop-color: color-mix(in oklab, var(--c4) 55%, var(--medio)); } .lg-1 { stop-color: color-mix(in oklab, var(--c3) 45%, var(--monte)); }
@@ -160,7 +160,7 @@ html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .rayos { display: inl
 html[data-cielo="noche"] .sol, html:not([data-cielo="noche"]) .luna { display: none; }
 .luna-sombra { fill: var(--astro); opacity: 0.16; }
 /* Brillo tenue detrás de la cumbre que es tu próxima gran meta. */
-.brillo-cima { opacity: 0.4; pointer-events: none; }
+.brillo-cima { opacity: 0.4; pointer-events: none; } html[data-cielo="dia"] .brillo-cima { opacity: 0.12; }
 /* Ambiente (solo con todos los efectos): las estrellas titilan a ritmos distintos y, de vez en cuando, cruza una fugaz. */
 @keyframes titila { 0%, 100% { opacity: var(--estrellas); } 50% { opacity: calc(var(--estrellas) * 0.3); } }
 html[data-efectos="todos"] .estrella.t1 { animation: titila 5.5s ease-in-out infinite; }
@@ -229,8 +229,7 @@ html[data-efectos="todos"] .marca-ico path { stroke-dasharray: 1; animation: ico
 .pino-0 { fill: var(--pino0); } .pino-1 { fill: var(--pino1); }
 /* El sendero es un camino de tierra (pulido visual): sombra sobre la roca, borde, tierra que se estrecha con la altura, peldaños y
    piedras; lo que falta va a trazos claros y apagados, lo recorrido es naranja con su luz. */
-:is(.sendero-sombra, .sendero-borde, .sendero-tierra) path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.sendero-sombra path { stroke: var(--monte-sombra); opacity: 0.55; }
+:is(.sendero-borde, .sendero-tierra) path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .sendero-borde path { stroke: color-mix(in oklab, var(--monte-sombra) 70%, #4a3523); }
 .sendero-tierra path { stroke: color-mix(in oklab, var(--monte) 52%, #a8865c); }
 .peldano { fill: none; stroke: color-mix(in oklab, var(--monte-sombra) 65%, #4a3523); stroke-width: 1.3; stroke-linecap: round; opacity: 0.55; }
@@ -254,7 +253,6 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 .campo line { stroke: var(--nieve); stroke-width: 2.2; stroke-linecap: round; }
 .banderin { fill: var(--nieve); opacity: 0.7; transform-box: fill-box; transform-origin: left center; }
 /* El campamento es parte de la escena: un claro sobre el sendero, los troncos del fogón (solo en los alcanzados) y su tienda o cabaña. */
-.sombra-contacto { fill: var(--monte-sombra); opacity: 0.55; }
 /* La cumbre: una cresta de roca nevada donde se apoyan el mástil, la fogata y el torre de piedras; la cara que mira al astro, más clara. */
 .nieve-luz { fill: #fff; opacity: 0.22; }
 /* Las etiquetas van sobre una placa (legibles sobre cualquier cielo o ladera); «Tú» en naranja, lo tuyo. */
@@ -269,9 +267,8 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 /* Marcas de etapa (250k, 500k…) atravesadas en el sendero: apagadas, encendidas al llegar y la siguiente en naranja. */
 .etapa-sombra { stroke: color-mix(in oklab, var(--monte-sombra) 70%, #0a0805); stroke-opacity: 0.4; stroke-width: 3.8; stroke-linecap: round; }
 .etapa-tick { stroke: color-mix(in oklab, var(--nieve) 60%, #cdbb9c); stroke-width: 1.8; stroke-linecap: round; opacity: 0.55; }
-.etapa.alcanzada .etapa-tick { stroke: #ffe0a3; opacity: 1; }
-.etapa.sig .etapa-sombra { stroke-width: 4.6; }
-.etapa.sig .etapa-tick { stroke: var(--naranja); stroke-width: 2.6; opacity: 1; }
+.etapa-tick.alcanzada { stroke: #ffe0a3; opacity: 0.95; }
+.etapa-tick.sig { stroke: var(--naranja); stroke-width: 2.6; opacity: 1; }
 .campo-txt.cima { stroke: color-mix(in oklab, var(--c2) 55%, transparent); stroke-width: 3.5px; fill: var(--cielo-txt); }
 .yo-txt { fill: var(--naranja-osc); font-weight: 700; }
 .yo-punto { fill: var(--naranja); stroke: var(--nieve); stroke-width: 3; }
@@ -1417,31 +1414,27 @@ html[data-cielo="atardecer"] .linterna, html[data-cielo="amanecer"] .linterna { 
 /* Un dibujo por campamento (tienda, cabaña, refugio, torre de piedras): apagado hasta alcanzarlo. */
 /* Los hitos (pasada de arte de los campamentos): piedra tallada en el lenguaje de la montaña, sin contornos de dibujo. Tres tonos
    que salen de la roca y de la luz del astro (siguen a la hora sin redibujar): la cara que mira al astro (`campo-ico`), la cara en
-   sombra y el plano de arriba. Cada hito se apoya en un apartadero de tierra que sale del sendero. El farol es parte de la piedra:
+   sombra y el plano de arriba. Cada hito se asienta en un rellano tallado en la ladera (ver «Campamento 21», al final). El farol es un hueco en la piedra:
    apagado es roca; encendido, su cámara brilla, la luz baja por la piedra y cae en el suelo (degradados propios, `#m-farol` y
    `#m-bano`: cálidos a cualquier hora y con cualquier tema). Alcanzado = encendido; siguiente = brasa y medio halo; pendiente = tenue. */
 .campo { --pd-media: color-mix(in oklab, var(--monte) 46%, #b6a995); --pd-luz: color-mix(in oklab, var(--pd-media) 56%, var(--luz-roca, var(--astro))); --pd-sombra: color-mix(in oklab, var(--monte-sombra) 90%, #0e0c0a); }
 .campo-ico { fill: var(--pd-luz); }
 .hito-sombra { fill: var(--pd-sombra); }
 .hito-techo { fill: color-mix(in oklab, var(--pd-luz) 76%, #fff); }
-.hito-rellano { fill: color-mix(in oklab, var(--monte) 52%, #a8865c); }
-.hito-canto { fill: var(--pd-sombra); opacity: 0.6; }
 .hito-bano { opacity: 0; pointer-events: none; }
 .ba-0 { stop-color: #ffcf7d; stop-opacity: 0.85; } .ba-1 { stop-color: #ffb056; stop-opacity: 0; }
 .fa-0 { stop-color: #ffe2a6; stop-opacity: 0.95; } .fa-1 { stop-color: #ffb357; stop-opacity: 0.36; } .fa-2 { stop-color: #ff9c3d; stop-opacity: 0; }
 .farol-cuerpo { fill: color-mix(in oklab, var(--pd-sombra) 78%, #000); } .farol-lado { fill: color-mix(in oklab, var(--pd-sombra) 90%, #000); }
-.farol-techo { fill: color-mix(in oklab, var(--pd-sombra) 82%, var(--pd-media)); } .farol-techo.luz { fill: color-mix(in oklab, var(--pd-media) 80%, var(--pd-sombra)); }
 .farol-halo, .luz-suelo, .cima-brasa { opacity: 0; pointer-events: none; }
 .campo.alcanzado .farol-cuerpo { fill: #ffe7ae; } .campo.alcanzado .farol-lado { fill: #f6b65a; }
 .campo.sig .farol-cuerpo { fill: #f0a148; } .campo.sig .farol-lado { fill: #c9762a; }
-.campo.alcanzado .farol-techo.luz, .campo.sig .farol-techo.luz { fill: color-mix(in oklab, var(--pd-media) 70%, #ffb866); }
 .campo.alcanzado .hito-bano { opacity: calc(var(--farol-a, 0.9) * 0.85); }
 .campo.alcanzado .farol-halo { opacity: var(--farol-a, 0.9); } .campo.sig .farol-halo { opacity: calc(var(--farol-a, 0.9) * 0.5); }
 .campo.alcanzado .luz-suelo { opacity: calc(var(--farol-a, 0.9) * 0.62); } .campo.sig .luz-suelo { opacity: calc(var(--farol-a, 0.9) * 0.3); }
 .campo.alcanzado .cima-brasa, .campo.sig .cima-brasa { opacity: calc(var(--farol-a, 0.9) * 0.7); }
 /* De día la luz de un farol casi no se ve: el halo baja para no lavar la roca; al amanecer y al atardecer, a medias. */
 html[data-cielo="dia"] .campo { --farol-a: 0.32; } html[data-cielo="amanecer"] .campo, html[data-cielo="atardecer"] .campo { --farol-a: 0.64; }
-.campo:not(.alcanzado):not(.sig) :is(.campo-ico, .hito-sombra, .hito-techo, .hito-rellano, .hito-canto, .farol-cuerpo, .farol-lado, .farol-techo) { opacity: 0.42; }
+.campo:not(.alcanzado):not(.sig) :is(.campo-ico, .hito-sombra, .hito-techo, .farol-cuerpo, .farol-lado) { opacity: 0.5; }
 .farol .llama { fill: #fff3cf; }
 /* Al alcanzar un campamento en esta sesión, su farol se enciende de golpe y se asienta (solo transform y opacity). */
 .campo.iza .farol-halo { transform-box: fill-box; transform-origin: center; animation: farol-enciende 1.3s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
@@ -3568,3 +3561,24 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
     background: linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 11px 2.5px no-repeat, linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 2.5px 11px no-repeat, var(--naranja-osc); }
   html[data-pestanas][data-boton]:not([data-tv]) .anotar .an-c { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
 }
+
+/* ================================================================ Campamento 21 · Montaña asentada
+   Lo que hay en la montaña está tallado en ella. Cada campamento se asienta en un rellano (montana.js: terrazas): el suelo, el corte
+   de roca de detrás, la roca que lo sostiene y su sombra; es terreno, en los tonos de la roca, y sigue a la hora. La repisa se alarga
+   bajo el rótulo. En la cumbre el rellano es un escalón en la nieve. La nieve en sombra toma el color del cielo (`--nieve-s`) y el
+   relieve de la montaña se pinta encima de ella: los mismos planos tallan roca y nieve. */
+.montana { --nieve-s: color-mix(in oklab, var(--c0) 55%, var(--monte-sombra)); --tz-roca: color-mix(in oklab, var(--monte) 84%, var(--luz-roca, var(--astro))); }
+.tz-suelo { fill: color-mix(in oklab, color-mix(in oklab, var(--monte) 56%, #a8865c) 74%, var(--luz-roca, var(--astro))); }
+.tz-corte { fill: color-mix(in oklab, var(--monte-sombra) 84%, #000); opacity: 0.72; }
+.tz-corte-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.09; }
+.tz-muro { fill: var(--tz-roca); }
+.tz-muro-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.13; }
+.tz-sombra { fill: var(--monte-sombra); opacity: 0.42; }
+.tz-pie { fill: color-mix(in oklab, var(--monte-sombra) 80%, #000); opacity: 0.5; }
+.tz-nieve { fill: color-mix(in oklab, var(--nieve) 92%, #fff); }
+.tz-nieve-s { fill: var(--nieve-s); opacity: 0.5; }
+.cuerno-sombra { fill: var(--nieve-s); opacity: 0.3; }
+/* El camino tallado: el corte de roca por encima (sombra) y el talud por debajo (luz). */
+:is(.sendero-talud, .sendero-corte) path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.sendero-corte path { stroke: color-mix(in oklab, var(--monte-sombra) 84%, #000); opacity: 0.6; }
+.sendero-talud path { stroke: var(--luz-roca, var(--astro)); opacity: 0.14; } html[data-cielo="noche"] .sendero-talud path { opacity: 0.09; }

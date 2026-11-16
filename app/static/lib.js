@@ -869,6 +869,25 @@ export function agruparPorMes(movs) {
   return grupos;
 }
 
+/** ¿Es una etapa «mayor» (2.5 o 5 de su potencia de 10)? En la montaña su marca pesa más que la de las demás etapas intermedias. */
+export function etapaMayor(m) {
+  if (!(m > 0)) return false;
+  const mant = m / 10 ** Math.floor(Math.log10(m) + 1e-9);
+  return Math.abs(mant - 2.5) < 1e-6 || Math.abs(mant - 5) < 1e-6;
+}
+
+/**
+ * Qué marcas de etapa caben en el sendero de la montaña sin amontonarse. `marcas` son `{ m, l, mayor }` (`l` = a qué distancia del
+ * inicio del sendero cae, en px). Entran por prioridad: la siguiente (`sig`) siempre; luego las mayores y luego las demás, de abajo
+ * arriba, y solo si quedan a `hueco` px o más de todas las que ya entraron. Devuelve las que se dibujan (los mismos objetos).
+ */
+export function marcasEtapa(marcas, sig, hueco = 11) {
+  const orden = [...marcas].sort((a, b) => Number(b.m === sig) - Number(a.m === sig) || Number(Boolean(b.mayor)) - Number(Boolean(a.mayor)) || a.m - b.m);
+  const vistas = [];
+  for (const x of orden) if (x.m === sig || vistas.every((o) => Math.abs(o.l - x.l) >= hueco)) vistas.push(x);
+  return vistas;
+}
+
 /**
  * Lo que dice la montaña a un lector de pantalla: dónde estás, cuántos campamentos pasaste, cuál es el siguiente y la cumbre.
  * `campos` son los campamentos que se ven en la escena (en sats) y `cima` la cumbre; `meta` es la siguiente etapa.
