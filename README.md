@@ -170,6 +170,9 @@ Además de los campamentos grandes de la montaña (100k, 1M, 10M, 1 BTC), la bar
 ## Novedades al abrir la web
 Quien entra con una cuenta de lector ve, la primera vez que abre la web, un resumen de lo que pasó desde su última visita: las compras o ventas nuevas, el saldo, lo que vale hoy, la ganancia, el avance hacia la siguiente meta y la racha. Si no pasó nada, no sale nada. La primera vez es una bienvenida con los últimos movimientos. Al cerrarlo, el servidor guarda la visita de esa persona, así que vale igual en el móvil y en el PC. No hace falta ningún canal externo: como se compra una vez por semana o por quincena, basta con que lo vean al entrar.
 
+## Pestañas, el dock y «Tu historia»
+Debajo de la montaña hay cuatro pestañas (Resumen, Gráficos, Historia y Movimientos; en «Tu cuenta → Pantalla» se puede volver a la página larga de antes). En el teléfono y la tablet van en una barra fija abajo, al alcance del pulgar, y «Anotar» es el botón naranja de su centro; tocar una pestaña enseña su contenido desde el principio y tocar la que ya estás sube a la montaña. En la computadora la barra va arriba y «Anotar compra» a la derecha. «Tu historia» abre con un dibujo distinto cada día (entre los que ya se ven bien con tus compras) y el resto va plegado con su cuenta; en el primer año del libro, el tronco crece por meses y la manta se teje en el telar.
+
 ## Instalar en el iPhone (PWA)
 En Safari abre `https://dca.polarzero.dev`, toca **Compartir → Añadir a pantalla de inicio**. Queda con su icono y sin la barra de Safari. En Android (Chrome): menú → «Instalar app». Notas:
 - La app instalada en iPhone **no comparte las cookies de Safari**: la primera vez hay que entrar de nuevo. La sesión dura 90 días deslizantes.

@@ -1654,7 +1654,8 @@ export function mesesTronco(items, hoy = hoyISO()) {
   const meses = [];
   for (let k = 0, f = `${p.slice(0, 7)}-01`; k < 13 && f.slice(0, 7) <= mesHoy; k++, f = sumarMeses(f, 1)) {
     const [y, m] = f.split('-').map(Number);
-    meses.push({ i: k, mes: f.slice(0, 7), nombre: `${MESES_L[m - 1]} de ${y}`, comprados: 0, vendidos: 0, nCompras: 0, nExtras: 0, nVentas: 0, extras: [], ventas: [],
+    meses.push({ i: k, mes: f.slice(0, 7), nombre: `${MESES_L[m - 1]} de ${y}`, comprados: 0, vendidos: 0, nCompras: 0, nExtras: 0, nVentas: 0,
+      extras: /** @type {{ fecha: string, sats: number, frac: number }[]} */ ([]), ventas: /** @type {{ fecha: string, sats: number, frac: number }[]} */ ([]),
       completo: f.slice(0, 7) < mesHoy, saldoFin: 0 });
   }
   for (const c of items) {

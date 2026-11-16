@@ -1003,4 +1003,65 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   const raro = certificado(datosCertificado(Rc, null, '2026-11-15', { montana: '<b>🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂🙂</b>' }));
   ok(raro.includes('class="c-pre c-montana"') && raro.includes('&lt;b&gt;') && !raro.includes('<b>') && raro.includes('>se hace constar que el</text>'), 'certificado: un nombre que no cabe va en su línea, escapado');
 }
+// ---------------------------------------------------------------- campamento 20: cada cosa en su sitio
+{
+  const L = await import('../app/static/lib.js');
+  const A = await import('../app/static/arte-historia.js');
+  const c = (id, fecha, sats, extra = false, tipo = 'compra', monto = 25) => ({ id, fecha, sats, monto, precio: (monto * 1e8) / sats, tipo, extra });
+  // 13 · cifras largas: la forma corta habla en BTC desde 1 BTC (con comas), y «sats» por debajo
+  eq([L.satsCorto(145_948_039_280), L.satsCorto(6_554_000_000), L.satsCorto(250_000_000), L.satsCorto(2_500_000)], ['1,459 BTC', '65.5 BTC', '2.5 BTC', '2.5M sats'], 'cifras: la forma corta es en BTC desde 1 BTC');
+  // Voz del lector: los textos de «Tu historia» hablan del libro con `libro`
+  const semanal = [];
+  for (let k = 0; k < 40; k++) semanal.push(c(k + 1, new Date(Date.UTC(2025, 10, 20) + k * 7 * 864e5).toISOString().slice(0, 10), 20_000 + k * 100, k === 5));
+  semanal.push(c(99, '2026-03-03', 5_000, false, 'venta', 5));
+  const hoy = '2026-08-30';
+  const R = resumen(semanal, 80_000, hoy);
+  const yo = historia(R, hoy), lb = historia(R, hoy, { libro: true });
+  ok(yo.eventos[0].titulo === 'Tu primera compra' && lb.eventos[0].titulo === 'La primera compra', 'voz: la línea de tiempo, para quien solo mira, habla de la primera compra del libro');
+  ok(lb.eventos.every((e) => !/(^|\s)(Tu|tu|Llegaste)\s/.test(`${e.titulo} ${e.detalle}`)) && lb.eventos.some((e) => /^El libro llegó a /.test(e.titulo)), 'voz: sin «tu» ni «llegaste» en la historia del libro');
+  const tro = aniosTronco(semanal, hoy), man = semanasManta(semanal, hoy), est = estratosMes(semanal, hoy), pt = partitura(semanal);
+  const libros = [textoTronco(tro, true), textoConstelacion(estrellasConstelacion(semanal), true), textoTorre(piedrasTorre(semanal), true), textoManta(man, true), textoEstratos(est, true), textoEstrato(est[0], true), textoAnio(tro[0], true),
+    textoPasaporte(sellosSemana(semanal, hoy), true), textoSelloSemana(sellosSemana(semanal, hoy)[0], true), textoPartitura(pt, true), textoAnioPartitura(pt[0], true), textoTronco([], true), textoManta({ celdas: [], anios: [] }, true)];
+  const tutea = /(^|[^\p{L}])(tu|tus|tienes|cerraste|compraste)(?![\p{L}])/iu;
+  eq(libros.filter((t) => tutea.test(t)), [], 'voz: los textos de los dibujos para quien solo mira no tutean');
+  ok(textoTronco(tro) === textoTronco(tro, false) && /^Tu tronco tiene/.test(textoTronco(tro)), 'voz: el dueño lee lo de siempre');
+  // 5a · el dibujo de hoy: mismo día, mismo dibujo; rota por día entre los que ya se ven bien
+  const listos = L.dibujosListos(semanal, hoy).map((d) => d.vh);
+  eq(listos, ['tronco', 'constelacion', 'torre', 'manta', 'estratos', 'partitura'], 'dibujo de hoy: con 40 compras semanales, los seis se ven bien');
+  eq(L.objetoDeHoy(semanal, hoy), L.objetoDeHoy(semanal, hoy), 'dibujo de hoy: el mismo todo el día');
+  const semana = Array.from({ length: 6 }, (_, k) => L.objetoDeHoy(semanal, L.sumarDias(hoy, k)).vh);
+  eq(new Set(semana).size, 6, `dibujo de hoy: en seis días seguidos salen los seis (${semana.join(', ')})`);
+  eq(L.dibujosListos([c(1, '2026-08-27', 36_578)], hoy).map((d) => d.vh), [], 'dibujo de hoy: con una compra, ninguno (no sale)');
+  eq(L.objetoDeHoy([], hoy), null, 'dibujo de hoy: sin compras, nada');
+  eq(L.dibujosListos([c(1, '2026-07-01', 10_000), c(2, '2026-07-08', 10_000), c(3, '2026-08-05', 10_000), c(4, '2026-08-12', 10_000)], hoy).map((d) => d.vh), ['tronco', 'torre', 'manta', 'partitura'], 'dibujo de hoy: con cuatro compras en dos meses, solo los que ya se ven bien (sin constelación ni estratos)');
+  ok(L.DIBUJOS.every((d) => /^(El|La|Los) /.test(d.nombre)), 'dibujo de hoy: cada uno con su nombre');
+  // 5b · el primer año
+  eq([L.primerAnio(semanal, hoy), L.primerAnio(semanal, '2026-11-19'), L.primerAnio(semanal, '2026-11-20'), L.primerAnio([], hoy)], [true, true, false, false], 'primer año: hasta la víspera del primer aniversario');
+  const t = L.mesesTronco(semanal, hoy);
+  eq(t.meses.map((m) => m.mes), ['2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08'], 'primer año: una banda por mes, de la primera compra a hoy');
+  eq(t.meses.reduce((a, m) => a + m.comprados, 0), semanal.filter((x) => x.tipo === 'compra').reduce((a, x) => a + x.sats, 0), 'primer año: las bandas suman todo lo comprado');
+  ok(t.meses.at(-1).completo === false && t.meses.slice(0, -1).every((m) => m.completo), 'primer año: el mes en curso está abierto');
+  eq(t.meses[0].saldoFin, satsEn(semanal, '2025-11-30'), 'primer año: el saldo al cerrar cada mes');
+  ok(t.fr > 0.75 && t.fr < 0.8 && t.meses[3].ventas.length === 0 && t.meses[4].ventas[0].frac > 0.25 && t.meses[4].ventas[0].frac < 0.4, `primer año: la vuelta es el año del libro (${t.fr.toFixed(2)}); las marcas, en su lugar`);
+  ok(/^Tu tronco está en su primer año: una banda por mes \(10\), de noviembre de 2025 a agosto de 2026\./.test(L.textoTroncoPrimer(t)) && /Hay 1 nudo/.test(L.textoTroncoPrimer(t)), 'primer año: lo que dice el tronco');
+  eq(L.textoMesTronco(t.meses[0]), 'Noviembre de 2025: 2 compras · +40,100 sats · cerraste con 40,100 sats', 'primer año: un mes del tronco');
+  ok(/^Agosto de 2026 \(en curso\): .* · hoy tiene [\d,]+ sats$/.test(L.textoMesTronco(t.meses.at(-1), true)), 'primer año: un mes, para quien solo mira');
+  const m = L.mantaPrimerAnio(semanal, hoy);
+  eq([m.cols, m.filas, m.total, m.celdas.length, m.futuras], [13, 4, 52, 41, 11], 'primer año: la manta es una pieza de 4 hileras de 13 semanas, lo tejido y lo que falta');
+  ok(/^Tu manta está en su primer año: 4 hileras de 13 semanas, 41 ya tejidas \(40 con compra\) y 11 en el telar\./.test(L.textoMantaPrimer(m)), 'primer año: lo que dice la manta');
+  // Los dibujos del primer año: piezas tocables con su índice, sin estilos en línea
+  const svgT = A.tronco(t.meses, { primer: t, sel: 2 }), svgM = A.mantaPrimer(m, { sel: 3 });
+  eq((svgT.match(/class="pieza h-anillo/g) ?? []).length, 10, 'primer año: una banda tocable por mes');
+  ok(svgT.includes('data-i="2"') && !svgT.includes('data-anio') && svgT.includes('h-tronco-primer') && svgT.includes('ht-falta') && /class="pieza h-anillo ht-\w+ sel" data-i="2"/.test(svgT), 'primer año: las bandas llevan su índice, la elegida y la vuelta que falta');
+  eq((svgM.match(/class="pieza celda/g) ?? []).length, 41, 'primer año: una celda tocable por semana tejida');
+  ok(svgM.includes('ha-telar') && /data-i="3"/.test(svgM) && /class="pieza celda tono-\d( extra)? sel" data-i="3"/.test(svgM), 'primer año: la urdimbre del telar y la semana elegida');
+  ok(![svgT, svgM].some((s) => / style=/.test(s)), 'primer año: sin estilos en línea (CSP)');
+  ok(!A.tronco(tro).includes('ht-falta') && A.tronco(tro).includes('data-anio'), 'el tronco de siempre no cambia');
+  // 9 · un punto por mes
+  const mes = L.comprasPorMes([c(1, '2026-01-05', 30_000, false, 'compra', 30), c(2, '2026-01-20', 10_000, false, 'compra', 20), c(3, '2026-01-12', 20_000, false, 'compra', 25), c(4, '2026-02-03', 50_000, false, 'compra', 40)]);
+  eq(mes.map((x) => [x.mes, x.n, x.sats, x.monto, x.fecha, x.desde, x.hasta]), [['2026-01', 3, 60_000, 75, '2026-01-12', '2026-01-05', '2026-01-20'], ['2026-02', 1, 50_000, 40, '2026-02-03', '2026-02-03', '2026-02-03']], 'un punto por mes: junta las compras de cada mes (la fecha, la de la compra del medio)');
+  eq(Math.round(mes[0].precio), 125_000, 'un punto por mes: al precio que se pagó en promedio (dólares entre sats)');
+  ok(mes[0].grupo && mes[0].id === 'm-2026-01' && mes[0].nombre === 'enero de 2026' && !mes[0].extra, 'un punto por mes: se sabe que es un mes y cuál');
+  eq(L.UMBRAL_POR_MES, 150, 'un punto por mes: desde más de 150 compras a la vista');
+}
 console.log(`OK ${n} comprobaciones`);

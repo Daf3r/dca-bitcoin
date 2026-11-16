@@ -249,7 +249,11 @@ function pintarHoy() {
   $('dh-hoy-t').textContent = o.nombre;
   $('dh-hoy-desc').textContent = d.desc;
   $('dh-hoy').dataset.vh = o.vh;
-  $('dh-hoy-ver').setAttribute('aria-label', `Ver de cerca ${o.nombre.replace(/^./, (c) => c.toLowerCase())}`);
+  // El nombre accesible es el texto visible y, para quien no ve, qué dibujo es (con `aria-label` axe marca `label-content-name-mismatch`).
+  const sr = document.createElement('span');
+  sr.className = 'sr';
+  sr.textContent = ` (${o.nombre.replace(/^./, (c) => c.toLowerCase())})`;
+  $('dh-hoy-ver').replaceChildren('Verlo de cerca', sr);
 }
 $('dh-hoy-ver').addEventListener('click', () => {
   const vh = $('dh-hoy').dataset.vh;

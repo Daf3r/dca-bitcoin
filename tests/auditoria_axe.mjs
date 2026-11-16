@@ -387,6 +387,65 @@ try {
       await auditar(p, `tele con el nombre de la montaña ${esquema}`);
       await ctx.close();
     }
+    { // campamento 20: «Tu cuenta» por grupos y «Probar la celebración»; el dock (dueño, lectora, letra muy grande y acostado); la historia
+      // con el dibujo de hoy y las secciones abiertas; el tronco y la manta del primer año; un punto por mes con un mes fijado
+      const conPestanas = (extra = []) => [(ex) => { try { localStorage.removeItem('libro.pestanas'); localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ex) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, extra];
+      const abrir = async (srv, cuenta, init, vp = null) => {
+        const ctx = await navegador.newContext({ ...devices['iPhone 13'], ...(vp ? { viewport: vp, isMobile: false } : {}), colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+        await p.addInitScript(init[0], init[1]);
+        await entrar(p, srv.url, cuenta);
+        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+        return { ctx, p };
+      };
+      let { ctx, p } = await abrir(anio, ADMIN, conPestanas());
+      await p.click('#cuenta-btn'); await p.waitForTimeout(400);
+      await auditar(p, `«Tu cuenta» por grupos (dueño) ${esquema}`);
+      await p.click('#dc-sistema-btn'); await p.waitForTimeout(900);
+      await p.locator('#dc-previa').scrollIntoViewIfNeeded();
+      await auditar(p, `Estado del sistema con «Probar la celebración» ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await auditar(p, `el dock con «Anotar» (dueño) ${esquema}`);
+      await p.click('#pestanas [data-pestana="historia"]'); await p.waitForTimeout(800);
+      await auditar(p, `historia: el dibujo de hoy y las secciones plegadas ${esquema}`);
+      await p.evaluate(() => { for (const d of document.querySelectorAll('#historia details.dh-sec')) d.open = true; }); await p.waitForTimeout(300);
+      await auditar(p, `historia: las secciones abiertas ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, LECTOR, conPestanas()));
+      await p.click('#cuenta-btn'); await p.waitForTimeout(400);
+      await auditar(p, `«Tu cuenta» por grupos (lectora) ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      await auditar(p, `el dock sin «Anotar» (lectora) ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, ADMIN, conPestanas([['libro.letra', 'muy-grande']])));
+      await p.click('#pestanas [data-pestana="graficos"]'); await p.waitForTimeout(700);
+      await auditar(p, `el dock compacto con letra muy grande ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, ADMIN, conPestanas(), { width: 844, height: 390 }));
+      await auditar(p, `el dock acostado ${esquema}`);
+      await ctx.close();
+      // El primer año: tronco por meses (con una banda elegida) y la manta en el telar (escenario «nueve»)
+      const nueve = await servidor('nueve');
+      try {
+        ({ ctx, p } = await abrir(nueve, ADMIN, conPestanas([['libro.historia.vista', 'tronco']])));
+        await p.click('#pestanas [data-pestana="historia"]'); await p.waitForTimeout(700);
+        await p.locator('#dh-lienzo .pieza').first().click({ force: true }); await p.waitForTimeout(250);
+        await auditar(p, `tronco del primer año ${esquema}`);
+        await p.click('#dh-vistas [data-vh="manta"]'); await p.waitForTimeout(400);
+        await p.locator('#dh-lienzo .pieza').nth(2).click({ force: true }); await p.waitForTimeout(250);
+        await auditar(p, `manta del primer año ${esquema}`);
+        await ctx.close();
+      } finally { nueve.parar(); }
+      // Un punto por mes (mil compras con «Todo»), con un mes fijado
+      ({ ctx, p } = await abrir(mil, ADMIN, conPestanas([['libro.pestana', 'graficos']])));
+      await p.click('#rangos button[data-r="0"]'); await p.waitForTimeout(700);
+      await p.evaluate(() => document.getElementById('lienzo').scrollIntoView({ block: 'center' })); await p.waitForTimeout(500);
+      const pc = await p.evaluate(() => { const svg = document.querySelector('#lienzo svg'), m = /^M([\d.]+) ([\d.]+)a([\d.]+)/.exec(svg.querySelector('.g-compras').getAttribute('d')), r = svg.getBoundingClientRect(); return { x: r.left + Number(m[1]) + Number(m[3]), y: r.top + Number(m[2]) }; });
+      await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(300);
+      await auditar(p, `un punto por mes, con un mes fijado ${esquema}`);
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
