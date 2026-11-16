@@ -3315,3 +3315,71 @@ html:not([data-efectos="ninguno"]) .dia-oir[aria-pressed="true"] .ico { animatio
 @keyframes oir-late { 50% { opacity: 0.45; } }
 @media (min-width: 700px) { .dia-oir { grid-column: 1; justify-self: start; } }
 @media (forced-colors: active) { .dia-oir[aria-pressed="true"] { border: 2px solid Highlight; } }
+
+/* --- El libro de cumbre en la tarjeta del campamento (montana.js: #m-firmas): un solo botón con el libro, quién firmó y qué hacer. En la
+   tarjeta plana, un recuadro suave; bajo la laja tallada, una pieza propia como la cinta del mensaje. */
+.m-firmas {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: var(--toque); margin: 6px 0 8px; padding: 8px 12px;
+  border: 1px solid var(--s3); border-radius: 14px; background: color-mix(in srgb, var(--s2) 70%, transparent); color: var(--txt);
+  font: 400 0.875rem/1.35 var(--sans); text-align: left; cursor: pointer;
+}
+.m-firmas[hidden] { display: none; }
+.m-firmas > .ico { flex: none; width: 32px; height: 32px; padding: 7px; border-radius: 50%; box-sizing: border-box; background: color-mix(in srgb, var(--naranja) 16%, transparent); color: var(--naranja-txt); }
+.m-firmas-t { display: grid; gap: 1px; min-width: 0; }
+.m-firmas-k { font: 700 0.6875rem/1.3 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--txt2); }
+.m-firmas-r { color: var(--txt); overflow-wrap: anywhere; }
+.m-firmas:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .m-firmas:hover { border-color: var(--naranja); } }
+.m-tarjeta.con-piedra > .m-firmas { flex: 1 0 100%; margin: 0; background: var(--s1); box-shadow: var(--sombra); }
+
+/* --- El libro de cumbre abierto (firmas.js: #d-firmas): un cuaderno de papel claro en los dos temas (como el comprobante y las cartas),
+   una firma por renglón con su inicial, su fecha y su texto en letra de mano; abajo, el campo de tu firma. Tinta ≥ 7:1 sobre el papel. */
+.d-firmas { width: min(calc(100vw - 24px), 28rem); padding: 14px 14px 16px; background: var(--s2); }
+.fi-papel {
+  --fi-papel: #fbf5e6; --fi-tinta: #2a2018; --fi-tinta2: #5e5142; --fi-linea: #cdbd98; --fi-acento: #8a3f00;
+  margin: 0 0 14px; padding: 16px 16px 8px; border-radius: 6px; color: var(--fi-tinta); background-color: var(--fi-papel);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.55), transparent 30%); box-shadow: 0 1px 2px rgb(60 30 10 / 0.2), inset 4px 0 0 color-mix(in srgb, var(--fi-acento) 55%, var(--fi-papel));
+}
+:root[data-tema="oscuro"] .fi-papel { --fi-papel: #f1e8d4; }
+html[data-contraste="alto"] .fi-papel { --fi-tinta: #17100a; --fi-tinta2: #3d3226; --fi-linea: #6b5d47; --fi-acento: #6a2f00; }
+.d-firmas .fi-papel p { margin: 0; color: inherit; }
+.fi-cab { display: grid; gap: 2px; justify-items: center; padding-bottom: 10px; border-bottom: 1.5px solid var(--fi-linea); text-align: center; }
+.d-firmas .fi-papel .fi-marca { font: 700 0.6875rem/1.4 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--fi-tinta2); }
+.d-firmas .fi-cab h2 { font-size: 1.375rem; line-height: 1.2; color: var(--fi-tinta); }
+.d-firmas .fi-cab h2:focus { outline: none; }
+.d-firmas .fi-cab h2:focus-visible { outline: 2px solid var(--fi-tinta); outline-offset: 3px; border-radius: 4px; }
+.d-firmas .fi-papel .fi-ayuda { font-size: 0.875rem; line-height: 1.4; color: var(--fi-tinta2); }
+.fi-lista { margin: 0; padding: 0; list-style: none; }
+.fi-firma { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--fi-linea); }
+.fi-firma .avatar { margin-top: 3px; }
+.d-firmas .fi-papel .fi-quien { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; font-size: 0.8125rem; color: var(--fi-tinta2); }
+.fi-quien b { color: var(--fi-tinta); font-size: 0.875rem; font-weight: 650; }
+.d-firmas .fi-papel .fi-txt { margin-top: 1px; font: italic 500 1.125rem/1.4 var(--serif); color: var(--fi-tinta); overflow-wrap: anywhere; }
+.fi-quitar { min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--fi-linea); border-radius: 999px; background: transparent; color: var(--fi-acento); font: 650 0.875rem var(--sans); white-space: nowrap; cursor: pointer; }
+.fi-quitar[data-confirmar] { border-color: var(--fi-acento); background: var(--fi-acento); color: var(--fi-papel); }
+.fi-quitar:focus-visible { outline: 2px solid var(--fi-tinta); outline-offset: 2px; }
+.d-firmas .fi-papel .fi-vacio { padding: 16px 4px 10px; font: italic 400 1.0625rem/1.45 var(--serif); color: var(--fi-tinta2); text-align: center; }
+.d-firmas .fi-papel .fi-estado { padding: 8px 0 2px; font-size: 0.8125rem; font-weight: 600; color: var(--fi-acento); text-align: center; }
+.d-firmas .fi-papel .fi-estado:empty { display: none; }
+.fi-form, .fi-campos { display: grid; gap: 6px; }
+.fi-campos[hidden], .fi-cerrado[hidden] { display: none; }
+.fi-campos label { font: 650 1rem var(--sans); color: var(--txt); }
+#fi-texto {
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  background: var(--s1); color: var(--txt); font: italic 400 1.0625rem/1.55 var(--serif);
+}
+#fi-texto::placeholder { color: var(--txt3); opacity: 1; }
+#fi-texto:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
+.d-firmas .cap-cuenta { margin: 0; text-align: right; font-size: 0.875rem; color: var(--txt2); }
+.d-firmas .fi-cerrado { margin: 0 0 4px; font-size: 0.9375rem; line-height: 1.45; color: var(--txt2); }
+.d-firmas .hoja-error { margin: 0; }
+.d-firmas .d-bot { flex-wrap: wrap; margin-top: 4px; }
+.d-firmas .d-bot button { padding: 0 15px; }
+.d-firmas .d-bot #fi-cerrar { margin-right: auto; }
+/* Con muchas firmas (o el teclado abierto) el cuaderno se desplaza: los botones se quedan a mano, abajo. */
+.d-firmas { scroll-padding-bottom: 80px; }
+.d-firmas .d-bot { position: sticky; bottom: 0; z-index: 1; margin: 4px -14px -16px; padding: 10px 14px 16px; background: linear-gradient(to top, var(--s2) calc(100% - 10px), color-mix(in srgb, var(--s2) 0%, transparent)); }
+html[data-efectos="todos"] .d-firmas[open] .fi-papel, html[data-efectos="esenciales"] .d-firmas[open] .fi-papel { transform-origin: 50% 0; animation: cp-sale 0.42s var(--resorte, ease-out) 0.06s both; }
+@media (max-width: 359px) { .d-firmas { padding: 10px 10px 12px; } .d-firmas .d-bot { margin: 4px -10px -12px; padding: 10px 10px 12px; } .fi-papel { padding: 14px 12px 8px; } }
+/* «Tu historia»: el libro de cumbre bajo su campamento (también los de abajo, que la montaña deja de dibujar al subir). */
+.h-ev .h-firmas { margin-top: 2px; text-align: left; line-height: 1.35; }

@@ -1448,6 +1448,25 @@ export function diarioParaOir(d, { montana = null } = {}) {
   return partes.map(paraOir).filter(Boolean).map((p) => (/[.!?:]$/.test(p) ? p : `${p}.`));
 }
 
+/** Las firmas del libro de cumbre de un campamento (idea 18), en el orden en que se firmaron. `firmas`: las de `GET /api/firmas`. */
+export function firmasDe(firmas, hito) {
+  return (firmas ?? []).filter((f) => f.hito === hito).sort((a, b) => a.creado - b.creado || a.id - b.id);
+}
+/** Quién firmó: «Firmó Ana», «Firmaste tú», «Firmaron tú y Ana», «Firmaron Ana, Papá y 2 más». Tu firma va primero (y no se pierde en «más»). */
+export function textoFirmantes(fs) {
+  const n = fs?.length ?? 0;
+  if (!n) return 'Nadie ha firmado todavía';
+  const nombres = [...fs].sort((a, b) => Number(Boolean(b.mia)) - Number(Boolean(a.mia))).map((f) => (f.mia ? 'tú' : f.quien));
+  if (n === 1) return fs[0].mia ? 'Firmaste tú' : `Firmó ${nombres[0]}`;
+  return `Firmaron ${n === 2 ? `${nombres[0]} y ${nombres[1]}` : n === 3 ? `${nombres[0]}, ${nombres[1]} y ${nombres[2]}` : `${nombres[0]}, ${nombres[1]} y ${n - 2} más`}`;
+}
+/** Lo que invita a hacer la tarjeta del campamento con su libro: firmar (si el libro llegó ahí), cambiar tu firma o solo leerlo. */
+export function accionFirmas(fs, alcanzado) {
+  if (!alcanzado) return 'Léelo';
+  if ((fs ?? []).some((f) => f.mia)) return 'Cambia tu firma';
+  return fs?.length ? 'Firma tú también' : 'Deja la primera firma';
+}
+
 // ---------------------------------------------------------------------------------------------
 // Campamento 15B · la apacheta (piedritas), los cumpleaños y la tele: solo datos y textos. Todo acompaña; nada presiona.
 // ---------------------------------------------------------------------------------------------

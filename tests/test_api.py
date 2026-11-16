@@ -2362,4 +2362,96 @@ ritmo.aviso_diario = _orig_av
 _cx.close()
 push.ahora = _de_dia
 
+# --- Campamento 19 (3/4): el libro de cumbre (idea 18). Una firma por persona y campamento alcanzado; también la deja un lector.
+check(len(sql("SELECT name FROM sqlite_master WHERE name = 'firmas'")) == 1 and server.version_esquema(server.connect()) >= 16, "la tabla del libro de cumbre existe (migración 16)")
+_cx = server.connect(); server._m_firmas(_cx); server._m_firmas(_cx); _cx.commit()
+check({r[1] for r in _cx.execute("PRAGMA table_info(firmas)")} == {"id", "hito", "usuario_id", "texto", "creado", "editado"}, "la migración 16 es idempotente (dos veces, la misma tabla)")
+_cx.close()
+_sal = server.saldo_actual(server.connect())
+_ab = max(m for m in server.HITOS_MENSAJE if m <= _sal)   # un campamento al que el libro ya llegó
+_ar = min(m for m in server.HITOS_MENSAJE if m > _sal)    # uno por alcanzar
+check(adm.get("/api/firmas").get_json() == [] and luz.get("/api/firmas").status_code == 200 and anon.get("/api/firmas").status_code == 401, "al principio no hay firmas; las leen todos con sesión")
+check(anon.put(f"/api/firmas/{_ab}", json={"texto": "hola"}).status_code in (401, 403), "sin sesión no se firma")
+for _malo in (5, 250000, 10**13, 0):
+    check(luz.put(f"/api/firmas/{_malo}", json={"texto": "hola"}).status_code == 400, f"campamento que no existe: {_malo}")
+for _malo in ({}, {"texto": ""}, {"texto": "   \n "}, {"texto": 5}, {"texto": None}, {"texto": "x" * 81}, {"texto": "🙂" * 81}, [1]):
+    check(luz.put(f"/api/firmas/{_ab}", json=_malo).status_code == 400, f"firma rechazada: {str(_malo)[:40]}")
+_r = luz.put(f"/api/firmas/{_ar}", json={"texto": "Ya casi"})
+check(_r.status_code == 400 and "todavía no llega" in _r.get_json()["error"], "un campamento por alcanzar no se firma")
+enviados.clear()
+_r = luz.put(f"/api/firmas/{_ab}", json={"texto": "  Qué orgullo,\n  hijo  "})
+_f = _r.get_json()
+check(_r.status_code == 201 and _f["texto"] == "Qué orgullo, hijo" and _f["nueva"] is True and _f["mia"] is True and _f["quien"] == "Luz" and _f["hito"] == _ab,
+      f"una lectora firma, en una línea y sin espacios de sobra {_r.data}")
+_txt_push = [p["cuerpo"] for _e, p in enviados]
+check(any(t == f"Luz firmó el libro de cumbre del campamento {ritmo.nombre_hito(_ab).replace(' sats', '')}." for t in _txt_push)
+      and all(_e not in (EP_D1, EP_D3, EP_D4) for _e, _p in enviados), f"la primera firma de alguien avisa al dueño, y solo al dueño {_txt_push}")
+check(all("Qué orgullo" not in t for t in _txt_push), "el aviso no lleva el texto de la firma")
+enviados.clear()
+_r = luz.put(f"/api/firmas/{_ab}", json={"texto": "Qué orgullo, hijo"})
+check(_r.status_code == 200 and _r.get_json()["nueva"] is False and len(audit("firma")) == 1 and not enviados, "firmar igual otra vez no hace nada (ni audita ni avisa)")
+_r = luz.put(f"/api/firmas/{_ab}", json={"texto": "Qué orgullo, hijo. Sigue así."})
+_au = [dict(a) for a in audit("firma")]
+check(_r.status_code == 200 and _r.get_json()["editado"] and len(_au) == 2 and json.loads(_au[-1]["antes"]) == {"texto": "Qué orgullo, hijo"}
+      and json.loads(_au[-1]["despues"]) == {"texto": "Qué orgullo, hijo. Sigue así."} and _au[-1]["usuario"] == "Luz" and _au[-1]["entidad_id"] == _ab,
+      "se puede reescribir la propia; la auditoría guarda lo de antes y lo de después")
+check(not enviados, "reescribir no avisa a nadie")
+check(sql("SELECT COUNT(*) FROM firmas WHERE usuario_id = (SELECT id FROM usuarios WHERE nombre = 'Luz')")[0][0] == 1, "una sola firma por persona y campamento")
+# Otra lectora y el dueño también firman; cada quien ve cuál es la suya
+check(ana.put(f"/api/firmas/{_ab}", json={"texto": "Aquí estuve 🙂"}).status_code == 201, "otra lectora firma el mismo campamento")
+enviados.clear()
+check(adm.put(f"/api/firmas/{_ab}", json={"texto": "Gracias por subir conmigo"}).status_code == 201 and not any("Daf3r firmó" in p["cuerpo"] for _e, p in enviados),
+      "el dueño también firma (y no se avisa a sí mismo)")
+_l = luz.get("/api/firmas").get_json()
+check([f["quien"] for f in _l] == ["Luz", "Ana", "Daf3r"] and [f["mia"] for f in _l] == [True, False, False], f"las firmas, en el orden en que se firmaron, con la propia marcada {_l}")
+check([f["mia"] for f in adm.get("/api/firmas").get_json()] == [False, False, True], "el dueño ve la suya marcada")
+check(set(_l[0]) == {"id", "hito", "quien", "texto", "creado", "editado", "mia"}, "la firma no lleva datos de la cuenta (solo el nombre)")
+# Caracteres raros: se guardan como texto (se pintan con textContent) y sin caracteres invisibles de control
+_r = ana.put(f"/api/firmas/{_ab}", json={"texto": "<b>hola</b> ‮​mundo \U0001F642" + "x" * 3})
+check(_r.status_code == 200 and _r.get_json()["texto"] == "<b>hola</b> mundo \U0001F642xxx", f"los caracteres de control se quitan y el resto queda como texto {_r.get_json()['texto']!r}")
+check(ana.put(f"/api/firmas/{_ab}", json={"texto": "🙂" * 80}).status_code == 200, "80 caracteres (aunque sean emojis) valen")
+# Borrar: la propia sí; la de otra persona, solo el dueño
+_ids = {f["quien"]: f["id"] for f in luz.get("/api/firmas").get_json()}
+check(ana.delete(f"/api/firmas/{_ab}/{_ids['Luz']}").status_code == 403, "una lectora no borra la firma de otra persona")
+check(luz.delete(f"/api/firmas/{_ab}/{_ids['Daf3r']}").status_code == 403, "ni la del dueño")
+check(luz.delete(f"/api/firmas/{_ar}/{_ids['Luz']}").status_code == 404, "la firma tiene que ser de ese campamento")
+check(luz.delete(f"/api/firmas/{_ab}/{_ids['Luz']}").status_code == 204 and luz.delete(f"/api/firmas/{_ab}/{_ids['Luz']}").status_code == 404, "la propia se borra (una vez)")
+check(adm.delete(f"/api/firmas/{_ab}/{_ids['Ana']}").status_code == 204, "el dueño quita la de otra persona")
+_au = [dict(a) for a in audit("firma_borrada")]
+check(len(_au) == 2 and json.loads(_au[0]["antes"])["de"] == "Luz" and _au[0]["usuario"] == "Luz" and json.loads(_au[1]["antes"]) == {"texto": "🙂" * 80, "de": "Ana"}
+      and _au[1]["usuario"] == "Daf3r" and _au[1]["despues"] is None, "cada borrado queda en la auditoría, con de quién era y quién la quitó")
+check([f["quien"] for f in luz.get("/api/firmas").get_json()] == ["Daf3r"], "quedan las que no se borraron")
+check(luz.put(f"/api/firmas/{_ab}", json={"texto": "Volví a firmar"}).status_code == 201, "tras borrarla se puede firmar de nuevo")
+# Dos personas a la vez, y la misma persona dos veces a la vez: nunca dos firmas suyas en el mismo campamento
+import threading as _th
+_otro = next(m for m in sorted(server.HITOS_MENSAJE) if m <= _sal and m != _ab) if any(m <= _sal and m != _ab for m in server.HITOS_MENSAJE) else _ab
+_res = []
+_barrera = _th.Barrier(4)
+def _firma_hilo(c_, t_):
+    _barrera.wait()
+    _res.append(c_.put(f"/api/firmas/{_otro}", json={"texto": t_}).status_code)
+_hs = [_th.Thread(target=_firma_hilo, args=a_) for a_ in ((cliente("Luz", "clave-de-luz-2026"), "uno"), (cliente("Luz", "clave-de-luz-2026"), "dos"), (cliente("Ana", "otra-clave-larga-1"), "tres"), (cliente(), "cuatro"))]
+for h_ in _hs: h_.start()
+for h_ in _hs: h_.join()
+_en = [r[0] for r in sql("SELECT u.nombre FROM firmas f JOIN usuarios u ON u.id = f.usuario_id WHERE f.hito = ?", (_otro,))]
+check(all(s_ in (200, 201) for s_ in _res) and sorted(_en).count("Luz") == 1 and "Ana" in _en and "Daf3r" in _en, f"a la vez: una firma por persona ({_res}, {_en})")
+# Si el saldo baja de un campamento ya firmado, lo firmado se lee pero no se firma ni se reescribe hasta volver
+_cx = server.connect()
+_cx.execute("INSERT INTO firmas (hito, usuario_id, texto, creado) VALUES (?, (SELECT id FROM usuarios WHERE nombre = 'Luz'), 'Estuve antes de la venta', 1)", (_ar,)); _cx.commit(); _cx.close()
+check(any(f["hito"] == _ar and f["texto"] == "Estuve antes de la venta" for f in ana.get("/api/firmas").get_json()), "las firmas de un campamento que el saldo ya no alcanza se siguen leyendo")
+check(luz.put(f"/api/firmas/{_ar}", json={"texto": "otra"}).status_code == 400, "pero no se reescriben hasta que el libro vuelva")
+_idar = next(f["id"] for f in luz.get("/api/firmas").get_json() if f["hito"] == _ar)
+check(luz.delete(f"/api/firmas/{_ar}/{_idar}").status_code == 204, "borrar la propia sí se puede siempre")
+# Límite propio de firmas (además del de escrituras): 20 cada 10 minutos por cuenta
+server._FIRMAS_RECIENTES.clear()
+_lim = server.FIRMA_MAX
+server.FIRMA_MAX = 3
+for _k in range(3):
+    luz.put(f"/api/firmas/{_ab}", json={"texto": f"firma {_k}"})
+_r = luz.put(f"/api/firmas/{_ab}", json={"texto": "una más"})
+check(_r.status_code == 429 and _r.headers.get("Retry-After") and ana.put(f"/api/firmas/{_ab}", json={"texto": "la mía"}).status_code in (200, 201), "demasiadas firmas seguidas: 429 para esa cuenta, no para las demás")
+server.FIRMA_MAX = _lim
+server._FIRMAS_RECIENTES.clear()
+check(push.CATEGORIAS["piedrita"]["nombre"] == "Piedritas y firmas de tu familia" and "firma" in push.CATEGORIAS["piedrita"]["ayuda"], "la categoría del dueño ahora habla también de las firmas")
+
 print("OK", ok, "comprobaciones")

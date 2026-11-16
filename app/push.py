@@ -11,7 +11,7 @@ Categorías (cada dispositivo elige las suyas; `rol` dice quién puede recibirla
   txid          admin   un TXID que estaba pendiente ya se confirmó            (encendida)
   respaldo      admin   el respaldo diario falló                               (encendida)
   caida         admin   BTC cayó 15 % o más de su máximo de 30 días (una vez)  (encendida)
-  piedrita      admin   alguien de la familia dejó una piedrita                (encendida)
+  piedrita      admin   alguien de la familia dejó una piedrita o firmó        (encendida)
   diario        todos   el domingo a las 18:00, el titular del Diario sin cifras (apagada)
   wallet        admin   en el exchange hay más sats del monto elegido          (apagada)
 """
@@ -75,8 +75,8 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
                  "ayuda": "Si el respaldo diario falla."},
     "caida": {"rol": "admin", "defecto": True, "nombre": "Gran caída",
               "ayuda": "Una vez por caída, cuando BTC baja 15 % o más de su máximo de 30 días. Solo informa, no recomienda."},
-    "piedrita": {"rol": "admin", "defecto": True, "nombre": "Piedritas de tu familia",
-                 "ayuda": "Cuando alguien de tu familia deja una piedrita en una de tus compras."},
+    "piedrita": {"rol": "admin", "defecto": True, "nombre": "Piedritas y firmas de tu familia",
+                 "ayuda": "Cuando alguien de tu familia deja una piedrita en una de tus compras o firma el libro de cumbre de un campamento."},
     # El Diario del domingo (campamento 19, idea 20): para toda la familia, apagado hasta que cada quien lo pida. Solo el titular, sin cifras.
     "diario": {"rol": "todos", "defecto": False, "nombre": "El Diario del domingo",
                "ayuda": "Los domingos a las 6 de la tarde (si tu horario lo permite), el titular del Diario del Libro, sin cifras."},

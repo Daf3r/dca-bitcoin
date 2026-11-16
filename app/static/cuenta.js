@@ -172,6 +172,9 @@ function textoAuditoria(a) {
   if (a.accion === 'mensaje_bandera') return a.despues ? `dejó un mensaje en el campamento ${nombreHito(a.entidad_id)}` : `quitó el mensaje del campamento ${nombreHito(a.entidad_id)}`;
   if (a.accion === 'capsula_sellada') return `selló una carta para ${d.abre_fecha ? `el ${fechaLarga(d.abre_fecha)}` : `cuando llegue a ${nombreHito(d.abre_sats)}`}`;
   if (a.accion === 'capsula_anulada') return 'anuló una carta aún sellada';
+  // El libro de cumbre (campamento 19)
+  if (a.accion === 'firma') return a.antes ? `cambió su firma en el campamento ${nombreHito(a.entidad_id)}: «${a.despues?.texto ?? ''}»` : `firmó el libro de cumbre del campamento ${nombreHito(a.entidad_id)}: «${a.despues?.texto ?? ''}»`;
+  if (a.accion === 'firma_borrada') return a.antes?.de && a.antes.de !== a.usuario ? `quitó la firma de ${a.antes.de} del campamento ${nombreHito(a.entidad_id)}` : `quitó su firma del campamento ${nombreHito(a.entidad_id)}`;
   if (a.entidad === 'traslado') {
     const dir = d.sentido === 'a_exchange' ? 'de su wallet al exchange' : 'a su wallet';
     return a.accion === 'alta' ? `anotó un traslado de ${entero(d.sats)} sats ${dir}` : `anuló el traslado de ${entero(d.sats)} sats ${dir}`;

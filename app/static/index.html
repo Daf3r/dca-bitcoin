@@ -85,6 +85,7 @@
 <link rel="modulepreload" href="/escuchar.js">
 <link rel="modulepreload" href="/capsulas.js">
 <link rel="modulepreload" href="/mensajes.js">
+<link rel="modulepreload" href="/firmas.js">
 <link rel="modulepreload" href="/cumple.js">
 <link rel="modulepreload" href="/arte-historia.js">
 <link rel="modulepreload" href="/arte-sellos.js">
@@ -112,6 +113,7 @@
   <symbol id="i-baja" viewBox="0 0 24 24"><path d="M12 18 4 6h16z" fill="currentColor"/></symbol>
   <symbol id="i-zopilote" viewBox="0 0 24 24"><path d="M12 8.3c.9 0 1.3.8 1.3 1.6 2.8-.8 6-1.2 9.2-1.2-1.2 1.6-3.4 3-6.2 3.6l-2.2.6.7 3.1h-5.6l.7-3.1-2.2-.6C4.7 11.7 2.5 10.3 1.3 8.7c3.2 0 6.4.4 9.2 1.2 0-.8.6-1.6 1.5-1.6Z"/></symbol>
   <symbol id="i-bocina" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/></symbol>
+  <symbol id="i-libro" viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.6 4 5v13c3-.4 6 0 8 1.5 2-1.5 5-1.9 8-1.5V5c-3-.4-6 0-8 1.5zM12 6.5v13"/></symbol>
 </svg>
 <section class="escena" aria-labelledby="t-saldo">
   <div class="montana" id="montana"></div>
@@ -760,6 +762,26 @@
     <p class="cap-cuenta" id="msg-cuenta" aria-live="polite">0 de 160</p>
     <p class="hoja-error" id="msg-error" role="alert"></p>
     <div class="d-bot"><button type="button" id="msg-cancelar">Cancelar</button><button type="button" id="msg-borrar" hidden>Quitar</button><button type="submit" class="primario" id="msg-guardar">Guardar</button></div>
+  </form>
+</dialog>
+
+<!-- El libro de cumbre (campamento 19): las firmas de quien llegó a un campamento. Lo leen todos; firma cada persona la suya (también un
+     lector) y el dueño puede quitar cualquiera. Todo entra con textContent (firmas.js). El papel es claro en los dos temas, como un cuaderno. -->
+<dialog id="d-firmas" class="d-firmas" aria-labelledby="fi-t">
+  <article class="fi-papel">
+    <header class="fi-cab"><p class="fi-marca">Libro de cumbre</p><h2 id="fi-t" tabindex="-1"></h2><p class="fi-ayuda">Quien llega hasta aquí deja su firma. La lee toda la familia.</p></header>
+    <ol class="fi-lista" id="fi-lista"></ol>
+    <p class="fi-estado" id="fi-estado" role="status"></p>
+  </article>
+  <form id="f-firma" class="fi-form" novalidate>
+    <div class="fi-campos" id="fi-campos">
+      <label for="fi-texto">Tu firma</label>
+      <input id="fi-texto" type="text" maxlength="80" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: Aquí estuve, con frío y con ganas" aria-describedby="fi-cuenta">
+      <p class="cap-cuenta" id="fi-cuenta">0 de 80</p>
+    </div>
+    <p class="fi-cerrado" id="fi-cerrado" hidden>Este campamento se firma cuando el libro llega hasta aquí.</p>
+    <p class="hoja-error" id="fi-error" role="alert"></p>
+    <div class="d-bot"><button type="button" id="fi-cerrar">Cerrar</button><button type="button" id="fi-borrar" hidden>Borrar mi firma</button><button type="submit" class="primario" id="fi-guardar">Firmar</button></div>
   </form>
 </dialog>
 

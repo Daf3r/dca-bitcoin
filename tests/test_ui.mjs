@@ -1998,7 +1998,7 @@ try {
         ok(c.muestras >= 20 && c.buenos === 6 && c.malos.length === 0, `guía (${tema}, contraste ${contraste}): ${c.muestras} colores, los 6 de texto con 4.5:1 o más${c.malos.length ? ` (mal: ${c.malos})` : ''}`);
       }
       const ic = await g.p.evaluate(() => ({ iconos: [...document.querySelectorAll('#guia-iconos .ico')].map((e) => { const r = e.getBoundingClientRect(); return r.width > 8 && r.height > 8; }), avatares: document.querySelectorAll('#guia-av .avatar').length, medallas: document.querySelectorAll('#guia-med .med').length, ilus: document.querySelectorAll('#guia-ilu .ilu').length }));
-      ok(ic.iconos.length === 9 && ic.iconos.every(Boolean) && ic.avatares === 8 && ic.medallas === 4 && ic.ilus === 3, 'guía: muestra los 9 iconos (con el zopilote), los avatares, las medallas y las ilustraciones');
+      ok(ic.iconos.length === 11 && ic.iconos.every(Boolean) && ic.avatares === 8 && ic.medallas === 4 && ic.ilus === 3, 'guía: muestra los 11 iconos (con el zopilote, la bocina y el libro), los avatares, las medallas y las ilustraciones');
       for (const w of [320, 768, 1280]) {
         await g.p.setViewportSize({ width: w, height: 800 });
         await g.p.waitForTimeout(200);

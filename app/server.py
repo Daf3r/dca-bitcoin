@@ -270,6 +270,19 @@ def _m_usuarios_cumple(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE usuarios ADD COLUMN cumple TEXT")
 
 
+def _m_firmas(conn: sqlite3.Connection) -> None:
+    # Libro de cumbre (campamento 19, idea 18): una firma por persona y campamento ya alcanzado (hasta 80 caracteres, una línea).
+    conn.execute("""CREATE TABLE IF NOT EXISTS firmas (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        hito       INTEGER NOT NULL,
+        usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+        texto      TEXT    NOT NULL CHECK (length(texto) BETWEEN 1 AND 80),
+        creado     INTEGER NOT NULL,
+        editado    INTEGER,
+        UNIQUE (hito, usuario_id)
+    )""")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -286,6 +299,7 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (13, "capsulas (cartas selladas que se abren en una fecha o con un saldo)", _m_capsulas),
     (14, "piedritas (la apacheta: una por persona y compra)", _m_piedritas),
     (15, "usuarios.cumple (farol por cumpleaños)", _m_usuarios_cumple),
+    (16, "firmas (el libro de cumbre: una por persona y campamento)", _m_firmas),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -969,7 +983,7 @@ def exigir_sesion() -> Any:
         resp.headers["Retry-After"] = "60"
         return resp, 429
     if request.method in ESCRITURA and u["rol"] != "admin" and ruta not in ("/api/logout", "/api/clave", "/api/visto", "/api/cambios-visto", "/api/errores") \
-            and not ruta.startswith(("/api/push/", "/api/sesiones/", "/api/piedritas/", "/api/yo/")):
+            and not ruta.startswith(("/api/push/", "/api/sesiones/", "/api/piedritas/", "/api/yo/", "/api/firmas/")):
         return jsonify(error="Tu cuenta es de solo lectura."), 403
     return None
 
@@ -1794,6 +1808,110 @@ def listar_cumples() -> Response:
     """Los cumpleaños que la familia puso (solo nombre, mes y día) de las cuentas activas."""
     rows = db().execute("SELECT nombre, cumple FROM usuarios WHERE activo = 1 AND cumple IS NOT NULL ORDER BY nombre").fetchall()
     return jsonify([dict(r) for r in rows])
+
+
+# ------------------------------------------------- el libro de cumbre (campamento 19, idea 18)
+# Una firma por persona y campamento ya alcanzado: también la deja un lector (es su segunda escritura, después de las piedritas). Las
+# firmas las lee toda la familia siempre: solo se escriben en un campamento al que el libro ya llegó, así que no hay sorpresa que guardar
+# (si el saldo luego baja, lo firmado se queda; para firmar o reescribir, el libro tiene que volver a estar ahí). Cada cambio va a la
+# auditoría; reescribir la propia no avisa a nadie, la primera firma de alguien más avisa al dueño («Piedritas y firmas de tu familia»).
+MAX_FIRMA = 80
+FIRMA_MAX, FIRMA_VENTANA = 20, 600  # por cuenta y proceso: 20 firmas (o cambios) cada 10 minutos
+_FIRMAS_RECIENTES: dict[str, deque[float]] = {}
+
+
+def parse_firma(v: Any) -> str:
+    """La firma: hasta 80 caracteres en una sola línea, sin caracteres de control. No puede ir vacía (para quitarla está «Borrar»)."""
+    if not isinstance(v, str):
+        raise ValueError("Escribe tu firma.")
+    t = " ".join("".join(ch for ch in v if ch.isprintable() or ch in "\t\n").split())
+    if not t:
+        raise ValueError("Escribe tu firma.")
+    if len(t) > MAX_FIRMA:
+        raise ValueError(f"La firma admite hasta {MAX_FIRMA} caracteres.")
+    return t
+
+
+def _demasiadas_firmas(nombre: str) -> bool:
+    ahora = time.time()
+    cola = _FIRMAS_RECIENTES.setdefault(nombre, deque())
+    while cola and ahora - cola[0] > FIRMA_VENTANA:
+        cola.popleft()
+    if len(cola) >= FIRMA_MAX:
+        return True
+    cola.append(ahora)
+    return False
+
+
+def _firma_json(r: sqlite3.Row, uid: int) -> dict[str, Any]:
+    return {"id": r["id"], "hito": r["hito"], "quien": r["quien"], "texto": r["texto"], "creado": r["creado"], "editado": r["editado"], "mia": r["usuario_id"] == uid}
+
+
+_SQL_FIRMAS = "SELECT f.id, f.hito, f.usuario_id, u.nombre AS quien, f.texto, f.creado, f.editado FROM firmas f JOIN usuarios u ON u.id = f.usuario_id"
+
+
+@app.get("/api/firmas")
+def listar_firmas() -> Response:
+    """Todas las firmas de los libros de cumbre, en el orden en que se firmaron. `mia` dice cuál es de quien pregunta."""
+    uid = g.usuario["id"]
+    return jsonify([_firma_json(r, uid) for r in db().execute(f"{_SQL_FIRMAS} ORDER BY f.hito, f.creado, f.id")])
+
+
+@app.put("/api/firmas/<int:hito>")
+def firmar(hito: int) -> Any:
+    """Firma (o reescribe la propia firma) el libro de cumbre de un campamento al que el libro ya llegó."""
+    u = g.usuario
+    if hito not in HITOS_MENSAJE:
+        return jsonify(error="Ese campamento no existe."), 400
+    body = request.get_json(silent=True)
+    try:
+        texto = parse_firma(body.get("texto") if isinstance(body, dict) else None)
+    except ValueError as err:
+        return jsonify(error=str(err)), 400
+    conn = db()
+    if saldo_actual(conn) < hito:
+        return jsonify(error="El libro todavía no llega a este campamento: su libro de cumbre se firma al llegar."), 400
+    if _demasiadas_firmas(u["nombre"]):
+        resp = jsonify(error="Demasiadas firmas seguidas. Espera unos minutos.")
+        resp.headers["Retry-After"] = str(FIRMA_VENTANA)
+        return resp, 429
+    if conn.in_transaction:
+        conn.commit()
+    conn.execute("BEGIN IMMEDIATE")  # leer la firma de antes y escribir la nueva van juntas (la auditoría dice lo que había de verdad)
+    antes = conn.execute("SELECT texto FROM firmas WHERE hito = ? AND usuario_id = ?", (hito, u["id"])).fetchone()
+    ahora = int(time.time())
+    if antes and antes["texto"] == texto:
+        conn.commit()  # lo mismo que ya estaba: nada que guardar ni que auditar
+    else:
+        conn.execute("INSERT INTO firmas (hito, usuario_id, texto, creado) VALUES (?, ?, ?, ?) "
+                     "ON CONFLICT (hito, usuario_id) DO UPDATE SET texto = excluded.texto, editado = excluded.creado", (hito, u["id"], texto, ahora))
+        auth.auditar(conn, u["nombre"], "firma", "campamento", hito, {"texto": antes["texto"]} if antes else None, {"texto": texto}, auth.ip_resumida(ip_real()))
+        conn.commit()
+    nueva = antes is None
+    if nueva and u["rol"] != "admin":  # al dueño se le avisa de la primera firma de alguien más (no de las suyas ni de reescribir)
+        try:
+            push.notificar(conn, "piedrita", "Libro DCA", f"{u['nombre']} firmó el libro de cumbre del campamento {ritmo.nombre_hito(hito).replace(' sats', '')}.",
+                           f"firma-{hito}-{u['id']}")
+        except Exception as e:  # noqa: BLE001 — avisar es secundario
+            print(f"push: no se pudo avisar de la firma ({type(e).__name__}: {e})", flush=True)
+    r = conn.execute(f"{_SQL_FIRMAS} WHERE f.hito = ? AND f.usuario_id = ?", (hito, u["id"])).fetchone()
+    return jsonify({**_firma_json(r, u["id"]), "nueva": nueva}), 201 if nueva else 200
+
+
+@app.delete("/api/firmas/<int:hito>/<int:fid>")
+def borrar_firma(hito: int, fid: int) -> Any:
+    """Quita una firma: la propia, cualquiera; la de otra persona, solo el admin (403 para un lector). Queda en la auditoría."""
+    u = g.usuario
+    conn = db()
+    r = conn.execute(f"{_SQL_FIRMAS} WHERE f.id = ? AND f.hito = ?", (fid, hito)).fetchone()
+    if not r:
+        return jsonify(error="Esa firma ya no está."), 404
+    if r["usuario_id"] != u["id"] and u["rol"] != "admin":
+        return jsonify(error="Solo puedes borrar tu propia firma."), 403
+    conn.execute("DELETE FROM firmas WHERE id = ?", (fid,))
+    auth.auditar(conn, u["nombre"], "firma_borrada", "campamento", hito, {"texto": r["texto"], "de": r["quien"]}, None, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return "", 204
 
 
 @app.post("/api/traslados")

@@ -1,5 +1,5 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente } from './lib.js';
+import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, firmasDe, textoFirmantes, accionFirmas } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 
@@ -196,7 +196,7 @@ function lago(c, W, H, ventas = 0) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, cumples = [], pie = 104, libro = false }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo, pie);
@@ -444,7 +444,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, mensajes, puedeEscribir, techo, ec, libro, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, mensajes, puedeEscribir, firmas, techo, ec, libro, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -644,10 +644,15 @@ function banderas(host, campos, W, H) {
   tarjeta.setAttribute('role', 'group');
   tarjeta.setAttribute('aria-labelledby', 'm-tarjeta-t');
   tarjeta.hidden = true;
-  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><p class="m-mensaje" id="m-mensaje" hidden></p><small class="m-mensaje-nota" id="m-mensaje-nota" hidden></small><button type="button" class="m-tarjeta-escribir" id="m-escribir" hidden></button><button type="button" class="m-tarjeta-x">Cerrar</button>';
+  tarjeta.innerHTML = '<div class="m-pet" aria-hidden="true"></div><b id="m-tarjeta-t"></b><p id="m-tarjeta-p"></p><p class="m-mensaje" id="m-mensaje" hidden></p><small class="m-mensaje-nota" id="m-mensaje-nota" hidden></small><button type="button" class="m-firmas" id="m-firmas" hidden><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-libro"/></svg><span class="m-firmas-t"><span class="m-firmas-k">Libro de cumbre</span><span class="m-firmas-r" id="m-firmas-r"></span></span></button><button type="button" class="m-tarjeta-escribir" id="m-escribir" hidden></button><button type="button" class="m-tarjeta-x">Cerrar</button>';
   tarjeta.querySelector('.m-tarjeta-x').addEventListener('click', () => cerrarTarjeta(true));
   // El dueño escribe o cambia el mensaje de la bandera: la montaña solo avisa (mensajes.js abre el cuadro).
   tarjeta.querySelector('#m-escribir').addEventListener('click', () => { if (abierta !== null) document.dispatchEvent(new CustomEvent('libro:mensaje', { detail: { hito: abierta } })); });
+  // El libro de cumbre (campamento 19): leer y firmar es de toda la familia; firmas.js abre el libro (la montaña solo avisa).
+  tarjeta.querySelector('#m-firmas').addEventListener('click', () => {
+    if (abierta === null) return;
+    document.dispatchEvent(new CustomEvent('libro:firmas', { detail: { hito: abierta, alcanzado: estado.sats >= abierta } }));
+  });
   caja.replaceChildren(...botones, tarjeta);
   abierta = null;
 }
@@ -677,6 +682,7 @@ function abrirTarjeta(m) {
   nota.textContent = nota.hidden ? '' : 'Se revelará a los demás cuando lleguen a este campamento.';
   bE.hidden = !estado.puedeEscribir;
   bE.textContent = msg ? 'Cambiar el mensaje' : 'Escribir un mensaje';
+  pintarFirmasTarjeta(m);
   tarjeta.style.setProperty('--cx', `${f1(campo.p.x)}px`);
   const abajo = campo.p.y < H * 0.62;
   tarjeta.style.top = abajo ? `${f1(campo.p.y + 18)}px` : 'auto';
@@ -690,6 +696,25 @@ function abrirTarjeta(m) {
   }
   caja.querySelectorAll('.m-bandera').forEach((b) => b.setAttribute('aria-expanded', String(Number(b.dataset.m) === m)));
   abierta = m;
+}
+
+/**
+ * El libro de cumbre en la tarjeta (campamento 19): quién firmó y qué se puede hacer. Sale en un campamento al que el libro ya llegó o, si
+ * el saldo bajó después, cuando ya tiene firmas (se pueden leer). La cumbre no tiene libro: nunca se alcanza (al llegar, la montaña sube).
+ */
+function pintarFirmasTarjeta(m) {
+  const b = estado?.caja?.querySelector('#m-firmas');
+  if (!b) return;
+  const fs = firmasDe(estado.firmas, m), alcanzado = estado.sats >= m;
+  b.hidden = !(alcanzado || fs.length);
+  if (b.hidden) return;
+  b.querySelector('#m-firmas-r').textContent = `${textoFirmantes(fs)} · ${accionFirmas(fs, alcanzado)}`;
+}
+/** Firmas nuevas (alguien firmó, o llegó la actualización de cada minuto): se pintan en la tarjeta abierta sin redibujar la montaña. */
+export function actualizarFirmas(firmas) {
+  if (!estado) return;
+  estado.firmas = firmas;
+  if (abierta !== null) pintarFirmasTarjeta(abierta);
 }
 
 function cerrarTarjeta(devolverFoco = false) {
@@ -708,8 +733,10 @@ let cierreInstalado = false;
 function instalarCierre() {
   if (cierreInstalado) return;
   cierreInstalado = true;
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && abierta !== null) { e.preventDefault(); cerrarTarjeta(true); } });
-  document.addEventListener('pointerdown', (e) => { if (abierta !== null && !e.target.closest?.('.m-bandera, .m-tarjeta')) cerrarTarjeta(); });
+  // Con un cuadro abierto encima (escribir el mensaje, el libro de cumbre) la tarjeta se queda: al cerrarlo, el foco vuelve a su botón. Tocar
+  // el aviso de abajo («Deshacer» una firma) tampoco la cierra.
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && abierta !== null && !document.querySelector('dialog[open]')) { e.preventDefault(); cerrarTarjeta(true); } });
+  document.addEventListener('pointerdown', (e) => { if (abierta !== null && !e.target.closest?.('.m-bandera, .m-tarjeta, dialog, #aviso')) cerrarTarjeta(); });
 }
 
 /**

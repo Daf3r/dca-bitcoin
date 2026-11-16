@@ -8,7 +8,7 @@ import {
   satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, textoApertura, etapasFuturas, mananaISO, diario, textoDiario, piedritasPorCompra, textoPiedritas, ultimaPiedrita, cumpleHoy, textoCumple, textoCumpleFecha, muestrasSismo, medianocheSV, tarjetaFiesta, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
-import { AVISO_DIARIO, diarioParaOir, fechaHablada, paraOir } from '../app/static/lib.js';
+import { AVISO_DIARIO, accionFirmas, diarioParaOir, fechaHablada, firmasDe, paraOir, textoFirmantes } from '../app/static/lib.js';
 
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
@@ -980,5 +980,16 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(oido.indexOf('Hace un año.') > 1 && oido.some((f) => /^Hace un año el libro tenía 20000 sats/.test(f)), 'oír: con un año de historia, también «hace un año»');
   ok(diarioParaOir(una, { montana: 'La Ceiba' })[0].startsWith('El Diario del Libro, desde la montaña La Ceiba. Edición'), 'oír: con nombre, la montaña se nombra en la cabecera');
   eq(diarioParaOir(null), [], 'oír: sin Diario no hay nada que leer');
+  // El libro de cumbre: quién firmó y qué invita a hacer la tarjeta.
+  const f = (id, hito, quien, creado, mia = false) => ({ id, hito, quien, texto: 'x', creado, editado: null, mia });
+  const todas = [f(3, 1e6, 'Papá', 30), f(1, 1e6, 'Ana', 10), f(2, 1e7, 'Ana', 20), f(4, 1e6, 'Daf3r', 40, true), f(5, 1e6, 'Mamá', 50)];
+  eq(firmasDe(todas, 1e6).map((x) => x.id), [1, 3, 4, 5], 'cumbre: las firmas de un campamento, en el orden en que se firmaron');
+  eq(firmasDe(null, 1e6), [], 'cumbre: sin firmas, ninguna');
+  eq([textoFirmantes([]), textoFirmantes([f(1, 1e6, 'Ana', 1)]), textoFirmantes([f(1, 1e6, 'Ana', 1, true)])], ['Nadie ha firmado todavía', 'Firmó Ana', 'Firmaste tú'], 'cumbre: nadie, una persona o tú');
+  eq(textoFirmantes(firmasDe(todas, 1e6).slice(0, 2)), 'Firmaron Ana y Papá', 'cumbre: dos personas');
+  eq(textoFirmantes(firmasDe(todas, 1e6).slice(0, 3)), 'Firmaron tú, Ana y Papá', 'cumbre: tu firma va primero');
+  eq(textoFirmantes(firmasDe(todas, 1e6)), 'Firmaron tú, Ana y 2 más', 'cumbre: con muchas, dos nombres y cuántas más (la tuya nunca se pierde en «más»)');
+  eq([accionFirmas([], true), accionFirmas([f(1, 1e6, 'Ana', 1)], true), accionFirmas([f(1, 1e6, 'Ana', 1, true)], true), accionFirmas([f(1, 1e6, 'Ana', 1)], false)],
+    ['Deja la primera firma', 'Firma tú también', 'Cambia tu firma', 'Léelo'], 'cumbre: lo que invita a hacer la tarjeta (sin alcanzar, solo leer)');
 }
 console.log(`OK ${n} comprobaciones`);
