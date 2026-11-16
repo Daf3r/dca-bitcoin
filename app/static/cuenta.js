@@ -68,7 +68,6 @@ export async function cargarYo() {
     $('dc-sistema-btn').hidden = yo.rol !== 'admin';
     $('dc-enlaces-btn').hidden = yo.rol !== 'admin';
     $('dc-montana').hidden = yo.rol !== 'admin'; // bautizar la montaña: solo quien anota
-    $('dc-previa').hidden = yo.rol !== 'admin'; // vista previa temporal
     $('fc-usuario').value = yo.usuario;
     pintar();
   } catch { /* el 401 ya redirige; si falla la red, la app sigue en solo lectura */ }

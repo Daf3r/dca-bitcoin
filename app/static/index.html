@@ -532,43 +532,34 @@
   <div class="dc-menu" id="dc-menu">
     <h2 id="dc-t">Tu cuenta</h2>
     <p class="dc-quien" id="dc-quien"></p>
-    <!-- VISTA PREVIA TEMPORAL de la celebración (solo admin; no guarda nada). Para quitarla: este bloque, `.dc-previa` en
-         styles.css, el bloque «vista previa temporal» de app.js y la línea de `dc-previa` en cargarYo. -->
-    <div class="dc-previa" id="dc-previa" hidden>
-      <p>Vista previa de la celebración (temporal, no guarda nada):</p>
-      <div>
-        <button type="button" data-previa="compra">Compra</button>
-        <button type="button" data-previa="etapa">Etapa</button>
-        <button type="button" data-previa="hito">Hito grande</button>
-        <button type="button" data-previa="epico">1 BTC</button>
-        <button type="button" data-previa="constancia">Constancia</button>
-      </div>
-    </div>
+    <!-- «Tu cuenta» por para qué sirve (campamento 20): lo que es del libro (y de la familia), lo que vale solo en este dispositivo y lo
+         que se administra (la cuenta de cada quien y, para quien anota, el libro y el servidor). Al final, salir. Los ids no cambian. -->
     <div class="dc-lista">
-      <button type="button" data-cuenta="clave">Cambiar contraseña</button>
-      <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
+      <h3 class="dc-grupo" id="dc-g-libro">El libro</h3>
+      <button type="button" data-cuenta="historia" id="dc-historia-btn" data-libro="Historia y medallas del libro">Tu historia y medallas</button>
       <button type="button" data-cuenta="montana" id="dc-montana" hidden>Nombre de la montaña: sin nombre</button>
+      <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
+      <h3 class="dc-grupo" id="dc-g-disp">Este dispositivo</h3>
+      <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
+      <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
+      <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
+      <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
+      <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
+      <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
+      <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
+      <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
+      <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
+      <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
+      <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
+      <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
+      <h3 class="dc-grupo" id="dc-g-admin">Administrar</h3>
+      <button type="button" data-cuenta="clave">Cambiar contraseña</button>
+      <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
       <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
       <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
       <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
-      <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
-      <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
-      <h3 class="dc-grupo">En este dispositivo</h3>
-      <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
-      <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
-      <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
-      <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
-      <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
-      <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
-      <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
-      <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
-      <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
-      <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
-      <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
-      <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
-      <h3 class="dc-grupo">Salir</h3>
-      <button type="button" data-cuenta="salir">Salir</button>
+      <button type="button" class="dc-salir" data-cuenta="salir">Salir</button>
       <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
       <button type="button" data-cuenta="cerrar">Cerrar</button>
     </div>
@@ -669,6 +660,16 @@
     </table></div>
     <h3>Errores del navegador</h3>
     <ul class="sis-lista" id="sis-err"></ul>
+    <!-- Probar la celebración (antes «vista previa temporal» en el menú; campamento 20): la animación con datos de prueba. No guarda nada ni queda en el Historial. -->
+    <h3 id="dc-previa-t">Probar la celebración</h3>
+    <p class="dc-nota">La animación de una compra, una etapa o un hito, con datos de prueba. No guarda nada ni queda en el Historial.</p>
+    <div class="dc-previa" id="dc-previa" role="group" aria-labelledby="dc-previa-t">
+      <button type="button" data-previa="compra">Compra</button>
+      <button type="button" data-previa="etapa">Etapa</button>
+      <button type="button" data-previa="hito">Hito grande</button>
+      <button type="button" data-previa="epico">1 BTC</button>
+      <button type="button" data-previa="constancia">Constancia</button>
+    </div>
     <div class="d-bot"><button type="button" id="sis-err-limpiar" hidden>Limpiar la lista</button><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-historial" id="dc-hist" hidden>

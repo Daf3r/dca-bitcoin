@@ -55,10 +55,9 @@ export function destello() {
   setTimeout(() => b.classList.remove('destello'), 1000);
 }
 
-// ---------------------------------------------------- vista previa temporal
-// Reproduce la celebración con datos inventados y luego vuelve al estado real. No guarda nada ni toca la
-// auditoría. Es temporal: para quitarla, borra este bloque, el `#dc-previa` de index.html, su regla
-// `.dc-previa` en styles.css y la línea de `dc-previa` en cargarYo.
+// ---------------------------------------------------- probar la celebración
+// Reproduce la celebración con datos inventados y luego vuelve al estado real. No guarda nada ni toca la auditoría. Vive en
+// «Tu cuenta → Estado del sistema» (solo quien administra; campamento 20): sirve para probar la animación después de un cambio.
 let previaActiva = false;
 const pausa = (ms) => new Promise((ok) => setTimeout(ok, ms));
 async function vistaPrevia(nivel) {
@@ -72,7 +71,7 @@ async function vistaPrevia(nivel) {
   else { antes = base; despues = base + Math.max(1000, Math.min(30_000, Math.floor((etapaSiguiente(base) - base) / 2))); } // «compra» y «constancia»
   fijarR({ ...R, sats: despues, meta: metaSiguiente(despues), etapa: etapaSiguiente(despues), etapaPrev: etapaAnterior(despues) });
   if (window.scrollY > 40) { window.scrollTo({ top: 0, behavior: reducido() ? 'auto' : 'smooth' }); await pausa(480); }
-  avisar('Vista previa de la celebración: no se guarda nada.', null, true);
+  avisar('Prueba de la celebración: no se guarda nada.', null, true);
   pintarMontana(false, antes, { antes, delta: despues - antes });
   if (!reducido()) setTimeout(() => destello(), MS_SUBIDA);
   celebrar({ sats: antes }, nivel === 'constancia' ? [{ tipo: 'compras', valor: R.constancia?.compras?.valor ?? 25 }] : []);

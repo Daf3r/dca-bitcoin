@@ -1575,6 +1575,7 @@ try {
       // La vista previa de la celebración de 1 BTC: aurora por todo el cielo, lluvia de luz, tarjeta propia y, al final, acento dorado
       r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
       await r.p.click('#cuenta-btn');
+      await r.p.click('#dc-sistema-btn'); await r.p.waitForTimeout(400); // «Probar la celebración» vive en Estado del sistema (campamento 20)
       await r.p.click('[data-previa="epico"]');
       await r.p.waitForSelector('.aurora-epica', { timeout: 6000 });
       const ep = await r.p.evaluate(() => ({ bandas: document.querySelectorAll('.aurora-epica').length, gotas: document.querySelectorAll('.luz-gota').length, cometa: document.querySelectorAll('.cometa').length }));
@@ -1591,6 +1592,7 @@ try {
       // El cometa: al cruzar una etapa
       r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
       await r.p.click('#cuenta-btn');
+      await r.p.click('#dc-sistema-btn'); await r.p.waitForTimeout(400); // «Probar la celebración» vive en Estado del sistema (campamento 20)
       await r.p.click('[data-previa="etapa"]');
       await r.p.waitForSelector('.cometa', { timeout: 6000 });
       ok(await r.p.evaluate(() => !!document.querySelector('.cometa .cometa-cola') && document.querySelectorAll('.aurora-epica').length === 0), 'cometa: una etapa lo lanza (y no la celebración de 1 BTC)');
@@ -2795,6 +2797,7 @@ try {
     try {
       const r = await ent(navegador, sLac, ADMIN, { hora: 22 }, sinAviso);
       await r.p.click('#cuenta-btn');
+      await r.p.click('#dc-sistema-btn'); await r.p.waitForTimeout(400); // «Probar la celebración» vive en Estado del sistema (campamento 20)
       await r.p.click('[data-previa="etapa"]');
       await r.p.waitForFunction(() => !document.getElementById('hito-cel').hidden && document.querySelector('#hc-lacre svg'), null, { timeout: 12000 });
       ok(await r.p.locator('#hc-lacre svg.lacre.grande').count() === 1, 'lacre: un sello cae en la tarjeta de la etapa');

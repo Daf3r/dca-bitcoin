@@ -946,7 +946,11 @@ div.fila:hover { background: none; }
 .d-cuenta { width: min(26rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
 .dc-quien { margin: 4px 0 14px; }
 .dc-lista { display: grid; gap: 6px; }
-.dc-grupo { margin: 12px 4px 2px; font: 600 0.8125rem var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt3); }
+.dc-grupo { margin: 14px 4px 2px; font: 600 0.8125rem var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt3); }
+.dc-lista > .dc-grupo:first-child { margin-top: 2px; }
+/* Salir va aparte, al final (campamento 20): sin título (diría «Salir» dos veces), con una raya y aire encima. */
+.dc-lista .dc-salir { margin-top: 18px; position: relative; }
+.dc-lista .dc-salir::before { content: ""; position: absolute; left: 4px; right: 4px; top: -12px; border-top: 1px solid var(--s3); }
 .dc-lista button {
   min-height: var(--toque); padding: 10px 16px; border: 0; border-radius: 14px; background: var(--s2);
   text-align: left; font-weight: 600; cursor: pointer;
@@ -1144,10 +1148,8 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .nov-resumen dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
 #nov-ok { background: var(--naranja); border-color: transparent; color: var(--naranja-osc); }
 
-/* Vista previa temporal de la celebración (solo admin). */
-.dc-previa { margin: 0 0 14px; padding: 12px; border-radius: 14px; background: var(--s2); }
-.dc-previa p { margin: 0 0 8px; font-size: 0.8125rem; color: var(--txt2); }
-.dc-previa div { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Probar la celebración (solo admin, en «Estado del sistema»; campamento 20). */
+.dc-previa { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .dc-previa button { min-height: var(--toque); padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 650; cursor: pointer; touch-action: manipulation; }
 
 /* ======================================================= Campamento 4 (1/4): se siente como app */
