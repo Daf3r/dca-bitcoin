@@ -3,10 +3,14 @@ import { $, R, S, api, normalizar } from './estado.js';
 import { pintar } from './pintar.js';
 
 // -------------------------------------------------------------------- CSV
+// Exportar e importar viven en «Tu cuenta → Tus datos» (campamento 17). Al elegir un archivo se cierra «Tu cuenta» para que se vean
+// el resultado (el aviso de abajo) y, si entraron compras, el saldo nuevo.
+const cerrarCuenta = () => { const d = $('d-cuenta'); if (d?.open) d.close(); };
 $('csv-in').addEventListener('change', async (e) => {
   const archivo = e.target.files[0];
   e.target.value = '';
   if (!archivo) return;
+  cerrarCuenta();
   try {
     const r = await api('/api/import', { metodo: 'POST', cuerpo: await archivo.text(), tipo: 'text/csv' });
     const antes = R.sats;
@@ -24,6 +28,7 @@ $('tras-in').addEventListener('change', async (e) => {
   const archivo = e.target.files[0];
   e.target.value = '';
   if (!archivo) return;
+  cerrarCuenta();
   try {
     const r = await api('/api/traslados/import', { metodo: 'POST', cuerpo: await archivo.text(), tipo: 'text/csv' });
     S.traslados = await api('/api/traslados');

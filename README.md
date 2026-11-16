@@ -119,7 +119,7 @@ Para un mantenimiento, o si sospechas de un problema y quieres revisarlo sin que
 «Tu cuenta → Enlace para tu hoja de cálculo» (solo el admin) crea un enlace que Google Sheets (`=IMPORTDATA("…")`) o Excel leen **sin iniciar sesión**: da solo las compras y los traslados en CSV, nunca escribe ni ve cuentas. El enlace se muestra **una sola vez** (en la base solo queda su huella), puedes tener hasta 5 y revocar cualquiera al instante. **Es una llave:** la dirección completa viaja en la petición, así que puede quedar en los registros de Caddy o de Cloudflare; no la pegues en chats ni en documentos que otros vean. Si Cloudflare tiene reglas de bots muy estrictas, Google Sheets puede no llegar: prueba el enlace en la hoja tras crearlo.
 
 ## Importar y exportar
-*Exportar CSV* descarga todas las compras (`fecha,monto_usd,precio_btc_usd,sats,btc`). *Importar CSV* acepta ese mismo formato o uno viejo sin `sats` (usa `precio_btc_usd`). Salta filas repetidas e inválidas y dice cuáles, así que puedes importar el mismo archivo dos veces sin duplicar.
+Están en **«Tu cuenta → Tus datos: descargar e importar»** (solo el admin). *Exportar compras (CSV)* descarga todas las compras (`fecha,monto_usd,precio_btc_usd,sats,btc`). *Importar compras (CSV)* acepta ese mismo formato o uno viejo sin `sats` (usa `precio_btc_usd`). Salta filas repetidas e inválidas y dice cuáles, así que puedes importar el mismo archivo dos veces sin duplicar.
 
 Desde el servidor, para archivos grandes (la página acepta hasta 1 MB):
 ```bash

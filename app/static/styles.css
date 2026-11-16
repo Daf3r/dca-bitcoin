@@ -413,7 +413,6 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
   text-decoration: underline; text-decoration-color: var(--naranja); text-decoration-thickness: 2px; text-underline-offset: 5px;
 }
 .csv { display: flex; gap: 20px; }
-.csv:has(input:focus-visible) label { outline: 2px solid var(--naranja); outline-offset: 3px; }
 
 /* Recordatorio «te toca comprar» (solo admin). Calmo cuando vas al día; naranja cuando toca; gris si la racha se reinició. */
 .toca { display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 16px; background: var(--s1); border: 1px solid var(--s3); color: var(--txt2); font-size: 0.9375rem; line-height: 1.35; }
@@ -964,6 +963,8 @@ div.fila:hover { background: none; }
 }
 .dc-lista .enlace-boton:hover { background: var(--s3); }
 .dc-lista .enlace-boton:focus-within, .dc-lista .enlace-boton:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+/* «Importar…» es una etiqueta de un campo de archivo oculto (su hermano siguiente): con el teclado, el foco del campo se ve en ella. */
+.dc-lista label.enlace-boton:has(+ input:focus-visible) { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
 .f-et { display: inline-block; padding: 0 7px; border-radius: 999px; background: var(--s3); color: var(--txt2); font-size: 0.75rem; line-height: 1.5; }
 .f-et::before { content: '#'; opacity: 0.7; }
 .dc-sistema h3 { margin: 18px 0 8px; font: 650 0.9375rem var(--sans); color: var(--txt2); letter-spacing: 0.02em; }

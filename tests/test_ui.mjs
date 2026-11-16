@@ -1265,10 +1265,10 @@ try {
 
       // Índice de secciones: solo en pantallas muy anchas, salta a la sección y resalta la que se ve
       ok(await p.locator('#indice').isVisible(), 'índice: a 1600 px sale al lado');
-      eq(await p.locator('#indice a:visible').count(), 4, 'índice: Saldo, Gráfico, Reportes y Compras');
+      eq(await p.locator('#indice a:visible').count(), 4, 'índice: Saldo, Gráfico, Reportes y Movimientos');
       await p.click('#indice a[data-s="compras"]');
       await p.waitForTimeout(900);
-      ok((await p.locator('#t-compras').boundingBox()).y < 200, 'índice: «Compras» lleva a esa sección');
+      ok((await p.locator('#t-compras').boundingBox()).y < 200, 'índice: «Movimientos» lleva a esa sección');
       eq(await html(() => document.querySelector('#indice a[aria-current="true"]')?.dataset.s), 'compras', 'índice: resalta la sección que se ve');
       await p.click('#indice a[data-s="escena"]');
       await p.waitForTimeout(900);
@@ -3542,6 +3542,47 @@ try {
       }
     } finally {
       s17d.parar();
+    }
+    // ---- 7. Movimientos: el mismo nombre en la pestaña y en la lista, y los CSV solo en «Tu cuenta → Tus datos»
+    const s17c = await servidor('nueve');
+    try {
+      const a = await ent(s17c, ADMIN, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      await a.p.click('#pestanas [data-pestana="movimientos"]'); await a.p.waitForTimeout(400);
+      eq([await a.p.locator('#t-compras').textContent(), (await a.p.locator('#pestanas [aria-current="true"] .pe-txt').textContent()).trim()], ['Movimientos', 'Movimientos'], '17·7 la lista se llama igual que su pestaña');
+      ok(!/CSV/i.test(await a.p.locator('#compras').innerText()) && await a.p.locator('#compras a[href$=".csv"], #compras input[type="file"]').count() === 0, '17·7 arriba de la lista ya no hay exportar ni importar');
+      // Exportar e importar siguen funcionando, desde «Tus datos».
+      const antes = (await datos(a.p, '/api/compras')).length;
+      await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(300);
+      eq(await a.p.locator('#dc-datos-btn').textContent(), 'Tus datos: descargar e importar', '17·7 «Tu cuenta»: el botón dice lo que hay dentro');
+      await a.p.click('#dc-datos-btn'); await a.p.waitForTimeout(500);
+      const [descarga] = await Promise.all([a.p.waitForEvent('download'), a.p.click('#csv-out')]);
+      ok(/\.csv$/.test(descarga.suggestedFilename()), `17·7 exportar compras descarga su CSV (${descarga.suggestedFilename()})`);
+      const csv = (await datos(a.p, '/api/compras')).length && await a.p.evaluate(() => fetch('/api/export.csv').then((r) => r.text()));
+      ok(csv.split('\n').filter(Boolean).length === antes + 1, '17·7 el CSV trae todas las compras');
+      const caja = await a.p.locator('label[for="csv-in"]').boundingBox();
+      ok(await a.p.locator('label[for="csv-in"]').isVisible() && caja.height >= 47.5, `17·7 «Importar compras (CSV)» está en «Tus datos» y mide ${caja.height.toFixed(0)} px`);
+      await a.p.focus('#csv-out'); await a.p.keyboard.press('Tab');
+      ok(await a.p.evaluate(() => { const l = document.querySelector('label[for="csv-in"]'); return document.activeElement.id === 'csv-in' && getComputedStyle(l).outlineStyle !== 'none'; }), '17·7 con el teclado, el foco del campo de archivo se ve en su etiqueta');
+      await a.p.setInputFiles('#csv-in', { name: 'c.csv', mimeType: 'text/csv', buffer: Buffer.from('fecha,monto_usd,precio_btc_usd,sats\n2020-01-15,10,8000,125000\n') });
+      await a.p.waitForTimeout(1500);
+      eq((await datos(a.p, '/api/compras')).length, antes + 1, '17·7 importar compras desde «Tus datos» las guarda');
+      ok(/Importadas: 1 · repetidas: 0/.test(await a.p.textContent('#aviso')) && !(await a.p.locator('#d-cuenta').evaluate((d) => d.open)), '17·7 «Tu cuenta» se cierra y el aviso dice el resultado');
+      eq(a.consola.filter((x) => !/503/.test(x)), [], '17·7 consola limpia');
+      await a.ctx.close();
+      // Una lectora: el mismo nombre, y nada de CSV (ni arriba ni en su cuenta).
+      const l = await ent(s17c, LECTOR, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      await l.p.click('#pestanas [data-pestana="movimientos"]'); await l.p.waitForTimeout(400);
+      ok(await l.p.locator('#t-compras').textContent() === 'Movimientos' && !/CSV/i.test(await l.p.locator('#compras').innerText()), '17·7 lectora: «Movimientos», sin CSV');
+      await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(300);
+      ok(!(await l.p.locator('#dc-datos-btn').isVisible()), '17·7 lectora: «Tus datos» sigue siendo de quien anota');
+      await l.ctx.close();
+      // Escritorio: «Ver como tabla» sigue junto al título.
+      const e = await ent(s17c, ADMIN, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
+      await e.p.click('#pestanas [data-pestana="movimientos"]'); await e.p.waitForTimeout(400);
+      ok(await e.p.locator('#l-tabla').isVisible() && await e.p.locator('#t-compras').textContent() === 'Movimientos', '17·7 escritorio: «Ver como tabla» sigue junto al título');
+      await e.ctx.close();
+    } finally {
+      s17c.parar();
     }
     const s17v = await servidor('vacio');
     try {

@@ -94,7 +94,7 @@
 <div class="recarga" id="recarga" aria-hidden="true"><i></i></div>
 <!-- Índice de secciones (solo en pantallas muy anchas, a un lado): resalta la que se ve y salta a ella (indice.js). -->
 <nav class="indice" id="indice" aria-label="Secciones de la página">
-  <a href="#t-saldo" data-s="escena">Saldo</a><a href="#mercado" data-s="grafico">Gráfico</a><a href="#reportes" data-s="reportes">Reportes</a><a href="#compras" data-s="compras">Compras</a>
+  <a href="#t-saldo" data-s="escena">Saldo</a><a href="#mercado" data-s="grafico">Gráfico</a><a href="#reportes" data-s="reportes">Reportes</a><a href="#compras" data-s="compras">Movimientos</a>
 </nav>
 <!-- Mini-cabecera: al bajar y perder de vista el saldo, queda una franja con el saldo y el precio; tocarla sube (minicab.js). -->
 <button type="button" class="minicab" id="minicab"><b id="minicab-saldo"></b> <i class="mc-alt" id="minicab-alt" aria-hidden="true" hidden><i class="mc-punto"></i></i> <span id="minicab-precio"></span><span class="sr"> Volver arriba</span></button>
@@ -306,12 +306,10 @@
 
   <section class="compras" id="compras" aria-labelledby="t-compras" data-p="movimientos">
     <div class="sec-cab">
-      <h2 id="t-compras" tabindex="-1">Últimas compras</h2>
+      <!-- El mismo nombre que la pestaña. Exportar e importar CSV ya no van aquí arriba: están en «Tu cuenta → Tus datos» (campamento 17). -->
+      <h2 id="t-compras" tabindex="-1">Movimientos</h2>
       <p class="csv">
         <button type="button" class="enlace" id="l-tabla" hidden>Ver como tabla</button>
-        <a class="enlace" id="csv-out" href="/api/export.csv" download>Exportar CSV</a>
-        <label class="enlace" for="csv-in">Importar CSV</label>
-        <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
       </p>
     </div>
     <!-- Buscar, filtrar y ordenar (sale cuando hay más movimientos de los que caben en la primera pantalla). Solo cambia lo que se ve en la lista: los totales son siempre los de todo. -->
@@ -524,7 +522,7 @@
       <button type="button" data-cuenta="clave">Cambiar contraseña</button>
       <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
-      <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar y traslados</button>
+      <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
       <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
       <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
       <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
@@ -594,6 +592,9 @@
     <p>Todo tu historial en archivos que abre cualquier hoja de cálculo. Solo lo vigente: lo anulado queda en el historial.</p>
     <div class="dc-lista">
       <a class="enlace-boton" id="dd-zip" href="/api/todo.zip" download>Descargar todo (ZIP con compras y traslados)</a>
+      <a class="enlace-boton" id="csv-out" href="/api/export.csv" download>Exportar compras (CSV)</a>
+      <label class="enlace-boton" for="csv-in">Importar compras (CSV)</label>
+      <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
       <a class="enlace-boton" id="dd-tras" href="/api/traslados.csv" download>Exportar traslados (CSV)</a>
       <label class="enlace-boton" for="tras-in">Importar traslados (CSV)</label>
       <input class="sr" type="file" id="tras-in" accept=".csv,text/csv">
