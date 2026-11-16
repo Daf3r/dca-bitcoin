@@ -87,7 +87,7 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
   }
   const u = puntos.at(-1);
   s += `<circle class="s-hoy" cx="${f1(x(u.fecha))}" cy="${f1(y(u.v))}" r="5"/>`;
-  if (perfil) s += `<text class="g-t pf-tu" x="${f1(Math.min(W - m.r, x(u.fecha)))}" y="${f1(y(u.v) - 11)}" text-anchor="end">Tú</text>`;
+  if (perfil) s += `<text class="g-t pf-tu" x="${f1(Math.min(W - m.r, x(u.fecha)))}" y="${f1(y(u.v) - 11)}" text-anchor="end">${perfil.rotulo ?? 'Tú'}</text>`;
   s += `<g class="g-cursor" visibility="hidden"><line y1="${m.t}" y2="${base}"/><circle class="vc-v" r="5.5"/></g></svg>`;
   host.innerHTML = s;
   host.setAttribute('aria-label', aria);

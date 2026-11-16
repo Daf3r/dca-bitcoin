@@ -97,8 +97,11 @@ button, input { font: inherit; color: inherit; }
 :where(button, [role="button"], summary) { transition: transform 0.12s ease-out; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--naranja); outline-offset: 3px; }
-[data-tono="sube"] { color: var(--sube); }
-[data-tono="baja"] { color: var(--baja); }
+/* (Campamento 17) Ganancia sin rojo: lo que sube o baja va en tinta neutra, con su signo y su flechita (`ico('sube'|'baja')`),
+   que son los que dicen hacia dónde va. El verde y el rojo quedan en la tarjeta «Ganancia» (realizada y no realizada) y para quien
+   los prefiera: «Tu cuenta → Colores de ganancia: verde y rojo» (`html[data-ganancia="color"]`, accesibilidad.js; por dispositivo). */
+:is(html[data-ganancia="color"], .rep-ganancia) [data-tono="sube"] { color: var(--sube); }
+:is(html[data-ganancia="color"], .rep-ganancia) [data-tono="baja"] { color: var(--baja); }
 
 /* -------------------------------------------------------------------- escena */
 .escena {
@@ -298,8 +301,8 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
 .cot-24 { font-size: 0.75rem; font-weight: 600; color: var(--cielo-txt2); white-space: nowrap; }
-.cot-24[data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
-.cot-24[data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
+html[data-ganancia="color"] .cot-24[data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
+html[data-ganancia="color"] .cot-24[data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
 /* Cifras secundarias con forma corta (cifras.js): en teléfonos de menos de 360 px se ve la corta. */
 .c-c { display: none; }
 @media (max-width: 359px) { .c-l { display: none; } .c-c { display: inline; } }
@@ -380,12 +383,17 @@ html[data-tv] .esc-datos { display: none !important; }
 .sd-gan .mini { margin-left: 6px; vertical-align: 0; }
 @media (max-width: 699px) {
   .sd-sep { display: block; height: 0; overflow: hidden; }
+  /* El renglón de la ganancia tiene su sitio desde antes de que llegue el precio: si el precio tarda más que las compras, la
+     montaña ya se dibujó midiendo dónde acaba el saldo (`techo`) y, al aparecer la píldora, la cumbre quedaba bajo el texto. */
+  html:not([data-tv]) .saldo-d { min-height: calc(3em + 11px); }
   .sd-gan { margin: 5px 0 0; padding-block: 3px; }
 }
 html[data-tv] .sd-gan { background: none; padding: 0; margin: 0; }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
-.saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
-.saldo-d [data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
+.saldo-d [data-tono] { color: var(--cielo-txt); } /* tinta del cielo, plena: el signo y la flecha dicen si sube o baja */
+html[data-ganancia="color"] .saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
+html[data-ganancia="color"] .saldo-d [data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
+.saldo-d [data-tono] > .ico { width: 0.62em; height: 0.62em; margin-right: 0.32em; vertical-align: 0.06em; opacity: 0.8; }
 /* Saludo según la hora, en una línea bajo la marca: discreto, no compite con la cifra. Su altura se reserva siempre para que no mueva nada al aparecer. */
 .saludo { flex-basis: 100%; min-height: 1.25rem; margin-top: -8px; font-size: 0.8125rem; line-height: 1.25rem; color: var(--cielo-txt2); }
 
@@ -405,7 +413,6 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
   text-decoration: underline; text-decoration-color: var(--naranja); text-decoration-thickness: 2px; text-underline-offset: 5px;
 }
 .csv { display: flex; gap: 20px; }
-.csv:has(input:focus-visible) label { outline: 2px solid var(--naranja); outline-offset: 3px; }
 
 /* Recordatorio «te toca comprar» (solo admin). Calmo cuando vas al día; naranja cuando toca; gris si la racha se reinició. */
 .toca { display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 16px; background: var(--s1); border: 1px solid var(--s3); color: var(--txt2); font-size: 0.9375rem; line-height: 1.35; }
@@ -606,7 +613,12 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .f-sats { grid-area: s; font-weight: 650; font-variant-numeric: tabular-nums; }
 .f-sats small { color: var(--txt3); font-weight: 500; }
 .f-det { grid-area: d; font-size: 0.8125rem; color: var(--txt3); font-variant-numeric: tabular-nums; }
-.f-var { grid-area: v; font-weight: 650; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.f-var { grid-area: v; font-weight: 650; font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.f-var .ico { width: 0.6em; height: 0.6em; margin-right: 0.4em; vertical-align: 0.08em; color: var(--txt3); }
+html[data-ganancia="color"] .f-var .ico { color: inherit; }
+/* Qué mide el porcentaje de cada fila: se dice una vez, arriba de la lista (cada fila lo repite para lectores de pantalla). */
+.l-col { margin: 2px 0 -2px; text-align: right; font: 650 0.6875rem/1.4 var(--sans); letter-spacing: 0.09em; text-transform: uppercase; color: var(--txt2); }
+.l-col[hidden] { display: none; }
 .ver-todas { margin-top: 8px; min-height: var(--toque); padding: 0 18px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 600; cursor: pointer; }
 
 /* -------------------------------------------------------- siguiente paso */
@@ -771,7 +783,8 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 .wal-fila .ses-cerrar:disabled { opacity: 0.55; }
 .ub-e { background: var(--s3); box-shadow: inset 0 0 0 1.5px var(--txt3); }
 .ub-pista { margin: 8px 0 12px; color: var(--txt2); font-size: 0.9375rem; }
-.hoja-calc .costo[data-tono="sube"] { color: var(--sube); font-weight: 600; }
+.hoja-calc .costo[data-tono="sube"] { font-weight: 600; }
+html[data-ganancia="color"] .hoja-calc .costo[data-tono="sube"] { color: var(--sube); }
 .hoja-error { color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .hoja-error:empty { display: none; }
 .hoja-error.hoja-aviso { color: var(--naranja-txt); }
@@ -950,6 +963,8 @@ div.fila:hover { background: none; }
 }
 .dc-lista .enlace-boton:hover { background: var(--s3); }
 .dc-lista .enlace-boton:focus-within, .dc-lista .enlace-boton:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+/* «Importar…» es una etiqueta de un campo de archivo oculto (su hermano siguiente): con el teclado, el foco del campo se ve en ella. */
+.dc-lista label.enlace-boton:has(+ input:focus-visible) { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
 .f-et { display: inline-block; padding: 0 7px; border-radius: 999px; background: var(--s3); color: var(--txt2); font-size: 0.75rem; line-height: 1.5; }
 .f-et::before { content: '#'; opacity: 0.7; }
 .dc-sistema h3 { margin: 18px 0 8px; font: 650 0.9375rem var(--sans); color: var(--txt2); letter-spacing: 0.02em; }
@@ -1054,7 +1069,7 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .login-caja h1 { font: 600 clamp(1.75rem, 7vw, 2.1rem)/1.1 var(--serif); }
 .login-lema { margin: 2px 0 8px; color: var(--txt2); font-size: 0.9375rem; }
 .login-aviso { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--naranja) 16%, var(--s2)); font-size: 0.875rem; overflow-wrap: anywhere; }
-.login-error { min-height: 1.3em; margin-top: 4px; color: var(--baja); font-weight: 600; font-size: 0.875rem; }
+.login-error { min-height: 1.5em; margin-top: 4px; color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .login-caja .guardar { margin-top: 4px; min-height: 52px; }
 .login-caja .guardar:disabled { opacity: 0.6; }
 .login-pie { margin-top: 14px; font-size: 0.8125rem; color: var(--txt3); text-align: center; }
@@ -1263,8 +1278,8 @@ html[data-efectos="ninguno"] .lista li.sale { display: none; }
 .dt tbody th { font-weight: 600; color: var(--txt); }
 .dt .num { text-align: right; }
 .dt td:nth-last-child(2) { white-space: normal; min-width: 10rem; color: var(--txt2); }
-.dt [data-tono="sube"] { color: var(--sube); }
-.dt [data-tono="baja"] { color: var(--baja); }
+html[data-ganancia="color"] .dt [data-tono="sube"] { color: var(--sube); }
+html[data-ganancia="color"] .dt [data-tono="baja"] { color: var(--baja); }
 .dt a, .dt .dt-edit { color: var(--naranja-txt); }
 .dt .dt-edit { min-height: 32px; text-align: left; }
 .dt tbody tr:hover { background: var(--s1); }
@@ -3082,3 +3097,84 @@ html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb
   .historia-pg .dh-vistas button:first-child { grid-column: auto; flex-direction: column; gap: 6px; min-height: calc(var(--toque, 48px) + 14px); }
 }
 @media (min-width: 700px) and (max-width: 899px) { html[data-letra="muy-grande"] .historia-pg .dh-vistas { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ============================================================================================================================
+   Campamento 17 · Primera impresión
+   ============================================================================================================================ */
+/* --- 1. Las pestañas se asoman al abrir (teléfono y tablet, de pie, con la pantalla «por pestañas»). La escena deja libre una
+   franja abajo (`--asoma`) y la barra se ve desde el primer segundo (en escritorio ya se veía).
+   - Quien solo mira (y mientras no se sabe quién es): 92 px. Sin botón flotante, el sendero arranca más abajo (`--pie`, lo lee
+     pintar.js: cuánto se reserva al pie de la escena) y la montaña casi no pierde alto.
+   - Quien anota (`html[data-boton]`: el botón «Anotar» flota fijo abajo): en pantallas altas (740 px o más) la franja mide 164 px
+     y caben la barra y, debajo, el botón, sin taparse; en pantallas más bajas no hay sitio para los dos sin aplastar la montaña y
+     todo queda como estaba (la escena llena la pantalla y el botón flota sobre los pinos).
+   Acostado no hay altura para esto: se queda como estaba. `data-boton` se recuerda por dispositivo (efectos.js lo pone antes de
+   pintar) para que la escena no cambie de alto al saber quién eres. */
+@media (max-width: 1099px) and (min-height: 521px) {
+  html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 92px); height: calc(100svh - 92px); min-height: 470px; --pie: 64; }
+  html[data-pestanas]:not([data-tv], [data-boton]) .cuerpo { padding-top: 14px; }
+}
+/* En pantallas bajas cada píxel de montaña cuenta: el sendero arranca aún más abajo y, en las más bajas (320×568), la franja es
+   menor (la barra se asoma a medias, que ya dice «hay más abajo») para que la montaña mida lo mismo que antes. */
+@media (max-width: 1099px) and (min-height: 521px) and (max-height: 700px) {
+  html[data-pestanas]:not([data-tv], [data-boton]) .escena { --pie: 46; }
+}
+@media (max-width: 1099px) and (min-height: 521px) and (max-height: 600px) {
+  html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 64px); height: calc(100svh - 64px); min-height: 440px; --pie: 40; }
+}
+/* Quien anota, en pantalla alta: caben la barra (de una fila) y, debajo, el botón. Donde la barra va en dos filas (menos de 360 px,
+   o letra grande o muy grande en teléfonos) no caben: ahí queda como estaba, igual que en pantallas bajas. */
+@media (min-width: 360px) and (max-width: 1099px) and (min-height: 740px) {
+  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .cuerpo { padding-top: 14px; }
+}
+@media (min-width: 480px) and (max-width: 1099px) and (min-height: 740px) {
+  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
+}
+@media (min-width: 600px) and (max-width: 1099px) and (min-height: 740px) {
+  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
+}
+/* --- 2. «Saldo del libro» para quien solo mira. Los textos fijos llevan su otra forma en `data-libro` y pintar.js elige cuál se ve
+   (`html[data-voz]`). Si este dispositivo es de alguien que solo mira (`data-lector`, efectos.js), el texto de «tu…» no se
+   enseña mientras se cambia: nunca se ve un «Tu saldo» que luego salta a «Saldo del libro». */
+html[data-lector]:not([data-voz]) [data-libro] { visibility: hidden; }
+
+/* --- 4. El Diario plegado en el teléfono: portada (titular y una línea) y un botón que lo abre entero (diario.js). En tablet y
+   escritorio no hay botón y va siempre abierto. Solo se anima el giro de la flechita (transform). */
+.dia-abrir {
+  position: relative; display: block; width: 100%; min-height: var(--toque, 48px); margin: 14px 0 0; padding: 11px 44px 12px 14px;
+  border: 1px solid var(--dia-filo); border-radius: 12px; background: color-mix(in srgb, var(--dia-papel) 92%, var(--dia-tinta));
+  color: var(--dia-tinta2); font: 400 0.9375rem/1.4 var(--sans); text-align: left; cursor: pointer;
+}
+.dia-abrir b { color: var(--dia-tinta); font-weight: 700; }
+.dia-abrir::after {
+  content: ""; position: absolute; right: 18px; top: 50%; width: 8px; height: 8px; margin-top: -6px;
+  border-right: 2px solid var(--dia-tinta); border-bottom: 2px solid var(--dia-tinta); transform: rotate(45deg); transition: transform 0.25s;
+}
+.dia-abrir[aria-expanded="true"]::after { margin-top: -2px; transform: rotate(-135deg); }
+.dia-abrir:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .dia-abrir:hover { background: color-mix(in srgb, var(--dia-papel) 80%, var(--dia-tinta)); } }
+@media (max-width: 699px) {
+  .diario:not([data-abierto]) :is(.dia-grabado, .dia-cols) { display: none; }
+  .diario:not([data-abierto]) { background-image: var(--velo-tarjeta); } /* plegado no lleva el doblez de media altura: caería sobre el titular */
+}
+@media (min-width: 700px) { .dia-abrir { display: none; } }
+
+/* --- 11. Entrada: ver la contraseña y aviso de mayúsculas (login.js). El botón vive dentro del campo, a la derecha; el aviso, en el
+   renglón de la etiqueta (alineado a la derecha), que ya tiene su alto: al aparecer no cambia el alto del formulario. */
+.l-fila { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.login-caja .l-fila .campo-l { margin-top: 0; }
+.l-mayus { flex: none; font: 650 0.75rem/1 var(--sans); color: var(--naranja-txt); white-space: nowrap; }
+.l-mayus:not(:empty)::before { content: ""; display: inline-block; width: 0.62em; height: 0.56em; margin-right: 0.4em; background: currentColor; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.l-clave-caja { position: relative; display: grid; }
+.login-caja .l-clave-caja input { min-width: 0; padding-right: 5.6rem; }
+.l-ver {
+  position: absolute; top: 0; right: 0; bottom: 0; min-width: 4rem; padding: 0 14px; border: 0; border-radius: 0 12px 12px 0; background: none;
+  color: var(--naranja-txt); font: 650 0.875rem var(--sans); cursor: pointer; touch-action: manipulation;
+}
+.l-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: -3px; }
+.l-ver:disabled { opacity: 0.5; cursor: default; }
+@media (hover: hover) and (pointer: fine) { .l-ver:not(:disabled):hover { text-decoration: underline; text-underline-offset: 3px; } }
+@media (max-height: 360px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) { .l-fila { margin-top: 0; } .l-ver { min-width: var(--toque, 48px); } }

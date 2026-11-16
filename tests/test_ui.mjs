@@ -134,7 +134,7 @@ try {
       }
       // Variación desde ayer junto al precio, y la tarjeta de sats por dólar con su línea del mes.
       const var24 = (await p.innerText('#precio-24')).trim(); // la flecha es un icono SVG (sin texto): queda «−0.2% vs ayer» o «• +0.0% vs ayer»
-      ok(await p.locator('#precio-24').isVisible() && /^(• )?[+−]?\d+\.\d% vs ayer$/.test(var24) && (var24.startsWith('•') || await p.locator('#precio-24 .ico').count() === 1), `variación desde ayer: «${var24}»`);
+      ok(await p.locator('#precio-24').isVisible() && /^(• |(sube|baja)\s*)?[+−]?\d+\.\d% vs ayer$/.test(var24) && (var24.startsWith('•') || await p.locator('#precio-24 .ico').count() === 1), `variación desde ayer: «${var24}»`);
       const precioVivo = (await datos(p, '/api/precio')).precio;
       ok(await p.locator('#spd').isVisible(), 'sale la tarjeta de sats por dólar');
       eq((await p.textContent('#spd-v')).trim(), entero(1e8 / precioVivo), 'sats por dólar = 100,000,000 ÷ precio');
@@ -317,7 +317,7 @@ try {
       await p.waitForTimeout(400);
       ok(!(await p.locator('#anotar').isVisible()), 'el lector no ve «Anotar compra»');
       ok(!(await p.locator('#toca').isVisible()), 'el lector no ve «te toca comprar»');
-      eq((await p.textContent('#prox')).trim(), '', 'el lector no ve la línea de última y próxima compra');
+      eq((await p.textContent('#prox')).trim(), 'Lo anota Daf3r', 'el lector no ve la línea de última y próxima compra: en su sitio se dice quién lleva el libro (campamento 17)');
       ok(await p.locator('#t-anillo').isVisible() && await p.locator('#g-indicador').isVisible() && await p.locator('#rep-curiosas').isVisible(), 'el lector sí ve el anillo, el indicador del costo y las cifras curiosas');
       await verVista(p, 'valor');
       ok(await p.locator('#valor').isVisible(), 'el lector sí ve el gráfico de valor');
@@ -1265,10 +1265,10 @@ try {
 
       // Índice de secciones: solo en pantallas muy anchas, salta a la sección y resalta la que se ve
       ok(await p.locator('#indice').isVisible(), 'índice: a 1600 px sale al lado');
-      eq(await p.locator('#indice a:visible').count(), 4, 'índice: Saldo, Gráfico, Reportes y Compras');
+      eq(await p.locator('#indice a:visible').count(), 4, 'índice: Saldo, Gráfico, Reportes y Movimientos');
       await p.click('#indice a[data-s="compras"]');
       await p.waitForTimeout(900);
-      ok((await p.locator('#t-compras').boundingBox()).y < 200, 'índice: «Compras» lleva a esa sección');
+      ok((await p.locator('#t-compras').boundingBox()).y < 200, 'índice: «Movimientos» lleva a esa sección');
       eq(await html(() => document.querySelector('#indice a[aria-current="true"]')?.dataset.s), 'compras', 'índice: resalta la sección que se ve');
       await p.click('#indice a[data-s="escena"]');
       await p.waitForTimeout(900);
@@ -3309,6 +3309,387 @@ try {
       await pf.ctx.close();
     } finally {
       sMil.parar();
+    }
+  }
+
+  // ---------------------------------------------------------------- campamento 17: primera impresión
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const cerrar = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(350); } };
+    const ent = async (srv, cuenta, opts = {}, init = sinAviso) => { const r = await entrar(navegador, srv, cuenta, { pestanas: true, hora: 15, ...opts }, init); await cerrar(r.p); return r; };
+    const s17 = await servidor('anio');
+    try {
+      // ---- 1. Las pestañas se asoman al abrir
+      const cajas = (p) => p.evaluate(() => {
+        const r = (sel) => { const e = document.querySelector(sel); if (!e || getComputedStyle(e).display === 'none') return null; const q = e.getBoundingClientRect(); return { arriba: Math.round(q.top), abajo: Math.round(q.bottom) }; };
+        return { vh: innerHeight, y: Math.round(scrollY), escena: r('.escena'), barra: r('#pestanas'), boton: r('#anotar'), yo: r('#montana .yo'), salida: r('#montana .salida'), saldo: r('.saldo'), pista: document.documentElement.hasAttribute('data-boton') };
+      });
+      const fijo = { isMobile: false, hasTouch: false };
+      for (const [w, h] of [[390, 844], [390, 664], [768, 1024]]) {
+        const l = await ent(s17, LECTOR, { viewport: { width: w, height: h }, ...fijo });
+        const c = await cajas(l.p);
+        eq(c.escena.abajo, h - 92, `17·1 lectora ${w}×${h}: la escena deja libres 92 px abajo`);
+        ok(c.barra.arriba >= c.escena.abajo && c.barra.abajo <= h, `17·1 lectora ${w}×${h}: la barra de pestañas se ve entera al abrir (${c.barra.arriba}–${c.barra.abajo} de ${h})`);
+        ok(c.yo.abajo < c.escena.abajo && c.salida.abajo <= c.escena.abajo && c.yo.arriba > c.saldo.abajo - 30, `17·1 lectora ${w}×${h}: el sendero y el punto caben en la escena, bajo el saldo`);
+        ok(!c.pista && !c.boton, `17·1 lectora ${w}×${h}: sin botón ni pista de botón`);
+        eq(l.consola.filter((x) => !/503/.test(x)), [], `17·1 lectora ${w}×${h}: consola limpia`);
+        await l.ctx.close();
+      }
+      {
+        // Pantalla muy baja (320×568): la franja es menor y la barra (de dos filas) se asoma a medias.
+        const l = await ent(s17, LECTOR, { viewport: { width: 320, height: 568 }, ...fijo });
+        const c = await cajas(l.p);
+        ok(c.escena.abajo === 568 - 64 && c.barra.arriba <= 568 - 40, `17·1 lectora 320×568: la barra se asoma al menos 40 px (${c.barra.arriba} de 568)`);
+        ok(c.yo.abajo < c.escena.abajo && c.salida.abajo <= c.escena.abajo, '17·1 lectora 320×568: el sendero cabe en la escena');
+        await l.ctx.close();
+      }
+      {
+        // El dueño, en pantalla alta: la barra y, debajo, el botón, sin taparse. Y la pista se recuerda: al recargar ya sale así.
+        const a = await ent(s17, ADMIN, { viewport: { width: 390, height: 844 }, ...fijo });
+        let c = await cajas(a.p);
+        ok(c.pista && c.escena.abajo === 844 - 164, `17·1 dueño 390×844: la escena deja 164 px (${c.escena.abajo})`);
+        ok(c.barra.arriba >= c.escena.abajo && c.barra.abajo < c.boton.arriba && c.boton.abajo <= 844, `17·1 dueño 390×844: barra (${c.barra.arriba}–${c.barra.abajo}) sobre el botón (${c.boton.arriba}–${c.boton.abajo}), sin taparse`);
+        ok(c.yo.abajo < c.escena.abajo && c.salida.abajo <= c.escena.abajo, '17·1 dueño 390×844: el sendero cabe en la escena');
+        eq(await a.p.evaluate(() => localStorage.getItem('libro.rol')), 'admin', '17·1 dueño: el dispositivo recuerda que aquí flota el botón');
+        await a.p.reload({ waitUntil: 'domcontentloaded' });
+        ok(await a.p.evaluate(() => document.documentElement.hasAttribute('data-boton') && document.documentElement.hasAttribute('data-pestanas')), '17·1 dueño: al recargar, la escena sale con su alto desde el primer pintado');
+        await a.p.waitForTimeout(2600); await cerrar(a.p);
+        c = await cajas(a.p);
+        ok(c.escena.abajo === 844 - 164 && c.barra.abajo < c.boton.arriba, '17·1 dueño: tras recargar, igual');
+        // Al bajar, la barra queda pegada arriba y el botón abajo.
+        await a.p.evaluate(() => window.scrollTo(0, 900)); await a.p.waitForTimeout(500);
+        c = await cajas(a.p);
+        ok(c.barra.arriba < 120 && c.boton.abajo <= 844 && c.boton.arriba > 700, `17·1 dueño: al bajar, barra arriba (${c.barra.arriba}) y botón abajo (${c.boton.arriba})`);
+        eq(a.consola.filter((x) => !/503/.test(x)), [], '17·1 dueño 390×844: consola limpia');
+        await a.ctx.close();
+      }
+      {
+        // El dueño, en pantalla baja: no caben los dos sin aplastar la montaña; todo queda como estaba.
+        const a = await ent(s17, ADMIN, { viewport: { width: 390, height: 664 }, ...fijo });
+        const c = await cajas(a.p);
+        ok(c.escena.abajo === 664 && c.boton.abajo <= 664 && c.salida.abajo < c.boton.arriba, `17·1 dueño 390×664: la escena llena la pantalla y el sendero arranca sobre el botón (${c.salida.abajo} < ${c.boton.arriba})`);
+        await a.ctx.close();
+      }
+      {
+        // Donde la barra va en dos filas (letra muy grande en el teléfono) no caben barra y botón: queda como estaba y nada tapa el botón.
+        const letra = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.letra', 'muy-grande'); } catch { /* sin almacenamiento */ } };
+        const tocable = (p) => p.evaluate(() => { const r = document.getElementById('anotar').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('#anotar') !== null; });
+        const g = await ent(s17, ADMIN, { viewport: { width: 390, height: 844 }, ...fijo }, letra);
+        const c = await cajas(g.p);
+        ok(c.escena.abajo === 844 && c.boton.abajo <= 844 && await tocable(g.p), `17·1 dueño con letra muy grande: la escena llena la pantalla y el botón queda a la vista y encima (${c.escena.abajo})`);
+        await g.ctx.close();
+        const n = await ent(s17, ADMIN, { viewport: { width: 412, height: 780 }, ...fijo });
+        const cn = await cajas(n.p);
+        ok(cn.escena.abajo === 780 - 164 && cn.barra.abajo < cn.boton.arriba && await tocable(n.p), `17·1 dueño 412×780: barra y botón, sin taparse (${cn.barra.abajo} < ${cn.boton.arriba})`);
+        await n.ctx.close();
+      }
+      {
+        // «Todo junto», acostado y escritorio: como antes.
+        const t = await entrar(navegador, s17, LECTOR, { viewport: { width: 390, height: 844 }, ...fijo }, sinAviso); await cerrar(t.p);
+        eq((await cajas(t.p)).escena.abajo, 844, '17·1 «todo junto»: la escena sigue llenando la pantalla');
+        ok(await t.p.evaluate(() => !document.documentElement.hasAttribute('data-pestanas')), '17·1 «todo junto»: sin la marca de pestañas');
+        await t.ctx.close();
+        const ac = await ent(s17, LECTOR, { viewport: { width: 844, height: 390 }, ...fijo });
+        eq((await cajas(ac.p)).escena.abajo, 390, '17·1 acostado: la escena mide la pantalla');
+        await ac.ctx.close();
+        const e = await ent(s17, LECTOR, { viewport: { width: 1440, height: 900 }, ...fijo });
+        const c = await cajas(e.p);
+        ok(c.escena.abajo === 774 && c.barra.abajo <= 900, `17·1 escritorio: como antes, con la barra a la vista (${c.escena.abajo}, ${c.barra.abajo})`);
+        await e.ctx.close();
+      }
+      // ---- 2. «Saldo del libro» para quien solo mira (y «Vamos aquí» en el sendero); para el dueño nada cambia
+      const voz = (p) => p.evaluate(() => {
+        const t = (sel) => document.querySelector(sel)?.textContent.trim() ?? null;
+        const escena = document.querySelector('.escena').cloneNode(true);
+        escena.querySelector('#cuenta-btn')?.remove(); // «(tu cuenta)»: esa sí es suya
+        const pil = document.querySelector('#montana .eti-yo')?.getBoundingClientRect();
+        return {
+          saldo: t('#t-saldo'), prox: t('#prox'), punto: t('#montana .yo-txt'), desc: t('#m-desc'), ayuda: t('#s-saldo-ayuda'), marca: document.documentElement.dataset.voz,
+          banderas: [...document.querySelectorAll('.m-bandera')].map((b) => b.getAttribute('aria-label')).join(' | '),
+          todo: `${escena.textContent} ${document.title} ${t('#minicab')}`, medallas: t('#t-res-med'), pildora: pil ? [Math.round(pil.left), Math.round(pil.right)] : null, ancho: innerWidth,
+        };
+      });
+      const tuteo = /(^|[^\p{L}])(t[uú]s?|te|ti|tuy[oa]s?|estás|vas|llevas|tienes)([^\p{L}]|$)/iu;
+      {
+        const l = await ent(s17, LECTOR, { viewport: { width: 390, height: 844 }, ...fijo });
+        const v = await voz(l.p);
+        eq([v.saldo, v.punto, v.marca], ['Saldo del libro', 'Vamos aquí', 'libro'], '17·2 lectora: «Saldo del libro» y «Vamos aquí»');
+        eq(v.prox, 'Lo anota Daf3r', '17·2 lectora: dice quién lleva el libro (el nombre ya venía en la carta sembrada)');
+        ok(v.desc.startsWith('El libro está a 1,211,769 sats de altitud') && /Ya pasó 2 de 3 campamentos/.test(v.desc) && /Al pie crece el bosque del libro/.test(v.desc), `17·2 lectora: la descripción de la montaña habla del libro («${v.desc.slice(0, 70)}…»)`);
+        ok(v.ayuda.startsWith('Saldo del libro.') && /Se alcanzó el /.test(v.banderas) && /Faltan [\d,]+ sats para la cumbre\. El libro va al \d+%\./.test(v.banderas), `17·2 lectora: ayuda del saldo y banderas («${v.banderas.slice(0, 90)}»)`);
+        ok(!tuteo.test(v.todo) && !tuteo.test(v.desc) && !tuteo.test(v.banderas) && !tuteo.test(v.ayuda), `17·2 lectora: en la escena, el título y la mini-cabecera nada dice «tu» («${(tuteo.exec(`${v.todo} ${v.desc} ${v.banderas}`) ?? [''])[0]}»)`);
+        ok(v.pildora && v.pildora[0] >= 4 && v.pildora[1] <= v.ancho - 4, `17·2 lectora: la píldora «Vamos aquí» cabe en la escena (${v.pildora})`);
+        eq(v.medallas, 'Medallas del libro', '17·2 lectora: los títulos fijos también cambian');
+        const res = await l.p.evaluate(() => `${document.getElementById('res-med-n').textContent} ${document.getElementById('t-ritmo').textContent} ${document.getElementById('t-anillo').getAttribute('aria-label')}`);
+        ok(/^El libro ya tiene \d+ medallas/.test(res) && !tuteo.test(res), `17·2 lectora: medallas y próxima etapa hablan del libro («${res.slice(0, 80)}»)`);
+        // La tarjeta de una bandera por alcanzar.
+        await l.p.locator('.m-bandera').first().click(); await l.p.waitForTimeout(300);
+        ok(/^Faltan [\d,]+ sats para la cumbre\. El libro va al \d+%\.$/.test(await l.p.locator('#m-tarjeta-p').textContent()), '17·2 lectora: la tarjeta de la cumbre habla del libro');
+        await l.p.keyboard.press('Escape');
+        // El perfil de altitud (Gráficos → Sats).
+        await l.p.click('#pestanas [data-pestana="graficos"]'); await l.p.waitForTimeout(400); await verVista(l.p, 'sats');
+        eq((await l.p.locator('#s-lienzo .pf-tu').textContent()).trim(), 'Vamos aquí', '17·2 lectora: también en el perfil de altitud');
+        // La pista queda en el dispositivo: al recargar, el rótulo sale bien desde el primer pintado.
+        eq(await l.p.evaluate(() => localStorage.getItem('libro.rol')), 'lector', '17·2 lectora: el dispositivo recuerda la voz');
+        await l.p.reload({ waitUntil: 'domcontentloaded' });
+        const pronto = await l.p.evaluate(() => { const h = document.getElementById('t-saldo'); return { pista: document.documentElement.hasAttribute('data-lector'), seVeTu: h.textContent === 'Tu saldo' && getComputedStyle(h).visibility !== 'hidden' }; });
+        ok(pronto.pista && !pronto.seVeTu, '17·2 lectora: al recargar nunca se ve «Tu saldo»');
+        await l.p.waitForTimeout(2500); await cerrar(l.p);
+        eq((await voz(l.p)).saldo, 'Saldo del libro', '17·2 lectora: tras recargar, igual');
+        eq(l.consola.filter((x) => !/503/.test(x)), [], '17·2 lectora: consola limpia');
+        await l.ctx.close();
+      }
+      for (const [w, h] of [[320, 568], [844, 390], [1440, 900], [2560, 1300]]) {
+        const l = await ent(s17, LECTOR, { viewport: { width: w, height: h }, ...fijo });
+        const v = await voz(l.p);
+        ok(v.punto === 'Vamos aquí' && v.pildora[0] >= 4 && v.pildora[1] <= w - 4, `17·2 lectora ${w}×${h}: «Vamos aquí» cabe (${v.pildora})`);
+        const sw = await l.p.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
+        ok(sw[0] <= sw[1], `17·2 lectora ${w}×${h}: sin scroll horizontal`);
+        await l.ctx.close();
+      }
+      {
+        // El saludo nunca cae sobre el rótulo del saldo: si la marca y la cuenta no caben en un renglón (360 px, letra grande), no se enseña.
+        const saludo = (p) => p.evaluate(() => { const sl = document.getElementById('saludo'), k = document.getElementById('t-saldo'); return { oculto: sl.hidden, pisa: !sl.hidden && sl.getBoundingClientRect().bottom > k.getBoundingClientRect().top + 2, txt: sl.textContent }; });
+        const grande = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.letra', 'grande'); } catch { /* sin almacenamiento */ } };
+        for (const [cuenta, w, h, init, nombre] of [[ADMIN, 360, 740, sinAviso, 'dueño 360×740'], [LECTOR, 390, 844, grande, 'lectora con letra grande'], [LECTOR, 320, 568, sinAviso, 'lectora 320×568']]) {
+          const x = await ent(s17, cuenta, { viewport: { width: w, height: h }, ...fijo }, init);
+          const sl = await saludo(x.p);
+          ok(!sl.pisa && sl.txt.length > 8, `17·2 ${nombre}: el saludo no pisa el rótulo del saldo (${sl.oculto ? 'no se enseña' : 'cabe'})`);
+          await x.ctx.close();
+        }
+        const x = await ent(s17, LECTOR, { viewport: { width: 390, height: 844 }, ...fijo });
+        const sl = await saludo(x.p);
+        ok(!sl.oculto && !sl.pisa && /, Ana$/.test(sl.txt), `17·2 lectora 390×844: el saludo se ve («${sl.txt}»)`);
+        await x.ctx.close();
+      }
+      {
+        // En modo pantalla grande (una tele con cuenta de lectora) también.
+        const t = await ent(s17, LECTOR, { viewport: { width: 1920, height: 1080 }, ...fijo });
+        await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.reload({ waitUntil: 'networkidle' }); await t.p.waitForTimeout(2500);
+        const v = await voz(t.p);
+        ok(await t.p.evaluate(() => document.documentElement.hasAttribute('data-tv')) && v.saldo === 'Saldo del libro' && v.punto === 'Vamos aquí' && !tuteo.test(v.todo), '17·2 pantalla grande con una lectora: habla del libro');
+        await t.ctx.close();
+      }
+      {
+        // El dueño: todo como siempre.
+        const a = await ent(s17, ADMIN, { viewport: { width: 390, height: 844 }, ...fijo });
+        const v = await voz(a.p);
+        eq([v.saldo, v.punto, v.marca, v.medallas], ['Tu saldo', 'Tú', 'yo', 'Tus medallas'], '17·2 dueño: «Tu saldo» y «Tú», como siempre');
+        ok(v.prox.startsWith('Última compra') && v.desc.startsWith('Estás a ') && v.ayuda.startsWith('Tu saldo.'), '17·2 dueño: sus textos no cambian');
+        await a.ctx.close();
+      }
+    } finally {
+      s17.parar();
+    }
+    // Sin carta ni mensajes el navegador no sabe quién lleva el libro: texto genérico (no se le pregunta nada nuevo al servidor).
+    const s17h = await servidor('hoy');
+    try {
+      const l = await ent(s17h, LECTOR, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      eq(await l.p.locator('#prox').textContent(), 'Lo anota quien lleva el libro', '17·2 lectora sin el dato: «quien lleva el libro»');
+      eq(await l.p.locator('#t-saldo').textContent(), 'Saldo del libro', '17·2 lectora con una sola compra: «Saldo del libro»');
+      await l.ctx.close();
+    } finally {
+      s17h.parar();
+    }
+    // ---- 3. Ganancia sin rojo: tinta neutra con signo y flecha; el verde y el rojo, solo en la tarjeta «Ganancia» o si se eligen
+    const s17m = await servidor('mil');
+    try {
+      const colores = (p) => p.evaluate(() => {
+        const c = (sel) => { const e = document.querySelector(sel); return e ? getComputedStyle(e).color : null; };
+        const fila = document.querySelector('#lista .fila[data-tipo="compra"] .f-var');
+        return {
+          marca: document.documentElement.dataset.ganancia ?? '', gan: c('#s-valor .sd-gan [data-tono]'), tintaCielo: c('#s-valor b'), flechaGan: document.querySelectorAll('#s-valor .sd-gan [data-tono] > .ico').length,
+          fila: fila ? getComputedStyle(fila).color : null, tinta: c('#lista .f-sats'), flechaFila: fila?.querySelectorAll('.ico').length, filaTxt: fila?.textContent.replace(/\s+/g, ' ').trim(), tono: fila?.dataset.tono,
+          col: (() => { const e = document.getElementById('l-col'); return e.hidden ? null : e.textContent; })(), colOculto: document.getElementById('l-col').getAttribute('aria-hidden'),
+          tarjeta: [...document.querySelectorAll('#rep-ganancia [data-tono]')].map((e) => getComputedStyle(e).color), tintaTarjeta: c('#rep-ganancia'),
+          venta: document.querySelector('#lista .fila[data-tipo="venta"] .f-var')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+        };
+      });
+      const a = await entrar(navegador, s17m, ADMIN, { hora: 15, viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false }, sinAviso); await cerrar(a.p);
+      let c = await colores(a.p);
+      eq(c.marca, '', '17·3 por defecto no hay colores de ganancia');
+      ok(c.gan === c.tintaCielo && c.flechaGan === 1, `17·3 la ganancia bajo el saldo va en la tinta del cielo, con su flecha (${c.gan})`);
+      ok(c.fila === c.tinta && c.flechaFila === 1 && /^(sube|baja) [+−]\d+\.\d% desde entonces$/.test(c.filaTxt) && ['sube', 'baja'].includes(c.tono), `17·3 lista: el porcentaje va en tinta neutra, con flecha y «desde entonces» para lectores de pantalla («${c.filaTxt}»)`);
+      ok(c.col === 'desde entonces' && c.colOculto === 'true', '17·3 lista: el rótulo «desde entonces» se ve una vez, arriba');
+      ok(c.tarjeta.length >= 2 && c.tarjeta.some((x) => x !== c.tintaTarjeta), `17·3 la tarjeta «Ganancia» conserva el verde y el rojo (${c.tarjeta.join(' · ')})`);
+      // El ajuste de «Tu cuenta»: verde y rojo para quien los prefiera, por dispositivo.
+      await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(300);
+      eq(await a.p.locator('#dc-ganancia').textContent(), 'Colores de ganancia: neutros', '17·3 «Tu cuenta»: el ajuste dice «neutros»');
+      await a.p.click('#dc-ganancia');
+      eq([await a.p.locator('#dc-ganancia').textContent(), await a.p.evaluate(() => localStorage.getItem('libro.ganancia'))], ['Colores de ganancia: verde y rojo', 'color'], '17·3 el ajuste cambia y se guarda');
+      const caja = await a.p.locator('#dc-ganancia').boundingBox();
+      ok(caja.height >= 47.5, `17·3 el ajuste mide ${caja.height.toFixed(0)} px de alto`);
+      await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(300);
+      c = await colores(a.p);
+      ok(c.marca === 'color' && c.fila !== c.tinta && c.gan !== c.tintaCielo, `17·3 con «verde y rojo» vuelven los colores (${c.fila}, ${c.gan})`);
+      await a.p.reload({ waitUntil: 'networkidle' }); await a.p.waitForTimeout(2200); await cerrar(a.p);
+      eq((await colores(a.p)).marca, 'color', '17·3 se recuerda al recargar');
+      await a.p.click('#cuenta-btn'); await a.p.click('#dc-ganancia'); await a.p.keyboard.press('Escape');
+      eq((await colores(a.p)).marca, '', '17·3 y se puede volver a la tinta neutra');
+      eq(a.consola.filter((x) => !/503/.test(x)), [], '17·3 consola limpia');
+      await a.ctx.close();
+    } finally {
+      s17m.parar();
+    }
+    // ---- 4. Resumen más corto: «Próxima etapa» primero y el Diario plegado en el teléfono (abierto en tablet y escritorio)
+    const s17d = await servidor('anio');
+    try {
+      const estadoDiario = (p) => p.evaluate(() => {
+        const ve = (sel) => { const e = document.querySelector(sel); return Boolean(e) && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+        const y = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().top + scrollY);
+        const b = document.getElementById('dia-abrir');
+        return { titular: ve('#t-diario'), sub: ve('#dia-sub'), grabado: ve('#dia-grabado'), cols: ve('#dia-cols'), boton: ve('#dia-abrir'), txt: b.textContent, exp: b.getAttribute('aria-expanded'), ctl: b.getAttribute('aria-controls'), alto: Math.round(b.getBoundingClientRect().height), yTramo: y('#tramo'), yDiario: y('#diario'), altoDiario: Math.round(document.getElementById('diario').getBoundingClientRect().height), pagina: document.documentElement.scrollHeight, foco: document.activeElement?.id };
+      });
+      const a = await ent(s17d, ADMIN, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      let d = await estadoDiario(a.p);
+      ok(d.yTramo < d.yDiario, `17·4 «Próxima etapa» va antes que el Diario (${d.yTramo} < ${d.yDiario})`);
+      ok(d.titular && d.sub && d.boton && !d.grabado && !d.cols && d.exp === 'false', '17·4 teléfono: el Diario sale en portada (titular y una línea), plegado');
+      ok(/^Leer el Diario de hoy · (hace un año, )?clasificados y pronóstico$/.test(d.txt) && d.ctl === 'dia-grabado dia-cols' && d.alto >= 47.5, `17·4 el botón dice qué abre y mide ${d.alto} px («${d.txt}»)`);
+      const plegado = d.altoDiario, paginaAntes = d.pagina;
+      await a.p.focus('#dia-abrir'); await a.p.keyboard.press('Enter'); await a.p.waitForTimeout(250);
+      d = await estadoDiario(a.p);
+      ok(d.grabado && d.cols && d.exp === 'true' && d.txt === 'Plegar el Diario' && d.foco === 'dia-abrir' && d.altoDiario > plegado + 200, `17·4 con Intro se abre entero y el foco se queda en el botón (${plegado} → ${d.altoDiario} px)`);
+      eq(await a.p.locator('#dia-clasif li').count(), 3, '17·4 abierto: los tres clasificados, como siempre');
+      ok(await a.p.evaluate(() => /^\d+ \w+ \d{4}$/.test(localStorage.getItem('libro.diario.abierto') ?? '')), '17·4 se recuerda la edición abierta');
+      await a.p.reload({ waitUntil: 'networkidle' }); await a.p.waitForTimeout(2300); await cerrar(a.p);
+      ok((await estadoDiario(a.p)).exp === 'true', '17·4 tras recargar sigue abierto');
+      await a.p.click('#dia-abrir'); await a.p.waitForTimeout(250);
+      d = await estadoDiario(a.p);
+      ok(!d.grabado && !d.cols && d.exp === 'false' && await a.p.evaluate(() => localStorage.getItem('libro.diario.abierto') === null), '17·4 otro toque lo pliega (y se olvida)');
+      // La edición de otro día vuelve a salir en portada.
+      await a.p.evaluate(() => localStorage.setItem('libro.diario.abierto', '1 ene 2020')); await a.p.reload({ waitUntil: 'networkidle' }); await a.p.waitForTimeout(2300); await cerrar(a.p);
+      ok((await estadoDiario(a.p)).exp === 'false', '17·4 el Diario de otro día sale plegado');
+      ok(paginaAntes < 3300, `17·4 el Resumen del teléfono es más corto (${paginaAntes} px con la escena; antes 3,914)`);
+      eq(a.consola.filter((x) => !/503/.test(x)), [], '17·4 consola limpia');
+      await a.ctx.close();
+      for (const [w, h] of [[768, 1024], [1440, 900]]) {
+        const t = await ent(s17d, LECTOR, { viewport: { width: w, height: h }, isMobile: false, hasTouch: false });
+        const e = await estadoDiario(t.p);
+        ok(!e.boton && e.grabado && e.cols && e.titular, `17·4 ${w} px: el Diario va abierto y sin botón`);
+        await t.ctx.close();
+      }
+    } finally {
+      s17d.parar();
+    }
+    // ---- 7. Movimientos: el mismo nombre en la pestaña y en la lista, y los CSV solo en «Tu cuenta → Tus datos»
+    const s17c = await servidor('nueve');
+    try {
+      const a = await ent(s17c, ADMIN, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      await a.p.click('#pestanas [data-pestana="movimientos"]'); await a.p.waitForTimeout(400);
+      eq([await a.p.locator('#t-compras').textContent(), (await a.p.locator('#pestanas [aria-current="true"] .pe-txt').textContent()).trim()], ['Movimientos', 'Movimientos'], '17·7 la lista se llama igual que su pestaña');
+      ok(!/CSV/i.test(await a.p.locator('#compras').innerText()) && await a.p.locator('#compras a[href$=".csv"], #compras input[type="file"]').count() === 0, '17·7 arriba de la lista ya no hay exportar ni importar');
+      // Exportar e importar siguen funcionando, desde «Tus datos».
+      const antes = (await datos(a.p, '/api/compras')).length;
+      await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(300);
+      eq(await a.p.locator('#dc-datos-btn').textContent(), 'Tus datos: descargar e importar', '17·7 «Tu cuenta»: el botón dice lo que hay dentro');
+      await a.p.click('#dc-datos-btn'); await a.p.waitForTimeout(500);
+      const [descarga] = await Promise.all([a.p.waitForEvent('download'), a.p.click('#csv-out')]);
+      ok(/\.csv$/.test(descarga.suggestedFilename()), `17·7 exportar compras descarga su CSV (${descarga.suggestedFilename()})`);
+      const csv = (await datos(a.p, '/api/compras')).length && await a.p.evaluate(() => fetch('/api/export.csv').then((r) => r.text()));
+      ok(csv.split('\n').filter(Boolean).length === antes + 1, '17·7 el CSV trae todas las compras');
+      const caja = await a.p.locator('label[for="csv-in"]').boundingBox();
+      ok(await a.p.locator('label[for="csv-in"]').isVisible() && caja.height >= 47.5, `17·7 «Importar compras (CSV)» está en «Tus datos» y mide ${caja.height.toFixed(0)} px`);
+      await a.p.focus('#csv-out'); await a.p.keyboard.press('Tab');
+      ok(await a.p.evaluate(() => { const l = document.querySelector('label[for="csv-in"]'); return document.activeElement.id === 'csv-in' && getComputedStyle(l).outlineStyle !== 'none'; }), '17·7 con el teclado, el foco del campo de archivo se ve en su etiqueta');
+      await a.p.setInputFiles('#csv-in', { name: 'c.csv', mimeType: 'text/csv', buffer: Buffer.from('fecha,monto_usd,precio_btc_usd,sats\n2020-01-15,10,8000,125000\n') });
+      await a.p.waitForTimeout(1500);
+      eq((await datos(a.p, '/api/compras')).length, antes + 1, '17·7 importar compras desde «Tus datos» las guarda');
+      ok(/Importadas: 1 · repetidas: 0/.test(await a.p.textContent('#aviso')) && !(await a.p.locator('#d-cuenta').evaluate((d) => d.open)), '17·7 «Tu cuenta» se cierra y el aviso dice el resultado');
+      eq(a.consola.filter((x) => !/503/.test(x)), [], '17·7 consola limpia');
+      await a.ctx.close();
+      // Una lectora: el mismo nombre, y nada de CSV (ni arriba ni en su cuenta).
+      const l = await ent(s17c, LECTOR, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      await l.p.click('#pestanas [data-pestana="movimientos"]'); await l.p.waitForTimeout(400);
+      ok(await l.p.locator('#t-compras').textContent() === 'Movimientos' && !/CSV/i.test(await l.p.locator('#compras').innerText()), '17·7 lectora: «Movimientos», sin CSV');
+      await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(300);
+      ok(!(await l.p.locator('#dc-datos-btn').isVisible()), '17·7 lectora: «Tus datos» sigue siendo de quien anota');
+      await l.ctx.close();
+      // Escritorio: «Ver como tabla» sigue junto al título.
+      const e = await ent(s17c, ADMIN, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
+      await e.p.click('#pestanas [data-pestana="movimientos"]'); await e.p.waitForTimeout(400);
+      ok(await e.p.locator('#l-tabla').isVisible() && await e.p.locator('#t-compras').textContent() === 'Movimientos', '17·7 escritorio: «Ver como tabla» sigue junto al título');
+      await e.ctx.close();
+    } finally {
+      s17c.parar();
+    }
+    // ---- 11. Entrada: ver la contraseña (se oculta sola) y aviso de mayúsculas tras un intento fallido, sin mover el formulario
+    const s17e = await servidor('hoy');
+    try {
+      const abrir = async (w, h) => {
+        const ctx = await navegador.newContext({ viewport: { width: w, height: h } });
+        const p = await ctx.newPage();
+        const consola = [];
+        p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
+        p.on('pageerror', (e) => consola.push(`pageerror ${e.message}`));
+        await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '20'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+        await p.goto(`${s17e.url}/login`, { waitUntil: 'networkidle' });
+        return { ctx, p, consola };
+      };
+      const campo = (p) => p.evaluate(() => {
+        const c = document.getElementById('l-clave'), v = document.getElementById('l-ver'), rc = c.getBoundingClientRect(), rv = v.getBoundingClientRect();
+        return { tipo: c.type, valor: c.value, auto: c.autocomplete, nombre: c.name, pulsado: v.getAttribute('aria-pressed'), txt: v.textContent, visible: document.getElementById('l-ver-t').textContent, ancho: rv.width, alto: rv.height, dentro: rv.left >= rc.left && rv.right <= rc.right + 0.5 && rv.top >= rc.top - 0.5 && rv.bottom <= rc.bottom + 0.5, foco: document.activeElement?.id, mayus: document.getElementById('l-mayus').textContent, altoForm: document.getElementById('f-login').getBoundingClientRect().height, error: document.getElementById('l-error').textContent };
+      });
+      const mayusculas = (p, si) => p.evaluate((puestas) => document.getElementById('l-clave').dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true, modifierCapsLock: puestas })), si);
+      const { ctx, p, consola } = await abrir(390, 844);
+      let c = await campo(p);
+      eq([c.tipo, c.auto, c.nombre, c.pulsado, c.txt], ['password', 'current-password', 'password', 'false', 'Ver la contraseña'], '17·11 la contraseña sale oculta, con «Ver la contraseña» sin pulsar (y el campo de siempre para los gestores)');
+      ok(c.alto >= 47.5 && c.ancho >= 47.5 && c.dentro, `17·11 «Ver» mide ${c.ancho.toFixed(0)}×${c.alto.toFixed(0)} px, dentro del campo`);
+      const altoVacio = c.altoForm;
+      await p.fill('#l-usuario', 'nadie-17'); await p.fill('#l-clave', 'Secreta-123-ABC');
+      await p.click('#l-ver');
+      c = await campo(p);
+      eq([c.tipo, c.valor, c.pulsado, c.visible, c.txt, c.foco, c.auto], ['text', 'Secreta-123-ABC', 'true', 'Ocultar', 'Ocultar la contraseña', 'l-clave', 'current-password'], '17·11 «Ver» la enseña, pasa a «Ocultar» y el foco vuelve al campo');
+      await p.click('#l-ver');
+      c = await campo(p);
+      eq([c.tipo, c.pulsado, c.visible, c.valor], ['password', 'false', 'Ver', 'Secreta-123-ABC'], '17·11 otro toque la oculta, sin perder lo escrito');
+      // Con el teclado: Tab llega al botón e Intro lo pulsa.
+      await p.focus('#l-clave'); await p.keyboard.press('Tab');
+      eq(await p.evaluate(() => document.activeElement.id), 'l-ver', '17·11 con Tab se llega a «Ver» justo después del campo');
+      await p.keyboard.press('Enter');
+      eq((await campo(p)).tipo, 'text', '17·11 Intro sobre «Ver» la enseña (no envía el formulario)');
+      // Se vuelve a ocultar sola a los 10 s.
+      await p.waitForTimeout(10_600);
+      c = await campo(p);
+      eq([c.tipo, c.pulsado], ['password', 'false'], '17·11 a los 10 s se oculta sola');
+      // Mayúsculas antes de fallar: no se dice nada.
+      await mayusculas(p, true);
+      eq((await campo(p)).mayus, '', '17·11 antes de un intento fallido no hay aviso de mayúsculas');
+      // Al enviar se oculta; el acceso falla y, con las mayúsculas puestas, sale el aviso sin cambiar el alto.
+      await p.click('#l-ver'); await mayusculas(p, false);
+      await p.click('#l-entrar'); await p.waitForTimeout(900);
+      c = await campo(p);
+      ok(c.tipo === 'password' && /incorrectos/.test(c.error) && c.mayus === '' && c.foco === 'l-clave', `17·11 al enviar se oculta; falla el acceso y, sin mayúsculas, no hay aviso («${c.error}»)`);
+      ok(Math.abs(c.altoForm - altoVacio) < 0.6, `17·11 el error no cambia el alto del formulario (${altoVacio} → ${c.altoForm})`);
+      const altoError = c.altoForm;
+      await mayusculas(p, true);
+      c = await campo(p);
+      ok(c.mayus === 'Mayúsculas activadas' && Math.abs(c.altoForm - altoError) < 0.6 && await p.locator('#l-mayus').isVisible() && await p.getAttribute('#l-mayus', 'role') === 'status', `17·11 con las mayúsculas puestas sale el aviso, sin mover nada (${altoError} → ${c.altoForm})`);
+      await mayusculas(p, false);
+      eq((await campo(p)).mayus, '', '17·11 al quitar las mayúsculas el aviso se va');
+      // Entrar con la contraseña a la vista funciona igual.
+      await p.fill('#l-usuario', ADMIN[0]); await p.fill('#l-clave', ADMIN[1]); await p.click('#l-ver');
+      await Promise.all([p.waitForURL('**/'), p.click('#l-entrar')]);
+      ok(new URL(p.url()).pathname === '/', '17·11 con la contraseña a la vista se entra igual');
+      eq(consola.filter((x) => !/401|503/.test(x)), [], '17·11 consola limpia');
+      await ctx.close();
+      for (const [w, h] of [[320, 568], [844, 390], [568, 320], [1440, 900], [2560, 1300]]) {
+        const e = await abrir(w, h);
+        await e.p.fill('#l-clave', 'x'.repeat(40));
+        const m = await e.p.evaluate(() => { const r = (id) => document.getElementById(id).getBoundingClientRect(); return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, ver: r('l-ver'), campo: r('l-clave'), entrar: r('l-entrar'), relleno: parseFloat(getComputedStyle(document.getElementById('l-clave')).paddingRight) }; });
+        ok(m.sw <= m.cw && m.ver.right <= m.campo.right + 0.5 && m.ver.width >= 47.5 && m.relleno >= m.ver.width, `17·11 entrada ${w}×${h}: «Ver» cabe en el campo y no tapa lo escrito (${m.ver.width.toFixed(0)} px, relleno ${m.relleno.toFixed(0)})`);
+        if (h <= 400) ok(m.entrar.bottom <= h + 0.5, `17·11 entrada acostada ${w}×${h}: «Entrar» sigue a la vista (${m.entrar.bottom.toFixed(0)} de ${h})`);
+        await e.ctx.close();
+      }
+    } finally {
+      s17e.parar();
+    }
+    const s17v = await servidor('vacio');
+    try {
+      const l = await ent(s17v, LECTOR, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      eq([await l.p.locator('#s-valor').textContent(), await l.p.locator('#prox').textContent()], ['La montaña espera: el libro aún no tiene compras.', ''], '17·2 lectora con el libro vacío');
+      await l.ctx.close();
+    } finally {
+      s17v.parar();
     }
   }
 

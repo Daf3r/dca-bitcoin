@@ -90,7 +90,10 @@ function htmlFila(m) {
   const venta = c.tipo === 'venta';
   // Compra: cómo va frente al precio de hoy. Venta: la ganancia que realizó.
   const v = venta ? c.realizada : S.precio ? (S.precio / c.precio - 1) * 100 : null;
-  const textoV = v == null ? '' : venta ? usdSigno(v) : pct(v);
+  // Tinta neutra con signo y flechita (campamento 17). Qué mide lo dice el rótulo de arriba («desde entonces», `#l-col`) y, para
+  // lectores de pantalla, cada fila: «baja −3.1% desde entonces» o, en una venta, «+$3.20 de ganancia realizada».
+  const plano = v == null || Math.abs(v) < (venta ? 0.005 : 0.05);
+  const textoV = v == null ? '' : `${plano ? '' : `${ico(v > 0 ? 'sube' : 'baja')}<span class="sr">${v > 0 ? 'sube' : 'baja'} </span>`}${venta ? usdSigno(v) : pct(v)}<span class="sr">${venta ? ' de ganancia realizada' : ' desde entonces'}</span>`;
   const etiqueta = esAdmin() ? 'button type="button"' : 'div';
   return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}"${c.extra ? ' data-extra="1"' : ''}>` +
     (esAdmin() ? `<span class="sr">Editar la ${venta ? 'venta' : 'compra'} del </span>` : '') + htmlFecha(c.fecha) +
@@ -176,6 +179,7 @@ export function pintarLista() {
     host.innerHTML = `<li class="vacio${sinCompras ? ' con-ilu' : ''}">${sinCompras ? ilustracion('montana') : ''}${!S.cargado ? 'Cargando compras…' : S.errorCarga ? 'No se pudieron cargar tus compras.' : 'Aún no hay compras. Anota la primera o importa un CSV.'}</li>`;
     $('ver-todas').hidden = true;
     $('l-ctl').hidden = true;
+    $('l-col').hidden = true;
     previas = null;
     return;
   }
@@ -194,6 +198,7 @@ export function pintarLista() {
   const foco = enFoco && (enFoco.dataset.id ? `[data-id="${enFoco.dataset.id}"]` : `[data-tras="${enFoco.dataset.tras}"]`);
   const viejos = new Map([...host.querySelectorAll('li[data-clave]')].map((li) => [li.dataset.clave, { node: li, idx: [...host.children].indexOf(li) }]));
   const filas = vistos.slice(0, F.limite);
+  $('l-col').hidden = !(S.precio && filas.some((m) => m.tipo === 'compra')); // «desde entonces»: solo si alguna fila lleva su porcentaje
   const html = [];
   if (!filas.length) html.push('<li class="vacio">Nada coincide con esos filtros.</li>');
   else if (F.orden === 'recientes' || F.orden === 'antiguas') {

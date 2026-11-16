@@ -649,6 +649,14 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   const f = textoCampamento(1e8, 1211769, null, true);
   ok(!f.alcanzado && f.titulo === 'Cumbre · 1 BTC' && f.texto === 'Te faltan 98,788,231 sats para la cumbre. Vas al 1%.', `bandera futura: «${f.texto}»`);
   ok(textoCampamento(1e7, 9999999, null).texto.endsWith('Vas al 99%.'), 'bandera futura: nunca dice 100% sin haberla alcanzado');
+  // Campamento 17: a quien solo mira se le habla del libro (nunca «tú», «te» ni «tu»).
+  const tuteo = /\b(t[uú]s?|te|estás|vas|pasaste|llegas|alcanzaste)\b/i;
+  const al = textoCampamento(1e6, 1211769, '2026-09-04', false, true), fl = textoCampamento(1e8, 1211769, null, true, true);
+  ok(al.texto === 'Se alcanzó el 4 sept 2026.' && textoCampamento(1e6, 1211769, null, false, true).texto === 'Ya quedó atrás.', `bandera para quien solo mira: «${al.texto}»`);
+  ok(fl.texto === 'Faltan 98,788,231 sats para la cumbre. El libro va al 1%.' && fl.titulo === f.titulo, `cumbre para quien solo mira: «${fl.texto}»`);
+  const dl = descripcionMontana(1_211_769, 2_500_000, [1e5, 1e6, 1e8], 1e8, true), dl0 = descripcionMontana(5, 100000, [1e5], 1e8, true);
+  ok(dl.startsWith('El libro está a 1,211,769 sats de altitud') && dl.includes('Ya pasó 2 de 3 campamentos') && dl.includes('; faltan 1,288,231 sats.') && dl0.includes('Aún no llega al primer campamento'), `montaña para quien solo mira: «${dl.slice(0, 60)}…»`);
+  ok(![al.texto, fl.texto, dl, dl0].some((t) => tuteo.test(t)) && tuteo.test(descripcionMontana(1_211_769, 2_500_000, [1e5, 1e6, 1e8], 1e8)), 'para quien solo mira no hay tuteo (y el dueño conserva el suyo)');
 }
 
 // Aurora, acento dorado, celebración de 1 BTC y lago (campamento 5, 3/3)

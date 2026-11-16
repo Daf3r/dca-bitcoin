@@ -91,11 +91,13 @@ export const nombreHito = (m) => (m >= 1e8 ? `${num(m / 1e8)} BTC` : m >= 1e6 ? 
  * Lo que dice la tarjeta al tocar la bandera de un campamento (idea 72): alcanzado (con su fecha, si se conoce)
  * o cuánto falta. `cima` es la meta de la montaña. Solo informa.
  */
-export function textoCampamento(m, sats, fecha, cima = false) {
+export function textoCampamento(m, sats, fecha, cima = false, libro = false) {
   const titulo = cima ? `Cumbre · ${nombreHito(m)}` : `Campamento ${nombreHito(m)}`;
-  if (sats >= m) return { titulo, texto: fecha ? `Lo alcanzaste el ${fechaLarga(fecha)}.` : 'Ya lo pasaste.', alcanzado: true };
+  // `libro`: para quien solo mira se habla del libro, no de «ti» (campamento 17).
+  if (sats >= m) return { titulo, texto: fecha ? `${libro ? 'Se alcanzó' : 'Lo alcanzaste'} el ${fechaLarga(fecha)}.` : libro ? 'Ya quedó atrás.' : 'Ya lo pasaste.', alcanzado: true };
   const falta = Math.ceil(m - sats);
-  return { titulo, texto: `Te faltan ${entero(falta)} sats${cima ? ' para la cumbre' : ''}. Vas al ${Math.min(99, Math.floor((sats / m) * 100))}%.`, alcanzado: false };
+  const pct = Math.min(99, Math.floor((sats / m) * 100));
+  return { titulo, texto: `${libro ? 'Faltan' : 'Te faltan'} ${entero(falta)} sats${cima ? ' para la cumbre' : ''}. ${libro ? 'El libro va' : 'Vas'} al ${pct}%.`, alcanzado: false };
 }
 
 // Detalles de la montaña que siguen a tus datos (campamento 5, 3/3).
@@ -868,14 +870,15 @@ export function agruparPorMes(movs) {
  * Lo que dice la montaña a un lector de pantalla: dónde estás, cuántos campamentos pasaste, cuál es el siguiente y la cumbre.
  * `campos` son los campamentos que se ven en la escena (en sats) y `cima` la cumbre; `meta` es la siguiente etapa.
  */
-export function descripcionMontana(sats, meta, campos, cima) {
+export function descripcionMontana(sats, meta, campos, cima, libro = false) {
   const hechos = campos.filter((m) => m <= sats);
   const pct = Math.min(100, (sats / meta) * 100);
+  // `libro`: para quien solo mira, el que sube es el libro (campamento 17).
   const pasados = hechos.length
-    ? `Ya pasaste ${hechos.length} de ${campos.length} campamentos (el último, ${nombreHito(hechos.at(-1))}).`
-    : `Aún no llegas al primer campamento (${nombreHito(campos[0])}).`;
-  const falta = meta > sats ? ` te faltan ${entero(meta - sats)} sats` : '';
-  return `Estás a ${entero(sats)} sats de altitud, subiendo por un sendero con campamentos en la montaña. ${pasados} `
+    ? `Ya ${libro ? 'pasó' : 'pasaste'} ${hechos.length} de ${campos.length} campamentos (el último, ${nombreHito(hechos.at(-1))}).`
+    : `Aún no ${libro ? 'llega' : 'llegas'} al primer campamento (${nombreHito(campos[0])}).`;
+  const falta = meta > sats ? ` ${libro ? 'faltan' : 'te faltan'} ${entero(meta - sats)} sats` : '';
+  return `${libro ? 'El libro está' : 'Estás'} a ${entero(sats)} sats de altitud, subiendo por un sendero con campamentos en la montaña. ${pasados} `
     + `Siguiente meta: ${nombreHito(meta)}, al ${pct < 10 ? pct.toFixed(1) : Math.floor(pct)} %;${falta}. La cumbre es ${nombreHito(cima)}.`;
 }
 

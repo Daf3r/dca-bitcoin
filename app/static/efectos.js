@@ -11,6 +11,17 @@
   const CLAVE = 'libro.efectos';
   const NIVELES = ['todos', 'esenciales', 'ninguno'];
   const raiz = document.documentElement;
+  // (Campamento 17) La app sale con `<html data-pestanas>` ya puesto (es lo normal: por pestañas) para que la escena tenga su alto
+  // definitivo desde el primer pintado; quien eligió «Todo junto» lo quita aquí, antes de pintar (pestanas.js lo mantiene después).
+  // `data-boton`: en este dispositivo flota el botón «Anotar» (la última cuenta que entró aquí era la de quien anota; lo guarda
+  // cuenta.js en `libro.rol`). Es solo una pista para el alto de la escena; quién puede escribir lo decide siempre el servidor.
+  try {
+    if (localStorage.getItem('libro.pestanas') === 'todo') raiz.removeAttribute('data-pestanas');
+    const rol = localStorage.getItem('libro.rol');
+    if (rol === 'admin') raiz.setAttribute('data-boton', '');
+    // `data-lector`: aquí entró por última vez alguien que solo mira; la página le habla «del libro» desde el primer pintado.
+    if (rol === 'lector') raiz.setAttribute('data-lector', '');
+  } catch { /* sin almacenamiento: por pestañas y sin pista */ }
   const sistema = matchMedia('(prefers-reduced-motion: reduce)');
   const ahorro = matchMedia('(prefers-reduced-data: reduce)');
 

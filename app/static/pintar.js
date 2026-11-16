@@ -9,7 +9,7 @@ import { dual, miniLinea } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
 import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos } from './cuenta.js';
-import { $, R, S, esAdmin, fijarR, reducido } from './estado.js';
+import { $, R, S, esAdmin, fijarR, quienAnota, reducido, vozLibro } from './estado.js';
 import { actualizarIndice } from './indice.js';
 import { pintarLista, pintarUltimaPiedrita } from './lista.js';
 import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mercado.js';
@@ -24,6 +24,7 @@ import { pintarCaida, pintarComienzo, pintarEquilibrio, pintarReportes, pintarTo
 export function pintar({ montana = false, animar = false, desde = null, festejo = null } = {}) {
   fijarR(resumen(S.compras, S.precio));
   $('sk-cards').hidden = S.cargado; // las formas grises de carga se van cuando llegan los datos
+  pintarVoz();
   pintarPrecio();
   pintarSaldo(desde);
   if (montana) pintarMontana(animar, desde, festejo);
@@ -111,7 +112,7 @@ export function pintarPrecio() {
   el24.hidden = !v;
   if (v) {
     const plano = Math.abs(v.pct) < 0.05; // casi igual: sin flecha ni color
-    el24.innerHTML = `${plano ? '•' : ico(v.pct > 0 ? 'sube' : 'baja')} ${pct(v.pct)} vs ayer`;
+    el24.innerHTML = `${plano ? '•' : `${ico(v.pct > 0 ? 'sube' : 'baja')}<span class="sr">${v.pct > 0 ? 'sube' : 'baja'}</span>`} ${pct(v.pct)} vs ayer`;
     el24.dataset.tono = plano ? '' : v.pct > 0 ? 'sube' : 'baja';
   }
 }
@@ -147,7 +148,7 @@ function etiquetaUnidad() {
   const u = unidadVista();
   $('s-unidad').textContent = ETIQUETA_UNIDAD[u];
   $('s-unidad').dataset.vivo = u === 'usd' ? '1' : ''; // el punto «en vivo»: el valor sigue al precio
-  $('s-saldo-ayuda').textContent = `Tu saldo${u === 'usd' ? ' en dólares, al precio en vivo' : ''}. Toca para verlo en ${NOMBRE_SIGUIENTE[u]}.`;
+  $('s-saldo-ayuda').textContent = `${vozLibro() ? 'Saldo del libro' : 'Tu saldo'}${u === 'usd' ? ' en dólares, al precio en vivo' : ''}. Toca para verlo en ${NOMBRE_SIGUIENTE[u]}.`;
 }
 // Huevo de pascua (idea 28): siete toques seguidos en el saldo y el libro dice cuántas pupusas son (a $0.75, solo es una cuenta curiosa).
 let toquesSeguidos = 0, ultimoToque = 0;
@@ -158,7 +159,7 @@ function contarToque() {
   if (toquesSeguidos < 7) return;
   toquesSeguidos = 0;
   const n = R.valor != null ? enPupusas(R.valor) : null;
-  if (n != null) avisar(`Tu saldo equivale a unas ${entero(n)} pupusas, a $0.75 cada una.`, null, true, { ms: 5000 });
+  if (n != null) avisar(`${vozLibro() ? 'El saldo del libro' : 'Tu saldo'} equivale a unas ${entero(n)} pupusas, a $0.75 cada una.`, null, true, { ms: 5000 });
 }
 function alternarUnidad() {
   contarToque();
@@ -186,7 +187,7 @@ function pintarSaldo(desde) {
     el.textContent = '—';
     mostrado = null;
     unidadPintada = null;
-    $('s-valor').textContent = 'No se pudieron cargar tus compras.';
+    $('s-valor').textContent = vozLibro() ? 'No se pudieron cargar las compras.' : 'No se pudieron cargar tus compras.';
     return;
   }
   const u = unidadVista();
@@ -241,10 +242,11 @@ function pintarBonito() {
 /** La línea bajo el saldo: lo que valen tus sats (con su propio odómetro) y la ganancia, con formas cortas en pantallas muy pequeñas. */
 export function pintarLinea() {
   const linea = $('s-valor');
-  if (!R.n) { linea.textContent = 'Tu montaña te espera. Anota tu primera compra para empezar a subir.'; return; }
+  const libro = vozLibro(); // a quien solo mira se le habla del libro, no de «ti» (campamento 17)
+  if (!R.n) { linea.textContent = libro ? 'La montaña espera: el libro aún no tiene compras.' : 'Tu montaña te espera. Anota tu primera compra para empezar a subir.'; return; }
   // Saldo en cero tras vender todo (idea 50): estás en el campamento base y el bosque sigue en pie.
-  if (R.sats === 0 && R.nCompras) { linea.textContent = 'Volviste al campamento base. Tus pinos siguen aquí.'; return; }
-  if (R.valor == null) { linea.textContent = `${btc(R.sats)} BTC · invertiste ${usd(R.inv)}`; return; }
+  if (R.sats === 0 && R.nCompras) { linea.textContent = libro ? 'El libro volvió al campamento base. Sus pinos siguen aquí.' : 'Volviste al campamento base. Tus pinos siguen aquí.'; return; }
+  if (R.valor == null) { linea.textContent = `${btc(R.sats)} BTC · ${libro ? 'se invirtieron' : 'invertiste'} ${usd(R.inv)}`; return; }
   const b = document.createElement('b');
   if (unidadVista() === 'usd') {
     b.textContent = `${entero(R.sats)} sats`; // el saldo grande ya dice cuánto vale: aquí, cuántos sats son
@@ -258,6 +260,8 @@ export function pintarLinea() {
   gan.dataset.tono = R.gan >= 0 ? 'sube' : 'baja';
   dual(gan, usdSigno(R.gan), usdSignoCorto(R.gan));
   if (R.pct != null) gan.append(` (${pct(R.pct)})`);
+  // Tinta neutra (campamento 17): la flechita y el signo dicen si va arriba o abajo; el color es opcional («Tu cuenta»).
+  if (Math.abs(R.gan) >= 0.005) gan.insertAdjacentHTML('afterbegin', ico(R.gan > 0 ? 'sube' : 'baja'));
   // La ganancia y su mini línea van juntas en una píldora (`.sd-gan`); en el teléfono bajan a su propia línea (el «·» se esconde).
   const sep = document.createElement('i');
   sep.className = 'sd-sep';
@@ -270,12 +274,12 @@ export function pintarLinea() {
     const real = document.createElement('span');
     real.dataset.tono = R.realizada >= 0 ? 'sube' : 'baja';
     dual(real, usdSigno(R.realizada), usdSignoCorto(R.realizada));
-    linea.append(' · ya realizaste ', real);
+    linea.append(libro ? ' · ya se realizaron ' : ' · ya realizaste ', real);
   }
   // Mini línea del valor de tu saldo en los últimos 30 días (solo con histórico; en pantallas muy pequeñas se oculta).
   if (R.nCompras >= 3 && S.histEstado === 'ok' && S.precio) {
     const serie = serieValor(R.items, S.historico, S.precio, hoyISO()).slice(-30);
-    const mini = miniLinea(serie.map((d) => d.valor), serie.length ? `Valor de tu saldo en los últimos ${serie.length} días: de ${usd0(serie[0].valor)} a ${usd0(serie.at(-1).valor)}` : '');
+    const mini = miniLinea(serie.map((d) => d.valor), serie.length ? `Valor ${libro ? 'del saldo' : 'de tu saldo'} en los últimos ${serie.length} días: de ${usd0(serie[0].valor)} a ${usd0(serie.at(-1).valor)}` : '');
     if (mini) grupo.append(mini);
   }
 }
@@ -283,6 +287,8 @@ export function pintarLinea() {
 /** «Última compra: hace 3 días · próxima, en 8 días» (solo admin, con 3 compras o más; la próxima es el último día que mantiene tu racha). */
 function pintarProx() {
   const el = $('prox');
+  // Quien solo mira no tiene «próxima compra»: en ese renglón (que ya tenía su sitio reservado) se dice de quién es el libro.
+  if (S.cargado && S.rol && vozLibro()) { const q = quienAnota(); el.textContent = R.n ? `Lo anota ${q ?? 'quien lleva el libro'}` : ''; return; }
   const toca = S.cargado && esAdmin() && R.nCompras >= 3 ? tocaComprar(R) : null;
   const ultima = toca ? R.items.filter((c) => c.tipo !== 'venta').at(-1) : null;
   if (!ultima) { el.textContent = ''; return; }
@@ -319,6 +325,30 @@ function pintarDatosEscena() {
 }
 
 let anchoMontana = 0, altoMontana = 0;
+let vozMontana = false; // con qué voz se dibujó la montaña («Tú» o «Vamos aquí»)
+/**
+ * La voz de la página (campamento 17): a quien solo mira se le habla «del libro» y no de «tu» saldo. Los textos fijos de la página
+ * llevan su otra forma en `data-libro` (y `data-libro-aria` para su `aria-label`); aquí se elige cuál se ve. El dueño ve lo de siempre.
+ */
+let vozPintada = null;
+export function pintarVoz() {
+  const libro = vozLibro();
+  if (vozPintada === libro) return;
+  vozPintada = libro;
+  for (const el of document.querySelectorAll('[data-libro]')) {
+    el.dataset.yo ??= el.textContent;
+    el.textContent = libro ? el.dataset.libro : el.dataset.yo;
+  }
+  for (const el of document.querySelectorAll('[data-libro-aria]')) {
+    el.dataset.yoAria ??= el.getAttribute('aria-label') ?? '';
+    el.setAttribute('aria-label', libro ? el.dataset.libroAria : el.dataset.yoAria);
+  }
+  document.documentElement.dataset.voz = libro ? 'libro' : 'yo';
+  // Si la montaña ya estaba dibujada con la otra voz (la cuenta llegó después que las compras), se rehace el rótulo del punto.
+  if (S.cargado && vozMontana !== libro && anchoMontana) pintarMontana(false);
+}
+pintarVoz(); // con la pista del dispositivo, antes de que llegue la cuenta
+
 // Idea 32: desde 1 BTC el acento de la app es dorado (variables de color en el CSS, `html[data-acento="oro"]`). Con la celebración
 // de 1 BTC en marcha se retiene el cambio hasta que acabe.
 let acentoRetenido = false;
@@ -336,7 +366,11 @@ export function pintarMontana(animar, desde, festejo = null) {
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
-  dibujarMontana(host, { sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
+  // Cuánto se reserva al pie para el botón flotante: lo dice el CSS (`--pie` en `.escena`; menos cuando la escena deja la franja
+  // de abajo a las pestañas y el botón ya no flota sobre ella). Una lectura de estilo por dibujo.
+  const pie = Number.parseFloat(getComputedStyle(host).getPropertyValue('--pie')) || 104;
+  vozMontana = vozLibro();
+  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     const m = etapasCruzadas(festejo.antes, R.sats).at(-1);
@@ -366,9 +400,9 @@ function pintarTramo() {
   const p = Math.max(0, Math.min(1, prog));
   requestAnimationFrame(() => pintarAnillo($('t-anillo-svg'), [{ clase: 'an-naranja', desde: 0, hasta: p }]));
   $('t-pct').textContent = `${p > 0 && p < 0.01 ? '<1' : Math.floor(p * 100)}%`;
-  $('t-anillo').setAttribute('aria-label', `Vas en ${(p * 100).toFixed(1)}% del camino a ${nombreHito(R.etapa)}${R.etapa >= 1e8 ? '' : ' sats'}`);
+  $('t-anillo').setAttribute('aria-label', `${vozLibro() ? 'El libro va' : 'Vas'} en ${(p * 100).toFixed(1)}% del camino a ${nombreHito(R.etapa)}${R.etapa >= 1e8 ? '' : ' sats'}`);
   $('t-ritmo').textContent = R.proyeccion
-    ? `Al ritmo de los últimos 6 meses${R.nExtra ? ', sin contar tus compras extra,' : ''} (${entero(R.satsMes)} sats al mes) llegas en ${plazo(R.proyeccion)}.`
-    : R.n ? `Vas en ${(prog * 100).toFixed(1)}% de este tramo.` : 'La primera etapa está en 100k sats.';
+    ? `Al ritmo de los últimos 6 meses${R.nExtra ? `, sin contar ${vozLibro() ? 'las' : 'tus'} compras extra,` : ''} (${entero(R.satsMes)} sats al mes) ${vozLibro() ? 'se llega' : 'llegas'} en ${plazo(R.proyeccion)}.`
+    : R.n ? `${vozLibro() ? 'El libro va' : 'Vas'} en ${(prog * 100).toFixed(1)}% de este tramo.` : 'La primera etapa está en 100k sats.';
 }
 export const plazo = (m) => (m < 1 ? 'menos de un mes' : `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}`);

@@ -10,14 +10,16 @@ function azar(s) {
 }
 
 /** Composición según el tamaño: en móvil la cumbre baja para dejar el cielo al saldo. */
-function composicion(W, H, techo) {
+function composicion(W, H, techo, pie = 104) {
   // techo: dónde acaba el texto del saldo; la cumbre y su etiqueta quedan por debajo.
-  // En móvil y tablet el botón fijo «Anotar compra» ocupa los últimos ~90 px: el sendero empieza por encima.
+  // En móvil y tablet el botón fijo «Anotar compra» ocupa los últimos ~90 px: el sendero empieza por encima (`pie`, 104 px).
+  // Cuando la escena deja libre la franja de abajo para que se asomen las pestañas (campamento 17), el botón ya no flota sobre
+  // ella y el sendero puede arrancar más abajo (`pie` menor, lo da el CSS con `--pie`): la montaña casi no pierde alto.
   // Teléfono acostado (idea 64): la escena mide lo que la pantalla (poca altura), el saldo va a la izquierda y la montaña a la
   // derecha, a lo ancho; el botón «Anotar» va abajo a la izquierda, así que el sendero puede bajar hasta casi el borde.
   if (H <= 520 && W >= H * 1.5 && W < 1100) return { sx: W * 0.7, sy: Math.max(H * 0.36, 92), base: [W * 0.5, H - 26], vueltas: 4, ancho: 0.2, campos: 3, sol: [W * 0.92, H * 0.3], rs: H * 0.07, lago: [W * 0.85, W * 0.11] };
-  if (W < 700) return { sx: W * 0.62, sy: Math.max(H * 0.43, techo + 70), base: [W * 0.14, H - 104], vueltas: 5, ancho: 0.34, campos: 3, sol: [W * 0.86, H * 0.47], rs: W * 0.1 };
-  if (W < 1100) return { sx: W * 0.64, sy: Math.max(H * 0.3, techo + 70), base: [W * 0.2, H - 104], vueltas: 6, ancho: 0.27, campos: 4, sol: [W * 0.87, H * 0.3], rs: W * 0.07 };
+  if (W < 700) return { sx: W * 0.62, sy: Math.max(H * 0.43, techo + 70), base: [W * 0.14, H - pie], vueltas: 5, ancho: 0.34, campos: 3, sol: [W * 0.86, H * 0.47], rs: W * 0.1 };
+  if (W < 1100) return { sx: W * 0.64, sy: Math.max(H * 0.3, techo + 70), base: [W * 0.2, H - pie], vueltas: 6, ancho: 0.27, campos: 4, sol: [W * 0.87, H * 0.3], rs: W * 0.07 };
   // Escritorio: el pico se dimensiona por la altura y se compone en un marco centrado de hasta
   // 1600 px (2000 desde 2400 px de ancho, 2400 desde 3200), alineado con el contenido; fuera del marco solo hay cielo y cordillera.
   const marco = Math.min(W, W >= 3200 ? 2400 : W >= 2400 ? 2000 : 1600); // crece con la raíz en pantallas muy anchas (styles.css: --medio-ancho)
@@ -194,10 +196,10 @@ function lago(c, W, H, ventas = 0) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, cumples = [] }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, cumples = [], pie = 104, libro = false }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
-  const c = composicion(W, H, techo);
+  const c = composicion(W, H, techo, pie);
   const esc = escalaMontana(sats, c.campos);
   const rnd = azar(42);
   // Degradados de la escena (dirección «Hora dorada»): el cielo es continuo (sin franjas), la luz del astro se difumina y cada
@@ -442,7 +444,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, mensajes, puedeEscribir, techo, ec, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, mensajes, puedeEscribir, techo, ec, libro, eco: ecoP ? { p: ecoP, sats: eco.sats } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -605,7 +607,7 @@ function banderas(host, campos, W, H) {
   estado.caja = caja;
   // De arriba abajo: el orden de tabulación es el visual.
   const botones = [...campos].sort((a, b) => a.p.y - b.p.y).map(({ m, p, cima, lado }) => {
-    const t = textoCampamento(m, sats, fechas[m] ?? null, cima);
+    const t = textoCampamento(m, sats, fechas[m] ?? null, cima, estado.libro);
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'm-bandera';
@@ -638,7 +640,7 @@ function abrirTarjeta(m) {
   const campo = campos.find((x) => x.m === m);
   const tarjeta = caja?.querySelector('#m-tarjeta');
   if (!campo || !tarjeta) return;
-  const t = textoCampamento(m, sats, fechas[m] ?? null, campo.cima);
+  const t = textoCampamento(m, sats, fechas[m] ?? null, campo.cima, estado.libro);
   tarjeta.querySelector('#m-tarjeta-t').textContent = t.titulo;
   tarjeta.querySelector('#m-tarjeta-p').textContent = t.texto;
   tarjeta.dataset.estado = t.alcanzado ? 'alcanzado' : 'futuro';
@@ -771,14 +773,29 @@ function etiquetar(yo, sats = estado.sats) {
   const techoEt = W < 1100 && !estado.c.lago ? (estado.techo || 0) + 4 : 0;
   const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || b.y < Math.max(4, techoEt) || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
   // «Tú» primero: arriba a la izquierda de tu punto y, si ahí hay un campamento, en otro rincón.
+  // El rótulo del punto: «Tú» para quien anota y «Vamos aquí» para quien solo mira (no es esa persona la que sube). La caja mide
+  // lo que el texto (36 px para «Tú», como siempre) y se aparta lo mismo del punto.
+  const rotulo = estado.libro ? 'Vamos aquí' : 'Tú';
+  const wYo = estado.libro ? rotulo.length * 7.4 + 16 : 36;
   const yoOpc = [[-46, -38, 'end', -16], [10, -38, 'start', 16], [-46, 12, 'end', -16], [10, 12, 'start', 16], [-54, -8, 'end', -24], [18, -8, 'start', 24], [-18, -64, 'middle', 0], [-18, 26, 'middle', 0]]
-    .map(([dx, dy, a, tx]) => ({ x: yo.x + dx, y: yo.y + dy, w: 36, h: 24, anclaje: a, tx: yo.x + tx }));
+    .map(([dx, dy, a, tx]) => ({ x: a === 'end' ? yo.x + dx + 36 - wYo : a === 'middle' ? yo.x - wYo / 2 : yo.x + dx, y: yo.y + dy, w: wYo, h: 24, anclaje: a, tx: yo.x + tx }));
   // (Con `middle` la caja ya va centrada: dx = −18.)
-  const yb = yoOpc.find((o) => !choca(o)) ?? yoOpc[0];
+  // «Vamos aquí» es más largo que «Tú»: además se aparta del propio sendero (unas muestras del trazo a cada lado del punto).
+  const senda = [];
+  if (estado.libro) {
+    const l = estado.enAltura(altitud(sats, estado.esc));
+    for (let d = -84; d <= 84; d += 12) {
+      if (Math.abs(d) < 12 || l + d < 0 || l + d > estado.L) continue;
+      const q = estado.camino.getPointAtLength(l + d);
+      senda.push({ x: q.x - 5, y: q.y - 5, w: 10, h: 10 });
+    }
+  }
+  const pisaSenda = (b) => senda.some((o) => b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
+  const yb = yoOpc.find((o) => !choca(o) && !pisaSenda(o)) ?? yoOpc.find((o) => !choca(o)) ?? yoOpc[0];
   cajas.push(yb);
   const prioridad = (m) => (m === estado.esc.cima ? 0 : m === estado.meta ? 1 : 2);
   const orden = [...campos].sort((a, b) => prioridad(a.m) - prioridad(b.m));
-  let s = `<text class="yo-txt" x="${f1(yb.tx)}" y="${f1(yb.y + 17)}" text-anchor="${yb.anclaje}">Tú</text>`;
+  let s = `<text class="yo-txt" x="${f1(yb.tx)}" y="${f1(yb.y + 17)}" text-anchor="${yb.anclaje}">${rotulo}</text>`;
   for (const { m, p, cima, lado } of orden) {
     const txt = nombreHito(m);
     const w = txt.length * 8.2 + 6;
@@ -1011,9 +1028,10 @@ function epico(fx, c, W, H) {
 }
 
 function describir(sats, meta) {
-  estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima) + (estado.compras ? ` Al pie crece tu bosque: un pino por compra (${estado.compras}).` : '')
-    + (arbolesDe(estado.compras).length ? ` Entre los pinos crecen tus árboles de honor: ${arbolesDe(estado.compras).map((t) => ({ ceibo: 'un ceibo', amate: 'un amate', maquilishuat: 'un maquilishuat' })[t]).join(', ')}.` : '')
-    + (estado.eco ? ` Tu eco, una sombra quieta en el sendero, marca dónde estabas hace un año: ${entero(estado.eco.sats)} sats.` : '');
+  const lb = estado.libro; // para quien solo mira, el que sube es el libro (campamento 17)
+  estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima, lb) + (estado.compras ? ` Al pie crece ${lb ? 'el bosque del libro' : 'tu bosque'}: un pino por compra (${estado.compras}).` : '')
+    + (arbolesDe(estado.compras).length ? ` Entre los pinos crecen ${lb ? 'los' : 'tus'} árboles de honor: ${arbolesDe(estado.compras).map((t) => ({ ceibo: 'un ceibo', amate: 'un amate', maquilishuat: 'un maquilishuat' })[t]).join(', ')}.` : '')
+    + (estado.eco ? ` ${lb ? 'El eco' : 'Tu eco'}, una sombra quieta en el sendero, marca dónde ${lb ? 'estaba el libro' : 'estabas'} hace un año: ${entero(estado.eco.sats)} sats.` : '');
 }
 
 // ---------------------------------------------------------------- campamento 16A

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-pestanas>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -94,7 +94,7 @@
 <div class="recarga" id="recarga" aria-hidden="true"><i></i></div>
 <!-- Índice de secciones (solo en pantallas muy anchas, a un lado): resalta la que se ve y salta a ella (indice.js). -->
 <nav class="indice" id="indice" aria-label="Secciones de la página">
-  <a href="#t-saldo" data-s="escena">Saldo</a><a href="#mercado" data-s="grafico">Gráfico</a><a href="#reportes" data-s="reportes">Reportes</a><a href="#compras" data-s="compras">Compras</a>
+  <a href="#t-saldo" data-s="escena">Saldo</a><a href="#mercado" data-s="grafico">Gráfico</a><a href="#reportes" data-s="reportes">Reportes</a><a href="#compras" data-s="compras">Movimientos</a>
 </nav>
 <!-- Mini-cabecera: al bajar y perder de vista el saldo, queda una franja con el saldo y el precio; tocarla sube (minicab.js). -->
 <button type="button" class="minicab" id="minicab"><b id="minicab-saldo"></b> <i class="mc-alt" id="minicab-alt" aria-hidden="true" hidden><i class="mc-punto"></i></i> <span id="minicab-precio"></span><span class="sr"> Volver arriba</span></button>
@@ -125,10 +125,10 @@
     </p>
   </header>
   <div class="saldo">
-    <div class="saldo-cab"><h1 class="saldo-k" id="t-saldo">Tu saldo</h1><span class="bonito" id="s-bonito" hidden></span></div>
+    <div class="saldo-cab"><h1 class="saldo-k" id="t-saldo" data-libro="Saldo del libro">Tu saldo</h1><span class="bonito" id="s-bonito" hidden></span></div>
     <p class="saldo-v" id="s-saldo-v" role="button" tabindex="0" aria-describedby="s-saldo-ayuda"><span class="cifra-grande" id="s-sats"><span class="sk sk-grande" aria-hidden="true"></span></span><em id="s-unidad">sats</em></p>
     <span class="sr" id="s-saldo-ayuda"></span>
-    <p class="saldo-d" id="s-valor"><span class="sk sk-linea" aria-hidden="true"></span><span class="sr">Abriendo tu libro…</span></p>
+    <p class="saldo-d" id="s-valor"><span class="sk sk-linea" aria-hidden="true"></span><span class="sr" data-libro="Abriendo el libro…">Abriendo tu libro…</span></p>
     <p class="prox" id="prox"></p>
     <!-- Tres datos de tu camino bajo el saldo (solo en pantallas anchas, donde ese hueco quedaba vacío; pintar.js). -->
     <dl class="esc-datos" id="esc-datos" hidden></dl>
@@ -168,19 +168,6 @@
     <button type="button" class="enlace" id="caida-ocultar">Ocultar hoy</button>
   </div>
 
-  <!-- El Diario del Libro (campamento 15A): la portada de lo que pasó, para todos. diario.js la pinta. -->
-  <section class="diario" id="diario" data-p="resumen" aria-labelledby="t-diario" hidden>
-    <header class="dia-cab"><p class="dia-nombre">El Diario del Libro</p><p class="dia-edicion" id="dia-edicion"></p></header>
-    <h2 class="dia-titular" id="t-diario"></h2>
-    <p class="dia-sub" id="dia-sub"></p>
-    <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
-    <div class="dia-cols">
-      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p></section>
-      <section class="dia-bloque" aria-labelledby="t-dia-cla"><h3 id="t-dia-cla">Clasificados</h3><ul class="dia-clasif" id="dia-clasif"></ul></section>
-      <section class="dia-bloque" aria-labelledby="t-dia-pro"><h3 id="t-dia-pro">Pronóstico de la montaña</h3><p id="dia-pron"></p></section>
-    </div>
-  </section>
-
   <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden data-p="resumen">
     <h2 class="sr" id="t-tramo">Siguiente meta</h2>
     <p class="tr-k">Próxima etapa</p>
@@ -189,12 +176,27 @@
     <div class="rueda tr-anillo" id="t-anillo" role="img" aria-label=""><svg id="t-anillo-svg"></svg><span class="an-centro" id="t-pct"></span></div>
   </section>
 
+  <!-- El Diario del Libro (campamento 15A): la portada de lo que pasó, para todos. diario.js la pinta. Va después de «Próxima etapa» (campamento 17). -->
+  <section class="diario" id="diario" data-p="resumen" aria-labelledby="t-diario" hidden>
+    <header class="dia-cab"><p class="dia-nombre">El Diario del Libro</p><p class="dia-edicion" id="dia-edicion"></p></header>
+    <h2 class="dia-titular" id="t-diario"></h2>
+    <p class="dia-sub" id="dia-sub"></p>
+    <!-- En el teléfono el Diario sale en portada (titular y una línea) y este botón lo abre entero; en tablet y escritorio va siempre abierto (campamento 17). -->
+    <button type="button" class="dia-abrir" id="dia-abrir" aria-expanded="false" aria-controls="dia-grabado dia-cols"><b id="dia-abrir-t">Leer el Diario de hoy</b><span id="dia-abrir-d"></span></button>
+    <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
+    <div class="dia-cols" id="dia-cols">
+      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p></section>
+      <section class="dia-bloque" aria-labelledby="t-dia-cla"><h3 id="t-dia-cla">Clasificados</h3><ul class="dia-clasif" id="dia-clasif"></ul></section>
+      <section class="dia-bloque" aria-labelledby="t-dia-pro"><h3 id="t-dia-pro">Pronóstico de la montaña</h3><p id="dia-pron"></p></section>
+    </div>
+  </section>
+
   <!-- Tus medallas a la vista (campamento 14): las ya ganadas y, apagada, la que sigue. Es un reconocimiento, no una lista de pendientes. -->
   <section class="res-medallas" id="res-medallas" data-p="resumen" aria-labelledby="t-res-med" hidden>
-    <h2 id="t-res-med">Tus medallas</h2>
+    <h2 id="t-res-med" data-libro="Medallas del libro">Tus medallas</h2>
     <p class="res-med-n" id="res-med-n"></p>
     <ul class="med-rejilla" id="res-med-lista"></ul>
-    <button type="button" class="res-med-ver" id="res-historia">Ver todas mis medallas</button>
+    <button type="button" class="res-med-ver" id="res-historia" data-libro="Ver todas las medallas">Ver todas mis medallas</button>
   </section>
 
   <!-- Sats por dólar: cuántos sats compra $1 hoy y cómo ha cambiado en el último mes. Solo informa. -->
@@ -215,7 +217,7 @@
 
   <section class="mercado" id="mercado" aria-labelledby="t-mercado" data-p="graficos">
     <div class="sec-cab">
-      <h2 id="t-mercado">El precio y tus compras</h2>
+      <h2 id="t-mercado" data-libro="El precio y las compras">El precio y tus compras</h2>
       <div class="rangos" id="rangos" role="group" aria-label="Rango del gráfico">
         <button type="button" data-r="30">1M</button><button type="button" data-r="182">6M</button><button type="button" data-r="365">1A</button><button type="button" data-r="0">Todo</button>
       </div>
@@ -233,30 +235,30 @@
       <button type="button" class="g-op" id="g-ampliar">Ampliar</button>
     </div>
     <div class="g-caja">
-      <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo y Intro para ver la compra de ese día."></div>
+      <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo y Intro para ver la compra de ese día." data-libro-aria="Precio de bitcoin con las compras del libro marcadas. Usa las flechas para recorrerlo y Intro para ver la compra de ese día."></div>
       <div class="g-tarjeta" id="g-tarjeta" hidden>
         <p class="gt-fecha"></p><p class="gt-precio"></p><p class="gt-sub"></p><p class="gt-nota"></p>
         <div class="gt-acciones"><button type="button" class="gt-editar" hidden>Editar</button><button type="button" class="gt-cerrar">Cerrar</button></div>
       </div>
     </div>
     <details class="ley-det" id="ley-det"><summary>Leyenda y series</summary>
-      <p class="leyenda" role="group" aria-label="Qué mostrar en el gráfico (toca para ocultar o mostrar)"><button type="button" class="k-p" data-serie="precio" aria-pressed="true">Precio de BTC</button><button type="button" class="k-c" data-serie="compras" aria-pressed="true">Tus compras, a su precio</button><span class="k-x" hidden>Compra extra</span><button type="button" class="k-a" data-serie="costo" aria-pressed="true">Tu costo promedio</button><span class="k-g" hidden>Por encima de tu costo</span><span class="k-l" hidden>Por debajo de tu costo</span><button type="button" class="k-m" data-serie="max" aria-pressed="true" hidden>Máximo de 30 días</button><button type="button" class="k-b" data-serie="bandas" aria-pressed="true" hidden>Caída fuerte (15 %+)</button></p>
+      <p class="leyenda" role="group" aria-label="Qué mostrar en el gráfico (toca para ocultar o mostrar)"><button type="button" class="k-p" data-serie="precio" aria-pressed="true">Precio de BTC</button><button type="button" class="k-c" data-serie="compras" aria-pressed="true" data-libro="Las compras, a su precio">Tus compras, a su precio</button><span class="k-x" hidden>Compra extra</span><button type="button" class="k-a" data-serie="costo" aria-pressed="true" data-libro="Costo promedio">Tu costo promedio</button><span class="k-g" hidden data-libro="Por encima del costo">Por encima de tu costo</span><span class="k-l" hidden data-libro="Por debajo del costo">Por debajo de tu costo</span><button type="button" class="k-m" data-serie="max" aria-pressed="true" hidden>Máximo de 30 días</button><button type="button" class="k-b" data-serie="bandas" aria-pressed="true" hidden>Caída fuerte (15 %+)</button></p>
     </details>
   </section>
 
   <!-- Lo que pusiste (neto) frente a lo que vale tu saldo, día a día. Desde 3 compras y con histórico. -->
   <section class="valor" id="valor" aria-labelledby="t-valor" hidden data-p="graficos">
-    <div class="sec-cab"><h2 id="t-valor">Lo que pusiste y lo que vale</h2></div>
+    <div class="sec-cab"><h2 id="t-valor" data-libro="Lo que se puso y lo que vale">Lo que pusiste y lo que vale</h2></div>
     <p class="lectura" id="v-lectura"></p>
     <p class="sr" id="v-sr" aria-live="polite"></p>
-    <div class="lienzo" id="v-lienzo" tabindex="0" role="img" aria-label="Lo que has invertido y lo que vale tu saldo, día a día. Usa las flechas para recorrerlo."></div>
-    <p class="leyenda" aria-hidden="true"><span class="k-v">Lo que vale tu saldo</span><span class="k-i">Lo que pusiste (neto)</span></p>
+    <div class="lienzo" id="v-lienzo" tabindex="0" role="img" aria-label="Lo que has invertido y lo que vale tu saldo, día a día. Usa las flechas para recorrerlo." data-libro-aria="Lo que se ha invertido y lo que vale el saldo del libro, día a día. Usa las flechas para recorrerlo."></div>
+    <p class="leyenda" aria-hidden="true"><span class="k-v" data-libro="Lo que vale el saldo">Lo que vale tu saldo</span><span class="k-i" data-libro="Lo que se puso (neto)">Lo que pusiste (neto)</span></p>
     <p class="rep-txt" id="v-vs" hidden></p>
   </section>
 
   <!-- Cómo ha ido cambiando tu costo promedio con cada compra (desde 3 compras). -->
   <section class="valor" id="costo-prom" aria-labelledby="t-costo" hidden data-p="graficos">
-    <div class="sec-cab"><h2 id="t-costo">Cómo cambia tu costo promedio</h2></div>
+    <div class="sec-cab"><h2 id="t-costo" data-libro="Cómo cambia el costo promedio">Cómo cambia tu costo promedio</h2></div>
     <p class="lectura fija" id="c-lectura"></p>
     <p class="sr" id="c-sr" aria-live="polite"></p>
     <div class="lienzo" id="c-lienzo" tabindex="0" role="img" aria-label="Tu costo promedio con cada compra. Usa las flechas para recorrerlo."></div>
@@ -265,7 +267,7 @@
 
   <!-- La escalera de tus sats: sube con cada compra y baja con cada venta (desde 2 movimientos). -->
   <section class="valor" id="sats-acum" aria-labelledby="t-sats" hidden data-p="graficos">
-    <div class="sec-cab"><h2 id="t-sats">Tus sats, compra a compra</h2></div>
+    <div class="sec-cab"><h2 id="t-sats" data-libro="Los sats, compra a compra">Tus sats, compra a compra</h2></div>
     <p class="lectura fija" id="s-lectura"></p>
     <p class="sr" id="s-sr" aria-live="polite"></p>
     <div class="lienzo" id="s-lienzo" tabindex="0" role="img" aria-label="Tus sats acumulados con cada compra. Usa las flechas para recorrerlo."></div>
@@ -281,7 +283,7 @@
       </div>
       <p class="rep-txt" id="const-txt"></p>
       <p class="rep-txt" id="const-hito"></p>
-      <div class="semanas" id="semanas" tabindex="0" role="img" aria-label="Tus últimas semanas: las naranjas tuvieron compra. Toca una o usa las flechas para ver sus compras."></div>
+      <div class="semanas" id="semanas" tabindex="0" role="img" aria-label="Tus últimas semanas: las naranjas tuvieron compra. Toca una o usa las flechas para ver sus compras." data-libro-aria="Las últimas semanas del libro: las naranjas tuvieron compra. Toca una o usa las flechas para ver sus compras."></div>
       <p class="rep-txt sem-det" id="sem-det">Toca una semana para ver sus compras.</p>
     </article>
     <article class="rep rep-curiosas" id="rep-curiosas" data-p="ninguna">
@@ -293,7 +295,7 @@
       <ol class="hitos" id="hitos"></ol>
     </article>
     <article class="rep rep-ext" id="rep-ext" data-p="graficos">
-      <h3>Tu mejor y tu peor precio</h3>
+      <h3 data-libro="El mejor y el peor precio">Tu mejor y tu peor precio</h3>
       <div class="extremos" id="extremos"></div>
     </article>
   </section>
@@ -304,17 +306,15 @@
 
   <section class="compras" id="compras" aria-labelledby="t-compras" data-p="movimientos">
     <div class="sec-cab">
-      <h2 id="t-compras" tabindex="-1">Últimas compras</h2>
+      <!-- El mismo nombre que la pestaña. Exportar e importar CSV ya no van aquí arriba: están en «Tu cuenta → Tus datos» (campamento 17). -->
+      <h2 id="t-compras" tabindex="-1">Movimientos</h2>
       <p class="csv">
         <button type="button" class="enlace" id="l-tabla" hidden>Ver como tabla</button>
-        <a class="enlace" id="csv-out" href="/api/export.csv" download>Exportar CSV</a>
-        <label class="enlace" for="csv-in">Importar CSV</label>
-        <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
       </p>
     </div>
     <!-- Buscar, filtrar y ordenar (sale cuando hay más movimientos de los que caben en la primera pantalla). Solo cambia lo que se ve en la lista: los totales son siempre los de todo. -->
     <div class="l-ctl" id="l-ctl" hidden>
-      <label class="l-busca"><span class="sr">Buscar en tus movimientos</span><input type="search" id="l-buscar" placeholder="Buscar: nota, mes, monto, TXID…" autocomplete="off" autocapitalize="none" enterkeyhint="search"></label>
+      <label class="l-busca"><span class="sr" data-libro="Buscar en los movimientos">Buscar en tus movimientos</span><input type="search" id="l-buscar" placeholder="Buscar: nota, mes, monto, TXID…" autocomplete="off" autocapitalize="none" enterkeyhint="search"></label>
       <div class="l-chips" id="l-chips" role="group" aria-label="Filtrar por tipo">
         <button type="button" data-f="todos" aria-pressed="true">Todo</button><button type="button" data-f="compra" aria-pressed="false">Compras</button><button type="button" data-f="venta" aria-pressed="false">Ventas</button><button type="button" data-f="traslado" aria-pressed="false">Traslados</button><button type="button" data-f="extra" aria-pressed="false">Extra</button><button type="button" data-f="txid" aria-pressed="false">Con TXID</button>
       </div>
@@ -330,6 +330,7 @@
       <p class="l-res" id="l-res" role="status"></p>
       <button type="button" class="enlace" id="l-limpiar" hidden>Quitar filtros</button>
     </div>
+    <p class="l-col" id="l-col" aria-hidden="true" hidden>desde entonces</p>
     <ul class="lista" id="lista"><li class="vacio">Cargando compras…</li></ul>
     <button type="button" class="ver-todas" id="ver-todas" hidden></button>
   </section>
@@ -337,7 +338,7 @@
   <!-- Dónde están tus sats: lo trasladado a tu wallet frente al saldo total. La ven todos cuando hay traslados;
        el admin, además, ve una pista para anotar el primero. -->
   <section class="ubicacion" id="ubicacion" aria-labelledby="t-ubic" hidden data-p="resumen">
-    <h2 id="t-ubic">Dónde están tus sats</h2>
+    <h2 id="t-ubic" data-libro="Dónde están los sats">Dónde están tus sats</h2>
     <div id="ub-datos" hidden>
       <div class="rueda ub-dona" id="ub-dona" role="img" aria-label=""><svg id="ub-dona-svg"></svg><span class="an-centro"><b id="ub-pct"></b><small>wallet</small></span></div>
       <dl class="ub-lista">
@@ -386,10 +387,10 @@
 
   <!-- Tu historia (antes dentro de «Tu cuenta»): una pestaña de la página. historia.js la pinta. -->
   <section class="historia-pg" id="historia" data-p="historia" aria-labelledby="t-historia">
-    <h2 id="t-historia">Tu historia</h2>
+    <h2 id="t-historia" data-libro="La historia del libro">Tu historia</h2>
     <p class="vacio con-ilu" id="dh-vacio" hidden></p>
     <div id="dh-cuerpo">
-      <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia">
+      <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia" data-libro-aria="Cómo ver la historia del libro">
         <button type="button" data-vh="linea" aria-pressed="true">Línea</button>
         <button type="button" data-vh="tronco" aria-pressed="false">Tronco</button>
         <button type="button" data-vh="constelacion" aria-pressed="false">Constelación</button>
@@ -414,7 +415,7 @@
         <h3>Cómo llegaste hasta aquí</h3>
         <ol class="historia" id="dh-linea"></ol>
       </div>
-      <button type="button" class="enlace dh-cert-btn" id="dh-cert">Ver mi certificado de altitud</button>
+      <button type="button" class="enlace dh-cert-btn" id="dh-cert" data-libro="Ver el certificado de altitud">Ver mi certificado de altitud</button>
       <figure class="dh-objeto" id="dh-objeto" hidden>
         <div class="dh-lienzo" id="dh-lienzo" role="img" aria-labelledby="dh-desc" tabindex="0"></div>
         <figcaption id="dh-desc"></figcaption>
@@ -425,7 +426,7 @@
     </div>
   </section>
 
-  <footer class="pie">Tus datos viven en tu servidor, con respaldo diario. Precios de Coinbase (Kraken de reserva).</footer>
+  <footer class="pie"><span data-libro="Los datos del libro viven en el servidor de la familia, con respaldo diario.">Tus datos viven en tu servidor, con respaldo diario.</span> Precios de Coinbase (Kraken de reserva).</footer>
 </main>
 
 <div class="hoja" id="hoja" hidden>
@@ -521,13 +522,14 @@
       <button type="button" data-cuenta="clave">Cambiar contraseña</button>
       <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
-      <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar y traslados</button>
+      <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
       <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
       <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
       <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
       <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
       <h3 class="dc-grupo">En este dispositivo</h3>
       <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
+      <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
       <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
       <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
       <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
@@ -590,6 +592,9 @@
     <p>Todo tu historial en archivos que abre cualquier hoja de cálculo. Solo lo vigente: lo anulado queda en el historial.</p>
     <div class="dc-lista">
       <a class="enlace-boton" id="dd-zip" href="/api/todo.zip" download>Descargar todo (ZIP con compras y traslados)</a>
+      <a class="enlace-boton" id="csv-out" href="/api/export.csv" download>Exportar compras (CSV)</a>
+      <label class="enlace-boton" for="csv-in">Importar compras (CSV)</label>
+      <input class="sr" type="file" id="csv-in" accept=".csv,text/csv">
       <a class="enlace-boton" id="dd-tras" href="/api/traslados.csv" download>Exportar traslados (CSV)</a>
       <label class="enlace-boton" for="tras-in">Importar traslados (CSV)</label>
       <input class="sr" type="file" id="tras-in" accept=".csv,text/csv">
@@ -732,7 +737,7 @@
 
 <dialog id="d-grafico" class="d-grafico" aria-labelledby="dg-t">
   <div class="dg-cab">
-    <h2 id="dg-t">El precio y tus compras</h2>
+    <h2 id="dg-t" data-libro="El precio y las compras">El precio y tus compras</h2>
     <div class="rangos" id="dg-rangos" role="group" aria-label="Rango del gráfico">
       <button type="button" data-r="30">1M</button><button type="button" data-r="182">6M</button><button type="button" data-r="365">1A</button><button type="button" data-r="0">Todo</button>
     </div>
@@ -751,7 +756,7 @@
 
 <!-- La lista como tabla (solo en pantallas anchas): los mismos movimientos, con los filtros y el orden de ahora. -->
 <dialog id="d-tabla" class="d-tabla" aria-labelledby="dt-t">
-  <div class="dt-cab"><h2 id="dt-t">Tus movimientos</h2><button type="button" class="cerrar" id="dt-cerrar">Cerrar</button></div>
+  <div class="dt-cab"><h2 id="dt-t" data-libro="Movimientos">Tus movimientos</h2><button type="button" class="cerrar" id="dt-cerrar">Cerrar</button></div>
   <p class="dt-nota" id="dt-nota"></p>
   <div class="dt-caja"><table class="dt" id="dt"></table></div>
 </dialog>

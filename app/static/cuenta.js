@@ -51,6 +51,11 @@ export async function cargarYo() {
     document.body.dataset.rol = yo.rol;
     document.body.dataset.mant = yo.mantenimiento ? '1' : ''; // modo solo lectura de emergencia (SOLO_LECTURA=1 en el servidor)
     $('mant').hidden = !yo.mantenimiento;
+    // ¿Flota el botón «Anotar» en este dispositivo? El CSS lo usa para el alto de la escena (campamento 17). El rol se recuerda
+    // (`libro.rol`) para que la próxima vez la escena salga ya con su alto (efectos.js). Solo es una pista de diseño: no da permisos.
+    document.documentElement.toggleAttribute('data-boton', yo.rol === 'admin' && !yo.mantenimiento);
+    document.documentElement.toggleAttribute('data-lector', yo.rol !== 'admin');
+    try { localStorage.setItem('libro.rol', yo.rol === 'admin' ? 'admin' : 'lector'); } catch { /* vale para esta visita */ }
     conAvatar($('cuenta-btn'), yo.usuario, yo.usuario);
     aclararCuenta();
     $('cuenta-btn').hidden = false;
@@ -75,7 +80,19 @@ export function pintarSaludo(nombre = nombreSaludo) {
   // El día de tu cumpleaños el saludo cambia (campamento 15B).
   const cumple = S.cumple && cumpleHoy([{ nombre, cumple: S.cumple }], cielo.dia()).length;
   $('saludo').textContent = cumple ? textoCumple(nombre) : `${cielo.saludo(cielo.hora())}, ${nombre}`;
+  encajarSaludo();
 }
+/**
+ * Si la marca y el botón de la cuenta no caben en un renglón (teléfonos de 360 px, letra grande, un nombre largo), el saludo baja
+ * un renglón y caía encima del rótulo del saldo. En ese caso no se enseña (el nombre ya está en el botón de la cuenta). Se mide en
+ * el mismo fotograma (mostrar, leer, decidir): no parpadea. Se revisa al cambiar el tamaño de la cabecera.
+ */
+function encajarSaludo() {
+  const s = $('saludo');
+  s.hidden = false;
+  if (s.textContent && s.getBoundingClientRect().bottom > $('t-saldo').getBoundingClientRect().top + 2) s.hidden = true;
+}
+if ('ResizeObserver' in window) new ResizeObserver(() => encajarSaludo()).observe(document.querySelector('.cima'));
 setInterval(() => document.visibilityState === 'visible' && pintarSaludo(), 300_000);
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && pintarSaludo());
 
@@ -105,6 +122,7 @@ function etiquetasAccesibilidad() {
   const c = acc?.contraste() ?? 'auto';
   $('dc-contraste').textContent = `Contraste: ${NOMBRE_CONTRASTE[c]}${c === 'auto' && acc?.contrasteAlto() ? ' (alto, como pide el sistema)' : ''}`;
   $('dc-atajos').textContent = `Atajos de teclado: ${atajosActivos() ? 'activados' : 'apagados'}`;
+  $('dc-ganancia').textContent = `Colores de ganancia: ${acc?.ganancia() ? 'verde y rojo' : 'neutros'}`;
 }
 /** El cambio de tema con la tecla T (atajos.js) pasa por aquí para tener el mismo fundido. */
 export function siguienteTema() {
@@ -223,6 +241,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'letra') { window.libroAcc?.fijarLetra(SIGUIENTE_LETRA[window.libroAcc.letra()]); etiquetasAccesibilidad(); }
   else if (accion === 'contraste') { window.libroAcc?.fijarContraste(SIGUIENTE_CONTRASTE[window.libroAcc.contraste()]); etiquetasAccesibilidad(); }
   else if (accion === 'atajos') { fijarAtajos(!atajosActivos()); etiquetasAccesibilidad(); }
+  else if (accion === 'ganancia') { window.libroAcc?.fijarGanancia(window.libroAcc.ganancia() ? '' : 'color'); etiquetasAccesibilidad(); }
   else if (accion === 'madrugada') { window.libroCielo?.fijarMadrugada(!window.libroCielo.madrugadaPref()); etiquetaMadrugada(); }
   else if (accion === 'sonido') { fijarSonido(!sonidoActivo()); etiquetaSonido(); if (sonidoActivo()) sonar('compra'); } // al encenderlo suena una muestra
   else if (accion === 'tv') { dCuenta.close(); entrarTV(); }

@@ -7,6 +7,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-r', fecha: '2026-11-20',
+    items: [
+      'Al abrir en el teléfono ya se asoman las pestañas (Resumen, Gráficos, Historia y Movimientos): la montaña les deja sitio abajo.',
+      'Quien solo mira el libro ahora lee «Saldo del libro» y, en el sendero, «Vamos aquí»; quien lo anota sigue viendo «Tu saldo» y «Tú».',
+      'Lo que sube o baja ya no va en rojo ni en verde: tinta neutra, con su signo y una flechita. Quien prefiera los colores los tiene en «Tu cuenta → Colores de ganancia».',
+      'El Resumen es más corto: primero «Próxima etapa» y, en el teléfono, el Diario sale en portada con «Leer el Diario de hoy».',
+      'La lista se llama «Movimientos», como su pestaña, y dice qué mide el porcentaje de cada compra: «desde entonces». Exportar e importar están en «Tu cuenta → Tus datos».',
+      'Al entrar se puede ver la contraseña que se escribe («Ver») y, si el acceso falla, se avisa cuando las mayúsculas están puestas.',
+    ],
+  },
+  {
     id: '2026-11-q', fecha: '2026-11-19',
     items: [
       'La montaña tiene relieve: caras de roca con luz y sombra, un bosque que sube por la falda y, de noche, luz de luna. La luna ahora tiene sus mares.',
