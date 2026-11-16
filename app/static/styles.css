@@ -738,7 +738,7 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 /* Suelo bajo el botón flotante: un degradado del color del fondo para que el texto que pasa por detrás no se enrede con él
    (solo donde el botón flota: teléfono y tablet, y solo para quien puede anotar). */
 @media (max-width: 1099px) {
-  html:not([data-tv]) body[data-rol="admin"]:not([data-mant="1"])::after {
+  html:not([data-tv], [data-pestanas]) body[data-rol="admin"]:not([data-mant="1"])::after {
     content: ""; position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; height: calc(92px + env(safe-area-inset-bottom)); pointer-events: none;
     background: linear-gradient(to top, var(--fondo) 22%, color-mix(in srgb, var(--fondo) 0%, transparent));
   }
@@ -3148,32 +3148,8 @@ html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb
      todo queda como estaba (la escena llena la pantalla y el botón flota sobre los pinos).
    Acostado no hay altura para esto: se queda como estaba. `data-boton` se recuerda por dispositivo (efectos.js lo pone antes de
    pintar) para que la escena no cambie de alto al saber quién eres. */
-@media (max-width: 1099px) and (min-height: 521px) {
-  html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 92px); height: calc(100svh - 92px); min-height: 470px; --pie: 64; }
-  html[data-pestanas]:not([data-tv], [data-boton]) .cuerpo { padding-top: 14px; }
-}
-/* En pantallas bajas cada píxel de montaña cuenta: el sendero arranca aún más abajo y, en las más bajas (320×568), la franja es
-   menor (la barra se asoma a medias, que ya dice «hay más abajo») para que la montaña mida lo mismo que antes. */
-@media (max-width: 1099px) and (min-height: 521px) and (max-height: 700px) {
-  html[data-pestanas]:not([data-tv], [data-boton]) .escena { --pie: 46; }
-}
-@media (max-width: 1099px) and (min-height: 521px) and (max-height: 600px) {
-  html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 64px); height: calc(100svh - 64px); min-height: 440px; --pie: 40; }
-}
-/* Quien anota, en pantalla alta: caben la barra (de una fila) y, debajo, el botón. Donde la barra va en dos filas (menos de 360 px,
-   o letra grande o muy grande en teléfonos) no caben: ahí queda como estaba, igual que en pantallas bajas. */
-@media (min-width: 360px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
-  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .cuerpo { padding-top: 14px; }
-}
-@media (min-width: 480px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
-  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
-}
-@media (min-width: 600px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
-  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
-}
+/* (Campamento 20) La franja ya no hace falta: en el teléfono y la tablet la barra y «Anotar» son el dock de abajo, siempre a la vista
+   (ver «Campamento 20 · el dock», al final). La escena termina donde empieza el dock. */
 /* --- 2. «Saldo del libro» para quien solo mira. Los textos fijos llevan su otra forma en `data-libro` y pintar.js elige cuál se ve
    (`html[data-voz]`). Si este dispositivo es de alguien que solo mira (`data-lector`, efectos.js), el texto de «tu…» no se
    enseña mientras se cambia: nunca se ve un «Tu saldo» que luego salta a «Saldo del libro». */
@@ -3475,3 +3451,120 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
 /* La manta del primer año: la urdimbre del telar se ve donde aún no hay tela. */
 .ha-telar { opacity: 0.85; }
 .dh-lienzo :is(.ha-telar, .ht-falta) { pointer-events: none; }
+
+
+/* ============================================================================================================================
+   Campamento 20 (9/9) · La barra de pestañas y «Anotar», un solo conjunto: el dock de abajo
+   En el teléfono y la tablet, por pestañas, la barra va fija abajo, flotando sobre la zona segura, y «Anotar» es su acción del centro:
+   un círculo naranja que asoma sobre la barra, con su nombre debajo, a la altura de los de las pestañas. Todo queda en la zona del
+   pulgar y es una sola pieza: no son dos cosas que compiten (por eso se descartó antes una barra fija abajo) y nada se encoge ni se
+   mueve al desplazar (como el «Anotar que se encoge», descartado). Quien solo mira tiene las cuatro pestañas, sin hueco. Arriba solo
+   queda la mini-cabecera. En escritorio (≥ 1100 px), en «todo junto» y en pantalla grande, como antes. Los ids no cambian.
+   ============================================================================================================================ */
+@media (max-width: 1099px) {
+  html[data-pestanas]:not([data-tv]) {
+    --dock-h: 64px; --dock-m: 8px; --dock-hueco: 0px; --dock-fondo: color-mix(in srgb, var(--s1) 96%, var(--txt));
+    --dock-abajo: max(var(--dock-m), env(safe-area-inset-bottom));
+    --dock-total: calc(var(--dock-h) + var(--dock-abajo) + 8px);
+    scroll-padding-top: 60px; scroll-padding-bottom: calc(var(--dock-total) + 16px);
+  }
+  html[data-pestanas][data-boton]:not([data-tv]) { --dock-hueco: 78px; }
+  /* La escena termina donde empieza el dock: la montaña y el sendero se ven enteros. */
+  html[data-pestanas]:not([data-tv]) .escena { height: calc(100vh - var(--dock-total)); height: calc(100svh - var(--dock-total)); min-height: 440px; --pie: 46; }
+  html[data-pestanas]:not([data-tv]) .cuerpo { padding-top: 22px; padding-bottom: calc(var(--dock-total) + 40px); }
+  /* La barra: fija abajo, con su margen. Sin la píldora que se desliza (con el hueco del centro las columnas no son iguales): la activa se
+     pinta sola, con su fondo tintado, la letra gruesa, el dibujo en naranja y la rayita. */
+  html[data-pestanas]:not([data-tv]) .pestanas {
+    position: fixed; z-index: 7; top: auto; bottom: var(--dock-abajo);
+    left: max(var(--dock-m), env(safe-area-inset-left)); right: max(var(--dock-m), env(safe-area-inset-right));
+    max-width: 34rem; margin: 0 auto; min-height: var(--dock-h);
+    grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1fr; gap: 2px; padding: 5px;
+    border-radius: 26px; background-color: var(--dock-fondo); border: 1px solid var(--s3);
+    box-shadow: inset 0 1px 0 var(--filo), 0 -6px 26px -14px rgb(0 0 0 / 0.55), 0 16px 32px -18px rgb(0 0 0 / 0.8);
+  }
+  html[data-pestanas]:not([data-tv]) .pestanas [data-pestana="historia"] { grid-column: 4; }
+  html[data-pestanas]:not([data-tv]) .pestanas [data-pestana="movimientos"] { grid-column: 5; }
+  html[data-pestanas]:not([data-tv]) .pestanas::before { display: none; }
+  html[data-pestanas]:not([data-tv]) .pestanas button { flex-direction: column; gap: 4px; min-height: calc(var(--dock-h) - 10px); padding: 6px 1px 9px; border-radius: 21px; font-size: 0.75rem; }
+  html[data-pestanas]:not([data-tv]) .pestanas button[aria-current="true"] { background: var(--pe-activa); box-shadow: inset 0 0 0 1px var(--pe-filo); }
+  html[data-pestanas]:not([data-tv]) .pestanas button::after { bottom: 3px; }
+  /* «Anotar», el centro del dock. */
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar {
+    position: fixed; z-index: 8; left: 50%; right: auto; top: auto; bottom: calc(var(--dock-abajo) + 7px); transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px;
+    width: var(--dock-hueco); min-height: 0; padding: 0; border-radius: 18px; background: none; box-shadow: none;
+    color: var(--naranja-txt); font: 750 0.75rem/1.15 var(--sans); letter-spacing: -0.01em; white-space: nowrap;
+  }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar::before {
+    width: 56px; height: 56px;
+    background: linear-gradient(var(--naranja-osc), var(--naranja-osc)) 50% 50% / 20px 3px no-repeat, linear-gradient(var(--naranja-osc), var(--naranja-osc)) 50% 50% / 3px 20px no-repeat,
+      linear-gradient(180deg, color-mix(in srgb, var(--naranja) 84%, #fff), var(--naranja) 62%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 0 0 5px var(--dock-fondo), 0 0 0 6px var(--s3), 0 12px 22px -8px rgb(0 0 0 / 0.7);
+  }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar .an-c { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar:active { transform: translateX(-50%) scale(0.95); }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+  /* El suelo: lo que pasa por detrás del dock se funde con el fondo (para todos). Los avisos salen encima del dock. */
+  html[data-pestanas]:not([data-tv]) body::after {
+    content: ""; position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; height: calc(var(--dock-total) + 22px); pointer-events: none;
+    background: linear-gradient(to top, var(--fondo) 35%, color-mix(in srgb, var(--fondo) 0%, transparent));
+  }
+  html[data-pestanas]:not([data-tv]) .aviso { bottom: calc(var(--dock-abajo) + var(--dock-h) + 30px); }
+}
+/* Menos de 390 px: la letra de las pestañas baja un punto para que «Movimientos» quepa junto al hueco. */
+@media (min-width: 360px) and (max-width: 389px) { html[data-pestanas][data-boton]:not([data-tv]) .pestanas button { font-size: 0.6875rem; } }
+/* Compacto: donde las palabras no caben (menos de 360 px con el hueco de «Anotar», o letra grande o muy grande en el teléfono) solo la pestaña activa lleva su nombre
+   a la vista y su columna es más ancha (en menos de 360 px, menos: ver abajo); las demás, su dibujo (el nombre sigue ahí para los lectores de pantalla). */
+@media (max-width: 359px) {
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas button { padding-inline: 2px; font-size: 0.75rem; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas button:not([aria-current="true"]) .pe-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas button:not([aria-current="true"]) { justify-content: center; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas .pe-txt { white-space: nowrap; }
+}
+@media (max-width: 479px) {
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas button { padding-inline: 2px; font-size: 0.75rem; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas button:not([aria-current="true"]) .pe-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas button:not([aria-current="true"]) { justify-content: center; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas .pe-txt { white-space: nowrap; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas:has([data-pestana="resumen"][aria-current="true"]) { grid-template-columns: 1.9fr 1fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas:has([data-pestana="graficos"][aria-current="true"]) { grid-template-columns: 1fr 1.9fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas:has([data-pestana="historia"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1.9fr 1fr; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1.9fr; }
+}
+@media (max-width: 599px) {
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas button { padding-inline: 2px; font-size: 0.75rem; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas button:not([aria-current="true"]) .pe-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas button:not([aria-current="true"]) { justify-content: center; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas .pe-txt { white-space: nowrap; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas:has([data-pestana="resumen"][aria-current="true"]) { grid-template-columns: 1.9fr 1fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas:has([data-pestana="graficos"][aria-current="true"]) { grid-template-columns: 1fr 1.9fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas:has([data-pestana="historia"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1.9fr 1fr; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1.9fr; }
+}
+/* En menos de 360 px con «Anotar» no sobra nada: el hueco del centro baja a 64 px (el círculo asoma igual) y la pestaña activa se ensancha
+   menos, para que las demás conserven sus 48 px de toque (también con letra grande o muy grande). */
+@media (max-width: 359px) {
+  html[data-pestanas][data-boton]:not([data-tv]) { --dock-hueco: 64px; --dock-m: 6px; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas:has([data-pestana="resumen"][aria-current="true"]) { grid-template-columns: 1.4fr 1fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas:has([data-pestana="graficos"][aria-current="true"]) { grid-template-columns: 1fr 1.4fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas:has([data-pestana="historia"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1.4fr 1fr; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1.4fr; }
+}
+/* Acostado: poca altura. El dock es más bajo, con el dibujo y la palabra en una línea, y «Anotar compra» es una píldora en su centro
+   (no asoma: la montaña necesita esa altura). */
+@media (max-width: 1099px) and (max-height: 520px) and (min-aspect-ratio: 3/2) {
+  html[data-pestanas]:not([data-tv]) { --dock-h: 58px; --dock-m: 6px; }
+  html[data-pestanas]:not([data-tv]) .escena { min-height: 0; }
+  html[data-pestanas][data-boton]:not([data-tv]) { --dock-hueco: 176px; }
+  html[data-pestanas]:not([data-tv]) .pestanas { max-width: 48rem; }
+  html[data-pestanas]:not([data-tv]) .pestanas button { flex-direction: row; gap: 8px; padding: 4px 6px 6px; font-size: 0.8125rem; }
+  html[data-pestanas]:not([data-tv]) .pestanas button::after { bottom: 2px; }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar {
+    flex-direction: row; gap: 8px; justify-content: center; height: calc(var(--dock-h) - 10px); width: calc(var(--dock-hueco) - 8px); bottom: calc(var(--dock-abajo) + 5px);
+    border-radius: 999px; padding: 0 14px 0 8px; color: var(--naranja-osc); font-size: 0.9375rem;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--naranja) 84%, #fff), var(--naranja) 62%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 8px 18px -10px rgb(0 0 0 / 0.6);
+  }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar::before { width: 24px; height: 24px; box-shadow: none;
+    background: linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 11px 2.5px no-repeat, linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 2.5px 11px no-repeat, var(--naranja-osc); }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar .an-c { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+}
