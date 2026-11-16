@@ -3312,6 +3312,83 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- campamento 17: primera impresión
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const cerrar = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(350); } };
+    const ent = async (srv, cuenta, opts = {}, init = sinAviso) => { const r = await entrar(navegador, srv, cuenta, { pestanas: true, hora: 15, ...opts }, init); await cerrar(r.p); return r; };
+    const s17 = await servidor('anio');
+    try {
+      // ---- 1. Las pestañas se asoman al abrir
+      const cajas = (p) => p.evaluate(() => {
+        const r = (sel) => { const e = document.querySelector(sel); if (!e || getComputedStyle(e).display === 'none') return null; const q = e.getBoundingClientRect(); return { arriba: Math.round(q.top), abajo: Math.round(q.bottom) }; };
+        return { vh: innerHeight, y: Math.round(scrollY), escena: r('.escena'), barra: r('#pestanas'), boton: r('#anotar'), yo: r('#montana .yo'), salida: r('#montana .salida'), saldo: r('.saldo'), pista: document.documentElement.hasAttribute('data-boton') };
+      });
+      const fijo = { isMobile: false, hasTouch: false };
+      for (const [w, h] of [[390, 844], [390, 664], [768, 1024]]) {
+        const l = await ent(s17, LECTOR, { viewport: { width: w, height: h }, ...fijo });
+        const c = await cajas(l.p);
+        eq(c.escena.abajo, h - 92, `17·1 lectora ${w}×${h}: la escena deja libres 92 px abajo`);
+        ok(c.barra.arriba >= c.escena.abajo && c.barra.abajo <= h, `17·1 lectora ${w}×${h}: la barra de pestañas se ve entera al abrir (${c.barra.arriba}–${c.barra.abajo} de ${h})`);
+        ok(c.yo.abajo < c.escena.abajo && c.salida.abajo <= c.escena.abajo && c.yo.arriba > c.saldo.abajo - 30, `17·1 lectora ${w}×${h}: el sendero y el punto caben en la escena, bajo el saldo`);
+        ok(!c.pista && !c.boton, `17·1 lectora ${w}×${h}: sin botón ni pista de botón`);
+        eq(l.consola.filter((x) => !/503/.test(x)), [], `17·1 lectora ${w}×${h}: consola limpia`);
+        await l.ctx.close();
+      }
+      {
+        // Pantalla muy baja (320×568): la franja es menor y la barra (de dos filas) se asoma a medias.
+        const l = await ent(s17, LECTOR, { viewport: { width: 320, height: 568 }, ...fijo });
+        const c = await cajas(l.p);
+        ok(c.escena.abajo === 568 - 64 && c.barra.arriba <= 568 - 40, `17·1 lectora 320×568: la barra se asoma al menos 40 px (${c.barra.arriba} de 568)`);
+        ok(c.yo.abajo < c.escena.abajo && c.salida.abajo <= c.escena.abajo, '17·1 lectora 320×568: el sendero cabe en la escena');
+        await l.ctx.close();
+      }
+      {
+        // El dueño, en pantalla alta: la barra y, debajo, el botón, sin taparse. Y la pista se recuerda: al recargar ya sale así.
+        const a = await ent(s17, ADMIN, { viewport: { width: 390, height: 844 }, ...fijo });
+        let c = await cajas(a.p);
+        ok(c.pista && c.escena.abajo === 844 - 164, `17·1 dueño 390×844: la escena deja 164 px (${c.escena.abajo})`);
+        ok(c.barra.arriba >= c.escena.abajo && c.barra.abajo < c.boton.arriba && c.boton.abajo <= 844, `17·1 dueño 390×844: barra (${c.barra.arriba}–${c.barra.abajo}) sobre el botón (${c.boton.arriba}–${c.boton.abajo}), sin taparse`);
+        ok(c.yo.abajo < c.escena.abajo && c.salida.abajo <= c.escena.abajo, '17·1 dueño 390×844: el sendero cabe en la escena');
+        eq(await a.p.evaluate(() => localStorage.getItem('libro.rol')), 'admin', '17·1 dueño: el dispositivo recuerda que aquí flota el botón');
+        await a.p.reload({ waitUntil: 'domcontentloaded' });
+        ok(await a.p.evaluate(() => document.documentElement.hasAttribute('data-boton') && document.documentElement.hasAttribute('data-pestanas')), '17·1 dueño: al recargar, la escena sale con su alto desde el primer pintado');
+        await a.p.waitForTimeout(2600); await cerrar(a.p);
+        c = await cajas(a.p);
+        ok(c.escena.abajo === 844 - 164 && c.barra.abajo < c.boton.arriba, '17·1 dueño: tras recargar, igual');
+        // Al bajar, la barra queda pegada arriba y el botón abajo.
+        await a.p.evaluate(() => window.scrollTo(0, 900)); await a.p.waitForTimeout(500);
+        c = await cajas(a.p);
+        ok(c.barra.arriba < 120 && c.boton.abajo <= 844 && c.boton.arriba > 700, `17·1 dueño: al bajar, barra arriba (${c.barra.arriba}) y botón abajo (${c.boton.arriba})`);
+        eq(a.consola.filter((x) => !/503/.test(x)), [], '17·1 dueño 390×844: consola limpia');
+        await a.ctx.close();
+      }
+      {
+        // El dueño, en pantalla baja: no caben los dos sin aplastar la montaña; todo queda como estaba.
+        const a = await ent(s17, ADMIN, { viewport: { width: 390, height: 664 }, ...fijo });
+        const c = await cajas(a.p);
+        ok(c.escena.abajo === 664 && c.boton.abajo <= 664 && c.salida.abajo < c.boton.arriba, `17·1 dueño 390×664: la escena llena la pantalla y el sendero arranca sobre el botón (${c.salida.abajo} < ${c.boton.arriba})`);
+        await a.ctx.close();
+      }
+      {
+        // «Todo junto», acostado y escritorio: como antes.
+        const t = await entrar(navegador, s17, LECTOR, { viewport: { width: 390, height: 844 }, ...fijo }, sinAviso); await cerrar(t.p);
+        eq((await cajas(t.p)).escena.abajo, 844, '17·1 «todo junto»: la escena sigue llenando la pantalla');
+        ok(await t.p.evaluate(() => !document.documentElement.hasAttribute('data-pestanas')), '17·1 «todo junto»: sin la marca de pestañas');
+        await t.ctx.close();
+        const ac = await ent(s17, LECTOR, { viewport: { width: 844, height: 390 }, ...fijo });
+        eq((await cajas(ac.p)).escena.abajo, 390, '17·1 acostado: la escena mide la pantalla');
+        await ac.ctx.close();
+        const e = await ent(s17, LECTOR, { viewport: { width: 1440, height: 900 }, ...fijo });
+        const c = await cajas(e.p);
+        ok(c.escena.abajo === 774 && c.barra.abajo <= 900, `17·1 escritorio: como antes, con la barra a la vista (${c.escena.abajo}, ${c.barra.abajo})`);
+        await e.ctx.close();
+      }
+    } finally {
+      s17.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- sin histórico de precios
   const sinhist = await servidor('sinhist');
   try {

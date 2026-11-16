@@ -3082,3 +3082,32 @@ html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb
   .historia-pg .dh-vistas button:first-child { grid-column: auto; flex-direction: column; gap: 6px; min-height: calc(var(--toque, 48px) + 14px); }
 }
 @media (min-width: 700px) and (max-width: 899px) { html[data-letra="muy-grande"] .historia-pg .dh-vistas { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ============================================================================================================================
+   Campamento 17 · Primera impresión
+   ============================================================================================================================ */
+/* --- 1. Las pestañas se asoman al abrir (teléfono y tablet, de pie, con la pantalla «por pestañas»). La escena deja libre una
+   franja abajo (`--asoma`) y la barra se ve desde el primer segundo (en escritorio ya se veía).
+   - Quien solo mira (y mientras no se sabe quién es): 92 px. Sin botón flotante, el sendero arranca más abajo (`--pie`, lo lee
+     pintar.js: cuánto se reserva al pie de la escena) y la montaña casi no pierde alto.
+   - Quien anota (`html[data-boton]`: el botón «Anotar» flota fijo abajo): en pantallas altas (740 px o más) la franja mide 164 px
+     y caben la barra y, debajo, el botón, sin taparse; en pantallas más bajas no hay sitio para los dos sin aplastar la montaña y
+     todo queda como estaba (la escena llena la pantalla y el botón flota sobre los pinos).
+   Acostado no hay altura para esto: se queda como estaba. `data-boton` se recuerda por dispositivo (efectos.js lo pone antes de
+   pintar) para que la escena no cambie de alto al saber quién eres. */
+@media (max-width: 1099px) and (min-height: 521px) {
+  html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 92px); height: calc(100svh - 92px); min-height: 470px; --pie: 64; }
+  html[data-pestanas]:not([data-tv], [data-boton]) .cuerpo { padding-top: 14px; }
+}
+/* En pantallas bajas cada píxel de montaña cuenta: el sendero arranca aún más abajo y, en las más bajas (320×568), la franja es
+   menor (la barra se asoma a medias, que ya dice «hay más abajo») para que la montaña mida lo mismo que antes. */
+@media (max-width: 1099px) and (min-height: 521px) and (max-height: 700px) {
+  html[data-pestanas]:not([data-tv], [data-boton]) .escena { --pie: 46; }
+}
+@media (max-width: 1099px) and (min-height: 521px) and (max-height: 600px) {
+  html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 64px); height: calc(100svh - 64px); min-height: 440px; --pie: 40; }
+}
+@media (max-width: 1099px) and (min-height: 740px) {
+  html[data-pestanas][data-boton]:not([data-tv]) .escena { height: calc(100vh - 164px); height: calc(100svh - 164px); --pie: 46; }
+  html[data-pestanas][data-boton]:not([data-tv]) .cuerpo { padding-top: 14px; }
+}

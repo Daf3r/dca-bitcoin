@@ -51,6 +51,10 @@ export async function cargarYo() {
     document.body.dataset.rol = yo.rol;
     document.body.dataset.mant = yo.mantenimiento ? '1' : ''; // modo solo lectura de emergencia (SOLO_LECTURA=1 en el servidor)
     $('mant').hidden = !yo.mantenimiento;
+    // ¿Flota el botón «Anotar» en este dispositivo? El CSS lo usa para el alto de la escena (campamento 17). El rol se recuerda
+    // (`libro.rol`) para que la próxima vez la escena salga ya con su alto (efectos.js). Solo es una pista de diseño: no da permisos.
+    document.documentElement.toggleAttribute('data-boton', yo.rol === 'admin' && !yo.mantenimiento);
+    try { localStorage.setItem('libro.rol', yo.rol === 'admin' ? 'admin' : 'lector'); } catch { /* vale para esta visita */ }
     conAvatar($('cuenta-btn'), yo.usuario, yo.usuario);
     aclararCuenta();
     $('cuenta-btn').hidden = false;
