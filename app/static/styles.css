@@ -147,7 +147,7 @@ html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .rayos { display: inl
 .ry-0 { stop-color: var(--astro); stop-opacity: 0; } .ry-1 { stop-color: var(--astro); stop-opacity: 0.2; } .ry-2 { stop-color: var(--astro); stop-opacity: 0; }
 .faceta { fill: var(--astro); opacity: 0.07; } .faceta.f1 { opacity: 0.05; } .faceta.f2 { opacity: 0.03; }
 .arista { fill: none; stroke: var(--astro); stroke-opacity: 0.32; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
-.nieve-sombra { fill: var(--nieve-s); opacity: 0.4; }
+.nieve-sombra { fill: color-mix(in oklab, var(--nieve) 72%, var(--nieve-s)); opacity: 1; }
 .nb-0 { stop-color: var(--nube); } .nb-1 { stop-color: color-mix(in oklab, var(--nube) 55%, transparent); }
 .nl-0 { stop-color: var(--nube); stop-opacity: 0; } .nl-1 { stop-color: var(--nube); }
 .lg-0 { stop-color: color-mix(in oklab, var(--c4) 55%, var(--medio)); } .lg-1 { stop-color: color-mix(in oklab, var(--c3) 45%, var(--monte)); }
@@ -3569,16 +3569,17 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
    bajo el rótulo. En la cumbre el rellano es un escalón en la nieve. La nieve en sombra toma el color del cielo (`--nieve-s`) y el
    relieve de la montaña se pinta encima de ella: los mismos planos tallan roca y nieve. */
 .montana { --nieve-s: color-mix(in oklab, var(--c0) 55%, var(--monte-sombra)); --tz-roca: color-mix(in oklab, var(--monte) 84%, var(--luz-roca, var(--astro))); }
-.tz-suelo { fill: color-mix(in oklab, color-mix(in oklab, var(--monte) 56%, #a8865c) 74%, var(--luz-roca, var(--astro))); }
+.tz-suelo { fill: color-mix(in oklab, color-mix(in oklab, var(--monte) 86%, #a8865c) 80%, var(--luz-roca, var(--astro))); }
 .tz-corte { fill: color-mix(in oklab, var(--monte-sombra) 84%, #000); opacity: 0.72; }
 .tz-corte-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.09; }
-.tz-muro { fill: var(--tz-roca); }
-.tz-muro-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.13; }
-.tz-sombra { fill: var(--monte-sombra); opacity: 0.42; }
+.tz-muro { fill: color-mix(in oklab, var(--monte-sombra) 62%, var(--monte)); }
+.tz-sombra { fill: var(--monte-sombra); opacity: 0.36; }
 .tz-pie { fill: color-mix(in oklab, var(--monte-sombra) 80%, #000); opacity: 0.5; }
 .tz-nieve { fill: color-mix(in oklab, var(--nieve) 92%, #fff); }
-.tz-nieve-s { fill: var(--nieve-s); opacity: 0.5; }
-.cuerno-sombra { fill: var(--nieve-s); opacity: 0.3; }
+.espolon-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.09; }
+.tz-pared { fill: color-mix(in oklab, var(--monte-sombra) 62%, var(--monte)); }
+.tz-pared-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.14; }
+.nieve-s2 { fill: var(--nieve-s); opacity: 0.22; }
 /* El camino tallado: el corte de roca por encima (sombra) y el talud por debajo (luz). */
 :is(.sendero-talud, .sendero-corte) path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .sendero-corte path { stroke: color-mix(in oklab, var(--monte-sombra) 84%, #000); opacity: 0.6; }
