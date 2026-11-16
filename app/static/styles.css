@@ -751,7 +751,7 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 .h-usd { display: grid; gap: 4px; margin-top: 4px; }
 .h-usd input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font: 400 1.125rem var(--sans); }
 .h-nota { margin-top: 6px; font-size: 0.8125rem; }
-.hoja-calc { min-height: 2.6em; font-size: 0.875rem; color: var(--txt2); }
+.hoja-calc { display: grid; align-content: start; min-height: 2.6em; font-size: 0.875rem; color: var(--txt2); }
 .hoja-calc .costo { display: block; margin-top: 2px; }
 .h-extra { display: flex; align-items: center; gap: 12px; min-height: var(--toque); margin-top: 10px; font-size: 0.9375rem; font-weight: 600; color: var(--txt); cursor: pointer; }
 .h-extra input { flex: none; width: 22px; height: 22px; accent-color: var(--naranja); }
@@ -3015,7 +3015,7 @@ html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cie
 .lago-moneda.hunde { animation: moneda-hunde 1.7s cubic-bezier(.45, 0, .8, .6) 1 both; }
 
 /* «Tú» fantasma en la hoja de anotar (16B, idea 2): tu etapa como regla, con dónde quedarías al guardar. */
-.h-ruta { margin: 4px 0 12px; }
+.h-ruta { margin: 2px 0 12px; }
 .hr-pista { position: relative; display: block; height: 8px; border-radius: 4px; background: var(--s3, rgb(255 255 255 / 0.12)); }
 .hr-hecho { position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); border-radius: 4px; background: var(--naranja); opacity: 0.55; }
 /* Lo que sumaría esta compra: un tramo a rayas entre «Tú» y el fantasma (se lee aunque el avance sea corto). */
@@ -3190,3 +3190,13 @@ html[data-lector]:not([data-voz]) [data-libro] { visibility: hidden; }
 .h-fecha-otro[hidden] { display: none; }
 .h-fecha-otro input { flex: 0 1 14rem; min-width: 0; }
 .h-fecha-otro input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+/* Una respuesta: un renglón que se lee de un vistazo (los dólares y cómo queda el saldo); lo demás, plegado bajo «Qué cambia con esta compra». */
+.hc-uno, .hc-pie, .hc-lineas { margin: 0; }
+.hc-uno[data-resp="1"] { color: var(--txt); font-size: 1.0625rem; font-weight: 600; line-height: 1.35; }
+.hc-est { display: block; margin-bottom: 2px; color: var(--naranja-txt); font-size: 0.875rem; }
+.hc-pie { margin-top: 2px; font-size: 0.8125rem; }
+.hc-pie[hidden] { display: none; }
+.hc-mas[hidden] { display: none; }
+.hc-mas { margin-top: 2px; }
+.hc-lineas { display: grid; gap: 3px; padding-bottom: 6px; }
+.hc-lineas > span { margin: 0; }

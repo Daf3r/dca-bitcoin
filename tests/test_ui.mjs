@@ -3295,6 +3295,7 @@ try {
       await h.p.keyboard.press('a'); await h.p.waitForTimeout(600);
       ok(await h.p.locator('#h-ruta').isHidden(), '16B fantasma: sin sats escritos no hay regla');
       await h.p.fill('#h-sats', '2500000'); await h.p.waitForTimeout(600);
+      await h.p.evaluate(() => { document.getElementById('h-cambia').open = true; }); // en el teléfono va plegado bajo «Qué cambia con esta compra» (campamento 18)
       ok(await h.p.locator('#h-ruta').isVisible() && /Quedarías al \d+ % del camino a |Con esto llegarías a /.test(await h.p.textContent('#hoja-calc')), '16B fantasma: con sats escritos sale la regla y la frase');
       const pq = await h.p.evaluate(() => { const r = document.getElementById('h-ruta'); return [Number(r.style.getPropertyValue('--p')), Number(r.style.getPropertyValue('--q'))]; });
       ok(pq[1] > pq[0], '16B fantasma: el fantasma queda más adelante que tú');

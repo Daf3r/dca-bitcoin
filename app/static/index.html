@@ -457,11 +457,18 @@
       </label>
     </div>
     <label class="h-sats"><span id="h-sats-l">Sats que recibiste</span>
-      <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hoja-calc">
+      <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hc-uno hc-pie">
     </label>
     <button type="button" class="enlace h-habitual" id="h-habitual" hidden></button>
-    <div class="h-ruta" id="h-ruta" hidden aria-hidden="true"><span class="hr-pista"><i class="hr-hecho"></i><i class="hr-yo"></i><i class="hr-fantasma"></i></span></div>
-    <p class="hoja-calc" id="hoja-calc" aria-live="polite"></p>
+    <!-- Una respuesta (campamento 18): los dólares y cómo queda el saldo, en un renglón. El resto (la regla de la etapa con el «Tú» fantasma,
+         el costo promedio y el precio usado) va bajo «Qué cambia con esta compra»: cerrado en el teléfono, abierto en pantallas anchas, y se recuerda. -->
+    <div class="hoja-calc" id="hoja-calc"><p class="hc-uno" id="hc-uno" aria-live="polite"></p><p class="hc-pie" id="hc-pie" hidden></p>
+      <details class="h-avanzado hc-mas" id="h-cambia" hidden>
+        <summary>Qué cambia con esta compra</summary>
+        <div class="h-ruta" id="h-ruta" hidden aria-hidden="true"><span class="hr-pista"><i class="hr-hecho"></i><i class="hr-yo"></i><i class="hr-fantasma"></i></span></div>
+        <p class="hc-lineas" id="hc-lineas"></p>
+      </details>
+    </div>
     <p class="hoja-error" id="hoja-error" role="alert"></p>
     <!-- Fecha (campamento 18): casi siempre es hoy o ayer; «Otro día» enseña el calendario. Debajo, la fecha escrita como aquí. -->
     <div class="h-fecha" id="h-fecha-caja">
