@@ -7,7 +7,10 @@ quincenal), racha, «te toca comprar», etapas, constancia y el titular (sin cif
 from __future__ import annotations
 
 import math
+from collections.abc import Iterator
 from datetime import date, datetime, timedelta, timezone
+from decimal import ROUND_HALF_UP, Decimal
+from itertools import takewhile
 from typing import Any
 
 # El Salvador no usa horario de verano: un desfase fijo evita depender de la base de zonas horarias del sistema.
@@ -92,18 +95,55 @@ def texto_recordatorio(t: dict[str, Any]) -> str:
 
 
 # ------------------------------------------------------------------ etapas y constancia
-def etapas_hasta(tope: int) -> list[int]:
-    """Etapas (1, 2.5 y 5 de cada potencia de 10 desde 100k) hasta `tope` sats, como `lib.etapasHasta`."""
-    out: list[int] = []
-    d = 10**5
-    while d <= tope:
-        out += [m for m in (d, d * 5 // 2, d * 5) if m <= tope]
+# La escalera de etapas (campamento 21, «etapas más cercanas»), la misma que `lib.js`: 100k y después pasos iguales entre las etapas de
+# siempre (2.5 y 5 de cada potencia): cada 250k hasta 2.5M, cada 500k hasta 5M, cada 1M hasta 10M, y así ×10. Aritmética entera.
+ETAPAS_INICIO = (100_000, 250_000, 500_000, 750_000)
+ETAPAS_CUARTOS = (4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36)  # de cada potencia d ≥ 1M, en cuartos de d
+
+
+def escalera() -> Iterator[int]:
+    yield from ETAPAS_INICIO
+    d = 10**6
+    while d <= 10**15:
+        for k in ETAPAS_CUARTOS:
+            yield d // 4 * k
         d *= 10
-    return out
+
+
+def etapas_hasta(tope: int) -> list[int]:
+    """Las etapas hasta `tope` sats, como `lib.etapasHasta`."""
+    return list(takewhile(lambda m: m <= tope, escalera()))
+
+
+def etapa_siguiente(sats: int) -> int:
+    """`lib.etapaSiguiente`: la primera etapa por encima del saldo."""
+    return next(m for m in escalera() if m > sats)
 
 
 def etapas_cruzadas(desde: int, hasta: int) -> list[int]:
     return [m for m in etapas_hasta(max(hasta, 10**5)) if desde < m <= hasta] if hasta > desde else []
+
+
+def rango_etapa(m: int) -> str:
+    """`lib.rangoEtapa`: campamento (potencia de 10) · principal (2.5 y 5 de cada potencia) · intermedia."""
+    d = 10**5
+    while d * 10 <= m:
+        d *= 10
+    if m == d:
+        return "campamento"
+    return "principal" if m * 2 == d * 5 or m == d * 5 else "intermedia"
+
+
+_PESO_RANGO = {"intermedia": 0, "principal": 1, "campamento": 2}
+
+
+def etapa_destacada(lista: list[int]) -> int | None:
+    """`lib.etapaDestacada`: la de más rango y, a igual rango, la más alta."""
+    return max(lista, key=lambda m: (_PESO_RANGO[rango_etapa(m)], m), default=None)
+
+
+def etapa_celebrada(desde: int, hasta: int) -> int | None:
+    return etapa_destacada(etapas_cruzadas(desde, hasta))
 
 
 def es_hito_grande(m: int) -> bool:
@@ -111,7 +151,10 @@ def es_hito_grande(m: int) -> bool:
 
 
 def _num(n: float) -> str:
-    return f"{int(n):,}" if float(n).is_integer() else f"{n:.1f}"
+    """Hasta dos decimales sin ceros de más (2.5, 1.25), redondeando como `toFixed` de JavaScript."""
+    if float(n).is_integer():
+        return f"{int(n):,}"
+    return str(Decimal(n).quantize(Decimal("0.01"), ROUND_HALF_UP)).rstrip("0").rstrip(".")
 
 
 def nombre_hito(m: int) -> str:
@@ -177,16 +220,6 @@ def meta_siguiente(sats: int) -> int:
     while m <= sats:
         m *= 10
     return m
-
-
-def etapa_siguiente(sats: int) -> int:
-    """`lib.etapaSiguiente`: la primera etapa (1, 2.5 o 5 de cada potencia de 10 desde 100k) por encima del saldo."""
-    d = 10**5
-    while True:
-        for m in (d, d * 5 // 2, d * 5):
-            if m > sats:
-                return m
-        d *= 10
 
 
 def clase_diario(movs: list[tuple[str, int, str, int]], hoy: date) -> str | None:

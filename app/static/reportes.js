@@ -1,4 +1,4 @@
-import { aFecha, semanasDetalle, caidaGrande, entero, satsCorto, equilibrio, fechaLarga, hoyISO, nombreHito, nombreHitoMeses, pct, reposicion, textoMeses, tocaComprar, ubicacionSats, usd, usd0, usdSigno } from './lib.js';
+import { aFecha, caminoParaLeer, semanasDetalle, caidaGrande, entero, satsCorto, equilibrio, fechaLarga, hoyISO, nombreHito, nombreHitoMeses, pct, reposicion, textoMeses, tocaComprar, ubicacionSats, usd, usd0, usdSigno } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { dual, pegado, pegarHtml } from './cifras.js';
 import { $, R, S, esAdmin, vozLibro } from './estado.js';
@@ -28,7 +28,8 @@ export function pintarReportes() {
   if (R.nCompras < 3) { $('rep-anios').hidden = true; $('rep-ganancia').hidden = true; return; }
   pintarGanancia();
   const lb = vozLibro(); // a quien solo mira se le habla del libro, no de «ti» (campamento 17; segunda pasada en el 20)
-  $('hitos').innerHTML = R.camino.map((h) => {
+  // Campamentos y etapas principales, más las intermedias del tramo en curso (campamento 21: así la lista no crece sin fin).
+  $('hitos').innerHTML = caminoParaLeer(R.camino).camino.map((h) => {
     const estado = h.fecha ? 'hecho' : h.m === R.etapa ? 'siguiente' : 'lejos';
     const detalle = h.fecha ? `${fechaLarga(h.fecha)} · ${textoMeses(h.meses)}`
       : estado === 'siguiente' ? (R.proyeccion ? `faltan ${entero(h.m - R.sats)} sats · ${lb ? 'al ritmo del libro' : 'a tu ritmo'}, en ${plazo(R.proyeccion)}` : `faltan ${entero(h.m - R.sats)} sats`)

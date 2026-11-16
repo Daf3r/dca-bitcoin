@@ -1,4 +1,4 @@
-import { aFecha, costoVsPromedio, etapaSiguiente, etapasHasta, entero, fechaLarga, hoyISO, masMovieron, numCorto, pct, satsPorDolar, serieCostoPromedio, serieGrafico, serieSatsAcum, serieSatsPorDolar, serieValor, usd0, usdSigno } from './lib.js';
+import { aFecha, costoVsPromedio, etapaSiguiente, etapasHasta, entero, rangoEtapa, fechaLarga, hoyISO, masMovieron, numCorto, pct, satsPorDolar, serieCostoPromedio, serieGrafico, serieSatsAcum, serieSatsPorDolar, serieValor, usd0, usdSigno } from './lib.js';
 import { dibujarGrafico, instalarLectura } from './grafico.js';
 import { dibujarValor, instalarLecturaValor } from './valor.js';
 import { dibujarEscalera, instalarEscalera } from './escalera.js';
@@ -184,7 +184,8 @@ function pintarSatsAcum() {
   anchoSats = h.clientWidth;
   const lb = vozLibro();
   dibujarEscalera(h, $('s-lectura'), $('s-sr'), {
-    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, perfil: { etapas: [...etapasHasta(etapaSiguiente(R.sats))], rotulo: lb ? 'Vamos aquí' : 'Tú' }, fmtEje: (v) => `${numCorto(v)} sats`,
+    // El perfil rotula las etapas con sello y la siguiente (campamento 21: las intermedias de antes amontonarían el eje).
+    puntos: serie.map((p) => ({ ...p, v: p.sats })), escalon: true, desdeCero: true, perfil: { etapas: etapasHasta(etapaSiguiente(R.sats)).filter((m, i, a) => rangoEtapa(m) !== 'intermedia' || i === a.length - 1), rotulo: lb ? 'Vamos aquí' : 'Tú' }, fmtEje: (v) => `${numCorto(v)} sats`,
     defecto: lb ? `Hoy el libro tiene <b>${entero(R.sats)} sats</b>.` : `Hoy tienes <b>${entero(R.sats)} sats</b>.`,
     texto: (p) => (p.hoy ? `Hoy · <b>${entero(p.sats)} sats</b>` : `${fechaLarga(p.fecha)} · ${p.delta >= 0 ? '+' : '−'}${entero(Math.abs(p.delta))} sats · <b>${entero(p.sats)}</b> en total${p.tipo === 'venta' ? ' (venta o gasto)' : ''}`),
     aria: lb ? 'Los sats del libro, acumulados con cada compra. Usa las flechas para recorrerlo.' : 'Tus sats acumulados con cada compra. Usa las flechas para recorrerlo.',

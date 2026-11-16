@@ -446,6 +446,38 @@ try {
       await auditar(p, `un punto por mes, con un mes fijado ${esquema}`);
       await ctx.close();
     }
+    { // campamento 21: «Próxima etapa» con la escalerita del tramo (dueño y lectora), la tarjeta ligera de una etapa intermedia y «Tu
+      // historia» con las etapas intermedias juntas y un tramo abierto (libro largo)
+      const abrir = async (srv, cuenta, extra = []) => {
+        const ctx = await navegador.newContext({ ...devices['iPhone 13'], colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript(([h, ex]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ex) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, [esquema === 'light' ? 12 : 22, extra]);
+        await entrar(p, srv.url, cuenta);
+        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+        return { ctx, p };
+      };
+      let { ctx, p } = await abrir(anio, ADMIN, [['libro.efectos', 'esenciales']]);
+      await p.locator('#t-pasos').scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
+      await auditar(p, `«Próxima etapa» con su tramo (dueño) ${esquema}`);
+      await p.evaluate(() => window.scrollTo(0, 0));
+      await p.click('#cuenta-btn'); await p.click('#dc-sistema-btn'); await p.waitForTimeout(400);
+      await p.click('[data-previa="paso"]');
+      await p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 }); await p.waitForTimeout(500);
+      await auditar(p, `celebración ligera de una etapa intermedia ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, LECTOR));
+      await p.locator('#t-pasos').scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
+      await auditar(p, `«Próxima etapa» con su tramo (lectora) ${esquema}`);
+      await ctx.close();
+      const largo = await servidor('largo');
+      try {
+        ({ ctx, p } = await abrir(largo, ADMIN, [['libro.pestana', 'historia']]));
+        await p.evaluate(() => { document.getElementById('dh-sec-linea').open = true; document.querySelector('#dh-linea .h-pasos details')?.setAttribute('open', ''); }); await p.waitForTimeout(300);
+        await p.locator('#dh-linea .h-pasos').first().scrollIntoViewIfNeeded();
+        await auditar(p, `historia con las etapas intermedias juntas y un tramo abierto ${esquema}`);
+        await ctx.close();
+      } finally { largo.parar(); }
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

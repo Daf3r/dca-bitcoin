@@ -182,6 +182,8 @@
     <p class="tr-v"><b id="t-meta"></b><span id="t-falta"></span></p>
     <p class="tr-ritmo" id="t-ritmo"></p>
     <div class="rueda tr-anillo" id="t-anillo" role="img" aria-label=""><svg id="t-anillo-svg"></svg><span class="an-centro" id="t-pct"></span></div>
+    <!-- El tramo en curso (campamento 21): las etapas entre la última con sello y la siguiente, como una escalerita. pintar.js la pinta. -->
+    <div class="tr-pasos" id="t-pasos" hidden><span class="tr-esc" id="t-esc" aria-hidden="true"></span><p class="tr-pasos-t" id="t-pasos-t"></p></div>
   </section>
 
   <!-- El Diario del Libro (campamento 15A): la portada de lo que pasó, para todos. diario.js la pinta. Va después de «Próxima etapa» (campamento 17). -->
@@ -685,7 +687,8 @@
     <p class="dc-nota">La animación de una compra, una etapa o un hito, con datos de prueba. No guarda nada ni queda en el Historial.</p>
     <div class="dc-previa" id="dc-previa" role="group" aria-labelledby="dc-previa-t">
       <button type="button" data-previa="compra">Compra</button>
-      <button type="button" data-previa="etapa">Etapa</button>
+      <button type="button" data-previa="paso">Etapa</button>
+      <button type="button" data-previa="etapa">Etapa con sello</button>
       <button type="button" data-previa="hito">Hito grande</button>
       <button type="button" data-previa="epico">1 BTC</button>
       <button type="button" data-previa="constancia">Constancia</button>

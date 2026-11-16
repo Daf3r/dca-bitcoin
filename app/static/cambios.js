@@ -7,13 +7,22 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-x', fecha: '2026-11-26',
+    items: [
+      'Las etapas van más juntas: después de 1M hay una cada 250 mil sats hasta 2.5M, luego cada medio millón hasta 5M y cada millón hasta 10M. Las de siempre (250k, 500k, 2.5M, 5M…) siguen ahí.',
+      '«Próxima etapa» enseña el tramo en el que vas, como una escalerita: cuántas etapas tiene y por cuál vas.',
+      'Cruzar una etapa pequeña se celebra en corto: su marca se enciende en el sendero y sale una tarjeta breve. Las de siempre conservan su bandera, su sello de lacre y el cometa.',
+      'En «Tu historia» las etapas pequeñas de los tramos que ya pasaste van juntas en un renglón que se abre al tocarlo; las del tramo de ahora salen sueltas.',
+    ],
+  },
+  {
     id: '2026-11-w', fecha: '2026-11-25',
     items: [
       'La montaña se ve de una pieza: cada campamento está en un rellano tallado en la ladera, con su roca detrás y su sombra, y su nombre se apoya en esa misma repisa.',
       'El camino también va tallado en la roca: se nota el corte por arriba y el borde por abajo.',
       'La cumbre cambió: la bandera de la meta está en un escalón de nieve, resguardada por la roca, y ya no parece puesta encima.',
       'La nieve sigue los pliegues de la montaña y baja en lenguas desiguales; su lado en sombra toma el color del cielo.',
-      'Las marcas de las etapas en el camino son más finas y nunca se amontonan: la siguiente siempre se ve, en naranja.',
+      'En el camino, las etapas pequeñas son una muesca fina y las de siempre lo cruzan de lado a lado; la siguiente siempre se ve, en naranja.',
     ],
   },
   {

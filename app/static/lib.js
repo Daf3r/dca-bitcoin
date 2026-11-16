@@ -86,7 +86,8 @@ export const metaSiguiente = (sats) => {
   return m;
 };
 
-const num = (n) => (Number.isInteger(n) ? entero(n) : n.toFixed(1));
+// Hasta dos decimales y sin ceros de más: 2.5M, 1.25M, 2.25 BTC (las etapas cercanas del campamento 21 tienen cuartos).
+const num = (n) => (Number.isInteger(n) ? entero(n) : n.toFixed(2).replace(/0+$/, '').replace(/\.$/, ''));
 export const nombreHito = (m) => (m >= 1e8 ? `${num(m / 1e8)} BTC` : m >= 1e6 ? `${num(m / 1e6)}M` : `${num(m / 1e3)}k`);
 
 /**
@@ -113,18 +114,90 @@ export const cruzo1Btc = (antes, despues) => antes < 1e8 && despues >= 1e8;
 /** Fracción iluminada de la luna (0 nueva, 1 llena) a partir de su fase (fracción del ciclo, 0–1). */
 export const iluminacionLunar = (fase) => (1 - Math.cos(2 * Math.PI * fase)) / 2;
 
-// Etapas: además de los hitos grandes (potencias de 10, los campamentos de la montaña), metas intermedias
-// a 2.5 y 5 de cada potencia (100k, 250k, 500k, 1M, 2.5M, 5M, 10M…) para sentir el avance cada pocas compras.
-const PASOS = [1, 2.5, 5];
+// Etapas (campamento 21, «etapas más cercanas»): además de los campamentos (potencias de 10, las banderas de la montaña), metas
+// intermedias. Las «de siempre» (2.5 y 5 de cada potencia: 250k, 500k, 2.5M, 5M…) siguen, y cada tramo entre ellas se parte en pasos
+// iguales: 100k, después cada 250k hasta 2.5M, cada 500k hasta 5M, cada 1M hasta 10M, y así ×10 (cada 2.5M hasta 25M, cada 5M hasta
+// 50M, cada 10M hasta 1 BTC…). Solo depende de los sats: es la misma escalera para cualquiera. `app/ritmo.py` tiene la misma tabla.
+const ETAPAS_INICIO = [1e5, 2.5e5, 5e5, 7.5e5];
+// De cada potencia d ≥ 1M, en cuartos de d: 1, 1.25 … 2.25 (cada cuarto), 2.5 … 4.5 (cada medio) y 5 … 9 (cada entero).
+const ETAPAS_CUARTOS = [4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36];
+/** La escalera de etapas, de menor a mayor (hasta 10^16 sats: de sobra). */
+function* escalera() {
+  yield* ETAPAS_INICIO;
+  for (let d = 1e6; d <= 1e15; d *= 10) for (const k of ETAPAS_CUARTOS) yield (d / 4) * k;
+}
 export function etapasHasta(tope) {
   const out = [];
-  for (let d = 1e5; d <= tope; d *= 10) for (const k of PASOS) if (d * k <= tope) out.push(d * k);
+  for (const m of escalera()) { if (m > tope) break; out.push(m); }
   return out;
 }
-export const etapaSiguiente = (sats) => { for (let d = 1e5; ; d *= 10) for (const k of PASOS) if (d * k > sats) return d * k; };
-export const etapaAnterior = (sats) => { let prev = 0; for (let d = 1e5; ; d *= 10) for (const k of PASOS) { if (d * k > sats) return prev; prev = d * k; } };
+export const etapaSiguiente = (sats) => { for (const m of escalera()) if (m > sats) return m; return Number.POSITIVE_INFINITY; };
+export const etapaAnterior = (sats) => { let prev = 0; for (const m of escalera()) { if (m > sats) break; prev = m; } return prev; };
 /** Etapas que se cruzan al subir de `desde` a `hasta` sats (vacío si no se sube). */
 export const etapasCruzadas = (desde, hasta) => (hasta > desde ? etapasHasta(Math.max(hasta, 1e5)).filter((m) => m > desde && m <= hasta) : []);
+/**
+ * El rango de una etapa: `campamento` (potencia de 10: una bandera de la montaña), `principal` (las de siempre, 2.5 y 5 de cada potencia:
+ * llevan sello de lacre) o `intermedia` (los pasos entre ellas: se celebran en ligero y no llevan sello).
+ */
+export function rangoEtapa(m) {
+  if (!Number.isFinite(m)) return 'campamento';
+  let d = 1e5;
+  while (d * 10 <= m) d *= 10;
+  if (m === d) return 'campamento';
+  return m * 2 === d * 5 || m === d * 5 ? 'principal' : 'intermedia';
+}
+const PESO_RANGO = { intermedia: 0, principal: 1, campamento: 2 };
+/** De varias etapas, la que se destaca: la de más rango (campamento, principal, intermedia) y, a igual rango, la más alta. */
+export const etapaDestacada = (lista) => (lista ?? []).reduce((a, m) => (a == null || PESO_RANGO[rangoEtapa(m)] > PESO_RANGO[rangoEtapa(a)] || (rangoEtapa(m) === rangoEtapa(a) && m > a) ? m : a), undefined);
+/** La etapa que celebra una subida de `antes` a `despues` (la destacada de las que cruzó), o undefined. */
+export const etapaCelebrada = (antes, despues) => etapaDestacada(etapasCruzadas(antes, despues));
+/** La última etapa con sello (principal o campamento) a la que llega `sats`, o 0. */
+export const etapaConSelloAnterior = (sats) => etapasHasta(sats).filter((m) => rangoEtapa(m) !== 'intermedia').at(-1) ?? 0;
+/**
+ * El tramo en curso (campamento 21): de la última etapa con sello (`desde`, 0 al empezar) a la siguiente (`hasta`), con las etapas que lo
+ * forman (`pasos`, la última es `hasta`) y cuántas ya alcanza el saldo (`hechas`). Es la escalerita de «Próxima etapa»: 1M → 2.5M en seis.
+ */
+export function tramoEtapas(sats) {
+  const desde = etapaConSelloAnterior(sats), pasos = [];
+  for (let m = etapaSiguiente(desde); Number.isFinite(m); m = etapaSiguiente(m)) { pasos.push(m); if (rangoEtapa(m) !== 'intermedia') break; }
+  return { desde, hasta: pasos.at(-1), pasos, hechas: pasos.filter((m) => m <= sats).length };
+}
+/**
+ * Qué marcas de etapa caben en el sendero (campamento 21; «Para el arte de la montaña» en CLAUDE.md). Con las etapas más juntas y la
+ * escala logarítmica, arriba quedarían pegadas. `marcas` = [{ m, p: {x, y} }] (las etapas que no son campamento, en orden), `campos` =
+ * [{ p }] (los campamentos, que se respetan). Se eligen por prioridad —la siguiente etapa siempre, luego las principales, luego las
+ * intermedias de la más cercana al saldo a la más lejana; las intermedias, solo por encima del último campamento alcanzado— y se
+ * omite la que quede a menos de `min` px de otra ya elegida o a menos de
+ * `minCampo` px de un campamento (en línea recta: el sendero zigzaguea, y dos marcas lejanas en el trazo pueden quedar pegadas en la
+ * vuelta). Como mucho `tope`. Devuelve las elegidas en el orden de `marcas`.
+ */
+export function marcasDeEtapa(marcas, { sats = 0, campos = [], min = 18, minCampo = 22, tope = 20 } = {}) {
+  const sig = etapaSiguiente(sats);
+  // Las intermedias solo en el tramo que se está subiendo (desde el último campamento alcanzado): lo de abajo queda como antes.
+  let piso = 0;
+  for (let d = 1e5; d <= sats; d *= 10) piso = d;
+  marcas = marcas.filter((e) => rangoEtapa(e.m) !== 'intermedia' || e.m > piso);
+  const peso = (e) => (e.m === sig ? 0 : rangoEtapa(e.m) === 'principal' ? 1 : 2);
+  const lejos = (e) => Math.abs(Math.log(e.m / Math.max(1, sats)));
+  const orden = [...marcas].sort((a, b) => peso(a) - peso(b) || lejos(a) - lejos(b));
+  const elegidas = new Set();
+  const cerca = (a, b, d) => Math.hypot(a.x - b.x, a.y - b.y) < d;
+  for (const e of orden) {
+    if (elegidas.size >= tope) break;
+    if (e.m !== sig && ([...elegidas].some((o) => cerca(o.p, e.p, min)) || campos.some((c) => cerca(c.p, e.p, minCampo)))) continue;
+    elegidas.add(e);
+  }
+  return marcas.filter((e) => elegidas.has(e));
+}
+/**
+ * El camino «para leer» (reporte de etapas y «Tu historia»): los campamentos y las etapas principales siempre; de las intermedias, solo
+ * las del tramo en curso (después de la última principal o campamento alcanzado) y las que aún faltan. Las demás se cuentan en `ocultas`.
+ */
+export function caminoParaLeer(camino) {
+  const ultima = (camino ?? []).filter((h) => h.fecha && h.rango !== 'intermedia').at(-1)?.m ?? 0;
+  const ver = (h) => h.rango !== 'intermedia' || !h.fecha || h.m > ultima;
+  return { camino: (camino ?? []).filter(ver), ocultas: (camino ?? []).filter((h) => !ver(h)) };
+}
 
 /**
  * Qué campamentos dibujar. Cimas progresivas: la cumbre es la siguiente potencia de 10 (con 1.2M sats, 10M; al llegar, 100M…).
@@ -198,17 +271,34 @@ const metaTxt = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`);
  * «Tu historia» (idea 37): la línea de tiempo de cómo llegaste hasta aquí, de lo más viejo a lo más nuevo. Sale de datos que ya
  * existen: la primera compra, cada etapa y campamento con su fecha (`R.camino`), los hitos de constancia, tu mejor racha y las
  * compras extra (las hechas en caídas). De las extra se cuentan las `maxExtras` más recientes y el resto va en `extrasOcultas`.
+ * Las etapas intermedias de tramos ya cerrados van juntas, un evento `pasos` por tramo (con `pasos`, `desde` y `hasta`), y
+ * `etapasAgrupadas` dice cuántas son; las del tramo en curso son eventos `paso` sueltos (campamento 21).
  */
 export function historia(R, hoy = hoyISO(), { maxExtras = 8, libro = false } = {}) {
-  if (!R || !R.nCompras) return { eventos: [], extrasOcultas: 0 };
+  if (!R || !R.nCompras) return { eventos: [], extrasOcultas: 0, etapasAgrupadas: 0 };
   const ev = [];
   const compras = R.items.filter((c) => c.tipo !== 'venta');
   const p = compras[0];
   // `libro`: para quien solo mira se habla del libro, no de «ti» (campamento 20).
   ev.push({ fecha: p.fecha, clase: 'primera', orden: 0, titulo: libro ? 'La primera compra' : 'Tu primera compra', detalle: `${entero(p.sats)} sats${p.precio ? ` a ${usd0(p.precio)}` : ''}` });
-  for (const h of R.camino ?? []) {
+  // Campamentos y etapas principales, cada una en su renglón; las intermedias del tramo en curso también (son lo más reciente) y las
+  // de tramos ya terminados se juntan en un renglón plegable por tramo («5 etapas intermedias, entre 1M y 2.5M sats»; campamento 21).
+  const { camino: leer, ocultas } = caminoParaLeer(R.camino);
+  for (const h of leer) {
     if (!h.fecha) continue;
-    ev.push({ m: h.m, fecha: h.fecha, clase: h.mayor ? 'hito' : 'etapa', orden: 1, titulo: h.mayor ? `Campamento ${nombreHito(h.m)}` : `${libro ? 'El libro llegó' : 'Llegaste'} a ${metaTxt(h.m)}`, detalle: h.mayor ? `${libro ? 'El libro llegó' : 'Llegaste'} a ${metaTxt(h.m)}` : '' });
+    const llego = `${libro ? 'El libro llegó' : 'Llegaste'} a ${metaTxt(h.m)}`;
+    ev.push({ m: h.m, fecha: h.fecha, clase: h.mayor ? 'hito' : h.rango === 'intermedia' ? 'paso' : 'etapa', orden: 1, titulo: h.mayor ? `Campamento ${nombreHito(h.m)}` : llego, detalle: h.mayor ? llego : h.rango === 'intermedia' ? 'Etapa intermedia' : '' });
+  }
+  const tramos = new Map();
+  for (const h of ocultas) {
+    const desde = etapasHasta(h.m).filter((m) => rangoEtapa(m) !== 'intermedia').at(-1) ?? 0;
+    if (!tramos.has(desde)) tramos.set(desde, []);
+    tramos.get(desde).push({ m: h.m, fecha: h.fecha });
+  }
+  for (const [desde, pasos] of tramos) {
+    let hasta = desde;
+    do hasta = etapaSiguiente(hasta); while (rangoEtapa(hasta) === 'intermedia');
+    ev.push({ m: pasos.at(-1).m, fecha: pasos.at(-1).fecha, clase: 'pasos', orden: 0.9, titulo: `${pasos.length} ${pasos.length === 1 ? 'etapa intermedia' : 'etapas intermedias'}`, detalle: `Entre ${nombreHito(desde)} y ${metaTxt(hasta)}`, pasos, desde, hasta });
   }
   for (const h of HITOS_COMPRAS) if (h <= compras.length) ev.push({ fecha: compras[h - 1].fecha, clase: 'constancia', orden: 2, titulo: `${h} compras`, detalle: 'Constancia' });
   for (const m of HITOS_MESES) {
@@ -222,7 +312,7 @@ export function historia(R, hoy = hoyISO(), { maxExtras = 8, libro = false } = {
   for (const c of extras.slice(0, maxExtras)) ev.push({ fecha: c.fecha, clase: 'extra', orden: 5, titulo: 'Compra extra en una caída', detalle: `${entero(c.sats)} sats${c.precio ? ` a ${usd0(c.precio)}` : ''}${c.nota ? ` · ${c.nota}` : ''}` });
   ev.push({ fecha: hoy, clase: 'hoy', orden: 9, titulo: 'Hoy', detalle: `${entero(R.sats)} sats${R.valor != null ? ` · valen ${usd(R.valor)}` : ''}` });
   ev.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.orden - b.orden));
-  return { eventos: ev, extrasOcultas: Math.max(0, extras.length - maxExtras) };
+  return { eventos: ev, extrasOcultas: Math.max(0, extras.length - maxExtras), etapasAgrupadas: ocultas.length };
 }
 
 /**
@@ -431,12 +521,13 @@ export function resumen(compras, precio, hoy = hoyISO()) {
     return { m, fecha: c?.fecha ?? null, meses: c ? mesesEntre(items[0].fecha, c.fecha) : null };
   });
 
-  // Camino que se enseña en «Campamentos»: las etapas hasta la siguiente (con su fecha si ya se cruzaron)
-  // y, más arriba, los hitos grandes que faltan hasta la cumbre.
+  // Camino que se enseña en «Etapas» y en «Tu historia»: las etapas hasta la siguiente (con su fecha si ya se cruzaron: la del primer
+  // movimiento con el que el saldo llegó) y, más arriba, los hitos grandes que faltan hasta la cumbre. `mayor` = campamento (potencia de
+  // 10); `rango` = campamento · principal · intermedia (`rangoEtapa`).
   const cima = Math.max(1e8, meta);
   const camino = [...new Set([...etapasHasta(etapa), ...hitosHasta(cima)])].sort((a, b) => a - b).map((m) => {
     const c = items.find((x) => x.satsAcum >= m);
-    return { m, mayor: hitosHasta(cima).includes(m), fecha: c?.fecha ?? null, meses: c ? mesesEntre(items[0].fecha, c.fecha) : null };
+    return { m, mayor: hitosHasta(cima).includes(m), rango: rangoEtapa(m), fecha: c?.fecha ?? null, meses: c ? mesesEntre(items[0].fecha, c.fecha) : null };
   });
 
   const limite = new Date(aFecha(hoy).getTime() - 182 * 864e5);
@@ -869,25 +960,6 @@ export function agruparPorMes(movs) {
   return grupos;
 }
 
-/** ¿Es una etapa «mayor» (2.5 o 5 de su potencia de 10)? En la montaña su marca pesa más que la de las demás etapas intermedias. */
-export function etapaMayor(m) {
-  if (!(m > 0)) return false;
-  const mant = m / 10 ** Math.floor(Math.log10(m) + 1e-9);
-  return Math.abs(mant - 2.5) < 1e-6 || Math.abs(mant - 5) < 1e-6;
-}
-
-/**
- * Qué marcas de etapa caben en el sendero de la montaña sin amontonarse. `marcas` son `{ m, l, mayor }` (`l` = a qué distancia del
- * inicio del sendero cae, en px). Entran por prioridad: la siguiente (`sig`) siempre; luego las mayores y luego las demás, de abajo
- * arriba, y solo si quedan a `hueco` px o más de todas las que ya entraron. Devuelve las que se dibujan (los mismos objetos).
- */
-export function marcasEtapa(marcas, sig, hueco = 11) {
-  const orden = [...marcas].sort((a, b) => Number(b.m === sig) - Number(a.m === sig) || Number(Boolean(b.mayor)) - Number(Boolean(a.mayor)) || a.m - b.m);
-  const vistas = [];
-  for (const x of orden) if (x.m === sig || vistas.every((o) => Math.abs(o.l - x.l) >= hueco)) vistas.push(x);
-  return vistas;
-}
-
 /**
  * Lo que dice la montaña a un lector de pantalla: dónde estás, cuántos campamentos pasaste, cuál es el siguiente y la cumbre.
  * `campos` son los campamentos que se ven en la escena (en sats) y `cima` la cumbre; `meta` es la siguiente etapa.
@@ -1225,10 +1297,11 @@ export const textoCertificado = (d) => `Certificado de altitud${d.nombre ? ` de 
   + `${d.nCompras ? `, de ${d.nCompras} ${d.nCompras === 1 ? 'compra' : 'compras'}` : ''}.`;
 
 /**
- * Los sellos de lacre: uno por cada etapa que ya cruzaste (con su fecha); nunca los que faltan. `nombre` es la cifra del sello.
+ * Los sellos de lacre: uno por cada campamento y etapa principal que ya cruzaste (con su fecha); nunca los que faltan. Las etapas
+ * intermedias (campamento 21) no llevan sello: así cada sello sigue valiendo lo que costó. `nombre` es la cifra del sello.
  */
 export function sellos(R) {
-  return (R.camino ?? []).filter((h) => h.fecha).map((h) => ({ m: h.m, nombre: nombreHito(h.m), grande: Boolean(h.mayor), fecha: h.fecha }));
+  return (R.camino ?? []).filter((h) => h.fecha && rangoEtapa(h.m) !== 'intermedia').map((h) => ({ m: h.m, nombre: nombreHito(h.m), grande: Boolean(h.mayor), fecha: h.fecha }));
 }
 export const textoSello = (s) => `Sello de ${s.m >= 1e8 ? s.nombre : `${s.nombre} sats`}, cruzado el ${fechaLarga(s.fecha)}`;
 
@@ -1346,11 +1419,14 @@ export function textoApertura(c) {
   if (c.abre_fecha) return `Se abre el ${fechaLarga(c.abre_fecha)}`;
   return `Se abre al llegar a ${c.abre_sats >= 1e8 ? nombreHito(c.abre_sats) : `${nombreHito(c.abre_sats)} sats`}`;
 }
-/** Las próximas etapas por encima de tu saldo (para elegir a cuál se abre una carta). */
+/**
+ * Las próximas etapas por encima de tu saldo (para elegir a cuál se abre una carta): las dos siguientes, sean del rango que sean, y
+ * después solo principales y campamentos, para que una carta pueda esperar a 10M aunque las etapas ahora vayan más juntas.
+ */
 export function etapasFuturas(sats, n = 6) {
   const out = [];
   let m = etapaSiguiente(sats);
-  while (out.length < n) { out.push(m); m = etapaSiguiente(m); }
+  while (out.length < n && Number.isFinite(m)) { if (out.length < 2 || rangoEtapa(m) !== 'intermedia') out.push(m); m = etapaSiguiente(m); }
   return out;
 }
 /** La fecha de mañana (la primera en que puede abrirse una carta). */
@@ -1394,7 +1470,9 @@ export function diario(R, hoy = hoyISO()) {
   const desde = restarDias(hoy, 7), desdeEtapa = restarDias(hoy, 14);
   const recientes = compras.filter((c) => c.fecha > desde && c.fecha <= hoy);
   const subidos = recientes.reduce((a, c) => a + c.sats, 0);
-  const etapaReciente = (R.camino ?? []).filter((h) => h.fecha && h.fecha > desdeEtapa && h.fecha <= hoy).at(-1);
+  // Si en esos 14 días se cruzaron varias, el titular lleva la destacada (un campamento o una principal antes que una intermedia).
+  const etapasRecientes = (R.camino ?? []).filter((h) => h.fecha && h.fecha > desdeEtapa && h.fecha <= hoy);
+  const etapaReciente = etapasRecientes.find((h) => h.m === etapaDestacada(etapasRecientes.map((x) => x.m)));
   // `clase` dice de qué fue la semana (etapa · una · varias · tranquila): el aviso del domingo la usa sin cifras (`AVISO_DIARIO`).
   let titular, sub, clase;
   if (etapaReciente) { clase = 'etapa'; titular = `Llegamos a ${metaTxt(etapaReciente.m)}`; sub = `La montaña ya cuenta ${entero(R.sats)} sats. El ${fechaLarga(etapaReciente.fecha)} quedó marcado en el sendero.`; }
@@ -1554,7 +1632,7 @@ export function medianocheSV(ahoraMs) {
 
 /** Lo que dice la tele cuando se anota una compra (idea 5): `antes`/`despues` son los saldos; `sats` lo que se compró. */
 export function tarjetaFiesta(antes, despues, sats) {
-  const m = etapasCruzadas(antes, despues).at(-1);
+  const m = etapaCelebrada(antes, despues);
   if (m) {
     const grande = m >= 1e6 && Math.abs(Math.log10(m) - Math.round(Math.log10(m))) < 1e-9;
     return { titulo: grande ? 'Nuevo hito' : 'Nueva etapa', texto: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, sub: `+${entero(sats)} sats`, grande };
@@ -1591,7 +1669,7 @@ export function notaDeHaceUnAnio(items, hoy = hoyISO()) {
  * El comprobante de una compra o de una venta (idea 17): lo que dice su ficha, armado con lo que ya se sabe. `items` son los de
  * `resumen` (en orden y con `satsAcum`). `numero` cuenta las compras (o las ventas) por fecha; `antes` y `despues` son la altitud (el
  * saldo) al anotarla; `p` y `q` (0 a 1) la sitúan en el tramo entre la etapa anterior y la siguiente (`meta`) y `etapa` es la etapa
- * que cruzó, si cruzó alguna (la más alta). `sello` es el de su semana y `primeraDeSemana` dice si nació con ella. `hoy` (solo compras
+ * que cruzó, si cruzó alguna (la destacada: `etapaDestacada`). `sello` es el de su semana y `primeraDeSemana` dice si nació con ella. `hoy` (solo compras
  * y con precio) es lo que valen hoy esos sats y cuánto cambió el precio desde entonces: informa, no recomienda. Sin el movimiento, null.
  */
 export function comprobante(items, id, { precio = null, hoy = hoyISO() } = {}) {
@@ -1606,7 +1684,7 @@ export function comprobante(items, id, { precio = null, hoy = hoyISO() } = {}) {
   const primera = sello ? pares.find((x) => x.fecha >= sello.desde && x.fecha <= sello.hasta) : null;
   return {
     id: c.id, tipo: venta ? 'venta' : 'compra', numero: pares.indexOf(c) + 1, total: pares.length, fecha: c.fecha, sats: c.sats, monto: c.monto, precio: c.precio,
-    antes, despues, p: en(antes), q: en(despues), meta: b, etapa: venta ? null : etapasCruzadas(antes, despues).at(-1) ?? null,
+    antes, despues, p: en(antes), q: en(despues), meta: b, etapa: venta ? null : etapaCelebrada(antes, despues) ?? null,
     sello, primeraDeSemana: Boolean(primera && primera.id === c.id),
     hoy: !venta && precio && c.precio ? { valor: (c.sats * precio) / 1e8, variacion: (precio / c.precio - 1) * 100 } : null,
     realizada: venta ? c.realizada ?? null : null, extra: !venta && Boolean(c.extra), nota: c.nota ?? '', etiquetas: c.etiquetas ?? [], txid: c.txid ?? '',

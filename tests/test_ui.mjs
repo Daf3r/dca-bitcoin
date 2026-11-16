@@ -3987,7 +3987,7 @@ try {
           aros: document.querySelectorAll('#m-campos circle[stroke], #m-campos .humo:not([fill])').length,
           terrazas: { nodos: document.querySelectorAll('#m-terrazas *').length, recorte: document.getElementById('m-terrazas').getAttribute('clip-path'), rellanos: (document.querySelector('.tz-suelo').getAttribute('d').match(/M/g) || []).length, cortes: (document.querySelector('.tz-corte').getAttribute('d').match(/M/g) || []).length, repisas: (document.getElementById('m-repisa').getAttribute('d') || '').length > 0 },
           rotulos: [...document.querySelectorAll('#m-etiquetas .campo-txt:not(.etapa-txt)')].map((t) => { const r = t.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; }),
-          etapas: [...document.querySelectorAll('#m-etapas > *')].map((e) => e.tagName.toLowerCase()).join(), camino: [document.querySelectorAll('.sendero-corte path').length, document.querySelectorAll('.sendero-talud path').length, document.querySelectorAll('.sendero-tierra path').length],
+          etapas: [...document.querySelectorAll('#m-etapas .etapa')].map((g) => { const l = g.querySelector('.etapa-tick'); return [g.classList.contains('menor') && !g.classList.contains('sig'), Math.hypot(l.x2.baseVal.value - l.x1.baseVal.value, l.y2.baseVal.value - l.y1.baseVal.value), getComputedStyle(g.querySelector('.etapa-sombra')).display]; }), camino: [document.querySelectorAll('.sendero-corte path').length, document.querySelectorAll('.sendero-talud path').length, document.querySelectorAll('.sendero-tierra path').length],
           bandera2: (() => { const svg = document.querySelector('.montana svg'), inv = svg.getScreenCTM().inverse(), b = cima.querySelector('.banderin').getBoundingClientRect(), monte = document.querySelector('.monte');
             return [[b.left + 1, b.top + b.height / 2], [b.right - 2.5, b.top + b.height / 2], [b.left + b.width / 2, b.top + 2]].every(([x, y]) => monte.isPointInFill(new DOMPoint(x, y).matrixTransform(inv))); })() };
       });
@@ -4009,7 +4009,8 @@ try {
       ok(a.rotulos.length === 4 && pegados(a).every((d) => d <= 36), `montaña asentada: cada rótulo queda pegado a la piedra de su campamento (${pegados(a).map(Math.round)} px)`);
       ok(a.terrazas.repisas, 'montaña asentada: la repisa se alarga bajo el rótulo que se apoya en ella');
       ok(a.bandera2, 'montaña asentada: la bandera de la meta tiene montaña detrás (no asoma contra el cielo)');
-      eq(a.etapas, 'path,path,path,path', 'montaña asentada: las marcas de etapa son cuatro trazos, haya las etapas que haya');
+      { const menores = a.etapas.filter((x) => x[0]), mayores = a.etapas.filter((x) => !x[0]);
+        ok(a.etapas.length > 0 && menores.every((x) => x[2] === 'none' && x[1] < 12) && mayores.every((x) => x[2] !== 'none'), `montaña asentada: las marcas intermedias son una muesca sin sombra; las principales llevan la suya (${menores.length} y ${mayores.length})`); }
       ok(a.camino[0] === a.camino[2] && a.camino[1] === a.camino[2] && a.camino[2] >= 5, `montaña asentada: el camino está tallado (corte arriba y talud abajo en cada tramo: ${a.camino})`);
       ok(hitos[0].alto < hitos[1].alto && hitos[1].alto < hitos[2].alto, `arte: cada campamento es más alto que el anterior (${hitos.map((c) => c.alto)})`);
       ok(hitos.every((c) => c.vidrio === 'rgb(255, 231, 174)' && c.halo > 0.8 && c.suelo > 0.4 && c.bano > 0.6), `arte: alcanzado = farol encendido, con halo, luz en el suelo y luz bajando por la piedra (${hitos[0].halo}, ${hitos[0].suelo})`);
@@ -4328,7 +4329,7 @@ try {
         eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas', 'cerrar'], '20·cuenta: «Administrar» y, al final, salir');
         ok(await a.p.locator('#dc-menu [data-previa]').count() === 0, '20·cuenta: la vista previa ya no está en el menú');
         await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(600);
-        ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 5 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus cinco botones');
+        ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 6 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus seis botones (campamento 21: etapa y etapa con sello)');
         ok(!/temporal/i.test(await a.p.textContent('#dc-sistema')), '20·cuenta: ya no se llama temporal');
         const alto = await a.p.evaluate(() => [...document.querySelectorAll('#dc-previa button')].every((b) => b.getBoundingClientRect().height >= 47.5));
         ok(alto, '20·cuenta: sus botones miden 48 px');
@@ -4587,6 +4588,155 @@ try {
       ok(!(await ver(t.p, '#pestanas')), '20·dock: la pantalla grande no lo enseña');
       await t.ctx.close();
     } finally { sDock.parar(); }
+  }
+
+  // ---------------------------------------------------------------- campamento 21: etapas más cercanas
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const conLocal = (pares) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    const ent = async (srv, cuenta, opts = {}, init = sinAviso) => {
+      const r = await entrar(navegador, srv, cuenta, opts, init);
+      for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); }
+      return r;
+    };
+    const ver = (p, sel) => p.locator(sel).first().isVisible();
+    const tuteo = /\b(tu|tus|te|ti|vas|llegas|llegaste|compraste)\b/i;
+    // Las marcas de etapa de la montaña: centro de cada una, si es fina, si es la siguiente y qué rótulos hay.
+    const marcas = (p) => p.evaluate(() => {
+      const m = [...document.querySelectorAll('#m-etapas .etapa')].map((g) => { const b = g.querySelector('.etapa-tick').getBoundingClientRect(); return { m: Number(g.dataset.m), x: b.x + b.width / 2, y: b.y + b.height / 2, fina: g.classList.contains('menor'), sig: g.classList.contains('sig'), oculta: g.getAttribute('visibility') === 'hidden' }; });
+      let dmin = Infinity;
+      for (let i = 0; i < m.length; i++) for (let j = i + 1; j < m.length; j++) dmin = Math.min(dmin, Math.hypot(m[i].x - m[j].x, m[i].y - m[j].y));
+      return { m, dmin, campos: document.querySelectorAll('#m-campos .campo').length, rotulos: [...document.querySelectorAll('#m-etiquetas text.campo-txt:not(.etapa-txt)')].map((t) => t.textContent), etiqueta: [...document.querySelectorAll('#m-etiquetas text.etapa-txt')].map((t) => t.textContent), sw: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+    });
+    const sAnio = await servidor('anio');
+    try {
+      // ---- «Próxima etapa»: la meta cercana y la escalerita del tramo
+      const a = await ent(sAnio, ADMIN, { hora: 22, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, conLocal([['libro.efectos', 'todos']]));
+      const tr = () => a.p.evaluate(() => ({ meta: document.getElementById('t-meta').textContent, aria: document.getElementById('t-anillo').getAttribute('aria-label'), pasos: !document.getElementById('t-pasos').hidden, n: document.querySelectorAll('#t-esc i').length, hechas: document.querySelectorAll('#t-esc i.hecha').length, sig: document.querySelectorAll('#t-esc i.sig').length, txt: document.getElementById('t-pasos-t').textContent, escAria: document.getElementById('t-esc').getAttribute('aria-hidden') }));
+      let t = await tr();
+      eq([t.meta, t.pasos, t.n, t.hechas, t.sig, t.txt, t.escAria], ['1.25M sats', true, 6, 0, 1, 'Etapa 1 de 6 del tramo de 1M a 2.5M sats', 'true'], `21·próxima: la meta cercana y su tramo (${JSON.stringify(t)})`);
+      ok(/del camino a 1\.25M sats$/.test(t.aria), `21·próxima: el anillo habla de la etapa cercana («${t.aria}»)`);
+      // ---- Cruzar una etapa intermedia: celebración ligera (sin lacre, sin cometa ni bandera plantada) y la marca se enciende
+      await a.p.evaluate(() => window.scrollTo(0, 0));
+      await a.p.click('#anotar'); await a.p.waitForTimeout(400);
+      await a.p.fill('#h-sats', '40000');
+      await a.p.click('#guardar');
+      await a.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
+      const c = await a.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), k: document.getElementById('hc-k').textContent, txt: document.getElementById('hc-txt').textContent, lacre: document.getElementById('hc-lacre').innerHTML, cometa: document.querySelectorAll('.cometa').length, plantada: document.querySelectorAll('.plantada').length, anillos: document.querySelectorAll('#m-fx .anillo').length }));
+      eq(c, { ligera: true, k: 'Nueva etapa', txt: '1.25M sats', lacre: '', cometa: 0, plantada: 0, anillos: 0 }, '21·celebración: una etapa intermedia se celebra en ligero');
+      const t0 = Date.now();
+      await a.p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 6000 });
+      ok(Date.now() - t0 < 2600, `21·celebración: la tarjeta ligera es breve (${Date.now() - t0} ms)`);
+      t = await tr();
+      eq([t.meta, t.hechas, t.txt], ['1.5M sats', 1, 'Etapa 2 de 6 del tramo de 1M a 2.5M sats'], '21·próxima: tras cruzarla, la siguiente y un escalón lleno');
+      const mk = await marcas(a.p);
+      const enc = await a.p.evaluate(() => { const g = document.querySelector('#m-etapas .etapa[data-m="1250000"]'); return { hay: !!g, alcanzada: g?.classList.contains('alcanzada') ?? null, fina: g?.classList.contains('menor') ?? null, encendidas: document.querySelectorAll('#m-etapas .etapa.alcanzada').length, transicion: getComputedStyle(document.querySelector('#m-etapas .etapa-tick')).transitionProperty }; });
+      ok((!enc.hay || (enc.alcanzada && enc.fina)) && enc.encendidas >= 1 && /opacity/.test(enc.transicion), `21·montaña: la marca cruzada queda encendida y se enciende con suavidad (${JSON.stringify(enc)})`);
+      ok(mk.m.filter((x) => x.sig).length === 1 && mk.m.find((x) => x.sig).m === 1_500_000, '21·montaña: la siguiente etapa lleva su marca naranja');
+      eq(a.consola, [], `21·celebración: consola limpia (${a.consola.join(' | ')})`);
+      await a.ctx.close();
+      // ---- Una etapa con sello: bandera, lacre y cometa; «Probar la celebración» tiene las dos
+      const b = await ent(sAnio, ADMIN, { hora: 22 }, conLocal([['libro.efectos', 'todos']]));
+      await b.p.click('#cuenta-btn'); await b.p.click('#dc-sistema-btn'); await b.p.waitForTimeout(400);
+      eq(await b.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia'], '21·probar: «Etapa» y «Etapa con sello»');
+      await b.p.click('[data-previa="etapa"]');
+      await b.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
+      const g = await b.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), txt: document.getElementById('hc-txt').textContent, lacre: !!document.querySelector('#hc-lacre svg.lacre'), cometa: document.querySelectorAll('.cometa').length }));
+      eq(g, { ligera: false, txt: '2.5M sats', lacre: true, cometa: 1 }, '21·celebración: una etapa con sello trae su lacre y el cometa');
+      await b.p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 8000 });
+      await b.p.waitForTimeout(5000);
+      await b.p.click('#cuenta-btn'); await b.p.click('#dc-sistema-btn'); await b.p.waitForTimeout(400);
+      await b.p.click('[data-previa="paso"]');
+      await b.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
+      ok(await b.p.evaluate(() => document.getElementById('hito-cel').classList.contains('ligera') && !document.querySelector('#hc-lacre svg') && !document.querySelector('.cometa')), '21·probar: «Etapa» enseña la celebración ligera');
+      await b.ctx.close();
+      // ---- Cartas: las dos siguientes etapas y después las de siempre (una carta puede esperar a 10M)
+      const cr = await ent(sAnio, ADMIN, { hora: 15 });
+      await cr.p.click('#cap-nueva'); await cr.p.waitForTimeout(400);
+      eq(await cr.p.locator('#cap-etapa option').allTextContents(), ['1.5M sats', '1.75M sats', '2.5M sats', '5M sats', '10M sats', '25M sats'], '21·cartas: las dos siguientes y luego las de siempre, hasta 25M (la compra de arriba ya cruzó 1.25M)');
+      await cr.ctx.close();
+      // ---- La escalerita para quien solo mira, sin tuteo; y en 320 px con letra muy grande, sin desbordes
+      const l = await ent(sAnio, LECTOR, { hora: 15, viewport: { width: 320, height: 640 } }, conLocal([['libro.letra', 'muy-grande']]));
+      const lt = await l.p.evaluate(() => ({ txt: document.getElementById('t-pasos-t').textContent, ritmo: document.getElementById('t-ritmo').textContent, esc: document.getElementById('t-esc').getBoundingClientRect().width, caja: document.getElementById('tramo').getBoundingClientRect().width, sw: document.documentElement.scrollWidth - document.documentElement.clientWidth }));
+      ok(/^Etapa \d de 6 del tramo de 1M a 2\.5M sats$/.test(lt.txt) && !tuteo.test(lt.txt) && lt.esc > 0 && lt.esc <= lt.caja && lt.sw <= 0, `21·próxima: lectora, 320 px y letra muy grande (${JSON.stringify(lt)})`);
+      await l.ctx.close();
+    } finally { sAnio.parar(); }
+    // ---- Sin escalerita al empezar (100k es la primera etapa) ni con una sola etapa en el tramo
+    const sHoy = await servidor('hoy');
+    try {
+      const h = await ent(sHoy, ADMIN, { hora: 15 });
+      ok(!(await ver(h.p, '#t-pasos')) && (await h.p.textContent('#t-meta')) === '100k sats', '21·próxima: al empezar no hay escalerita y la meta es 100k');
+      await h.ctx.close();
+    } finally { sHoy.parar(); }
+    // ---- «Tu historia» y el reporte de etapas con un libro largo
+    const sLargo = await servidor('largo');
+    try {
+      const a = await ent(sLargo, ADMIN, { hora: 15 });
+      await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(300); await a.p.click('#dc-historia-btn'); await a.p.waitForTimeout(900);
+      await a.p.evaluate(() => { document.getElementById('dh-sec-linea').open = true; });
+      const hs = await a.p.evaluate(() => ({
+        grupos: [...document.querySelectorAll('#dh-linea .h-pasos')].map((li) => ({ sum: li.querySelector('summary').textContent, abierto: li.querySelector('details').open, n: li.querySelectorAll('ul li').length, fechas: [...li.querySelectorAll('ul time')].every((t) => /^\d{4}-\d\d-\d\d$/.test(t.dateTime)) })),
+        sueltas: [...document.querySelectorAll('#dh-linea .h-paso strong')].map((s) => s.textContent),
+        etapas: [...document.querySelectorAll('#dh-linea .h-etapa strong')].map((s) => s.textContent),
+        sellos: [...document.querySelectorAll('#dh-sellos .sello b')].map((s) => s.textContent),
+        orden: [...document.querySelectorAll('#dh-linea > li > time')].map((t) => t.dateTime),
+      }));
+      ok(hs.grupos.length >= 2 && hs.grupos.every((x) => !x.abierto && x.n >= 1 && x.fechas && /^\d+ etapas? intermedias?entre \S+ y \S+ sats$/.test(x.sum)), `21·historia: las intermedias de tramos cerrados van juntas y plegadas (${JSON.stringify(hs.grupos)})`);
+      eq(hs.sueltas, ['Llegaste a 12.5M sats', 'Llegaste a 15M sats'], '21·historia: las del tramo en curso, sueltas');
+      eq(hs.etapas, ['Llegaste a 250k sats', 'Llegaste a 500k sats', 'Llegaste a 2.5M sats', 'Llegaste a 5M sats'], '21·historia: las etapas de siempre, cada una en su renglón');
+      eq(hs.sellos, ['100k sats', '250k sats', '500k sats', '1M sats', '2.5M sats', '5M sats', '10M sats'], '21·historia: sellos solo de campamentos y etapas de siempre');
+      ok(hs.orden.every((f, i) => i === 0 || hs.orden[i - 1] <= f), '21·historia: la línea sigue en orden');
+      // Con el teclado: el renglón del tramo se despliega con Intro y enseña sus etapas
+      await a.p.focus('#dh-linea .h-pasos summary'); await a.p.keyboard.press('Enter'); await a.p.waitForTimeout(200);
+      const ab = await a.p.evaluate(() => { const d = document.querySelector('#dh-linea .h-pasos details'); const s = d.querySelector('summary').getBoundingClientRect(); return { open: d.open, alto: s.height, lista: d.querySelector('ul').getBoundingClientRect().height }; });
+      ok(ab.open && ab.alto >= 47.5 && ab.lista > 0, `21·historia: se despliega con el teclado y su zona de toque mide 48 px (${JSON.stringify(ab)})`);
+      // El reporte de etapas («todo junto»): campamentos y principales, el tramo en curso y lo que falta; no las intermedias viejas
+      const hi = await a.p.evaluate(() => [...document.querySelectorAll('#hitos li b')].map((b) => b.textContent));
+      ok(hi.includes('12.5M sats') && hi.includes('17.5M sats') && hi.includes('2.5M sats') && !hi.includes('750k sats') && !hi.includes('1.25M sats') && hi.at(-1) === '1 BTC', `21·reporte: etapas para leer (${hi.join(' · ')})`);
+      eq(a.consola, [], `21·historia: consola limpia (${a.consola.join(' | ')})`);
+      await a.ctx.close();
+      const l = await ent(sLargo, LECTOR, { hora: 15 });
+      await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(300); await l.p.click('#dc-historia-btn'); await l.p.waitForTimeout(900);
+      await l.p.evaluate(() => { document.getElementById('dh-sec-linea').open = true; });
+      const lt = await l.p.evaluate(() => [...document.querySelectorAll('#dh-linea .h-paso strong, #dh-linea .h-pasos summary')].map((s) => s.textContent));
+      ok(lt.length >= 3 && lt.every((x) => !tuteo.test(x)) && lt.some((x) => /^El libro llegó a 12\.5M sats$/.test(x)), `21·historia: quien solo mira lee del libro (${lt.join(' · ')})`);
+      await l.ctx.close();
+      // ---- Perfil de altitud: ningún rótulo pegado a otro
+      const pf = await ent(sLargo, ADMIN, { hora: 15, viewport: { width: 390, height: 844 } });
+      await verVista(pf.p, 'sats');
+      const ys = await pf.p.evaluate(() => [...document.querySelectorAll('#s-lienzo .pf-eje')].map((t) => t.getBoundingClientRect().y).sort((x, y) => x - y));
+      ok(ys.length >= 3 && ys.every((y, i) => i === 0 || y - ys[i - 1] >= 14), `21·perfil: rótulos de etapas sin encimarse (${ys.map(Math.round).join(', ')})`);
+      await pf.ctx.close();
+    } finally { sLargo.parar(); }
+    // ---- La montaña: marcas separadas, la siguiente siempre, intermedias solo arriba del último campamento; de 320 a 2560 px,
+    // acostado y con letra grande, en claro y oscuro
+    const TAM = [['320', { viewport: { width: 320, height: 568 } }, 12], ['390', { viewport: { width: 390, height: 844 } }, 12], ['acostado', { viewport: { width: 844, height: 390 } }, 20],
+      ['768', { viewport: { width: 768, height: 1024 }, isMobile: false, hasTouch: false }, 20], ['1440', { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, 20],
+      ['2560', { viewport: { width: 2560, height: 1440 }, isMobile: false, hasTouch: false }, 20]];
+    for (const esc of ['anio', 'largo', 'milbtc']) {
+      const srv = await servidor(esc);
+      try {
+        for (const [nom, opts, tope] of TAM) {
+          for (const letra of nom === '390' ? ['', 'grande'] : ['']) {
+            const r = await ent(srv, ADMIN, { hora: nom === '1440' ? 14 : 22, ...opts }, conLocal([['libro.efectos', 'esenciales'], ...(letra ? [['libro.letra', letra]] : [])]));
+            const mk = await marcas(r.p);
+            const piso = (s) => { let d = 0; for (let x = 1e5; x <= s; x *= 10) d = x; return d; };
+            const sats = await r.p.evaluate(() => Number(document.querySelector('#s-sats .sr').textContent.replace(/\D/g, '')));
+            const L = await import('../app/static/lib.js');
+            const sig = L.etapaSiguiente(sats), sinSig = mk.m.filter((x) => x.m !== sig);
+            let dmin = Infinity;
+            for (let i = 0; i < sinSig.length; i++) for (let j = i + 1; j < sinSig.length; j++) dmin = Math.min(dmin, Math.hypot(sinSig[i].x - sinSig[j].x, sinSig[i].y - sinSig[j].y));
+            const desc = `${esc} ${nom}${letra ? ` ${letra}` : ''}`;
+            ok(dmin >= 17.5 && mk.m.length <= tope, `21·montaña ${desc}: ${mk.m.length} marcas, ninguna pegada (${Math.round(dmin)} px)`);
+            ok(L.rangoEtapa(sig) === 'campamento' || mk.m.some((x) => x.m === sig && x.sig), `21·montaña ${desc}: la siguiente etapa (${sig}) está en el sendero`);
+            ok(mk.m.every((x) => !x.fina || x.m > piso(sats)) && mk.m.every((x) => x.fina === (L.rangoEtapa(x.m) === 'intermedia')), `21·montaña ${desc}: intermedias finas y solo sobre el último campamento`);
+            ok(mk.rotulos.length >= mk.campos - 1 && mk.sw <= 0, `21·montaña ${desc}: los campamentos conservan sus rótulos (${mk.rotulos.join(', ')} de ${mk.campos}) y sin desbordes`);
+            eq(r.consola, [], `21·montaña ${desc}: consola limpia (${r.consola.join(' | ')})`);
+            await r.ctx.close();
+          }
+        }
+      } finally { srv.parar(); }
+    }
   }
 
   // ---------------------------------------------------------------- sin histórico de precios
