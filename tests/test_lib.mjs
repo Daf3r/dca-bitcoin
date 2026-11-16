@@ -8,6 +8,7 @@ import {
   satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, textoApertura, etapasFuturas, mananaISO, diario, textoDiario, piedritasPorCompra, textoPiedritas, ultimaPiedrita, cumpleHoy, textoCumple, textoCumpleFecha, muestrasSismo, medianocheSV, tarjetaFiesta, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
+import { caminoParaLeer, etapaCelebrada, etapaConSelloAnterior, etapaDestacada, rangoEtapa } from '../app/static/lib.js';
 import { AVISO_DIARIO, accionFirmas, diarioParaOir, fechaHablada, firmasDe, paraOir, textoFirmantes } from '../app/static/lib.js';
 import { certificado } from '../app/static/arte-sellos.js';
 
@@ -179,18 +180,37 @@ eq([rm.paso, rm.nCompras, rm.nVentas], [2, 6, 2], 'las ventas no cambian el ritm
 const sinRitmo = resumen([mov(1, '2026-08-01', 'compra', 10, 100_000), mov(2, '2026-08-08', 'compra', 10, 100_000), mov(3, '2026-08-15', 'compra', 10, 100_000), mov(4, '2026-08-20', 'venta', 35, 350_000), mov(5, '2025-01-01', 'compra', 100, 1_000_000)], 20000, '2026-09-01');
 eq([sinRitmo.satsMes, sinRitmo.proyeccion], [null, null], 'ritmo neto negativo: sin proyección');
 
-// Etapas intermedias: 100k, 250k, 500k, 1M, 2.5M, 5M, 10M…
-eq(etapasHasta(1e7), [1e5, 2.5e5, 5e5, 1e6, 2.5e6, 5e6, 1e7], 'escalera de etapas');
-eq([36578, 1e5, 249_999, 2.5e5, 5e5, 9_999_999, 1e8].map(etapaSiguiente), [1e5, 2.5e5, 2.5e5, 5e5, 1e6, 1e7, 2.5e8], 'siguiente etapa');
-eq([0, 36578, 1e5, 3e5, 5e5, 2.4e6, 1e8].map(etapaAnterior), [0, 0, 1e5, 2.5e5, 5e5, 1e6, 1e8], 'etapa anterior');
-eq([nombreHito(2.5e5), nombreHito(5e5), nombreHito(2.5e6), nombreHito(5e7), nombreHito(2.5e8), nombreHito(1e8)], ['250k', '500k', '2.5M', '50M', '2.5 BTC', '1 BTC'], 'nombres de etapas');
+// Etapas (campamento 21, «etapas más cercanas»): 100k, cada 250k hasta 2.5M, cada 500k hasta 5M, cada 1M hasta 10M, y así ×10.
+const ESC_1M = [1e5, 2.5e5, 5e5, 7.5e5, 1e6, 1.25e6, 1.5e6, 1.75e6, 2e6, 2.25e6, 2.5e6, 3e6, 3.5e6, 4e6, 4.5e6, 5e6, 6e6, 7e6, 8e6, 9e6, 1e7];
+eq(etapasHasta(1e7), ESC_1M, 'escalera de etapas hasta 10M');
+eq(etapasHasta(1e8).filter((m) => m > 1e7), [1.25e7, 1.5e7, 1.75e7, 2e7, 2.25e7, 2.5e7, 3e7, 3.5e7, 4e7, 4.5e7, 5e7, 6e7, 7e7, 8e7, 9e7, 1e8], 'la década de 10M repite la de 1M ×10');
+eq([etapasHasta(1e8).length, etapasHasta(1e9).length], [37, 53], 'de 100k a 1 BTC hay 37 etapas; a 10 BTC, 53');
+ok(etapasHasta(1e12).every((m, i, a) => Number.isInteger(m) && (i === 0 || m > a[i - 1])), 'la escalera es de enteros y siempre sube');
+ok(etapasHasta(1e12).filter((m) => m >= 1e6).every((m, i, a) => i === 0 || (m / a[i - 1] - 1 >= 0.11 && m / a[i - 1] - 1 <= 0.25 + 1e-9)), 'desde 1M cada etapa es entre un 11 % y un 25 % más alta que la anterior');
+eq([36578, 1e5, 249_999, 2.5e5, 5e5, 7.5e5, 1.2e6, 1.25e6, 2.4e6, 9_999_999, 1e8].map(etapaSiguiente), [1e5, 2.5e5, 2.5e5, 5e5, 7.5e5, 1e6, 1.25e6, 1.5e6, 2.5e6, 1e7, 1.25e8], 'siguiente etapa');
+eq([0, 36578, 1e5, 3e5, 5e5, 8e5, 1.2e6, 2.4e6, 2.5e6, 9.9e6, 1e8].map(etapaAnterior), [0, 0, 1e5, 2.5e5, 5e5, 7.5e5, 1e6, 2.25e6, 2.5e6, 9e6, 1e8], 'etapa anterior');
+eq([2.5e5, 5e5, 7.5e5, 1.25e6, 1.75e6, 2.25e6, 2.5e6, 5e7, 1.25e7, 1.75e7, 2.25e7, 2.5e8, 1.25e8, 2.25e8, 1e8].map(nombreHito),
+  ['250k', '500k', '750k', '1.25M', '1.75M', '2.25M', '2.5M', '50M', '12.5M', '17.5M', '22.5M', '2.5 BTC', '1.25 BTC', '2.25 BTC', '1 BTC'], 'nombres de etapas (con cuartos)');
 eq(etapasCruzadas(90_000, 600_000), [1e5, 2.5e5, 5e5], 'etapas cruzadas al subir');
-eq([etapasCruzadas(600_000, 90_000), etapasCruzadas(1e5, 1e5), etapasCruzadas(1e5, 249_999)], [[], [], []], 'sin etapas si no se sube o no se llega');
+eq(etapasCruzadas(1.2e6, 2.6e6), [1.25e6, 1.5e6, 1.75e6, 2e6, 2.25e6, 2.5e6], 'una subida grande cruza varias intermedias');
+eq([etapasCruzadas(600_000, 90_000), etapasCruzadas(1e5, 1e5), etapasCruzadas(1e5, 249_999), etapasCruzadas(1.25e6 - 1, 1.25e6)], [[], [], [], [1.25e6]], 'sin etapas si no se sube o no se llega; justo en la etapa sí');
+eq([1e5, 2.5e5, 5e5, 7.5e5, 1e6, 1.25e6, 2e6, 2.5e6, 3e6, 5e6, 6e6, 1e7, 2.5e7, 1e8, 2.25e8, 5e8].map(rangoEtapa),
+  ['campamento', 'principal', 'principal', 'intermedia', 'campamento', 'intermedia', 'intermedia', 'principal', 'intermedia', 'principal', 'intermedia', 'campamento', 'principal', 'campamento', 'intermedia', 'principal'], 'rango de cada etapa');
+eq([etapaDestacada([2.5e6, 3e6]), etapaDestacada([7.5e5, 1e6, 1.25e6]), etapaDestacada([1.25e6, 1.5e6]), etapaDestacada([]), etapaDestacada([2.5e5, 5e5])], [2.5e6, 1e6, 1.5e6, undefined, 5e5], 'la destacada: más rango y, a igual rango, la más alta');
+eq([etapaCelebrada(2.4e6, 3.1e6), etapaCelebrada(1.2e6, 1.3e6), etapaCelebrada(1.3e6, 1.4e6), etapaCelebrada(9.9e6, 1.26e7)], [2.5e6, 1.25e6, undefined, 1e7], 'la que se celebra al subir');
+eq([etapaConSelloAnterior(0), etapaConSelloAnterior(8e5), etapaConSelloAnterior(2.4e6), etapaConSelloAnterior(3.2e6), etapaConSelloAnterior(1.2e7)], [0, 5e5, 1e6, 2.5e6, 1e7], 'la última etapa con sello (principal o campamento)');
 const e1 = resumen([{ id: 1, fecha: '2026-11-01', tipo: 'compra', monto: 28.68, sats: 36578, precio: 78408 }], 77598, '2026-11-04');
 eq([e1.etapa, e1.etapaPrev, e1.meta], [1e5, 0, 1e5], 'primera etapa con tu caso real');
 const e2 = resumen([mov(1, '2026-01-01', 'compra', 40, 300_000)], 20000, '2026-01-05');
 eq([e2.etapa, e2.etapaPrev, e2.meta], [5e5, 2.5e5, 1e6], 'con 300k: la etapa es 500k y el gran hito sigue siendo 1M');
-eq(e2.camino.map((c) => [c.m, c.mayor, !!c.fecha]), [[1e5, true, true], [2.5e5, false, true], [5e5, false, false], [1e6, true, false], [1e7, true, false], [1e8, true, false]], 'camino: etapas hechas, la siguiente y los hitos grandes');
+eq(e2.camino.map((c) => [c.m, c.mayor, c.rango, !!c.fecha]), [[1e5, true, 'campamento', true], [2.5e5, false, 'principal', true], [5e5, false, 'principal', false], [1e6, true, 'campamento', false], [1e7, true, 'campamento', false], [1e8, true, 'campamento', false]], 'camino: etapas hechas, la siguiente y los hitos grandes');
+// Las fechas de las etapas nuevas salen del historial (la del primer movimiento con el que el saldo llegó), también hacia atrás.
+const e3 = resumen([mov(1, '2026-01-04', 'compra', 100, 700_000), mov(2, '2026-02-01', 'compra', 50, 400_000), mov(3, '2026-03-01', 'venta', 20, 200_000), mov(4, '2026-04-05', 'compra', 60, 450_000)], 20000, '2026-04-10');
+eq([e3.sats, e3.etapa, e3.etapaPrev], [1_350_000, 1.5e6, 1.25e6], 'con 1.35M: la siguiente es 1.5M y la anterior 1.25M');
+eq(e3.camino.filter((c) => c.fecha).map((c) => [c.m, c.fecha]), [[1e5, '2026-01-04'], [2.5e5, '2026-01-04'], [5e5, '2026-01-04'], [7.5e5, '2026-02-01'], [1e6, '2026-02-01'], [1.25e6, '2026-04-05']],
+  'fechas de las etapas: la primera vez que el saldo llegó (la venta no las borra)');
+const leer3 = caminoParaLeer(e3.camino);
+eq([leer3.camino.map((c) => c.m), leer3.ocultas.map((c) => c.m)], [[1e5, 2.5e5, 5e5, 1e6, 1.25e6, 1.5e6, 1e7, 1e8], [7.5e5]], 'para leer: campamentos y principales, las intermedias del tramo en curso y las que faltan');
 eq(e2.hitos.map((h) => h.m), [1e5, 1e6, 1e7, 1e8], 'los hitos de la montaña siguen siendo potencias de 10');
 
 // Novedades al abrir la web (solo movimientos creados después de la última visita)
@@ -705,6 +725,24 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   // Fin de mes: 6 meses desde el 31 de agosto es el 28 de febrero
   const fm = historia(resumen([{ id: 1, fecha: '2025-08-31', tipo: 'compra', monto: 1, sats: 1000, precio: 1e5 }], 1e5, '2026-03-05'), '2026-03-05').eventos;
   ok(fm.some((e) => e.titulo === '6 meses comprando' && e.fecha === '2026-02-28'), 'seis meses desde el 31 de agosto caen el 28 de febrero');
+  // Campamento 21: con etapas más juntas la línea no se alarga sin fin. Campamentos y principales van cada una en su renglón; las
+  // intermedias del tramo en curso también; las de tramos ya cerrados se juntan en un renglón por tramo.
+  const sem = [];
+  for (let w = 0; w < 120; w++) sem.push({ id: w + 1, fecha: new Date(Date.UTC(2024, 0, 1 + w * 7)).toISOString().slice(0, 10), tipo: 'compra', monto: 25, sats: 30_000, precio: 83000 });
+  const Rs = resumen(sem, 80000, '2026-04-30'), hs = historia(Rs, '2026-04-30');
+  eq(Rs.sats, 3_600_000, 'historia de etapas: 120 compras de 30,000 sats');
+  const tit = (c) => hs.eventos.filter((e) => e.clase === c).map((e) => e.titulo);
+  eq(tit('hito'), ['Campamento 100k', 'Campamento 1M'], 'historia: los campamentos, cada uno en su renglón');
+  eq(tit('etapa'), ['Llegaste a 250k sats', 'Llegaste a 500k sats', 'Llegaste a 2.5M sats'], 'historia: las etapas principales, cada una en su renglón');
+  eq(tit('paso'), ['Llegaste a 3M sats', 'Llegaste a 3.5M sats'], 'historia: las intermedias del tramo en curso, sueltas');
+  const grupos = hs.eventos.filter((e) => e.clase === 'pasos');
+  eq(grupos.map((g) => [g.titulo, g.detalle, g.pasos.map((x) => x.m)]), [['1 etapa intermedia', 'Entre 500k y 1M sats', [7.5e5]], ['5 etapas intermedias', 'Entre 1M y 2.5M sats', [1.25e6, 1.5e6, 1.75e6, 2e6, 2.25e6]]],
+    'historia: las intermedias de tramos cerrados, juntas por tramo y con sus etapas');
+  ok(grupos.every((g) => g.pasos.every((x) => x.fecha) && g.fecha === g.pasos.at(-1).fecha), 'historia: cada grupo va en la fecha de su última etapa y cada etapa trae la suya');
+  eq(hs.etapasAgrupadas, 6, 'historia: cuántas intermedias van juntas');
+  ok(hs.eventos.every((e, i) => i === 0 || hs.eventos[i - 1].fecha <= e.fecha), 'historia: con grupos sigue de más viejo a más nuevo');
+  ok(historia(Rs, '2026-04-30', { libro: true }).eventos.filter((e) => e.clase === 'paso').every((e) => /^El libro llegó a /.test(e.titulo)), 'historia: las intermedias hablan del libro para quien solo mira');
+  eq(sellos(Rs).map((x) => x.m), [1e5, 2.5e5, 5e5, 1e6, 2.5e6], 'sellos: solo campamentos y principales (las intermedias no llevan lacre)');
 }
 
 // Color y avatar por persona (campamento 6, idea 157)
@@ -896,6 +934,12 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(/^Llegamos a 100k sats$/.test(diario(grande, '2026-11-15').titular), 'diario: una etapa reciente es el titular');
   ok(/^El Diario del Libro, edición del 15 nov 2026\. Un paso más/.test(textoDiario(d)), 'diario: el texto para lectores');
   eq([etapasFuturas(50000, 3), etapasFuturas(100000, 2), mananaISO('2026-12-31'), mananaISO('2026-02-28')], [[100000, 250000, 500000], [250000, 500000], '2027-01-01', '2026-03-01'], 'cartas: las etapas de arriba y la fecha de mañana');
+  eq([etapasFuturas(1.2e6), etapasFuturas(2.6e6, 4)], [[1.25e6, 1.5e6, 2.5e6, 5e6, 1e7, 2.5e7], [3e6, 3.5e6, 5e6, 1e7]], 'cartas: las dos siguientes y después solo principales y campamentos (una carta puede esperar a 10M)');
+  // Campamento 21: si en 14 días se cruzaron varias, el titular lleva la destacada (2.5M antes que 3M)
+  const dos = resumen([{ id: 1, fecha: '2026-10-01', tipo: 'compra', sats: 2_400_000, precio: 100000, monto: 2400 }, { id: 2, fecha: '2026-11-10', tipo: 'compra', sats: 700_000, precio: 100000, monto: 700 }], 90000);
+  eq([diario(dos, '2026-11-15').clase, diario(dos, '2026-11-15').titular], ['etapa', 'Llegamos a 2.5M sats'], 'diario: con varias etapas en la semana, la destacada');
+  const chica = resumen([{ id: 1, fecha: '2026-10-01', tipo: 'compra', sats: 1_200_000, precio: 100000, monto: 1200 }, { id: 2, fecha: '2026-11-10', tipo: 'compra', sats: 60_000, precio: 100000, monto: 60 }], 90000);
+  eq(diario(chica, '2026-11-15').titular, 'Llegamos a 1.25M sats', 'diario: una etapa intermedia también es noticia');
 }
 
 // Campamento 15B · piedritas, cumpleaños y la tele
@@ -923,6 +967,7 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq(tarjetaFiesta(90000, 95000, 5000), { titulo: 'Compra nueva', texto: '+5,000 sats', sub: 'La montaña sube un paso más', grande: false }, 'tele: una compra normal');
   eq(tarjetaFiesta(90000, 120000, 30000), { titulo: 'Nueva etapa', texto: '100k sats', sub: '+30,000 sats', grande: false }, 'tele: una etapa');
   eq(tarjetaFiesta(900000, 1100000, 200000).titulo, 'Nuevo hito', 'tele: un hito grande');
+  eq([tarjetaFiesta(2.4e6, 3.1e6, 7e5).texto, tarjetaFiesta(1.2e6, 1.26e6, 6e4).titulo, tarjetaFiesta(1.2e6, 1.26e6, 6e4).texto], ['2.5M sats', 'Nueva etapa', '1.25M sats'], 'tele: la etapa destacada, también una intermedia');
 }
 // ------------------------------------------------------------ campamento 18: el ritual de anotar
 {

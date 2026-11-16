@@ -1012,6 +1012,15 @@ enviados.clear()
 adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": _sig - _saldo})
 _txt = [p["cuerpo"] for e, p in enviados]
 check(any(("LLEGÓ A" in t and "STOP" in t) and ritmo.nombre_hito(_sig) in t for t in _txt), f"cruzar una etapa avisa a quien lo encendió {_txt}")
+# Campamento 21: una compra que cruza varias etapas manda UN telegrama, con la destacada (una principal o un campamento antes que una intermedia)
+_pr = next(m for m in ritmo.etapas_hasta(10**12) if m > _sig and ritmo.rango_etapa(m) != "intermedia")
+_desp = ritmo.etapa_siguiente(_pr)
+_cel = ritmo.etapa_celebrada(_sig, _desp)
+enviados.clear()
+adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": _desp - _sig})
+_tel = [p["cuerpo"] for e, p in enviados if "STOP" in p["cuerpo"]]
+check(len(ritmo.etapas_cruzadas(_sig, _desp)) >= 2 and ritmo.rango_etapa(_cel) != "intermedia" and _tel == [f"LLEGÓ A {ritmo.nombre_hito(_cel)} STOP SIGUE EL SENDERO STOP"],
+      f"cruzar varias etapas: un solo telegrama con la destacada ({_tel}, {_cel})")
 
 # Horario: de noche se guarda y sale por la mañana (varios de una categoría, en uno solo)
 push.ahora = _de_noche
@@ -1093,6 +1102,9 @@ if _sh.which("node"):
         fechas_ = sorted({(lunes_pasado - _td(days=paso_d * k - _r.randrange(0, 3 if k else 1))).isoformat() for k in range(_r.randrange(2, 10))})
         casos_toca.append({"fechas": fechas_, "hoy": hoy_.isoformat()})
     casos_etapas = [[a, a + _r.choice([1, 500, 90000, 260000, 3000000, 90000000])] for a in (_r.randrange(0, 4 * 10**8) for _ in range(60))] + [[0, 100000], [99999, 100000], [5, 4]]
+    # Campamento 21: subidas que cruzan varias etapas de rangos distintos (la destacada no siempre es la más alta) y bordes exactos.
+    casos_etapas += [[2_400_000, 3_100_000], [90_000, 260_000], [740_000, 1_300_000], [9_900_000, 12_600_000], [1_249_999, 1_250_000], [1_250_000, 1_250_001],
+                     [4_400_000, 5_600_000], [99_000_000, 130_000_000], [700_000, 760_000], [0, 1]]
     casos_const = []
     for _ in range(60):
         n = _r.randrange(0, 60)
@@ -1100,7 +1112,8 @@ if _sh.which("node"):
         nueva = (date(2025, 1, 1) + _td(days=_r.randrange(0, 760))).isoformat()
         casos_const.append({"antes": ff, "despues": sorted([*ff, nueva]) if _r.random() < 0.8 else [*ff, nueva]})
     casos_const += [{"antes": [f"2026-01-{d:02d}" for d in range(1, 10)], "despues": [f"2026-01-{d:02d}" for d in range(1, 11)]}]
-    nombres = [100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000, 100000000, 250000000, 1000000000000]
+    nombres = [100000, 250000, 500000, 750000, 1000000, 1250000, 1750000, 2250000, 2500000, 5000000, 10000000, 12500000, 17500000, 22500000, 100000000, 125000000, 225000000,
+               250000000, 1000000000000, *ritmo.etapas_hasta(10**11)]
     casos_caida = []
     for _ in range(120):
         hoy_ = date(2026, 1, 1) + _td(days=_r.randrange(0, 300))
@@ -1133,7 +1146,7 @@ if _sh.which("node"):
                      {"movs": [{"id": 1, "fecha": "2026-11-01", "tipo": "compra", "sats": 99000}, {"id": 2, "fecha": "2026-11-01", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},  # hace 14 días: ya no es etapa ni compra de la semana
                      {"movs": [{"id": 1, "fecha": "2026-10-01", "tipo": "compra", "sats": 5000}, {"id": 2, "fecha": "2026-11-08", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},   # hace 7 días exactos: fuera
                      {"movs": [{"id": 1, "fecha": "2026-10-01", "tipo": "compra", "sats": 5000}, {"id": 2, "fecha": "2026-11-09", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"}]
-    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres, "caida": casos_caida, "reposicion": casos_repo, "diario": casos_diario}
+    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres, "caida": casos_caida, "reposicion": casos_repo, "diario": casos_diario, "escalera": 10**12}
     p_ = subprocess.run(["node", os.path.join(os.path.dirname(os.path.abspath(__file__)), "paridad_ritmo.mjs")], input=json.dumps(entrada), capture_output=True, text=True)
     check(p_.returncode == 0, f"node calcula la paridad: {p_.stderr[:200]}")
     js = json.loads(p_.stdout)
@@ -1145,6 +1158,12 @@ if _sh.which("node"):
             mal.append((caso, mio, esperado))
     check(not mal, f"«te toca comprar» igual que lib.js ({len(mal)} casos distintos de {len(casos_toca)}): {mal[:1]}")
     check([ritmo.etapas_cruzadas(a, b) for a, b in casos_etapas] == js["etapas"], "etapas cruzadas igual que lib.js")
+    check([[m, ritmo.rango_etapa(m)] for m in ritmo.etapas_hasta(10**12)] == js["escalera"], "la escalera de etapas y el rango de cada una igual que lib.js")
+    check([ritmo.etapa_celebrada(a, b) for a, b in casos_etapas] == js["celebrada"], "la etapa que se celebra al cruzar varias igual que lib.js")
+    check(ritmo.etapa_celebrada(2_400_000, 3_100_000) == 2_500_000 and ritmo.etapa_celebrada(740_000, 1_300_000) == 1_000_000, "al cruzar varias se celebra la de más rango")
+    check(ritmo.etapas_hasta(10**7) == [100_000, 250_000, 500_000, 750_000, 1_000_000, 1_250_000, 1_500_000, 1_750_000, 2_000_000, 2_250_000, 2_500_000,
+                                         3_000_000, 3_500_000, 4_000_000, 4_500_000, 5_000_000, 6_000_000, 7_000_000, 8_000_000, 9_000_000, 10_000_000],
+          "la escalera cercana: cada 250k hasta 2.5M, cada 500k hasta 5M, cada 1M hasta 10M")
     check([[list(x) for x in ritmo.constancia_cruzada(c["antes"], c["despues"])] for c in casos_const] == js["constancia"], "constancia cruzada igual que lib.js")
     check([ritmo.nombre_hito(m).replace(" sats", "") for m in nombres] == js["nombres"], "nombre del hito igual que lib.js")
     check(sum(1 for x in js["toca"] if x and x["estado"] in ("toca", "ultimo")) > 5, "la paridad prueba casos de «toca» de verdad")
