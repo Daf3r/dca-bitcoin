@@ -1,6 +1,6 @@
 // Juego de iconos propio (campamento 6, idea 33): un solo trazo (2 px, puntas redondas, `currentColor`) para todo. Los dibujos
 // viven como <symbol> en el sprite de index.html (`#i-…`); aquí solo se arma el <svg> que los usa. No importa nada de la app.
-export const ICONOS = ['traslado', 'externo', 'rayo', 'copiar', 'campana', 'lapiz', 'sube', 'baja', 'zopilote'];
+export const ICONOS = ['traslado', 'externo', 'rayo', 'copiar', 'campana', 'lapiz', 'sube', 'baja', 'zopilote', 'bocina'];
 
 /** `<svg class="ico">` que apunta al símbolo del sprite; decorativo (lo que importa va en el texto de al lado). */
 export const ico = (nombre) => `<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-${nombre}"/></svg>`;

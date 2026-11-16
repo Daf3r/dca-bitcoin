@@ -1397,10 +1397,56 @@ export function diario(R, hoy = hoyISO()) {
   const pronostico = `${PRONOSTICOS[epoca][sem % 4].replace(/^./, (ch) => ch.toUpperCase())}. Es el clima, no un consejo: la montaña no adivina nada.`;
   const esc = escalaMontana(R.sats);
   const primera = compras[0].fecha;
-  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, clase, aviso: AVISO_DIARIO[clase], haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
+  return { fecha: hoy, edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, clase, aviso: AVISO_DIARIO[clase], haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
     altitud: altitud(R.sats, esc), sats: R.sats, valor: R.valor ?? null };
 }
 export const textoDiario = (d) => `El Diario del Libro, edición del ${d.edicion}. ${d.titular}. ${d.sub}`;
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 19 · la familia: el Diario en voz alta, el libro de cumbre y el nombre de la montaña. Solo datos y textos.
+// ---------------------------------------------------------------------------------------------
+
+const MESES_L = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+/** «15 de noviembre de 2026»: la fecha para decirla en voz alta (la abreviada, «15 nov», se leería «nov»). */
+export function fechaHablada(f) {
+  const [y, m, d] = f.split('-').map(Number);
+  return `${d} de ${MESES_L[m - 1]} de ${y}`;
+}
+/**
+ * Un texto de la app preparado para la voz del aparato (idea 33). Las cifras van sin comas (con voz en español «1,241,769» se leería
+ * como un decimal), «2.5M» y «100k» se dicen enteros («2,5 millones», «100 mil»), «BTC» se dice «bitcoin», los avisos en mayúsculas de
+ * los clasificados («SE BUSCAN») se escriben en minúsculas para que no se deletreen y el «·» es una pausa.
+ */
+export function paraOir(t) {
+  return String(t ?? '')
+    .replace(/n\.º/g, 'número')
+    .replace(/\d{1,3}(?:,\d{3})+/g, (x) => x.replace(/,/g, ''))
+    .replace(/\b(\d+(?:\.\d+)?)M\b( sats)?/g, (_, x, s) => `${x.replace('.', ',')} ${x === '1' ? 'millón' : 'millones'}${s ? ' de sats' : ''}`)
+    .replace(/\b(\d+(?:\.\d+)?)k\b/g, (_, x) => `${x.replace('.', ',')} mil`)
+    .replace(/\b(\d+(?:\.\d+)?) BTC\b/g, (_, x) => `${x.replace('.', ',')} bitcoin`)
+    .replace(/\bBTC\b/g, 'bitcoin')
+    .replace(/\b[A-ZÁÉÍÓÚÑ]{2,}\b/g, (w) => w.toLowerCase())
+    .replace(/\s*·\s*/g, ', ')
+    .replace(/[«»]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase());
+}
+/**
+ * El Diario dicho en voz alta (idea 33): la misma portada, en frases cortas (una voz larga de una sola vez se corta en algunos
+ * navegadores). `montana` es el nombre que le puso quien anota, si tiene. Nada que no esté ya escrito en el Diario.
+ */
+export function diarioParaOir(d, { montana = null } = {}) {
+  if (!d) return [];
+  const partes = [`El Diario del Libro${montana ? `, desde la montaña ${montana}` : ''}. Edición del ${fechaHablada(d.fecha)}, número ${d.numero}.`, `${d.titular}.`, d.sub];
+  if (d.haceUnAnio || d.notaAnio) {
+    partes.push('Hace un año.');
+    if (d.haceUnAnio) partes.push(d.haceUnAnio.texto);
+    if (d.notaAnio) partes.push(`El ${fechaHablada(d.notaAnio.fecha)} quedó anotado: ${d.notaAnio.nota}`);
+  }
+  partes.push('Clasificados.', ...d.clasificados, 'Pronóstico de la montaña.', d.pronostico);
+  return partes.map(paraOir).filter(Boolean).map((p) => (/[.!?:]$/.test(p) ? p : `${p}.`));
+}
 
 // ---------------------------------------------------------------------------------------------
 // Campamento 15B · la apacheta (piedritas), los cumpleaños y la tele: solo datos y textos. Todo acompaña; nada presiona.

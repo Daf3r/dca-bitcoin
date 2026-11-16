@@ -8,7 +8,7 @@ import {
   satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, textoApertura, etapasFuturas, mananaISO, diario, textoDiario, piedritasPorCompra, textoPiedritas, ultimaPiedrita, cumpleHoy, textoCumple, textoCumpleFecha, muestrasSismo, medianocheSV, tarjetaFiesta, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
-import { AVISO_DIARIO } from '../app/static/lib.js';
+import { AVISO_DIARIO, diarioParaOir, fechaHablada, paraOir } from '../app/static/lib.js';
 
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
@@ -967,5 +967,18 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   const quieta = diario(resumen([c(1, '2026-10-01', 90000)], null, '2026-11-15'), '2026-11-15');
   eq([quieta.clase, quieta.aviso], ['tranquila', 'Semana tranquila en la montaña'], 'diario: una semana sin compras es tranquila');
   ok(Object.values(AVISO_DIARIO).every((t) => !/\d/.test(t)) && Object.keys(AVISO_DIARIO).length === 4, 'diario: el titular del aviso nunca lleva cifras');
+  // Escuchar: el Diario en frases para la voz del aparato.
+  eq(fechaHablada('2026-11-15'), '15 de noviembre de 2026', 'oír: la fecha se dice entera');
+  eq(paraOir('La montaña subió 1,241,769 sats esta semana'), 'La montaña subió 1241769 sats esta semana', 'oír: las cifras sin comas (con voz en español se leerían como decimales)');
+  eq(paraOir('Llegamos a 2.5M sats'), 'Llegamos a 2,5 millones de sats', 'oír: «2.5M» se dice «2,5 millones»');
+  eq(paraOir('Llegamos a 1M sats'), 'Llegamos a 1 millón de sats', 'oír: «1M» se dice «1 millón»');
+  eq(paraOir('SE REGALA vista desde el campamento 100k. Buenas condiciones'), 'Se regala vista desde el campamento 100 mil. Buenas condiciones', 'oír: los avisos en mayúsculas no se deletrean y «100k» es «100 mil»');
+  eq(paraOir('15 nov 2026 · edición n.º 52 · 1 BTC y 1,000 BTC'), '15 nov 2026, edición número 52, 1 bitcoin y 1000 bitcoin', 'oír: «·» es una pausa, «n.º» es «número» y «BTC» es «bitcoin»');
+  const oido = diarioParaOir(una);
+  ok(oido[0] === `El Diario del Libro. Edición del ${fechaHablada(una.fecha)}, número ${una.numero}.` && oido[1] === 'Un paso más: la montaña subió 10000 sats.', `oír: la cabecera y el titular primero (${oido.slice(0, 2).join(' | ')})`);
+  ok(oido.includes('Clasificados.') && oido.includes('Pronóstico de la montaña.') && oido.every((f) => /[.!?:]$/.test(f) && !/\d,\d{3}/.test(f)), 'oír: los clasificados y el pronóstico, en frases cortas que terminan en punto');
+  ok(oido.indexOf('Hace un año.') > 1 && oido.some((f) => /^Hace un año el libro tenía 20000 sats/.test(f)), 'oír: con un año de historia, también «hace un año»');
+  ok(diarioParaOir(una, { montana: 'La Ceiba' })[0].startsWith('El Diario del Libro, desde la montaña La Ceiba. Edición'), 'oír: con nombre, la montaña se nombra en la cabecera');
+  eq(diarioParaOir(null), [], 'oír: sin Diario no hay nada que leer');
 }
 console.log(`OK ${n} comprobaciones`);

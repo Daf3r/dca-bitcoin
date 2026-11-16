@@ -64,6 +64,7 @@ async function mantenerDespierta() {
 }
 export async function entrarTV({ pantallaCompleta = true } = {}) {
   raiz.dataset.tv = '1';
+  document.dispatchEvent(new CustomEvent('libro:tv')); // en la tele no hay Diario a la vista: si se estaba leyendo, se calla
   if (location.hash !== '#tv') history.replaceState(null, '', `${location.pathname}${location.search}#tv`);
   window.scrollTo(0, 0);
   pintarTV();

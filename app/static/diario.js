@@ -1,5 +1,6 @@
-import { diario, fechaLarga, textoDiario } from './lib.js';
+import { diario, diarioParaOir, fechaLarga, textoDiario } from './lib.js';
 import { miniMontana } from './arte.js';
+import { alCambiarVoces, callar, leer, leyendo, vozEspanol } from './escuchar.js';
 import { $, R, S } from './estado.js';
 
 // El Diario del Libro (campamento 15A, idea 46): una portada con lo que pasó, para todos (también los lectores). Es una tarjeta del
@@ -24,14 +25,39 @@ $('dia-abrir').addEventListener('click', () => {
   if (!ultimo) return;
   edicionAbierta = edicionAbierta === ultimo.edicion ? null : ultimo.edicion;
   try { if (edicionAbierta) localStorage.setItem(CLAVE_ABIERTO, edicionAbierta); else localStorage.removeItem(CLAVE_ABIERTO); } catch { /* vale para esta visita */ }
+  if (!edicionAbierta) callar(); // plegar el Diario lo cierra: si se estaba leyendo, se calla
   pintarPliegue();
 });
+
+// «Escuchar» (campamento 19, idea 33): el Diario leído por la voz del propio aparato (escuchar.js). Solo suena al tocarlo; otro toque lo
+// calla, y también se calla al cambiar de pestaña, al plegar el Diario, al irse de la página o a la tele. Sin una voz en español del
+// aparato el botón no sale (en Chrome las voces llegan un momento después: se vuelve a mirar cuando avisan). Es un interruptor:
+// `aria-pressed` dice si está leyendo y el nombre no cambia.
+const bOir = $('dia-oir');
+let edicionLeida = null;
+const marcarOir = (si) => bOir.setAttribute('aria-pressed', String(si));
+function pintarOir() {
+  const hay = Boolean(ultimo) && Boolean(vozEspanol());
+  if (!hay) callar();
+  bOir.hidden = !hay;
+}
+bOir.addEventListener('click', () => {
+  if (leyendo()) { callar(); return; }
+  if (!ultimo) return;
+  if (leer(diarioParaOir(ultimo), { alTerminar: () => { marcarOir(false); edicionLeida = null; } })) { marcarOir(true); edicionLeida = ultimo.edicion; }
+  else pintarOir(); // la voz ya no está (el sistema la quitó): fuera el botón
+});
+alCambiarVoces(pintarOir);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') callar(); });
+window.addEventListener('pagehide', () => callar());
+for (const ev of ['libro:pestana', 'libro:tv']) document.addEventListener(ev, () => callar());
 
 export function pintarDiario() {
   const caja = $('diario');
   const d = S.cargado && R?.items && R.nCompras ? diario(R) : null;
   caja.hidden = !d;
-  if (!d) return;
+  if (!d) { ultimo = null; pintarOir(); return; }
+  if (edicionLeida && edicionLeida !== d.edicion) callar(); // pasó la medianoche mientras se leía: la de ayer ya no es la portada
   $('dia-edicion').textContent = `${d.edicion} · edición n.º ${d.numero}`;
   ultimo = d;
   pintarPliegue();
@@ -56,4 +82,5 @@ export function pintarDiario() {
   }
   $('dia-pron').textContent = d.pronostico;
   caja.setAttribute('aria-description', textoDiario(d));
+  pintarOir();
 }
