@@ -20,8 +20,8 @@ export const CAMBIOS = [
     items: [
       'La montaña se ve de una pieza: cada campamento está en un rellano tallado en la ladera, con su roca detrás y su sombra, y su nombre se apoya en esa misma repisa.',
       'El camino también va tallado en la roca: se nota el corte por arriba y el borde por abajo.',
-      'La cumbre cambió: la bandera de la meta está en un escalón de nieve, resguardada por la roca, y ya no parece puesta encima.',
-      'La nieve sigue los pliegues de la montaña y baja en lenguas desiguales; su lado en sombra toma el color del cielo.',
+      'La cumbre cambió: la roca de la montaña asoma por la nieve hasta arriba y la bandera de la meta, ahora más grande, está en un escalón de nieve al pie de esa roca.',
+      'La nieve baja en lenguas desiguales y su lado en sombra toma el color del cielo.',
       'En el camino, las etapas pequeñas son una muesca fina y las de siempre lo cruzan de lado a lado; la siguiente siempre se ve, en naranja.',
     ],
   },
