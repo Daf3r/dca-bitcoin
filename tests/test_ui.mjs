@@ -4016,6 +4016,262 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- campamento 19: la familia (escuchar el Diario, libro de cumbre y nombre de la montaña; el aviso del domingo, en test_api)
+  {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const ent = async (srv, cuenta, opts = {}, init = sinAviso) => {
+      const r = await entrar(navegador, srv, cuenta, opts, init);
+      for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); }
+      return r;
+    };
+    const ver = (p, sel) => p.locator(sel).first().isVisible();
+    // Voces de mentira (el Chromium de las pruebas no trae ninguna): `voces` es la lista, `tarde` (ms) las hace llegar después con
+    // `voiceschanged` (como en Chrome) y `ms` es lo que tarda cada frase. Guarda lo que se dijo en `window.__dichas`.
+    const vocesFalsas = ([voces, tarde, ms]) => {
+      try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ }
+      const s = new EventTarget();
+      let listas = !tarde, cola = [], gen = 0;
+      window.__dichas = []; window.__canceladas = 0;
+      const avanzar = () => {
+        const u = cola.shift();
+        if (!u) { s.speaking = false; return; }
+        s.speaking = true;
+        window.__dichas.push({ texto: u.text, voz: u.voice?.name, lang: u.lang });
+        const g = gen;
+        setTimeout(() => { if (g !== gen) return; u.onend?.({}); avanzar(); }, ms);
+      };
+      Object.assign(s, { speaking: false, paused: false, getVoices: () => (listas ? voces : []),
+        speak(u) { cola.push(u); if (!s.speaking) avanzar(); },
+        cancel() { window.__canceladas += 1; gen += 1; const quedan = cola; cola = []; s.speaking = false; for (const u of quedan) u.onerror?.({ error: 'canceled' }); },
+        pause() {}, resume() {} });
+      Object.defineProperty(s, 'pending', { configurable: true, get: () => cola.length > 0 });
+      Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: s });
+      window.SpeechSynthesisUtterance = class { constructor(t) { this.text = t; } };
+      if (tarde) setTimeout(() => { listas = true; s.dispatchEvent(new Event('voiceschanged')); }, tarde);
+    };
+    const ES = (lang, name, localService = true) => ({ name, lang, localService, default: false, voiceURI: name });
+    const sAnio = await servidor('anio');
+    try {
+      // ---- 33 · Escuchar: sin voz en español del aparato no hay botón
+      {
+        const a = await ent(sAnio, ADMIN, { pestanas: true });
+        ok(await ver(a.p, '#diario') && !(await ver(a.p, '#dia-oir')), '19·escuchar: sin voces (el navegador de pruebas no trae) el botón no sale');
+        await a.ctx.close();
+      }
+      {
+        const a = await ent(sAnio, ADMIN, { pestanas: true }, [vocesFalsas, [[ES('es-MX', 'Google español de Estados Unidos', false), ES('en-US', 'Samantha')], 0, 60]]);
+        ok(!(await ver(a.p, '#dia-oir')), '19·escuchar: una voz en español «en línea» (manda el texto a un tercero) no cuenta, ni una en inglés');
+        await a.ctx.close();
+      }
+      {
+        const a = await ent(sAnio, ADMIN, { pestanas: true }, [vocesFalsas, [[ES('es-ES', 'Mónica'), ES('es-MX', 'Paulina'), ES('es', 'Genérica')], 7000, 60]]);
+        const antes = await ver(a.p, '#dia-oir');
+        await a.p.waitForFunction(() => !document.getElementById('dia-oir').hidden, null, { timeout: 9000 }).catch(() => {});
+        ok(!antes && await ver(a.p, '#dia-oir'), '19·escuchar: si las voces llegan tarde (voiceschanged), el botón sale cuando llegan');
+        await a.ctx.close();
+      }
+      // ---- Leer, callar con otro toque, terminar sola, callar al cambiar de pestaña, al plegar y al ocultar la pestaña del navegador
+      const { ctx, p, consola } = await ent(sAnio, ADMIN, { pestanas: true }, [vocesFalsas, [[ES('es-ES', 'Mónica'), ES('es-MX', 'Paulina'), ES('es-SV', 'Salvadoreña', false)], 0, 250]]);
+      const oir = p.locator('#dia-oir');
+      const est = () => p.evaluate(() => ({ pres: document.getElementById('dia-oir').getAttribute('aria-pressed'), dichas: window.__dichas.length, canc: window.__canceladas, hablando: window.speechSynthesis.speaking }));
+      ok(await oir.isVisible() && (await oir.textContent()).trim() === 'Escuchar el Diario' && await oir.getAttribute('aria-pressed') === 'false', '19·escuchar: con voz del aparato sale «Escuchar el Diario», apagado');
+      const caja = await oir.boundingBox();
+      ok(caja.height >= 47.5, `19·escuchar: el botón mide 48 px (${caja.height})`);
+      await oir.click(); await p.waitForTimeout(150);
+      let e = await est();
+      ok(e.pres === 'true' && e.dichas >= 1, '19·escuchar: un toque empieza a leer y el botón queda pulsado');
+      const primera = await p.evaluate(() => window.__dichas[0]);
+      ok(/^El Diario del Libro\. Edición del \d{1,2} de [a-z]+ de \d{4}, número \d+\.$/.test(primera.texto) && primera.voz === 'Paulina' && primera.lang === 'es-MX',
+        `19·escuchar: empieza por la cabecera, con la voz de América del propio aparato («${primera.texto}», ${primera.voz})`);
+      await p.waitForTimeout(700);
+      await oir.click(); await p.waitForTimeout(200);
+      e = await est();
+      const tras = e.dichas;
+      await p.waitForTimeout(700);
+      ok(e.pres === 'false' && e.canc >= 1 && (await est()).dichas === tras && !(await est()).hablando, '19·escuchar: otro toque lo calla y no sigue');
+      // Leída entera: termina sola y vuelve a «apagado»; todo lo escrito del Diario está, sin comas en las cifras
+      await p.evaluate(() => { window.__dichas = []; });
+      await oir.click();
+      await p.waitForFunction(() => document.getElementById('dia-oir').getAttribute('aria-pressed') === 'false', null, { timeout: 30000 });
+      const todo = await p.evaluate(() => window.__dichas.map((d) => d.texto));
+      const titular = (await p.textContent('#t-diario')).trim();
+      ok(todo.length >= 8 && todo.some((t) => t.startsWith('Clasificados')) && todo.some((t) => t.startsWith('Pronóstico de la montaña')), `19·escuchar: lee la portada, los clasificados y el pronóstico (${todo.length} frases)`);
+      ok(todo.every((t) => !/\d,\d{3}/.test(t) && !/\bSE [A-Z]/.test(t) && !/·/.test(t)), '19·escuchar: las cifras van sin comas, sin «SE BUSCAN» en mayúsculas y sin «·»');
+      ok(todo[1].split(' ').slice(0, 3).join(' ') === titular.split(' ').slice(0, 3).join(' '), `19·escuchar: después de la cabecera va el titular de la página («${todo[1]}» / «${titular}»)`);
+      // Cambiar de pestaña lo calla
+      await oir.click(); await p.waitForTimeout(200);
+      await p.click('#pestanas [data-pestana="graficos"]'); await p.waitForTimeout(300);
+      ok((await est()).pres === 'false' && !(await est()).hablando, '19·escuchar: cambiar de pestaña lo calla');
+      await p.click('#pestanas [data-pestana="resumen"]'); await p.waitForTimeout(400);
+      // Irse a otra pestaña del navegador (o bloquear el teléfono) lo calla
+      await oir.click(); await p.waitForTimeout(200);
+      await p.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); });
+      await p.waitForTimeout(200);
+      ok((await est()).pres === 'false', '19·escuchar: al ocultar la página se calla');
+      await p.evaluate(() => { delete document.visibilityState; document.dispatchEvent(new Event('visibilitychange')); });
+      // Con el teclado: Espacio lo enciende y lo apaga (es un botón)
+      await oir.focus(); await p.keyboard.press('Space'); await p.waitForTimeout(200);
+      ok((await est()).pres === 'true', '19·escuchar: con el teclado, Espacio empieza a leer');
+      await p.keyboard.press('Space'); await p.waitForTimeout(200);
+      ok((await est()).pres === 'false', '19·escuchar: y otra vez lo calla');
+      // Plegar el Diario (teléfono) lo calla
+      if (await ver(p, '#dia-abrir')) {
+        await p.click('#dia-abrir'); await p.waitForTimeout(200);
+        await oir.click(); await p.waitForTimeout(200);
+        await p.click('#dia-abrir'); await p.waitForTimeout(200);
+        ok((await est()).pres === 'false' && await p.getAttribute('#dia-abrir', 'aria-expanded') === 'false', '19·escuchar: plegar el Diario lo calla');
+      }
+      eq(consola, [], `19·escuchar: consola limpia (${consola.join(' | ')})`);
+      await ctx.close();
+      // Una lectora también lo tiene (es su Diario)
+      const l = await ent(sAnio, LECTOR, { pestanas: true }, [vocesFalsas, [[ES('es-MX', 'Paulina')], 0, 60]]);
+      ok(await ver(l.p, '#dia-oir'), '19·escuchar: una lectora también puede escucharlo');
+      await l.ctx.close();
+    } finally { sAnio.parar(); }
+
+    // ---- 18 · Libro de cumbre: una lectora firma, reescribe, borra y deshace; el dueño lee y quita; «Tu historia» lo enseña
+    const sLargo = await servidor('largo');
+    try {
+      const l = await ent(sLargo, LECTOR);
+      const info = await l.p.evaluate(async () => {
+        const saldo = (await (await fetch('/api/compras')).json()).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+        const pot = [1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11];
+        return { abajo: pot.filter((x) => x <= saldo).at(-1), arriba: pot.find((x) => x > saldo) };
+      });
+      const nombre = info.abajo >= 1e8 ? `${info.abajo / 1e8} BTC` : `${info.abajo / 1e6}M`;
+      const abrirBandera = async (p, m) => { await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400); await p.locator(`.m-bandera[data-m="${m}"]`).click({ force: true }); await p.waitForTimeout(600); };
+      await abrirBandera(l.p, info.arriba);
+      ok(!(await ver(l.p, '#m-firmas')), '19·cumbre: un campamento por alcanzar no tiene libro');
+      await l.p.keyboard.press('Escape'); await l.p.waitForTimeout(200);
+      await abrirBandera(l.p, info.abajo);
+      const bF = l.p.locator('#m-firmas');
+      const rF = (p) => p.textContent('#m-firmas-r').then((t) => t.trim());
+      ok(await bF.isVisible() && (await bF.textContent()).startsWith('Libro de cumbre') && await rF(l.p) === 'Nadie ha firmado todavía · Deja la primera firma', `19·cumbre: la tarjeta del campamento invita a firmar («${await rF(l.p)}»)`);
+      ok((await bF.boundingBox()).height >= 47.5, '19·cumbre: el botón del libro mide 48 px');
+      await bF.click(); await l.p.waitForTimeout(600);
+      ok(await l.p.locator('#d-firmas[open]').count() === 1 && await l.p.evaluate(() => document.activeElement?.id) === 'fi-t' && (await l.p.textContent('#fi-t')).trim() === `Campamento ${nombre}`,
+        '19·cumbre: se abre el libro, con el foco en su título (primero se lee)');
+      ok(/^Nadie ha firmado todavía/.test((await l.p.textContent('#fi-lista')).trim()) && await ver(l.p, '#fi-texto') && (await l.p.textContent('#fi-guardar')).trim() === 'Firmar' && !(await ver(l.p, '#fi-borrar')),
+        '19·cumbre: vacío, con el campo para firmar y sin «Borrar»');
+      await l.p.click('#fi-guardar'); await l.p.waitForTimeout(200);
+      eq((await l.p.textContent('#fi-error')).trim(), 'Escribe tu firma.', '19·cumbre: una firma vacía no se guarda');
+      await l.p.fill('#fi-texto', '<b>Aquí estuve</b> con frío');
+      eq((await l.p.textContent('#fi-cuenta')).trim(), '27 de 80', '19·cumbre: cuenta los caracteres');
+      await l.p.click('#fi-guardar'); await l.p.waitForTimeout(900);
+      ok(await l.p.locator('#d-firmas[open]').count() === 0 && /^Firmaste el libro de cumbre del campamento /.test((await l.p.textContent('#aviso-txt')).trim()), '19·cumbre: se firma, se cierra y avisa');
+      ok(await ver(l.p, '#m-tarjeta') && await rF(l.p) === 'Firmaste tú · Cambia tu firma' && await l.p.evaluate(() => document.activeElement?.id) === 'm-firmas',
+        '19·cumbre: la tarjeta sigue abierta, dice que firmaste y el foco vuelve a su botón');
+      await bF.click(); await l.p.waitForTimeout(500);
+      const fila = l.p.locator('#fi-lista .fi-firma.mia');
+      ok(await fila.count() === 1 && /^Ana \(tú\)/.test((await fila.locator('.fi-quien').textContent()).trim()) && (await fila.locator('.fi-txt').textContent()) === '<b>Aquí estuve</b> con frío' && await fila.locator('.fi-txt b').count() === 0,
+        '19·cumbre: la firma se lee como texto (nunca como HTML), marcada como tuya');
+      ok(await l.p.locator('#fi-lista .fi-quitar').count() === 0 && (await l.p.textContent('#fi-guardar')).trim() === 'Guardar mi firma' && await ver(l.p, '#fi-borrar') && await l.p.inputValue('#fi-texto') === '<b>Aquí estuve</b> con frío',
+        '19·cumbre: una lectora no puede quitar firmas ajenas; la suya se puede cambiar o borrar');
+      // Esc cierra el libro pero no la tarjeta; otro Esc, la tarjeta
+      await l.p.keyboard.press('Escape'); await l.p.waitForTimeout(300);
+      ok(await l.p.locator('#d-firmas[open]').count() === 0 && await ver(l.p, '#m-tarjeta'), '19·cumbre: Esc cierra el libro y deja la tarjeta');
+      await l.p.keyboard.press('Escape'); await l.p.waitForTimeout(300);
+      ok(!(await ver(l.p, '#m-tarjeta')), '19·cumbre: un segundo Esc cierra la tarjeta');
+      // Reescribir
+      await abrirBandera(l.p, info.abajo);
+      await bF.click(); await l.p.waitForTimeout(500);
+      await l.p.fill('#fi-texto', 'Qué orgullo, hijo. Sigue así.'); await l.p.click('#fi-guardar'); await l.p.waitForTimeout(900);
+      eq((await l.p.textContent('#aviso-txt')).trim(), 'Tu firma quedó guardada.', '19·cumbre: reescribir la propia');
+      // Borrar la propia y deshacerlo
+      await bF.click(); await l.p.waitForTimeout(500);
+      await l.p.click('#fi-borrar'); await l.p.waitForTimeout(900);
+      ok(/Quitaste tu firma/.test(await l.p.textContent('#aviso-txt')) && await ver(l.p, '#aviso-btn') && (await datos(l.p, '/api/firmas')).length === 0, '19·cumbre: borrar la propia, con «Deshacer»');
+      await l.p.click('#aviso-btn'); await l.p.waitForTimeout(900);
+      const vuelta = await datos(l.p, '/api/firmas');
+      ok(vuelta.length === 1 && vuelta[0].texto === 'Qué orgullo, hijo. Sigue así.' && /^Firmaste tú/.test(await rF(l.p)), `19·cumbre: «Deshacer» la vuelve a escribir igual (${JSON.stringify(vuelta)} · ${await rF(l.p)} · ${await l.p.textContent('#aviso-txt')})`);
+      await l.ctx.close();
+      // El dueño la lee, la puede quitar (con un segundo toque) y su Historial lo cuenta
+      const a = await ent(sLargo, ADMIN);
+      await abrirBandera(a.p, info.abajo);
+      ok(await rF(a.p) === 'Firmó Ana · Firma tú también', `19·cumbre: el dueño ve quién firmó («${await rF(a.p)}»)`);
+      await a.p.click('#m-firmas'); await a.p.waitForTimeout(500);
+      const quitar = a.p.locator('#fi-lista .fi-quitar');
+      ok(await quitar.count() === 1 && (await quitar.locator('.fi-quitar-t').textContent()) === 'Quitar' && /Quitar la firma de Ana/.test(await quitar.textContent()), '19·cumbre: el dueño puede quitar la firma de Ana');
+      ok((await a.p.textContent('#fi-guardar')).trim() === 'Firmar' && await ver(a.p, '#fi-texto'), '19·cumbre: y también firmar el suyo');
+      await quitar.click(); await a.p.waitForTimeout(300);
+      ok((await quitar.locator('.fi-quitar-t').textContent()) === 'Sí, quitar' && /¿Quitar la firma de Ana\?/.test(await a.p.textContent('#fi-estado')) && (await datos(a.p, '/api/firmas')).length === 1, '19·cumbre: el primer toque pregunta y no quita');
+      await quitar.click(); await a.p.waitForTimeout(900);
+      ok((await datos(a.p, '/api/firmas')).length === 0 && /Quitaste la firma de Ana/.test(await a.p.textContent('#fi-estado')) && await a.p.locator('#d-firmas[open]').count() === 1, '19·cumbre: el segundo la quita y el libro sigue abierto');
+      await a.p.fill('#fi-texto', 'Gracias por subir conmigo'); await a.p.click('#fi-guardar'); await a.p.waitForTimeout(900);
+      await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(300);
+      await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(300); await a.p.click('#dc-historial'); await a.p.waitForTimeout(900);
+      const hist = await a.p.textContent('#hist-lista');
+      ok(/firmó el libro de cumbre del campamento/.test(hist) && /cambió su firma en el campamento/.test(hist) && /quitó la firma de Ana del campamento/.test(hist) && /quitó su firma del campamento/.test(hist),
+        '19·cumbre: el Historial cuenta las firmas, los cambios y lo que se quitó');
+      await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(300);
+      // «Tu historia»: el libro bajo su campamento (también los de abajo, que la montaña ya no dibuja)
+      await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(300); await a.p.click('#dc-historia-btn'); await a.p.waitForTimeout(900);
+      const hf = a.p.locator('#dh-linea .h-firmas');
+      ok(await hf.count() >= 1 && (await hf.allInnerTexts()).some((t) => t === 'Libro de cumbre: firmaste tú'), `19·cumbre: «Tu historia» dice quién firmó cada campamento (${(await hf.allInnerTexts()).join(' | ')})`);
+      await hf.filter({ hasText: 'firmaste tú' }).first().click(); await a.p.waitForTimeout(500);
+      ok(await a.p.locator('#d-firmas[open]').count() === 1 && /Gracias por subir conmigo/.test(await a.p.textContent('#fi-lista')), '19·cumbre: y desde ahí se abre el libro');
+      eq(a.consola, [], `19·cumbre: consola limpia (${a.consola.join(' | ')})`);
+      await a.ctx.close();
+      // A 320 px el libro cabe sin desplazar a lo ancho
+      const c = await ent(sLargo, LECTOR, { viewport: { width: 320, height: 568 } });
+      await abrirBandera(c.p, info.abajo);
+      await c.p.click('#m-firmas'); await c.p.waitForTimeout(500);
+      const anchos = await c.p.evaluate(() => { const d = document.getElementById('d-firmas'); return [d.scrollWidth, d.clientWidth, document.documentElement.scrollWidth, document.documentElement.clientWidth]; });
+      ok(anchos[0] <= anchos[1] + 1 && anchos[2] <= anchos[3], `19·cumbre: a 320 px el libro no se sale a lo ancho (${anchos})`);
+      const bot = await c.p.locator('#fi-cerrar').boundingBox();
+      ok(bot && bot.y + bot.height <= 568 && bot.height >= 47.5, '19·cumbre: a 320 px los botones quedan a mano (48 px, dentro de la pantalla)');
+      await c.ctx.close();
+
+      // ---- 21 · Bautizar la montaña: el dueño le pone nombre en «Tu cuenta»; sale en el Diario, el certificado y la tele; nunca en la entrada
+      const d = await ent(sLargo, ADMIN);
+      await d.p.click('#cuenta-btn'); await d.p.waitForTimeout(300);
+      const filaM = d.p.locator('#dc-montana');
+      ok(await filaM.isVisible() && (await filaM.textContent()).trim() === 'Nombre de la montaña: sin nombre', '19·nombre: «Tu cuenta» del dueño dice que la montaña no tiene nombre');
+      await filaM.click(); await d.p.waitForTimeout(600);
+      ok(await d.p.locator('#d-montana[open]').count() === 1 && await d.p.evaluate(() => document.activeElement?.id) === 'mo-nombre' && await d.p.isHidden('#mo-quitar'), '19·nombre: se abre el cuadro con el foco en el nombre');
+      eq(await d.p.getAttribute('#mo-nombre', 'maxlength'), '32', '19·nombre: hasta 32 caracteres');
+      await d.p.click('#mo-guardar'); await d.p.waitForTimeout(200);
+      ok(/Escribe un nombre/.test(await d.p.textContent('#mo-error')), '19·nombre: vacío no se guarda (para quitarlo está su botón)');
+      await d.p.fill('#mo-nombre', '  La   Ceiba '); await d.p.click('#mo-guardar'); await d.p.waitForTimeout(900);
+      ok(await d.p.locator('#d-montana[open]').count() === 0 && (await d.p.textContent('#aviso-txt')).trim() === 'La montaña se llama «La Ceiba».', '19·nombre: se guarda y avisa');
+      eq((await d.p.textContent('#dia-edicion')).replace(/\u00a0/g, ' ').trim().split(' · ')[0], 'Desde «La Ceiba»', '19·nombre: el Diario lo pone delante de la fecha, como el lugar de un periódico');
+      await d.p.click('#cuenta-btn'); await d.p.waitForTimeout(300);
+      ok((await filaM.textContent()).trim() === 'Nombre de la montaña: La Ceiba', '19·nombre: «Tu cuenta» dice el nombre');
+      await d.p.click('#dc-historia-btn'); await d.p.waitForTimeout(900);
+      await d.p.click('#dh-cert'); await d.p.waitForTimeout(700);
+      ok((await d.p.innerHTML('#cert-lienzo')).includes('En la montaña «La Ceiba», se hace constar que') && /en la montaña «La Ceiba»/.test(await d.p.textContent('#cert-desc')), '19·nombre: el certificado lo dice (también en su descripción)');
+      await d.p.click('#cert-ok'); await d.p.waitForTimeout(300);
+      await d.p.click('#cuenta-btn'); await d.p.waitForTimeout(300); await d.p.click('#dc-historial'); await d.p.waitForTimeout(900);
+      ok(/le puso a la montaña el nombre «La Ceiba»/.test(await d.p.textContent('#hist-lista')), '19·nombre: el Historial lo cuenta');
+      await d.p.keyboard.press('Escape'); await d.p.waitForTimeout(300);
+      eq(d.consola, [], `19·nombre: consola limpia (${d.consola.join(' | ')})`);
+      await d.ctx.close();
+      // Una lectora lo ve en el Diario y en la tele, pero no lo puede cambiar
+      const t = await ent(sLargo, LECTOR, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false });
+      ok((await t.p.textContent('#dia-edicion')).replace(/\u00a0/g, ' ').startsWith('Desde «La Ceiba» · '), '19·nombre: la lectora ve el nombre en el Diario');
+      await t.p.click('#cuenta-btn'); await t.p.waitForTimeout(300);
+      ok(await t.p.isHidden('#dc-montana'), '19·nombre: y no tiene el botón para cambiarlo');
+      await t.p.keyboard.press('Escape'); await t.p.waitForTimeout(300);
+      ok(!(await t.p.isVisible('#tv-nombre')), '19·nombre: fuera de la tele no sale bajo la marca');
+      await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.waitForTimeout(800);
+      ok(await t.p.isVisible('#tv-nombre') && (await t.p.textContent('#tv-nombre')).trim() === 'Montaña «La Ceiba»', '19·nombre: la tele lo pone bajo la marca');
+      const cajas = await t.p.evaluate(() => { const n = document.getElementById('tv-nombre').getBoundingClientRect(), s = document.getElementById('t-saldo').getBoundingClientRect(); return [n.bottom, s.top]; });
+      ok(cajas[0] <= cajas[1], `19·nombre: en la tele no pisa el saldo (${cajas.map(Math.round)})`);
+      // Nunca en la entrada
+      await t.p.evaluate(() => fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: '{}' }));
+      await t.p.goto(`${sLargo.url}/login`, { waitUntil: 'networkidle' }); await t.p.waitForTimeout(500);
+      ok(!(await t.p.evaluate(() => document.body.textContent.includes('Ceiba'))), '19·nombre: la pantalla de entrada nunca lo enseña');
+      await t.ctx.close();
+      // Quitarlo
+      const q = await ent(sLargo, ADMIN);
+      await q.p.click('#cuenta-btn'); await q.p.waitForTimeout(300); await q.p.click('#dc-montana'); await q.p.waitForTimeout(600);
+      ok(await q.p.isVisible('#mo-quitar') && await q.p.inputValue('#mo-nombre') === 'La Ceiba', '19·nombre: con nombre, el cuadro lo trae y deja quitarlo');
+      await q.p.click('#mo-quitar'); await q.p.waitForTimeout(900);
+      ok(!(await q.p.textContent('#dia-edicion')).includes('Ceiba') && (await datos(q.p, '/api/montana')).nombre === null, '19·nombre: se quita y el Diario vuelve a su fecha');
+      await q.ctx.close();
+    } finally { sLargo.parar(); }
+  }
+
   // ---------------------------------------------------------------- sin histórico de precios
   const sinhist = await servidor('sinhist');
   try {

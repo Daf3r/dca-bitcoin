@@ -47,7 +47,7 @@ bOir.addEventListener('click', () => {
   if (leer(diarioParaOir(ultimo, { montana: S.montana }), { alTerminar: () => { marcarOir(false); edicionLeida = null; } })) { marcarOir(true); edicionLeida = ultimo.edicion; }
   else pintarOir(); // la voz ya no está (el sistema la quitó): fuera el botón
 });
-alCambiarVoces(pintarOir);
+alCambiarVoces(pintarOir); // (en el nivel superior está bien: escuchar.js no importa nada de la app, así que ya está cargado)
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') callar(); });
 window.addEventListener('pagehide', () => callar());
 for (const ev of ['libro:pestana', 'libro:tv']) document.addEventListener(ev, () => callar());

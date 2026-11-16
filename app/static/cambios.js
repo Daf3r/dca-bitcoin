@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-u', fecha: '2026-11-23',
+    items: [
+      'El Diario puede llegar como aviso los domingos a las 6 de la tarde: solo su titular, sin cifras. Se enciende en «Tu cuenta → Avisos en este dispositivo».',
+      'El Diario se puede escuchar: «Escuchar el Diario» lo lee con la voz del propio teléfono o computadora, si tiene una en español. Otro toque lo calla.',
+      'Cada campamento alcanzado tiene su libro de cumbre: toca su bandera y deja tu firma, de hasta 80 letras. Lo lee toda la familia y cada quien puede cambiar o borrar la suya.',
+      'En «Tu historia», bajo cada campamento, se ve quién firmó su libro, también de los campamentos que la montaña ya dejó abajo.',
+      'Quien anota le puede poner nombre a la montaña: sale en el Diario, en el certificado de altitud y en la tele.',
+    ],
+  },
+  {
     id: '2026-11-t', fecha: '2026-11-22',
     items: [
       'Los campamentos de la montaña están tallados como la roca: cada hito tiene su cara al sol (o a la luna) y su cara en sombra.',
