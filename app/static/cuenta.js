@@ -80,7 +80,19 @@ export function pintarSaludo(nombre = nombreSaludo) {
   // El día de tu cumpleaños el saludo cambia (campamento 15B).
   const cumple = S.cumple && cumpleHoy([{ nombre, cumple: S.cumple }], cielo.dia()).length;
   $('saludo').textContent = cumple ? textoCumple(nombre) : `${cielo.saludo(cielo.hora())}, ${nombre}`;
+  encajarSaludo();
 }
+/**
+ * Si la marca y el botón de la cuenta no caben en un renglón (teléfonos de 360 px, letra grande, un nombre largo), el saludo baja
+ * un renglón y caía encima del rótulo del saldo. En ese caso no se enseña (el nombre ya está en el botón de la cuenta). Se mide en
+ * el mismo fotograma (mostrar, leer, decidir): no parpadea. Se revisa al cambiar el tamaño de la cabecera.
+ */
+function encajarSaludo() {
+  const s = $('saludo');
+  s.hidden = false;
+  if (s.textContent && s.getBoundingClientRect().bottom > $('t-saldo').getBoundingClientRect().top + 2) s.hidden = true;
+}
+if ('ResizeObserver' in window) new ResizeObserver(() => encajarSaludo()).observe(document.querySelector('.cima'));
 setInterval(() => document.visibilityState === 'visible' && pintarSaludo(), 300_000);
 document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && pintarSaludo());
 

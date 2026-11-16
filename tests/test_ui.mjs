@@ -3371,6 +3371,19 @@ try {
         await a.ctx.close();
       }
       {
+        // Donde la barra va en dos filas (letra muy grande en el teléfono) no caben barra y botón: queda como estaba y nada tapa el botón.
+        const letra = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.letra', 'muy-grande'); } catch { /* sin almacenamiento */ } };
+        const tocable = (p) => p.evaluate(() => { const r = document.getElementById('anotar').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('#anotar') !== null; });
+        const g = await ent(s17, ADMIN, { viewport: { width: 390, height: 844 }, ...fijo }, letra);
+        const c = await cajas(g.p);
+        ok(c.escena.abajo === 844 && c.boton.abajo <= 844 && await tocable(g.p), `17·1 dueño con letra muy grande: la escena llena la pantalla y el botón queda a la vista y encima (${c.escena.abajo})`);
+        await g.ctx.close();
+        const n = await ent(s17, ADMIN, { viewport: { width: 412, height: 780 }, ...fijo });
+        const cn = await cajas(n.p);
+        ok(cn.escena.abajo === 780 - 164 && cn.barra.abajo < cn.boton.arriba && await tocable(n.p), `17·1 dueño 412×780: barra y botón, sin taparse (${cn.barra.abajo} < ${cn.boton.arriba})`);
+        await n.ctx.close();
+      }
+      {
         // «Todo junto», acostado y escritorio: como antes.
         const t = await entrar(navegador, s17, LECTOR, { viewport: { width: 390, height: 844 }, ...fijo }, sinAviso); await cerrar(t.p);
         eq((await cajas(t.p)).escena.abajo, 844, '17·1 «todo junto»: la escena sigue llenando la pantalla');
@@ -3433,6 +3446,21 @@ try {
         const sw = await l.p.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
         ok(sw[0] <= sw[1], `17·2 lectora ${w}×${h}: sin scroll horizontal`);
         await l.ctx.close();
+      }
+      {
+        // El saludo nunca cae sobre el rótulo del saldo: si la marca y la cuenta no caben en un renglón (360 px, letra grande), no se enseña.
+        const saludo = (p) => p.evaluate(() => { const sl = document.getElementById('saludo'), k = document.getElementById('t-saldo'); return { oculto: sl.hidden, pisa: !sl.hidden && sl.getBoundingClientRect().bottom > k.getBoundingClientRect().top + 2, txt: sl.textContent }; });
+        const grande = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.letra', 'grande'); } catch { /* sin almacenamiento */ } };
+        for (const [cuenta, w, h, init, nombre] of [[ADMIN, 360, 740, sinAviso, 'dueño 360×740'], [LECTOR, 390, 844, grande, 'lectora con letra grande'], [LECTOR, 320, 568, sinAviso, 'lectora 320×568']]) {
+          const x = await ent(s17, cuenta, { viewport: { width: w, height: h }, ...fijo }, init);
+          const sl = await saludo(x.p);
+          ok(!sl.pisa && sl.txt.length > 8, `17·2 ${nombre}: el saludo no pisa el rótulo del saldo (${sl.oculto ? 'no se enseña' : 'cabe'})`);
+          await x.ctx.close();
+        }
+        const x = await ent(s17, LECTOR, { viewport: { width: 390, height: 844 }, ...fijo });
+        const sl = await saludo(x.p);
+        ok(!sl.oculto && !sl.pisa && /, Ana$/.test(sl.txt), `17·2 lectora 390×844: el saludo se ve («${sl.txt}»)`);
+        await x.ctx.close();
       }
       {
         // En modo pantalla grande (una tele con cuenta de lectora) también.

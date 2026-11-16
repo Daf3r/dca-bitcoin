@@ -3122,11 +3122,20 @@ html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb
 @media (max-width: 1099px) and (min-height: 521px) and (max-height: 600px) {
   html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 64px); height: calc(100svh - 64px); min-height: 440px; --pie: 40; }
 }
-@media (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton]:not([data-tv]) .escena { height: calc(100vh - 164px); height: calc(100svh - 164px); --pie: 46; }
-  html[data-pestanas][data-boton]:not([data-tv]) .cuerpo { padding-top: 14px; }
+/* Quien anota, en pantalla alta: caben la barra (de una fila) y, debajo, el botón. Donde la barra va en dos filas (menos de 360 px,
+   o letra grande o muy grande en teléfonos) no caben: ahí queda como estaba, igual que en pantallas bajas. */
+@media (min-width: 360px) and (max-width: 1099px) and (min-height: 740px) {
+  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .cuerpo { padding-top: 14px; }
 }
-
+@media (min-width: 480px) and (max-width: 1099px) and (min-height: 740px) {
+  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
+}
+@media (min-width: 600px) and (max-width: 1099px) and (min-height: 740px) {
+  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
+  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
+}
 /* --- 2. «Saldo del libro» para quien solo mira. Los textos fijos llevan su otra forma en `data-libro` y pintar.js elige cuál se ve
    (`html[data-voz]`). Si este dispositivo es de alguien que solo mira (`data-lector`, efectos.js), el texto de «tu…» no se
    enseña mientras se cambia: nunca se ve un «Tu saldo» que luego salta a «Saldo del libro». */
