@@ -1340,6 +1340,8 @@ const restarDias = (hoy, n) => {
   const [y, m, d] = hoy.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
 };
+/** Suma (o resta, con `n` negativo) días a una fecha AAAA-MM-DD. */
+export const sumarDias = (f, n) => restarDias(f, -n);
 
 const PRONOSTICOS = {
   lluviosa: ['lluvias por la tarde en el valle y la cumbre despejada', 'nubes bajas por la mañana, claros al mediodía', 'chubascos ligeros abajo y mucha luz arriba', 'tarde fresca, con olor a tierra mojada'],
@@ -1381,7 +1383,7 @@ export function diario(R, hoy = hoyISO()) {
   const pronostico = `${PRONOSTICOS[epoca][sem % 4].replace(/^./, (ch) => ch.toUpperCase())}. Es el clima, no un consejo: la montaña no adivina nada.`;
   const esc = escalaMontana(R.sats);
   const primera = compras[0].fecha;
-  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, haceUnAnio: haceAnio, clasificados, pronostico,
+  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
     altitud: altitud(R.sats, esc), sats: R.sats, valor: R.valor ?? null };
 }
 export const textoDiario = (d) => `El Diario del Libro, edición del ${d.edicion}. ${d.titular}. ${d.sub}`;
@@ -1457,4 +1459,55 @@ export function tarjetaFiesta(antes, despues, sats) {
     return { titulo: grande ? 'Nuevo hito' : 'Nueva etapa', texto: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, sub: `+${entero(sats)} sats`, grande };
   }
   return { titulo: 'Compra nueva', texto: `+${entero(sats)} sats`, sub: 'La montaña sube un paso más', grande: false };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 18 · El ritual de anotar: la fecha escrita, la nota de la semana que vuelve al año y el comprobante de cada movimiento.
+// ---------------------------------------------------------------------------------------------
+
+const dfEscrita = new Intl.DateTimeFormat('es-SV', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+/** La fecha escrita como aquí: «domingo 15 de noviembre»; si no es de este año, «sábado 15 de noviembre de 2025». */
+export function fechaEscrita(f, hoy = hoyISO()) {
+  const p = Object.fromEntries(dfEscrita.formatToParts(aFecha(f)).map((x) => [x.type, x.value]));
+  return `${p.weekday} ${p.day} de ${p.month}${f.slice(0, 4) === hoy.slice(0, 4) ? '' : ` de ${p.year}`}`;
+}
+/** Qué botón de la fecha le toca a un día: 'hoy', 'ayer' u 'otro'. */
+export const diaDe = (f, hoy = hoyISO()) => (f === hoy ? 'hoy' : f === sumarDias(hoy, -1) ? 'ayer' : 'otro');
+
+/**
+ * La semana en una línea (idea 16): la nota de una compra de hace un año, para que el Diario la traiga de vuelta. Se busca en los siete
+ * días que terminan en la misma fecha del año pasado (así se recuerda toda una semana) y, si hay varias, gana la más cercana a esa fecha.
+ * Devuelve `{ fecha, nota }` o null. Las ventas y los gastos no cuentan: sus notas son de otra cosa.
+ */
+export function notaDeHaceUnAnio(items, hoy = hoyISO()) {
+  const hasta = haceUnAnio(hoy), desde = sumarDias(hasta, -6);
+  const c = (items ?? []).filter((x) => x.tipo !== 'venta' && x.nota?.trim() && x.fecha >= desde && x.fecha <= hasta)
+    .sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : (b.id ?? 0) - (a.id ?? 0)))[0];
+  return c ? { fecha: c.fecha, nota: c.nota.trim() } : null;
+}
+
+/**
+ * El comprobante de una compra o de una venta (idea 17): lo que dice su ficha, armado con lo que ya se sabe. `items` son los de
+ * `resumen` (en orden y con `satsAcum`). `numero` cuenta las compras (o las ventas) por fecha; `antes` y `despues` son la altitud (el
+ * saldo) al anotarla; `p` y `q` (0 a 1) la sitúan en el tramo entre la etapa anterior y la siguiente (`meta`) y `etapa` es la etapa
+ * que cruzó, si cruzó alguna (la más alta). `sello` es el de su semana y `primeraDeSemana` dice si nació con ella. `hoy` (solo compras
+ * y con precio) es lo que valen hoy esos sats y cuánto cambió el precio desde entonces: informa, no recomienda. Sin el movimiento, null.
+ */
+export function comprobante(items, id, { precio = null, hoy = hoyISO() } = {}) {
+  const c = (items ?? []).find((x) => x.id === id);
+  if (!c) return null;
+  const venta = c.tipo === 'venta';
+  const pares = items.filter((x) => (x.tipo === 'venta') === venta);
+  const despues = c.satsAcum, antes = despues + (venta ? c.sats : -c.sats);
+  const a = etapaAnterior(antes), b = etapaSiguiente(antes);
+  const en = (s) => (b > a ? Math.max(0, Math.min(1, (s - a) / (b - a))) : 0);
+  const sello = venta ? null : sellosSemana(items, hoy).find((s) => s.desde <= c.fecha && c.fecha <= s.hasta) ?? null;
+  const primera = sello ? pares.find((x) => x.fecha >= sello.desde && x.fecha <= sello.hasta) : null;
+  return {
+    id: c.id, tipo: venta ? 'venta' : 'compra', numero: pares.indexOf(c) + 1, total: pares.length, fecha: c.fecha, sats: c.sats, monto: c.monto, precio: c.precio,
+    antes, despues, p: en(antes), q: en(despues), meta: b, etapa: venta ? null : etapasCruzadas(antes, despues).at(-1) ?? null,
+    sello, primeraDeSemana: Boolean(primera && primera.id === c.id),
+    hoy: !venta && precio && c.precio ? { valor: (c.sats * precio) / 1e8, variacion: (precio / c.precio - 1) * 100 } : null,
+    realizada: venta ? c.realizada ?? null : null, extra: !venta && Boolean(c.extra), nota: c.nota ?? '', etiquetas: c.etiquetas ?? [], txid: c.txid ?? '',
+  };
 }

@@ -4,7 +4,8 @@ import { apacheta, piedrita } from './arte.js';
 import { copiarTexto } from './copiar.js';
 import { ico, ilustracion } from './iconos.js';
 import { $, R, S, api, esAdmin, normalizar, reducido } from './estado.js';
-import { abrirAnularTraslado, abrirHoja, esc } from './hoja.js';
+import { abrirComprobante } from './comprobante.js';
+import { abrirHoja, esc } from './hoja.js';
 import { pintar } from './pintar.js';
 
 // ----------------------------------------------------------------- lista
@@ -76,13 +77,11 @@ function textoTraslado(t, aW) {
 function htmlTraslado(m) {
   const t = m.ref;
   const aW = t.sentido === 'a_wallet';
-  const etiqueta = esAdmin() ? 'button type="button"' : 'div';
-  const cierre = esAdmin() ? 'button' : 'div';
-  return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-tras="${t.id}" data-tipo="traslado">` +
-    (esAdmin() ? '<span class="sr">Ver el traslado del </span>' : '') + htmlFecha(t.fecha) +
+  return `<li data-clave="${m.clave}"><button type="button" class="fila" data-tras="${t.id}" data-tipo="traslado">` +
+    '<span class="sr">Ver el traslado del </span>' + htmlFecha(t.fecha) +
     `<span class="f-sats">${ico('traslado')} ${entero(t.sats)} <small>sats</small></span>` +
     `<span class="f-det">${textoTraslado(t, aW)}${t.nota ? ` · ${esc(t.nota)}` : ''}</span>` +
-    `<span class="f-var"></span></${cierre}>${htmlExtras(m)}</li>`;
+    `<span class="f-var"></span></button>${htmlExtras(m)}</li>`;
 }
 function htmlFila(m) {
   if (m.tipo === 'traslado') return htmlTraslado(m);
@@ -94,12 +93,12 @@ function htmlFila(m) {
   // lectores de pantalla, cada fila: «baja −3.1% desde entonces» o, en una venta, «+$3.20 de ganancia realizada».
   const plano = v == null || Math.abs(v) < (venta ? 0.005 : 0.05);
   const textoV = v == null ? '' : `${plano ? '' : `${ico(v > 0 ? 'sube' : 'baja')}<span class="sr">${v > 0 ? 'sube' : 'baja'} </span>`}${venta ? usdSigno(v) : pct(v)}<span class="sr">${venta ? ' de ganancia realizada' : ' desde entonces'}</span>`;
-  const etiqueta = esAdmin() ? 'button type="button"' : 'div';
-  return `<li data-clave="${m.clave}"><${etiqueta} class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}"${c.extra ? ' data-extra="1"' : ''}>` +
-    (esAdmin() ? `<span class="sr">Editar la ${venta ? 'venta' : 'compra'} del </span>` : '') + htmlFecha(c.fecha) +
+  // La fila es un botón para todos (campamento 18): abre el comprobante de ese movimiento; editar queda dentro, para quien anota.
+  return `<li data-clave="${m.clave}"><button type="button" class="fila" data-id="${c.id}" data-tipo="${venta ? 'venta' : 'compra'}"${c.extra ? ' data-extra="1"' : ''}>` +
+    `<span class="sr">Ver la ${venta ? 'venta' : 'compra'} del </span>` + htmlFecha(c.fecha) +
     `<span class="f-sats">${venta ? '−' : '+'}${entero(c.sats)} <small>sats</small></span>` +
     `<span class="f-det">${venta ? 'Venta · ' : ''}${c.extra ? `<b class="f-extra">${ico('rayo')} Extra</b> · ` : ''}${usd(c.monto)} a ${usd0(c.precio)}${c.nota ? ` · ${esc(c.nota)}` : ''}${c.etiquetas?.length ? ` · ${c.etiquetas.map((e) => `<span class="f-et">${esc(e)}</span>`).join(' ')}` : ''}</span>` +
-    `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${textoV}</span></${esAdmin() ? 'button' : 'div'}>${htmlExtras(m)}</li>`;
+    `<span class="f-var"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${textoV}</span></button>${htmlExtras(m)}</li>`;
 }
 
 // Resalte de lo recién guardado: cuando la fila se ve por primera vez, brilla un momento (aunque se guarde con la vista arriba).
@@ -248,6 +247,17 @@ function pintarEstadoTx() {
     el.dataset.estado = estado;
   });
 }
+/** El estado de un TXID para el comprobante: lo ya consultado en esta visita o, si falta, lo pide (una sola vez). `{ txt, estado }`. */
+export async function estadoDeTx(txid) {
+  if (!(txid in estadoTx)) {
+    if (enColaTx.has(txid)) return null; // ya está en camino por la lista: se pintará allí
+    enColaTx.add(txid);
+    try { estadoTx[txid] = await api(`/api/tx/${txid}`); } catch { estadoTx[txid] = 'error'; }
+    enColaTx.delete(txid);
+    pintarEstadoTx();
+  }
+  return textoEstadoTx(estadoTx[txid]);
+}
 async function verificarTx() {
   const faltan = [...new Set([...document.querySelectorAll('.f-est[data-txid]')].map((e) => e.dataset.txid))]
     .filter((t) => !(t in estadoTx) && !enColaTx.has(t)).slice(0, 12);
@@ -269,9 +279,7 @@ $('lista').addEventListener('click', async (e) => {
   const nb = e.target.closest('.f-nota-b');
   if (nb) { editarNota(nb); return; }
   const b = e.target.closest('.fila');
-  if (!b || !esAdmin()) return;
-  if (b.dataset.tras) abrirAnularTraslado(Number(b.dataset.tras));
-  else abrirHoja(Number(b.dataset.id));
+  if (b) abrirComprobante(b.dataset.tras ? `t${b.dataset.tras}` : `c${b.dataset.id}`);
 });
 
 /** Cambiar la nota de una compra o venta ahí mismo (solo admin; usa la misma ruta de edición, así que queda en el Historial). */

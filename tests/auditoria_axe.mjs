@@ -147,6 +147,16 @@ try {
         await auditar(p, `hoja de ${tipo} ${esquema}`);
       }
       await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+      // Campamento 18: la hoja con «Qué cambia con esta compra» abierto y «Otro día», y el comprobante de un movimiento
+      await p.click('#anotar'); await p.waitForTimeout(400);
+      await p.click('#h-tipo button[data-tipo="compra"]');
+      await p.fill('#h-sats', '30000'); await p.evaluate(() => { document.getElementById('h-cambia').open = true; }); await p.click('#h-dia-otro'); await p.waitForTimeout(300);
+      await auditar(p, `hoja con lo que cambia y otro día ${esquema}`);
+      await p.fill('#h-sats', '');
+      for (let k = 0; k < 3 && await p.locator('#hoja.abierta').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
+      await p.evaluate(() => document.querySelector('#lista .fila').click()); await p.waitForTimeout(600);
+      await auditar(p, `comprobante de una compra ${esquema}`);
+      await p.click('#cp-cerrar'); await p.waitForTimeout(300);
       // «Compra de siempre»: sats estimados, con su aviso
       await p.click('#anotar'); await p.waitForTimeout(400);
       await p.click('#h-habitual'); await p.waitForTimeout(300);

@@ -38,6 +38,7 @@
 <link rel="stylesheet" href="/styles.css">
 <!-- Los módulos se piden todos a la vez (en vez de descubrirlos uno tras otro al ejecutar el anterior): la app abre antes, sobre todo en el teléfono. -->
 <link rel="modulepreload" href="/estado.js">
+<link rel="modulepreload" href="/comprobante.js">
 <link rel="modulepreload" href="/favicon.js">
 <link rel="modulepreload" href="/datos.js">
 <link rel="modulepreload" href="/avisar.js">
@@ -185,7 +186,7 @@
     <button type="button" class="dia-abrir" id="dia-abrir" aria-expanded="false" aria-controls="dia-grabado dia-cols"><b id="dia-abrir-t">Leer el Diario de hoy</b><span id="dia-abrir-d"></span></button>
     <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
     <div class="dia-cols" id="dia-cols">
-      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p></section>
+      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p><p class="dia-nota" id="dia-nota" hidden><span id="dia-nota-k"></span> <span class="dia-nota-q" id="dia-nota-q"></span></p></section>
       <section class="dia-bloque" aria-labelledby="t-dia-cla"><h3 id="t-dia-cla">Clasificados</h3><ul class="dia-clasif" id="dia-clasif"></ul></section>
       <section class="dia-bloque" aria-labelledby="t-dia-pro"><h3 id="t-dia-pro">Pronóstico de la montaña</h3><p id="dia-pron"></p></section>
     </div>
@@ -457,16 +458,35 @@
       </label>
     </div>
     <label class="h-sats"><span id="h-sats-l">Sats que recibiste</span>
-      <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hoja-calc">
+      <input id="h-sats" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0" aria-describedby="hc-uno hc-pie">
     </label>
     <button type="button" class="enlace h-habitual" id="h-habitual" hidden></button>
-    <div class="h-ruta" id="h-ruta" hidden aria-hidden="true"><span class="hr-pista"><i class="hr-hecho"></i><i class="hr-yo"></i><i class="hr-fantasma"></i></span></div>
-    <p class="hoja-calc" id="hoja-calc" aria-live="polite"></p>
+    <!-- Una respuesta (campamento 18): los dólares y cómo queda el saldo, en un renglón. El resto (la regla de la etapa con el «Tú» fantasma,
+         el costo promedio y el precio usado) va bajo «Qué cambia con esta compra»: cerrado en el teléfono, abierto en pantallas anchas, y se recuerda. -->
+    <div class="hoja-calc" id="hoja-calc"><p class="hc-uno" id="hc-uno" aria-live="polite"></p><p class="hc-pie" id="hc-pie" hidden></p>
+      <details class="h-avanzado hc-mas" id="h-cambia" hidden>
+        <summary>Qué cambia con esta compra</summary>
+        <div class="h-ruta" id="h-ruta" hidden aria-hidden="true"><span class="hr-pista"><i class="hr-hecho"></i><i class="hr-yo"></i><i class="hr-fantasma"></i></span></div>
+        <p class="hc-lineas" id="hc-lineas"></p>
+      </details>
+    </div>
     <p class="hoja-error" id="hoja-error" role="alert"></p>
-    <label class="h-fecha">Fecha <input type="date" id="h-fecha" required></label>
-    <label class="h-nota-campo" id="h-nota-l" hidden>Nota (opcional)
-      <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: gasté en renta">
+    <!-- Fecha (campamento 18): casi siempre es hoy o ayer; «Otro día» enseña el calendario. Debajo, la fecha escrita como aquí. -->
+    <div class="h-fecha" id="h-fecha-caja">
+      <p class="h-fecha-cab"><span id="h-fecha-l">Fecha</span> <b id="h-fecha-txt" aria-live="polite"></b></p>
+      <div class="h-tipo h-dia" id="h-dia" role="group" aria-labelledby="h-fecha-l">
+        <button type="button" data-dia="hoy" aria-pressed="true">Hoy</button>
+        <button type="button" data-dia="ayer" aria-pressed="false">Ayer</button>
+        <button type="button" data-dia="otro" id="h-dia-otro" aria-pressed="false" aria-controls="h-fecha-otro">Otro día</button>
+      </div>
+      <label class="h-fecha-otro" id="h-fecha-otro" hidden><span>Elige el día</span> <input type="date" id="h-fecha" required></label>
+    </div>
+    <!-- La semana en una línea (campamento 18): en una compra, la nota es una pregunta opcional sobre la semana en casa; un año después el
+         Diario la trae de vuelta. Es la nota de siempre (120 caracteres) y la ve toda la familia. En ventas y traslados sigue siendo «Nota». -->
+    <label class="h-nota-campo" id="h-nota-l"><span id="h-nota-t">¿Qué pasó esta semana en casa?</span>
+      <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: Sofi perdió su primer diente" aria-describedby="h-nota-ay">
     </label>
+    <p class="h-nota h-nota-ay" id="h-nota-ay">Opcional. Queda como nota de la compra: la ve toda la familia y, dentro de un año, el Diario la recuerda.</p>
     <details class="h-avanzado" id="h-avanzado">
       <summary id="h-av-t">Más detalles: dólares, TXID y compra extra</summary>
       <label class="h-usd" data-no-traslado><span id="h-usd-t">Pagaste (USD)</span>
@@ -482,12 +502,9 @@
         <input id="h-comision" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0">
       </label>
       <p class="h-nota" data-solo-traslado hidden>Si la pagaste, se anota también como un gasto («Comisión de retiro») y baja tu saldo.</p>
-      <!-- Solo para compras: la marca de extra y su nota (en una venta, la nota va arriba). -->
+      <!-- Solo para compras: la marca de extra (su nota es la de arriba, como en cualquier compra). -->
       <label class="h-extra" data-solo-compra><input type="checkbox" id="h-extra"> <span>Compra extra (por una caída)</span></label>
       <p class="h-nota" data-solo-compra>Las extra se muestran aparte: no son tu ritmo habitual ni cubren la compra de la semana.</p>
-      <label class="h-usd" data-solo-compra>Nota (opcional)
-        <input id="h-nota-c" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="¿Por qué esta compra?">
-      </label>
       <!-- Etiquetas (idea 56): hasta 5, separadas por comas; las que ya usaste salen como sugerencia. Compras y ventas, no traslados. -->
       <label class="h-usd" data-no-traslado>Etiquetas (opcional)
         <input id="h-etq" type="text" list="h-etq-lista" maxlength="140" autocomplete="off" autocapitalize="none" enterkeyhint="done" placeholder="cumpleaños, bono">
@@ -678,6 +695,28 @@
   <div class="cert-lienzo" id="cert-lienzo" role="img" aria-labelledby="cert-desc"></div>
   <p class="cert-desc" id="cert-desc"></p>
   <div class="d-bot"><button type="button" id="cert-ok" autofocus>Cerrar</button></div>
+</dialog>
+
+<!-- Comprobante de un movimiento (campamento 18): tocar una fila de la lista abre su ficha en papel. La ven todos; «Editar» (o «Anular»,
+     en un traslado) solo quien anota. El papel es claro en los dos temas, como un ticket. -->
+<dialog id="d-comp" class="d-comp" aria-labelledby="cp-t">
+  <article class="cp-papel">
+    <header class="cp-cab">
+      <p class="cp-marca">Libro DCA · comprobante</p>
+      <h2 id="cp-t"></h2>
+      <p class="cp-fecha" id="cp-fecha"></p>
+    </header>
+    <p class="cp-sats"><span id="cp-sats"></span> <b class="cp-extra" id="cp-extra" hidden>Extra</b></p>
+    <dl class="cp-datos" id="cp-datos"></dl>
+    <div class="cp-alt" id="cp-alt" hidden><span class="cp-pista" aria-hidden="true"><i class="cp-antes"></i><i class="cp-despues"></i></span><p id="cp-alt-t"></p></div>
+    <p class="cp-nota" id="cp-nota" hidden></p>
+    <ul class="cp-etq" id="cp-etq" aria-label="Etiquetas" hidden></ul>
+    <div class="cp-sello" id="cp-sello" hidden><span class="cp-sello-ico" id="cp-sello-ico" aria-hidden="true"></span><p><b id="cp-sello-t"></b><span id="cp-sello-d"></span></p></div>
+    <div class="cp-tx" id="cp-tx" hidden></div>
+    <p class="cp-pie" id="cp-pie" hidden><span class="cp-pie-ico" id="cp-pie-ico" aria-hidden="true"></span><span id="cp-pie-t"></span></p>
+    <p class="cp-aviso" id="cp-aviso" role="status"></p>
+  </article>
+  <div class="d-bot"><button type="button" id="cp-editar" hidden>Editar</button><button type="button" id="cp-cerrar" autofocus>Cerrar</button></div>
 </dialog>
 
 <dialog id="d-carta" class="d-carta" aria-labelledby="carta-t">

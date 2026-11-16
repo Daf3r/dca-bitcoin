@@ -7,6 +7,7 @@ import {
   escalaMontana, altitud, metaSiguiente, nombreHito, textoCampamento, historia, medallas, hayAurora, acentoDe, cruzo1Btc, iluminacionLunar, textoMeses, resumen, serieGrafico, ubicar, muestrear, hoyISO, ZONA, precioDelDia, estimarMonto, mempoolUrl, extraerTxid, etapaSiguiente, etapaAnterior, etapasHasta, etapasCruzadas, novedades, avisosAlAnotar, constanciaCruzada, proximosHitosConstancia, tocaComprar, costoTrasCompra, caidaGrande, reposicion, montoHabitual, equilibrio, haceCuanto, serieValor, ticksDolares, ticksPrecio, costoVsPromedio, ubicacionSats, walletNeto, walletNetoDe, nombreWallet,
   satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, textoApertura, etapasFuturas, mananaISO, diario, textoDiario, piedritasPorCompra, textoPiedritas, ultimaPiedrita, cumpleHoy, textoCumple, textoCumpleFecha, muestrasSismo, medianocheSV, tarjetaFiesta, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
+import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
 
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
@@ -920,5 +921,36 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq(tarjetaFiesta(90000, 95000, 5000), { titulo: 'Compra nueva', texto: '+5,000 sats', sub: 'La montaña sube un paso más', grande: false }, 'tele: una compra normal');
   eq(tarjetaFiesta(90000, 120000, 30000), { titulo: 'Nueva etapa', texto: '100k sats', sub: '+30,000 sats', grande: false }, 'tele: una etapa');
   eq(tarjetaFiesta(900000, 1100000, 200000).titulo, 'Nuevo hito', 'tele: un hito grande');
+}
+// ------------------------------------------------------------ campamento 18: el ritual de anotar
+{
+  // La fecha: «Hoy · Ayer · Otro día» y escrita como aquí.
+  eq([sumarDias('2026-03-01', -1), sumarDias('2024-02-28', 1), sumarDias('2026-12-31', 1), sumarDias('2026-11-15', 0)], ['2026-02-28', '2024-02-29', '2027-01-01', '2026-11-15'], 'sumarDias: cruza meses, años y el 29 de febrero');
+  eq([diaDe('2026-11-15', '2026-11-15'), diaDe('2026-11-14', '2026-11-15'), diaDe('2026-11-13', '2026-11-15'), diaDe('2026-10-31', '2026-11-01'), diaDe('2026-11-16', '2026-11-15')], ['hoy', 'ayer', 'otro', 'ayer', 'otro'], 'diaDe: hoy, ayer (también entre meses) u otro día');
+  eq([fechaEscrita('2026-11-15', '2026-11-16'), fechaEscrita('2025-03-08', '2026-11-16'), fechaEscrita('2026-01-01', '2026-01-01'), fechaEscrita('2026-11-15', '')],
+    ['domingo 15 de noviembre', 'sábado 8 de marzo de 2025', 'jueves 1 de enero', 'domingo 15 de noviembre de 2026'], 'fechaEscrita: como aquí, con el año solo si no es el de hoy');
+  // La semana en una línea: la nota de la compra de hace un año.
+  const notas = [{ id: 1, fecha: '2025-11-08', tipo: 'compra', nota: 'vieja' }, { id: 2, fecha: '2025-11-10', tipo: 'compra', nota: ' Sofi perdió su primer diente ' }, { id: 3, fecha: '2025-11-12', tipo: 'compra', nota: '  ' },
+    { id: 4, fecha: '2025-11-14', tipo: 'venta', nota: 'Gasto' }, { id: 5, fecha: '2025-11-16', tipo: 'compra', nota: 'después' }, { id: 6, fecha: '2025-11-16', tipo: 'compra', nota: 'la última del día' }, { id: 7, fecha: '2023-02-28', tipo: 'compra', nota: 'bisiesto' }];
+  eq(notaDeHaceUnAnio(notas, '2026-11-15'), { fecha: '2025-11-10', nota: 'Sofi perdió su primer diente' }, 'nota de hace un año: la de los siete días que acaban en la misma fecha (sin espacios; ni ventas ni notas vacías)');
+  eq([notaDeHaceUnAnio(notas, '2026-11-16').nota, notaDeHaceUnAnio(notas, '2026-11-08').nota, notaDeHaceUnAnio(notas, '2026-11-25'), notaDeHaceUnAnio(notas, '2024-02-29').nota, notaDeHaceUnAnio([], '2026-11-15'), notaDeHaceUnAnio(null, '2026-11-15')],
+    ['la última del día', 'vieja', null, 'bisiesto', null, null], 'nota de hace un año: gana la más cercana a la fecha (y la última anotada ese día); sin nota, nada');
+  const semanal = [];
+  for (let k = 0; k < 60; k++) semanal.push({ id: k + 1, fecha: sumarDias('2026-11-12', -7 * k), monto: 20, sats: 25000, precio: 80000, tipo: 'compra', nota: k === 52 ? 'El primer aguacero' : '' });
+  const Rn = resumen(semanal, 80000, '2026-11-15');
+  eq(diario(Rn, '2026-11-15').notaAnio, { fecha: '2025-11-13', nota: 'El primer aguacero' }, 'diario: trae la nota de la compra de hace un año');
+  eq(diario(resumen(semanal.map((c) => ({ ...c, nota: '' })), 80000, '2026-11-15'), '2026-11-15').notaAnio, null, 'diario: sin nota de hace un año no cita nada');
+  // El comprobante de cada movimiento.
+  const mov = [{ id: 1, fecha: '2026-01-05', monto: 50, sats: 60000, precio: 83333.33, tipo: 'compra' }, { id: 2, fecha: '2026-01-07', monto: 40, sats: 50000, precio: 80000, tipo: 'compra' },
+    { id: 3, fecha: '2026-02-01', monto: 9, sats: 10000, precio: 90000, tipo: 'venta', nota: 'Gasto' },
+    { id: 4, fecha: '2026-02-10', monto: 25, sats: 30000, precio: 83333.33, tipo: 'compra', extra: true, nota: 'cayó 20 %', etiquetas: ['bono'], txid: 'ab'.repeat(32) }];
+  const items = resumen(mov, 100000, '2026-11-15').items;
+  const c1 = comprobante(items, 1, { precio: 100000, hoy: '2026-11-15' }), c2 = comprobante(items, 2, { precio: 100000, hoy: '2026-11-15' }), v3 = comprobante(items, 3, { precio: 100000, hoy: '2026-11-15' }), c4 = comprobante(items, 4, { precio: 100000, hoy: '2026-11-15' });
+  eq([c1.numero, c1.total, c1.antes, c1.despues, c1.etapa, c1.primeraDeSemana, c1.sello.numero], [1, 3, 0, 60000, null, true, 1], 'comprobante: la primera compra, de 0 a 60,000 sats, con el sello que nació con ella');
+  eq([c2.numero, c2.antes, c2.despues, c2.etapa, c2.primeraDeSemana, c2.sello.numero, c2.q], [2, 60000, 110000, 100000, false, 1, 1], 'comprobante: la segunda cruza 100k y comparte el sello de la semana');
+  eq([v3.tipo, v3.numero, v3.total, v3.antes, v3.despues, v3.sello, v3.hoy, v3.etapa, v3.nota, typeof v3.realizada], ['venta', 1, 1, 110000, 100000, null, null, null, 'Gasto', 'number'], 'comprobante: una venta baja la altitud, lleva su ganancia realizada y no tiene sello');
+  eq([c4.numero, c4.antes, c4.despues, c4.meta, c4.p, c4.q, c4.extra, c4.nota, c4.etiquetas, c4.txid.length], [3, 100000, 130000, 250000, 0, 0.2, true, 'cayó 20 %', ['bono'], 64], 'comprobante: extra, nota, etiquetas y TXID; del 0 % al 20 % del camino a 250k');
+  ok(Math.abs(c4.hoy.valor - 30) < 1e-9 && Math.abs(c4.hoy.variacion - (100000 / 83333.33 - 1) * 100) < 1e-9, 'comprobante: lo que valen hoy esos sats y cuánto cambió el precio desde entonces');
+  eq([comprobante(items, 4, { hoy: '2026-11-15' }).hoy, comprobante(items, 99), comprobante(null, 1)], [null, null, null], 'comprobante: sin precio no hay «hoy valen»; sin el movimiento, nada');
 }
 console.log(`OK ${n} comprobaciones`);

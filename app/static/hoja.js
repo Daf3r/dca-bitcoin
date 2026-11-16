@@ -1,5 +1,5 @@
 import { hundirMoneda } from './montana.js';
-import { etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
+import { diaDe, fechaEscrita, sumarDias, etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
 import { avisar } from './avisar.js';
 import { celebrar, destello } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
@@ -11,7 +11,7 @@ import { sonarGuardado } from './sonido.js';
 
 // ------------------------------------------------------------- hoja de anotar
 export const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const H = { tipo: 'compra', nota: '', etq: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', wallet: '', walletNueva: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false };
+const H = { tipo: 'compra', nota: '', etq: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', wallet: '', walletNueva: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false, otroDia: false };
 export const hoja = $('hoja');
 
 // «Deshacer» tras guardar, corregir o anular (8 s): deshacer una compra nueva la anula, deshacer una anulación la vuelve a anotar con los mismos
@@ -57,7 +57,7 @@ hoja.addEventListener('click', (e) => { if (e.target.closest('#h-tipo, #h-sentid
 
 export function abrirHoja(id = null, tipoInicial = 'compra') {
   const c = id ? S.compras.find((x) => x.id === id) : null;
-  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement, confirmadoPara: '', estimado: false });
+  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement, confirmadoPara: '', estimado: false, otroDia: false });
   H.sats = c ? String(c.sats) : '';
   H.usd = c ? String(c.monto) : '';
   H.txid = c?.txid ?? '';
@@ -74,7 +74,6 @@ export function abrirHoja(id = null, tipoInicial = 'compra') {
   $('h-borrador').hidden = !b;
   $('h-comision').value = H.comision ? entero(Number(H.comision)) : '';
   $('h-nota').value = H.nota;
-  $('h-nota-c').value = H.nota;
   $('h-extra').checked = H.extra;
   $('h-etq').value = H.etq;
   $('h-etq-lista').replaceChildren(...etiquetasUsadas(S.compras).map(({ nombre }) => Object.assign(document.createElement('option'), { value: nombre })));
@@ -83,11 +82,12 @@ export function abrirHoja(id = null, tipoInicial = 'compra') {
   $('h-sats').value = H.sats ? entero(Number(H.sats)) : '';
   $('h-usd').value = H.usd;
   $('h-avanzado').open = !!c || !!(b && (b.usd || b.txid || b.extra || b.comision || b.etq));
-  $('h-fecha').value = c?.fecha ?? hoyISO();
   $('h-fecha').max = hoyISO();
+  fijarFecha(c?.fecha ?? hoyISO());
   $('hoja-t').textContent = c ? 'Editar compra' : 'Anotar compra';
   $('h-borrar').hidden = !c;
   limpiarError();
+  abrirCambia();
   pintarHoja();
   hoja.hidden = false;
   requestAnimationFrame(() => hoja.classList.add('abierta'));
@@ -130,7 +130,7 @@ $('h-habitual').addEventListener('click', () => {
   Object.assign(H, { sats: String(h.sats), usd: '', usdTocado: false, estimado: true });
   $('h-sats').value = entero(h.sats);
   $('h-usd').value = '';
-  $('h-fecha').value = hoyISO(); // la compra de siempre es la de hoy
+  fijarFecha(hoyISO()); // la compra de siempre es la de hoy
   limpiarError();
   pintarHoja();
   guardarBorrador();
@@ -158,10 +158,13 @@ function camposSegunTipo() {
   const tras = H.tipo === 'traslado';
   $('h-sentido').hidden = !tras;
   pintarSelectorWallet(tras);
-  $('h-nota-l').hidden = !(H.tipo === 'venta' || tras);
+  // La nota: en una compra es la pregunta de la semana (campamento 18); en una venta o un traslado, la nota de siempre.
+  const compra = H.tipo === 'compra';
+  $('h-nota-t').textContent = compra ? '¿Qué pasó esta semana en casa?' : 'Nota (opcional)';
+  $('h-nota-ay').hidden = !compra;
   $('h-av-t').textContent = tras ? 'Más detalles: TXID y comisión' : H.tipo === 'venta' ? 'Más detalles: dólares y TXID' : 'Más detalles: dólares, TXID y compra extra';
   $('h-usd-t').textContent = H.tipo === 'venta' ? 'Recibiste (USD)' : 'Pagaste (USD)';
-  $('h-nota').placeholder = tras ? 'Por ejemplo: a mi Ledger' : 'Por ejemplo: gasté en renta';
+  $('h-nota').placeholder = tras ? 'Por ejemplo: a mi Ledger' : compra ? (H.extra ? 'Por ejemplo: cayó 20 %' : 'Por ejemplo: Sofi perdió su primer diente') : 'Por ejemplo: gasté en renta';
   document.querySelectorAll('#h-avanzado [data-solo-compra]').forEach((el) => { el.hidden = H.tipo !== 'compra'; });
   document.querySelectorAll('#h-avanzado [data-no-traslado]').forEach((el) => { el.hidden = tras; });
   document.querySelectorAll('#h-avanzado [data-solo-traslado]').forEach((el) => { el.hidden = !tras || H.sentido !== 'a_wallet'; });
@@ -214,7 +217,10 @@ function pintarHojaTraslado() {
   const enWallet = d ? Math.max(0, neto + (aWallet ? d.sats : -d.sats)) : neto;
   const enTodas = d ? Math.max(0, todas + (aWallet ? d.sats : -d.sats)) : todas;
   const parte = id === 0 && !S.wallets.length ? '' : ` (${enWallet === 0 ? 'nada' : entero(enWallet)} en ${nombreW})`;
-  $('hoja-calc').textContent = !d ? (aWallet ? 'Escribe los sats que te llegaron a la wallet. El saldo total no cambia: solo cambia dónde están.' : 'Escribe los sats que sacaste de tu wallet hacia el exchange.')
+  $('hc-uno').dataset.resp = '';
+  $('hc-pie').hidden = true;
+  $('h-cambia').hidden = true;
+  $('hc-uno').textContent = !d ? (aWallet ? 'Escribe los sats que te llegaron a la wallet. El saldo total no cambia: solo cambia dónde están.' : 'Escribe los sats que sacaste de tu wallet hacia el exchange.')
     : falla ? (aWallet ? `No tienes tantos sats: tu saldo es ${entero(R.sats)} y ya tienes ${entero(todas)} en tus wallets.` : `No tienes tantos sats en ${nombreW}: tienes ${entero(neto)}.`)
       : id === 0 && !S.wallets.length ? `Quedarán ${entero(enWallet)} sats en tu wallet y ${entero(Math.max(0, R.sats - enWallet))} en el exchange.`
         : `Quedarán ${entero(enTodas)} sats en tus wallets${parte} y ${entero(Math.max(0, R.sats - enTodas))} en el exchange.`;
@@ -238,43 +244,70 @@ function pintarHoja() {
   $('h-sats-l').textContent = venta ? 'Sats que salieron' : 'Sats que recibiste';
   const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
   const habitual = !venta && S.precio ? montoHabitual(R.items) : null;
-  const referencia = habitual ? ` Hoy ${usd0(habitual)} son ≈ ${entero((habitual / S.precio) * 1e8)} sats ($1 = ${entero(1e8 / S.precio)} sats).` : '';
-  const estimado = H.estimado ? 'Estimación con el precio de hoy: cámbiala por lo que recibiste. ' : '';
-  $('hoja-calc').textContent = estimado + (!d ? (venta ? 'Escribe los sats que salieron; los dólares se calculan solos con el precio del día.' : `Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.${referencia}`)
+  // Con «Compra de siempre» a la vista, lo que valen tus dólares de siempre ya lo dice ese botón: aquí queda solo el cambio.
+  const referencia = !habitual ? '' : h ? ` Hoy $1 = ${entero(1e8 / S.precio)} sats.` : ` Hoy ${usd0(habitual)} son ≈ ${entero((habitual / S.precio) * 1e8)} sats ($1 = ${entero(1e8 / S.precio)} sats).`;
+  // Una respuesta (campamento 18): los dólares y cómo queda el saldo, en un renglón que se lee de un vistazo. Lo demás va debajo, plegado.
+  const resp = Boolean(d && !d.sinPrecio && !sinSaldo);
+  const nueva = resp && !venta && !H.editando;
+  const uno = $('hc-uno');
+  uno.dataset.resp = resp ? '1' : '';
+  uno.textContent = !d ? (venta ? 'Escribe los sats que salieron; los dólares se calculan solos con el precio del día.' : `Escribe los sats que recibiste; los dólares se calculan solos con el precio del día.${referencia}`)
     : d.sinPrecio ? 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares.'
       : sinSaldo ? `No tienes tantos sats: tu saldo es ${entero(saldo)}.`
-        : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · 1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''} · saldo ${entero(resto)} sats`);
-  // El «ajuste» del DCA: cómo mueve esta compra tu costo promedio (solo al crear una compra con precio).
-  const c = d && !d.sinPrecio && !venta && !H.editando ? costoTrasCompra(R, d.monto, d.sats) : null;
-  if (c) {
-    const s = document.createElement('span');
-    s.className = 'costo';
-    s.dataset.tono = c.despues < c.antes ? 'sube' : '';
-    s.textContent = Math.abs(c.cambio) < 0.05 ? `Tu costo promedio casi no cambia (${usd0(c.antes)}).`
-      : `Tu costo promedio ${c.despues < c.antes ? 'baja' : 'sube'} de ${usd0(c.antes)} a ${usd0(c.despues)} (${pct(c.cambio)}).`;
-    $('hoja-calc').append(s);
+        : `${d.exacto ? '' : '≈ '}${usd(d.monto)}${venta ? ' por la venta' : ''} · quedas en ${entero(resto)} sats`;
+  if (H.estimado) {
+    const est = document.createElement('span');
+    est.className = 'hc-est';
+    est.textContent = 'Estimación con el precio de hoy: cámbiala por lo que recibiste. ';
+    uno.prepend(est);
   }
+  // El precio con que se hizo la cuenta: a la vista si no es el de ahora (un cierre, o el de hoy porque falta el de ese día) y en ventas
+  // y ediciones; en una compra nueva de hoy va con lo plegado.
+  const precioTxt = resp ? `1 BTC a ${usd0(d.precio)}${d.fuente === 'cierre' ? ` (cierre del ${fechaCorta(d.dia)})` : d.fuente === 'hoy' ? ' (sin precio de ese día: uso el de hoy)' : ''}` : '';
+  const precioFuera = resp && (!nueva || d.fuente === 'cierre' || d.fuente === 'hoy');
+  $('hc-pie').hidden = !precioFuera;
+  $('hc-pie').textContent = precioFuera ? precioTxt : '';
+  const lineas = [];
+  const linea = (clase, texto) => { const s = document.createElement('span'); s.className = clase; s.textContent = texto; lineas.push(s); return s; };
   // «Tú» fantasma (16B, idea 2): la regla de tu etapa con dónde quedarías si guardas esto (solo al anotar una compra).
-  const ruta = $('h-ruta'), verRuta = Boolean(d && !venta && !H.editando && d.sats > 0 && !sinSaldo);
-  ruta.hidden = !verRuta;
-  if (verRuta) {
+  const ruta = $('h-ruta');
+  ruta.hidden = !nueva;
+  if (nueva) {
     const a = etapaAnterior(saldo), b = etapaSiguiente(saldo), tras = saldo + d.sats, q = b > a ? (tras - a) / (b - a) : 0;
     ruta.style.setProperty('--p', String(Math.max(0, Math.min(1, b > a ? (saldo - a) / (b - a) : 0)).toFixed(3)));
     ruta.style.setProperty('--q', String(Math.max(0, Math.min(1, q)).toFixed(3)));
-    const t = document.createElement('span');
-    t.className = 'ruta-txt';
-    t.textContent = tras >= b ? `Con esto llegarías a ${b >= 1e8 ? nombreHito(b) : `${nombreHito(b)} sats`}.` : `Quedarías al ${Math.round(q * 100)} % del camino a ${b >= 1e8 ? nombreHito(b) : `${nombreHito(b)} sats`}.`;
-    $('hoja-calc').append(t);
+    linea('ruta-txt', tras >= b ? `Con esto llegarías a ${b >= 1e8 ? nombreHito(b) : `${nombreHito(b)} sats`}.` : `Quedarías al ${Math.round(q * 100)} % del camino a ${b >= 1e8 ? nombreHito(b) : `${nombreHito(b)} sats`}.`);
   }
+  // El «ajuste» del DCA: cómo mueve esta compra tu costo promedio (solo al crear una compra con precio).
+  const c = nueva ? costoTrasCompra(R, d.monto, d.sats) : null;
+  if (c) {
+    linea('costo', Math.abs(c.cambio) < 0.05 ? `Tu costo promedio casi no cambia (${usd0(c.antes)}).`
+      : `Tu costo promedio ${c.despues < c.antes ? 'baja' : 'sube'} de ${usd0(c.antes)} a ${usd0(c.despues)} (${pct(c.cambio)}).`).dataset.tono = c.despues < c.antes ? 'sube' : '';
+  }
+  if (nueva && !precioFuera) linea('hc-precio', `${d.exacto ? 'Precio que pagaste' : 'Precio de ahora'}: ${precioTxt}.`);
+  $('hc-lineas').replaceChildren(...lineas);
+  $('h-cambia').hidden = !nueva;
   $('guardar').disabled = !d || d.sinPrecio || sinSaldo || H.guardando;
   $('guardar').textContent = H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
 }
+// «Qué cambia con esta compra»: se abre con un toque y el dispositivo recuerda cómo lo dejaste; si nunca lo tocaste, va cerrado en el
+// teléfono (lo que importa es el renglón de arriba y que «Guardar» quede a la vista) y abierto donde sobra sitio.
+const CLAVE_CAMBIA = 'libro.hoja.cambia';
+const anchoHoja = matchMedia('(min-width: 700px)');
+function abrirCambia() {
+  let g = null;
+  try { g = localStorage.getItem(CLAVE_CAMBIA); } catch { /* sin almacenamiento: según el ancho */ }
+  $('h-cambia').open = g === '1' || (g !== '0' && anchoHoja.matches);
+}
+$('h-cambia').querySelector('summary').addEventListener('click', () => {
+  // El clic llega antes de que <details> cambie: se guarda lo contrario de como está.
+  try { localStorage.setItem(CLAVE_CAMBIA, $('h-cambia').open ? '0' : '1'); } catch { /* vale para esta vez */ }
+});
 $('h-tipo').addEventListener('click', (e) => {
   const b = e.target.closest('button');
-  if (b) { H.tipo = b.dataset.tipo; $('h-nota').value = H.nota; $('h-nota-c').value = H.nota; limpiarError(); pintarHoja(); }
+  if (b) { H.tipo = b.dataset.tipo; limpiarError(); pintarHoja(); }
 });
 $('h-nota').addEventListener('input', (e) => { H.nota = e.target.value; });
-$('h-nota-c').addEventListener('input', (e) => { H.nota = e.target.value; });
 $('h-etq').addEventListener('input', (e) => { H.etq = e.target.value; });
 // Marcar o desmarcar «extra» reinicia el aviso: lo que se confirmó ya no es lo mismo.
 $('h-extra').addEventListener('change', (e) => { H.extra = e.target.checked; limpiarError(); pintarHoja(); });
@@ -314,7 +347,38 @@ $('h-usd').addEventListener('input', (e) => {
 $('h-txid').addEventListener('input', (e) => { H.txid = e.target.value.trim(); $('hoja-error').textContent = ''; });
 // Al salir del campo, si pegaron un enlace de un explorador se deja solo el TXID.
 $('h-txid').addEventListener('change', (e) => { e.target.value = H.txid = extraerTxid(e.target.value); });
-$('h-fecha').addEventListener('input', () => { limpiarError(); pintarHoja(); });
+$('h-fecha').addEventListener('input', () => { limpiarError(); pintarFecha(); pintarHoja(); });
+// Fecha con «Hoy · Ayer · Otro día» (campamento 18): casi siempre se anota el mismo día o al siguiente, así que el calendario del
+// teléfono (que además puede salir en formato de fuera, 11/15/2026) solo aparece si lo pides. El valor sigue viviendo en `#h-fecha`.
+function pintarFecha() {
+  const f = $('h-fecha').value, hoy = hoyISO();
+  const modo = H.otroDia ? 'otro' : diaDe(f, hoy);
+  document.querySelectorAll('#h-dia button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dia === modo)));
+  $('h-fecha-otro').hidden = modo !== 'otro';
+  const txt = f ? fechaEscrita(f, hoy) : 'elige un día';
+  if ($('h-fecha-txt').textContent !== txt) $('h-fecha-txt').textContent = txt;
+}
+/** Pone la fecha de la hoja y deja el selector en «Hoy», «Ayer» u «Otro día» según corresponda. */
+function fijarFecha(f) {
+  H.otroDia = diaDe(f, hoyISO()) === 'otro';
+  $('h-fecha').value = f;
+  pintarFecha();
+}
+$('h-dia').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-dia]');
+  if (!b) return;
+  const hoy = hoyISO();
+  if (b.dataset.dia === 'otro') {
+    H.otroDia = true;
+    pintarFecha();
+    const inp = $('h-fecha');
+    inp.focus({ preventScroll: true });
+    // En pantallas táctiles el calendario se abre en el mismo toque (un toque menos); con ratón basta el campo, que ya tiene el foco.
+    if (matchMedia('(pointer: coarse)').matches) { try { inp.showPicker?.(); } catch { /* el navegador no lo permite: queda el campo */ } }
+  } else fijarFecha(b.dataset.dia === 'hoy' ? hoy : sumarDias(hoy, -1));
+  limpiarError();
+  pintarHoja();
+});
 hoja.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') return cerrarHoja();
   if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'date') { e.preventDefault(); $('guardar').click(); }

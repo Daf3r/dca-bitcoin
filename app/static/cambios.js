@@ -7,6 +7,25 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-t', fecha: '2026-11-22',
+    items: [
+      'Los campamentos de la montaña están tallados como la roca: cada hito tiene su cara al sol (o a la luna) y su cara en sombra.',
+      'El farol es parte de la piedra: encendido, su luz baja por el hito y cae en el suelo; de noche se nota más y de día casi no.',
+      'Cada campamento se apoya en un pequeño apartadero que sale del sendero.',
+      'En la cumbre, la banderita de la meta tiene un mojón de piedra y el mismo farol a su pie.',
+    ],
+  },
+  {
+    id: '2026-11-s', fecha: '2026-11-21',
+    items: [
+      'Al anotar, la fecha se elige con tres botones («Hoy», «Ayer» u «Otro día») y se lee escrita como aquí: «domingo 15 de noviembre».',
+      'La hoja de anotar contesta en un renglón cuánto fue y cómo queda el saldo; lo demás está bajo «Qué cambia con esta compra».',
+      'Con cada compra se puede dejar una línea: «¿Qué pasó esta semana en casa?». La ve toda la familia y, dentro de un año, el Diario la recuerda.',
+      'Tocar un movimiento de la lista abre su comprobante: número de compra, precio de ese día, altitud antes y después, su sello de la semana, su nota y su TXID. Lo abre cualquiera de la familia; «Editar» queda dentro, para quien anota.',
+      '«Guardar» ya no se esconde: se queda a la vista aunque la hoja sea larga o el teclado esté abierto.',
+    ],
+  },
+  {
     id: '2026-11-r', fecha: '2026-11-20',
     items: [
       'Al abrir en el teléfono ya se asoman las pestañas (Resumen, Gráficos, Historia y Movimientos): la montaña les deja sitio abajo.',

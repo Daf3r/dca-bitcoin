@@ -1,4 +1,4 @@
-import { diario, textoDiario } from './lib.js';
+import { diario, fechaLarga, textoDiario } from './lib.js';
 import { miniMontana } from './arte.js';
 import { $, R, S } from './estado.js';
 
@@ -18,7 +18,7 @@ function pintarPliegue() {
   // Solo se escribe si cambió: el Diario se repinta con cada precio (cada 30 s) y el botón puede tener el foco.
   const poner = (id, txt) => { if ($(id).textContent !== txt) $(id).textContent = txt; };
   poner('dia-abrir-t', abierto ? 'Plegar el Diario' : 'Leer el Diario de hoy');
-  poner('dia-abrir-d', abierto || !ultimo ? '' : ` · ${ultimo.haceUnAnio ? 'hace un año, ' : ''}clasificados y pronóstico`);
+  poner('dia-abrir-d', abierto || !ultimo ? '' : ` · ${ultimo.haceUnAnio || ultimo.notaAnio ? 'hace un año, ' : ''}clasificados y pronóstico`);
 }
 $('dia-abrir').addEventListener('click', () => {
   if (!ultimo) return;
@@ -40,8 +40,12 @@ export function pintarDiario() {
   const grab = $('dia-grabado');
   grab.innerHTML = miniMontana({ altitud: d.altitud });
   grab.setAttribute('aria-label', `Grabado de la montaña: vas al ${Math.round(d.altitud * 100)} % de la altura de la cima.`);
-  $('dia-hace-b').hidden = !d.haceUnAnio;
+  $('dia-hace-b').hidden = !d.haceUnAnio && !d.notaAnio;
   $('dia-hace').textContent = d.haceUnAnio?.texto ?? '';
+  // La semana en una línea (campamento 18): lo que se anotó con la compra de esa semana, hace un año. Siempre con `textContent`.
+  $('dia-nota').hidden = !d.notaAnio;
+  $('dia-nota-k').textContent = d.notaAnio ? `El ${fechaLarga(d.notaAnio.fecha)} quedó anotado:` : '';
+  $('dia-nota-q').textContent = d.notaAnio ? `«${d.notaAnio.nota}»` : '';
   const lista = $('dia-clasif');
   lista.textContent = '';
   for (const t of d.clasificados) {
