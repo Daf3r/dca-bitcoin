@@ -383,13 +383,21 @@ html[data-tv] .esc-datos { display: none !important; }
 .sd-gan { display: inline-flex; align-items: center; gap: 2px; padding: 1px 10px 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--cielo-sombra, transparent) 62%, transparent); vertical-align: baseline; } /* el velo es del color contrario a la tinta: sube el contraste de la cifra, nunca lo baja */
 .sd-gan .mini { margin-left: 6px; vertical-align: 0; }
 @media (max-width: 699px) {
-  .sd-sep { display: block; height: 0; overflow: hidden; }
   /* El renglón de la ganancia tiene su sitio desde antes de que llegue el precio: si el precio tarda más que las compras, la
      montaña ya se dibujó midiendo dónde acaba el saldo (`techo`) y, al aparecer la píldora, la cumbre quedaba bajo el texto. */
   html:not([data-tv]) .saldo-d { min-height: calc(3em + 11px); }
   .sd-gan { margin: 5px 0 0; padding-block: 3px; }
 }
 html[data-tv] .sd-gan { background: none; padding: 0; margin: 0; }
+/* (Campamento 20) El renglón bajo el saldo va en piezas (pintar.js: pintarLinea): «valen $X», «· píldora» y «· ya realizaste $Y», en una
+   fila que se envuelve. Ninguna pieza se parte por dentro (el monto va siempre pegado a su texto) y la que empieza un renglón pierde su «·»:
+   cae en una franja de la izquierda que se recorta (margen negativo + `clip-path`, sin medir nada en JS). En el teléfono la píldora baja a su
+   renglón y «ya realizaste» se queda a su lado si cabe; si no, baja entera al siguiente. */
+.saldo-d:has(> .sd-v) { --sd-s: 1.1em; display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 4px; margin-left: calc(-1 * var(--sd-s)); clip-path: inset(-3em -3em -3em calc(var(--sd-s) - 0.35em)); }
+.saldo-d > .sd-v { margin-left: var(--sd-s); white-space: nowrap; }
+.saldo-d > :is(.sd-g, .sd-r) { display: inline-flex; align-items: baseline; white-space: nowrap; }
+.saldo-d .sd-sep { flex: none; width: var(--sd-s); text-align: center; }
+@media (max-width: 699px) { .saldo-d > .sd-v { flex: 0 0 calc(100% - var(--sd-s)); } }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
 .saldo-d [data-tono] { color: var(--cielo-txt); } /* tinta del cielo, plena: el signo y la flecha dicen si sube o baja */
 html[data-ganancia="color"] .saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }

@@ -247,14 +247,21 @@ export function pintarLinea() {
   // Saldo en cero tras vender todo (idea 50): estás en el campamento base y el bosque sigue en pie.
   if (R.sats === 0 && R.nCompras) { linea.textContent = libro ? 'El libro volvió al campamento base. Sus pinos siguen aquí.' : 'Volviste al campamento base. Tus pinos siguen aquí.'; return; }
   if (R.valor == null) { linea.textContent = `${btc(R.sats)} BTC · ${libro ? 'se invirtieron' : 'invertiste'} ${usd(R.inv)}`; return; }
+  // (Campamento 20) El renglón va en piezas que no se parten por dentro: «valen $X», «· píldora» y «· ya realizaste $Y». El CSS
+  // (`.saldo-d:has(> .sd-v)`) las acomoda en una fila que se envuelve y esconde el «·» de la pieza que empieza un renglón: nada queda
+  // colgando y el monto nunca se separa de su texto. El `textContent` de `#s-valor` es el mismo de siempre.
+  const pieza = (clase) => { const e = document.createElement('span'); e.className = clase; return e; };
+  const sep = () => { const i = document.createElement('i'); i.className = 'sd-sep'; i.textContent = ' · '; return i; };
+  const v = pieza('sd-v');
   const b = document.createElement('b');
   if (unidadVista() === 'usd') {
     b.textContent = `${entero(R.sats)} sats`; // el saldo grande ya dice cuánto vale: aquí, cuántos sats son
-    linea.replaceChildren(b);
+    v.append(b);
   } else {
     pintarOdometro(b, valorMostrado != null && valorMostrado !== R.valor ? valorMostrado : null, R.valor, usd, { ms: 900 });
-    linea.replaceChildren('valen ', b);
+    v.append('valen ', b);
   }
+  linea.replaceChildren(v);
   valorMostrado = R.valor;
   const gan = document.createElement('span');
   gan.dataset.tono = R.gan >= 0 ? 'sube' : 'baja';
@@ -263,18 +270,20 @@ export function pintarLinea() {
   // Tinta neutra (campamento 17): la flechita y el signo dicen si va arriba o abajo; el color es opcional («Tu cuenta»).
   if (Math.abs(R.gan) >= 0.005) gan.insertAdjacentHTML('afterbegin', ico(R.gan > 0 ? 'sube' : 'baja'));
   // La ganancia y su mini línea van juntas en una píldora (`.sd-gan`); en el teléfono bajan a su propia línea (el «·» se esconde).
-  const sep = document.createElement('i');
-  sep.className = 'sd-sep';
-  sep.textContent = ' · ';
-  const grupo = document.createElement('span');
-  grupo.className = 'sd-gan';
+  const grupo = pieza('sd-gan');
   grupo.append(gan);
-  linea.append(sep, grupo);
+  const g = pieza('sd-g');
+  g.append(sep(), grupo);
+  linea.append(g);
   if (R.nVentas) {
     const real = document.createElement('span');
     real.dataset.tono = R.realizada >= 0 ? 'sube' : 'baja';
     dual(real, usdSigno(R.realizada), usdSignoCorto(R.realizada));
-    linea.append(libro ? ' · ya se realizaron ' : ' · ya realizaste ', real);
+    const t = pieza('sd-rt'); // «ya realizaste −$0.01»: el monto va siempre pegado a su texto
+    t.append(libro ? 'ya se realizaron ' : 'ya realizaste ', real);
+    const r = pieza('sd-r');
+    r.append(sep(), t);
+    linea.append(r);
   }
   // Mini línea del valor de tu saldo en los últimos 30 días (solo con histórico; en pantallas muy pequeñas se oculta).
   if (R.nCompras >= 3 && S.histEstado === 'ok' && S.precio) {
@@ -365,6 +374,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   altoMontana = host.clientHeight;
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
+  techoDibujado = techo;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
   // Cuánto se reserva al pie para el botón flotante: lo dice el CSS (`--pie` en `.escena`; menos cuando la escena deja la franja
   // de abajo a las pestañas y el botón ya no flota sobre ella). Una lectura de estilo por dibujo.
@@ -378,8 +388,20 @@ export function pintarMontana(animar, desde, festejo = null) {
     // El acento dorado llega cuando acaba la celebración de 1 BTC, no antes.
     if (f.nivel === 'epico') { acentoRetenido = true; setTimeout(() => { acentoRetenido = false; pintarAcento(); }, reducido() ? 0 : MS_SUBIDA + 1800); }
   }
-  if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : f ? MS_SUBIDA : 1600, f);
+  const ms = animar ? 2400 : f ? MS_SUBIDA : 1600;
+  ocupadaHasta = performance.now() + (inicio !== R.sats ? ms : 0) + (f ? 7000 : 0); // la subida y su celebración no se cortan
+  if (inicio !== R.sats) subir(inicio, R.sats, ms, f);
 }
+// (Campamento 20) Si el bloque del saldo crece después de dibujar la montaña (llega el precio y «ya realizaste» baja a su renglón, otra
+// letra…), la cumbre quedaría bajo el texto: se redibuja, cuando acaba la subida si estaba subiendo. Si encoge no hace falta.
+let techoDibujado = 0, ocupadaHasta = 0, redibujo = 0;
+new ResizeObserver(() => {
+  if (!S.cargado || !anchoMontana) return;
+  const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - $('montana').getBoundingClientRect().top;
+  if (techo <= techoDibujado + 4) return;
+  clearTimeout(redibujo);
+  redibujo = setTimeout(() => pintarMontana(false), Math.max(0, ocupadaHasta - performance.now()));
+}).observe(document.querySelector('.saldo'));
 new ResizeObserver(() => {
   // Se redibuja si cambia el ancho **o el alto** (una barra del navegador que aparece, las herramientas de desarrollo, un cambio de
   // ventana): el SVG se dibuja a la medida de la caja y, si solo cambiara el alto, se vería cortado y con una franja de cielo.
