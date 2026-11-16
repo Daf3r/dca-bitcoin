@@ -1593,3 +1593,40 @@ export function comprobante(items, id, { precio = null, hoy = hoyISO() } = {}) {
     realizada: venta ? c.realizada ?? null : null, extra: !venta && Boolean(c.extra), nota: c.nota ?? '', etiquetas: c.etiquetas ?? [], txid: c.txid ?? '',
   };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 20 · «Tu historia»: el dibujo de hoy (5a). Solo datos y textos.
+// ---------------------------------------------------------------------------------------------
+
+/** Los dibujos de «Tu historia», en el orden del selector, con el nombre que se les da en la portada. */
+export const DIBUJOS = [
+  { vh: 'tronco', nombre: 'El tronco' }, { vh: 'constelacion', nombre: 'La constelación' }, { vh: 'torre', nombre: 'La torre de piedras' },
+  { vh: 'manta', nombre: 'La manta de añil' }, { vh: 'estratos', nombre: 'Los estratos' }, { vh: 'partitura', nombre: 'La partitura' },
+];
+/**
+ * Los dibujos que ya se ven bien con los datos (los mínimos son pocos y a propósito): el tronco con 3 compras en 2 meses, la
+ * constelación con 12 estrellas, la torre con 3 piedras, la manta con 4 semanas tejidas con compra, los estratos con 3 capas (meses)
+ * y la partitura con 4 notas en su año.
+ */
+export function dibujosListos(items, hoy = hoyISO()) {
+  const compras = (items ?? []).filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return [];
+  const meses = new Set(compras.map((c) => c.fecha.slice(0, 7))).size;
+  const semanas = new Set(compras.map((c) => semana(c.fecha))).size;
+  const listo = {
+    tronco: compras.length >= 3 && meses >= 2,
+    constelacion: compras.length >= 12,
+    torre: compras.length >= 3,
+    manta: semanas >= 4,
+    estratos: estratosMes(items, hoy).length >= 3,
+    partitura: (partitura(items).at(-1)?.notas.length ?? 0) >= 4,
+  };
+  return DIBUJOS.filter((d) => listo[d.vh]);
+}
+/** El dibujo de hoy: rota por día entre los que ya se ven bien (mismo día, mismo dibujo; mañana, el siguiente). Sin ninguno, null. */
+export function objetoDeHoy(items, hoy = hoyISO()) {
+  const listos = dibujosListos(items, hoy);
+  if (!listos.length) return null;
+  const [y, m, d] = hoy.split('-').map(Number);
+  return listos[Math.round(Date.UTC(y, m - 1, d) / 864e5) % listos.length];
+}

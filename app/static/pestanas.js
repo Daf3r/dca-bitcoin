@@ -1,5 +1,5 @@
 import { $, reducido } from './estado.js';
-import { refrescarHistoria } from './historia.js';
+import { refrescarHistoria, verMedallas } from './historia.js';
 
 // Pestañas (campamento 14): Resumen · Gráficos · Historia · Movimientos. Una sola vista a la vez, sin el scroll largo.
 // No se mueve nada de sitio: cada bloque de la página lleva `data-p` con la pestaña a la que pertenece y el CSS esconde los demás
@@ -86,5 +86,5 @@ $('pestanas').addEventListener('keydown', (e) => {
   e.preventDefault();
   $('pestanas').children[(i + d + PESTANAS.length) % PESTANAS.length].focus();
 });
-$('res-historia').addEventListener('click', () => irAPestana('historia'));
+$('res-historia').addEventListener('click', () => { irAPestana('historia'); verMedallas(); }); // con sus medallas abiertas (campamento 20)
 aplicar();

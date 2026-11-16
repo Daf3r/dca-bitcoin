@@ -402,6 +402,17 @@
     <h2 id="t-historia" data-libro="La historia del libro">Tu historia</h2>
     <p class="vacio con-ilu" id="dh-vacio" hidden></p>
     <div id="dh-cuerpo">
+      <!-- El objeto de hoy (campamento 20): uno de los dibujos, el mismo todo el día, entre los que ya se ven bien con los datos
+           (lib.objetoDeHoy). Es una portada: el dibujo no se toca aquí; «Verlo de cerca» lo abre abajo, en el selector. -->
+      <article class="dh-hoy" id="dh-hoy" aria-labelledby="dh-hoy-t" hidden>
+        <div class="dh-lienzo dh-hoy-lienzo" id="dh-hoy-lienzo" role="img" aria-labelledby="dh-hoy-desc"></div>
+        <div class="dh-hoy-txt">
+          <p class="dh-hoy-k">El dibujo de hoy</p>
+          <h3 id="dh-hoy-t"></h3>
+          <p class="dh-hoy-desc" id="dh-hoy-desc"></p>
+          <button type="button" class="dh-hoy-ver" id="dh-hoy-ver">Verlo de cerca</button>
+        </div>
+      </article>
       <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia" data-libro-aria="Cómo ver la historia del libro">
         <button type="button" data-vh="linea" aria-pressed="true">Línea</button>
         <button type="button" data-vh="tronco" aria-pressed="false">Tronco</button>
@@ -411,21 +422,26 @@
         <button type="button" data-vh="estratos" aria-pressed="false">Estratos</button>
         <button type="button" data-vh="partitura" aria-pressed="false">Partitura</button>
       </div>
+      <!-- La línea en secciones plegadas, cada una con su cuenta (campamento 20). Se recuerda cuáles abriste (por dispositivo). -->
       <div id="dh-v-linea">
-        <h3>Medallas</h3>
-        <ul class="medallas" id="dh-medallas"></ul>
-        <div id="dh-sellos-caja" hidden>
-          <h3>Sellos de lacre</h3>
+        <details class="dh-sec" id="dh-sec-medallas" data-sec="medallas">
+          <summary><h3 class="dh-sec-t">Medallas</h3> <span class="dh-n" id="dh-n-medallas"></span></summary>
+          <ul class="medallas" id="dh-medallas"></ul>
+        </details>
+        <details class="dh-sec" id="dh-sellos-caja" data-sec="sellos" hidden>
+          <summary><h3 class="dh-sec-t">Sellos de lacre</h3> <span class="dh-n" id="dh-n-sellos"></span></summary>
           <ul class="sellos" id="dh-sellos"></ul>
-        </div>
-        <div id="dh-pas-caja" hidden>
-          <h3>Pasaporte de semanas</h3>
+        </details>
+        <details class="dh-sec" id="dh-pas-caja" data-sec="pasaporte" hidden>
+          <summary><h3 class="dh-sec-t">Pasaporte de semanas</h3> <span class="dh-n" id="dh-n-pasaporte"></span></summary>
           <p class="dh-pas-txt" id="dh-pas-txt"></p>
           <ul class="pasaporte" id="dh-pasaporte"></ul>
           <button type="button" class="enlace" id="dh-pas-mas" hidden>Ver más</button>
-        </div>
-        <h3 data-libro="Cómo llegó el libro hasta aquí">Cómo llegaste hasta aquí</h3>
-        <ol class="historia" id="dh-linea"></ol>
+        </details>
+        <details class="dh-sec" id="dh-sec-linea" data-sec="linea">
+          <summary><h3 class="dh-sec-t" data-libro="Cómo llegó el libro hasta aquí">Cómo llegaste hasta aquí</h3> <span class="dh-n" id="dh-n-linea"></span></summary>
+          <ol class="historia" id="dh-linea"></ol>
+        </details>
       </div>
       <button type="button" class="enlace dh-cert-btn" id="dh-cert" data-libro="Ver el certificado de altitud">Ver mi certificado de altitud</button>
       <figure class="dh-objeto" id="dh-objeto" hidden>
