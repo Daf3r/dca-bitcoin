@@ -1,5 +1,5 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, firmasDe, textoFirmantes, accionFirmas } from './lib.js';
+import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 
@@ -422,15 +422,17 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec, c.sol[0] >= c.sx ? 1 : -1)).join('');
   // Las etapas intermedias (250k, 500k…) que no son campamento van como una marca atravesada en el sendero: así se ve el avance entre
   // un campamento y el siguiente. Solo en la app (la entrada no enseña tus datos).
-  const etapas = !tocable ? [] : etapasHasta(esc.cima).filter((m) => m < esc.cima && m > esc.base && !esc.campos.includes(m)).map((m) => {
+  // (Campamento 21) Con las etapas más juntas, solo las que caben: `lib.marcasDeEtapa` (la siguiente siempre; sin marcas pegadas
+  // entre sí ni a un campamento; tope por tamaño). Las intermedias van más finas (`.menor`).
+  const etapas = !tocable ? [] : marcasDeEtapa(etapasHasta(esc.cima).filter((m) => m < esc.cima && m > esc.base && !esc.campos.includes(m)).map((m) => {
     const alt = altitud(m, esc), l = enAltura(alt), p = camino.getPointAtLength(l);
     const a = camino.getPointAtLength(Math.max(0, l - 4)), b = camino.getPointAtLength(Math.min(L, l + 4));
     return { m, p, ang: Math.atan2(b.y - a.y, b.x - a.x), mitad: (anchoAbajo * (1 - 0.58 * alt)) / 2 + 4 };
-  });
+  }), { sats, campos, tope: W < 700 ? 12 : 20 });
   host.querySelector('#m-etapas').innerHTML = etapas.map(({ m, p, ang, mitad }) => {
     const dx = -Math.sin(ang) * mitad, dy = Math.cos(ang) * mitad;
     const l = `x1="${f1(p.x - dx)}" y1="${f1(p.y - dy)}" x2="${f1(p.x + dx)}" y2="${f1(p.y + dy)}"`;
-    return `<g class="etapa" data-m="${m}"><line class="etapa-sombra" ${l}/><line class="etapa-tick" ${l}/></g>`;
+    return `<g class="etapa${rangoEtapa(m) === 'intermedia' ? ' menor' : ''}" data-m="${m}"><line class="etapa-sombra" ${l}/><line class="etapa-tick" ${l}/></g>`;
   }).join('');
   // Tu eco (idea 31): un «Tú» translúcido y quieto donde estabas hace un año. Solo si de ahí hasta hoy hay camino que se vea.
   let ecoP = null, ecoTramo = null;
@@ -812,7 +814,7 @@ function etiquetar(yo, sats = estado.sats) {
   cajas.push({ x: yo.x - 18, y: yo.y - 18, w: 36, h: 36 });
   if (estado.eco) cajas.push({ x: estado.eco.p.x - 12, y: estado.eco.p.y - 12, w: 24, h: 24 });
   // Las marcas de etapa también ocupan su sitio (solo la siguiente lleva rótulo).
-  for (const { m, p } of estado.etapas || []) cajas.push({ x: p.x - 9, y: p.y - 9, w: 18, h: 18, m });
+  for (const { m, p } of estado.etapas || []) cajas.push({ x: p.x - 9, y: p.y - 9, w: 18, h: 18, m, fina: rangoEtapa(m) === 'intermedia' });
   // En el teléfono y la tablet el saldo ocupa todo el ancho de arriba: ninguna etiqueta sube por encima de él.
   const techoEt = W < 1100 && !estado.c.lago ? (estado.techo || 0) + 4 : 0;
   const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || b.y < Math.max(4, techoEt) || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
@@ -870,9 +872,11 @@ function etiquetar(yo, sats = estado.sats) {
     const b = opc.find((o) => !choca(o, 'eco'));
     if (b) { cajas.push(b); s += `<text class="eco-txt" x="${f1(b.tx)}" y="${f1(b.y + 13)}" text-anchor="${b.anclaje}">hace 1 año</text>`; }
   }
-  // La siguiente etapa, si no es un campamento: su rótulo junto a la marca (a la derecha, a la izquierda, encima o debajo).
-  const eSig = (estado.etapas || []).find((x) => x.m === etapaSiguiente(sats));
-  if (eSig) {
+  // La siguiente etapa, si no es un campamento: su rótulo junto a la marca (a la derecha, a la izquierda, encima o debajo). (Campamento 21)
+  // Con las etapas más juntas la siguiente suele ir pegada a «Tú»: si su rótulo no cabe, lo lleva la siguiente con sello.
+  const sigs = [(estado.etapas || []).find((x) => x.m === etapaSiguiente(sats)), (estado.etapas || []).find((x) => x.m > sats && rangoEtapa(x.m) !== 'intermedia')];
+  host.querySelectorAll('#m-etapas .etapa[visibility]').forEach((g) => g.removeAttribute('visibility'));
+  for (const eSig of sigs.filter((x, i) => x && sigs.indexOf(x) === i)) {
     const txt = nombreHito(eSig.m), w = txt.length * 8.2 + 6, p = eSig.p;
     const opciones = [
       { x: p.x + 12 * e, y: p.y - 10, w, h: 20, anclaje: 'start', tx: p.x + 12 * e + 3 },
@@ -880,8 +884,15 @@ function etiquetar(yo, sats = estado.sats) {
       { x: p.x - w / 2, y: p.y - 30 * e, w, h: 20, anclaje: 'middle', tx: p.x },
       { x: p.x - w / 2, y: p.y + 10 * e, w, h: 20, anclaje: 'middle', tx: p.x },
     ];
-    const b = opciones.find((o) => !choca(o, eSig.m));
-    if (b) s += `<text class="campo-txt etapa-txt" x="${f1(b.tx)}" y="${f1(b.y + 15)}" text-anchor="${b.anclaje}">${txt}</text>`;
+    // El rótulo de la etapa puede ir sobre una marca fina (intermedia), que entonces se esconde: el rótulo manda.
+    const sinFinas = cajas.filter((o) => !o.fina || o.m === eSig.m);
+    const chocaEt = (b) => b.x < 4 || b.x + b.w > W - 4 || b.y < Math.max(4, techoEt) || sinFinas.some((o) => o.m !== eSig.m && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
+    const b = opciones.find((o) => !chocaEt(o));
+    if (b) {
+      s += `<text class="campo-txt etapa-txt" x="${f1(b.tx)}" y="${f1(b.y + 15)}" text-anchor="${b.anclaje}">${txt}</text>`;
+      for (const o of cajas) if (o.fina && o.m !== eSig.m && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y) host.querySelector(`#m-etapas .etapa[data-m="${o.m}"]`)?.setAttribute('visibility', 'hidden');
+      break;
+    }
   }
   const caja = host.querySelector('#m-etiquetas');
   caja.innerHTML = s;

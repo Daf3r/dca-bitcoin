@@ -8,7 +8,7 @@ import {
   satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, textoApertura, etapasFuturas, mananaISO, diario, textoDiario, piedritasPorCompra, textoPiedritas, ultimaPiedrita, cumpleHoy, textoCumple, textoCumpleFecha, muestrasSismo, medianocheSV, tarjetaFiesta, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
-import { caminoParaLeer, etapaCelebrada, etapaConSelloAnterior, etapaDestacada, rangoEtapa } from '../app/static/lib.js';
+import { caminoParaLeer, etapaCelebrada, etapaConSelloAnterior, etapaDestacada, marcasDeEtapa, rangoEtapa, tramoEtapas } from '../app/static/lib.js';
 import { AVISO_DIARIO, accionFirmas, diarioParaOir, fechaHablada, firmasDe, paraOir, textoFirmantes } from '../app/static/lib.js';
 import { certificado } from '../app/static/arte-sellos.js';
 
@@ -198,6 +198,21 @@ eq([1e5, 2.5e5, 5e5, 7.5e5, 1e6, 1.25e6, 2e6, 2.5e6, 3e6, 5e6, 6e6, 1e7, 2.5e7, 
   ['campamento', 'principal', 'principal', 'intermedia', 'campamento', 'intermedia', 'intermedia', 'principal', 'intermedia', 'principal', 'intermedia', 'campamento', 'principal', 'campamento', 'intermedia', 'principal'], 'rango de cada etapa');
 eq([etapaDestacada([2.5e6, 3e6]), etapaDestacada([7.5e5, 1e6, 1.25e6]), etapaDestacada([1.25e6, 1.5e6]), etapaDestacada([]), etapaDestacada([2.5e5, 5e5])], [2.5e6, 1e6, 1.5e6, undefined, 5e5], 'la destacada: más rango y, a igual rango, la más alta');
 eq([etapaCelebrada(2.4e6, 3.1e6), etapaCelebrada(1.2e6, 1.3e6), etapaCelebrada(1.3e6, 1.4e6), etapaCelebrada(9.9e6, 1.26e7)], [2.5e6, 1.25e6, undefined, 1e7], 'la que se celebra al subir');
+{
+  // La escalerita de «Próxima etapa»: el tramo entre la última etapa con sello y la siguiente.
+  eq(tramoEtapas(1_300_000), { desde: 1e6, hasta: 2.5e6, pasos: [1.25e6, 1.5e6, 1.75e6, 2e6, 2.25e6, 2.5e6], hechas: 1 }, 'tramo: de 1M a 2.5M en seis etapas, una ya hecha');
+  eq([tramoEtapas(0).pasos, tramoEtapas(600_000).pasos, tramoEtapas(2.5e6).pasos, tramoEtapas(5.5e6).hasta], [[1e5], [7.5e5, 1e6], [3e6, 3.5e6, 4e6, 4.5e6, 5e6], 1e7], 'tramo: al empezar, bajo 1M y en los demás tramos');
+  // Marcas en el sendero: una cada ~19 px a lo largo de una recta vertical (como en una vuelta del zigzag).
+  const marcas = etapasHasta(1e7).filter((m) => m > 1e5 && m < 1e7 && m !== 1e6).map((m, i) => ({ m, p: { x: 100, y: 600 - i * 19 } }));
+  const elegidas = marcasDeEtapa(marcas, { sats: 1_300_000, campos: [{ p: { x: 100, y: 600 - 3.5 * 19 } }], tope: 20 });
+  const dmin = Math.min(...elegidas.flatMap((a, i) => elegidas.slice(i + 1).map((b) => Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y))));
+  ok(elegidas.some((e) => e.m === 1.5e6) && dmin >= 18, `marcas: la siguiente siempre y ninguna pegada a otra (${dmin.toFixed(1)} px)`);
+  ok(!elegidas.some((e) => e.m === 7.5e5), 'marcas: las intermedias de abajo (antes del último campamento) no se dibujan');
+  ok(elegidas.every((e) => e.m === 1.5e6 || Math.abs(e.p.y - (600 - 3.5 * 19)) >= 22), 'marcas: ninguna pegada a un campamento (salvo la siguiente, que siempre va)');
+  eq(marcasDeEtapa(marcas, { sats: 1_300_000, tope: 3 }).length, 3, 'marcas: nunca más del tope');
+  const juntas = [{ m: 1.75e6, p: { x: 50, y: 50 } }, { m: 1.5e6, p: { x: 52, y: 52 } }];
+  eq(marcasDeEtapa(juntas, { sats: 1_300_000 }).map((e) => e.m), [1.5e6], 'marcas: si dos quedan pegadas (en la vuelta), gana la siguiente etapa');
+}
 eq([etapaConSelloAnterior(0), etapaConSelloAnterior(8e5), etapaConSelloAnterior(2.4e6), etapaConSelloAnterior(3.2e6), etapaConSelloAnterior(1.2e7)], [0, 5e5, 1e6, 2.5e6, 1e7], 'la última etapa con sello (principal o campamento)');
 const e1 = resumen([{ id: 1, fecha: '2026-11-01', tipo: 'compra', monto: 28.68, sats: 36578, precio: 78408 }], 77598, '2026-11-04');
 eq([e1.etapa, e1.etapaPrev, e1.meta], [1e5, 0, 1e5], 'primera etapa con tu caso real');

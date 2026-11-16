@@ -163,6 +163,33 @@ export function tramoEtapas(sats) {
   return { desde, hasta: pasos.at(-1), pasos, hechas: pasos.filter((m) => m <= sats).length };
 }
 /**
+ * Qué marcas de etapa caben en el sendero (campamento 21; «Para el arte de la montaña» en CLAUDE.md). Con las etapas más juntas y la
+ * escala logarítmica, arriba quedarían pegadas. `marcas` = [{ m, p: {x, y} }] (las etapas que no son campamento, en orden), `campos` =
+ * [{ p }] (los campamentos, que se respetan). Se eligen por prioridad —la siguiente etapa siempre, luego las principales, luego las
+ * intermedias de la más cercana al saldo a la más lejana; las intermedias, solo por encima del último campamento alcanzado— y se
+ * omite la que quede a menos de `min` px de otra ya elegida o a menos de
+ * `minCampo` px de un campamento (en línea recta: el sendero zigzaguea, y dos marcas lejanas en el trazo pueden quedar pegadas en la
+ * vuelta). Como mucho `tope`. Devuelve las elegidas en el orden de `marcas`.
+ */
+export function marcasDeEtapa(marcas, { sats = 0, campos = [], min = 18, minCampo = 22, tope = 20 } = {}) {
+  const sig = etapaSiguiente(sats);
+  // Las intermedias solo en el tramo que se está subiendo (desde el último campamento alcanzado): lo de abajo queda como antes.
+  let piso = 0;
+  for (let d = 1e5; d <= sats; d *= 10) piso = d;
+  marcas = marcas.filter((e) => rangoEtapa(e.m) !== 'intermedia' || e.m > piso);
+  const peso = (e) => (e.m === sig ? 0 : rangoEtapa(e.m) === 'principal' ? 1 : 2);
+  const lejos = (e) => Math.abs(Math.log(e.m / Math.max(1, sats)));
+  const orden = [...marcas].sort((a, b) => peso(a) - peso(b) || lejos(a) - lejos(b));
+  const elegidas = new Set();
+  const cerca = (a, b, d) => Math.hypot(a.x - b.x, a.y - b.y) < d;
+  for (const e of orden) {
+    if (elegidas.size >= tope) break;
+    if (e.m !== sig && ([...elegidas].some((o) => cerca(o.p, e.p, min)) || campos.some((c) => cerca(c.p, e.p, minCampo)))) continue;
+    elegidas.add(e);
+  }
+  return marcas.filter((e) => elegidas.has(e));
+}
+/**
  * El camino «para leer» (reporte de etapas y «Tu historia»): los campamentos y las etapas principales siempre; de las intermedias, solo
  * las del tramo en curso (después de la última principal o campamento alcanzado) y las que aún faltan. Las demás se cuentan en `ocultas`.
  */
