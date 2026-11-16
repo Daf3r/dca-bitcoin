@@ -3407,6 +3407,8 @@ try {
         ok(!tuteo.test(v.todo) && !tuteo.test(v.desc) && !tuteo.test(v.banderas) && !tuteo.test(v.ayuda), `17·2 lectora: en la escena, el título y la mini-cabecera nada dice «tu» («${(tuteo.exec(`${v.todo} ${v.desc} ${v.banderas}`) ?? [''])[0]}»)`);
         ok(v.pildora && v.pildora[0] >= 4 && v.pildora[1] <= v.ancho - 4, `17·2 lectora: la píldora «Vamos aquí» cabe en la escena (${v.pildora})`);
         eq(v.medallas, 'Medallas del libro', '17·2 lectora: los títulos fijos también cambian');
+        const res = await l.p.evaluate(() => `${document.getElementById('res-med-n').textContent} ${document.getElementById('t-ritmo').textContent} ${document.getElementById('t-anillo').getAttribute('aria-label')}`);
+        ok(/^El libro ya tiene \d+ medallas/.test(res) && !tuteo.test(res), `17·2 lectora: medallas y próxima etapa hablan del libro («${res.slice(0, 80)}»)`);
         // La tarjeta de una bandera por alcanzar.
         await l.p.locator('.m-bandera').first().click(); await l.p.waitForTimeout(300);
         ok(/^Faltan [\d,]+ sats para la cumbre\. El libro va al \d+%\.$/.test(await l.p.locator('#m-tarjeta-p').textContent()), '17·2 lectora: la tarjeta de la cumbre habla del libro');
@@ -3500,6 +3502,46 @@ try {
       await a.ctx.close();
     } finally {
       s17m.parar();
+    }
+    // ---- 4. Resumen más corto: «Próxima etapa» primero y el Diario plegado en el teléfono (abierto en tablet y escritorio)
+    const s17d = await servidor('anio');
+    try {
+      const estadoDiario = (p) => p.evaluate(() => {
+        const ve = (sel) => { const e = document.querySelector(sel); return Boolean(e) && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+        const y = (sel) => Math.round(document.querySelector(sel).getBoundingClientRect().top + scrollY);
+        const b = document.getElementById('dia-abrir');
+        return { titular: ve('#t-diario'), sub: ve('#dia-sub'), grabado: ve('#dia-grabado'), cols: ve('#dia-cols'), boton: ve('#dia-abrir'), txt: b.textContent, exp: b.getAttribute('aria-expanded'), ctl: b.getAttribute('aria-controls'), alto: Math.round(b.getBoundingClientRect().height), yTramo: y('#tramo'), yDiario: y('#diario'), altoDiario: Math.round(document.getElementById('diario').getBoundingClientRect().height), pagina: document.documentElement.scrollHeight, foco: document.activeElement?.id };
+      });
+      const a = await ent(s17d, ADMIN, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });
+      let d = await estadoDiario(a.p);
+      ok(d.yTramo < d.yDiario, `17·4 «Próxima etapa» va antes que el Diario (${d.yTramo} < ${d.yDiario})`);
+      ok(d.titular && d.sub && d.boton && !d.grabado && !d.cols && d.exp === 'false', '17·4 teléfono: el Diario sale en portada (titular y una línea), plegado');
+      ok(/^Leer el Diario de hoy · (hace un año, )?clasificados y pronóstico$/.test(d.txt) && d.ctl === 'dia-grabado dia-cols' && d.alto >= 47.5, `17·4 el botón dice qué abre y mide ${d.alto} px («${d.txt}»)`);
+      const plegado = d.altoDiario, paginaAntes = d.pagina;
+      await a.p.focus('#dia-abrir'); await a.p.keyboard.press('Enter'); await a.p.waitForTimeout(250);
+      d = await estadoDiario(a.p);
+      ok(d.grabado && d.cols && d.exp === 'true' && d.txt === 'Plegar el Diario' && d.foco === 'dia-abrir' && d.altoDiario > plegado + 200, `17·4 con Intro se abre entero y el foco se queda en el botón (${plegado} → ${d.altoDiario} px)`);
+      eq(await a.p.locator('#dia-clasif li').count(), 3, '17·4 abierto: los tres clasificados, como siempre');
+      ok(await a.p.evaluate(() => /^\d+ \w+ \d{4}$/.test(localStorage.getItem('libro.diario.abierto') ?? '')), '17·4 se recuerda la edición abierta');
+      await a.p.reload({ waitUntil: 'networkidle' }); await a.p.waitForTimeout(2300); await cerrar(a.p);
+      ok((await estadoDiario(a.p)).exp === 'true', '17·4 tras recargar sigue abierto');
+      await a.p.click('#dia-abrir'); await a.p.waitForTimeout(250);
+      d = await estadoDiario(a.p);
+      ok(!d.grabado && !d.cols && d.exp === 'false' && await a.p.evaluate(() => localStorage.getItem('libro.diario.abierto') === null), '17·4 otro toque lo pliega (y se olvida)');
+      // La edición de otro día vuelve a salir en portada.
+      await a.p.evaluate(() => localStorage.setItem('libro.diario.abierto', '1 ene 2020')); await a.p.reload({ waitUntil: 'networkidle' }); await a.p.waitForTimeout(2300); await cerrar(a.p);
+      ok((await estadoDiario(a.p)).exp === 'false', '17·4 el Diario de otro día sale plegado');
+      ok(paginaAntes < 3300, `17·4 el Resumen del teléfono es más corto (${paginaAntes} px con la escena; antes 3,914)`);
+      eq(a.consola.filter((x) => !/503/.test(x)), [], '17·4 consola limpia');
+      await a.ctx.close();
+      for (const [w, h] of [[768, 1024], [1440, 900]]) {
+        const t = await ent(s17d, LECTOR, { viewport: { width: w, height: h }, isMobile: false, hasTouch: false });
+        const e = await estadoDiario(t.p);
+        ok(!e.boton && e.grabado && e.cols && e.titular, `17·4 ${w} px: el Diario va abierto y sin botón`);
+        await t.ctx.close();
+      }
+    } finally {
+      s17d.parar();
     }
     const s17v = await servidor('vacio');
     try {

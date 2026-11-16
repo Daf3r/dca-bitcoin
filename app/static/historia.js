@@ -3,7 +3,7 @@ import { constelacion, estratos, manta, partitura as dibujarPartitura, torre, tr
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
 import { ico, ilustracion, medalla } from './iconos.js';
-import { $, R, S, esAdmin } from './estado.js';
+import { $, R, S, esAdmin, vozLibro } from './estado.js';
 
 // «Tu historia» (ideas 37 y 38): en «Tu cuenta», las medallas de constancia y la línea de tiempo de cómo llegaste hasta aquí.
 // Todo sale de datos que ya existen (ver `lib.historia` y `lib.medallas`). El texto de las compras (notas) entra con `textContent`.
@@ -198,8 +198,9 @@ export function pintarMedallasResumen() {
   caja.hidden = !ganadas.length;
   lista.textContent = '';
   if (!ganadas.length) return;
-  $('res-med-n').textContent = ganadas.length === 1 ? 'Ya tienes 1 medalla.'
-    : ganadas.length > MED_RESUMEN ? `Ya tienes ${ganadas.length} medallas. Aquí, las más recientes.` : `Ya tienes ${ganadas.length} medallas.`;
+  const ya = vozLibro() ? 'El libro ya tiene' : 'Ya tienes'; // a quien solo mira se le habla del libro (campamento 17)
+  $('res-med-n').textContent = ganadas.length === 1 ? `${ya} 1 medalla.`
+    : ganadas.length > MED_RESUMEN ? `${ya} ${ganadas.length} medallas. Aquí, las más recientes.` : `${ya} ${ganadas.length} medallas.`;
   const siguiente = ms.find((m) => !m.ganada && m.tipo === 'compras') ?? ms.find((m) => !m.ganada);
   for (const m of [...ganadas.slice(0, MED_RESUMEN), ...(siguiente ? [siguiente] : [])]) {
     const li = nodo('li', `medalla ${m.ganada ? 'ganada' : 'bloq'}`);

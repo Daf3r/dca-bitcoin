@@ -168,25 +168,27 @@
     <button type="button" class="enlace" id="caida-ocultar">Ocultar hoy</button>
   </div>
 
-  <!-- El Diario del Libro (campamento 15A): la portada de lo que pasó, para todos. diario.js la pinta. -->
-  <section class="diario" id="diario" data-p="resumen" aria-labelledby="t-diario" hidden>
-    <header class="dia-cab"><p class="dia-nombre">El Diario del Libro</p><p class="dia-edicion" id="dia-edicion"></p></header>
-    <h2 class="dia-titular" id="t-diario"></h2>
-    <p class="dia-sub" id="dia-sub"></p>
-    <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
-    <div class="dia-cols">
-      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p></section>
-      <section class="dia-bloque" aria-labelledby="t-dia-cla"><h3 id="t-dia-cla">Clasificados</h3><ul class="dia-clasif" id="dia-clasif"></ul></section>
-      <section class="dia-bloque" aria-labelledby="t-dia-pro"><h3 id="t-dia-pro">Pronóstico de la montaña</h3><p id="dia-pron"></p></section>
-    </div>
-  </section>
-
   <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden data-p="resumen">
     <h2 class="sr" id="t-tramo">Siguiente meta</h2>
     <p class="tr-k">Próxima etapa</p>
     <p class="tr-v"><b id="t-meta"></b><span id="t-falta"></span></p>
     <p class="tr-ritmo" id="t-ritmo"></p>
     <div class="rueda tr-anillo" id="t-anillo" role="img" aria-label=""><svg id="t-anillo-svg"></svg><span class="an-centro" id="t-pct"></span></div>
+  </section>
+
+  <!-- El Diario del Libro (campamento 15A): la portada de lo que pasó, para todos. diario.js la pinta. Va después de «Próxima etapa» (campamento 17). -->
+  <section class="diario" id="diario" data-p="resumen" aria-labelledby="t-diario" hidden>
+    <header class="dia-cab"><p class="dia-nombre">El Diario del Libro</p><p class="dia-edicion" id="dia-edicion"></p></header>
+    <h2 class="dia-titular" id="t-diario"></h2>
+    <p class="dia-sub" id="dia-sub"></p>
+    <!-- En el teléfono el Diario sale en portada (titular y una línea) y este botón lo abre entero; en tablet y escritorio va siempre abierto (campamento 17). -->
+    <button type="button" class="dia-abrir" id="dia-abrir" aria-expanded="false" aria-controls="dia-grabado dia-cols"><b id="dia-abrir-t">Leer el Diario de hoy</b><span id="dia-abrir-d"></span></button>
+    <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
+    <div class="dia-cols" id="dia-cols">
+      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p></section>
+      <section class="dia-bloque" aria-labelledby="t-dia-cla"><h3 id="t-dia-cla">Clasificados</h3><ul class="dia-clasif" id="dia-clasif"></ul></section>
+      <section class="dia-bloque" aria-labelledby="t-dia-pro"><h3 id="t-dia-pro">Pronóstico de la montaña</h3><p id="dia-pron"></p></section>
+    </div>
   </section>
 
   <!-- Tus medallas a la vista (campamento 14): las ya ganadas y, apagada, la que sigue. Es un reconocimiento, no una lista de pendientes. -->
