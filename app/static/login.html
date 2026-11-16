@@ -54,8 +54,12 @@
     <p class="login-aviso" id="l-aviso" hidden></p>
     <label class="campo-l" for="l-usuario">Usuario</label>
     <input id="l-usuario" name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
-    <label class="campo-l" for="l-clave">Contraseña</label>
-    <input id="l-clave" name="password" type="password" autocomplete="current-password" required>
+    <!-- El aviso de mayúsculas va en el renglón de la etiqueta (ya tiene su alto): al aparecer no mueve nada. «Ver» enseña la contraseña unos segundos. -->
+    <div class="l-fila"><label class="campo-l" for="l-clave">Contraseña</label><span class="l-mayus" id="l-mayus" role="status"></span></div>
+    <div class="l-clave-caja">
+      <input id="l-clave" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      <button type="button" class="l-ver" id="l-ver" aria-pressed="false" aria-controls="l-clave"><span id="l-ver-t">Ver</span><span class="sr"> la contraseña</span></button>
+    </div>
     <label class="l-comp" for="l-compartido"><input type="checkbox" id="l-compartido"> <span>Este dispositivo es compartido<span class="l-comp-det">: se cierra solo a las 4 horas</span></span></label>
     <p class="login-error" id="l-error" role="alert"></p>
     <button type="submit" class="guardar" id="l-entrar">Entrar</button>

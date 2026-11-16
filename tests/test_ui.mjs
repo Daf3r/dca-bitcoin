@@ -3584,6 +3584,77 @@ try {
     } finally {
       s17c.parar();
     }
+    // ---- 11. Entrada: ver la contraseña (se oculta sola) y aviso de mayúsculas tras un intento fallido, sin mover el formulario
+    const s17e = await servidor('hoy');
+    try {
+      const abrir = async (w, h) => {
+        const ctx = await navegador.newContext({ viewport: { width: w, height: h } });
+        const p = await ctx.newPage();
+        const consola = [];
+        p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
+        p.on('pageerror', (e) => consola.push(`pageerror ${e.message}`));
+        await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '20'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+        await p.goto(`${s17e.url}/login`, { waitUntil: 'networkidle' });
+        return { ctx, p, consola };
+      };
+      const campo = (p) => p.evaluate(() => {
+        const c = document.getElementById('l-clave'), v = document.getElementById('l-ver'), rc = c.getBoundingClientRect(), rv = v.getBoundingClientRect();
+        return { tipo: c.type, valor: c.value, auto: c.autocomplete, nombre: c.name, pulsado: v.getAttribute('aria-pressed'), txt: v.textContent, visible: document.getElementById('l-ver-t').textContent, ancho: rv.width, alto: rv.height, dentro: rv.left >= rc.left && rv.right <= rc.right + 0.5 && rv.top >= rc.top - 0.5 && rv.bottom <= rc.bottom + 0.5, foco: document.activeElement?.id, mayus: document.getElementById('l-mayus').textContent, altoForm: document.getElementById('f-login').getBoundingClientRect().height, error: document.getElementById('l-error').textContent };
+      });
+      const mayusculas = (p, si) => p.evaluate((puestas) => document.getElementById('l-clave').dispatchEvent(new KeyboardEvent('keydown', { key: 'A', bubbles: true, modifierCapsLock: puestas })), si);
+      const { ctx, p, consola } = await abrir(390, 844);
+      let c = await campo(p);
+      eq([c.tipo, c.auto, c.nombre, c.pulsado, c.txt], ['password', 'current-password', 'password', 'false', 'Ver la contraseña'], '17·11 la contraseña sale oculta, con «Ver la contraseña» sin pulsar (y el campo de siempre para los gestores)');
+      ok(c.alto >= 47.5 && c.ancho >= 47.5 && c.dentro, `17·11 «Ver» mide ${c.ancho.toFixed(0)}×${c.alto.toFixed(0)} px, dentro del campo`);
+      const altoVacio = c.altoForm;
+      await p.fill('#l-usuario', 'nadie-17'); await p.fill('#l-clave', 'Secreta-123-ABC');
+      await p.click('#l-ver');
+      c = await campo(p);
+      eq([c.tipo, c.valor, c.pulsado, c.visible, c.txt, c.foco, c.auto], ['text', 'Secreta-123-ABC', 'true', 'Ocultar', 'Ocultar la contraseña', 'l-clave', 'current-password'], '17·11 «Ver» la enseña, pasa a «Ocultar» y el foco vuelve al campo');
+      await p.click('#l-ver');
+      c = await campo(p);
+      eq([c.tipo, c.pulsado, c.visible, c.valor], ['password', 'false', 'Ver', 'Secreta-123-ABC'], '17·11 otro toque la oculta, sin perder lo escrito');
+      // Con el teclado: Tab llega al botón e Intro lo pulsa.
+      await p.focus('#l-clave'); await p.keyboard.press('Tab');
+      eq(await p.evaluate(() => document.activeElement.id), 'l-ver', '17·11 con Tab se llega a «Ver» justo después del campo');
+      await p.keyboard.press('Enter');
+      eq((await campo(p)).tipo, 'text', '17·11 Intro sobre «Ver» la enseña (no envía el formulario)');
+      // Se vuelve a ocultar sola a los 10 s.
+      await p.waitForTimeout(10_600);
+      c = await campo(p);
+      eq([c.tipo, c.pulsado], ['password', 'false'], '17·11 a los 10 s se oculta sola');
+      // Mayúsculas antes de fallar: no se dice nada.
+      await mayusculas(p, true);
+      eq((await campo(p)).mayus, '', '17·11 antes de un intento fallido no hay aviso de mayúsculas');
+      // Al enviar se oculta; el acceso falla y, con las mayúsculas puestas, sale el aviso sin cambiar el alto.
+      await p.click('#l-ver'); await mayusculas(p, false);
+      await p.click('#l-entrar'); await p.waitForTimeout(900);
+      c = await campo(p);
+      ok(c.tipo === 'password' && /incorrectos/.test(c.error) && c.mayus === '' && c.foco === 'l-clave', `17·11 al enviar se oculta; falla el acceso y, sin mayúsculas, no hay aviso («${c.error}»)`);
+      ok(Math.abs(c.altoForm - altoVacio) < 0.6, `17·11 el error no cambia el alto del formulario (${altoVacio} → ${c.altoForm})`);
+      const altoError = c.altoForm;
+      await mayusculas(p, true);
+      c = await campo(p);
+      ok(c.mayus === 'Mayúsculas activadas' && Math.abs(c.altoForm - altoError) < 0.6 && await p.locator('#l-mayus').isVisible() && await p.getAttribute('#l-mayus', 'role') === 'status', `17·11 con las mayúsculas puestas sale el aviso, sin mover nada (${altoError} → ${c.altoForm})`);
+      await mayusculas(p, false);
+      eq((await campo(p)).mayus, '', '17·11 al quitar las mayúsculas el aviso se va');
+      // Entrar con la contraseña a la vista funciona igual.
+      await p.fill('#l-usuario', ADMIN[0]); await p.fill('#l-clave', ADMIN[1]); await p.click('#l-ver');
+      await Promise.all([p.waitForURL('**/'), p.click('#l-entrar')]);
+      ok(new URL(p.url()).pathname === '/', '17·11 con la contraseña a la vista se entra igual');
+      eq(consola.filter((x) => !/401|503/.test(x)), [], '17·11 consola limpia');
+      await ctx.close();
+      for (const [w, h] of [[320, 568], [844, 390], [568, 320], [1440, 900], [2560, 1300]]) {
+        const e = await abrir(w, h);
+        await e.p.fill('#l-clave', 'x'.repeat(40));
+        const m = await e.p.evaluate(() => { const r = (id) => document.getElementById(id).getBoundingClientRect(); return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, ver: r('l-ver'), campo: r('l-clave'), entrar: r('l-entrar'), relleno: parseFloat(getComputedStyle(document.getElementById('l-clave')).paddingRight) }; });
+        ok(m.sw <= m.cw && m.ver.right <= m.campo.right + 0.5 && m.ver.width >= 47.5 && m.relleno >= m.ver.width, `17·11 entrada ${w}×${h}: «Ver» cabe en el campo y no tapa lo escrito (${m.ver.width.toFixed(0)} px, relleno ${m.relleno.toFixed(0)})`);
+        if (h <= 400) ok(m.entrar.bottom <= h + 0.5, `17·11 entrada acostada ${w}×${h}: «Entrar» sigue a la vista (${m.entrar.bottom.toFixed(0)} de ${h})`);
+        await e.ctx.close();
+      }
+    } finally {
+      s17e.parar();
+    }
     const s17v = await servidor('vacio');
     try {
       const l = await ent(s17v, LECTOR, { viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false });

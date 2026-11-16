@@ -1069,7 +1069,7 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .login-caja h1 { font: 600 clamp(1.75rem, 7vw, 2.1rem)/1.1 var(--serif); }
 .login-lema { margin: 2px 0 8px; color: var(--txt2); font-size: 0.9375rem; }
 .login-aviso { padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--naranja) 16%, var(--s2)); font-size: 0.875rem; overflow-wrap: anywhere; }
-.login-error { min-height: 1.3em; margin-top: 4px; color: var(--baja); font-weight: 600; font-size: 0.875rem; }
+.login-error { min-height: 1.5em; margin-top: 4px; color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .login-caja .guardar { margin-top: 4px; min-height: 52px; }
 .login-caja .guardar:disabled { opacity: 0.6; }
 .login-pie { margin-top: 14px; font-size: 0.8125rem; color: var(--txt3); text-align: center; }
@@ -3152,3 +3152,20 @@ html[data-lector]:not([data-voz]) [data-libro] { visibility: hidden; }
   .diario:not([data-abierto]) { background-image: var(--velo-tarjeta); } /* plegado no lleva el doblez de media altura: caería sobre el titular */
 }
 @media (min-width: 700px) { .dia-abrir { display: none; } }
+
+/* --- 11. Entrada: ver la contraseña y aviso de mayúsculas (login.js). El botón vive dentro del campo, a la derecha; el aviso, en el
+   renglón de la etiqueta (alineado a la derecha), que ya tiene su alto: al aparecer no cambia el alto del formulario. */
+.l-fila { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.login-caja .l-fila .campo-l { margin-top: 0; }
+.l-mayus { flex: none; font: 650 0.75rem/1 var(--sans); color: var(--naranja-txt); white-space: nowrap; }
+.l-mayus:not(:empty)::before { content: ""; display: inline-block; width: 0.62em; height: 0.56em; margin-right: 0.4em; background: currentColor; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.l-clave-caja { position: relative; display: grid; }
+.login-caja .l-clave-caja input { min-width: 0; padding-right: 5.6rem; }
+.l-ver {
+  position: absolute; top: 0; right: 0; bottom: 0; min-width: 4rem; padding: 0 14px; border: 0; border-radius: 0 12px 12px 0; background: none;
+  color: var(--naranja-txt); font: 650 0.875rem var(--sans); cursor: pointer; touch-action: manipulation;
+}
+.l-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: -3px; }
+.l-ver:disabled { opacity: 0.5; cursor: default; }
+@media (hover: hover) and (pointer: fine) { .l-ver:not(:disabled):hover { text-decoration: underline; text-underline-offset: 3px; } }
+@media (max-height: 360px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) { .l-fila { margin-top: 0; } .l-ver { min-width: var(--toque, 48px); } }
