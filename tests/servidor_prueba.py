@@ -149,6 +149,12 @@ elif esc in ("anio", "eco", "largo", "ballena"):
         if esc == "ballena":
             base *= 2500
         comprar(d, round(base + r2.random() * base * 0.8, 2))
+if esc == "eco":  # la semana en una línea (campamento 18): la compra de hace un año lleva su nota, y el Diario la trae de vuelta
+    ya = HOY.replace(year=HOY.year - 1, day=28) if (HOY.month == 2 and HOY.day == 29) else HOY.replace(year=HOY.year - 1)
+    semana_ya = ((ya - timedelta(days=6)).isoformat(), ya.isoformat())
+    if conn.execute("SELECT 1 FROM compras WHERE fecha BETWEEN ? AND ?", semana_ya).fetchone() is None:  # esa semana pudo quedar sin compra
+        comprar(ya - timedelta(days=2), 20.0)
+    conn.execute("UPDATE compras SET nota = 'Sofi perdió su primer diente' WHERE id = (SELECT id FROM compras WHERE fecha BETWEEN ? AND ? ORDER BY fecha DESC, id DESC LIMIT 1)", semana_ya)
 auth.crear_usuario(conn, "Daf3r", "clave-de-prueba-12", "admin", "prueba")
 auth.crear_usuario(conn, "Ana", "lectora-de-prueba", "lector", "prueba")
 if esc in ("anio", "largo"):  # una carta que ya se abrió (campamento 15A), para probar cómo se lee

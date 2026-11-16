@@ -252,7 +252,7 @@ try {
       await ponerFecha(p, libre3);
       await p.click('#h-avanzado summary');
       await p.check('#h-extra');
-      await p.fill('#h-nota-c', 'cayó 20 %');
+      await p.fill('#h-nota', 'cayó 20 %');
       await p.click('#guardar');
       await p.waitForTimeout(1500);
       const tras = await datos(p, '/api/compras');

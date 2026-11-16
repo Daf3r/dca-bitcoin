@@ -185,7 +185,7 @@
     <button type="button" class="dia-abrir" id="dia-abrir" aria-expanded="false" aria-controls="dia-grabado dia-cols"><b id="dia-abrir-t">Leer el Diario de hoy</b><span id="dia-abrir-d"></span></button>
     <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
     <div class="dia-cols" id="dia-cols">
-      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p></section>
+      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p><p class="dia-nota" id="dia-nota" hidden><span id="dia-nota-k"></span> <span class="dia-nota-q" id="dia-nota-q"></span></p></section>
       <section class="dia-bloque" aria-labelledby="t-dia-cla"><h3 id="t-dia-cla">Clasificados</h3><ul class="dia-clasif" id="dia-clasif"></ul></section>
       <section class="dia-bloque" aria-labelledby="t-dia-pro"><h3 id="t-dia-pro">Pronóstico de la montaña</h3><p id="dia-pron"></p></section>
     </div>
@@ -480,9 +480,12 @@
       </div>
       <label class="h-fecha-otro" id="h-fecha-otro" hidden><span>Elige el día</span> <input type="date" id="h-fecha" required></label>
     </div>
-    <label class="h-nota-campo" id="h-nota-l" hidden>Nota (opcional)
-      <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: gasté en renta">
+    <!-- La semana en una línea (campamento 18): en una compra, la nota es una pregunta opcional sobre la semana en casa; un año después el
+         Diario la trae de vuelta. Es la nota de siempre (120 caracteres) y la ve toda la familia. En ventas y traslados sigue siendo «Nota». -->
+    <label class="h-nota-campo" id="h-nota-l"><span id="h-nota-t">¿Qué pasó esta semana en casa?</span>
+      <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: Sofi perdió su primer diente" aria-describedby="h-nota-ay">
     </label>
+    <p class="h-nota h-nota-ay" id="h-nota-ay">Opcional. Queda como nota de la compra: la ve toda la familia y, dentro de un año, el Diario la recuerda.</p>
     <details class="h-avanzado" id="h-avanzado">
       <summary id="h-av-t">Más detalles: dólares, TXID y compra extra</summary>
       <label class="h-usd" data-no-traslado><span id="h-usd-t">Pagaste (USD)</span>
@@ -498,12 +501,9 @@
         <input id="h-comision" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0">
       </label>
       <p class="h-nota" data-solo-traslado hidden>Si la pagaste, se anota también como un gasto («Comisión de retiro») y baja tu saldo.</p>
-      <!-- Solo para compras: la marca de extra y su nota (en una venta, la nota va arriba). -->
+      <!-- Solo para compras: la marca de extra (su nota es la de arriba, como en cualquier compra). -->
       <label class="h-extra" data-solo-compra><input type="checkbox" id="h-extra"> <span>Compra extra (por una caída)</span></label>
       <p class="h-nota" data-solo-compra>Las extra se muestran aparte: no son tu ritmo habitual ni cubren la compra de la semana.</p>
-      <label class="h-usd" data-solo-compra>Nota (opcional)
-        <input id="h-nota-c" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="¿Por qué esta compra?">
-      </label>
       <!-- Etiquetas (idea 56): hasta 5, separadas por comas; las que ya usaste salen como sugerencia. Compras y ventas, no traslados. -->
       <label class="h-usd" data-no-traslado>Etiquetas (opcional)
         <input id="h-etq" type="text" list="h-etq-lista" maxlength="140" autocomplete="off" autocapitalize="none" enterkeyhint="done" placeholder="cumpleaños, bono">

@@ -1383,7 +1383,7 @@ export function diario(R, hoy = hoyISO()) {
   const pronostico = `${PRONOSTICOS[epoca][sem % 4].replace(/^./, (ch) => ch.toUpperCase())}. Es el clima, no un consejo: la montaña no adivina nada.`;
   const esc = escalaMontana(R.sats);
   const primera = compras[0].fecha;
-  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, haceUnAnio: haceAnio, clasificados, pronostico,
+  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
     altitud: altitud(R.sats, esc), sats: R.sats, valor: R.valor ?? null };
 }
 export const textoDiario = (d) => `El Diario del Libro, edición del ${d.edicion}. ${d.titular}. ${d.sub}`;
@@ -1473,3 +1473,15 @@ export function fechaEscrita(f, hoy = hoyISO()) {
 }
 /** Qué botón de la fecha le toca a un día: 'hoy', 'ayer' u 'otro'. */
 export const diaDe = (f, hoy = hoyISO()) => (f === hoy ? 'hoy' : f === sumarDias(hoy, -1) ? 'ayer' : 'otro');
+
+/**
+ * La semana en una línea (idea 16): la nota de una compra de hace un año, para que el Diario la traiga de vuelta. Se busca en los siete
+ * días que terminan en la misma fecha del año pasado (así se recuerda toda una semana) y, si hay varias, gana la más cercana a esa fecha.
+ * Devuelve `{ fecha, nota }` o null. Las ventas y los gastos no cuentan: sus notas son de otra cosa.
+ */
+export function notaDeHaceUnAnio(items, hoy = hoyISO()) {
+  const hasta = haceUnAnio(hoy), desde = sumarDias(hasta, -6);
+  const c = (items ?? []).filter((x) => x.tipo !== 'venta' && x.nota?.trim() && x.fecha >= desde && x.fecha <= hasta)
+    .sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : (b.id ?? 0) - (a.id ?? 0)))[0];
+  return c ? { fecha: c.fecha, nota: c.nota.trim() } : null;
+}

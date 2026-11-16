@@ -3200,3 +3200,14 @@ html[data-lector]:not([data-voz]) [data-libro] { visibility: hidden; }
 .hc-mas { margin-top: 2px; }
 .hc-lineas { display: grid; gap: 3px; padding-bottom: 6px; }
 .hc-lineas > span { margin: 0; }
+/* La semana en una línea: la pregunta de la compra y su ayuda, y la cita que el Diario trae un año después. */
+.h-nota-ay { margin: -4px 0 0; }
+.h-nota-ay[hidden] { display: none; }
+.h-nota-campo input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+.dia-bloque .dia-nota { margin: 8px 0 8px; padding-left: 12px; border-left: 2px solid var(--naranja-txt); font-size: 0.875rem; color: var(--dia-tinta); }
+.dia-nota[hidden] { display: none; }
+.dia-bloque .dia-nota-q { display: block; margin-top: 2px; font: italic 500 1.125rem/1.4 var(--serif); overflow-wrap: anywhere; }
+/* «Guardar» siempre a mano: la hoja creció (fecha, la semana en una línea) y en teléfonos bajos, o con el teclado abierto, hay que
+   desplazarla; el botón se queda pegado al borde de abajo de la hoja, sobre un fondo liso, y lo enfocado nunca queda detrás de él. */
+.hoja-panel { --hp-b: max(18px, env(safe-area-inset-bottom)); --hp-l: max(18px, env(safe-area-inset-left)); --hp-r: max(18px, env(safe-area-inset-right)); scroll-padding-bottom: 104px; }
+.hoja-bot { position: sticky; bottom: calc(-1 * var(--hp-b)); z-index: 2; margin: -4px calc(-1 * var(--hp-r)) calc(-1 * var(--hp-b)) calc(-1 * var(--hp-l)); padding: 12px var(--hp-r) var(--hp-b) var(--hp-l); background: linear-gradient(to top, var(--s1) calc(100% - 12px), color-mix(in srgb, var(--s1) 0%, transparent)); }

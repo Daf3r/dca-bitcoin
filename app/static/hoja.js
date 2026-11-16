@@ -74,7 +74,6 @@ export function abrirHoja(id = null, tipoInicial = 'compra') {
   $('h-borrador').hidden = !b;
   $('h-comision').value = H.comision ? entero(Number(H.comision)) : '';
   $('h-nota').value = H.nota;
-  $('h-nota-c').value = H.nota;
   $('h-extra').checked = H.extra;
   $('h-etq').value = H.etq;
   $('h-etq-lista').replaceChildren(...etiquetasUsadas(S.compras).map(({ nombre }) => Object.assign(document.createElement('option'), { value: nombre })));
@@ -159,10 +158,13 @@ function camposSegunTipo() {
   const tras = H.tipo === 'traslado';
   $('h-sentido').hidden = !tras;
   pintarSelectorWallet(tras);
-  $('h-nota-l').hidden = !(H.tipo === 'venta' || tras);
+  // La nota: en una compra es la pregunta de la semana (campamento 18); en una venta o un traslado, la nota de siempre.
+  const compra = H.tipo === 'compra';
+  $('h-nota-t').textContent = compra ? '¿Qué pasó esta semana en casa?' : 'Nota (opcional)';
+  $('h-nota-ay').hidden = !compra;
   $('h-av-t').textContent = tras ? 'Más detalles: TXID y comisión' : H.tipo === 'venta' ? 'Más detalles: dólares y TXID' : 'Más detalles: dólares, TXID y compra extra';
   $('h-usd-t').textContent = H.tipo === 'venta' ? 'Recibiste (USD)' : 'Pagaste (USD)';
-  $('h-nota').placeholder = tras ? 'Por ejemplo: a mi Ledger' : 'Por ejemplo: gasté en renta';
+  $('h-nota').placeholder = tras ? 'Por ejemplo: a mi Ledger' : compra ? (H.extra ? 'Por ejemplo: cayó 20 %' : 'Por ejemplo: Sofi perdió su primer diente') : 'Por ejemplo: gasté en renta';
   document.querySelectorAll('#h-avanzado [data-solo-compra]').forEach((el) => { el.hidden = H.tipo !== 'compra'; });
   document.querySelectorAll('#h-avanzado [data-no-traslado]').forEach((el) => { el.hidden = tras; });
   document.querySelectorAll('#h-avanzado [data-solo-traslado]').forEach((el) => { el.hidden = !tras || H.sentido !== 'a_wallet'; });
@@ -303,10 +305,9 @@ $('h-cambia').querySelector('summary').addEventListener('click', () => {
 });
 $('h-tipo').addEventListener('click', (e) => {
   const b = e.target.closest('button');
-  if (b) { H.tipo = b.dataset.tipo; $('h-nota').value = H.nota; $('h-nota-c').value = H.nota; limpiarError(); pintarHoja(); }
+  if (b) { H.tipo = b.dataset.tipo; limpiarError(); pintarHoja(); }
 });
 $('h-nota').addEventListener('input', (e) => { H.nota = e.target.value; });
-$('h-nota-c').addEventListener('input', (e) => { H.nota = e.target.value; });
 $('h-etq').addEventListener('input', (e) => { H.etq = e.target.value; });
 // Marcar o desmarcar «extra» reinicia el aviso: lo que se confirmó ya no es lo mismo.
 $('h-extra').addEventListener('change', (e) => { H.extra = e.target.checked; limpiarError(); pintarHoja(); });
