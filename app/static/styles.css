@@ -380,6 +380,9 @@ html[data-tv] .esc-datos { display: none !important; }
 .sd-gan .mini { margin-left: 6px; vertical-align: 0; }
 @media (max-width: 699px) {
   .sd-sep { display: block; height: 0; overflow: hidden; }
+  /* El renglón de la ganancia tiene su sitio desde antes de que llegue el precio: si el precio tarda más que las compras, la
+     montaña ya se dibujó midiendo dónde acaba el saldo (`techo`) y, al aparecer la píldora, la cumbre quedaba bajo el texto. */
+  html:not([data-tv]) .saldo-d { min-height: calc(3em + 11px); }
   .sd-gan { margin: 5px 0 0; padding-block: 3px; }
 }
 html[data-tv] .sd-gan { background: none; padding: 0; margin: 0; }
