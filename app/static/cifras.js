@@ -14,6 +14,27 @@ export function dual(padre, largo, corto) {
   return padre;
 }
 
+// (Campamento 20) Una cifra y su unidad («14 meses», «10,490,094,721 sats», «+$13.74 BTC») no se separan en dos renglones: se envuelven
+// en `<span class="nw">` (sin saltos de línea dentro). El texto (`textContent`) no cambia: las pruebas y los lectores leen lo mismo.
+const PEGAR = /([+−-]?\$?\d[\d,]*(?:\.\d+)?%?) (sats|BTC|días|día|semanas|semana|quincenas|quincena|meses|mes|años|año|compras|compra|ventas|venta|notas|nota)(?![\p{L}])/gu;
+/** Escribe `texto` en `el` (como `textContent`) con cada cifra pegada a su unidad. */
+export function pegado(el, texto) {
+  const partes = [];
+  let i = 0;
+  for (const m of texto.matchAll(PEGAR)) {
+    if (m.index > i) partes.push(texto.slice(i, m.index));
+    const n = document.createElement('span');
+    n.className = 'nw';
+    n.textContent = m[0];
+    partes.push(n);
+    i = m.index + m[0].length;
+  }
+  if (i < texto.length) partes.push(texto.slice(i));
+  el.replaceChildren(...partes);
+}
+/** Lo mismo para un HTML que armamos nosotros (con `<b>`…): solo toca el texto entre etiquetas. */
+export const pegarHtml = (html) => html.split(/(<[^>]+>)/).map((t) => (t.startsWith('<') ? t : t.replace(PEGAR, '<span class="nw">$&</span>'))).join('');
+
 const NS = 'http://www.w3.org/2000/svg';
 /**
  * Una línea pequeña (sparkline) junto a una cifra: la forma de los últimos valores, con un punto en el último. Devuelve un

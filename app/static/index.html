@@ -209,17 +209,6 @@
     <button type="button" class="res-med-ver" id="res-historia" data-libro="Ver todas las medallas">Ver todas mis medallas</button>
   </section>
 
-  <!-- Sats por dólar: cuántos sats compra $1 hoy y cómo ha cambiado en el último mes. Solo informa. -->
-  <section class="spd" id="spd" aria-labelledby="t-spd" hidden data-p="graficos">
-    <h2 class="sr" id="t-spd">Sats por dólar</h2>
-    <div class="spd-txt">
-      <p class="spd-k">Hoy, $1 te compra</p>
-      <p class="spd-v"><b id="spd-v">—</b> <span>sats</span></p>
-      <p class="spd-t" id="spd-t"></p>
-    </div>
-    <svg class="spd-l" id="spd-l" viewBox="0 0 120 40" role="img" aria-label="" preserveAspectRatio="none"></svg>
-  </section>
-
   <!-- Qué gráfico ver: Precio, Valor, Costo promedio o Sats. Solo salen las vistas con datos; se recuerda la última por dispositivo. -->
   <div class="rangos vistas" id="vistas" role="group" aria-label="Qué gráfico ver" hidden data-p="graficos">
     <button type="button" data-vista="precio" aria-pressed="true">Precio</button><button type="button" data-vista="valor" aria-pressed="false">Valor</button><button type="button" data-vista="costo" aria-pressed="false">Costo</button><button type="button" data-vista="sats" aria-pressed="false">Sats</button>
@@ -234,12 +223,6 @@
     </div>
     <p class="lectura" id="g-lectura"></p>
     <p class="sr" id="g-sr" aria-live="polite"></p>
-    <p class="equilibrio" id="g-equilibrio" hidden></p>
-    <!-- Dónde está el precio de hoy frente a tu costo promedio: una barra serena, sin colores de alarma. -->
-    <div class="indicador" id="g-indicador" role="img" aria-label="" hidden>
-      <div class="ind-pista"><i class="ind-costo"></i><i class="ind-hoy" id="ind-hoy"></i></div>
-      <p class="ind-eti"><span id="ind-costo-t"></span><span id="ind-hoy-t"></span></p>
-    </div>
     <div class="g-opciones">
       <button type="button" class="g-op" id="g-log" aria-pressed="false" hidden>Escala logarítmica</button>
       <button type="button" class="g-op" id="g-ampliar">Ampliar</button>
@@ -254,6 +237,13 @@
     <details class="ley-det" id="ley-det"><summary>Leyenda y series</summary>
       <p class="leyenda" role="group" aria-label="Qué mostrar en el gráfico (toca para ocultar o mostrar)"><button type="button" class="k-p" data-serie="precio" aria-pressed="true">Precio de BTC</button><button type="button" class="k-c" data-serie="compras" aria-pressed="true" data-libro="Las compras, a su precio">Tus compras, a su precio</button><span class="k-x" hidden>Compra extra</span><button type="button" class="k-a" data-serie="costo" aria-pressed="true" data-libro="Costo promedio">Tu costo promedio</button><span class="k-g" hidden data-libro="Por encima del costo">Por encima de tu costo</span><span class="k-l" hidden data-libro="Por debajo del costo">Por debajo de tu costo</span><button type="button" class="k-m" data-serie="max" aria-pressed="true" hidden>Máximo de 30 días</button><button type="button" class="k-b" data-serie="bandas" aria-pressed="true" hidden>Caída fuerte (15 %+)</button></p>
     </details>
+    <!-- Las frases del gráfico van bajo el dibujo (campamento 20): primero se ve el gráfico. El equilibrio y dónde está el precio de hoy
+         frente a tu costo promedio (una barra serena, sin colores de alarma). -->
+    <p class="equilibrio" id="g-equilibrio" hidden></p>
+    <div class="indicador" id="g-indicador" role="img" aria-label="" hidden>
+      <div class="ind-pista"><i class="ind-costo"></i><i class="ind-hoy" id="ind-hoy"></i></div>
+      <p class="ind-eti"><span id="ind-costo-t"></span><span id="ind-hoy-t"></span></p>
+    </div>
   </section>
 
   <!-- Lo que pusiste (neto) frente a lo que vale tu saldo, día a día. Desde 3 compras y con histórico. -->
@@ -281,6 +271,18 @@
     <p class="lectura fija" id="s-lectura"></p>
     <p class="sr" id="s-sr" aria-live="polite"></p>
     <div class="lienzo" id="s-lienzo" tabindex="0" role="img" aria-label="Tus sats acumulados con cada compra. Usa las flechas para recorrerlo."></div>
+  </section>
+
+  <!-- Sats por dólar: cuántos sats compra $1 hoy y cómo ha cambiado en el último mes. Solo informa. Va después de los gráficos, junto a
+       «Mejor y peor precio» (campamento 20: en la pestaña Gráficos lo primero es el selector y el gráfico). -->
+  <section class="spd" id="spd" aria-labelledby="t-spd" hidden data-p="graficos">
+    <h2 class="sr" id="t-spd">Sats por dólar</h2>
+    <div class="spd-txt">
+      <p class="spd-k" data-libro="Hoy, $1 compra">Hoy, $1 te compra</p>
+      <p class="spd-v"><b id="spd-v">—</b> <span>sats</span></p>
+      <p class="spd-t" id="spd-t"></p>
+    </div>
+    <svg class="spd-l" id="spd-l" viewBox="0 0 120 40" role="img" aria-label="" preserveAspectRatio="none"></svg>
   </section>
 
   <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>
@@ -312,7 +314,9 @@
   </div>
 
   <div class="col-lateral">
-  <button class="anotar" type="button" id="anotar">Anotar compra</button>
+  <!-- (Campamento 20) En el teléfono y la tablet, por pestañas, «Anotar» es la acción del centro del dock de abajo (con la barra de
+       pestañas, un solo conjunto); ahí se lee «Anotar» y el nombre accesible sigue siendo «Anotar compra». En escritorio va aquí, pegajoso. -->
+  <button class="anotar" type="button" id="anotar"><span class="an-txt"><span class="an-t">Anotar</span><span class="an-c"> compra</span></span></button>
 
   <section class="compras" id="compras" aria-labelledby="t-compras" data-p="movimientos">
     <div class="sec-cab">
@@ -381,8 +385,8 @@
     <article class="rep rep-ganancia" id="rep-ganancia" aria-labelledby="t-ganancia" hidden data-p="resumen">
       <h3 id="t-ganancia">Ganancia</h3>
       <dl class="gan-lista">
-        <div><dt>Realizada <small>(lo que ya vendiste)</small></dt><dd id="gan-real"></dd></div>
-        <div><dt>No realizada <small>(lo que aún tienes)</small></dt><dd id="gan-noreal"></dd></div>
+        <div><dt>Realizada <small data-libro="(lo que ya se vendió)">(lo que ya vendiste)</small></dt><dd id="gan-real"></dd></div>
+        <div><dt>No realizada <small data-libro="(lo que el libro aún tiene)">(lo que aún tienes)</small></dt><dd id="gan-noreal"></dd></div>
         <div class="gan-total"><dt>Total</dt><dd id="gan-total"></dd></div>
         <div><dt>Invertido neto</dt><dd id="gan-inv"></dd></div>
       </dl>
@@ -400,6 +404,17 @@
     <h2 id="t-historia" data-libro="La historia del libro">Tu historia</h2>
     <p class="vacio con-ilu" id="dh-vacio" hidden></p>
     <div id="dh-cuerpo">
+      <!-- El objeto de hoy (campamento 20): uno de los dibujos, el mismo todo el día, entre los que ya se ven bien con los datos
+           (lib.objetoDeHoy). Es una portada: el dibujo no se toca aquí; «Verlo de cerca» lo abre abajo, en el selector. -->
+      <article class="dh-hoy" id="dh-hoy" aria-labelledby="dh-hoy-t" hidden>
+        <div class="dh-lienzo dh-hoy-lienzo" id="dh-hoy-lienzo" role="img" aria-labelledby="dh-hoy-desc"></div>
+        <div class="dh-hoy-txt">
+          <p class="dh-hoy-k">El dibujo de hoy</p>
+          <h3 id="dh-hoy-t"></h3>
+          <p class="dh-hoy-desc" id="dh-hoy-desc"></p>
+          <button type="button" class="dh-hoy-ver" id="dh-hoy-ver">Verlo de cerca</button>
+        </div>
+      </article>
       <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia" data-libro-aria="Cómo ver la historia del libro">
         <button type="button" data-vh="linea" aria-pressed="true">Línea</button>
         <button type="button" data-vh="tronco" aria-pressed="false">Tronco</button>
@@ -409,21 +424,26 @@
         <button type="button" data-vh="estratos" aria-pressed="false">Estratos</button>
         <button type="button" data-vh="partitura" aria-pressed="false">Partitura</button>
       </div>
+      <!-- La línea en secciones plegadas, cada una con su cuenta (campamento 20). Se recuerda cuáles abriste (por dispositivo). -->
       <div id="dh-v-linea">
-        <h3>Medallas</h3>
-        <ul class="medallas" id="dh-medallas"></ul>
-        <div id="dh-sellos-caja" hidden>
-          <h3>Sellos de lacre</h3>
+        <details class="dh-sec" id="dh-sec-medallas" data-sec="medallas">
+          <summary><h3 class="dh-sec-t">Medallas</h3> <span class="dh-n" id="dh-n-medallas"></span></summary>
+          <ul class="medallas" id="dh-medallas"></ul>
+        </details>
+        <details class="dh-sec" id="dh-sellos-caja" data-sec="sellos" hidden>
+          <summary><h3 class="dh-sec-t">Sellos de lacre</h3> <span class="dh-n" id="dh-n-sellos"></span></summary>
           <ul class="sellos" id="dh-sellos"></ul>
-        </div>
-        <div id="dh-pas-caja" hidden>
-          <h3>Pasaporte de semanas</h3>
+        </details>
+        <details class="dh-sec" id="dh-pas-caja" data-sec="pasaporte" hidden>
+          <summary><h3 class="dh-sec-t">Pasaporte de semanas</h3> <span class="dh-n" id="dh-n-pasaporte"></span></summary>
           <p class="dh-pas-txt" id="dh-pas-txt"></p>
           <ul class="pasaporte" id="dh-pasaporte"></ul>
           <button type="button" class="enlace" id="dh-pas-mas" hidden>Ver más</button>
-        </div>
-        <h3>Cómo llegaste hasta aquí</h3>
-        <ol class="historia" id="dh-linea"></ol>
+        </details>
+        <details class="dh-sec" id="dh-sec-linea" data-sec="linea">
+          <summary><h3 class="dh-sec-t" data-libro="Cómo llegó el libro hasta aquí">Cómo llegaste hasta aquí</h3> <span class="dh-n" id="dh-n-linea"></span></summary>
+          <ol class="historia" id="dh-linea"></ol>
+        </details>
       </div>
       <button type="button" class="enlace dh-cert-btn" id="dh-cert" data-libro="Ver el certificado de altitud">Ver mi certificado de altitud</button>
       <figure class="dh-objeto" id="dh-objeto" hidden>
@@ -532,43 +552,34 @@
   <div class="dc-menu" id="dc-menu">
     <h2 id="dc-t">Tu cuenta</h2>
     <p class="dc-quien" id="dc-quien"></p>
-    <!-- VISTA PREVIA TEMPORAL de la celebración (solo admin; no guarda nada). Para quitarla: este bloque, `.dc-previa` en
-         styles.css, el bloque «vista previa temporal» de app.js y la línea de `dc-previa` en cargarYo. -->
-    <div class="dc-previa" id="dc-previa" hidden>
-      <p>Vista previa de la celebración (temporal, no guarda nada):</p>
-      <div>
-        <button type="button" data-previa="compra">Compra</button>
-        <button type="button" data-previa="etapa">Etapa</button>
-        <button type="button" data-previa="hito">Hito grande</button>
-        <button type="button" data-previa="epico">1 BTC</button>
-        <button type="button" data-previa="constancia">Constancia</button>
-      </div>
-    </div>
+    <!-- «Tu cuenta» por para qué sirve (campamento 20): lo que es del libro (y de la familia), lo que vale solo en este dispositivo y lo
+         que se administra (la cuenta de cada quien y, para quien anota, el libro y el servidor). Al final, salir. Los ids no cambian. -->
     <div class="dc-lista">
-      <button type="button" data-cuenta="clave">Cambiar contraseña</button>
-      <button type="button" data-cuenta="historia" id="dc-historia-btn">Tu historia y medallas</button>
+      <h3 class="dc-grupo" id="dc-g-libro">El libro</h3>
+      <button type="button" data-cuenta="historia" id="dc-historia-btn" data-libro="Historia y medallas del libro">Tu historia y medallas</button>
       <button type="button" data-cuenta="montana" id="dc-montana" hidden>Nombre de la montaña: sin nombre</button>
+      <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
+      <h3 class="dc-grupo" id="dc-g-disp">Este dispositivo</h3>
+      <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
+      <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
+      <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
+      <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
+      <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
+      <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
+      <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
+      <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
+      <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
+      <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
+      <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
+      <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
+      <h3 class="dc-grupo" id="dc-g-admin">Administrar</h3>
+      <button type="button" data-cuenta="clave">Cambiar contraseña</button>
+      <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
       <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
       <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
       <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
       <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
-      <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
-      <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
-      <h3 class="dc-grupo">En este dispositivo</h3>
-      <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
-      <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
-      <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
-      <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
-      <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
-      <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
-      <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
-      <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
-      <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
-      <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
-      <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
-      <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
-      <h3 class="dc-grupo">Salir</h3>
-      <button type="button" data-cuenta="salir">Salir</button>
+      <button type="button" class="dc-salir" data-cuenta="salir">Salir</button>
       <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
       <button type="button" data-cuenta="cerrar">Cerrar</button>
     </div>
@@ -669,6 +680,16 @@
     </table></div>
     <h3>Errores del navegador</h3>
     <ul class="sis-lista" id="sis-err"></ul>
+    <!-- Probar la celebración (antes «vista previa temporal» en el menú; campamento 20): la animación con datos de prueba. No guarda nada ni queda en el Historial. -->
+    <h3 id="dc-previa-t">Probar la celebración</h3>
+    <p class="dc-nota">La animación de una compra, una etapa o un hito, con datos de prueba. No guarda nada ni queda en el Historial.</p>
+    <div class="dc-previa" id="dc-previa" role="group" aria-labelledby="dc-previa-t">
+      <button type="button" data-previa="compra">Compra</button>
+      <button type="button" data-previa="etapa">Etapa</button>
+      <button type="button" data-previa="hito">Hito grande</button>
+      <button type="button" data-previa="epico">1 BTC</button>
+      <button type="button" data-previa="constancia">Constancia</button>
+    </div>
     <div class="d-bot"><button type="button" id="sis-err-limpiar" hidden>Limpiar la lista</button><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-historial" id="dc-hist" hidden>

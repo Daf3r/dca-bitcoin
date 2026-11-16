@@ -56,6 +56,8 @@ export const hora = (ts) => dfHora.format(new Date(ts));
 /** Formas compactas (con signo, como usdSigno) para pantallas muy pequeñas (320 px): «+$1.2K», «−$79», «1.2M». Solo para cifras secundarias; el saldo nunca se abrevia. */
 export const usdSignoCorto = (n) => { const a = Math.abs(n); return signo(n) + (a < 1000 ? nfUSD0.format(a) : `$${nfComp.format(a)}`); };
 export const numCorto = (n) => nfComp.format(Math.round(n));
+/** Sats en forma corta: por encima de 1 BTC se habla en BTC («65.5 BTC»: «6.5B sats» es ambiguo en español). */
+export const satsCorto = (s) => (s >= 1e8 ? `${s >= 1e10 ? entero(s / 1e8) : (s / 1e8).toFixed(1)} BTC` : `${compacto(s)} sats`);
 
 // «Hoy» es siempre el de El Salvador, como en el servidor (TZ del contenedor): así la fecha
 // por defecto, la validación y la racha coinciden aunque el navegador esté en otra zona.
@@ -197,15 +199,16 @@ const metaTxt = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`);
  * existen: la primera compra, cada etapa y campamento con su fecha (`R.camino`), los hitos de constancia, tu mejor racha y las
  * compras extra (las hechas en caídas). De las extra se cuentan las `maxExtras` más recientes y el resto va en `extrasOcultas`.
  */
-export function historia(R, hoy = hoyISO(), { maxExtras = 8 } = {}) {
+export function historia(R, hoy = hoyISO(), { maxExtras = 8, libro = false } = {}) {
   if (!R || !R.nCompras) return { eventos: [], extrasOcultas: 0 };
   const ev = [];
   const compras = R.items.filter((c) => c.tipo !== 'venta');
   const p = compras[0];
-  ev.push({ fecha: p.fecha, clase: 'primera', orden: 0, titulo: 'Tu primera compra', detalle: `${entero(p.sats)} sats${p.precio ? ` a ${usd0(p.precio)}` : ''}` });
+  // `libro`: para quien solo mira se habla del libro, no de «ti» (campamento 20).
+  ev.push({ fecha: p.fecha, clase: 'primera', orden: 0, titulo: libro ? 'La primera compra' : 'Tu primera compra', detalle: `${entero(p.sats)} sats${p.precio ? ` a ${usd0(p.precio)}` : ''}` });
   for (const h of R.camino ?? []) {
     if (!h.fecha) continue;
-    ev.push({ m: h.m, fecha: h.fecha, clase: h.mayor ? 'hito' : 'etapa', orden: 1, titulo: h.mayor ? `Campamento ${nombreHito(h.m)}` : `Llegaste a ${metaTxt(h.m)}`, detalle: h.mayor ? `Llegaste a ${metaTxt(h.m)}` : '' });
+    ev.push({ m: h.m, fecha: h.fecha, clase: h.mayor ? 'hito' : 'etapa', orden: 1, titulo: h.mayor ? `Campamento ${nombreHito(h.m)}` : `${libro ? 'El libro llegó' : 'Llegaste'} a ${metaTxt(h.m)}`, detalle: h.mayor ? `${libro ? 'El libro llegó' : 'Llegaste'} a ${metaTxt(h.m)}` : '' });
   }
   for (const h of HITOS_COMPRAS) if (h <= compras.length) ev.push({ fecha: compras[h - 1].fecha, clase: 'constancia', orden: 2, titulo: `${h} compras`, detalle: 'Constancia' });
   for (const m of HITOS_MESES) {
@@ -213,7 +216,7 @@ export function historia(R, hoy = hoyISO(), { maxExtras = 8 } = {}) {
     if (f <= hoy) ev.push({ fecha: f, clase: 'constancia', orden: 3, titulo: `${nombreHitoMeses(m)} comprando`, detalle: 'Constancia' });
   }
   if (R.mejorRacha >= 4 && R.mejorRachaDesde) {
-    ev.push({ fecha: R.mejorRachaHasta, clase: 'racha', orden: 4, titulo: `Tu mejor racha: ${R.mejorRacha} ${R.paso === 2 ? 'quincenas' : 'semanas'}`, detalle: `Del ${fechaCorta(R.mejorRachaDesde)} al ${fechaCorta(R.mejorRachaHasta)}` });
+    ev.push({ fecha: R.mejorRachaHasta, clase: 'racha', orden: 4, titulo: `${libro ? 'La mejor racha' : 'Tu mejor racha'}: ${R.mejorRacha} ${R.paso === 2 ? 'quincenas' : 'semanas'}`, detalle: `Del ${fechaCorta(R.mejorRachaDesde)} al ${fechaCorta(R.mejorRachaHasta)}` });
   }
   const extras = compras.filter((c) => c.extra).sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
   for (const c of extras.slice(0, maxExtras)) ev.push({ fecha: c.fecha, clase: 'extra', orden: 5, titulo: 'Compra extra en una caída', detalle: `${entero(c.sats)} sats${c.precio ? ` a ${usd0(c.precio)}` : ''}${c.nota ? ` · ${c.nota}` : ''}` });
@@ -1051,31 +1054,31 @@ export function piedrasTorre(items, max = 40) {
 }
 
 /** Los textos que leen los lectores de pantalla (y los lectores de la familia) para cada dibujo. */
-export function textoTronco(anios) {
-  if (!anios.length) return 'Tu tronco empieza con tu primera compra.';
+export function textoTronco(anios, libro = false) {
+  if (!anios.length) return libro ? 'El tronco del libro empieza con su primera compra.' : 'Tu tronco empieza con tu primera compra.';
   const mejor = anios.reduce((m, y) => (y.comprados > m.comprados ? y : m), anios[0]);
   const nudos = anios.reduce((a, y) => a + y.nExtras, 0);
-  return `Tu tronco tiene ${anios.length} ${anios.length === 1 ? 'anillo' : 'anillos'}, uno por año, de ${anios[0].anio} a ${anios.at(-1).anio}. `
+  return `${libro ? 'El tronco del libro' : 'Tu tronco'} tiene ${anios.length} ${anios.length === 1 ? 'anillo' : 'anillos'}, uno por año, de ${anios[0].anio} a ${anios.at(-1).anio}. `
     + `El más ancho es ${mejor.anio}, con ${entero(mejor.comprados)} sats.${nudos ? ` Hay ${nudos} ${nudos === 1 ? 'nudo' : 'nudos'}: las compras extra.` : ''}`;
 }
-export function textoConstelacion(estrellas) {
-  if (!estrellas.length) return 'Tu constelación empieza con tu primera compra.';
+export function textoConstelacion(estrellas, libro = false) {
+  if (!estrellas.length) return libro ? 'La constelación del libro empieza con su primera compra.' : 'Tu constelación empieza con tu primera compra.';
   const ult = estrellas.at(-1);
-  return `Tu constelación tiene ${estrellas.length} ${estrellas.length === 1 ? 'estrella' : 'estrellas'}, una por compra. La más reciente es la del ${fechaLarga(ult.fecha)}.`;
+  return `${libro ? 'La constelación del libro' : 'Tu constelación'} tiene ${estrellas.length} ${estrellas.length === 1 ? 'estrella' : 'estrellas'}, una por compra. La más reciente es la del ${fechaLarga(ult.fecha)}.`;
 }
-export function textoTorre(piedras) {
-  if (!piedras.length) return 'Tu torre de piedras empieza con tu primera compra.';
+export function textoTorre(piedras, libro = false) {
+  if (!piedras.length) return libro ? 'La torre de piedras del libro empieza con su primera compra.' : 'Tu torre de piedras empieza con tu primera compra.';
   const n = piedras.reduce((a, p) => a + p.n, 0);
   const junta = piedras.some((p) => p.n > 1);
-  return `Tu torre de piedras tiene ${piedras.length} ${piedras.length === 1 ? 'piedra' : 'piedras'}${junta ? `, que juntan ${n} compras` : ', una por compra'}; las más grandes son las de más sats.`;
+  return `${libro ? 'La torre de piedras del libro' : 'Tu torre de piedras'} tiene ${piedras.length} ${piedras.length === 1 ? 'piedra' : 'piedras'}${junta ? `, que juntan ${n} compras` : ', una por compra'}; las más grandes son las de más sats.`;
 }
 /** Resumen de un año del tronco, para leerlo al tocar su anillo. */
-export function textoAnio(y) {
+export function textoAnio(y, libro = false) {
   const partes = [`${y.anio}${y.completo ? '' : ' (en curso)'}: ${y.nCompras} ${y.nCompras === 1 ? 'compra' : 'compras'}`];
   if (y.comprados) partes.push(`+${entero(y.comprados)} sats`);
   if (y.nExtras) partes.push(`${y.nExtras} extra`);
   if (y.nVentas) partes.push(`${y.nVentas} ${y.nVentas === 1 ? 'venta' : 'ventas'} (−${entero(y.vendidos)} sats)`);
-  partes.push(`${y.completo ? 'cerraste' : 'tienes'} ${entero(y.saldoFin)} sats`);
+  partes.push(libro ? `${y.completo ? 'cerró con' : 'hoy tiene'} ${entero(y.saldoFin)} sats` : `${y.completo ? 'cerraste' : 'tienes'} ${entero(y.saldoFin)} sats`);
   return partes.join(' · ');
 }
 
@@ -1137,10 +1140,10 @@ export function semanasManta(items, hoy = hoyISO()) {
 }
 
 /** Lo que dice la manta en total, para los lectores de pantalla. */
-export function textoManta(m) {
-  if (!m.celdas.length) return 'Tu manta empieza con tu primera compra.';
+export function textoManta(m, libro = false) {
+  if (!m.celdas.length) return libro ? 'La manta del libro empieza con su primera compra.' : 'Tu manta empieza con tu primera compra.';
   const a = m.anios;
-  return `Tu manta tiene ${a.length} ${a.length === 1 ? 'fila' : 'filas'}, una por año, de ${a[0].anio} a ${a.at(-1).anio}, y ${m.celdas.length} semanas tejidas, `
+  return `${libro ? 'La manta del libro' : 'Tu manta'} tiene ${a.length} ${a.length === 1 ? 'fila' : 'filas'}, una por año, de ${a[0].anio} a ${a.at(-1).anio}, y ${m.celdas.length} semanas tejidas, `
     + `${m.semanasConCompra} con compra. Cuanto más oscuro el añil, más sats esa semana; el algodón crudo es una semana sin compras.`;
 }
 /** Una semana de la manta, para leerla al tocarla. */
@@ -1245,18 +1248,18 @@ export function estratosMes(items, hoy = hoyISO()) {
   }
   return [...por.values()];
 }
-export function textoEstratos(e) {
-  if (!e.length) return 'Tus estratos empiezan con tu primera compra.';
+export function textoEstratos(e, libro = false) {
+  if (!e.length) return libro ? 'Los estratos del libro empiezan con su primera compra.' : 'Tus estratos empiezan con tu primera compra.';
   const con = e.filter((x) => x.nCompras).length;
-  return `Tus estratos tienen ${e.length} ${e.length === 1 ? 'capa' : 'capas'}, una por mes, de ${e[0].nombre} a ${e.at(-1).nombre}; ${con} con compras. `
+  return `${libro ? 'Los estratos del libro' : 'Tus estratos'} tienen ${e.length} ${e.length === 1 ? 'capa' : 'capas'}, una por mes, de ${e[0].nombre} a ${e.at(-1).nombre}; ${con} con compras. `
     + 'Cuanto más gruesa la capa, más sats ese mes; las vetas de cuarzo son compras extra y lo desgastado, ventas o gastos.';
 }
 /** Un mes de los estratos, para leerlo al tocarlo. */
-export function textoEstrato(e) {
+export function textoEstrato(e, libro = false) {
   const partes = [`${e.nombre}${e.enCurso ? ' (en curso)' : ''}: ${e.nCompras ? `${e.nCompras} ${e.nCompras === 1 ? 'compra' : 'compras'}, +${entero(e.comprados)} sats` : 'sin compras'}`];
   if (e.nExtras) partes.push(`${e.nExtras} extra (+${entero(e.satsExtra)} sats)`);
   if (e.nVentas) partes.push(`${e.nVentas} ${e.nVentas === 1 ? 'venta' : 'ventas'} (−${entero(e.vendidos)} sats)`);
-  partes.push(`${e.enCurso ? 'tienes' : 'cerraste con'} ${entero(e.saldoFin)} sats`);
+  partes.push(libro ? `${e.enCurso ? 'hoy tiene' : 'cerró con'} ${entero(e.saldoFin)} sats` : `${e.enCurso ? 'tienes' : 'cerraste con'} ${entero(e.saldoFin)} sats`);
   return partes.join(' · ');
 }
 
@@ -1281,10 +1284,10 @@ export function selloNuevo(items, fecha, hoy = hoyISO()) {
   const s = sellosSemana(items, hoy).find((x) => x.desde <= fecha && fecha <= x.hasta);
   return s && s.n === 1 ? s : null;
 }
-export const textoSelloSemana = (s) => `Sello n.º ${s.numero}: semana del ${s.nombre}, ${s.n} ${s.n === 1 ? 'compra' : 'compras'}, +${entero(s.sats)} sats; al cerrar la semana tenías ${entero(s.saldo)} sats`;
-export const textoPasaporte = (ss) => (ss.length
-  ? `Tu pasaporte tiene ${ss.length} ${ss.length === 1 ? 'sello' : 'sellos'}, uno por cada semana en que compraste.`
-  : 'Tu pasaporte empieza con tu primera compra.');
+export const textoSelloSemana = (s, libro = false) => `Sello n.º ${s.numero}: semana del ${s.nombre}, ${s.n} ${s.n === 1 ? 'compra' : 'compras'}, +${entero(s.sats)} sats; al cerrar la semana ${libro ? 'el libro tenía' : 'tenías'} ${entero(s.saldo)} sats`;
+export const textoPasaporte = (ss, libro = false) => (ss.length
+  ? (libro ? `El pasaporte del libro tiene ${ss.length} ${ss.length === 1 ? 'sello' : 'sellos'}, uno por cada semana con compras.` : `Tu pasaporte tiene ${ss.length} ${ss.length === 1 ? 'sello' : 'sellos'}, uno por cada semana en que compraste.`)
+  : libro ? 'El pasaporte del libro empieza con su primera compra.' : 'Tu pasaporte empieza con tu primera compra.');
 
 /** Las trece posiciones de la pauta (do 4 a la 5 sobre la quinta), de abajo arriba, en Hz: escala de do mayor. Las líneas son los pasos 2, 4, 6, 8 y 10. */
 export const PASOS_HZ = [261.63, 293.66, 329.63, 349.23, 392, 440, 493.88, 523.25, 587.33, 659.25, 698.46, 783.99, 880];
@@ -1308,10 +1311,10 @@ export function partitura(items) {
   });
   return [...por.values()];
 }
-export const textoPartitura = (anios) => (anios.length
-  ? `Tu partitura tiene ${anios.length} ${anios.length === 1 ? 'pauta' : 'pautas'}, una por año, y una nota por compra: cuanto más caro estaba BTC ese día, más aguda la nota.`
-  : 'Tu partitura empieza con tu primera compra.');
-export const textoAnioPartitura = (y) => `${y.anio}: ${y.notas.length} ${y.notas.length === 1 ? 'nota' : 'notas'}; BTC entre $${entero(y.min)} y $${entero(y.max)} en tus compras`;
+export const textoPartitura = (anios, libro = false) => (anios.length
+  ? `${libro ? 'La partitura del libro' : 'Tu partitura'} tiene ${anios.length} ${anios.length === 1 ? 'pauta' : 'pautas'}, una por año, y una nota por compra: cuanto más caro estaba BTC ese día, más aguda la nota.`
+  : libro ? 'La partitura del libro empieza con su primera compra.' : 'Tu partitura empieza con tu primera compra.');
+export const textoAnioPartitura = (y, libro = false) => `${y.anio}: ${y.notas.length} ${y.notas.length === 1 ? 'nota' : 'notas'}; BTC entre $${entero(y.min)} y $${entero(y.max)} en ${libro ? 'las compras' : 'tus compras'}`;
 export const textoNota = (n) => `${fechaLarga(n.fecha)} · BTC a $${entero(n.precio)} · +${entero(n.sats)} sats${n.extra ? ' · compra extra' : ''}`;
 
 // ---------------------------------------------------------------------------------------------
@@ -1589,4 +1592,145 @@ export function comprobante(items, id, { precio = null, hoy = hoyISO() } = {}) {
     hoy: !venta && precio && c.precio ? { valor: (c.sats * precio) / 1e8, variacion: (precio / c.precio - 1) * 100 } : null,
     realizada: venta ? c.realizada ?? null : null, extra: !venta && Boolean(c.extra), nota: c.nota ?? '', etiquetas: c.etiquetas ?? [], txid: c.txid ?? '',
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 20 · «Tu historia»: el dibujo de hoy (5a) y el primer año del tronco y la manta (5b). Solo datos y textos.
+// ---------------------------------------------------------------------------------------------
+
+/** Los dibujos de «Tu historia», en el orden del selector, con el nombre que se les da en la portada. */
+export const DIBUJOS = [
+  { vh: 'tronco', nombre: 'El tronco' }, { vh: 'constelacion', nombre: 'La constelación' }, { vh: 'torre', nombre: 'La torre de piedras' },
+  { vh: 'manta', nombre: 'La manta de añil' }, { vh: 'estratos', nombre: 'Los estratos' }, { vh: 'partitura', nombre: 'La partitura' },
+];
+/**
+ * Los dibujos que ya se ven bien con los datos (los mínimos son pocos y a propósito): el tronco con 3 compras en 2 meses, la
+ * constelación con 12 estrellas, la torre con 3 piedras, la manta con 4 semanas tejidas con compra, los estratos con 3 capas (meses)
+ * y la partitura con 4 notas en su año.
+ */
+export function dibujosListos(items, hoy = hoyISO()) {
+  const compras = (items ?? []).filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return [];
+  const meses = new Set(compras.map((c) => c.fecha.slice(0, 7))).size;
+  const semanas = new Set(compras.map((c) => semana(c.fecha))).size;
+  const listo = {
+    tronco: compras.length >= 3 && meses >= 2,
+    constelacion: compras.length >= 12,
+    torre: compras.length >= 3,
+    manta: semanas >= 4,
+    estratos: estratosMes(items, hoy).length >= 3,
+    partitura: (partitura(items).at(-1)?.notas.length ?? 0) >= 4,
+  };
+  return DIBUJOS.filter((d) => listo[d.vh]);
+}
+/** El dibujo de hoy: rota por día entre los que ya se ven bien (mismo día, mismo dibujo; mañana, el siguiente). Sin ninguno, null. */
+export function objetoDeHoy(items, hoy = hoyISO()) {
+  const listos = dibujosListos(items, hoy);
+  if (!listos.length) return null;
+  const [y, m, d] = hoy.split('-').map(Number);
+  return listos[Math.round(Date.UTC(y, m - 1, d) / 864e5) % listos.length];
+}
+
+/** ¿El libro está en su primer año? Sí desde la primera compra hasta la víspera de su primer aniversario. */
+export function primerAnio(items, hoy = hoyISO()) {
+  const f = (items ?? []).filter((c) => c.tipo !== 'venta').map((c) => c.fecha).sort();
+  return Boolean(f.length) && sumarMeses(f[0], 12) > hoy;
+}
+
+/**
+ * El tronco del primer año (5b): un árbol joven todavía no tiene anillos de años, así que se dibuja por meses: una banda por mes, de
+ * la primera compra a hoy (el más viejo en el centro). Cada mes trae lo de `aniosTronco` (comprados, extras, ventas, saldo al cerrar)
+ * y sus marcas llevan `frac`, su lugar en el primer año (0 = la primera compra, 1 = el aniversario): así la vuelta del tronco es ese
+ * año y se cierra al cumplirlo. `fr` es cuánto del primer año ya pasó (para el borde vivo).
+ */
+export function mesesTronco(items, hoy = hoyISO()) {
+  const compras = (items ?? []).filter((c) => c.tipo !== 'venta');
+  if (!compras.length) return { meses: [], fr: 0 };
+  const p = compras.map((c) => c.fecha).sort()[0];
+  const aniv = sumarMeses(p, 12);
+  const largo = (aFecha(aniv).getTime() - aFecha(p).getTime()) / 864e5;
+  const frDe = (f) => Math.min(1, Math.max(0, (aFecha(f).getTime() - aFecha(p).getTime()) / 864e5 / largo));
+  const mesHoy = hoy.slice(0, 7);
+  const meses = [];
+  for (let k = 0, f = `${p.slice(0, 7)}-01`; k < 13 && f.slice(0, 7) <= mesHoy; k++, f = sumarMeses(f, 1)) {
+    const [y, m] = f.split('-').map(Number);
+    meses.push({ i: k, mes: f.slice(0, 7), nombre: `${MESES_L[m - 1]} de ${y}`, comprados: 0, vendidos: 0, nCompras: 0, nExtras: 0, nVentas: 0,
+      extras: /** @type {{ fecha: string, sats: number, frac: number }[]} */ ([]), ventas: /** @type {{ fecha: string, sats: number, frac: number }[]} */ ([]),
+      completo: f.slice(0, 7) < mesHoy, saldoFin: 0 });
+  }
+  for (const c of items) {
+    const y = meses.find((x) => x.mes === c.fecha.slice(0, 7));
+    if (!y) continue;
+    const marca = { fecha: c.fecha, sats: c.sats, frac: frDe(c.fecha) };
+    if (c.tipo === 'venta') { y.vendidos += c.sats; y.nVentas++; y.ventas.push(marca); }
+    else { y.comprados += c.sats; y.nCompras++; if (c.extra) { y.nExtras++; y.extras.push(marca); } }
+  }
+  for (const y of meses) y.saldoFin = satsEn(items, y.completo ? restarDias(sumarMeses(`${y.mes}-01`, 1), 1) : hoy); // al cerrar el mes (su último día)
+  return { meses, fr: frDe(hoy), desde: p, aniversario: aniv };
+}
+/** Lo que dice el tronco del primer año, para los lectores de pantalla y la portada. */
+export function textoTroncoPrimer(t, libro = false) {
+  const ms = t.meses;
+  if (!ms.length) return textoTronco([], libro);
+  const mejor = ms.reduce((m, y) => (y.comprados > m.comprados ? y : m), ms[0]);
+  const nudos = ms.reduce((a, y) => a + y.nExtras, 0);
+  return `${libro ? 'El tronco del libro' : 'Tu tronco'} está en su primer año: una banda por mes (${ms.length}), de ${ms[0].nombre} a ${ms.at(-1).nombre}. `
+    + `La más ancha es ${mejor.nombre}, con ${entero(mejor.comprados)} sats. Al cumplir un año, la primera vuelta se cierra y desde ahí cada anillo es un año.`
+    + (nudos ? ` Hay ${nudos} ${nudos === 1 ? 'nudo' : 'nudos'}: las compras extra.` : '');
+}
+/** Un mes del tronco del primer año, para leerlo al tocar su banda. */
+export function textoMesTronco(y, libro = false) {
+  const partes = [`${y.nombre.replace(/^./, (c) => c.toUpperCase())}${y.completo ? '' : ' (en curso)'}: ${y.nCompras} ${y.nCompras === 1 ? 'compra' : 'compras'}`];
+  if (y.comprados) partes.push(`+${entero(y.comprados)} sats`);
+  if (y.nExtras) partes.push(`${y.nExtras} extra`);
+  if (y.nVentas) partes.push(`${y.nVentas} ${y.nVentas === 1 ? 'venta' : 'ventas'} (−${entero(y.vendidos)} sats)`);
+  partes.push(libro ? `${y.completo ? 'cerró con' : 'hoy tiene'} ${entero(y.saldoFin)} sats` : `${y.completo ? 'cerraste con' : 'tienes'} ${entero(y.saldoFin)} sats`);
+  return partes.join(' · ');
+}
+
+/**
+ * La manta del primer año (5b): en vez de una fila por año del calendario (que dejaba una tira de unas semanas arriba y otra abajo),
+ * el primer año del libro se teje como una sola pieza de 4 hileras (una por trimestre del libro) de 13 semanas, de la primera semana
+ * a la del aniversario. Lo tejido son las semanas reales (las mismas celdas que `semanasManta`, con su tono); lo que falta es la
+ * urdimbre aún sin tejer. `cols` es 13 (14 si el año del libro abarca 53 semanas).
+ */
+export function mantaPrimerAnio(items, hoy = hoyISO()) {
+  const m = semanasManta(items, hoy);
+  const total = Math.max(52, m.celdas.length);
+  const cols = Math.ceil(total / 4);
+  return { primer: true, cols, filas: 4, total: cols * 4, celdas: m.celdas, semanasConCompra: m.semanasConCompra, futuras: cols * 4 - m.celdas.length };
+}
+/** Lo que dice la manta del primer año. */
+export function textoMantaPrimer(m, libro = false) {
+  if (!m.celdas.length) return textoManta({ celdas: [], anios: [] }, libro);
+  return `${libro ? 'La manta del libro' : 'Tu manta'} está en su primer año: 4 hileras de ${m.cols} semanas, ${m.celdas.length} ya tejidas `
+    + `(${m.semanasConCompra} con compra) y ${m.futuras} en el telar. Cuanto más oscuro el añil, más sats esa semana; el algodón crudo es una semana sin compras.`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 20 · un punto por mes en el gráfico del precio (idea 9). Solo datos.
+// ---------------------------------------------------------------------------------------------
+
+/** A partir de cuántas compras a la vista el gráfico del precio dibuja un punto por mes (con 150 o menos, una por compra). */
+export const UMBRAL_POR_MES = 150;
+/**
+ * Las compras de cada mes en un solo punto, para el gráfico con muchas compras a la vista. Es un resumen honesto: el punto va al
+ * precio que de verdad se pagó en promedio ese mes (dólares entre sats, no la media de los precios) y su fecha es la de la compra del
+ * medio; trae cuántas compras junta (`n`), sus sats y sus dólares. Recibe solo compras habituales: las extra y las ventas no se juntan
+ * (el gráfico las sigue dibujando una por una).
+ */
+export function comprasPorMes(compras) {
+  const por = new Map();
+  for (const c of compras ?? []) {
+    const k = c.fecha.slice(0, 7);
+    if (!por.has(k)) por.set(k, []);
+    por.get(k).push(c);
+  }
+  return [...por.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([mes, cs]) => {
+    const orden = [...cs].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.id ?? 0) - (b.id ?? 0)));
+    const sats = cs.reduce((a, c) => a + c.sats, 0), monto = cs.reduce((a, c) => a + (c.monto ?? 0), 0);
+    const [y, m] = mes.split('-').map(Number);
+    return { grupo: true, id: `m-${mes}`, mes, nombre: `${MESES_L[m - 1]} de ${y}`, tipo: 'compra', extra: false, n: cs.length, sats, monto,
+      precio: sats ? (monto * 1e8) / sats : null, fecha: orden[orden.length >> 1].fecha, desde: orden[0].fecha, hasta: orden.at(-1).fecha };
+  });
 }

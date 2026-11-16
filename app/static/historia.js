@@ -1,9 +1,9 @@
-import { aniosTronco, datosCertificado, entero, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, partitura, piedrasTorre, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco } from './lib.js';
-import { constelacion, estratos, manta, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
+import { aniosTronco, datosCertificado, entero, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, mantaPrimerAnio, mesesTronco, objetoDeHoy, partitura, piedrasTorre, primerAnio, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoMantaPrimer, textoMesTronco, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco, textoTroncoPrimer } from './lib.js';
+import { constelacion, estratos, manta, mantaPrimer, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
 import { ico, ilustracion, medalla } from './iconos.js';
-import { $, R, S, esAdmin, vozLibro } from './estado.js';
+import { $, R, S, esAdmin, reducido, vozLibro } from './estado.js';
 
 // «Tu historia» (ideas 37 y 38): en «Tu cuenta», las medallas de constancia y la línea de tiempo de cómo llegaste hasta aquí.
 // Todo sale de datos que ya existen (ver `lib.historia` y `lib.medallas`). El texto de las compras (notas) entra con `textContent`.
@@ -18,7 +18,38 @@ let anioPartitura = null; // el año de la partitura que se ve (null = el últim
 let pararMusica = null; // detiene la partitura que está sonando
 const parar = () => { pararMusica?.(); pararMusica = null; };
 
-/** El dibujo de la vista elegida (tronco, constelación o torre de piedras) con su texto, y el detalle de lo seleccionado. */
+/**
+ * El dibujo de una vista, con su texto (lo usan el selector y la portada del dibujo de hoy). `tipo` y `lista` sirven para leer una
+ * pieza al tocarla o con el teclado. (Campamento 20) En el primer año del libro, el tronco y la manta tienen su forma propia
+ * (`lib.primerAnio`): el tronco por meses y la manta como una pieza de cuatro hileras.
+ */
+function dibujoDe(vh, sel = null) {
+  const hoy = hoyISO(), items = R.items, lb = vozLibro();
+  if (vh === 'tronco') {
+    if (primerAnio(items, hoy)) {
+      const t = mesesTronco(items, hoy);
+      return { tipo: 'tronco-mes', lista: t.meses, svg: tronco(t.meses, { sel, primer: t }), desc: textoTroncoPrimer(t, lb) };
+    }
+    const t = aniosTronco(items, hoy);
+    return { tipo: 'tronco', lista: t, svg: tronco(t, { sel }), desc: textoTronco(t, lb) };
+  }
+  if (vh === 'constelacion') { const e = estrellasConstelacion(items); return { tipo: vh, lista: e, svg: constelacion(e, { sel }), desc: textoConstelacion(e, lb) }; }
+  if (vh === 'estratos') { const e = estratosMes(items, hoy); return { tipo: vh, lista: e, svg: estratos(e, { sel }), desc: textoEstratos(e, lb) }; }
+  if (vh === 'partitura') {
+    const as = partitura(items);
+    const y = as.find((x) => x.anio === anioPartitura) ?? as.at(-1);
+    return { tipo: vh, lista: y?.notas ?? [], anios: as, anio: y, svg: y ? dibujarPartitura(y, { sel }) : '', desc: textoPartitura(as, lb) };
+  }
+  if (vh === 'manta') {
+    if (primerAnio(items, hoy)) { const m = mantaPrimerAnio(items, hoy); return { tipo: 'manta', cols: m.cols, lista: m.celdas, svg: mantaPrimer(m, { sel }), desc: textoMantaPrimer(m, lb) }; }
+    const m = semanasManta(items, hoy);
+    return { tipo: 'manta', cols: 52, lista: m.celdas, svg: manta(m, { sel }), desc: textoManta(m, lb) };
+  }
+  const p = piedrasTorre(items);
+  return { tipo: 'torre', lista: p, svg: torre(p, { sel }), desc: textoTorre(p, lb) };
+}
+
+/** El dibujo de la vista elegida con su texto, y el detalle de lo seleccionado. */
 function pintarObjeto() {
   parar();
   const fig = $('dh-objeto'), esLinea = vista === 'linea';
@@ -28,68 +59,41 @@ function pintarObjeto() {
   fig.hidden = esLinea;
   for (const b of $('dh-vistas').children) b.setAttribute('aria-pressed', String(b.dataset.vh === vista));
   if (esLinea) return;
-  const hoy = hoyISO(), items = R.items;
+  const lb = vozLibro();
   const anios = $('dh-anios');
-  anios.hidden = vista !== 'tronco' && vista !== 'partitura';
+  const d = dibujoDe(vista, seleccion);
+  datos = d;
+  $('dh-lienzo').innerHTML = d.svg;
+  $('dh-desc').textContent = d.desc;
+  anios.hidden = d.tipo !== 'tronco' && d.tipo !== 'partitura';
   anios.textContent = '';
-  if (vista === 'tronco') {
-    const t = aniosTronco(items, hoy);
-    datos = { tipo: 'tronco', lista: t };
-    $('dh-lienzo').innerHTML = tronco(t, { sel: seleccion });
-    $('dh-desc').textContent = textoTronco(t);
-    for (const y of [...t].reverse()) {
-      const li = nodo('li');
-      const b = nodo('button', y.anio === seleccion ? 'sel' : '', `${y.anio}`);
-      b.type = 'button';
-      b.dataset.anio = y.anio;
-      b.setAttribute('aria-pressed', String(y.anio === seleccion));
-      li.append(b);
-      anios.append(li);
-    }
-    $('dh-detalle').textContent = seleccion != null ? textoAnio(t.find((y) => y.anio === seleccion)) : 'Toca un anillo o un año para ver cómo fue.';
-  } else if (vista === 'constelacion') {
-    const e = estrellasConstelacion(items);
-    datos = { tipo: 'constelacion', lista: e };
-    $('dh-lienzo').innerHTML = constelacion(e, { sel: seleccion });
-    $('dh-desc').textContent = textoConstelacion(e);
-    const s = seleccion != null ? e[seleccion] : null;
+  const boton = (anio, elegido) => {
+    const li = nodo('li');
+    const b = nodo('button', elegido ? 'sel' : '', `${anio}`);
+    b.type = 'button';
+    b.dataset.anio = anio;
+    b.setAttribute('aria-pressed', String(elegido));
+    li.append(b);
+    anios.append(li);
+  };
+  const s = seleccion != null ? d.lista[seleccion] : null;
+  if (d.tipo === 'tronco') {
+    for (const y of [...d.lista].reverse()) boton(y.anio, y.anio === seleccion);
+    $('dh-detalle').textContent = seleccion != null ? textoAnio(d.lista.find((y) => y.anio === seleccion), lb) : 'Toca un anillo o un año para ver cómo fue.';
+  } else if (d.tipo === 'tronco-mes') {
+    $('dh-detalle').textContent = s ? textoMesTronco(s, lb) : 'Toca una banda (o usa las flechas) para ver ese mes.';
+  } else if (d.tipo === 'constelacion') {
     $('dh-detalle').textContent = s ? `${fechaLarga(s.fecha)} · +${entero(s.sats)} sats${s.extra ? ' · compra extra' : ''}` : 'Toca una estrella (o usa las flechas) para ver esa compra.';
-  } else if (vista === 'estratos') {
-    const e = estratosMes(items, hoy);
-    datos = { tipo: 'estratos', lista: e };
-    $('dh-lienzo').innerHTML = estratos(e, { sel: seleccion });
-    $('dh-desc').textContent = textoEstratos(e);
-    $('dh-detalle').textContent = seleccion != null ? textoEstrato(e[seleccion]) : 'Toca una capa (o usa las flechas) para ver ese mes.';
-  } else if (vista === 'partitura') {
-    const as = partitura(items);
-    const y = as.find((x) => x.anio === anioPartitura) ?? as.at(-1);
-    anioPartitura = y?.anio ?? null;
-    datos = { tipo: 'partitura', lista: y?.notas ?? [] };
-    $('dh-lienzo').innerHTML = y ? dibujarPartitura(y, { sel: seleccion }) : '';
-    $('dh-desc').textContent = textoPartitura(as);
-    for (const a of [...as].reverse()) {
-      const li = nodo('li');
-      const b = nodo('button', a.anio === anioPartitura ? 'sel' : '', `${a.anio}`);
-      b.type = 'button';
-      b.dataset.anio = a.anio;
-      b.setAttribute('aria-pressed', String(a.anio === anioPartitura));
-      li.append(b);
-      anios.append(li);
-    }
-    $('dh-tocar').hidden = !y;
-    $('dh-detalle').textContent = y ? (seleccion != null ? textoNota(y.notas[seleccion]) : `${textoAnioPartitura(y)}. Toca una nota para ver esa compra.`) : '';
-  } else if (vista === 'manta') {
-    const m = semanasManta(items, hoy);
-    datos = { tipo: 'manta', lista: m.celdas };
-    $('dh-lienzo').innerHTML = manta(m, { sel: seleccion });
-    $('dh-desc').textContent = textoManta(m);
-    $('dh-detalle').textContent = seleccion != null ? textoSemanaManta(m.celdas[seleccion]) : 'Toca una semana (o usa las flechas) para ver qué pasó.';
+  } else if (d.tipo === 'estratos') {
+    $('dh-detalle').textContent = s ? textoEstrato(s, lb) : 'Toca una capa (o usa las flechas) para ver ese mes.';
+  } else if (d.tipo === 'partitura') {
+    anioPartitura = d.anio?.anio ?? null;
+    for (const a of [...d.anios].reverse()) boton(a.anio, a.anio === anioPartitura);
+    $('dh-tocar').hidden = !d.anio;
+    $('dh-detalle').textContent = d.anio ? (s ? textoNota(s) : `${textoAnioPartitura(d.anio, lb)}. Toca una nota para ver esa compra.`) : '';
+  } else if (d.tipo === 'manta') {
+    $('dh-detalle').textContent = s ? textoSemanaManta(s) : 'Toca una semana (o usa las flechas) para ver qué pasó.';
   } else {
-    const p = piedrasTorre(items);
-    datos = { tipo: 'torre', lista: p };
-    $('dh-lienzo').innerHTML = torre(p, { sel: seleccion });
-    $('dh-desc').textContent = textoTorre(p);
-    const s = seleccion != null ? p[seleccion] : null;
     $('dh-detalle').textContent = s ? `${s.n === 1 ? fechaLarga(s.desde) : `${fechaLarga(s.desde)} a ${fechaLarga(s.hasta)}`} · ${s.n} ${s.n === 1 ? 'compra' : 'compras'} · +${entero(s.sats)} sats${s.extra ? ' · incluye extra' : ''}` : 'Toca una piedra (o usa las flechas) para ver esa compra.';
   }
 }
@@ -131,7 +135,7 @@ $('dh-lienzo').addEventListener('click', (e) => {
 $('dh-lienzo').addEventListener('keydown', (e) => {
   if (!datos || datos.tipo === 'tronco') return;
   const ult = datos.lista.length - 1, act = seleccion ?? ult;
-  const paso = datos.tipo === 'manta' ? { ArrowLeft: act - 1, ArrowRight: act + 1, ArrowUp: act - 52, ArrowDown: act + 52 } : { ArrowLeft: act - 1, ArrowUp: act + 1, ArrowRight: act + 1, ArrowDown: act - 1 };
+  const paso = datos.tipo === 'manta' ? { ArrowLeft: act - 1, ArrowRight: act + 1, ArrowUp: act - datos.cols, ArrowDown: act + datos.cols } : { ArrowLeft: act - 1, ArrowUp: act + 1, ArrowRight: act + 1, ArrowDown: act - 1 };
   if (!datos.lista.length) return;
   const sig = { ...paso, Home: 0, End: ult }[e.key];
   if (sig == null) return;
@@ -156,7 +160,8 @@ function pintarPasaporte() {
   pasSellos = sellosSemana(R.items, hoyISO()).reverse();
   pasVisibles = PAS_PASO;
   $('dh-pas-caja').hidden = !pasSellos.length;
-  $('dh-pas-txt').textContent = textoPasaporte(pasSellos);
+  cuenta('pasaporte', `${pasSellos.length} ${pasSellos.length === 1 ? 'semana' : 'semanas'}`);
+  $('dh-pas-txt').textContent = textoPasaporte(pasSellos, vozLibro());
   dibujarPasaporte();
 }
 function dibujarPasaporte(foco = false) {
@@ -166,7 +171,7 @@ function dibujarPasaporte(foco = false) {
     const li = nodo('li', 'sello-sem');
     li.insertAdjacentHTML('beforeend', selloSemana(s));
     li.append(nodo('b', null, s.nombre), nodo('small', null, `+${entero(s.sats)} sats`));
-    li.title = textoSelloSemana(s);
+    li.title = textoSelloSemana(s, vozLibro());
     lista.append(li);
   }
   const mas = $('dh-pas-mas');
@@ -179,7 +184,8 @@ $('dh-pas-mas').addEventListener('click', () => { pasVisibles += PAS_PASO; dibuj
 /** Un nombre para lo que se pintó, para no rehacer la historia (y perder lo que se está leyendo) en cada refresco del precio. */
 let firmaHistoria = null;
 const firmaDe = () => `${R.items.length}:${R.sats}:${R.items.at(-1)?.id ?? 0}:${R.nCompras}:${R.racha}:${S.mensajes.map((m) => `${m.hito}${m.sellado ? 's' : (m.texto ?? '').length}`).join(',')}`
-  + `:${(S.firmas ?? []).map((f) => `${f.id}.${f.editado ?? f.creado}`).join(',')}`;
+  + `:${(S.firmas ?? []).map((f) => `${f.id}.${f.editado ?? f.creado}`).join(',')}`
+  + `:${vozLibro() ? 'libro' : 'yo'}`; // si la cuenta llega después, se repinta con la voz que toca (campamento 20)
 /** Pinta «Tu historia» solo si cambió algo desde la última vez (o si no se había pintado). La llaman `pintar()` y las pestañas. */
 export function refrescarHistoria({ forzar = false } = {}) {
   if (!R?.items || !S.cargado) return;
@@ -212,25 +218,75 @@ export function pintarMedallasResumen() {
   }
 }
 
+// (Campamento 20, 5a) La línea va en secciones plegadas con su cuenta («10 ganadas», «52 semanas»…); el dispositivo recuerda cuáles
+// abriste (`libro.historia.abiertas`, con try/catch). Por defecto, todas plegadas: la pestaña abre con el dibujo de hoy.
+const CLAVE_ABIERTAS = 'libro.historia.abiertas';
+const abiertas = new Set((() => { try { return (localStorage.getItem(CLAVE_ABIERTAS) ?? '').split(',').filter(Boolean); } catch { return []; } })());
+const cuenta = (sec, txt) => { const el = $(`dh-n-${sec}`); if (el) el.textContent = txt; };
+for (const d of document.querySelectorAll('#dh-v-linea details.dh-sec')) {
+  d.open = abiertas.has(d.dataset.sec);
+  d.addEventListener('toggle', () => {
+    if (d.open) abiertas.add(d.dataset.sec); else abiertas.delete(d.dataset.sec);
+    try { localStorage.setItem(CLAVE_ABIERTAS, [...abiertas].join(',')); } catch { /* vale para esta visita */ }
+  });
+}
+/** «Ver todas mis medallas» (Resumen): la línea de la historia con sus medallas abiertas y a la vista. */
+export function verMedallas() {
+  const b = $('dh-vistas').querySelector('[data-vh="linea"]');
+  if (b && b.getAttribute('aria-pressed') !== 'true') b.click();
+  $('dh-sec-medallas').open = true;
+  requestAnimationFrame(() => $('dh-sec-medallas').scrollIntoView({ block: 'start', behavior: reducido() ? 'auto' : 'smooth' }));
+}
+
+// (Campamento 20, 5a) El dibujo de hoy: una portada arriba de la historia con uno de los dibujos, el mismo todo el día, entre los que ya se
+// ven bien con los datos (`lib.objetoDeHoy`). Sin datos para ninguno, no sale. El dibujo aquí no se toca: «Verlo de cerca» lo abre abajo.
+function pintarHoy() {
+  const o = R.nCompras ? objetoDeHoy(R.items, hoyISO()) : null;
+  $('dh-hoy').hidden = !o;
+  if (!o) return;
+  const d = dibujoDe(o.vh);
+  $('dh-hoy-lienzo').innerHTML = d.svg;
+  $('dh-hoy-t').textContent = o.nombre;
+  $('dh-hoy-desc').textContent = d.desc;
+  $('dh-hoy').dataset.vh = o.vh;
+  // El nombre accesible es el texto visible y, para quien no ve, qué dibujo es (con `aria-label` axe marca `label-content-name-mismatch`).
+  const sr = document.createElement('span');
+  sr.className = 'sr';
+  sr.textContent = ` (${o.nombre.replace(/^./, (c) => c.toLowerCase())})`;
+  $('dh-hoy-ver').replaceChildren('Verlo de cerca', sr);
+}
+$('dh-hoy-ver').addEventListener('click', () => {
+  const vh = $('dh-hoy').dataset.vh;
+  const b = $('dh-vistas').querySelector(`[data-vh="${vh}"]`);
+  if (!b) return;
+  if (b.getAttribute('aria-pressed') !== 'true') b.click();
+  $('dh-vistas').scrollIntoView({ block: 'start', behavior: reducido() ? 'auto' : 'smooth' });
+  $('dh-lienzo').focus({ preventScroll: true });
+});
+
 export function pintarHistoria() {
   const lista = $('dh-linea'), med = $('dh-medallas');
   lista.textContent = '';
   med.textContent = '';
   $('dh-vacio').hidden = R.nCompras > 0;
-  if (!R.nCompras) $('dh-vacio').innerHTML = `${ilustracion('montana')}Tu historia empieza con tu primera compra.`;
+  if (!R.nCompras) $('dh-vacio').innerHTML = `${ilustracion('montana')}${vozLibro() ? 'La historia del libro empieza con su primera compra.' : 'Tu historia empieza con tu primera compra.'}`;
   $('dh-cuerpo').hidden = !R.nCompras;
   if (!R.nCompras) return;
   seleccion = null;
   pintarObjeto();
-  for (const m of medallas(R)) {
+  pintarHoy();
+  const ms = medallas(R), ganadas = ms.filter((m) => m.ganada).length;
+  cuenta('medallas', ganadas ? `${ganadas} ${ganadas === 1 ? 'ganada' : 'ganadas'}` : 'aún ninguna');
+  for (const m of ms) {
     const li = nodo('li', `medalla ${m.ganada ? 'ganada' : 'bloq'}`);
     li.insertAdjacentHTML('beforeend', medalla(m));
-    li.append(nodo('b', null, m.titulo), nodo('small', null, m.ganada ? fechaLarga(m.fecha) : `Próxima: te ${m.falta === 1 ? 'falta' : 'faltan'} ${m.falta} ${m.tipo === 'compras' ? (m.falta === 1 ? 'compra' : 'compras') : (m.falta === 1 ? 'mes' : 'meses')}`));
+    li.append(nodo('b', null, m.titulo), nodo('small', null, m.ganada ? fechaLarga(m.fecha) : `Próxima: ${vozLibro() ? '' : 'te '}${m.falta === 1 ? 'falta' : 'faltan'} ${m.falta} ${m.tipo === 'compras' ? (m.falta === 1 ? 'compra' : 'compras') : (m.falta === 1 ? 'mes' : 'meses')}`));
     med.append(li);
   }
   // Sellos de lacre (13B): uno por cada etapa que ya cruzaste.
   const ss = sellos(R), caja = $('dh-sellos');
   $('dh-sellos-caja').hidden = !ss.length;
+  cuenta('sellos', `${ss.length} ${ss.length === 1 ? 'sello' : 'sellos'}`);
   caja.textContent = '';
   for (const x of ss) {
     const li = nodo('li', 'sello');
@@ -240,7 +296,8 @@ export function pintarHistoria() {
     caja.append(li);
   }
   pintarPasaporte();
-  const { eventos, extrasOcultas } = historia(R);
+  const { eventos, extrasOcultas } = historia(R, undefined, { libro: vozLibro() });
+  cuenta('linea', `${eventos.length} ${eventos.length === 1 ? 'momento' : 'momentos'}`);
   for (const e of eventos) {
     const li = nodo('li', `h-ev h-${e.clase}`);
     const t = nodo('time', null, fechaLarga(e.fecha));

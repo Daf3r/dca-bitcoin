@@ -1,7 +1,8 @@
 // Gráfico del precio de BTC con tus compras encima y tu costo promedio.
-import { usd, usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha, tramosCaida, ticksPrecio } from './lib.js';
+import { usd, usd0, usdSigno, entero, pct, fechaLarga, fechaCorta, ubicar, muestrear, aFecha, tramosCaida, ticksPrecio, comprasPorMes, UMBRAL_POR_MES } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { ilustracion } from './iconos.js';
+import { pegarHtml } from './cifras.js';
 
 const f1 = (n) => n.toFixed(1);
 const dfMes = new Intl.DateTimeFormat('es-SV', { month: 'short', year: 'numeric' });
@@ -16,7 +17,7 @@ let primeraVez = true;
  * flotante y la zona que anuncia a los lectores de pantalla (fuera del contenedor, que es `role="img"`). `editar(id)`: abrir una
  * compra para editarla (solo el admin).
  */
-export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], promedio, rango, hoy, maximo30 = null, log = false, alto = null, tarjeta = null, sr = null, editar = null }) {
+export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], promedio, rango, hoy, maximo30 = null, log = false, alto = null, tarjeta = null, sr = null, editar = null, libro = false }) {
   const W = Math.max(280, host.clientWidth);
   const H = alto ? Math.max(200, Math.round(alto)) : W < 560 ? 250 : W < 900 ? 300 : 340;
   const previo = EST.get(host) ?? null;
@@ -29,7 +30,12 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   const pts = muestrear(visible, Math.min(300, Math.round(W / 3)));
   const enRango = compras.filter((c) => ubicar(c.fecha, visible) >= 0);
   const ventasRango = ventas.filter((c) => ubicar(c.fecha, visible) >= 0);
-  const ps = pts.map((x) => x.p).concat(enRango.map((c) => c.precio), ventasRango.map((c) => c.precio));
+  // (Campamento 20, idea 9) Con más de 150 compras a la vista, un punto por mes: al precio que se pagó en promedio ese mes y del tamaño de
+  // sus sats (lib.comprasPorMes). No es un atajo que esconda nada: las compras extra y las ventas siguen una por una, la etiqueta del
+  // gráfico lo dice y tocar un punto dice cuántas compras junta. Con 150 o menos, nada cambia.
+  const porMes = enRango.length > UMBRAL_POR_MES;
+  const dibujadas = porMes ? [...comprasPorMes(enRango.filter((c) => !c.extra)), ...enRango.filter((c) => c.extra)] : enRango;
+  const ps = pts.map((x) => x.p).concat(dibujadas.map((c) => c.precio), ventasRango.map((c) => c.precio));
   let lo = Math.min(...ps), hi = Math.max(...ps);
   const promDentro = promedio && promedio > lo * 0.7 && promedio < hi * 1.3;
   if (promDentro) { lo = Math.min(lo, promedio); hi = Math.max(hi, promedio); }
@@ -70,7 +76,8 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   const primera = pts[0].fecha, ultima = pts.at(-1).fecha;
   const bandasVis = bandas.map((b) => [b.desde > primera ? b.desde : primera, b.hasta < ultima ? b.hasta : ultima]).filter(([d, h]) => d <= h);
   for (const [d, h] of bandasVis) s += `<rect class="g-banda" x="${f1(x(d))}" y="${m.t}" width="${f1(Math.max(2, x(h) - x(d)))}" height="${H - m.t - m.b}"/>`;
-  if (log) s += `<text class="g-escala" x="${m.l}" y="${m.t - 8}">Escala logarítmica</text>`;
+  const etiqueta = [log && 'Escala logarítmica', porMes && (log ? 'un punto por mes' : 'Un punto por mes')].filter(Boolean).join(' · ');
+  if (etiqueta) s += `<text class="g-escala" x="${m.l}" y="${m.t - 8}">${etiqueta}</text>`;
   const n = W < 560 ? 3 : 5;
   for (let k = 0; k < n; k++) {
     const p = pts[Math.round((k / (n - 1)) * (pts.length - 1))];
@@ -100,30 +107,30 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   if (promedio) {
     const yp = promDentro ? y(promedio) : f(promedio) < lo ? H - m.b - 4 : m.t + 4;
     if (promDentro) s += `<line class="g-prom" x1="${m.l}" x2="${W - m.r}" y1="${f1(yp)}" y2="${f1(yp)}"/>`;
-    const txt = `Tu costo ${usd0(promedio)}${promDentro ? '' : f(promedio) < lo ? ' ↓' : ' ↑'}`;
+    const txt = `${libro ? 'Costo' : 'Tu costo'} ${usd0(promedio)}${promDentro ? '' : f(promedio) < lo ? ' ↓' : ' ↑'}`;
     const ty = promDentro ? yp - 24 : f(promedio) < lo ? yp - 22 : yp;
     etiquetaCosto = `<g class="g-prom-tag"><rect x="${m.l}" y="${f1(ty)}" width="${f1(txt.length * 7 + 16)}" height="20" rx="10"/><text x="${m.l + 8}" y="${f1(ty + 14)}">${txt}</text></g>`;
   }
   // Las compras van a su propio precio: un único path de círculos, ligero aunque sean cientos.
-  const r = enRango.length > 120 ? 2.6 : enRango.length > 30 ? 3.6 : 5.5;
-  const cxy = enRango.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
+  const r = dibujadas.length > 120 ? 2.6 : dibujadas.length > 30 ? 3.6 : 5.5;
+  const cxy = dibujadas.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
   // El tamaño de cada punto sigue a los sats de esa compra (raíz cuadrada: el área, no el radio, es proporcional), entre 0.75 y 1.45 veces el normal.
-  const mediana = (() => { const v = enRango.map((c) => c.sats).filter((q) => q > 0).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : 1; })();
-  const rs = enRango.map((c) => r * Math.min(1.45, Math.max(0.75, Math.sqrt((c.sats || mediana) / mediana))));
+  const mediana = (() => { const v = dibujadas.map((c) => c.sats).filter((q) => q > 0).sort((a, b) => a - b); return v.length ? v[v.length >> 1] : 1; })();
+  const rs = dibujadas.map((c) => r * Math.min(1.45, Math.max(0.75, Math.sqrt((c.sats || mediana) / mediana))));
   if (cxy.length) s += `<path class="g-compras" d="${cxy.map(([cx, cy], i) => `M${f1(cx - rs[i])} ${f1(cy)}a${f1(rs[i])} ${f1(rs[i])} 0 1 0 ${f1(2 * rs[i])} 0a${f1(rs[i])} ${f1(rs[i])} 0 1 0 ${f1(-2 * rs[i])} 0`).join('')}"/>`;
   // Las compras extra (por una caída) llevan un anillo naranja alrededor del punto.
-  const extras = cxy.map((p, i) => [p, rs[i] + 3.2, enRango[i].extra]).filter((q) => q[2]);
+  const extras = cxy.map((p, i) => [p, rs[i] + 3.2, dibujadas[i].extra]).filter((q) => q[2]);
   if (extras.length) s += `<path class="g-extras" d="${extras.map(([[cx, cy], re]) => `M${f1(cx - re)} ${f1(cy)}a${f1(re)} ${f1(re)} 0 1 0 ${f1(2 * re)} 0a${f1(re)} ${f1(re)} 0 1 0 ${f1(-2 * re)} 0`).join('')}"/>`;
   // Las ventas van como rombos huecos a su precio de venta.
   const vxy = ventasRango.map((c) => [x(visible[ubicar(c.fecha, visible)].fecha), y(c.precio)]);
   const rv = r + 1.5;
-  const puntos = [...enRango.map((c, i) => ({ c, x: cxy[i][0], y: cxy[i][1] })), ...ventasRango.map((c, i) => ({ c, x: vxy[i][0], y: vxy[i][1] }))];
+  const puntos = [...dibujadas.map((c, i) => ({ c, x: cxy[i][0], y: cxy[i][1] })), ...ventasRango.map((c, i) => ({ c, x: vxy[i][0], y: vxy[i][1] }))];
   if (vxy.length) s += `<path class="g-ventas" d="${vxy.map(([cx, cy]) => `M${f1(cx)} ${f1(cy - rv)}L${f1(cx + rv)} ${f1(cy)}L${f1(cx)} ${f1(cy + rv)}L${f1(cx - rv)} ${f1(cy)}Z`).join('')}"/>`;
   // La etiqueta del costo va encima de los puntos para que siempre se lea.
   if (promedio) s += etiquetaCosto;
   if (enRango.length && enRango.length <= 2) {
     const c = enRango.at(-1), [cx, cy] = cxy.at(-1);
-    const k = compras.length === 1 ? 'Tu primera compra' : 'Tu última compra';
+    const k = compras.length === 1 ? (libro ? 'La primera compra' : 'Tu primera compra') : libro ? 'La última compra' : 'Tu última compra';
     const l2 = `a ${usd0(c.precio)} · ${fechaCorta(c.fecha)}`;
     const ancho = Math.max(k.length * 7.6, l2.length * 7.2) + 8;
     // Se prueban varias posiciones (a cada lado y a distintas alturas, incluida la pegada al fondo o al techo) y gana la que
@@ -163,9 +170,10 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
 
   const cambio = (u.p / pts[0].p - 1) * 100;
   const periodo = { 30: 'en el último mes', 182: 'en los últimos 6 meses', 365: 'en el último año' }[rango] ?? `desde ${mes(pts[0].fecha)}`;
-  const defecto = `BTC <b>${usd0(u.p)}</b> hoy, <b data-tono="${cambio >= 0 ? 'sube' : 'baja'}">${pct(cambio)}</b> ${periodo}.` +
-    (enRango.length ? ` <span class="lec-tuya">${enRango.length} ${enRango.length === 1 ? 'compra tuya' : 'compras tuyas'} aquí.</span>` : '');
-  const est = { host, lectura, pts, x, y, W, H, visible, enRango, defecto, sel: null, rango, puntos, tarjeta, sr, editar, fijada: null };
+  // (Campamento 20) Sin cortes entre una cifra y su unidad («286 compras»).
+  const defecto = pegarHtml(`BTC <b>${usd0(u.p)}</b> hoy, <b data-tono="${cambio >= 0 ? 'sube' : 'baja'}">${pct(cambio)}</b> ${periodo}.` +
+    (enRango.length ? ` <span class="lec-tuya">${entero(enRango.length)} ${enRango.length === 1 ? (libro ? 'compra del libro' : 'compra tuya') : libro ? 'compras del libro' : 'compras tuyas'} aquí${porMes ? ', un punto por mes' : ''}.</span>` : ''));
+  const est = { host, lectura, pts, x, y, W, H, visible, enRango: dibujadas, defecto, sel: null, rango, puntos, tarjeta, sr, editar, fijada: null, libro };
   EST.set(host, est);
   lectura.innerHTML = defecto;
   // Si había una compra fijada y sigue ahí tras repintar (el precio se refresca cada 30 s), se conserva su tarjeta.
@@ -204,12 +212,17 @@ function tarjetaLectura(g, p, compra, desde) {
   tx(t, '.gt-fecha', p.vivo ? 'Ahora' : fechaLarga(p.fecha));
   tx(t, '.gt-precio', `BTC ${usd0(p.p)}`);
   tx(t, '.gt-sub', p.vivo ? '' : `Desde entonces ${pct(desde)}`);
-  tx(t, '.gt-nota', compra ? `Compraste ${entero(compra.sats)} sats a ${usd0(compra.precio)}` : '');
+  tx(t, '.gt-nota', compra ? textoCompra(g, compra) : '');
   posicionar(t, g.x(p.fecha));
   t.hidden = false;
 }
 
-/** Fija la tarjeta en una compra (o venta): sus datos, y «Editar» si quien mira puede (`opciones.editar`). */
+/** Lo que se lee de una compra (o de un mes, con un punto por mes) al recorrer el gráfico. */
+const textoCompra = (g, c) => (c.grupo
+  ? `En ${c.nombre}: ${c.n} ${c.n === 1 ? 'compra' : 'compras'}, ${entero(c.sats)} sats a ${usd0(c.precio)} de promedio`
+  : `${g.libro ? 'Se compraron' : 'Compraste'} ${entero(c.sats)} sats a ${usd0(c.precio)}`);
+
+/** Fija la tarjeta en una compra (o venta, o un mes con un punto por mes): sus datos, y «Editar» si quien mira puede (`opciones.editar`). */
 function fijar(g, punto, anunciar = true) {
   const t = g.tarjeta;
   const c = punto.c;
@@ -219,15 +232,16 @@ function fijar(g, punto, anunciar = true) {
   t.dataset.modo = 'fija';
   t.removeAttribute('aria-hidden');
   t.setAttribute('role', 'group');
-  t.setAttribute('aria-label', venta ? 'Detalle de la venta o gasto' : 'Detalle de la compra');
-  tx(t, '.gt-fecha', `${venta ? 'Venta o gasto' : c.extra ? 'Compra extra' : 'Compra'} · ${fechaLarga(c.fecha)}`);
+  t.setAttribute('aria-label', c.grupo ? 'Detalle del mes' : venta ? 'Detalle de la venta o gasto' : 'Detalle de la compra');
+  // Un punto de mes dice cuántas compras junta y a qué precio salieron en promedio (no se edita: son varias).
+  tx(t, '.gt-fecha', c.grupo ? `${c.nombre.replace(/^./, (l) => l.toUpperCase())} · ${c.n} ${c.n === 1 ? 'compra' : 'compras'}` : `${venta ? 'Venta o gasto' : c.extra ? 'Compra extra' : 'Compra'} · ${fechaLarga(c.fecha)}`);
   tx(t, '.gt-precio', `${venta ? '−' : '+'}${entero(c.sats)} sats`);
   const hoy = g.pts.at(-1).p;
   const valorHoy = (c.sats / 1e8) * hoy;
-  tx(t, '.gt-sub', `${usd(c.monto)} a ${usd0(c.precio)}`);
+  tx(t, '.gt-sub', c.grupo ? `${usd(c.monto)} a ${usd0(c.precio)} de promedio` : `${usd(c.monto)} a ${usd0(c.precio)}`);
   tx(t, '.gt-nota', [venta ? '' : `Hoy ${usdSigno(valorHoy - c.monto)} (${pct((valorHoy / c.monto - 1) * 100)})`, c.nota ? `«${c.nota}»` : ''].filter(Boolean).join(' · '));
   const editar = t.querySelector('.gt-editar');
-  if (editar) { editar.hidden = !g.editar; editar.dataset.id = String(c.id ?? ''); }
+  if (editar) { editar.hidden = !g.editar || Boolean(c.grupo); editar.dataset.id = String(c.id ?? ''); }
   posicionar(t, punto.x);
   t.hidden = false;
   if (anunciar && g.sr) g.sr.textContent = `${t.querySelector('.gt-fecha').textContent}. ${t.querySelector('.gt-precio').textContent}. ${t.querySelector('.gt-sub').textContent}. ${t.querySelector('.gt-nota').textContent}`;
@@ -265,7 +279,7 @@ function marcar(host, i, teclado = false) {
   // El dato va en la tarjeta y se anuncia a los lectores de pantalla; el texto de arriba NO cambia (si cambiara de alto, el gráfico
   // y la leyenda se correrían bajo el dedo y el toque caería en otro sitio). Sin tarjeta, se escribe ahí como antes.
   const texto = `${p.vivo ? 'Ahora' : fechaLarga(p.fecha)} · BTC ${usd0(p.p)}${p.vivo ? '' : ` · desde entonces ${pct(desde)}`}` +
-    (compra ? `. Compraste ${entero(compra.sats)} sats a ${usd0(compra.precio)} el ${fechaCorta(compra.fecha)} (hoy ${usdSigno((compra.sats / 1e8) * g.pts.at(-1).p - compra.monto)})` : '');
+    (compra ? `. ${textoCompra(g, compra)}${compra.grupo ? '' : ` el ${fechaCorta(compra.fecha)}`} (hoy ${usdSigno((compra.sats / 1e8) * g.pts.at(-1).p - compra.monto)})` : '');
   if (!g.tarjeta) g.lectura.textContent = texto;
   tarjetaLectura(g, p, compra, desde);
   if (teclado && g.sr) g.sr.textContent = texto;

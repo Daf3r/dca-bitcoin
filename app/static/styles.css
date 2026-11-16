@@ -297,7 +297,9 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 /* En 320 px el precio va en su columna estrecha de siempre (una cosa por línea) para no empujar la marca ni el saludo. */
 @media (max-width: 399px) { .cotizacion { grid-template-columns: auto; justify-items: end; padding: 4px 8px 5px; margin: -4px -8px 0 0; } }
 @media (max-width: 359px) { .cotizacion { padding: 0; margin: 0; background: none; } }
-@media (max-width: 359px) { .cot-sep { display: none; } .cot-hace { display: block; } }
+/* (Campamento 20) En < 360 px la fuente («Coinbase») queda solo para los lectores de pantalla y la hora va sola: la cotización ocupa un
+   renglón menos y no baja hasta el renglón del saldo (con 1,000 BTC, «sats» chocaba con «ahora»). El texto es el mismo. */
+@media (max-width: 359px) { .cot-sep { display: none; } .cot-fuente { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }
 .cot-k { font-size: 0.75rem; color: var(--cielo-txt2); white-space: nowrap; }
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
@@ -306,6 +308,7 @@ html[data-ganancia="color"] .cot-24[data-tono="sube"] { color: var(--cielo-sube,
 html[data-ganancia="color"] .cot-24[data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
 /* Cifras secundarias con forma corta (cifras.js): en teléfonos de menos de 360 px se ve la corta. */
 .c-c { display: none; }
+.nw, .c-l, .c-c { white-space: nowrap; } /* una cifra pegada a su unidad (cifras.js: pegado, pegarHtml; campamento 20) */
 @media (max-width: 359px) { .c-l { display: none; } .c-c { display: inline; } }
 /* «En vivo» junto a USD: el valor sigue al precio. */
 .saldo-v em[data-vivo="1"]::before { content: ""; display: inline-block; width: 0.32em; height: 0.32em; margin-right: 0.3em; border-radius: 50%; background: var(--cielo-sube, var(--sube)); vertical-align: 0.12em; }
@@ -320,6 +323,7 @@ html[data-efectos="todos"] .saldo-v em[data-vivo="1"]::before { animation: latid
   left: max(20px, env(safe-area-inset-left)); right: max(20px, env(safe-area-inset-right));
   min-width: min(16rem, calc(100vw - 40px));
   color: var(--cielo-txt); container-type: inline-size;
+  --u-tam: clamp(1.3rem, 5vw, 2.1rem); /* el tamaño de la unidad («sats», «BTC», «USD»): la cifra le deja sitio en su renglón */
 }
 .saldo-k { font: 400 1rem var(--serif); color: var(--cielo-txt2); }
 .saldo-cab { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
@@ -329,12 +333,16 @@ html[data-efectos="todos"] .saldo-v em[data-vivo="1"]::before { animation: latid
 html:is([data-efectos="todos"], [data-efectos="esenciales"]) .saldo[data-bonito] .cifra-grande { animation: bonito-brillo 2.6s ease-out 1; }
 
 .saldo-v { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
-/* El tamaño sale del número de caracteres (dígito = 0.575 em, coma = 0.18 em en Bricolage
-   tabular), con suelo y techo: no se mide nada en JS y no puede quedar en 0. La cifra final,
-   invisible, reserva el ancho en la misma celda de la rejilla en la que cuenta la animada. */
+/* El tamaño sale del número de caracteres (`--n`: dígito = 0.575 em, coma = 0.18 em), con suelo y techo: no se mide nada en JS y no
+   puede quedar en 0. La cifra final, invisible, reserva el ancho en la misma celda de la rejilla en la que cuenta la animada.
+   (Campamento 20) Y nunca pasa de lo que cabe junto a su unidad (`--cg-cabe`): el ancho de la caja menos la unidad (su ancho en em,
+   `--u-em`) y el hueco, entre lo que mide la cifra final (`--a`, en em: la suma del ancho de cada carácter, de una tabla; pintar.js).
+   Así 10M, 100 BTC o 1,000 BTC no mandan «sats» al renglón de abajo ni se salen, tampoco con letra muy grande a 320 px; las cifras
+   cortas se ven igual que antes. El suelo baja a 1.25rem solo para que quepa lo más largo. */
 .cifra-grande {
   display: inline-grid;
-  font: 300 clamp(2.25rem, 94cqi / (var(--n, 7) * 0.575), 8rem) / 0.95 var(--sans);
+  --cg-cabe: calc((100cqi - var(--u-tam, 1.3rem) * var(--u-em, 3.4) - 14px) / (var(--a, 4.4) * 1.04));
+  font: 300 clamp(1.25rem, min(max(2.25rem, 94cqi / (var(--n, 7) * 0.575)), var(--cg-cabe)), 8rem) / 0.95 var(--sans);
   letter-spacing: -0.035em;
   white-space: nowrap;
 }
@@ -353,7 +361,7 @@ html:is([data-efectos="todos"], [data-efectos="esenciales"]) .saldo[data-bonito]
 .saldo-v[role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 12px; }
 .saldo-v[role="button"]:focus-visible { outline: 2px solid var(--naranja); outline-offset: 6px; }
 .saldo-v[role="button"] em::after { content: " ⇄"; font-style: normal; font-size: 0.6em; opacity: 0.55; }
-.equilibrio { margin-top: -4px; color: var(--txt2); font-size: 0.9375rem; }
+.equilibrio { margin-top: 10px; color: var(--txt2); font-size: 0.9375rem; } /* bajo el gráfico y su leyenda (campamento 20) */
 .equilibrio[hidden] { display: none; }
 /* Indicador del precio frente a tu costo promedio: la marca de arriba es tu costo; el punto, el precio de hoy. Neutro: es información. */
 .indicador { margin: 6px 0 4px; }
@@ -362,7 +370,7 @@ html:is([data-efectos="todos"], [data-efectos="esenciales"]) .saldo[data-bonito]
 .ind-costo { position: absolute; left: 50%; top: -5px; width: 2px; height: 16px; margin-left: -1px; border-radius: 1px; background: var(--txt2); }
 .ind-hoy { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--naranja); border: 2px solid var(--fondo); transform: translate(-50%, -50%); transition: left 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
 .ind-eti { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--txt2); font-size: 0.8125rem; }
-.saldo-v em { font: italic 400 clamp(1.3rem, 5vw, 2.1rem) var(--serif); color: var(--cielo-txt2); }
+.saldo-v em { font: italic 400 var(--u-tam, 1.3rem) var(--serif); color: var(--cielo-txt2); white-space: nowrap; }
 .saldo-d { margin-top: 8px; font-size: 1.0625rem; color: var(--cielo-txt2); }
 /* Última compra y cuánto falta para la próxima (solo admin). La altura se reserva siempre para que nada se mueva al aparecer. */
 .esc-datos { display: none; }
@@ -383,13 +391,21 @@ html[data-tv] .esc-datos { display: none !important; }
 .sd-gan { display: inline-flex; align-items: center; gap: 2px; padding: 1px 10px 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--cielo-sombra, transparent) 62%, transparent); vertical-align: baseline; } /* el velo es del color contrario a la tinta: sube el contraste de la cifra, nunca lo baja */
 .sd-gan .mini { margin-left: 6px; vertical-align: 0; }
 @media (max-width: 699px) {
-  .sd-sep { display: block; height: 0; overflow: hidden; }
   /* El renglón de la ganancia tiene su sitio desde antes de que llegue el precio: si el precio tarda más que las compras, la
      montaña ya se dibujó midiendo dónde acaba el saldo (`techo`) y, al aparecer la píldora, la cumbre quedaba bajo el texto. */
   html:not([data-tv]) .saldo-d { min-height: calc(3em + 11px); }
   .sd-gan { margin: 5px 0 0; padding-block: 3px; }
 }
 html[data-tv] .sd-gan { background: none; padding: 0; margin: 0; }
+/* (Campamento 20) El renglón bajo el saldo va en piezas (pintar.js: pintarLinea): «valen $X», «· píldora» y «· ya realizaste $Y», en una
+   fila que se envuelve. Ninguna pieza se parte por dentro (el monto va siempre pegado a su texto) y la que empieza un renglón pierde su «·»:
+   cae en una franja de la izquierda que se recorta (margen negativo + `clip-path`, sin medir nada en JS). En el teléfono la píldora baja a su
+   renglón y «ya realizaste» se queda a su lado si cabe; si no, baja entera al siguiente. */
+.saldo-d:has(> .sd-v) { --sd-s: 1.1em; display: flex; flex-wrap: wrap; align-items: baseline; row-gap: 4px; margin-left: calc(-1 * var(--sd-s)); clip-path: inset(-3em -3em -3em calc(var(--sd-s) - 0.35em)); }
+.saldo-d > .sd-v { margin-left: var(--sd-s); white-space: nowrap; }
+.saldo-d > :is(.sd-g, .sd-r) { display: inline-flex; align-items: baseline; white-space: nowrap; }
+.saldo-d .sd-sep { flex: none; width: var(--sd-s); text-align: center; }
+@media (max-width: 699px) { .saldo-d > .sd-v { flex: 0 0 calc(100% - var(--sd-s)); } }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
 .saldo-d [data-tono] { color: var(--cielo-txt); } /* tinta del cielo, plena: el signo y la flecha dicen si sube o baja */
 html[data-ganancia="color"] .saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
@@ -442,8 +458,9 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .an-centro b { font: 600 1.125rem/1.05 var(--sans); }
 .an-centro small { font-size: 0.6875rem; color: var(--txt3); font-weight: 400; }
 .tr-k { color: var(--txt3); font-size: 0.9375rem; }
-.tr-v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
-.tr-v b { font: 400 clamp(2.3rem, 10vw, 3.3rem)/1.05 var(--serif); letter-spacing: -0.02em; }
+.tr-v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; container-type: inline-size; }
+/* La meta («2.5M sats», «1,000 BTC») en un renglón: si no cabe en la columna, la letra baja (`--n`, los caracteres; pintar.js). */
+.tr-v b { font: 400 clamp(1.5rem, min(clamp(2.3rem, 10vw, 3.3rem), 100cqi / (var(--n, 7) * 0.56)), 3.3rem)/1.05 var(--serif); letter-spacing: -0.02em; white-space: nowrap; }
 .tr-v span { color: var(--txt2); }
 .tr-ritmo { margin-top: 10px; color: var(--txt2); }
 /* Sats por dólar: una cifra y su línea del mes, sin colores de alarma (es información, no una alerta). */
@@ -721,7 +738,7 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 /* Suelo bajo el botón flotante: un degradado del color del fondo para que el texto que pasa por detrás no se enrede con él
    (solo donde el botón flota: teléfono y tablet, y solo para quien puede anotar). */
 @media (max-width: 1099px) {
-  html:not([data-tv]) body[data-rol="admin"]:not([data-mant="1"])::after {
+  html:not([data-tv], [data-pestanas]) body[data-rol="admin"]:not([data-mant="1"])::after {
     content: ""; position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; height: calc(92px + env(safe-area-inset-bottom)); pointer-events: none;
     background: linear-gradient(to top, var(--fondo) 22%, color-mix(in srgb, var(--fondo) 0%, transparent));
   }
@@ -826,8 +843,8 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
 @media (max-height: 680px) and (max-width: 699px) {
   .saldo { top: 80px; } /* el saludo termina hacia los 76 px */
   .saldo-k { font-size: 0.875rem; }
-  .cifra-grande { font-size: clamp(2.25rem, 94cqi / (var(--n, 7) * 0.575), 4.4rem); }
-  .saldo-v em { font-size: 1.25rem; }
+  .saldo { --u-tam: 1.25rem; }
+  .cifra-grande { font-size: clamp(1.25rem, min(max(2.25rem, 94cqi / (var(--n, 7) * 0.575)), var(--cg-cabe)), 4.4rem); }
   .saldo-d { margin-top: 4px; font-size: 0.9375rem; }
   .prox { font-size: 0.8125rem; }
 }
@@ -851,8 +868,8 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .escena { height: 100vh; height: 100svh; min-height: 0; max-height: none; }
   .saldo { top: 80px; left: max(24px, env(safe-area-inset-left)); right: auto; width: min(46%, 22rem); min-width: 0; }
   .saldo-k { font-size: 0.875rem; }
-  .cifra-grande { font-size: clamp(2.25rem, 40cqi / (var(--n, 7) * 0.575), 4.6rem); }
-  .saldo-v em { font-size: 1.25rem; }
+  .saldo { --u-tam: 1.25rem; }
+  .cifra-grande { font-size: clamp(1.25rem, min(max(2.25rem, 40cqi / (var(--n, 7) * 0.575)), var(--cg-cabe)), 4.6rem); }
   .saldo-d { margin-top: 4px; font-size: 0.9375rem; }
   .prox { font-size: 0.8125rem; }
   .anotar { left: max(24px, env(safe-area-inset-left)); transform: none; bottom: max(14px, env(safe-area-inset-bottom)); min-height: var(--toque); padding: 0 24px; }
@@ -865,7 +882,7 @@ dialog p { margin: 8px 0 18px; color: var(--txt2); font-variant-numeric: tabular
   .escena { height: 86vh; min-height: 620px; max-height: 880px; }
   .saldo { top: 110px; left: max(48px, calc(50% - var(--medio-ancho))); right: auto; width: min(52%, calc(var(--medio-ancho) * 1.2)); }
   /* Deja sitio a «sats» en la misma línea sin invadir la montaña. */
-  .cifra-grande { font-size: clamp(2.25rem, 80cqi / (var(--n, 7) * 0.575), 8rem); }
+  .cifra-grande { font-size: clamp(1.25rem, min(max(2.25rem, 80cqi / (var(--n, 7) * 0.575)), var(--cg-cabe)), 8rem); }
   .cima { padding-inline: max(48px, calc(50vw - var(--medio-ancho))); }
   /* Tres datos de tu camino bajo el saldo: llenan el hueco del cielo en pantallas anchas. */
   .esc-datos:not([hidden]) { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
@@ -946,7 +963,11 @@ div.fila:hover { background: none; }
 .d-cuenta { width: min(26rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
 .dc-quien { margin: 4px 0 14px; }
 .dc-lista { display: grid; gap: 6px; }
-.dc-grupo { margin: 12px 4px 2px; font: 600 0.8125rem var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt3); }
+.dc-grupo { margin: 14px 4px 2px; font: 600 0.8125rem var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt3); }
+.dc-lista > .dc-grupo:first-child { margin-top: 2px; }
+/* Salir va aparte, al final (campamento 20): sin título (diría «Salir» dos veces), con una raya y aire encima. */
+.dc-lista .dc-salir { margin-top: 18px; position: relative; }
+.dc-lista .dc-salir::before { content: ""; position: absolute; left: 4px; right: 4px; top: -12px; border-top: 1px solid var(--s3); }
 .dc-lista button {
   min-height: var(--toque); padding: 10px 16px; border: 0; border-radius: 14px; background: var(--s2);
   text-align: left; font-weight: 600; cursor: pointer;
@@ -1144,10 +1165,8 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .nov-resumen dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
 #nov-ok { background: var(--naranja); border-color: transparent; color: var(--naranja-osc); }
 
-/* Vista previa temporal de la celebración (solo admin). */
-.dc-previa { margin: 0 0 14px; padding: 12px; border-radius: 14px; background: var(--s2); }
-.dc-previa p { margin: 0 0 8px; font-size: 0.8125rem; color: var(--txt2); }
-.dc-previa div { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Probar la celebración (solo admin, en «Estado del sistema»; campamento 20). */
+.dc-previa { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
 .dc-previa button { min-height: var(--toque); padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 650; cursor: pointer; touch-action: manipulation; }
 
 /* ======================================================= Campamento 4 (1/4): se siente como app */
@@ -1297,12 +1316,12 @@ html[data-ganancia="color"] .dt [data-tono="baja"] { color: var(--baja); }
   min-height: calc(44px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
   border: 0; border-bottom: 1px solid var(--s3); background: var(--fondo); color: var(--txt); font: inherit; text-align: left; cursor: pointer;
   transform: translateY(-100%); visibility: hidden; transition: transform 0.25s cubic-bezier(0.2, 0.9, 0.2, 1), visibility 0s 0.25s; }
-.minicab b { font: 650 1.0625rem var(--sans); font-variant-numeric: tabular-nums; }
-.mc-alt { position: relative; flex: 0 0 clamp(44px, 18vw, 96px); height: 4px; border-radius: 2px; background: var(--s3); }
+.minicab b { font: 650 min(1.0625rem, 5.2vw) var(--sans); font-variant-numeric: tabular-nums; white-space: nowrap; } /* en un renglón, también con 1,000 BTC a 320 px (campamento 20) */
+.mc-alt { position: relative; flex: 0 1 clamp(44px, 18vw, 96px); min-width: 20px; height: 4px; border-radius: 2px; background: var(--s3); }
 .mc-alt[hidden] { display: none; }
 .mc-alt::before { content: ""; position: absolute; inset: 0 auto 0 0; width: calc(var(--p, 0) * 100%); border-radius: 2px; background: var(--naranja); }
 .mc-punto { position: absolute; top: 50%; left: calc(var(--p, 0) * 100%); width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--fondo); border: 2.5px solid var(--naranja); }
-.minicab span { color: var(--txt2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.minicab span { color: var(--txt2); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 html[data-minicab] .minicab { transform: none; visibility: visible; transition-delay: 0s; }
 html[data-minicab] .minicab:has(#minicab-saldo:empty) { display: none; }
 html[data-efectos="ninguno"] .minicab { transition: none; }
@@ -1690,7 +1709,7 @@ html[data-tv]:not([data-tv-activo]) { cursor: none; }
 
 /* ------------------------------------------------------------- material de las tarjetas (pulido visual) */
 /* Todas las tarjetas comparten el mismo material: superficie con un velo de luz arriba, filo de luz y sombra en capas. */
-:is(.toca, .caida, .spd, .rep-const, .rep-curiosas, .ubicacion, .tramo, .comienzo, .res-medallas, .pestanas) {
+:is(.toca, .caida, .spd, .rep-const, .rep-curiosas, .ubicacion, .tramo, .comienzo, .res-medallas, .pestanas, .dh-hoy, .dh-sec) {
   background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra);
 }
 dialog, .hoja-panel { box-shadow: inset 0 1px 0 var(--filo), var(--sombra-alta); }
@@ -2444,7 +2463,7 @@ html[data-pestanas] .indice { display: none; }
 @media (hover: hover) and (pointer: fine) { .res-med-ver:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
 .res-med-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
 @media (min-width: 700px) {
-  .med-rejilla { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .med-rejilla { grid-template-columns: repeat(auto-fit, minmax(min(7.5rem, 100%), 1fr)); } /* (campamento 20) antes 4 fijas: a media página, «5 años comprando» se salía */
   .res-med-ver { width: auto; display: inline-flex; }
 }
 
@@ -2460,10 +2479,10 @@ html[data-pestanas] .indice { display: none; }
   .historia-pg .dh-vistas button:first-child { grid-column: auto; flex-direction: column; gap: 6px; min-height: calc(var(--toque, 48px) + 14px); }
   .historia-pg .dh-vistas button { font-size: 0.875rem; }
   /* Línea: medallas, sellos y pasaporte a la izquierda; «Cómo llegaste hasta aquí» a la derecha. */
-  .historia-pg #dh-v-linea { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto 1fr; column-gap: 48px; align-items: start; }
+  /* (Campamento 20) Las secciones plegadas: medallas, sellos y pasaporte a la izquierda; «Cómo llegaste hasta aquí» a la derecha. */
+  .historia-pg #dh-v-linea:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-auto-rows: auto; column-gap: 28px; align-items: start; }
   .historia-pg #dh-v-linea > * { grid-column: 1; }
-  .historia-pg #dh-v-linea > h3:nth-last-child(2) { grid-column: 2; grid-row: 1; }
-  .historia-pg #dh-v-linea > ol:last-child { grid-column: 2; grid-row: 2 / -1; }
+  .historia-pg #dh-v-linea > #dh-sec-linea { grid-column: 2; grid-row: 1 / span 3; }
   /* Dibujos: el lienzo a la izquierda, lo que dice a la derecha. */
   .historia-pg .dh-objeto:not([hidden]) { display: grid; grid-template-columns: minmax(0, 34rem) minmax(0, 1fr); column-gap: 40px; align-items: start; }
   .historia-pg .dh-objeto > * { grid-column: 2; }
@@ -3129,32 +3148,8 @@ html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb
      todo queda como estaba (la escena llena la pantalla y el botón flota sobre los pinos).
    Acostado no hay altura para esto: se queda como estaba. `data-boton` se recuerda por dispositivo (efectos.js lo pone antes de
    pintar) para que la escena no cambie de alto al saber quién eres. */
-@media (max-width: 1099px) and (min-height: 521px) {
-  html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 92px); height: calc(100svh - 92px); min-height: 470px; --pie: 64; }
-  html[data-pestanas]:not([data-tv], [data-boton]) .cuerpo { padding-top: 14px; }
-}
-/* En pantallas bajas cada píxel de montaña cuenta: el sendero arranca aún más abajo y, en las más bajas (320×568), la franja es
-   menor (la barra se asoma a medias, que ya dice «hay más abajo») para que la montaña mida lo mismo que antes. */
-@media (max-width: 1099px) and (min-height: 521px) and (max-height: 700px) {
-  html[data-pestanas]:not([data-tv], [data-boton]) .escena { --pie: 46; }
-}
-@media (max-width: 1099px) and (min-height: 521px) and (max-height: 600px) {
-  html[data-pestanas]:not([data-tv], [data-boton]) .escena { height: calc(100vh - 64px); height: calc(100svh - 64px); min-height: 440px; --pie: 40; }
-}
-/* Quien anota, en pantalla alta: caben la barra (de una fila) y, debajo, el botón. Donde la barra va en dos filas (menos de 360 px,
-   o letra grande o muy grande en teléfonos) no caben: ahí queda como estaba, igual que en pantallas bajas. */
-@media (min-width: 360px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
-  html[data-pestanas][data-boton]:not([data-tv], [data-letra]) .cuerpo { padding-top: 14px; }
-}
-@media (min-width: 480px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
-  html[data-pestanas][data-boton][data-letra="grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
-}
-@media (min-width: 600px) and (max-width: 1099px) and (min-height: 740px) {
-  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .escena { height: calc(100vh - 96px - var(--pe-alto)); height: calc(100svh - 96px - var(--pe-alto)); --pie: 46; }
-  html[data-pestanas][data-boton][data-letra="muy-grande"]:not([data-tv]) .cuerpo { padding-top: 14px; }
-}
+/* (Campamento 20) La franja ya no hace falta: en el teléfono y la tablet la barra y «Anotar» son el dock de abajo, siempre a la vista
+   (ver «Campamento 20 · el dock», al final). La escena termina donde empieza el dock. */
 /* --- 2. «Saldo del libro» para quien solo mira. Los textos fijos llevan su otra forma en `data-libro` y pintar.js elige cuál se ve
    (`html[data-voz]`). Si este dispositivo es de alguien que solo mira (`data-lector`, efectos.js), el texto de «tu…» no se
    enseña mientras se cambia: nunca se ve un «Tu saldo» que luego salta a «Saldo del libro». */
@@ -3405,3 +3400,171 @@ html[data-tv] .tv-nombre:not([hidden]) { display: block; flex-basis: 100%; margi
 #mo-nombre::placeholder { color: var(--txt3); opacity: 1; }
 #mo-nombre:focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
 .c-montana { letter-spacing: 0.01em; }
+
+
+/* ======================================================= Campamento 20 · «Tu historia»: el dibujo de hoy y las secciones plegadas (5a)
+   y el primer año del tronco y la manta (5b). */
+/* El dibujo de hoy: una portada arriba de la historia. El dibujo no se toca aquí (se abre abajo con «Verlo de cerca»). */
+.dh-hoy { display: grid; gap: 4px 20px; margin: 0 0 16px; padding: 18px 18px 20px; border-radius: 24px; background-color: var(--s1); }
+.dh-hoy[hidden] { display: none; }
+.dh-hoy-lienzo, .historia-pg .dh-hoy-lienzo { max-width: min(15rem, 100%); margin: 0 auto; }
+.dh-hoy-lienzo svg { pointer-events: none; }
+.dh-hoy-lienzo .pieza { cursor: default; }
+.dh-hoy-k { margin: 6px 0 0; font: 650 0.75rem var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--naranja-txt); }
+.historia-pg .dh-hoy h3 { margin: 2px 0 6px; font: 500 1.5rem/1.15 var(--serif); letter-spacing: -0.01em; color: var(--txt); }
+.dh-hoy-desc { margin: 0 0 12px; font-size: 0.9375rem; line-height: 1.45; color: var(--txt2); }
+.dh-hoy-ver {
+  display: inline-flex; align-items: center; gap: 10px; min-height: var(--toque, 48px); padding: 0 20px; border: 2px solid var(--naranja); border-radius: 999px;
+  background: color-mix(in srgb, var(--naranja) 12%, var(--s1)); color: var(--txt); font: 700 1rem var(--sans); cursor: pointer;
+}
+.dh-hoy-ver::after { content: ""; flex: none; width: 8px; height: 8px; border: solid currentColor; border-width: 2.5px 2.5px 0 0; transform: rotate(45deg); }
+@media (hover: hover) and (pointer: fine) { .dh-hoy-ver:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
+.dh-hoy-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
+@media (min-width: 700px) {
+  .dh-hoy { grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); align-items: center; padding: 20px 24px; }
+  .dh-hoy-lienzo, .historia-pg .dh-hoy-lienzo { margin: 0; max-width: 15rem; }
+}
+/* Las secciones de la línea, plegadas, con su cuenta a la derecha. */
+.dh-sec { margin: 0 0 10px; border-radius: 20px; background-color: var(--s1); }
+.dh-sec[hidden] { display: none; }
+.dh-sec > summary {
+  display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; min-height: calc(var(--toque, 48px) + 8px); padding: 6px 48px 6px 18px; border-radius: 20px;
+  position: relative; cursor: pointer; list-style: none;
+}
+.dh-sec > summary::-webkit-details-marker { display: none; }
+.dh-sec > summary::after { content: ""; position: absolute; right: 22px; top: calc(50% - 6px); width: 8px; height: 8px; border: solid var(--txt2); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); transition: transform 0.2s; }
+.dh-sec[open] > summary::after { transform: translateY(3px) rotate(-135deg); }
+html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
+.dh-sec > summary:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .dh-sec > summary:hover { background: color-mix(in srgb, var(--naranja) 8%, transparent); } }
+.historia-pg .dh-sec-t { margin: 0; flex: 1 1 auto; font: 500 1.0625rem/1.25 var(--serif); letter-spacing: 0; color: var(--txt); }
+.dh-n { flex: none; padding: 2px 10px; border-radius: 999px; background: var(--s2); color: var(--txt2); font: 650 0.875rem var(--sans); white-space: nowrap; }
+.dh-sec[open] { padding-bottom: 14px; }
+.dh-sec > :not(summary) { margin-inline: 18px; }
+.dh-sec .historia { margin-top: 6px; }
+@media (max-width: 359px) { .dh-sec > summary { padding-left: 14px; } .dh-sec > :not(summary) { margin-inline: 12px; } }
+
+/* El tronco del primer año: la vuelta que falta para cerrar el primer anillo, punteada y tenue (no se toca). */
+.ht-falta { fill: none; stroke: var(--ht-vivo, #e9d9a6); stroke-width: 1.4; stroke-dasharray: 2 5; stroke-linecap: round; opacity: 0.55; pointer-events: none; }
+/* Entre un mes y otro, una línea fina y clara (la de un año es la madera tardía, oscura): que no se lea como trece años. */
+.h-tronco-primer .ht-tardia { stroke: var(--ht-vivo, #e9d9a6); stroke-width: 0.7; opacity: 0.5; }
+/* La manta del primer año: la urdimbre del telar se ve donde aún no hay tela. */
+.ha-telar { opacity: 0.85; }
+.dh-lienzo :is(.ha-telar, .ht-falta) { pointer-events: none; }
+
+
+/* ============================================================================================================================
+   Campamento 20 (9/9) · La barra de pestañas y «Anotar», un solo conjunto: el dock de abajo
+   En el teléfono y la tablet, por pestañas, la barra va fija abajo, flotando sobre la zona segura, y «Anotar» es su acción del centro:
+   un círculo naranja que asoma sobre la barra, con su nombre debajo, a la altura de los de las pestañas. Todo queda en la zona del
+   pulgar y es una sola pieza: no son dos cosas que compiten (por eso se descartó antes una barra fija abajo) y nada se encoge ni se
+   mueve al desplazar (como el «Anotar que se encoge», descartado). Quien solo mira tiene las cuatro pestañas, sin hueco. Arriba solo
+   queda la mini-cabecera. En escritorio (≥ 1100 px), en «todo junto» y en pantalla grande, como antes. Los ids no cambian.
+   ============================================================================================================================ */
+@media (max-width: 1099px) {
+  html[data-pestanas]:not([data-tv]) {
+    --dock-h: 64px; --dock-m: 8px; --dock-hueco: 0px; --dock-fondo: color-mix(in srgb, var(--s1) 96%, var(--txt));
+    --dock-abajo: max(var(--dock-m), env(safe-area-inset-bottom));
+    --dock-total: calc(var(--dock-h) + var(--dock-abajo) + 8px);
+    scroll-padding-top: 60px; scroll-padding-bottom: calc(var(--dock-total) + 16px);
+  }
+  html[data-pestanas][data-boton]:not([data-tv]) { --dock-hueco: 78px; }
+  /* La escena termina donde empieza el dock: la montaña y el sendero se ven enteros. */
+  html[data-pestanas]:not([data-tv]) .escena { height: calc(100vh - var(--dock-total)); height: calc(100svh - var(--dock-total)); min-height: 440px; --pie: 46; }
+  html[data-pestanas]:not([data-tv]) .cuerpo { padding-top: 22px; padding-bottom: calc(var(--dock-total) + 40px); }
+  /* La barra: fija abajo, con su margen. Sin la píldora que se desliza (con el hueco del centro las columnas no son iguales): la activa se
+     pinta sola, con su fondo tintado, la letra gruesa, el dibujo en naranja y la rayita. */
+  html[data-pestanas]:not([data-tv]) .pestanas {
+    position: fixed; z-index: 7; top: auto; bottom: var(--dock-abajo);
+    left: max(var(--dock-m), env(safe-area-inset-left)); right: max(var(--dock-m), env(safe-area-inset-right));
+    max-width: 34rem; margin: 0 auto; min-height: var(--dock-h);
+    grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1fr; gap: 2px; padding: 5px;
+    border-radius: 26px; background-color: var(--dock-fondo); border: 1px solid var(--s3);
+    box-shadow: inset 0 1px 0 var(--filo), 0 -6px 26px -14px rgb(0 0 0 / 0.55), 0 16px 32px -18px rgb(0 0 0 / 0.8);
+  }
+  html[data-pestanas]:not([data-tv]) .pestanas [data-pestana="historia"] { grid-column: 4; }
+  html[data-pestanas]:not([data-tv]) .pestanas [data-pestana="movimientos"] { grid-column: 5; }
+  html[data-pestanas]:not([data-tv]) .pestanas::before { display: none; }
+  html[data-pestanas]:not([data-tv]) .pestanas button { flex-direction: column; gap: 4px; min-height: calc(var(--dock-h) - 10px); padding: 6px 1px 9px; border-radius: 21px; font-size: 0.75rem; }
+  html[data-pestanas]:not([data-tv]) .pestanas button[aria-current="true"] { background: var(--pe-activa); box-shadow: inset 0 0 0 1px var(--pe-filo); }
+  html[data-pestanas]:not([data-tv]) .pestanas button::after { bottom: 3px; }
+  /* «Anotar», el centro del dock. */
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar {
+    position: fixed; z-index: 8; left: 50%; right: auto; top: auto; bottom: calc(var(--dock-abajo) + 7px); transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px;
+    width: var(--dock-hueco); min-height: 0; padding: 0; border-radius: 18px; background: none; box-shadow: none;
+    color: var(--naranja-txt); font: 750 0.75rem/1.15 var(--sans); letter-spacing: -0.01em; white-space: nowrap;
+  }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar::before {
+    width: 56px; height: 56px;
+    background: linear-gradient(var(--naranja-osc), var(--naranja-osc)) 50% 50% / 20px 3px no-repeat, linear-gradient(var(--naranja-osc), var(--naranja-osc)) 50% 50% / 3px 20px no-repeat,
+      linear-gradient(180deg, color-mix(in srgb, var(--naranja) 84%, #fff), var(--naranja) 62%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 0 0 5px var(--dock-fondo), 0 0 0 6px var(--s3), 0 12px 22px -8px rgb(0 0 0 / 0.7);
+  }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar .an-c { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar:active { transform: translateX(-50%) scale(0.95); }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+  /* El suelo: lo que pasa por detrás del dock se funde con el fondo (para todos). Los avisos salen encima del dock. */
+  html[data-pestanas]:not([data-tv]) body::after {
+    content: ""; position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; height: calc(var(--dock-total) + 22px); pointer-events: none;
+    background: linear-gradient(to top, var(--fondo) 35%, color-mix(in srgb, var(--fondo) 0%, transparent));
+  }
+  html[data-pestanas]:not([data-tv]) .aviso { bottom: calc(var(--dock-abajo) + var(--dock-h) + 30px); }
+}
+/* Menos de 390 px: la letra de las pestañas baja un punto para que «Movimientos» quepa junto al hueco. */
+@media (min-width: 360px) and (max-width: 389px) { html[data-pestanas][data-boton]:not([data-tv]) .pestanas button { font-size: 0.6875rem; } }
+/* Compacto: donde las palabras no caben (menos de 360 px con el hueco de «Anotar», o letra grande o muy grande en el teléfono) solo la pestaña activa lleva su nombre
+   a la vista y su columna es más ancha (en menos de 360 px, menos: ver abajo); las demás, su dibujo (el nombre sigue ahí para los lectores de pantalla). */
+@media (max-width: 359px) {
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas button { padding-inline: 2px; font-size: 0.75rem; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas button:not([aria-current="true"]) .pe-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas button:not([aria-current="true"]) { justify-content: center; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas .pe-txt { white-space: nowrap; }
+}
+@media (max-width: 479px) {
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas button { padding-inline: 2px; font-size: 0.75rem; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas button:not([aria-current="true"]) .pe-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas button:not([aria-current="true"]) { justify-content: center; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas .pe-txt { white-space: nowrap; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas:has([data-pestana="resumen"][aria-current="true"]) { grid-template-columns: 1.9fr 1fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas:has([data-pestana="graficos"][aria-current="true"]) { grid-template-columns: 1fr 1.9fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas:has([data-pestana="historia"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1.9fr 1fr; }
+  html[data-pestanas][data-letra="grande"]:not([data-tv]) .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1.9fr; }
+}
+@media (max-width: 599px) {
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas button { padding-inline: 2px; font-size: 0.75rem; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas button:not([aria-current="true"]) .pe-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas button:not([aria-current="true"]) { justify-content: center; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas .pe-txt { white-space: nowrap; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas:has([data-pestana="resumen"][aria-current="true"]) { grid-template-columns: 1.9fr 1fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas:has([data-pestana="graficos"][aria-current="true"]) { grid-template-columns: 1fr 1.9fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas:has([data-pestana="historia"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1.9fr 1fr; }
+  html[data-pestanas][data-letra="muy-grande"]:not([data-tv]) .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1.9fr; }
+}
+/* En menos de 360 px con «Anotar» no sobra nada: el hueco del centro baja a 64 px (el círculo asoma igual) y la pestaña activa se ensancha
+   menos, para que las demás conserven sus 48 px de toque (también con letra grande o muy grande). */
+@media (max-width: 359px) {
+  html[data-pestanas][data-boton]:not([data-tv]) { --dock-hueco: 64px; --dock-m: 6px; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas:has([data-pestana="resumen"][aria-current="true"]) { grid-template-columns: 1.4fr 1fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas:has([data-pestana="graficos"][aria-current="true"]) { grid-template-columns: 1fr 1.4fr var(--dock-hueco) 1fr 1fr; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas:has([data-pestana="historia"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1.4fr 1fr; }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas:has([data-pestana="movimientos"][aria-current="true"]) { grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1.4fr; }
+}
+/* Acostado: poca altura. El dock es más bajo, con el dibujo y la palabra en una línea, y «Anotar compra» es una píldora en su centro
+   (no asoma: la montaña necesita esa altura). */
+@media (max-width: 1099px) and (max-height: 520px) and (min-aspect-ratio: 3/2) {
+  html[data-pestanas]:not([data-tv]) { --dock-h: 58px; --dock-m: 6px; }
+  html[data-pestanas]:not([data-tv]) .escena { min-height: 0; }
+  html[data-pestanas][data-boton]:not([data-tv]) { --dock-hueco: 176px; }
+  html[data-pestanas]:not([data-tv]) .pestanas { max-width: 48rem; }
+  html[data-pestanas]:not([data-tv]) .pestanas button { flex-direction: row; gap: 8px; padding: 4px 6px 6px; font-size: 0.8125rem; }
+  html[data-pestanas]:not([data-tv]) .pestanas button::after { bottom: 2px; }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar {
+    flex-direction: row; gap: 8px; justify-content: center; height: calc(var(--dock-h) - 10px); width: calc(var(--dock-hueco) - 8px); bottom: calc(var(--dock-abajo) + 5px);
+    border-radius: 999px; padding: 0 14px 0 8px; color: var(--naranja-osc); font-size: 0.9375rem;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--naranja) 84%, #fff), var(--naranja) 62%); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 8px 18px -10px rgb(0 0 0 / 0.6);
+  }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar::before { width: 24px; height: 24px; box-shadow: none;
+    background: linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 11px 2.5px no-repeat, linear-gradient(var(--naranja), var(--naranja)) 50% 50% / 2.5px 11px no-repeat, var(--naranja-osc); }
+  html[data-pestanas][data-boton]:not([data-tv]) .anotar .an-c { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+}

@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-v', fecha: '2026-11-24',
+    items: [
+      'En el teléfono, las pestañas y «Anotar» van juntas en una sola barra abajo, al alcance del pulgar: «Anotar» es el botón naranja del centro. Tocar una pestaña enseña su contenido desde el principio; tocar la que ya estás sube a la montaña.',
+      '«Tu historia» abre con un dibujo distinto cada día (el tronco, la constelación, las piedras, la manta, los estratos o la partitura); lo demás va plegado con su cuenta y se abre al tocarlo.',
+      'En su primer año, el tronco crece por meses y la manta se teje en el telar, para que se vean bien aunque haya pocas compras.',
+      'En «Gráficos», lo primero es el gráfico; «Sats por dólar» bajó junto a «Mejor y peor precio». Con muchísimas compras a la vista, el gráfico junta las de cada mes en un punto, y al tocarlo dice cuántas son.',
+      '«Tu cuenta» se ordena en tres grupos: el libro, este dispositivo y administrar. Las cifras largas (de 10 millones de sats para arriba) ya no se parten en dos renglones, tampoco «ya realizaste», y quien solo mira lee sobre «el libro» en todos los textos.',
+    ],
+  },
+  {
     id: '2026-11-u', fecha: '2026-11-23',
     items: [
       'El Diario puede llegar como aviso los domingos a las 6 de la tarde: solo su titular, sin cifras. Se enciende en «Tu cuenta → Avisos en este dispositivo».',

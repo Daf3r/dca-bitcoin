@@ -1,11 +1,11 @@
-import { aFecha, acentoDe, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapasCruzadas, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, resumen, numCorto, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
 import { ico } from './iconos.js';
 import { pintarInsignia } from './insignia.js';
 import { pintarTV } from './tv.js';
-import { dual, miniLinea } from './cifras.js';
+import { dual, miniLinea, pegado } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
 import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos } from './cuenta.js';
@@ -99,10 +99,11 @@ export function pintarPrecio() {
   // «Coinbase · hace 12 s»: el separador y la hora en sus piezas (el texto no cambia) para que en 320 px vaya «Coinbase» arriba y la
   // hora abajo, sin un «·» colgando al final de la línea.
   if (estado === 'vivo') {
-    const sep = document.createElement('span'), hace = document.createElement('span');
+    const fuente = document.createElement('span'), sep = document.createElement('span'), hace = document.createElement('span');
+    fuente.className = 'cot-fuente'; fuente.textContent = S.fuente;
     sep.className = 'cot-sep'; sep.textContent = ' · ';
     hace.className = 'cot-hace'; hace.textContent = haceCuanto(S.precioTs);
-    $('precio-meta').replaceChildren(S.fuente, sep, hace);
+    $('precio-meta').replaceChildren(fuente, sep, hace);
   }
   // Sin precio, en el hueco de la cifra planea el mensajero (un zopilote): decorativo; el texto de abajo lo dice todo y el «—» sigue ahí para los lectores.
   if (estado === 'error') $('precio').innerHTML = `${ico('zopilote')}<span class="sr">—</span>`;
@@ -126,8 +127,15 @@ function pintarCifraGrande(el, desde, hasta, ms = 1400, fmt = entero) {
   const final = fmt(hasta);
   // Caracteres en ancho de dígito tabular: dígito = 1, separador ≈ 0.31 (0.18 em / 0.575 em).
   el.style.setProperty('--n', (final.replace(/\D/g, '').length + final.replace(/\d/g, '').length * 0.31).toFixed(2));
+  el.style.setProperty('--a', anchoCifra(final).toFixed(3)); // lo que mide en em (campamento 20: el CSS le deja sitio a la unidad)
   pintarOdometro(el, desde, hasta, fmt, { ms });
 }
+// Lo que mide cada carácter de la cifra grande en em (Bricolage 300 con su `letter-spacing`; en el saldo los dígitos son
+// proporcionales: el «1» es estrecho). Es una tabla, no una medida de la página: con ella el CSS sabe cuánto ocupa la cifra final.
+const ANCHO_CIFRA = { 0: 0.608, 1: 0.25, 2: 0.536, 3: 0.557, 4: 0.56, 5: 0.549, 6: 0.595, 7: 0.478, 8: 0.601, 9: 0.588, ',': 0.097, '.': 0.154, $: 0.576 };
+export const anchoCifra = (t) => [...t].reduce((a, c) => a + (ANCHO_CIFRA[c] ?? 0.62), 0);
+// Lo que mide la unidad (con su «⇄», y el punto «en vivo» en dólares), en em de su propia letra.
+const ANCHO_UNIDAD = { sats: 2.45, btc: 2.67, usd: 3.36 };
 
 // El saldo se puede ver en sats, en BTC o en dólares (toque en la cifra, en ese orden); se recuerda por dispositivo.
 // En dólares es lo que vale hoy y cambia con el precio en vivo; sin precio se queda en sats.
@@ -148,6 +156,7 @@ function etiquetaUnidad() {
   const u = unidadVista();
   $('s-unidad').textContent = ETIQUETA_UNIDAD[u];
   $('s-unidad').dataset.vivo = u === 'usd' ? '1' : ''; // el punto «en vivo»: el valor sigue al precio
+  $('s-saldo-v').style.setProperty('--u-em', String(ANCHO_UNIDAD[u]));
   $('s-saldo-ayuda').textContent = `${vozLibro() ? 'Saldo del libro' : 'Tu saldo'}${u === 'usd' ? ' en dólares, al precio en vivo' : ''}. Toca para verlo en ${NOMBRE_SIGUIENTE[u]}.`;
 }
 // Huevo de pascua (idea 28): siete toques seguidos en el saldo y el libro dice cuántas pupusas son (a $0.75, solo es una cuenta curiosa).
@@ -247,14 +256,21 @@ export function pintarLinea() {
   // Saldo en cero tras vender todo (idea 50): estás en el campamento base y el bosque sigue en pie.
   if (R.sats === 0 && R.nCompras) { linea.textContent = libro ? 'El libro volvió al campamento base. Sus pinos siguen aquí.' : 'Volviste al campamento base. Tus pinos siguen aquí.'; return; }
   if (R.valor == null) { linea.textContent = `${btc(R.sats)} BTC · ${libro ? 'se invirtieron' : 'invertiste'} ${usd(R.inv)}`; return; }
+  // (Campamento 20) El renglón va en piezas que no se parten por dentro: «valen $X», «· píldora» y «· ya realizaste $Y». El CSS
+  // (`.saldo-d:has(> .sd-v)`) las acomoda en una fila que se envuelve y esconde el «·» de la pieza que empieza un renglón: nada queda
+  // colgando y el monto nunca se separa de su texto. El `textContent` de `#s-valor` es el mismo de siempre.
+  const pieza = (clase) => { const e = document.createElement('span'); e.className = clase; return e; };
+  const sep = () => { const i = document.createElement('i'); i.className = 'sd-sep'; i.textContent = ' · '; return i; };
+  const v = pieza('sd-v');
   const b = document.createElement('b');
   if (unidadVista() === 'usd') {
     b.textContent = `${entero(R.sats)} sats`; // el saldo grande ya dice cuánto vale: aquí, cuántos sats son
-    linea.replaceChildren(b);
+    v.append(b);
   } else {
     pintarOdometro(b, valorMostrado != null && valorMostrado !== R.valor ? valorMostrado : null, R.valor, usd, { ms: 900 });
-    linea.replaceChildren('valen ', b);
+    v.append('valen ', b);
   }
+  linea.replaceChildren(v);
   valorMostrado = R.valor;
   const gan = document.createElement('span');
   gan.dataset.tono = R.gan >= 0 ? 'sube' : 'baja';
@@ -263,18 +279,20 @@ export function pintarLinea() {
   // Tinta neutra (campamento 17): la flechita y el signo dicen si va arriba o abajo; el color es opcional («Tu cuenta»).
   if (Math.abs(R.gan) >= 0.005) gan.insertAdjacentHTML('afterbegin', ico(R.gan > 0 ? 'sube' : 'baja'));
   // La ganancia y su mini línea van juntas en una píldora (`.sd-gan`); en el teléfono bajan a su propia línea (el «·» se esconde).
-  const sep = document.createElement('i');
-  sep.className = 'sd-sep';
-  sep.textContent = ' · ';
-  const grupo = document.createElement('span');
-  grupo.className = 'sd-gan';
+  const grupo = pieza('sd-gan');
   grupo.append(gan);
-  linea.append(sep, grupo);
+  const g = pieza('sd-g');
+  g.append(sep(), grupo);
+  linea.append(g);
   if (R.nVentas) {
     const real = document.createElement('span');
     real.dataset.tono = R.realizada >= 0 ? 'sube' : 'baja';
     dual(real, usdSigno(R.realizada), usdSignoCorto(R.realizada));
-    linea.append(libro ? ' · ya se realizaron ' : ' · ya realizaste ', real);
+    const t = pieza('sd-rt'); // «ya realizaste −$0.01»: el monto va siempre pegado a su texto
+    t.append(libro ? 'ya se realizaron ' : 'ya realizaste ', real);
+    const r = pieza('sd-r');
+    r.append(sep(), t);
+    linea.append(r);
   }
   // Mini línea del valor de tu saldo en los últimos 30 días (solo con histórico; en pantallas muy pequeñas se oculta).
   if (R.nCompras >= 3 && S.histEstado === 'ok' && S.precio) {
@@ -298,7 +316,7 @@ function pintarProx() {
     const faltan = ((7 - aFecha(hoyISO()).getDay()) % 7) + 7 * R.venceSemanas; // hasta el domingo que mantiene la racha
     txt += faltan === 0 ? ' · próxima: hoy es el último día' : faltan === 1 ? ' · próxima: mañana es el último día' : ` · próxima, en ${faltan} días`;
   }
-  el.textContent = txt;
+  pegado(el, txt); // «en 6 días» no se parte (campamento 20)
 }
 
 /**
@@ -365,6 +383,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   altoMontana = host.clientHeight;
   const inicio = animar ? 0 : desde ?? R.sats;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
+  techoDibujado = techo;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
   // Cuánto se reserva al pie para el botón flotante: lo dice el CSS (`--pie` en `.escena`; menos cuando la escena deja la franja
   // de abajo a las pestañas y el botón ya no flota sobre ella). Una lectura de estilo por dibujo.
@@ -378,8 +397,20 @@ export function pintarMontana(animar, desde, festejo = null) {
     // El acento dorado llega cuando acaba la celebración de 1 BTC, no antes.
     if (f.nivel === 'epico') { acentoRetenido = true; setTimeout(() => { acentoRetenido = false; pintarAcento(); }, reducido() ? 0 : MS_SUBIDA + 1800); }
   }
-  if (inicio !== R.sats) subir(inicio, R.sats, animar ? 2400 : f ? MS_SUBIDA : 1600, f);
+  const ms = animar ? 2400 : f ? MS_SUBIDA : 1600;
+  ocupadaHasta = performance.now() + (inicio !== R.sats ? ms : 0) + (f ? 7000 : 0); // la subida y su celebración no se cortan
+  if (inicio !== R.sats) subir(inicio, R.sats, ms, f);
 }
+// (Campamento 20) Si el bloque del saldo crece después de dibujar la montaña (llega el precio y «ya realizaste» baja a su renglón, otra
+// letra…), la cumbre quedaría bajo el texto: se redibuja, cuando acaba la subida si estaba subiendo. Si encoge no hace falta.
+let techoDibujado = 0, ocupadaHasta = 0, redibujo = 0;
+new ResizeObserver(() => {
+  if (!S.cargado || !anchoMontana) return;
+  const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - $('montana').getBoundingClientRect().top;
+  if (techo <= techoDibujado + 4) return;
+  clearTimeout(redibujo);
+  redibujo = setTimeout(() => pintarMontana(false), Math.max(0, ocupadaHasta - performance.now()));
+}).observe(document.querySelector('.saldo'));
 new ResizeObserver(() => {
   // Se redibuja si cambia el ancho **o el alto** (una barra del navegador que aparece, las herramientas de desarrollo, un cambio de
   // ventana): el SVG se dibuja a la medida de la caja y, si solo cambiara el alto, se vería cortado y con una franja de cielo.
@@ -393,16 +424,18 @@ export const progresoEtapa = () => (R.sats - R.etapaPrev) / (R.etapa - R.etapaPr
 function pintarTramo() {
   $('tramo').hidden = !S.cargado || (S.errorCarga && !R.n);
   const prog = progresoEtapa();
-  $('t-meta').textContent = R.etapa >= 1e8 ? nombreHito(R.etapa) : `${nombreHito(R.etapa)} sats`;
+  const meta = R.etapa >= 1e8 ? nombreHito(R.etapa) : `${nombreHito(R.etapa)} sats`;
+  $('t-meta').textContent = meta;
+  $('t-meta').style.setProperty('--n', String(meta.length)); // la meta va en un renglón: con muchos caracteres, la letra baja (CSS)
   const falta = $('t-falta');
   falta.textContent = 'faltan ';
-  dual(falta, entero(R.etapa - R.sats), numCorto(R.etapa - R.sats));
+  dual(falta, entero(R.etapa - R.sats), R.etapa - R.sats >= 1e8 ? satsCorto(R.etapa - R.sats) : numCorto(R.etapa - R.sats)); // «6.5B» sería ambiguo: en BTC
   const p = Math.max(0, Math.min(1, prog));
   requestAnimationFrame(() => pintarAnillo($('t-anillo-svg'), [{ clase: 'an-naranja', desde: 0, hasta: p }]));
   $('t-pct').textContent = `${p > 0 && p < 0.01 ? '<1' : Math.floor(p * 100)}%`;
   $('t-anillo').setAttribute('aria-label', `${vozLibro() ? 'El libro va' : 'Vas'} en ${(p * 100).toFixed(1)}% del camino a ${nombreHito(R.etapa)}${R.etapa >= 1e8 ? '' : ' sats'}`);
-  $('t-ritmo').textContent = R.proyeccion
+  pegado($('t-ritmo'), R.proyeccion
     ? `Al ritmo de los últimos 6 meses${R.nExtra ? `, sin contar ${vozLibro() ? 'las' : 'tus'} compras extra,` : ''} (${entero(R.satsMes)} sats al mes) ${vozLibro() ? 'se llega' : 'llegas'} en ${plazo(R.proyeccion)}.`
-    : R.n ? `${vozLibro() ? 'El libro va' : 'Vas'} en ${(prog * 100).toFixed(1)}% de este tramo.` : 'La primera etapa está en 100k sats.';
+    : R.n ? `${vozLibro() ? 'El libro va' : 'Vas'} en ${(prog * 100).toFixed(1)}% de este tramo.` : 'La primera etapa está en 100k sats.');
 }
 export const plazo = (m) => (m < 1 ? 'menos de un mes' : `${Math.round(m)} ${Math.round(m) === 1 ? 'mes' : 'meses'}`);

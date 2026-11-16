@@ -54,13 +54,20 @@ function tallar(v, cx, cy, rx, ry, acc) {
 // ================================================================ el tronco
 const LADOS = 40; // cada anillo es un polígono de 40 lados: se lee redondo, pero de cerca es tallado como la roca
 
-/** Tronco: un anillo por año (el más viejo al centro). El ancho de cada anillo sale de `comprados`. */
-export function tronco(anios, { sel = null } = {}) {
+/**
+ * Tronco: un anillo por año (el más viejo al centro). El ancho de cada anillo sale de `comprados`.
+ * (Campamento 20) Con `primer` (`{ fr }`, el tronco del primer año: `lib.mesesTronco`) cada banda es un mes y lleva `data-i` en vez de
+ * `data-anio`: un árbol joven, todo albura, con su corte más pequeño cuanto menos año lleva, el borde vivo desde la primera compra
+ * (arriba) hasta hoy y, punteada, la vuelta que falta para cerrar su primer anillo.
+ */
+export function tronco(anios, { sel = null, primer = null } = {}) {
   const n = anios.length;
   if (!n) return `<svg ${MARCO}></svg>`;
   const cx = 160, cy = 152;
-  // Un árbol joven es un corte pequeño; a partir de seis años ocupa todo el sitio.
-  const R = 90 + 36 * Math.min(1, (n - 1) / 5);
+  const clave = (y) => (primer ? y.i : y.anio);
+  const atrib = primer ? 'data-i' : 'data-anio';
+  // Un árbol joven es un corte pequeño; a partir de seis años ocupa todo el sitio. En su primer año crece con el año (de 64 a 94).
+  const R = primer ? 64 + 30 * Math.min(1, primer.fr) : 90 + 36 * Math.min(1, (n - 1) / 5);
   const corteza = Math.max(8, R * 0.075), medula = Math.max(4.5, R * 0.05);
   const dentro = R - corteza;
   const max = Math.max(1, ...anios.map((y) => y.comprados));
@@ -74,10 +81,12 @@ export function tronco(anios, { sel = null } = {}) {
   const angulo = (frac) => frac * TAU - Math.PI / 2; // enero arriba, en el sentido del reloj
   const poli = (r, rev = false) => { const pts = []; for (let k = 0; k < LADOS; k++) pts.push(pt(((rev ? LADOS - k : k) / LADOS) * TAU, r)); return `${lin(pts)}Z`; };
 
-  let s = `<svg class="h-tronco${sel != null ? ' con-sel' : ''}" ${MARCO}><defs>`
+  let s = `<svg class="h-tronco${primer ? ' h-tronco-primer' : ''}${sel != null ? ' con-sel' : ''}" ${MARCO}><defs>`
     + '<linearGradient id="h-t-brillo" x1="0.85" y1="0.1" x2="0.15" y2="0.95"><stop class="ht-b0" offset="0"/><stop class="ht-b1" offset="0.5"/><stop class="ht-b2" offset="1"/></linearGradient></defs>';
   // Sombra en el suelo y el canto del corte (el grosor de la rodaja, visto un poco desde arriba).
   s += `<ellipse class="ht-suelo" cx="${cx + 4}" cy="${f1(cy + R * 0.98 + 12)}" rx="${f1(R * 0.95)}" ry="${f1(R * 0.16)}"/>`;
+  // El primer año: la vuelta que falta, punteada, del tamaño que tendrá el tronco al cumplirlo (no se toca).
+  if (primer && primer.fr < 1) s += `<circle class="ht-falta" cx="${cx}" cy="${cy}" r="${f1(94 + 3)}"/>`;
   const canto = []; for (let k = 0; k <= LADOS / 2; k++) { const t = (k / (LADOS / 2)) * Math.PI; const [x, y] = pt(t, R); canto.push([x, y + 7]); }
   for (let k = LADOS / 2; k >= 0; k--) canto.push(pt((k / (LADOS / 2)) * Math.PI, R * 0.995));
   s += `<path class="ht-canto" d="${lin(canto)}Z"/>`;
@@ -101,8 +110,9 @@ export function tronco(anios, { sel = null } = {}) {
   // Los anillos: el corazón (los años de dentro) es más oscuro que la albura; el año en curso es madera viva, más clara.
   const viejo = Math.max(1, Math.round(n * 0.55));
   anios.forEach((y, k) => {
-    const tono = !y.completo ? 'ht-vivo' : k < viejo && n > 2 ? `ht-dur${k % 2}` : `ht-alb${k % 2}`;
-    s += `<path class="pieza h-anillo ${tono}${y.anio === sel ? ' sel' : ''}" data-anio="${y.anio}" d="${poli(bordes[k + 1])}${poli(bordes[k], true)}" fill-rule="evenodd"/>`;
+    // Un árbol joven aún no tiene corazón; en su primer año los meses son bandas de una misma albura (no anillos de años).
+    const tono = !y.completo ? 'ht-vivo' : primer ? 'ht-alb0' : k < viejo && n > 2 ? `ht-dur${k % 2}` : `ht-alb${k % 2}`;
+    s += `<path class="pieza h-anillo ${tono}${clave(y) === sel ? ' sel' : ''}" ${atrib}="${clave(y)}" d="${poli(bordes[k + 1])}${poli(bordes[k], true)}" fill-rule="evenodd"/>`;
   });
   // La médula: una estrellita de cinco puntas, como la de muchos árboles de verdad, con su brillo.
   const [mx, my] = pt(0, 0), med = [];
@@ -147,7 +157,7 @@ export function tronco(anios, { sel = null } = {}) {
   // El borde vivo: el cámbium del año en curso, encendido desde enero hasta hoy, con una chispa en el día de hoy.
   const ult = anios.at(-1);
   if (!ult.completo) {
-    const fr = Math.max(0.02, fraccionAnio(hoyISO()));
+    const fr = Math.max(0.02, primer ? primer.fr : fraccionAnio(hoyISO()));
     const pts = []; const pasos = Math.max(2, Math.ceil(fr * LADOS));
     for (let k = 0; k <= pasos; k++) pts.push(pt(angulo((k / pasos) * fr), dentro - 1.2));
     const [hx, hy] = pts.at(-1);
@@ -155,7 +165,7 @@ export function tronco(anios, { sel = null } = {}) {
   }
   s += `<path class="ht-filo" d="${filo}"/></g>`;
   // La pieza elegida: su contorno en naranja, por encima de todo (no es tocable: el toque pasa al anillo de debajo).
-  const k = anios.findIndex((y) => y.anio === sel);
+  const k = anios.findIndex((y) => clave(y) === sel);
   if (k >= 0) s += `<path class="h-marca" d="${poli(bordes[k + 1])}${poli(bordes[k], true)}" fill-rule="evenodd"/>`;
   return `${s}</svg>`;
 }
@@ -502,6 +512,87 @@ export function manta(datos, { sel = null } = {}) {
   return `${s}</svg>`;
 }
 
+
+/**
+ * La manta del primer año (campamento 20, 5b): `datos` es `lib.mantaPrimerAnio`. Una sola pieza de 4 hileras de `cols` semanas, de la
+ * primera semana del libro a la de su aniversario, tejida de arriba abajo como en el telar: lo tejido son las semanas reales (mismas
+ * piezas tocables que la manta de siempre: `<rect class="pieza celda tono-N" data-i>`) y lo que falta es la urdimbre aún sin tejer, con
+ * sus hilos que cuelgan abajo. Así unas pocas semanas ya son un retazo que se ve, y la manta no queda partida entre dos años del calendario.
+ */
+export function mantaPrimer(datos, { sel = null } = {}) {
+  const { cols, filas } = datos;
+  if (!datos.celdas.length) return '<svg viewBox="0 0 320 60" aria-hidden="true" focusable="false"></svg>';
+  const x0 = 10, y0 = 18, W = 300, wc = W / cols, ch = 34, alto = y0 + filas * ch, fondo = alto + 16;
+  const rect = (b, e = 0) => `M${f1(b.x - e)} ${f1(b.y - e)}h${f1(b.w + 2 * e)}v${f1(b.h + 2 * e)}h${f1(-b.w - 2 * e)}Z`;
+  const celdas = datos.celdas.map((w, i) => ({ w, i, x: x0 + (i % cols) * wc, y: y0 + Math.floor(i / cols) * ch }));
+  const nTej = celdas.length, filasTej = Math.ceil(nTej / cols);
+  // La tela: las hileras completas y la parte tejida de la hilera en curso.
+  const bandas = [];
+  for (let f = 0; f < filasTej; f++) bandas.push({ x: x0, y: y0 + f * ch, w: (f < filasTej - 1 ? cols : nTej - f * cols) * wc, h: ch });
+  const tela = bandas.map((b) => rect(b)).join('');
+  let s = `<svg class="h-manta h-manta-primer" viewBox="0 0 320 ${f1(fondo)}" aria-hidden="true" focusable="false"><defs>`
+    + '<pattern id="h-a-trama" width="3" height="2.6" patternUnits="userSpaceOnUse"><path class="ha-p-luz" d="M0.15 0.25h1.2v0.75h-1.2ZM1.65 1.55h1.2v0.75h-1.2Z"/>'
+    + '<path class="ha-p-sombra" d="M0 1.15h1.5v0.3H0ZM1.5 2.45h1.5v0.15H1.5ZM1.5 0h1.5v0.15H1.5ZM1.42 0v1.3h0.16V0ZM2.92 1.3v1.3h0.16V1.3Z"/></pattern>'
+    + `<linearGradient id="h-a-pliegue" gradientUnits="userSpaceOnUse" x1="${x0}" y1="0" x2="${x0 + W}" y2="0">`
+    + '<stop class="ha-g-luz" offset="0"/><stop class="ha-g-sombra" offset="0.17"/><stop class="ha-g-luz" offset="0.36"/><stop class="ha-g-sombra" offset="0.58"/>'
+    + '<stop class="ha-g-luz" offset="0.8"/><stop class="ha-g-sombra" offset="1"/></linearGradient>'
+    + `<linearGradient id="h-a-luz" gradientUnits="userSpaceOnUse" x1="${x0 + W}" y1="${y0}" x2="${x0}" y2="${alto}"><stop class="ha-l0" offset="0"/><stop class="ha-l1" offset="0.5"/><stop class="ha-l2" offset="1"/></linearGradient>`
+    + `<linearGradient id="h-a-fleco" gradientUnits="userSpaceOnUse" x1="0" y1="${f1(y0)}" x2="0" y2="${f1(fondo)}"><stop class="ha-f0" offset="0"/><stop class="ha-f1" offset="0.7"/><stop class="ha-f2" offset="1"/></linearGradient>`
+    + '</defs>';
+  // El telar: la urdimbre de toda la pieza (hilos crudos verticales), que se ve donde aún no hay tela, y sus puntas que cuelgan abajo.
+  let urdimbre = '', mano = '';
+  const hilos = Math.max(2, Math.round(wc / 2.6)) * cols;
+  for (let h = 0; h < hilos; h++) {
+    const x = x0 + (W * (h + 0.5)) / hilos, l = 6 + 6 * fijo(h, 51), curva = (fijo(h, 52) - 0.5) * 2.2;
+    urdimbre += `M${f1(x)} ${f1(y0 - 2)}V${f1(alto)}q${f1(curva)} ${f1(l * 0.5)} ${f1(curva * 0.4)} ${f1(l)}`;
+    if (h % 3 === 1) mano += punto(x, alto + 1.2);
+  }
+  s += `<path class="ha-urdimbre ha-telar" d="${urdimbre}"/><path class="ha-manojo" d="${mano}"/>`;
+  s += `<path class="ha-sombra" d="${bandas.map((b) => rect({ ...b, x: b.x + 2.2, y: b.y + 3 })).join('')}"/><path class="ha-crudo" d="${tela}"/>`;
+  for (const c of celdas) s += `<rect class="pieza celda tono-${c.w.tono}${c.w.extra ? ' extra' : ''}${c.i === sel ? ' sel' : ''}" data-i="${c.i}" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(wc + 0.05)}" height="${f1(ch)}"/>`;
+  s += '<g class="ha-sobre">';
+  let jaspe = '', jaspeOsc = '';
+  for (const c of celdas) {
+    if (!c.w.tono) continue;
+    const f = fijo(c.w.idx, 31), g = fijo(c.w.idx, 32);
+    if (f > 0.42) { const x = c.x + wc * (0.2 + 0.6 * g), y = c.y + ch * (0.12 + 0.3 * f); jaspe += `M${f1(x)} ${f1(y)}v${f1(ch * (0.25 + 0.3 * g))}`; }
+    if (c.w.tono >= 2 && g < 0.35) { const x = c.x + wc * (0.3 + 0.4 * f); jaspeOsc += `M${f1(x)} ${f1(c.y + ch * 0.55)}v${f1(ch * 0.3)}`; }
+  }
+  s += `<path class="ha-jaspe" d="${jaspe}"/><path class="ha-jaspe-osc" d="${jaspeOsc}"/>`;
+  s += `<path class="ha-trama" d="${tela}"/><path class="ha-luz" d="${tela}"/><path class="ha-pliegue" d="${tela}"/>`;
+  // Una pasada más gruesa entre una hilera y la siguiente (cada trimestre del libro), los orillos y la cenefa de arriba.
+  let pasada = '', orillo = '';
+  bandas.forEach((b, k) => {
+    if (k) pasada += `M${f1(b.x)} ${f1(b.y)}H${f1(b.x + b.w)}`;
+    orillo += `M${f1(b.x)} ${f1(b.y)}v${f1(b.h)}`;
+    if (k === bandas.length - 1) orillo += `M${f1(b.x)} ${f1(b.y + b.h)}h${f1(b.w)}M${f1(b.x + b.w)} ${f1(b.y)}v${f1(b.h)}`;
+    else orillo += `M${f1(b.x + b.w)} ${f1(b.y)}v${f1(b.h)}`;
+    const sig = bandas[k + 1];
+    if (sig && sig.w < b.w) orillo += `M${f1(sig.x + sig.w)} ${f1(b.y + b.h)}H${f1(b.x + b.w)}`;
+  });
+  s += `<path class="ha-pasada" d="${pasada}"/><path class="ha-orillo" d="${orillo}"/>`;
+  const cy = y0 - 9, n = cols, paso = W / n;
+  let greca = '', rombos = '';
+  for (let k = 0; k < n; k++) {
+    const x = x0 + k * paso, h = 6.4;
+    greca += `M${f1(x)} ${f1(cy + h)}h${f1(paso * 0.12)}v-2h${f1(paso * 0.12)}v-2h${f1(paso * 0.12)}v-2h${f1(paso * 0.28)}v2h${f1(paso * 0.12)}v2h${f1(paso * 0.12)}v2Z`;
+    if (paso > 7) rombos += `M${f1(x + paso)} ${f1(cy + 1.4)}l1.3 1.6l-1.3 1.6l-1.3 -1.6Z`;
+  }
+  s += `<path class="ha-cenefa" d="${rect({ x: x0, y: cy, w: W, h: 9 })}"/><path class="ha-greca" d="${greca}"/><path class="ha-rombo" d="${rombos}"/>`
+    + `<path class="ha-trama" d="${rect({ x: x0, y: cy, w: W, h: 9 })}"/>`
+    + `<path class="ha-orillo" d="M${f1(x0)} ${f1(cy)}h${f1(W)}M${f1(x0)} ${f1(cy)}v9M${f1(x0 + W)} ${f1(cy)}v9"/>`;
+  let cruz = '';
+  for (const c of celdas) {
+    if (!c.w.extra) continue;
+    const r = Math.min(wc, ch) * 0.3, mx = c.x + wc / 2, my = c.y + ch / 2;
+    cruz += `M${f1(mx - r)} ${f1(my - r)}L${f1(mx + r)} ${f1(my + r)}M${f1(mx + r)} ${f1(my - r)}L${f1(mx - r)} ${f1(my + r)}`;
+  }
+  if (cruz) s += `<path class="ha-cruz-sombra" d="${cruz}"/><path class="ha-cruz" d="${cruz}"/>`;
+  s += '</g>';
+  const e = celdas.find((c) => c.i === sel);
+  if (e) { const m = rect({ x: e.x, y: e.y, w: wc, h: ch }, 1.3); s += `<path class="ha-sel-fondo" d="${m}"/><path class="ha-sel" d="${m}"/>`; }
+  return `${s}</svg>`;
+}
 
 // ================================================================ los estratos (campamento 13C)
 // Un corte geológico: un bloque de tierra visto de lado y un poco desde arriba, con una capa por mes (la más vieja abajo, sobre la roca

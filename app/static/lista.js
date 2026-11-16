@@ -1,9 +1,10 @@
 import { agruparPorMes, nombreWallet, piedritasPorCompra, textoPiedritas, ultimaPiedrita, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
 import { avisar } from './avisar.js';
+import { pegarHtml } from './cifras.js';
 import { apacheta, piedrita } from './arte.js';
 import { copiarTexto } from './copiar.js';
 import { ico, ilustracion } from './iconos.js';
-import { $, R, S, api, esAdmin, normalizar, reducido } from './estado.js';
+import { $, R, S, api, esAdmin, normalizar, reducido, vozLibro } from './estado.js';
 import { abrirComprobante } from './comprobante.js';
 import { abrirHoja, esc } from './hoja.js';
 import { pintar } from './pintar.js';
@@ -175,7 +176,7 @@ export function pintarLista() {
   if (host.querySelector('.f-notaed')) return; // se está editando una nota: no se la quitamos de debajo del dedo
   if (!R.n) {
     const sinCompras = S.cargado && !S.errorCarga; // solo el estado vacío de verdad lleva dibujo
-    host.innerHTML = `<li class="vacio${sinCompras ? ' con-ilu' : ''}">${sinCompras ? ilustracion('montana') : ''}${!S.cargado ? 'Cargando compras…' : S.errorCarga ? 'No se pudieron cargar tus compras.' : 'Aún no hay compras. Anota la primera o importa un CSV.'}</li>`;
+    host.innerHTML = `<li class="vacio${sinCompras ? ' con-ilu' : ''}">${sinCompras ? ilustracion('montana') : ''}${!S.cargado ? 'Cargando compras…' : S.errorCarga ? (vozLibro() ? 'No se pudieron cargar las compras.' : 'No se pudieron cargar tus compras.') : 'Aún no hay compras. Anota la primera o importa un CSV.'}</li>`;
     $('ver-todas').hidden = true;
     $('l-ctl').hidden = true;
     $('l-col').hidden = true;
@@ -208,7 +209,7 @@ export function pintarLista() {
     for (const g of agruparPorMes(vistos)) {
       if (pintadas >= filas.length) break;
       const cota = cotaDe(cotas, g.mes);
-      html.push(`<li class="mes-cab"><h3>${g.etiqueta} <small>· ${g.resumen}</small></h3>${cota == null ? '' : `<p class="mes-cota"><span class="sr">Altitud al terminar el mes: </span><span aria-hidden="true">altitud </span><b>${entero(cota)}</b> sats</p>`}</li>`);
+      html.push(`<li class="mes-cab"><h3>${g.etiqueta} <small>· ${pegarHtml(g.resumen)}</small></h3>${cota == null ? '' : `<p class="mes-cota"><span class="sr">Altitud al terminar el mes: </span><span aria-hidden="true">altitud </span><b>${entero(cota)}</b> sats</p>`}</li>`);
       for (const m of g.movs) { if (pintadas >= filas.length) break; html.push(htmlFila(m)); pintadas++; }
     }
   } else for (const m of filas) html.push(htmlFila(m));
@@ -367,7 +368,7 @@ function pintarTabla() {
       `<td class="num"${v == null ? '' : ` data-tono="${v >= 0 ? 'sube' : 'baja'}"`}>${v == null ? '' : venta ? usdSigno(v) : pct(v)}</td>` +
       `<td>${esc(m.nota)}</td><td>${mempoolUrl(m.txid) ? `<a href="${mempoolUrl(m.txid)}" target="_blank" rel="noopener noreferrer">${txCorto(m.txid)}<span class="sr"> (se abre en otra pestaña)</span></a>` : ''}</td></tr>`;
   }).join('');
-  $('dt').innerHTML = '<caption class="sr">Tus compras, ventas y traslados</caption><thead><tr><th scope="col">Fecha</th><th scope="col">Tipo</th><th scope="col" class="num">Sats</th><th scope="col" class="num">Dólares</th>' +
+  $('dt').innerHTML = `<caption class="sr">${vozLibro() ? 'Las compras, ventas y traslados del libro' : 'Tus compras, ventas y traslados'}</caption>` + '<thead><tr><th scope="col">Fecha</th><th scope="col">Tipo</th><th scope="col" class="num">Sats</th><th scope="col" class="num">Dólares</th>' +
     '<th scope="col" class="num">Precio de BTC</th><th scope="col" class="num">Hoy / ganancia</th><th scope="col">Nota</th><th scope="col">TXID</th></tr></thead><tbody>' + cuerpo + '</tbody>';
 }
 $('l-tabla').addEventListener('click', () => { pintarTabla(); dTabla.showModal(); });

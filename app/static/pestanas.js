@@ -1,5 +1,5 @@
 import { $, reducido } from './estado.js';
-import { refrescarHistoria } from './historia.js';
+import { refrescarHistoria, verMedallas } from './historia.js';
 
 // Pestañas (campamento 14): Resumen · Gráficos · Historia · Movimientos. Una sola vista a la vez, sin el scroll largo.
 // No se mueve nada de sitio: cada bloque de la página lleva `data-p` con la pestaña a la que pertenece y el CSS esconde los demás
@@ -43,9 +43,20 @@ export function irAPestana(cual, { desplazar = true } = {}) {
   if (desplazar && porPestanas) subirAlInicio();
 }
 
+/** ¿La barra va en el dock de abajo? (teléfono y tablet, por pestañas; campamento 20). En escritorio va arriba, pegajosa. */
+const DOCK = window.matchMedia('(max-width: 1099px)');
+export const enDock = () => porPestanas && DOCK.matches;
+
 /** La barra puede ser pegajosa (no sirve para saber hasta dónde se bajó): se compara con el inicio natural del cuerpo. */
 function subirAlInicio() {
   const arriba = $('principal').getBoundingClientRect().top;
+  // En el dock, la barra está abajo y no marca dónde empieza el contenido: la pestaña nueva se enseña desde su principio (bajo la
+  // mini-cabecera), también si se estaba arriba del todo (si no, tocar «Gráficos» no cambiaría nada a la vista).
+  if (enDock()) {
+    const destino = Math.max(0, Math.round(window.scrollY + arriba - 56));
+    if (Math.abs(destino - window.scrollY) > 2) window.scrollTo({ top: destino, behavior: reducido() ? 'auto' : 'smooth' });
+    return;
+  }
   // Se deja un margen arriba: al bajar sale la mini-cabecera y la barra (pegajosa) se coloca bajo ella; sin ese margen la barra
   // quedaba unos píxeles encima del primer título de la pestaña.
   if (arriba < 0) window.scrollTo({ top: window.scrollY + arriba - 36, behavior: reducido() ? 'auto' : 'smooth' });
@@ -56,7 +67,7 @@ export function verHistoria() {
   if (porPestanas) {
     irAPestana('historia', { desplazar: false });
     const arriba = $('principal').getBoundingClientRect().top;
-    window.scrollTo({ top: Math.max(0, window.scrollY + arriba), behavior: reducido() ? 'auto' : 'smooth' });
+    window.scrollTo({ top: Math.max(0, window.scrollY + arriba - (enDock() ? 56 : 0)), behavior: reducido() ? 'auto' : 'smooth' }); // en el dock, bajo la mini-cabecera
   } else {
     historiaPedida = true;
     $('historia').hidden = false;
@@ -76,6 +87,8 @@ export const etiquetaModo = () => `Pantalla: ${porPestanas ? 'por pestañas' : '
 $('pestanas').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-pestana]');
   if (b && b.dataset.pestana !== actual) irAPestana(b.dataset.pestana);
+  // En el dock, tocar la pestaña en la que ya estás sube hasta arriba del todo (la escena), como en las apps.
+  else if (b && enDock() && window.scrollY > 0) window.scrollTo({ top: 0, behavior: reducido() ? 'auto' : 'smooth' });
 });
 // Flechas izquierda y derecha entre las pestañas (además de Tab), como una barra de pestañas.
 $('pestanas').addEventListener('keydown', (e) => {
@@ -86,5 +99,5 @@ $('pestanas').addEventListener('keydown', (e) => {
   e.preventDefault();
   $('pestanas').children[(i + d + PESTANAS.length) % PESTANAS.length].focus();
 });
-$('res-historia').addEventListener('click', () => irAPestana('historia'));
+$('res-historia').addEventListener('click', () => { irAPestana('historia'); verMedallas(); }); // con sus medallas abiertas (campamento 20)
 aplicar();
