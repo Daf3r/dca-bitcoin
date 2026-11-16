@@ -1343,6 +1343,18 @@ const restarDias = (hoy, n) => {
 /** Suma (o resta, con `n` negativo) días a una fecha AAAA-MM-DD. */
 export const sumarDias = (f, n) => restarDias(f, -n);
 
+/**
+ * El titular del Diario sin cifras (campamento 19, idea 20): lo que dice el aviso del domingo. Una notificación se lee en la pantalla
+ * bloqueada, así que no lleva saldos, montos ni etapas: solo de qué fue la semana. `app/ritmo.py` tiene la misma tabla (y la misma regla
+ * para elegir la clase): `tests/test_api.py` compara las dos con `paridad_ritmo.mjs`. Si cambias una, cambia la otra.
+ */
+export const AVISO_DIARIO = {
+  etapa: 'Llegamos a una nueva etapa',
+  una: 'Un paso más en la montaña',
+  varias: 'La montaña subió esta semana',
+  tranquila: 'Semana tranquila en la montaña',
+};
+
 const PRONOSTICOS = {
   lluviosa: ['lluvias por la tarde en el valle y la cumbre despejada', 'nubes bajas por la mañana, claros al mediodía', 'chubascos ligeros abajo y mucha luz arriba', 'tarde fresca, con olor a tierra mojada'],
   seca: ['cielos limpios y brisa fresca en la cumbre', 'sol parejo todo el día y viento suave', 'mañana clara y tarde dorada', 'noche despejada, buena para mirar las estrellas'],
@@ -1361,12 +1373,14 @@ export function diario(R, hoy = hoyISO()) {
   const recientes = compras.filter((c) => c.fecha > desde && c.fecha <= hoy);
   const subidos = recientes.reduce((a, c) => a + c.sats, 0);
   const etapaReciente = (R.camino ?? []).filter((h) => h.fecha && h.fecha > desdeEtapa && h.fecha <= hoy).at(-1);
-  let titular, sub;
-  if (etapaReciente) { titular = `Llegamos a ${metaTxt(etapaReciente.m)}`; sub = `La montaña ya cuenta ${entero(R.sats)} sats. El ${fechaLarga(etapaReciente.fecha)} quedó marcado en el sendero.`; }
+  // `clase` dice de qué fue la semana (etapa · una · varias · tranquila): el aviso del domingo la usa sin cifras (`AVISO_DIARIO`).
+  let titular, sub, clase;
+  if (etapaReciente) { clase = 'etapa'; titular = `Llegamos a ${metaTxt(etapaReciente.m)}`; sub = `La montaña ya cuenta ${entero(R.sats)} sats. El ${fechaLarga(etapaReciente.fecha)} quedó marcado en el sendero.`; }
   else if (recientes.length) {
+    clase = recientes.length === 1 ? 'una' : 'varias';
     titular = recientes.length === 1 ? `Un paso más: la montaña subió ${entero(subidos)} sats` : `La montaña subió ${entero(subidos)} sats esta semana`;
     sub = `${recientes.length === 1 ? 'Una compra' : `${recientes.length} compras`} en los últimos siete días. El libro suma ${entero(R.sats)} sats.`;
-  } else { titular = 'Semana tranquila en la montaña'; sub = `Nadie se apura: el camino sigue ahí, ${entero(R.sats)} sats arriba, esperando con paciencia.`; }
+  } else { clase = 'tranquila'; titular = 'Semana tranquila en la montaña'; sub = `Nadie se apura: el camino sigue ahí, ${entero(R.sats)} sats arriba, esperando con paciencia.`; }
   const e = eco(R.items, R.sats, hoy);
   const haceAnio = e ? { fecha: e.fecha, sats: e.sats, hoy: R.sats, subiste: e.subiste,
     texto: e.subiste > 0 ? `Hace un año el libro tenía ${entero(e.sats)} sats. Hoy tiene ${entero(R.sats)}: ${entero(e.subiste)} más.` : `Hace un año el libro tenía ${entero(e.sats)} sats. Hoy tiene ${entero(R.sats)}.` } : null;
@@ -1383,7 +1397,7 @@ export function diario(R, hoy = hoyISO()) {
   const pronostico = `${PRONOSTICOS[epoca][sem % 4].replace(/^./, (ch) => ch.toUpperCase())}. Es el clima, no un consejo: la montaña no adivina nada.`;
   const esc = escalaMontana(R.sats);
   const primera = compras[0].fecha;
-  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
+  return { edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, clase, aviso: AVISO_DIARIO[clase], haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
     altitud: altitud(R.sats, esc), sats: R.sats, valor: R.valor ?? null };
 }
 export const textoDiario = (d) => `El Diario del Libro, edición del ${d.edicion}. ${d.titular}. ${d.sub}`;

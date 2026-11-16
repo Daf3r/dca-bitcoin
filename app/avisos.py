@@ -11,6 +11,8 @@ En cada pasada:
   · TXID vigilados: si uno que estaba pendiente ya se confirmó, avisa al admin una vez;
   · gran caída: si BTC está 15 % o más bajo su máximo de 30 días, avisa al admin una vez por caída (se reinicia cuando
     BTC se recupera y queda a menos de 10 % de su máximo). Solo informa; solo de 8:00 a 21:00;
+  · el Diario del domingo (idea 20): el domingo desde las 18:00, una vez, el titular del Diario sin cifras a quien lo pidió (cada
+    dispositivo con su horario: el que duerme lo recibe al despertar). Sin compras no hay Diario ni aviso;
   · cuentas (idea 46): si las reglas contables no cuadran (saldo negativo, wallet con más sats de los que hay), avisa al admin una vez
     por problema nuevo. Solo avisa: nunca corrige nada;
   · limpieza (una vez al día): quita lo que solo crece y ya no sirve (TXID cerrados, caché de TXID de movimientos que ya no existen,
@@ -168,6 +170,30 @@ def _wallet(conn: sqlite3.Connection) -> int:
     return n
 
 
+DIARIO_DIA, DIARIO_HORA = 6, 18  # domingo (lunes = 0) a las 18:00, hora de El Salvador
+
+
+def _diario(conn: sqlite3.Connection) -> bool:
+    """El Diario llega el domingo (campamento 19, idea 20): desde las 18:00 del domingo, una sola vez, el titular del Diario SIN cifras
+    (`ritmo.aviso_diario`, en paridad con `lib.diario`). `push.notificar` respeta el horario de cada dispositivo: al que duerme a esa hora
+    se le guarda (`avisos_pendientes.sus_id`) y lo recibe cuando despierta. La marca `meta.aviso_diario` (la fecha del domingo) se pone
+    antes de avisar: nunca sale dos veces el mismo domingo. Sin compras (no hay Diario), ese domingo no se avisa."""
+    ahora = push.ahora()
+    hoy = ritmo.hoy_sv(ahora)
+    if hoy.weekday() != DIARIO_DIA or ahora.hour < DIARIO_HORA or server._meta(conn, "aviso_diario") == hoy.isoformat():
+        return False
+    server._meta_poner(conn, "aviso_diario", hoy.isoformat())
+    conn.commit()
+    if not push.destinatarios(conn, "diario"):
+        return False
+    movs = [(r["fecha"], r["id"], r["tipo"], r["sats"]) for r in conn.execute(f"SELECT fecha, id, tipo, sats FROM compras WHERE {server.VIGENTES}")]
+    titular = ritmo.aviso_diario(movs, hoy)
+    if titular is None:
+        return False
+    push.notificar(conn, "diario", "El Diario del domingo", titular, f"diario-{hoy.isoformat()}")
+    return True
+
+
 def _una_vez_al_dia(conn: sqlite3.Connection, clave: str) -> bool:
     """True la primera vez que se pregunta cada día (y deja marcado el día)."""
     hoy = ritmo.hoy_sv(push.ahora()).isoformat()
@@ -282,7 +308,7 @@ def una_pasada() -> dict[str, Any]:
         server._meta_poner(conn, "avisos_latido", str(int(time.time())))  # «sigo vivo»: lo lee el chequeo de salud
         conn.commit()
         return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn), "caida": _caida(conn),
-                "wallet": _wallet(conn), "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "cuentas": _cuentas(conn), "limpieza": _limpieza(conn)}
+                "wallet": _wallet(conn), "diario": _diario(conn), "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "cuentas": _cuentas(conn), "limpieza": _limpieza(conn)}
     finally:
         conn.close()
 

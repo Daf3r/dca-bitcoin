@@ -221,6 +221,7 @@ Cada persona activa los avisos **en su dispositivo**: «Tu cuenta» → «Avisos
 - **Al entrar:** la primera vez en cada dispositivo sale una tarjeta «¿Quieres recibir avisos?» (a tus papás, después de su bienvenida). Si dices «Ahora no», no vuelve a preguntar; siempre puedes activarlos en «Tu cuenta».
 - **Tus papás (lectores):** un aviso por cada compra, venta o gasto nuevo (encendido) y, si quieren, por etapas, hitos y constancia (apagado por defecto).
 - **Tú (admin):** recordatorio unos días antes de que venza tu semana o quincena (viernes a domingo, una vez al día, y solo si aún no compraste), TXID confirmado, fallo del respaldo y **gran caída** (BTC 15 % o más bajo su máximo de 30 días: un aviso por caída, solo informa; se reinicia cuando BTC queda a menos de 10 % de su máximo).
+- **El Diario del domingo (todos, apagado por defecto):** el domingo a las 18:00 llega el titular del Diario del Libro, **sin cifras** (una notificación se lee en la pantalla bloqueada). Una vez por domingo; si a esa hora los avisos de ese dispositivo duermen, llega cuando despierten. Sin compras no hay Diario ni aviso.
 - **No suenan de noche** (solo de 8:00 a 21:00, hora de El Salvador): lo de la noche sale por la mañana.
 - **Aviso de prueba:** el botón «Enviarme un aviso de prueba» manda uno solo a ese dispositivo y te dice en palabras si algo falló (máximo uno cada 30 s).
 - **Botón «Anotar compra»** en el recordatorio (Android y computadora; en iPhone la notificación solo abre la app).

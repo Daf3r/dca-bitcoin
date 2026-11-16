@@ -4,13 +4,16 @@ El navegador de cada dispositivo se suscribe con el servicio de push de su siste
 servidor le manda mensajes cifrados. Aquí vive todo lo común: claves, suscripciones, categorías, horario y envío.
 Un fallo al avisar NUNCA debe romper una compra: todo lo que llaman las rutas captura sus errores.
 
-Categorías (cada dispositivo elige las suyas; `rol` dice quién puede recibirlas):
+Categorías (cada dispositivo elige las suyas; `rol` dice quién puede recibirlas: «todos» = el admin y los lectores):
   movimiento    lector  una compra, venta o gasto nuevo                       (encendida)
   hito          lector  una etapa, un hito grande o una constancia nuevos      (apagada)
   recordatorio  admin   se acaba la semana o quincena y aún no compraste       (encendida)
   txid          admin   un TXID que estaba pendiente ya se confirmó            (encendida)
   respaldo      admin   el respaldo diario falló                               (encendida)
   caida         admin   BTC cayó 15 % o más de su máximo de 30 días (una vez)  (encendida)
+  piedrita      admin   alguien de la familia dejó una piedrita                (encendida)
+  diario        todos   el domingo a las 18:00, el titular del Diario sin cifras (apagada)
+  wallet        admin   en el exchange hay más sats del monto elegido          (apagada)
 """
 from __future__ import annotations
 
@@ -74,6 +77,9 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
               "ayuda": "Una vez por caída, cuando BTC baja 15 % o más de su máximo de 30 días. Solo informa, no recomienda."},
     "piedrita": {"rol": "admin", "defecto": True, "nombre": "Piedritas de tu familia",
                  "ayuda": "Cuando alguien de tu familia deja una piedrita en una de tus compras."},
+    # El Diario del domingo (campamento 19, idea 20): para toda la familia, apagado hasta que cada quien lo pida. Solo el titular, sin cifras.
+    "diario": {"rol": "todos", "defecto": False, "nombre": "El Diario del domingo",
+               "ayuda": "Los domingos a las 6 de la tarde (si tu horario lo permite), el titular del Diario del Libro, sin cifras."},
     "wallet": {"rol": "admin", "defecto": False, "nombre": "Retirar a tu wallet",
                "ayuda": "Cuando en el exchange hay más sats del monto que tú elijas (abajo). Solo es un recordatorio de tu propio hábito."},
 }
@@ -246,7 +252,7 @@ def validar_suscripcion(s: Any) -> tuple[str, str, str]:
 
 
 def categorias_de(rol: str) -> list[str]:
-    return [c for c, d in CATEGORIAS.items() if d["rol"] == rol]
+    return [c for c, d in CATEGORIAS.items() if d["rol"] in (rol, "todos")]
 
 
 def prefs_efectivas(prefs_json: str | None, rol: str) -> dict[str, bool]:
@@ -432,11 +438,12 @@ def _despachar(db_path: str, destinos: list[dict[str, Any]], payload: str) -> in
 
 def destinatarios(conn: sqlite3.Connection, categoria: str) -> list[dict[str, Any]]:
     rol = CATEGORIAS[categoria]["rol"]
+    roles = ("admin", "lector") if rol == "todos" else (rol,)
     out = []
     for r in conn.execute(
-            "SELECT s.id, s.endpoint, s.p256dh, s.auth, s.prefs FROM suscripciones s "
-            "JOIN usuarios u ON u.id = s.usuario_id WHERE u.activo = 1 AND u.rol = ?", (rol,)):
-        if prefs_efectivas(r["prefs"], rol).get(categoria):
+            "SELECT s.id, s.endpoint, s.p256dh, s.auth, s.prefs, u.rol FROM suscripciones s "
+            f"JOIN usuarios u ON u.id = s.usuario_id WHERE u.activo = 1 AND u.rol IN ({','.join('?' * len(roles))})", roles):
+        if prefs_efectivas(r["prefs"], r["rol"]).get(categoria):
             out.append({"id": r["id"], "endpoint": r["endpoint"], "p256dh": r["p256dh"], "auth": r["auth"], "horario": horario_de(r["prefs"]),
                         "umbral": umbral_de(r["prefs"])})
     return out

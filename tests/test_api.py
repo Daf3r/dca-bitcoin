@@ -957,10 +957,10 @@ check(luz.post("/api/push/suscribir", json=[1]).status_code == 400, "cuerpo que 
 r = luz.post("/api/push/suscribir", json=_sus(EP_LUZ))
 check(r.status_code == 200 and r.get_json()["suscrito"] is True, f"un lector se suscribe {r.data}")
 cats = r.get_json()["categorias"]
-check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False)], f"categorías del lector y sus valores por defecto {cats}")
+check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False), ("diario", False)], f"categorías del lector y sus valores por defecto {cats}")
 check(all(c["nombre"] and c["ayuda"] for c in cats), "cada categoría trae nombre y ayuda")
 r = adm.post("/api/push/suscribir", json=_sus(EP_ADM))
-check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("piedrita", True), ("wallet", False)], "categorías del admin")
+check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("piedrita", True), ("diario", False), ("wallet", False)], "categorías del admin")
 check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "suscribirse no da permiso de escribir")
 
 # Estado por dispositivo: solo el dueño ve el suyo
@@ -1001,7 +1001,7 @@ check(not any(e == EP_ADM for e, _ in enviados), "el admin no recibe avisos de l
 
 # Categorías apagadas no reciben; «hito» está apagada por defecto y se enciende por dispositivo
 r = luz.put("/api/push/prefs", json={"endpoint": EP_LUZ, "prefs": {"movimiento": False}})
-check(r.status_code == 200 and [c["activo"] for c in r.get_json()["categorias"]] == [False, False], "se apaga una categoría")
+check(r.status_code == 200 and [c["activo"] for c in r.get_json()["categorias"]] == [False, False, False], "se apaga una categoría")
 enviados.clear()
 adm.post("/api/compras", json={"fecha": today, "monto": 10, "sats": 1000})
 check(not enviados, "con «movimiento» apagado no llega nada")
@@ -1119,7 +1119,21 @@ if _sh.which("node"):
             movs_.append({"fecha": (date(2025, 6, 1) + _td(days=i * _r.randrange(1, 9))).isoformat(), "monto": monto_, "sats": max(1, round(monto_ / precio_ * 1e8)),
                           "tipo": "venta" if _r.random() < 0.15 else "compra", "extra": _r.random() < 0.2})
         casos_repo.append({"movs": movs_, "vivo": round(_r.uniform(40000, 100000), 2), "hoy": "2026-11-01"})
-    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres, "caida": casos_caida, "reposicion": casos_repo}
+    # El Diario del domingo (campamento 19): de qué fue la semana (etapa · una · varias · tranquila) y su titular sin cifras.
+    casos_diario = []
+    for _ in range(220):
+        hoy_ = date(2026, 1, 4) + _td(days=_r.randrange(0, 330))
+        movs_ = []
+        for i in range(_r.randrange(0, 16)):
+            movs_.append({"id": i + 1, "fecha": (hoy_ - _td(days=_r.randrange(0, 45))).isoformat(), "tipo": "venta" if _r.random() < 0.15 else "compra",
+                          "sats": _r.choice([700, 30000, 60000, 150000, 240000, 900000, 2400000, 7000000])})
+        casos_diario.append({"movs": movs_, "hoy": hoy_.isoformat()})
+    casos_diario += [{"movs": [], "hoy": "2026-11-15"}, {"movs": [{"id": 1, "fecha": "2026-11-10", "tipo": "venta", "sats": 5}], "hoy": "2026-11-15"},
+                     {"movs": [{"id": 1, "fecha": "2026-11-01", "tipo": "compra", "sats": 99000}, {"id": 2, "fecha": "2026-11-08", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},  # cruzó 100k hace 7 días
+                     {"movs": [{"id": 1, "fecha": "2026-11-01", "tipo": "compra", "sats": 99000}, {"id": 2, "fecha": "2026-11-01", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},  # hace 14 días: ya no es etapa ni compra de la semana
+                     {"movs": [{"id": 1, "fecha": "2026-10-01", "tipo": "compra", "sats": 5000}, {"id": 2, "fecha": "2026-11-08", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},   # hace 7 días exactos: fuera
+                     {"movs": [{"id": 1, "fecha": "2026-10-01", "tipo": "compra", "sats": 5000}, {"id": 2, "fecha": "2026-11-09", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"}]
+    entrada = {"toca": casos_toca, "etapas": casos_etapas, "constancia": casos_const, "nombres": nombres, "caida": casos_caida, "reposicion": casos_repo, "diario": casos_diario}
     p_ = subprocess.run(["node", os.path.join(os.path.dirname(os.path.abspath(__file__)), "paridad_ritmo.mjs")], input=json.dumps(entrada), capture_output=True, text=True)
     check(p_.returncode == 0, f"node calcula la paridad: {p_.stderr[:200]}")
     js = json.loads(p_.stdout)
@@ -1153,6 +1167,16 @@ if _sh.which("node"):
             mal_r.append((caso, r_, esperado))
     check(not mal_r, f"monto habitual y reposición igual que lib.js ({len(mal_r)} distintos de {len(casos_repo)}): {mal_r[:1]}")
     check(sum(1 for x in js["reposicion"] if x["r"]) > 20, "la paridad de la reposición prueba casos con resultado")
+    mal_d = []
+    for caso, esperado in zip(casos_diario, js["diario"], strict=True):
+        clase_ = ritmo.clase_diario([(m["fecha"], m["id"], m["tipo"], m["sats"]) for m in caso["movs"]], date.fromisoformat(caso["hoy"]))
+        mio = {"clase": clase_, "aviso": ritmo.AVISO_DIARIO[clase_]} if clase_ else None
+        if mio != esperado:
+            mal_d.append((caso, mio, esperado))
+    check(not mal_d, f"el titular del Diario igual que lib.js ({len(mal_d)} distintos de {len(casos_diario)}): {mal_d[:1]}")
+    check({x["clase"] for x in js["diario"] if x} == {"etapa", "una", "varias", "tranquila"} and js["diario"][-6] is None and js["diario"][-5] is None,
+          "la paridad del Diario prueba las cuatro clases y la semana sin Diario")
+    check([x["clase"] for x in js["diario"][-4:]] == ["etapa", "tranquila", "tranquila", "una"], f"el Diario mira 14 días para la etapa y 7 para las compras {js['diario'][-4:]}")
 else:
     print("(sin node: se omite la paridad con lib.js)")
 
@@ -1192,7 +1216,7 @@ check(r["horario"] == _HDEF and r["horario_defecto"] == _HDEF, f"el horario por 
 check(luz.post("/api/push/estado", json={"endpoint": "https://fcm.googleapis.com/otro"}).get_json() == {"suscrito": False, "categorias": []}, "sin suscribir no hay horario")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
 check(r.status_code == 200 and r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, f"se guarda el horario del dispositivo {r.data}")
-check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "piedrita", "wallet"], "guardar el horario no cambia las categorías")
+check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "piedrita", "diario", "wallet"], "guardar el horario no cambia las categorías")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
 check(r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, "elegir categorías no borra el horario")
 adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
@@ -2279,5 +2303,63 @@ check(adm.put("/api/yo/cumple", json={"cumple": "02-29"}).status_code == 200, "e
 check(adm.get("/api/cumples").get_json() == [{"nombre": "Daf3r", "cumple": "02-29"}, {"nombre": "Luz", "cumple": "03-14"}] and anon.get("/api/cumples").status_code == 401, "la familia ve los cumpleaños (solo nombre, mes y día)")
 check(luz.put("/api/yo/cumple", json={"cumple": None}).status_code == 200 and luz.get("/api/yo").get_json()["cumple"] is None and len(adm.get("/api/cumples").get_json()) == 1, "se puede quitar")
 check(server.version_esquema(server.connect()) >= 15, "la base está al menos en la migración 15")
+
+# --- Campamento 19 (1/4): el Diario llega el domingo (idea 20). Para todos, apagado por defecto, a las 18:00 del domingo y sin cifras.
+check("diario" in push.categorias_de("lector") and "diario" in push.categorias_de("admin") and push.CATEGORIAS["diario"]["defecto"] is False,
+      "«El Diario del domingo» es para toda la familia y nace apagado")
+EP_D1 = "https://fcm.googleapis.com/fcm/send/diario-luz"                   # lectora, con el Diario
+EP_D2 = "https://updates.push.services.mozilla.com/wpush/v2/diario-admin"  # el dueño, con el Diario
+EP_D3 = "https://fcm.googleapis.com/fcm/send/diario-apagado"               # lectora, sin el Diario
+EP_D4 = "https://fcm.googleapis.com/fcm/send/diario-dormido"               # lectora, con el Diario, pero a las 18:00 sus avisos duermen
+for _c, _ep in ((luz, EP_D1), (adm, EP_D2), (luz, EP_D3), (luz, EP_D4)):
+    _r = _c.post("/api/push/suscribir", json=_sus(_ep))
+    check(_r.status_code == 200 and ("diario", False) in [(x["id"], x["activo"]) for x in _r.get_json()["categorias"]], f"el Diario sale apagado al suscribirse {_ep[-14:]}")
+check(luz.put("/api/push/prefs", json={"endpoint": EP_D1, "prefs": {"diario": True}}).status_code == 200
+      and adm.put("/api/push/prefs", json={"endpoint": EP_D2, "prefs": {"diario": True}}).status_code == 200, "una lectora y el dueño encienden el Diario")
+check(luz.put("/api/push/prefs", json={"endpoint": EP_D4, "horario": {"desde": 6, "hasta": 17}, "prefs": {"diario": True}}).status_code == 200, "y otra con avisos de 6:00 a 17:00")
+_cx = server.connect()
+_cx.execute("DELETE FROM meta WHERE clave = 'aviso_diario'"); _cx.execute("DELETE FROM avisos_pendientes"); _cx.commit()
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 14, 18, 30, tzinfo=ritmo.ZONA)  # sábado
+check(avisos._diario(_cx) is False and not enviados, "el sábado no sale el Diario")
+push.ahora = lambda: _dtm(2026, 11, 15, 17, 59, tzinfo=ritmo.ZONA)  # domingo, un minuto antes
+check(avisos._diario(_cx) is False and not enviados, "el domingo antes de las 18:00 tampoco")
+push.ahora = lambda: _dtm(2026, 11, 15, 18, 2, tzinfo=ritmo.ZONA)
+check(avisos._diario(_cx) is True and _a_quien() == sorted([EP_D1, EP_D2]), f"el domingo a las 18:00 llega a quien lo encendió y está despierto {_a_quien()}")
+_pd = enviados[0][1]
+_movs = [(r["fecha"], r["id"], r["tipo"], r["sats"]) for r in _cx.execute(f"SELECT fecha, id, tipo, sats FROM compras WHERE {server.VIGENTES}")]
+check(_pd["titulo"] == "El Diario del domingo" and _pd["cuerpo"] == ritmo.aviso_diario(_movs, date(2026, 11, 15)) and _pd["etiqueta"] == "diario-2026-11-15",
+      f"dice el titular del Diario de ese domingo {_pd}")
+check(not re.search(r"\d", _pd["titulo"] + _pd["cuerpo"]) and all(not re.search(r"\d", t) for t in ritmo.AVISO_DIARIO.values()), "el aviso no lleva ninguna cifra")
+check("acciones" not in _pd, "el Diario no trae botones")
+_sid4 = sql("SELECT id FROM suscripciones WHERE endpoint = ?", (EP_D4,))[0][0]
+check([tuple(r) for r in sql("SELECT categoria, sus_id, cuerpo FROM avisos_pendientes")] == [("diario", _sid4, _pd["cuerpo"])], "al que duerme se le guarda, a su nombre")
+enviados.clear()
+check(avisos._diario(_cx) is False and not enviados, "una sola vez por domingo")
+push.ahora = lambda: _dtm(2026, 11, 15, 23, 50, tzinfo=ritmo.ZONA)
+check(avisos._diario(_cx) is False and not enviados, "tampoco más tarde ese domingo")
+push.ahora = lambda: _dtm(2026, 11, 16, 6, 5, tzinfo=ritmo.ZONA)  # lunes: el dormido despierta
+push.vaciar_pendientes(_cx)
+check(_a_quien() == [EP_D4] and enviados[0][1]["cuerpo"] == _pd["cuerpo"], f"el que dormía lo recibe al despertar {enviados}")
+check(avisos._diario(_cx) is False, "el lunes no hay Diario nuevo")
+# El domingo siguiente vuelve; quien apagó la categoría mientras dormía no lo recibe (lo guardado se descarta)
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 22, 18, 0, tzinfo=ritmo.ZONA)
+check(avisos._diario(_cx) is True and _a_quien() == sorted([EP_D1, EP_D2]), "el domingo siguiente sale otra vez")
+luz.put("/api/push/prefs", json={"endpoint": EP_D4, "prefs": {"diario": False}})
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 23, 6, 5, tzinfo=ritmo.ZONA)
+push.vaciar_pendientes(_cx)
+check(not enviados and not sql("SELECT 1 FROM avisos_pendientes WHERE categoria = 'diario'"), "si apagó el Diario mientras dormía, lo guardado se descarta")
+# Sin compras no hay Diario ni aviso
+check(ritmo.aviso_diario([], date(2026, 11, 15)) is None and ritmo.aviso_diario([("2026-11-10", 1, "venta", 5)], date(2026, 11, 15)) is None, "sin compras no hay Diario")
+_orig_av = ritmo.aviso_diario
+ritmo.aviso_diario = lambda movs, hoy: None
+enviados.clear()
+push.ahora = lambda: _dtm(2026, 11, 29, 18, 0, tzinfo=ritmo.ZONA)
+check(avisos._diario(_cx) is False and not enviados and server._meta(_cx, "aviso_diario") == "2026-11-29", "una semana sin Diario no avisa (y no lo vuelve a intentar)")
+ritmo.aviso_diario = _orig_av
+_cx.close()
+push.ahora = _de_dia
 
 print("OK", ok, "comprobaciones")

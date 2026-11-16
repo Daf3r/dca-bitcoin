@@ -365,7 +365,7 @@ try {
       await p.click('#dc-avisos-btn');
       await p.waitForTimeout(500);
     };
-    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'caida', 'piedrita', 'wallet']], [LECTOR, 'lector', ['movimiento', 'hito']]]) {
+    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'caida', 'piedrita', 'diario', 'wallet']], [LECTOR, 'lector', ['movimiento', 'hito', 'diario']]]) {
       const { ctx, p, consola } = await entrar(navegador, avisos, cuenta, {}, conPush);
       await abrirAvisos(p);
       ok(await p.locator('#dc-avisos').isVisible() && !(await p.locator('#dc-menu').isVisible()), `${quien}: se abre la vista de avisos`);

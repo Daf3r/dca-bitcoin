@@ -8,6 +8,7 @@ import {
   satsEn, haceUnAnio, eco, fraccionAnio, aniosTronco, estrellasConstelacion, piedrasTorre, textoTronco, textoConstelacion, textoTorre, textoAnio, semanasManta, textoManta, textoSemanaManta, enLetras, datosCertificado, textoCertificado, sellos, textoSello, estratosMes, textoEstratos, textoEstrato, nombreSemana, sellosSemana, selloNuevo, textoSelloSemana, textoPasaporte, partitura, PASOS_HZ, textoPartitura, textoAnioPartitura, textoNota, textoApertura, etapasFuturas, mananaISO, diario, textoDiario, piedritasPorCompra, textoPiedritas, ultimaPiedrita, cumpleHoy, textoCumple, textoCumpleFecha, muestrasSismo, medianocheSV, tarjetaFiesta, numeroBonito, efemeride, lluviaEstrellas, aniversario, enPupusas, arbolesDe,
 } from '../app/static/lib.js';
 import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
+import { AVISO_DIARIO } from '../app/static/lib.js';
 
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
@@ -952,5 +953,19 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq([c4.numero, c4.antes, c4.despues, c4.meta, c4.p, c4.q, c4.extra, c4.nota, c4.etiquetas, c4.txid.length], [3, 100000, 130000, 250000, 0, 0.2, true, 'cayó 20 %', ['bono'], 64], 'comprobante: extra, nota, etiquetas y TXID; del 0 % al 20 % del camino a 250k');
   ok(Math.abs(c4.hoy.valor - 30) < 1e-9 && Math.abs(c4.hoy.variacion - (100000 / 83333.33 - 1) * 100) < 1e-9, 'comprobante: lo que valen hoy esos sats y cuánto cambió el precio desde entonces');
   eq([comprobante(items, 4, { hoy: '2026-11-15' }).hoy, comprobante(items, 99), comprobante(null, 1)], [null, null, null], 'comprobante: sin precio no hay «hoy valen»; sin el movimiento, nada');
+}
+// ---------------------------------------------------------------- Campamento 19: la familia
+{
+  // El Diario del domingo: de qué fue la semana y su titular sin cifras (el mismo que manda el servidor: ver la paridad en test_api).
+  const c = (id, fecha, sats, tipo = 'compra') => ({ id, fecha, sats, monto: 10, precio: (10 * 1e8) / sats, tipo });
+  const una = diario(resumen([c(1, '2025-10-01', 20000), c(2, '2026-11-12', 10000)], null, '2026-11-15'), '2026-11-15');
+  eq([una.clase, una.aviso], ['una', 'Un paso más en la montaña'], 'diario: una compra en la semana');
+  const varias = diario(resumen([c(1, '2025-10-01', 20000), c(2, '2026-11-10', 10000), c(3, '2026-11-14', 10000)], null, '2026-11-15'), '2026-11-15');
+  eq([varias.clase, varias.aviso], ['varias', 'La montaña subió esta semana'], 'diario: varias compras en la semana');
+  const etapa = diario(resumen([c(1, '2026-10-01', 90000), c(2, '2026-11-14', 15000)], null, '2026-11-15'), '2026-11-15');
+  eq([etapa.clase, etapa.aviso, etapa.titular], ['etapa', 'Llegamos a una nueva etapa', 'Llegamos a 100k sats'], 'diario: una etapa en los últimos 14 días manda');
+  const quieta = diario(resumen([c(1, '2026-10-01', 90000)], null, '2026-11-15'), '2026-11-15');
+  eq([quieta.clase, quieta.aviso], ['tranquila', 'Semana tranquila en la montaña'], 'diario: una semana sin compras es tranquila');
+  ok(Object.values(AVISO_DIARIO).every((t) => !/\d/.test(t)) && Object.keys(AVISO_DIARIO).length === 4, 'diario: el titular del aviso nunca lleva cifras');
 }
 console.log(`OK ${n} comprobaciones`);
