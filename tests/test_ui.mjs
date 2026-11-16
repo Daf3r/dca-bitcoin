@@ -134,7 +134,7 @@ try {
       }
       // Variación desde ayer junto al precio, y la tarjeta de sats por dólar con su línea del mes.
       const var24 = (await p.innerText('#precio-24')).trim(); // la flecha es un icono SVG (sin texto): queda «−0.2% vs ayer» o «• +0.0% vs ayer»
-      ok(await p.locator('#precio-24').isVisible() && /^(• )?[+−]?\d+\.\d% vs ayer$/.test(var24) && (var24.startsWith('•') || await p.locator('#precio-24 .ico').count() === 1), `variación desde ayer: «${var24}»`);
+      ok(await p.locator('#precio-24').isVisible() && /^(• |(sube|baja)\s*)?[+−]?\d+\.\d% vs ayer$/.test(var24) && (var24.startsWith('•') || await p.locator('#precio-24 .ico').count() === 1), `variación desde ayer: «${var24}»`);
       const precioVivo = (await datos(p, '/api/precio')).precio;
       ok(await p.locator('#spd').isVisible(), 'sale la tarjeta de sats por dólar');
       eq((await p.textContent('#spd-v')).trim(), entero(1e8 / precioVivo), 'sats por dólar = 100,000,000 ÷ precio');
@@ -3460,6 +3460,46 @@ try {
       await l.ctx.close();
     } finally {
       s17h.parar();
+    }
+    // ---- 3. Ganancia sin rojo: tinta neutra con signo y flecha; el verde y el rojo, solo en la tarjeta «Ganancia» o si se eligen
+    const s17m = await servidor('mil');
+    try {
+      const colores = (p) => p.evaluate(() => {
+        const c = (sel) => { const e = document.querySelector(sel); return e ? getComputedStyle(e).color : null; };
+        const fila = document.querySelector('#lista .fila[data-tipo="compra"] .f-var');
+        return {
+          marca: document.documentElement.dataset.ganancia ?? '', gan: c('#s-valor .sd-gan [data-tono]'), tintaCielo: c('#s-valor b'), flechaGan: document.querySelectorAll('#s-valor .sd-gan [data-tono] > .ico').length,
+          fila: fila ? getComputedStyle(fila).color : null, tinta: c('#lista .f-sats'), flechaFila: fila?.querySelectorAll('.ico').length, filaTxt: fila?.textContent.replace(/\s+/g, ' ').trim(), tono: fila?.dataset.tono,
+          col: (() => { const e = document.getElementById('l-col'); return e.hidden ? null : e.textContent; })(), colOculto: document.getElementById('l-col').getAttribute('aria-hidden'),
+          tarjeta: [...document.querySelectorAll('#rep-ganancia [data-tono]')].map((e) => getComputedStyle(e).color), tintaTarjeta: c('#rep-ganancia'),
+          venta: document.querySelector('#lista .fila[data-tipo="venta"] .f-var')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
+        };
+      });
+      const a = await entrar(navegador, s17m, ADMIN, { hora: 15, viewport: { width: 390, height: 844 }, isMobile: false, hasTouch: false }, sinAviso); await cerrar(a.p);
+      let c = await colores(a.p);
+      eq(c.marca, '', '17·3 por defecto no hay colores de ganancia');
+      ok(c.gan === c.tintaCielo && c.flechaGan === 1, `17·3 la ganancia bajo el saldo va en la tinta del cielo, con su flecha (${c.gan})`);
+      ok(c.fila === c.tinta && c.flechaFila === 1 && /^(sube|baja) [+−]\d+\.\d% desde entonces$/.test(c.filaTxt) && ['sube', 'baja'].includes(c.tono), `17·3 lista: el porcentaje va en tinta neutra, con flecha y «desde entonces» para lectores de pantalla («${c.filaTxt}»)`);
+      ok(c.col === 'desde entonces' && c.colOculto === 'true', '17·3 lista: el rótulo «desde entonces» se ve una vez, arriba');
+      ok(c.tarjeta.length >= 2 && c.tarjeta.some((x) => x !== c.tintaTarjeta), `17·3 la tarjeta «Ganancia» conserva el verde y el rojo (${c.tarjeta.join(' · ')})`);
+      // El ajuste de «Tu cuenta»: verde y rojo para quien los prefiera, por dispositivo.
+      await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(300);
+      eq(await a.p.locator('#dc-ganancia').textContent(), 'Colores de ganancia: neutros', '17·3 «Tu cuenta»: el ajuste dice «neutros»');
+      await a.p.click('#dc-ganancia');
+      eq([await a.p.locator('#dc-ganancia').textContent(), await a.p.evaluate(() => localStorage.getItem('libro.ganancia'))], ['Colores de ganancia: verde y rojo', 'color'], '17·3 el ajuste cambia y se guarda');
+      const caja = await a.p.locator('#dc-ganancia').boundingBox();
+      ok(caja.height >= 47.5, `17·3 el ajuste mide ${caja.height.toFixed(0)} px de alto`);
+      await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(300);
+      c = await colores(a.p);
+      ok(c.marca === 'color' && c.fila !== c.tinta && c.gan !== c.tintaCielo, `17·3 con «verde y rojo» vuelven los colores (${c.fila}, ${c.gan})`);
+      await a.p.reload({ waitUntil: 'networkidle' }); await a.p.waitForTimeout(2200); await cerrar(a.p);
+      eq((await colores(a.p)).marca, 'color', '17·3 se recuerda al recargar');
+      await a.p.click('#cuenta-btn'); await a.p.click('#dc-ganancia'); await a.p.keyboard.press('Escape');
+      eq((await colores(a.p)).marca, '', '17·3 y se puede volver a la tinta neutra');
+      eq(a.consola.filter((x) => !/503/.test(x)), [], '17·3 consola limpia');
+      await a.ctx.close();
+    } finally {
+      s17m.parar();
     }
     const s17v = await servidor('vacio');
     try {

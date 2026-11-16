@@ -110,6 +110,7 @@ function etiquetasAccesibilidad() {
   const c = acc?.contraste() ?? 'auto';
   $('dc-contraste').textContent = `Contraste: ${NOMBRE_CONTRASTE[c]}${c === 'auto' && acc?.contrasteAlto() ? ' (alto, como pide el sistema)' : ''}`;
   $('dc-atajos').textContent = `Atajos de teclado: ${atajosActivos() ? 'activados' : 'apagados'}`;
+  $('dc-ganancia').textContent = `Colores de ganancia: ${acc?.ganancia() ? 'verde y rojo' : 'neutros'}`;
 }
 /** El cambio de tema con la tecla T (atajos.js) pasa por aquí para tener el mismo fundido. */
 export function siguienteTema() {
@@ -228,6 +229,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'letra') { window.libroAcc?.fijarLetra(SIGUIENTE_LETRA[window.libroAcc.letra()]); etiquetasAccesibilidad(); }
   else if (accion === 'contraste') { window.libroAcc?.fijarContraste(SIGUIENTE_CONTRASTE[window.libroAcc.contraste()]); etiquetasAccesibilidad(); }
   else if (accion === 'atajos') { fijarAtajos(!atajosActivos()); etiquetasAccesibilidad(); }
+  else if (accion === 'ganancia') { window.libroAcc?.fijarGanancia(window.libroAcc.ganancia() ? '' : 'color'); etiquetasAccesibilidad(); }
   else if (accion === 'madrugada') { window.libroCielo?.fijarMadrugada(!window.libroCielo.madrugadaPref()); etiquetaMadrugada(); }
   else if (accion === 'sonido') { fijarSonido(!sonidoActivo()); etiquetaSonido(); if (sonidoActivo()) sonar('compra'); } // al encenderlo suena una muestra
   else if (accion === 'tv') { dCuenta.close(); entrarTV(); }

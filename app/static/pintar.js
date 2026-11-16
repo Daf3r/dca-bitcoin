@@ -112,7 +112,7 @@ export function pintarPrecio() {
   el24.hidden = !v;
   if (v) {
     const plano = Math.abs(v.pct) < 0.05; // casi igual: sin flecha ni color
-    el24.innerHTML = `${plano ? '•' : ico(v.pct > 0 ? 'sube' : 'baja')} ${pct(v.pct)} vs ayer`;
+    el24.innerHTML = `${plano ? '•' : `${ico(v.pct > 0 ? 'sube' : 'baja')}<span class="sr">${v.pct > 0 ? 'sube' : 'baja'}</span>`} ${pct(v.pct)} vs ayer`;
     el24.dataset.tono = plano ? '' : v.pct > 0 ? 'sube' : 'baja';
   }
 }
@@ -260,6 +260,8 @@ export function pintarLinea() {
   gan.dataset.tono = R.gan >= 0 ? 'sube' : 'baja';
   dual(gan, usdSigno(R.gan), usdSignoCorto(R.gan));
   if (R.pct != null) gan.append(` (${pct(R.pct)})`);
+  // Tinta neutra (campamento 17): la flechita y el signo dicen si va arriba o abajo; el color es opcional («Tu cuenta»).
+  if (Math.abs(R.gan) >= 0.005) gan.insertAdjacentHTML('afterbegin', ico(R.gan > 0 ? 'sube' : 'baja'));
   // La ganancia y su mini línea van juntas en una píldora (`.sd-gan`); en el teléfono bajan a su propia línea (el «·» se esconde).
   const sep = document.createElement('i');
   sep.className = 'sd-sep';

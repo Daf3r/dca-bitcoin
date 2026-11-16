@@ -97,8 +97,11 @@ button, input { font: inherit; color: inherit; }
 :where(button, [role="button"], summary) { transition: transform 0.12s ease-out; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 :focus-visible { outline: 2px solid var(--naranja); outline-offset: 3px; }
-[data-tono="sube"] { color: var(--sube); }
-[data-tono="baja"] { color: var(--baja); }
+/* (Campamento 17) Ganancia sin rojo: lo que sube o baja va en tinta neutra, con su signo y su flechita (`ico('sube'|'baja')`),
+   que son los que dicen hacia dónde va. El verde y el rojo quedan en la tarjeta «Ganancia» (realizada y no realizada) y para quien
+   los prefiera: «Tu cuenta → Colores de ganancia: verde y rojo» (`html[data-ganancia="color"]`, accesibilidad.js; por dispositivo). */
+:is(html[data-ganancia="color"], .rep-ganancia) [data-tono="sube"] { color: var(--sube); }
+:is(html[data-ganancia="color"], .rep-ganancia) [data-tono="baja"] { color: var(--baja); }
 
 /* -------------------------------------------------------------------- escena */
 .escena {
@@ -298,8 +301,8 @@ html[data-efectos="todos"] .eco-fantasma { animation: eco-respira 5s ease-in-out
 .cot-v { font: 600 1.25rem var(--sans); letter-spacing: -0.01em; }
 .cot-meta { font-size: 0.75rem; color: var(--cielo-txt2); }
 .cot-24 { font-size: 0.75rem; font-weight: 600; color: var(--cielo-txt2); white-space: nowrap; }
-.cot-24[data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
-.cot-24[data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
+html[data-ganancia="color"] .cot-24[data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
+html[data-ganancia="color"] .cot-24[data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
 /* Cifras secundarias con forma corta (cifras.js): en teléfonos de menos de 360 px se ve la corta. */
 .c-c { display: none; }
 @media (max-width: 359px) { .c-l { display: none; } .c-c { display: inline; } }
@@ -387,8 +390,10 @@ html[data-tv] .esc-datos { display: none !important; }
 }
 html[data-tv] .sd-gan { background: none; padding: 0; margin: 0; }
 .saldo-d b { color: var(--cielo-txt); font-weight: 650; }
-.saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
-.saldo-d [data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
+.saldo-d [data-tono] { color: var(--cielo-txt); } /* tinta del cielo, plena: el signo y la flecha dicen si sube o baja */
+html[data-ganancia="color"] .saldo-d [data-tono="sube"] { color: var(--cielo-sube, var(--sube)); }
+html[data-ganancia="color"] .saldo-d [data-tono="baja"] { color: var(--cielo-baja, var(--baja)); }
+.saldo-d [data-tono] > .ico { width: 0.62em; height: 0.62em; margin-right: 0.32em; vertical-align: 0.06em; opacity: 0.8; }
 /* Saludo según la hora, en una línea bajo la marca: discreto, no compite con la cifra. Su altura se reserva siempre para que no mueva nada al aparecer. */
 .saludo { flex-basis: 100%; min-height: 1.25rem; margin-top: -8px; font-size: 0.8125rem; line-height: 1.25rem; color: var(--cielo-txt2); }
 
@@ -609,7 +614,12 @@ h2 { font: 600 clamp(1.5rem, 6vw, 1.9rem)/1.15 var(--serif); letter-spacing: -0.
 .f-sats { grid-area: s; font-weight: 650; font-variant-numeric: tabular-nums; }
 .f-sats small { color: var(--txt3); font-weight: 500; }
 .f-det { grid-area: d; font-size: 0.8125rem; color: var(--txt3); font-variant-numeric: tabular-nums; }
-.f-var { grid-area: v; font-weight: 650; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.f-var { grid-area: v; font-weight: 650; font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.f-var .ico { width: 0.6em; height: 0.6em; margin-right: 0.4em; vertical-align: 0.08em; color: var(--txt3); }
+html[data-ganancia="color"] .f-var .ico { color: inherit; }
+/* Qué mide el porcentaje de cada fila: se dice una vez, arriba de la lista (cada fila lo repite para lectores de pantalla). */
+.l-col { margin: 2px 0 -2px; text-align: right; font: 650 0.6875rem/1.4 var(--sans); letter-spacing: 0.09em; text-transform: uppercase; color: var(--txt2); }
+.l-col[hidden] { display: none; }
 .ver-todas { margin-top: 8px; min-height: var(--toque); padding: 0 18px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; font-weight: 600; cursor: pointer; }
 
 /* -------------------------------------------------------- siguiente paso */
@@ -774,7 +784,8 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 .wal-fila .ses-cerrar:disabled { opacity: 0.55; }
 .ub-e { background: var(--s3); box-shadow: inset 0 0 0 1.5px var(--txt3); }
 .ub-pista { margin: 8px 0 12px; color: var(--txt2); font-size: 0.9375rem; }
-.hoja-calc .costo[data-tono="sube"] { color: var(--sube); font-weight: 600; }
+.hoja-calc .costo[data-tono="sube"] { font-weight: 600; }
+html[data-ganancia="color"] .hoja-calc .costo[data-tono="sube"] { color: var(--sube); }
 .hoja-error { color: var(--baja); font-weight: 600; font-size: 0.875rem; }
 .hoja-error:empty { display: none; }
 .hoja-error.hoja-aviso { color: var(--naranja-txt); }
@@ -1266,8 +1277,8 @@ html[data-efectos="ninguno"] .lista li.sale { display: none; }
 .dt tbody th { font-weight: 600; color: var(--txt); }
 .dt .num { text-align: right; }
 .dt td:nth-last-child(2) { white-space: normal; min-width: 10rem; color: var(--txt2); }
-.dt [data-tono="sube"] { color: var(--sube); }
-.dt [data-tono="baja"] { color: var(--baja); }
+html[data-ganancia="color"] .dt [data-tono="sube"] { color: var(--sube); }
+html[data-ganancia="color"] .dt [data-tono="baja"] { color: var(--baja); }
 .dt a, .dt .dt-edit { color: var(--naranja-txt); }
 .dt .dt-edit { min-height: 32px; text-align: left; }
 .dt tbody tr:hover { background: var(--s1); }
