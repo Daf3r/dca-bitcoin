@@ -4603,7 +4603,7 @@ try {
       eq([t.meta, t.hechas, t.txt], ['1.5M sats', 1, 'Etapa 2 de 6 del tramo de 1M a 2.5M sats'], '21·próxima: tras cruzarla, la siguiente y un escalón lleno');
       const mk = await marcas(a.p);
       const enc = await a.p.evaluate(() => { const g = document.querySelector('#m-etapas .etapa[data-m="1250000"]'); return { hay: !!g, alcanzada: g?.classList.contains('alcanzada') ?? null, fina: g?.classList.contains('menor') ?? null, encendidas: document.querySelectorAll('#m-etapas .etapa.alcanzada').length, transicion: getComputedStyle(document.querySelector('#m-etapas .etapa-tick')).transitionProperty }; });
-      ok((!enc.hay || (enc.alcanzada && enc.fina)) && enc.encendidas >= 1 && /stroke/.test(enc.transicion), `21·montaña: la marca cruzada queda encendida y se enciende con suavidad (${JSON.stringify(enc)})`);
+      ok((!enc.hay || (enc.alcanzada && enc.fina)) && enc.encendidas >= 1 && /opacity/.test(enc.transicion), `21·montaña: la marca cruzada queda encendida y se enciende con suavidad (${JSON.stringify(enc)})`);
       ok(mk.m.filter((x) => x.sig).length === 1 && mk.m.find((x) => x.sig).m === 1_500_000, '21·montaña: la siguiente etapa lleva su marca naranja');
       eq(a.consola, [], `21·celebración: consola limpia (${a.consola.join(' | ')})`);
       await a.ctx.close();

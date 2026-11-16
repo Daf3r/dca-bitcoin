@@ -1141,6 +1141,8 @@ if _sh.which("node"):
             movs_.append({"id": i + 1, "fecha": (hoy_ - _td(days=_r.randrange(0, 45))).isoformat(), "tipo": "venta" if _r.random() < 0.15 else "compra",
                           "sats": _r.choice([700, 30000, 60000, 150000, 240000, 900000, 2400000, 7000000])})
         casos_diario.append({"movs": movs_, "hoy": hoy_.isoformat()})
+    # Campamento 21: una compra de 60k sobre 1.2M cruza 1.25M (una etapa intermedia) a 5 días: es «etapa» (con la escalera de antes era «una»)
+    casos_diario.append({"movs": [{"id": 1, "fecha": "2026-10-01", "tipo": "compra", "sats": 1_200_000}, {"id": 2, "fecha": "2026-11-10", "tipo": "compra", "sats": 60_000}], "hoy": "2026-11-15"})
     casos_diario += [{"movs": [], "hoy": "2026-11-15"}, {"movs": [{"id": 1, "fecha": "2026-11-10", "tipo": "venta", "sats": 5}], "hoy": "2026-11-15"},
                      {"movs": [{"id": 1, "fecha": "2026-11-01", "tipo": "compra", "sats": 99000}, {"id": 2, "fecha": "2026-11-08", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},  # cruzó 100k hace 7 días
                      {"movs": [{"id": 1, "fecha": "2026-11-01", "tipo": "compra", "sats": 99000}, {"id": 2, "fecha": "2026-11-01", "tipo": "compra", "sats": 1000}], "hoy": "2026-11-15"},  # hace 14 días: ya no es etapa ni compra de la semana
@@ -1196,6 +1198,8 @@ if _sh.which("node"):
     check({x["clase"] for x in js["diario"] if x} == {"etapa", "una", "varias", "tranquila"} and js["diario"][-6] is None and js["diario"][-5] is None,
           "la paridad del Diario prueba las cuatro clases y la semana sin Diario")
     check([x["clase"] for x in js["diario"][-4:]] == ["etapa", "tranquila", "tranquila", "una"], f"el Diario mira 14 días para la etapa y 7 para las compras {js['diario'][-4:]}")
+    check(js["diario"][-7] == {"clase": "etapa", "aviso": "Llegamos a una nueva etapa"} and ritmo.clase_diario([(m["fecha"], m["id"], m["tipo"], m["sats"]) for m in casos_diario[-7]["movs"]], date(2026, 11, 15)) == "etapa",
+          f"el Diario cuenta una etapa intermedia reciente como etapa (campamento 21) {js['diario'][-7]}")
 else:
     print("(sin node: se omite la paridad con lib.js)")
 
