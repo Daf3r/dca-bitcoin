@@ -209,17 +209,6 @@
     <button type="button" class="res-med-ver" id="res-historia" data-libro="Ver todas las medallas">Ver todas mis medallas</button>
   </section>
 
-  <!-- Sats por dólar: cuántos sats compra $1 hoy y cómo ha cambiado en el último mes. Solo informa. -->
-  <section class="spd" id="spd" aria-labelledby="t-spd" hidden data-p="graficos">
-    <h2 class="sr" id="t-spd">Sats por dólar</h2>
-    <div class="spd-txt">
-      <p class="spd-k">Hoy, $1 te compra</p>
-      <p class="spd-v"><b id="spd-v">—</b> <span>sats</span></p>
-      <p class="spd-t" id="spd-t"></p>
-    </div>
-    <svg class="spd-l" id="spd-l" viewBox="0 0 120 40" role="img" aria-label="" preserveAspectRatio="none"></svg>
-  </section>
-
   <!-- Qué gráfico ver: Precio, Valor, Costo promedio o Sats. Solo salen las vistas con datos; se recuerda la última por dispositivo. -->
   <div class="rangos vistas" id="vistas" role="group" aria-label="Qué gráfico ver" hidden data-p="graficos">
     <button type="button" data-vista="precio" aria-pressed="true">Precio</button><button type="button" data-vista="valor" aria-pressed="false">Valor</button><button type="button" data-vista="costo" aria-pressed="false">Costo</button><button type="button" data-vista="sats" aria-pressed="false">Sats</button>
@@ -234,12 +223,6 @@
     </div>
     <p class="lectura" id="g-lectura"></p>
     <p class="sr" id="g-sr" aria-live="polite"></p>
-    <p class="equilibrio" id="g-equilibrio" hidden></p>
-    <!-- Dónde está el precio de hoy frente a tu costo promedio: una barra serena, sin colores de alarma. -->
-    <div class="indicador" id="g-indicador" role="img" aria-label="" hidden>
-      <div class="ind-pista"><i class="ind-costo"></i><i class="ind-hoy" id="ind-hoy"></i></div>
-      <p class="ind-eti"><span id="ind-costo-t"></span><span id="ind-hoy-t"></span></p>
-    </div>
     <div class="g-opciones">
       <button type="button" class="g-op" id="g-log" aria-pressed="false" hidden>Escala logarítmica</button>
       <button type="button" class="g-op" id="g-ampliar">Ampliar</button>
@@ -254,6 +237,13 @@
     <details class="ley-det" id="ley-det"><summary>Leyenda y series</summary>
       <p class="leyenda" role="group" aria-label="Qué mostrar en el gráfico (toca para ocultar o mostrar)"><button type="button" class="k-p" data-serie="precio" aria-pressed="true">Precio de BTC</button><button type="button" class="k-c" data-serie="compras" aria-pressed="true" data-libro="Las compras, a su precio">Tus compras, a su precio</button><span class="k-x" hidden>Compra extra</span><button type="button" class="k-a" data-serie="costo" aria-pressed="true" data-libro="Costo promedio">Tu costo promedio</button><span class="k-g" hidden data-libro="Por encima del costo">Por encima de tu costo</span><span class="k-l" hidden data-libro="Por debajo del costo">Por debajo de tu costo</span><button type="button" class="k-m" data-serie="max" aria-pressed="true" hidden>Máximo de 30 días</button><button type="button" class="k-b" data-serie="bandas" aria-pressed="true" hidden>Caída fuerte (15 %+)</button></p>
     </details>
+    <!-- Las frases del gráfico van bajo el dibujo (campamento 20): primero se ve el gráfico. El equilibrio y dónde está el precio de hoy
+         frente a tu costo promedio (una barra serena, sin colores de alarma). -->
+    <p class="equilibrio" id="g-equilibrio" hidden></p>
+    <div class="indicador" id="g-indicador" role="img" aria-label="" hidden>
+      <div class="ind-pista"><i class="ind-costo"></i><i class="ind-hoy" id="ind-hoy"></i></div>
+      <p class="ind-eti"><span id="ind-costo-t"></span><span id="ind-hoy-t"></span></p>
+    </div>
   </section>
 
   <!-- Lo que pusiste (neto) frente a lo que vale tu saldo, día a día. Desde 3 compras y con histórico. -->
@@ -281,6 +271,18 @@
     <p class="lectura fija" id="s-lectura"></p>
     <p class="sr" id="s-sr" aria-live="polite"></p>
     <div class="lienzo" id="s-lienzo" tabindex="0" role="img" aria-label="Tus sats acumulados con cada compra. Usa las flechas para recorrerlo."></div>
+  </section>
+
+  <!-- Sats por dólar: cuántos sats compra $1 hoy y cómo ha cambiado en el último mes. Solo informa. Va después de los gráficos, junto a
+       «Mejor y peor precio» (campamento 20: en la pestaña Gráficos lo primero es el selector y el gráfico). -->
+  <section class="spd" id="spd" aria-labelledby="t-spd" hidden data-p="graficos">
+    <h2 class="sr" id="t-spd">Sats por dólar</h2>
+    <div class="spd-txt">
+      <p class="spd-k" data-libro="Hoy, $1 compra">Hoy, $1 te compra</p>
+      <p class="spd-v"><b id="spd-v">—</b> <span>sats</span></p>
+      <p class="spd-t" id="spd-t"></p>
+    </div>
+    <svg class="spd-l" id="spd-l" viewBox="0 0 120 40" role="img" aria-label="" preserveAspectRatio="none"></svg>
   </section>
 
   <section class="reportes" id="reportes" aria-labelledby="t-rep" hidden>

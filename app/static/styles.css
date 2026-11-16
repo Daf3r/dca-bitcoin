@@ -353,7 +353,7 @@ html:is([data-efectos="todos"], [data-efectos="esenciales"]) .saldo[data-bonito]
 .saldo-v[role="button"] { cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 12px; }
 .saldo-v[role="button"]:focus-visible { outline: 2px solid var(--naranja); outline-offset: 6px; }
 .saldo-v[role="button"] em::after { content: " ⇄"; font-style: normal; font-size: 0.6em; opacity: 0.55; }
-.equilibrio { margin-top: -4px; color: var(--txt2); font-size: 0.9375rem; }
+.equilibrio { margin-top: 10px; color: var(--txt2); font-size: 0.9375rem; } /* bajo el gráfico y su leyenda (campamento 20) */
 .equilibrio[hidden] { display: none; }
 /* Indicador del precio frente a tu costo promedio: la marca de arriba es tu costo; el punto, el precio de hoy. Neutro: es información. */
 .indicador { margin: 6px 0 4px; }
