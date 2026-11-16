@@ -1705,3 +1705,31 @@ export function textoMantaPrimer(m, libro = false) {
   return `${libro ? 'La manta del libro' : 'Tu manta'} está en su primer año: 4 hileras de ${m.cols} semanas, ${m.celdas.length} ya tejidas `
     + `(${m.semanasConCompra} con compra) y ${m.futuras} en el telar. Cuanto más oscuro el añil, más sats esa semana; el algodón crudo es una semana sin compras.`;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 20 · un punto por mes en el gráfico del precio (idea 9). Solo datos.
+// ---------------------------------------------------------------------------------------------
+
+/** A partir de cuántas compras a la vista el gráfico del precio dibuja un punto por mes (con 150 o menos, una por compra). */
+export const UMBRAL_POR_MES = 150;
+/**
+ * Las compras de cada mes en un solo punto, para el gráfico con muchas compras a la vista. Es un resumen honesto: el punto va al
+ * precio que de verdad se pagó en promedio ese mes (dólares entre sats, no la media de los precios) y su fecha es la de la compra del
+ * medio; trae cuántas compras junta (`n`), sus sats y sus dólares. Recibe solo compras habituales: las extra y las ventas no se juntan
+ * (el gráfico las sigue dibujando una por una).
+ */
+export function comprasPorMes(compras) {
+  const por = new Map();
+  for (const c of compras ?? []) {
+    const k = c.fecha.slice(0, 7);
+    if (!por.has(k)) por.set(k, []);
+    por.get(k).push(c);
+  }
+  return [...por.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([mes, cs]) => {
+    const orden = [...cs].sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.id ?? 0) - (b.id ?? 0)));
+    const sats = cs.reduce((a, c) => a + c.sats, 0), monto = cs.reduce((a, c) => a + (c.monto ?? 0), 0);
+    const [y, m] = mes.split('-').map(Number);
+    return { grupo: true, id: `m-${mes}`, mes, nombre: `${MESES_L[m - 1]} de ${y}`, tipo: 'compra', extra: false, n: cs.length, sats, monto,
+      precio: sats ? (monto * 1e8) / sats : null, fecha: orden[orden.length >> 1].fecha, desde: orden[0].fecha, hasta: orden.at(-1).fecha };
+  });
+}
