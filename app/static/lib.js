@@ -1340,6 +1340,8 @@ const restarDias = (hoy, n) => {
   const [y, m, d] = hoy.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10);
 };
+/** Suma (o resta, con `n` negativo) días a una fecha AAAA-MM-DD. */
+export const sumarDias = (f, n) => restarDias(f, -n);
 
 const PRONOSTICOS = {
   lluviosa: ['lluvias por la tarde en el valle y la cumbre despejada', 'nubes bajas por la mañana, claros al mediodía', 'chubascos ligeros abajo y mucha luz arriba', 'tarde fresca, con olor a tierra mojada'],
@@ -1458,3 +1460,16 @@ export function tarjetaFiesta(antes, despues, sats) {
   }
   return { titulo: 'Compra nueva', texto: `+${entero(sats)} sats`, sub: 'La montaña sube un paso más', grande: false };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 18 · El ritual de anotar: la fecha escrita, la nota de la semana que vuelve al año y el comprobante de cada movimiento.
+// ---------------------------------------------------------------------------------------------
+
+const dfEscrita = new Intl.DateTimeFormat('es-SV', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+/** La fecha escrita como aquí: «domingo 15 de noviembre»; si no es de este año, «sábado 15 de noviembre de 2025». */
+export function fechaEscrita(f, hoy = hoyISO()) {
+  const p = Object.fromEntries(dfEscrita.formatToParts(aFecha(f)).map((x) => [x.type, x.value]));
+  return `${p.weekday} ${p.day} de ${p.month}${f.slice(0, 4) === hoy.slice(0, 4) ? '' : ` de ${p.year}`}`;
+}
+/** Qué botón de la fecha le toca a un día: 'hoy', 'ayer' u 'otro'. */
+export const diaDe = (f, hoy = hoyISO()) => (f === hoy ? 'hoy' : f === sumarDias(hoy, -1) ? 'ayer' : 'otro');

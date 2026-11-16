@@ -1,5 +1,5 @@
 import { hundirMoneda } from './montana.js';
-import { etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
+import { diaDe, fechaEscrita, sumarDias, etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, montoHabitual, pct, precioDelDia, usd, usd0, walletNeto } from './lib.js';
 import { avisar } from './avisar.js';
 import { celebrar, destello } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
@@ -11,7 +11,7 @@ import { sonarGuardado } from './sonido.js';
 
 // ------------------------------------------------------------- hoja de anotar
 export const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const H = { tipo: 'compra', nota: '', etq: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', wallet: '', walletNueva: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false };
+const H = { tipo: 'compra', nota: '', etq: '', sats: '', usd: '', txid: '', extra: false, sentido: 'a_wallet', comision: '', wallet: '', walletNueva: '', usdTocado: false, editando: null, guardando: false, origen: null, confirmadoPara: '', estimado: false, otroDia: false };
 export const hoja = $('hoja');
 
 // «Deshacer» tras guardar, corregir o anular (8 s): deshacer una compra nueva la anula, deshacer una anulación la vuelve a anotar con los mismos
@@ -57,7 +57,7 @@ hoja.addEventListener('click', (e) => { if (e.target.closest('#h-tipo, #h-sentid
 
 export function abrirHoja(id = null, tipoInicial = 'compra') {
   const c = id ? S.compras.find((x) => x.id === id) : null;
-  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement, confirmadoPara: '', estimado: false });
+  Object.assign(H, { editando: c?.id ?? null, usdTocado: false, guardando: false, origen: document.activeElement, confirmadoPara: '', estimado: false, otroDia: false });
   H.sats = c ? String(c.sats) : '';
   H.usd = c ? String(c.monto) : '';
   H.txid = c?.txid ?? '';
@@ -83,8 +83,8 @@ export function abrirHoja(id = null, tipoInicial = 'compra') {
   $('h-sats').value = H.sats ? entero(Number(H.sats)) : '';
   $('h-usd').value = H.usd;
   $('h-avanzado').open = !!c || !!(b && (b.usd || b.txid || b.extra || b.comision || b.etq));
-  $('h-fecha').value = c?.fecha ?? hoyISO();
   $('h-fecha').max = hoyISO();
+  fijarFecha(c?.fecha ?? hoyISO());
   $('hoja-t').textContent = c ? 'Editar compra' : 'Anotar compra';
   $('h-borrar').hidden = !c;
   limpiarError();
@@ -130,7 +130,7 @@ $('h-habitual').addEventListener('click', () => {
   Object.assign(H, { sats: String(h.sats), usd: '', usdTocado: false, estimado: true });
   $('h-sats').value = entero(h.sats);
   $('h-usd').value = '';
-  $('h-fecha').value = hoyISO(); // la compra de siempre es la de hoy
+  fijarFecha(hoyISO()); // la compra de siempre es la de hoy
   limpiarError();
   pintarHoja();
   guardarBorrador();
@@ -314,7 +314,38 @@ $('h-usd').addEventListener('input', (e) => {
 $('h-txid').addEventListener('input', (e) => { H.txid = e.target.value.trim(); $('hoja-error').textContent = ''; });
 // Al salir del campo, si pegaron un enlace de un explorador se deja solo el TXID.
 $('h-txid').addEventListener('change', (e) => { e.target.value = H.txid = extraerTxid(e.target.value); });
-$('h-fecha').addEventListener('input', () => { limpiarError(); pintarHoja(); });
+$('h-fecha').addEventListener('input', () => { limpiarError(); pintarFecha(); pintarHoja(); });
+// Fecha con «Hoy · Ayer · Otro día» (campamento 18): casi siempre se anota el mismo día o al siguiente, así que el calendario del
+// teléfono (que además puede salir en formato de fuera, 11/15/2026) solo aparece si lo pides. El valor sigue viviendo en `#h-fecha`.
+function pintarFecha() {
+  const f = $('h-fecha').value, hoy = hoyISO();
+  const modo = H.otroDia ? 'otro' : diaDe(f, hoy);
+  document.querySelectorAll('#h-dia button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dia === modo)));
+  $('h-fecha-otro').hidden = modo !== 'otro';
+  const txt = f ? fechaEscrita(f, hoy) : 'elige un día';
+  if ($('h-fecha-txt').textContent !== txt) $('h-fecha-txt').textContent = txt;
+}
+/** Pone la fecha de la hoja y deja el selector en «Hoy», «Ayer» u «Otro día» según corresponda. */
+function fijarFecha(f) {
+  H.otroDia = diaDe(f, hoyISO()) === 'otro';
+  $('h-fecha').value = f;
+  pintarFecha();
+}
+$('h-dia').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-dia]');
+  if (!b) return;
+  const hoy = hoyISO();
+  if (b.dataset.dia === 'otro') {
+    H.otroDia = true;
+    pintarFecha();
+    const inp = $('h-fecha');
+    inp.focus({ preventScroll: true });
+    // En pantallas táctiles el calendario se abre en el mismo toque (un toque menos); con ratón basta el campo, que ya tiene el foco.
+    if (matchMedia('(pointer: coarse)').matches) { try { inp.showPicker?.(); } catch { /* el navegador no lo permite: queda el campo */ } }
+  } else fijarFecha(b.dataset.dia === 'hoy' ? hoy : sumarDias(hoy, -1));
+  limpiarError();
+  pintarHoja();
+});
 hoja.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') return cerrarHoja();
   if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type !== 'date') { e.preventDefault(); $('guardar').click(); }

@@ -738,7 +738,7 @@ html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-ou
 .hoja-cab { display: flex; justify-content: space-between; align-items: center; }
 .hoja-cab h2 { font-size: 1.5rem; }
 .cerrar { min-height: var(--toque); padding: 0 16px; border: 0; border-radius: 999px; background: var(--s2); font-weight: 600; cursor: pointer; }
-.h-fecha { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.875rem; color: var(--txt2); }
+.h-fecha { display: grid; gap: 6px; font-size: 0.875rem; color: var(--txt2); }
 .h-fecha input { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; }
 .h-sats { display: grid; gap: 2px; font-size: 0.8125rem; font-weight: 600; color: var(--txt2); }
 .h-sats input { width: 100%; padding: 2px 0 6px; border: 0; border-bottom: 2px solid var(--naranja-trazo, var(--naranja)); border-radius: 0; background: none; color: var(--txt); font: 500 clamp(2.25rem, 12vw, 3.25rem)/1.1 var(--sans); letter-spacing: -0.02em; outline: none; }
@@ -3178,3 +3178,15 @@ html[data-lector]:not([data-voz]) [data-libro] { visibility: hidden; }
 .l-ver:disabled { opacity: 0.5; cursor: default; }
 @media (hover: hover) and (pointer: fine) { .l-ver:not(:disabled):hover { text-decoration: underline; text-underline-offset: 3px; } }
 @media (max-height: 360px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) { .l-fila { margin-top: 0; } .l-ver { min-width: var(--toque, 48px); } }
+
+/* ---------------------------------------------------------------------------------------------
+   Campamento 18 · El ritual de anotar
+   --------------------------------------------------------------------------------------------- */
+/* Fecha con «Hoy · Ayer · Otro día»: el rótulo y la fecha escrita en un renglón, el selector (píldora de tinta, como el tipo) y, solo
+   con «Otro día», el calendario. */
+.h-fecha-cab { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; margin: 0; font-weight: 600; }
+.h-fecha-cab b { color: var(--txt); font-weight: 600; }
+.h-fecha-otro { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; }
+.h-fecha-otro[hidden] { display: none; }
+.h-fecha-otro input { flex: 0 1 14rem; min-width: 0; }
+.h-fecha-otro input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }

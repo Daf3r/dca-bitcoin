@@ -56,6 +56,8 @@ async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
   await p.waitForTimeout(2800);
   return { ctx, p, consola };
 }
+/** La fecha de la hoja de anotar: «Otro día» enseña el calendario (campamento 18) y ahí se escribe. */
+const ponerFecha = async (p, f) => { await p.click('#h-dia-otro'); await p.fill('#h-fecha', f); };
 const verVista = async (p, v) => { await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(400); };
 const datos = (p, ruta) => p.evaluate((r) => fetch(r).then((x) => x.json()), ruta);
 const saldo = (p) => p.evaluate(() => {
@@ -220,7 +222,7 @@ try {
       await p.click('#anotar');
       await p.waitForTimeout(400);
       await p.fill('#h-sats', String(satsDe(mediana)));
-      await p.fill('#h-fecha', libre);
+      await ponerFecha(p, libre);
       ok(await p.locator('#hoja-calc .costo').count() === 1, 'la hoja dice cómo mueve el costo promedio');
       await p.click('#guardar');
       await p.waitForTimeout(1500);
@@ -232,7 +234,7 @@ try {
       await p.click('#anotar');
       await p.waitForTimeout(400);
       await p.fill('#h-sats', String(satsDe(mediana * 12)));
-      await p.fill('#h-fecha', libre2);
+      await ponerFecha(p, libre2);
       await p.click('#guardar');
       await p.waitForTimeout(250);
       ok(/veces más que tu compra habitual/.test(await p.textContent('#hoja-error')), 'avisa de la cifra rara');
@@ -247,7 +249,7 @@ try {
       await p.click('#anotar');
       await p.waitForTimeout(400);
       await p.fill('#h-sats', String(satsDe(mediana * 12)));
-      await p.fill('#h-fecha', libre3);
+      await ponerFecha(p, libre3);
       await p.click('#h-avanzado summary');
       await p.check('#h-extra');
       await p.fill('#h-nota-c', 'cayó 20 %');
@@ -2883,7 +2885,7 @@ try {
       const usadas = new Set(todos.map((c) => c.fecha));
       const precio = (await datos(p, '/api/precio')).precio;
       const sats = Math.round((20 / precio) * 1e8);
-      const anotar = async (fecha) => { await p.click('#anotar'); await p.waitForTimeout(400); await p.fill('#h-sats', String(sats)); await p.fill('#h-fecha', fecha); await p.click('#guardar'); await p.waitForTimeout(400); };
+      const anotar = async (fecha) => { await p.click('#anotar'); await p.waitForTimeout(400); await p.fill('#h-sats', String(sats)); await ponerFecha(p, fecha); await p.click('#guardar'); await p.waitForTimeout(400); };
       const lunes = '2019-01-07';
       ok(!usadas.has(lunes), 'sello nuevo: la semana de prueba está sin compras');
       await anotar(lunes);

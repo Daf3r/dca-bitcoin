@@ -463,7 +463,16 @@
     <div class="h-ruta" id="h-ruta" hidden aria-hidden="true"><span class="hr-pista"><i class="hr-hecho"></i><i class="hr-yo"></i><i class="hr-fantasma"></i></span></div>
     <p class="hoja-calc" id="hoja-calc" aria-live="polite"></p>
     <p class="hoja-error" id="hoja-error" role="alert"></p>
-    <label class="h-fecha">Fecha <input type="date" id="h-fecha" required></label>
+    <!-- Fecha (campamento 18): casi siempre es hoy o ayer; «Otro día» enseña el calendario. Debajo, la fecha escrita como aquí. -->
+    <div class="h-fecha" id="h-fecha-caja">
+      <p class="h-fecha-cab"><span id="h-fecha-l">Fecha</span> <b id="h-fecha-txt" aria-live="polite"></b></p>
+      <div class="h-tipo h-dia" id="h-dia" role="group" aria-labelledby="h-fecha-l">
+        <button type="button" data-dia="hoy" aria-pressed="true">Hoy</button>
+        <button type="button" data-dia="ayer" aria-pressed="false">Ayer</button>
+        <button type="button" data-dia="otro" id="h-dia-otro" aria-pressed="false" aria-controls="h-fecha-otro">Otro día</button>
+      </div>
+      <label class="h-fecha-otro" id="h-fecha-otro" hidden><span>Elige el día</span> <input type="date" id="h-fecha" required></label>
+    </div>
     <label class="h-nota-campo" id="h-nota-l" hidden>Nota (opcional)
       <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: gasté en renta">
     </label>
