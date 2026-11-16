@@ -280,7 +280,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // La cumbre no es una aguja: el sendero llega a un rellano (la meta) y, a su derecha, un cuerno de roca un poco más alto
   // la resguarda. Así la bandera de la meta queda por debajo del cuerno, dentro de la silueta, y no sobresale contra el cielo.
   // Los campamentos y el detalle de la cumbre crecen con la escena, y encogen si la montaña es baja (teléfono pequeño o acostado).
-  const ec = Math.min(W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1, Math.max(0.74, (piso - c.sy) / 300)), ecC = ec;
+  const ec = Math.min(W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1, Math.max(0.74, (piso - c.sy) / 240)), ecC = ec;
   // El cuerno es una pequeña cima con hombro (no una aguja): sube en dos tramos, tiene su pico y baja por la cara derecha en
   // pendiente, así que se lee como parte de la montaña. Todo son puntos fijos que crecen con la escena (sin `rnd()`).
   // (Montaña: campamentos asentados) A la izquierda del cuerno la arista sube a una antecima baja: entre las dos queda un collado
@@ -485,15 +485,15 @@ function campamento(m, p, cima, i, lado, ec = 1, sol = 1) {
       + `<path class="banderin-pliegue" d="M0.2 ${y(-15.7)}C4 ${y(-16.7)} 7 ${y(-14.2)} 9.7 ${y(-15)}L11.4 ${y(-12.3)}C7.2 ${y(-11.6)} 4 ${y(-14)} 0.2 ${y(-13.2)}Z"/></g></g>`;
   } else {
     const ico = icono(i);
-    dentro = `<g transform="translate(${DH} 0)"><ellipse class="luz-suelo" cx="-1" cy="0.6" rx="19" ry="4.6" fill="url(#m-farol)"/>`
-      + `<g${luz}>${ico.d}<path class="hito-bano" d="M${ico.xe} ${ico.farol}H${ico.b}L${f1(ico.b + 0.8)} ${f1(ico.farol + 8)}H${ico.xe}Z" fill="url(#m-bano)"/></g>${farol(ico.farol, ico.b - 0.5, ico.xe)}</g>`;
+    dentro = `<g transform="translate(${DH} 0)"><ellipse class="luz-suelo" cx="-1" cy="0.6" rx="19" ry="4.6" fill="url(#m-farol)"/><g transform="scale(${K_HITO})">`
+      + `<g${luz}>${ico.d}<path class="hito-bano" d="M${ico.xe} ${ico.farol}H${ico.b}L${f1(ico.b + 0.8)} ${f1(ico.farol + 8)}H${ico.xe}Z" fill="url(#m-bano)"/></g>${farol(ico.farol, ico.b - 0.5, ico.xe, 3.4, 18)}</g></g>`;
   }
   const brillo = cima ? `<ellipse class="brillo-cima" cx="2" cy="${f1(RELLANO_CIMA - 6 / ec - 10)}" rx="22" ry="13" fill="url(#m-luz)"/>` : '';
   return `<g class="campo${cima ? ' es-cima' : ''}" data-m="${m}" transform="translate(${f1(p.x)} ${f1(p.y)})${ec !== 1 ? ` scale(${ec})` : ''}">${brillo}${lado < 0 ? `<g transform="scale(-1 1)">${dentro}</g>` : dentro}</g>`;
 }
 
 /** A cuántas unidades del sendero se planta el hito de un campamento (hacia el lado libre) y a qué altura, bajo la cumbre, queda su rellano. */
-const DH = 15, RELLANO_CIMA = 7.2;
+const DH = 15, RELLANO_CIMA = 7.2, K_HITO = 1.2; // (K_HITO: cuánto se agranda el hito sobre su rellano)
 
 /**
  * Los rellanos (Montaña: campamentos asentados). Cada campamento se asienta en una repisa tallada en la ladera: el suelo (el plano que
@@ -523,7 +523,7 @@ function terrazas(campos, e, sol, [sx, sy]) {
     t.muro += d([[-4, 3], [32, 2.3], [fin, -0.9], [30 + (fin - 30) * 0.5, 4.2], [27, 8.6], [13, 10.6], [1, 9.4], [-7, 5.2]]);
     t.muroLuz += s > 0 ? d([[16, 2.6], [32, 2.3], [fin, -0.9], [30 + (fin - 30) * 0.5, 4.2], [27, 8.6], [14, 10.5]]) : d([[-4, 3], [13, 2.7], [12, 10.5], [1, 9.4], [-7, 5.2]]);
     t.sombra += d([[-7, 5.2], [1, 9.4], [13, 10.6], [27, 8.6], [30 + (fin - 30) * 0.5, 4.2], [29 - s * 3, 11], [18 - s * 4, 15.5], [5 - s * 4, 14], [-5 - s * 2, 10]]);
-    t.pie += d([[DH - 5.6, 0.2], [DH + 5.6, 0.2], [DH + 5.6 - s * 12, 2], [DH - 5.6 - s * 12, 2]]);
+    t.pie += d([[DH - 6.6, 0.2], [DH + 6.6, 0.2], [DH + 6.6 - s * 13, 2.1], [DH - 6.6 - s * 13, 2.1]]);
     t.suelo += d([[-9, 0.4], [-3, -2.6], [33, -3.1], [fin, -0.9], [32, 2.3], [-4, 3]]);
   }
   return `<path class="tz-sombra" d="${t.sombra}"/><path class="tz-corte" d="${t.corte}"/><path class="tz-corte-luz" d="${t.corteLuz}"/><path class="tz-muro" d="${t.muro}"/><path class="tz-muro-luz" d="${t.muroLuz}"/>`

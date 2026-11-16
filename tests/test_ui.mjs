@@ -3973,7 +3973,7 @@ try {
             const suelo = document.querySelector(g.classList.contains('es-cima') ? '.tz-nieve' : '.tz-suelo'), pie = document.querySelector('.tz-pie');
             const sol = [...document.querySelectorAll('.montana .halo')].map((h) => h.getBoundingClientRect()).find((q) => q.width > 0);
             const haciaSombra = sol.left + sol.width / 2 > px ? -1 : 1, e = r2.height / 12;
-            const caja = g.getBoundingClientRect(), nombre = g.dataset.m;
+            const caja = { left: Math.min(r.left, r2.left), top: Math.min(r.top, r2.top), right: Math.max(r.right, r2.right), bottom: Math.max(r.bottom, r2.bottom) }, nombre = g.dataset.m; // la piedra (sin el halo del farol)
             return { enRellano: suelo.isPointInFill(pt(px, py + 0.5)), conSombra: pie.isPointInFill(pt(px + haciaSombra * 6 * Math.max(1, e / 1.4), py + 1.2 * Math.max(1, e / 1.4))), px, py, caja: [caja.left, caja.top, caja.right, caja.bottom], nombre };
           })(),
           vidrio: getComputedStyle(g.querySelector('.farol-cuerpo')).fill, halo: op(g.querySelector('.farol-halo')), suelo: g.querySelector('.luz-suelo') ? op(g.querySelector('.luz-suelo')) : null,
@@ -4006,7 +4006,7 @@ try {
       ok(hitos.every((c) => c.conSombra), `montaña asentada: cada hito echa su sombra en el rellano, al lado contrario del astro (${hitos.map((c) => c.conSombra)})`);
       eq([a.terrazas.rellanos, a.terrazas.cortes, a.terrazas.recorte], [3, 4, 'url(#m-silueta)'], 'montaña asentada: un rellano con su corte de roca por campamento (y el de la cumbre), recortados por la silueta');
       ok(a.terrazas.nodos <= 12, `montaña asentada: los rellanos son terreno de pocos nodos, un trazo por tono (${a.terrazas.nodos})`);
-      ok(a.rotulos.length === 4 && pegados(a).every((d) => d <= 30), `montaña asentada: cada rótulo queda pegado a su campamento (${pegados(a).map(Math.round)} px)`);
+      ok(a.rotulos.length === 4 && pegados(a).every((d) => d <= 36), `montaña asentada: cada rótulo queda pegado a la piedra de su campamento (${pegados(a).map(Math.round)} px)`);
       ok(a.terrazas.repisas, 'montaña asentada: la repisa se alarga bajo el rótulo que se apoya en ella');
       ok(a.bandera2, 'montaña asentada: la bandera de la meta tiene montaña detrás (no asoma contra el cielo)');
       eq(a.etapas, 'path,path,path,path', 'montaña asentada: las marcas de etapa son cuatro trazos, haya las etapas que haya');
