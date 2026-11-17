@@ -225,7 +225,7 @@ html[data-efectos="todos"][data-mueve="torogoz"] .ave { animation: ave 52s linea
   html[data-efectos="todos"] .estrella.t1, html[data-efectos="todos"] .estrella.t2, html[data-efectos="todos"] .estrella.t3, html[data-efectos="todos"] .estrella.t4 { animation-timing-function: steps(15); }
 }
 .escena-velo { display: none; position: absolute; inset: 0; z-index: 0; background: var(--fondo); opacity: 0; pointer-events: none; }
-html[data-efectos="todos"] .escena-velo { display: block; }
+html[data-efectos="todos"] .escena-velo { display: block; will-change: opacity; } /* (rendimiento iPhone) su opacidad cambia en cada fotograma del desplazamiento: como capa propia de la GPU no obliga a repintar la escena que tapa */
 /* La escena despierta al abrir (entrada.js, solo con todos los efectos): `translate` es independiente de `transform`, así que no
    pisa el parallax. */
 @keyframes asienta { from { translate: 0 18px; opacity: 0.4; } to { translate: none; opacity: 1; } }

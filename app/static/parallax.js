@@ -5,7 +5,8 @@
 // CSS heredada obliga a recalcular el estilo de todos los nodos de la escena (unos 400) en cada fotograma del desplazamiento,
 // y eso se nota sobre todo en iPhone. Los cambios se agrupan en un solo `requestAnimationFrame`.
 // (Rendimiento iPhone) Las capas `.par` son ahora `<svg>` propios, capas de la GPU (montana.js: `enCapas`; styles.css: `svg.capa`), y
-// mover una capa no repinta nada. La escala (1.05) no cambia nunca: si cambiara, la capa se volvería a rasterizar.
+// mover una capa no repinta nada. La escala (1.05) no cambia nunca: si cambiara, la capa se volvería a rasterizar. El velo también es
+// una capa propia (`will-change: opacity`): cambiar su opacidad no repinta la escena que tapa.
 import { conAmbiente } from './movimiento.js';
 
 /** Cuánto se mueve cada capa: [píxeles con el puntero, fracción del desplazamiento]. Cada una va un 5 % más grande desde el centro. */
