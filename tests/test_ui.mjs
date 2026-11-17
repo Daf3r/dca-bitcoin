@@ -5811,6 +5811,8 @@ try {
       await x.p.waitForTimeout(250);
       let e = await peli(x.p);
       ok(e.abierta && e.senderos === 1 && e.enPeli === 1 && e.principal === 0, `23·29 una sola escena en el documento: la de la película (${e.senderos}, ${e.principal})`);
+      const fondoPeli = await x.p.evaluate(() => { const f = getComputedStyle(document.getElementById('d-pelicula'), '::backdrop'); return `${f.backdropFilter}|${/^rgb\(/.test(f.backgroundColor)}`; });
+      eq(fondoPeli, 'none|true', '23·29 (rendimiento) el fondo de la película es opaco y sin desenfoque: no se ve y Safari no lo recalcula');
       ok(e.valor === 0 && e.max > 300 && /^Tu saldo el \d/.test(e.rotulo) && e.ev === 'Tu primera compra' && e.vt.endsWith('Tu primera compra.'), `23·29 empieza en la primera compra («${e.rotulo}», ${e.vt})`);
       ok(e.foco === 'pe-play' && e.alcanzados === 0 && e.etapas === 0 && e.pinos[0] === 1 && e.pinos[1] > 40, `23·29 foco en el botón; ni campamentos ni bosque todavía (pinos ${e.pinos})`);
       const yoInicio = e.yoY;

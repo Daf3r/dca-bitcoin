@@ -4310,6 +4310,9 @@ html[data-fiesta="patrias"] .v-patrias { display: inline; }
 .d-pelicula { width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--fondo); color: var(--txt); overflow: hidden; }
 .d-pelicula[open] { display: flex; flex-direction: column; }
 .d-pelicula::backdrop { background: var(--fondo); }
+/* (Rendimiento iPhone) El fondo de la película es opaco, así que el desenfoque de lo de detrás («Cristal», `dialog::backdrop`) no se ve
+   nunca, ni durante su fundido (el fondo opaco lo tapa por dentro); pero Safari lo recalculaba mientras corre la película. */
+html:not([data-ligero]) dialog.d-pelicula::backdrop { backdrop-filter: none; }
 html:is([data-efectos="todos"], [data-efectos="esenciales"]) .d-pelicula[open] { animation: pe-entra 0.3s ease-out; }
 @keyframes pe-entra { from { opacity: 0; } }
 .pe-escena { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--c0); }
