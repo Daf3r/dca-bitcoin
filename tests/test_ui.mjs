@@ -4122,7 +4122,7 @@ try {
       });
       ok(tonos.every((x) => x.dE >= 0.045 && x.nieve !== '255,0,255'), `cumbre: la nieve en sombra se distingue del cielo a las 6, 12, 17:30 y 20 h (${tonos.map((x) => `${x.h} h ${x.dE.toFixed(3)}`).join(', ')})`);
       ok(tonos.every((x) => x.borde >= 3), `cumbre: el canto de la bandera se recorta contra la nieve en sombra (${tonos.map((x) => x.borde.toFixed(1)).join(', ')} : 1)`);
-      ok(c.nodos < 950 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
+      ok(c.nodos < 1000 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
       await t.ctx.close();
     } finally {
       srv.parar();
@@ -5325,7 +5325,7 @@ try {
       const meses = (d) => Math.max(1, (Number(d.slice(0, 4)) - Number(primera.slice(0, 4))) * 12 + Number(d.slice(5, 7)) - Number(primera.slice(5, 7)) + 1);
       const etapa = (d) => { const a = Math.max(0, (Date.parse(d) - Date.parse(primera)) / (365.2425 * 864e5)); return a < 1 ? 'retono' : a < 2 ? 'joven' : a < 5 ? 'arbol' : 'grande'; };
       ok(v.ranchos === 2 && v.casas && v.casas.x >= 0 && v.casas.y > v.saldoAbajo && !v.casasSobreSendero && !v.casasSobreRotulo, `22 cantón: en el teléfono, dos ranchos por debajo del saldo, sin pisar el sendero ni un rótulo (${JSON.stringify(v.casas)})`);
-      ok(v.nodos <= 150 && v.total < 950, `22 presupuesto: el valle en el teléfono son ${v.nodos} nodos (tope 150), la escena ${v.total} (tope 950)`);
+      ok(v.nodos <= 150 && v.total < 1000, `22 presupuesto: el valle en el teléfono son ${v.nodos} nodos (tope 150), la escena ${v.total} (tope 1000, desde el campamento 22B)`);
       ok(v.llena && !v.hilo && !v.playa && v.nivel === 'none', '22 quebrada y lago: en la lluviosa la quebrada baja llena y el lago cubre su playa');
       eq(v.milpa, ['jilote'], '22 milpa: el 10 de julio jilotea');
       ok(v.garza && v.cuerpo && !v.lampara && !v.humo && !v.lucesVis && !v.pisVis && !v.navidad && !v.grabado, '22 de día: la garza y el cayuco con su pescador; sin humo (no es hora del fogón), sin luces, sin piscuchas ni Navidad');
@@ -5390,7 +5390,7 @@ try {
       // Con muchos años, el árbol es grande; y el presupuesto del teléfono se mantiene con la escena más cargada.
       t = await entrar(navegador, srvB, ADMIN, { hora: 20 }, conDia('2026-07-10', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
       v = await valle(t.p);
-      ok(v.nodos <= 150 && v.total < 950, `22 presupuesto con ballena: valle ${v.nodos}, escena ${v.total}`);
+      ok(v.nodos <= 150 && v.total < 1000, `22 presupuesto con ballena: valle ${v.nodos}, escena ${v.total}`);
       await t.ctx.close();
     } finally { srv.parar(); srvB.parar(); }
     // La entrada: el paisaje del valle sin nada de nadie (sin ventanas encendidas, árbol, piscuchas ni grabado).

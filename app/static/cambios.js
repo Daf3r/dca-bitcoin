@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-12-b', fecha: '2026-12-08',
+    items: [
+      'El valle cambia de color con el año: verde en la época de lluvias y dorado en la seca, poco a poco en las primeras semanas de mayo y de noviembre.',
+      'Al amanecer, un mar de niebla llena el valle y la loma del cantón asoma como una isla; antes de las siete y media se levanta.',
+      'En el patio del cantón hay un maquilishuat que se pone rosado en febrero y un árbol de fuego que se pone rojo en abril.',
+      'Junto al lago hay vacas con sus garcitas; de noche se echan a dormir.',
+      'Pasan los azacuanes en octubre y en abril, los pericos al atardecer, los zompopos de mayo después de las primeras lluvias y, en las noches de invierno, relámpagos lejanos detrás de los volcanes.',
+    ],
+  },
+  {
     id: '2026-12-a', fecha: '2026-12-01',
     items: [
       'Al pie de la montaña hay ahora un valle: un cantón de ranchos de teja con su milpa, un camino real que llega a la salida del sendero, una quebrada que baja al lago y, en el lago, tule, una garza y el cayuco de un pescador.',
