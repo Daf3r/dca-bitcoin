@@ -1332,8 +1332,8 @@ def _avisar_movimiento(conn: sqlite3.Connection, antes: list[Mov], cid: int, nue
         extra = "extra " if nueva.get("extra") else ""
         push.notificar(conn, "movimiento", "Libro DCA", f"{quien_} anotó una compra {extra}de {sats:,} sats. {frase_paisaje(cid)}", f"mov-{cid}")
         saldo = sum(-s if tipo == "venta" else s for _f, _i, tipo, s in antes)
-        if cruzadas := ritmo.etapas_cruzadas(saldo, saldo + sats):
-            m = cruzadas[-1]  # la más alta si fueron varias
+        if (m := ritmo.etapa_celebrada(saldo, saldo + sats)) is not None:
+            # La destacada si fueron varias (un campamento o una principal antes que una intermedia; campamento 21), como la celebración.
             # Telegrama (idea 59): el aviso de etapa llega como en los viejos telegramas.
             push.notificar(conn, "hito", "Libro DCA", f"LLEGÓ A {ritmo.nombre_hito(m)} STOP SIGUE EL SENDERO STOP", f"hito-{cid}")
         fechas = [f for f, _i, tipo, _s in antes if tipo == "compra"]

@@ -55,7 +55,15 @@ export function dibujarEscalera(host, lectura, sr, { puntos, escalon, desdeCero,
   }
   const pot = (e) => Number.isInteger(Math.log10(e));
   const apretadas = perfil && perfil.etapas.length > 1 && Math.abs(y(perfil.etapas[0]) - y(perfil.etapas[1])) < 17; // con poco alto, solo las potencias de 10
-  const ticks = perfil ? perfil.etapas.filter((v) => T(v) > lo && T(v) < hi && y(v) > m.t + 6 && y(v) < base - 6 && (!apretadas || pot(v))) : marcas(lo, hi * 0.97).filter((v) => y(v) < base - 16); // la marca pegada a la base (p. ej. «0 sats») solo estorba al primer punto
+  let ticks = perfil ? perfil.etapas.filter((v) => T(v) > lo && T(v) < hi && y(v) > m.t + 6 && y(v) < base - 6 && (!apretadas || pot(v))) : marcas(lo, hi * 0.97).filter((v) => y(v) < base - 16); // la marca pegada a la base (p. ej. «0 sats») solo estorba al primer punto
+  if (perfil) {
+    // Ningún rótulo a menos de 15 px de otro (campamento 21: la siguiente etapa puede quedar pegada a una principal). Primero las
+    // potencias de 10, después la siguiente etapa (la última) y después las demás, de arriba abajo.
+    const orden = [...ticks].sort((a, b) => Number(pot(b)) - Number(pot(a)) || Number(b === perfil.etapas.at(-1)) - Number(a === perfil.etapas.at(-1)) || b - a);
+    const quedan = [];
+    for (const v of orden) if (quedan.every((q) => Math.abs(y(q) - y(v)) >= 15)) quedan.push(v);
+    ticks = ticks.filter((v) => quedan.includes(v));
+  }
   for (const v of ticks) s += `<line class="v-rej" x1="${m.l}" x2="${W - m.r}" y1="${f1(y(v))}" y2="${f1(y(v))}"/>`;
   s += `<line class="v-base" x1="${m.l}" x2="${W - m.r}" y1="${base}" y2="${base}"/>`;
   if (desdeCero) s += `<path class="s-area" fill="url(#s-grad-${host.id})" d="${d}L${f1(x(puntos.at(-1).fecha))} ${base}L${f1(x(puntos[0].fecha))} ${base}Z"/>`;

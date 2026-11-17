@@ -11,7 +11,7 @@
 //  · Ids de `<defs>` únicos con prefijo `s-`/`c-`: puede haber muchos sellos en la misma página, así que cada uno lleva su propia llave.
 //
 // El lenguaje es el de la montaña: la luz llega de arriba a la derecha, pocas piezas con intención, nada de filtros.
-import { entero, etapaAnterior, nombreHito } from './lib.js';
+import { entero, etapaConSelloAnterior, nombreHito } from './lib.js';
 
 /** Escapa un texto para meterlo dentro del SVG como texto. */
 export const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -217,7 +217,7 @@ export function certificado(d) {
     + `<text class="c-rotulo" x="124" y="${pie + 12}" text-anchor="middle">FECHA</text>`
     + `<text class="c-dato" x="356" y="${pie - 6}" text-anchor="middle">${esc(entero(d.nCompras ?? 0))} ${d.nCompras === 1 ? 'compra' : 'compras'}${d.racha > 1 ? ` · racha de ${esc(d.racha)}` : ''}</text>`
     + `<text class="c-rotulo" x="356" y="${pie + 12}" text-anchor="middle">CONSTANCIA</text>`;
-  const etapa = etapaAnterior(d.sats ?? 0);
+  const etapa = etapaConSelloAnterior(d.sats ?? 0); // el lacre de la última etapa con sello (las intermedias no llevan: campamento 21)
   const sel = sello('cert', etapa ? nombreHito(etapa) : null, { clase: ' c-sello' });
   s += `<g transform="translate(206 ${pie - 40}) rotate(-8 34 34) scale(0.68)">${sel.replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`;
   return `${s}</svg>`;
