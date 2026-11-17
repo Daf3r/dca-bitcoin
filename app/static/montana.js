@@ -2,7 +2,7 @@
 import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
-import { escalaValle, sitiosValle, sitiosLadera, canton, pinoNavidad, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna } from './arte-valle.js';
+import { escalaValle, sitiosValle, sitiosLadera, canton, pinoNavidad, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 
 function azar(s) {
@@ -224,7 +224,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-lejos', `gradientUnits="userSpaceOnUse" x1="0" y1="${f1((yH - 0.12) * H)}" x2="0" y2="${f1((yH + 0.12) * H)}"`, [[0, 'lj-0'], [1, 'lj-1']])
     + grad('m-medio', `gradientUnits="userSpaceOnUse" x1="0" y1="${f1((yH + 0.02) * H)}" x2="0" y2="${f1((yH + 0.26) * H)}"`, [[0, 'md-0'], [1, 'md-1']])
     + grad('m-ladera', `gradientUnits="userSpaceOnUse" x1="${f1(c.sx)}" y1="${f1(c.sy)}" x2="${f1(c.sx - W * 0.25 * lado)}" y2="${f1(H)}"`, [[0, 'ld-0'], [0.55, 'ld-1'], [1, 'ld-2']])
-    + grad('m-cara', `gradientUnits="userSpaceOnUse" x1="${f1(c.sx)}" y1="${f1(c.sy)}" x2="${f1(c.sx + (derX0 - c.sx) * 0.35)}" y2="${f1(c.sy + (H - c.sy) * 0.55)}"`, [[0, 'cr-0'], [0.45, 'cr-1'], [1, 'cr-2']])
+    // (Campamento 22B) La cara iluminada: el mismo degradado de siempre, con el vector alargado hasta el pie (las paradas de antes
+    // quedan en el mismo sitio: 0.45 × 0.55 y 1 × 0.55) y una parada más, la falda baja, que toma el verde o el dorado de la época.
+    + grad('m-cara', `gradientUnits="userSpaceOnUse" x1="${f1(c.sx)}" y1="${f1(c.sy)}" x2="${f1(c.sx + ((derX0 - c.sx) * 0.35) / 0.55)}" y2="${f1(H)}"`, [[0, 'cr-0'], [0.2475, 'cr-1'], [0.55, 'cr-2'], [1, 'cr-3']])
     + grad('m-nube', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'nb-0'], [1, 'nb-1']])
     + grad('m-niebla', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'nl-0'], [0.5, 'nl-1'], [1, 'nl-0']])
     + grad('m-lago', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'lg-0'], [1, 'lg-1']])
@@ -368,7 +370,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
-  s = s.replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${lucesValle(valle.luces, valle.k, 1)}${milpa({ ...valle.milpa, sol: solV })}${pinoNavidad(valle.pino)}</g>`);
+  // (Campamento 22B) El mar de niebla del amanecer: una capa detrás de la loma y otra delante de su falda (todo detrás de la montaña).
+  const mar = marDeNiebla({ W, H, canton: valle.canton, milpa: valle.milpa, k: valle.k, cresta: crestaMedia, techo });
+  s = s.replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${mar.atras}${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${lucesValle(valle.luces, valle.k, 1)}${milpa({ ...valle.milpa, sol: solV })}${pinoNavidad(valle.pino)}${mar.frente}</g>`);
   // El mismo trazo, entero (para medir la altitud y el tramo recorrido) y por tramos de zigzag (para la tierra del camino,
   // que se estrecha con la altura: más ancho abajo, más fino arriba, como visto en perspectiva).
   let d = `M${f1(bx)} ${f1(by)}`;

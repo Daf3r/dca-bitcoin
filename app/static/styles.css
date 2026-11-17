@@ -3930,7 +3930,6 @@ html:is([data-milpa="siembra"], [data-milpa="jilote"], [data-milpa="doblada"]) .
 .v-arbol .copa-filo { fill: none; stroke: var(--astro); stroke-opacity: calc(0.16 + var(--halo-a, 0.2) * 0.5); stroke-width: 0.9; stroke-linecap: round; }
 .v-ar-hoja-l { fill: color-mix(in oklab, var(--copa) 70%, var(--astro)); } .v-ar-hoja-s { fill: color-mix(in oklab, var(--copa) 70%, var(--monte-sombra)); }
 html[data-cielo="noche"] .v-arbol :is(.copa-luz, .copa-media) { fill: color-mix(in oklab, var(--copa) 86%, var(--astro)); }
-html[data-epoca="seca"] .v-arbol { --copa: color-mix(in oklab, #9c9456 calc(var(--v-luz) + 4%), var(--pino0)); }
 .v-ar-copa { transform-box: fill-box; transform-origin: 50% 100%; }
 html[data-epoca="seca"] .v-arbol:not(.v-retono) .v-ar-copa { transform: scale(0.84, 0.8); }
 html[data-epoca="seca"] .v-ar-ramas-secas { display: inline; }
@@ -4010,3 +4009,25 @@ html[data-luna-llena][data-cielo="noche"] .v-grabado { display: inline; }
 .v-grabado text { font-family: var(--serif); font-weight: 600; letter-spacing: 0.06em; }
 /* El surco: oscuro por dentro, con un filo fino de luz de luna por fuera. */
 .v-gr-texto { fill: rgb(0 0 0 / 0.42); stroke: color-mix(in oklab, var(--astro) 55%, transparent); }
+
+/* ---------------------------------------------------------------- Campamento 22B · el valle vivo, parte 2 (arte-valle.js) */
+/* 54 · Verde de invierno y dorado de verano: `--v-verde` (cielo.js) va de 1 (lluviosa) a 0 (seca), con la mezcla del 1 al 14 de mayo y
+   de noviembre. Solo el valle y la falda baja: la última parada de cada cara de la montaña, la loma del cantón y las copas del valle.
+   Cuánto se nota lo decide la hora (`--v-tin`): de noche manda la noche. */
+.montana { --v-tin: 27%; --v-pasto: color-mix(in oklab, #4f8d39 calc(var(--v-verde, 1) * 100%), #b4954c); }
+html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .montana { --v-tin: 15%; }
+html[data-cielo="noche"] .montana { --v-tin: 7%; }
+.ld-2 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--monte-sombra) 72%, var(--medio)) calc(100% - var(--v-tin)), var(--v-pasto)); }
+.cr-3 { stop-color: color-mix(in oklab, var(--monte) calc(100% - var(--v-tin)), var(--v-pasto)); }
+.vlo-0 { stop-color: color-mix(in oklab, color-mix(in oklab, color-mix(in oklab, var(--medio) 22%, var(--monte)) 92%, var(--luz-roca)) calc(100% - var(--v-tin) * 1.2), var(--v-pasto)); }
+.vlo-1 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--medio) 16%, var(--monte)) calc(100% - var(--v-tin)), var(--v-pasto)); }
+.v-canton { --copa: color-mix(in oklab, color-mix(in oklab, #4f8f48 calc(var(--v-verde, 1) * 100%), #8f8a4c) calc(var(--v-luz) + 6%), var(--pino0)); }
+.v-arbol { --copa: color-mix(in oklab, color-mix(in oklab, #5c9c4c calc(var(--v-verde, 1) * 100%), #9c9456) calc(var(--v-luz) + 4% + var(--v-verde, 1) * 4%), var(--pino0)); }
+
+/* 55 · El mar de niebla del amanecer (5:00 a 7:30): quieto, opaco, detrás de la montaña; se forma y se levanta con `--v-mar`. */
+.v-mar { display: none; }
+html[data-mar-niebla] .v-mar { display: inline; }
+.montana { --v-niebla: color-mix(in oklab, var(--c3) 24%, #efe9ea); --v-niebla-luz: color-mix(in oklab, var(--c2) 30%, #fffbf4); }
+.v-mar-cuerpo { fill: var(--v-niebla); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
+.v-mar-luz { fill: var(--v-niebla-luz); opacity: calc(var(--v-mar, 0) * 0.9); transition: opacity 4s linear; }
+.v-mar-sombra { fill: color-mix(in oklab, var(--v-niebla) 80%, var(--medio)); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
