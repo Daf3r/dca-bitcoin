@@ -5781,10 +5781,11 @@ try {
         sr: document.getElementById('pe-sr').textContent, ancho: Math.round(document.querySelector('#pe-montana svg')?.getBoundingClientRect().width ?? 0),
       };
     });
-    // (Rendimiento iPhone) Si la película corre, cómo están una estrella, el halo de «Tú» y un pino del bosque (que brota al aparecer).
+    // (Rendimiento iPhone) Si la película corre, cómo están una estrella, el halo de «Tú», un pino del bosque (que brota al aparecer) y
+    // la estrella fugaz (lo que cruza de paso no se queda colgado: sigue).
     const quieto = (p) => p.evaluate(() => {
       const h = document.getElementById('pe-montana'), st = (s) => { const el = h.querySelector(s); return el ? getComputedStyle(el).animationPlayState : 'falta'; };
-      return [h.hasAttribute('data-corre') ? 'corre' : 'quieta', st('.estrella'), st('.yo-halo'), st('#m-bosque path')].join('|');
+      return [h.hasAttribute('data-corre') ? 'corre' : 'quieta', st('.estrella'), st('.yo-halo'), st('#m-bosque path'), st('.fugaz')].join('|');
     });
     // Nada de lo escrito ni los controles tapan el sendero, «Tú», un rótulo o un hito; nada se sale del ancho; toques de 48 px.
     const geometria = (p) => p.evaluate(() => {
@@ -5825,7 +5826,7 @@ try {
       e = await peli(x.p);
       ok(e.valor > e.max * 0.3 && e.valor < e.max * 0.75 && e.play === 'Pausar la película' && !e.yoTxt.length, `23·29 a medio camino corre sola, sin el rótulo de «Tú» (${e.valor} de ${e.max})`);
       ok(e.yoY < yoInicio - 40 && e.pinos[0] > 1 && e.pinos[0] < e.pinos[1], `23·29 «Tú» subió y el bosque crece con las compras (${yoInicio} → ${e.yoY}, pinos ${e.pinos})`);
-      eq(await quieto(x.p), 'corre|paused|paused|running', '23·29 (rendimiento) mientras corre, el ambiente de su escena (estrellas, el halo de «Tú») se queda quieto; el bosque que brota, no');
+      eq(await quieto(x.p), 'corre|paused|paused|running|running', '23·29 (rendimiento) mientras corre, el ambiente de su escena (estrellas, el halo de «Tú») se queda quieto; el bosque que brota y la estrella fugaz, no');
       // Dura 15 s: se mira cuándo llega a hoy (la película arranca a los 0.7 s de abrir). Se espera a que acabe de verdad (el botón dice
       // «otra vez»): el deslizador redondea el día y marca hoy un fotograma antes del final (de 359.5 a 360), y leer ahí daba un falso fallo.
       let fin = null;
@@ -5840,7 +5841,7 @@ try {
       await x.p.click('#pe-play'); await x.p.waitForTimeout(200);
       const a = await peli(x.p); await x.p.waitForTimeout(700); const b = await peli(x.p);
       ok(a.valor > 0 && a.valor < a.max && a.valor === b.valor && b.play === 'Ver la película' && b.yoTxt[0] === 'Tú' && /^\d+ \w+ \d{4}: [\d,]+ sats\./.test(b.sr), `23·29 en pausa se queda quieta, con su rótulo, y lo dice (${b.valor}: «${b.sr}»)`);
-      eq(await quieto(x.p), 'quieta|running|running|running', '23·29 (rendimiento) detenida, el ambiente retoma');
+      eq(await quieto(x.p), 'quieta|running|running|running|running', '23·29 (rendimiento) detenida, el ambiente retoma');
       await x.p.focus('#pe-rango');
       await x.p.keyboard.press('End'); e = await peli(x.p);
       ok(e.valor === e.max && e.rotulo === 'Tu saldo hoy', '23·29 deslizador: Fin lleva a hoy');
@@ -5907,7 +5908,7 @@ try {
       await primera.click(); await l.p.waitForTimeout(400);
       const a = await peli(l.p); await l.p.waitForTimeout(1500); const b = await peli(l.p);
       ok(a.abierta && a.valor > 0 && a.valor === b.valor && b.play === 'Ver la película' && b.foco === 'pe-play', `23·29 «Ver ese día» la abre detenida en ese día (${a.valor})`);
-      eq(await quieto(l.p), 'quieta|running|running|running', '23·29 (rendimiento) abierta en un día, nada del ambiente se pausa');
+      eq(await quieto(l.p), 'quieta|running|running|running|running', '23·29 (rendimiento) abierta en un día, nada del ambiente se pausa');
       ok(/^Saldo del libro el /.test(b.rotulo) && /^El libro llegó al campamento /.test(b.ev) && b.yoTxt[0] === 'Íbamos aquí' && !/\b(tu|tus|llegaste)\b/i.test(`${b.rotulo} ${b.ev} ${b.vt}`), `23·29 lectora: sin tutear («${b.rotulo}» · «${b.ev}» · ${b.yoTxt})`);
       ok(b.vt.startsWith(new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${fecha}T12:00:00`)).replace('.', '')), `23·29 el día es el de la etapa (${fecha}: ${b.vt})`);
       await l.p.keyboard.press('Escape'); await l.p.waitForTimeout(800);
