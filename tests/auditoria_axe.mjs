@@ -550,6 +550,24 @@ try {
         await ctx.close();
       }
     }
+    { // campamento 22C: el valle, de verdad (el pueblo delante y la Navidad en toda la montaña), en el teléfono, con letra muy grande, acostado, en escritorio y la entrada
+      for (const [nombre, dia, hora, vp, letra] of [['Nochebuena en el teléfono', '2026-12-24', 21, { width: 390, height: 844 }, ''], ['Navidad de día con letra muy grande', '2026-12-10', 12, { width: 320, height: 568 }, 'muy-grande'],
+        ['Navidad acostado', '2026-12-24', 21, { width: 844, height: 390 }, ''], ['fiestas patrias en la plaza', '2026-09-15', 12, null, ''], ['el pueblo de noche en escritorio', '2027-01-03', 20, { width: 1440, height: 900 }, '']]) {
+        const ctx = await navegador.newContext({ ...(vp ? { viewport: vp, isMobile: vp.width < 700, hasTouch: vp.width < 1100 } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript(([h, d, l]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); if (l) localStorage.setItem('libro.letra', l); } catch { /* sin almacenamiento */ } }, [hora, dia, letra]);
+        await entrar(p, anio.url, ADMIN); await cerrarOferta(p);
+        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+        await auditar(p, `22C ${nombre} ${esquema}`);
+        await ctx.close();
+      }
+      const ctx = await navegador.newContext({ ...devices['iPhone 13'], colorScheme: esquema });
+      const p = await ctx.newPage();
+      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '21'); localStorage.setItem('libro.dia', '2026-12-24'); } catch { /* sin almacenamiento */ } });
+      await p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' }); await p.waitForTimeout(600);
+      await auditar(p, `22C la entrada en Nochebuena ${esquema}`);
+      await ctx.close();
+    }
     { // campamento 24: medir este aparato (antes de la prueba, durante, con el resultado) y las medidas en «Estado del sistema»
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

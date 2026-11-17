@@ -255,106 +255,22 @@ export function sitiosLadera({ W, H = 1e4, sx, sy, izq = [], der, nv, pts = [], 
   return { quebrada, roca };
 }
 
-// ------------------------------------------------------------------------------------------------ el cantón (idea 45)
+// ------------------------------------------------------------------------------------------------ la loma lejana (antes, el cantón)
 /**
- * Los ranchos de teja en su loma: cada uno es tres planos (el costado que mira al astro, el hastial en sombra y el tejado), con el alero
- * que echa su sombra en la pared, la puerta, las ventanas (encendidas de noche, una por persona con cuenta) y su sombra en el suelo. La
- * loma tiene su cara al astro y su cara en sombra; el patio de tierra asienta las casas. El humo del fogón es ambiente.
- * En Navidad: una guirnalda de foquitos en los aleros y el nacimiento en el nicho del rancho del medio (no cuenta como ventana).
+ * La loma del valle de atrás, a la izquierda de la montaña y detrás de su falda: su cara al astro, su cara en sombra y un filo de luz.
+ * Sobre ella, de noche, las luces lejanas (`lucesValle`, capa 1) y, al amanecer, el mar de niebla la deja como una isla. (Campamento
+ * 22C: los ranchos bajaron al pueblo del primer plano, `arte-pueblo.js`; aquí queda la loma.)
  */
-export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900, soloLoma = false }) {
-  const A = { lomaL: '', lomaS: '', filo: '', rellano: '', canto: '', sombra: '', paredL: '', paredS: '', techoL: '', techoS: '', alero: '', puerta: '', ventana: '', luz: '', halo: '', nav: ['', '', ''], nicho: '', figuras: '', tronco: '' };
-  const humos = [];
-  // La loma: el lomo del valle donde vive el cantón. Sube desde la orilla de la escena, hace un rellano bajo los ranchos y baja hacia la
-  // montaña (por detrás de su falda); llega hasta el pie de la escena (no flota en la bruma). Su cara izquierda queda en sombra.
+export function canton({ x, y, k, n, H = 900 }) {
   const span = (RANCHOS[n - 1][0] + ANCHO_RANCHO) * k;
   const xa = x - 26 * k, xb = x + span + 6 * k, fondo = H + 12;
   const cima = crestaLoma({ x, y, k, n });
   const suave = (pts) => `M${P(pts[0])}${pts.slice(1).map((q, i) => `Q${P(pts[i])} ${P([(pts[i][0] + q[0]) / 2, (pts[i][1] + q[1]) / 2])}`).join('')}L${P(pts[pts.length - 1])}`;
   const lomaBase = `${suave(cima)}L${f1(xb + 96 * k)} ${f1(fondo)}L-30 ${f1(fondo)}Z`;
-  A.lomaS = poli([[xa - 44 * k, y + 20 * k], [xa - 10 * k, y + 5 * k], [x + 4 * k, y + 30 * k], [x - 22 * k, fondo], [-30, fondo], [-30, y + 46 * k]]);
-  A.lomaL = poli([[xb, y + 1.5 * k], [xb + 34 * k, y + 13 * k], [xb + 96 * k, y + 44 * k], [xb + 96 * k, fondo], [xb + 6 * k, fondo], [x + span * 0.6, y + 26 * k]]);
-  A.filo = `M${P([xa - 10 * k, y + 5 * k])}Q${P([x + span * 0.35, y - 1.5 * k])} ${P([xb, y + 1.5 * k])}`;
-  // (22C) El pueblo bajó al primer plano: aquí queda la loma del fondo (con sus luces lejanas y su milpa), sin casas.
-  if (soloLoma) return `<g class="v-loma-lejos" aria-hidden="true"><path class="v-loma" d="${lomaBase}" fill="url(#m-v-loma)"/><path class="v-loma-s" d="${A.lomaS}"/><path class="v-loma-l" d="${A.lomaL}"/><path class="v-loma-filo" d="${A.filo}" stroke-width="${f1(0.9 * k)}"/></g>`;
-  // Dos árboles de aquí (campamento 22B, idea 56), con copas facetadas como las de los árboles de honor: entre los ranchos, un
-  // maquilishuat (copa redonda; en febrero, toda rosada) y al final del patio un árbol de fuego (copa de sombrilla, ancha y plana; en
-  // abril, roja). Cada uno con sus propios trazos (florecen en meses distintos) y, a su pie, las flores caídas (solo cuando florece).
-  const arboles = n > 2 ? [[x + 23 * k, y - 4.6 * k, 6.4, 'maqui'], [xb + 4 * k, y + 1.5 * k, 6.6, 'fuego']] : [[x + 24 * k, y - 4.6 * k, 6, 'maqui'], [xb + 3 * k, y + 1.5 * k, 5.6, 'fuego']];
-  const copas = {}, flores = {};
-  for (const [ax, ay, r, sp] of arboles) {
-    // El árbol de fuego: tronco corto que se abre bajo una copa ancha y baja, más ancha que alta pero con cuerpo (una tabla fina en un
-    // palo se leía como una sombrilla).
-    const fuego = sp === 'fuego', rx = r * k * (fuego ? 1.3 : 1), ry = r * k * (fuego ? 0.66 : 0.86), cy = ay - r * k * (fuego ? 1.02 : 1.25);
-    const tw = (fuego ? 0.95 : 0.7) * k;
-    A.tronco += poli([[ax - tw, ay], [ax + tw, ay], [ax + tw * 0.7, cy + ry * 0.4], [ax - tw * 0.7, cy + ry * 0.4]]);
-    if (fuego) A.tronco += poli([[ax - tw * 0.5, cy + ry * 0.9], [ax - rx * 0.42, cy + ry * 0.2], [ax - rx * 0.36, cy + ry * 0.05], [ax, cy + ry * 0.62], [ax + rx * 0.4, cy + ry * 0.08], [ax + rx * 0.46, cy + ry * 0.24], [ax + tw * 0.5, cy + ry * 0.9]]); // las ramas que se abren
-    copas[sp] = facetas(ax, cy, rx, ry, fuego ? [1, 0.9, 1.06, 0.95, 1.03, 0.92, 1.05, 0.97] : [1, 0.92, 1.05, 0.96, 1.02, 0.9, 1.04], sol, fuego ? 0.1 : 0.2, undefined, fuego ? 0.5 : 0.62);
-    // Las flores caídas: una alfombra baja bajo la copa, corrida hacia el lado de la sombra.
-    const fx = ax - sol * rx * 0.12, fr = rx * 0.95;
-    flores[sp] = `M${f1(fx - fr)} ${f1(ay + 0.5 * k)}Q${f1(fx)} ${f1(ay - 1.6 * k)} ${f1(fx + fr)} ${f1(ay + 0.5 * k)}Q${f1(fx)} ${f1(ay + 1.6 * k)} ${f1(fx - fr)} ${f1(ay + 0.5 * k)}Z`;
-  }
-  // Cada rancho se asienta en su rellano: el plano de tierra apisonada y su canto en sombra (como los rellanos de los campamentos).
-  RANCHOS.slice(0, n).forEach(([dx, dy, s]) => {
-    const u = k * s, ox = x + dx * k, oy = y + dy * k;
-    const m = (px, py) => [ox + sol * px * u, oy + py * u];
-    A.rellano += poli([m(-4, 0.4), m(-1.5, -1.6), m(26.5, -6.4), m(29, -3.8), m(26, 0.2), m(13, 2.6), m(-1, 2.8)]);
-    A.canto += poli([m(-4, 0.4), m(-1, 2.8), m(13, 2.6), m(26, 0.2), m(29, -3.8), m(29, -3), m(26.4, 1.2), m(13, 3.5), m(-1, 3.7), m(-4, 1.2)]);
-  });
-  let vent = Math.max(0, ventanas);
-  const sitiosVentana = [];
-  RANCHOS.slice(0, n).forEach(([dx, dy, s], i) => {
-    const u = k * s, ox = x + dx * k, oy = y + dy * k;
-    const m = (px, py) => [ox + sol * px * u, oy + py * u]; // local → escena (con la luz por la derecha, el costado mira al astro)
-    const fw = 11, wh = 7, gh = 5, dx2 = 14, dy2 = -4.2;
-    const a = m(0, 0), b = m(fw, 0), c = m(fw, -wh), d = m(0, -wh), e = m(fw / 2, -wh - gh);
-    const bb = m(fw + dx2, dy2), cc = m(fw + dx2, -wh + dy2), ee = m(fw / 2 + dx2, -wh - gh + dy2);
-    const vo = 1.9, vv = 1.3; // vuelo del alero
-    const c2 = m(fw + vo, -wh + vv), cc2 = m(fw + dx2 + vo, -wh + dy2 + vv), d2 = m(-vo, -wh + vv);
-    A.sombra += poli([m(-2.5, 0.6), a, b, bb, m(fw + dx2 + 2, dy2 + 0.4), m(dx2 - 6, dy2 + 1.6)].map(([px, py]) => [px - sol * 3.5 * u, py + 0.6 * u]));
-    A.paredS += poli([a, b, c, e, d]); // el hastial, de frente y en sombra
-    A.paredL += poli([b, bb, cc, c]); // el costado, al astro
-    A.alero += poli([c, cc, m(fw + dx2, -wh + dy2 + 1.5), m(fw, -wh + 1.5)]); // la sombra del alero en la pared
-    A.techoL += poli([e, ee, cc2, c2]);
-    A.techoS += poli([d2, e, c2, m(fw + vo, -wh + vv + 0.9), e.map((v, j) => v + [0, 0.9 * u][j]), m(-vo, -wh + vv + 0.9)]); // el canto del tejado sobre el hastial
-    A.puerta += poli([m(2, 0), m(4.8, 0), m(4.8, -4.6), m(2, -4.6)]);
-    // Dos ventanas en el costado (siguen su inclinación); el rancho del medio lleva además el nicho del nacimiento en el hastial.
-    for (const t of [0.3, 0.7]) {
-      const p0 = [fw + dx2 * t - 1.3, dy2 * t - 3.2], p1 = [fw + dx2 * t + 1.3, dy2 * (t + 0.093) - 3.2];
-      const q = [m(p0[0], p0[1]), m(p1[0], p1[1]), m(p1[0], p1[1] - 2.4), m(p0[0], p0[1] - 2.4)];
-      sitiosVentana.push({ q, c: m(fw + dx2 * t, dy2 * t - 4.4), orden: (t > 0.5 ? 10 : 0) + i });
-    }
-    if (i === Math.min(1, n - 1)) {
-      const nq = [m(6.2, -1.2), m(9.2, -1.2), m(9.2, -4.4), m(7.7, -5.4), m(6.2, -4.4)];
-      A.nicho += poli(nq);
-      const fx = (px, py) => P(m(px, py));
-      // La Virgen arrodillada, San José con su vara y el pesebre (siluetas contra la luz del nicho).
-      A.figuras += `M${fx(6.6, -1.2)}L${fx(7.1, -2.6)}L${fx(7.6, -1.2)}Z M${fx(7.1, -2.8)}L${fx(7.4, -3.1)}L${fx(7.1, -3.4)}L${fx(6.8, -3.1)}Z M${fx(8.2, -1.2)}L${fx(8.4, -3.4)}L${fx(8.9, -3.4)}L${fx(8.9, -1.2)}Z M${fx(8.55, -3.5)}L${fx(8.85, -3.8)}L${fx(8.55, -4.1)}L${fx(8.25, -3.8)}Z M${fx(7.4, -1.2)}L${fx(7.55, -1.8)}L${fx(8.05, -1.8)}L${fx(8.15, -1.2)}Z`;
-    }
-    // La guirnalda de Navidad: foquitos a lo largo del alero, tres colores que se alternan.
-    for (let j = 0; j <= 8; j++) {
-      const t = j / 8, p = m(fw + vo + dx2 * t, -wh + vv + dy2 * t + 0.6 + Math.sin(t * Math.PI * 4) * 0.5);
-      A.nav[j % 3] += `M${P(p)}h0.01`;
-    }
-    for (let j = 1; j <= 3; j++) { const p = m(fw / 2 - j * 1.6, -wh - gh + j * 1.25 + 0.7); A.nav[(j + 1) % 3] += `M${P(p)}h0.01`; }
-    if (i < n - 1) humos.push(m(fw / 2 + dx2 * 0.62, -wh - gh + dy2 * 0.62 - 0.6));
-  });
-  // Ventanas: se encienden tantas como personas con cuenta, empezando por las de delante; las demás quedan oscuras.
-  sitiosVentana.sort((a, b) => a.orden - b.orden).forEach(({ q, c }) => {
-    if (vent > 0) { A.luz += poli(q); A.halo += `M${P(c)}h0.01`; vent--; } else A.ventana += poli(q);
-  });
-  const sw = 7.5 * k;
-  // El humo: tres bocanadas por fogón, a destiempo (`v-hu-0…2`); el segundo fogón, más lento (`v-hu-b`). Sin grupo: cada una lleva su clase.
-  const humo = humos.map(([hx, hy], i) => [0, 1, 2].map((j) => `<circle class="efecto-ambiente v-humos v-hu v-hu-${j}${i ? ' v-hu-b' : ''}" cx="${f1(hx)}" cy="${f1(hy)}" r="${f1((1.6 + j * 0.5) * k)}"/>`).join('')).join('');
-  return `<g class="v-canton" aria-hidden="true"><path class="v-loma" d="${lomaBase}" fill="url(#m-v-loma)"/><path class="v-loma-s" d="${A.lomaS}"/><path class="v-loma-l" d="${A.lomaL}"/><path class="v-loma-filo" d="${A.filo}" stroke-width="${f1(0.9 * k)}"/>`
-    + `<path class="v-canto" d="${A.canto}"/><path class="v-rellano" d="${A.rellano}"/><path class="v-sombra" d="${A.sombra}"/>`
-    + Object.keys(flores).map((sp) => `<path class="v-flores v-flores-${sp}" d="${flores[sp]}"/>`).join('')
-    + `<path class="v-ar-tronco" d="${A.tronco}"/>${Object.entries(copas).map(([sp, c]) => `<path class="copa v-${sp}" d="${c.base}"/><path class="copa-media v-${sp}" d="${c.media}"/><path class="copa-luz v-${sp}" d="${c.luz}"/><path class="copa-sombra v-${sp}" d="${c.sombra}"/>`).join('')}`
-    + `<path class="v-pared-s" d="${A.paredS}"/><path class="v-pared-l" d="${A.paredL}"/><path class="v-alero" d="${A.alero}"/>`
-    + `<path class="v-puerta" d="${A.puerta}"/><path class="v-ventana" d="${A.ventana}"/><path class="v-luz" d="${A.luz}"/><path class="v-halo" d="${A.halo}" stroke-width="${f1(sw)}"/>`
-    + `<path class="v-techo-s" d="${A.techoS}"/><path class="v-techo-l" d="${A.techoL}"/>`
-    + `<path class="v-navidad v-nicho" d="${A.nicho}"/><path class="v-navidad v-figuras" d="${A.figuras}"/>${A.nav.map((d, j) => `<path class="v-navidad v-foco v-foco-${j}" d="${d}" stroke-width="${f1(1.25 * k)}"/>`).join('')}`
-    + `${humo}</g>`;
+  const lomaS = poli([[xa - 44 * k, y + 20 * k], [xa - 10 * k, y + 5 * k], [x + 4 * k, y + 30 * k], [x - 22 * k, fondo], [-30, fondo], [-30, y + 46 * k]]);
+  const lomaL = poli([[xb, y + 1.5 * k], [xb + 34 * k, y + 13 * k], [xb + 96 * k, y + 44 * k], [xb + 96 * k, fondo], [xb + 6 * k, fondo], [x + span * 0.6, y + 26 * k]]);
+  const filo = `M${P([xa - 10 * k, y + 5 * k])}Q${P([x + span * 0.35, y - 1.5 * k])} ${P([xb, y + 1.5 * k])}`;
+  return `<g class="v-loma-lejos" aria-hidden="true"><path class="v-loma" d="${lomaBase}" fill="url(#m-v-loma)"/><path class="v-loma-s" d="${lomaS}"/><path class="v-loma-l" d="${lomaL}"/><path class="v-loma-filo" d="${filo}" stroke-width="${f1(0.9 * k)}"/></g>`;
 }
 
 // ------------------------------------------------------------------------------------------------ vacas y garzas (campamento 22B, idea 58)
@@ -391,27 +307,6 @@ export function potrero({ vacas = [], k = 1 }) {
   });
   return `<path class="v-vaca-sombra" d="${sombra}"/><path class="v-vaca v-vaca-pie v-vaca-s" d="${pieS}"/><path class="v-vaca v-vaca-pie v-vaca-l" d="${pieL}"/>`
     + `<path class="v-vaca v-vaca-echada v-vaca-s" d="${echS}"/><path class="v-vaca v-vaca-echada v-vaca-l" d="${echL}"/><path class="v-garcita" d="${garcitas}"/>`;
-}
-
-/** El pino de Navidad del cantón: dos pisos en sombra y luz, foquitos de tres colores en guirnalda (parpadean suave solo con «todos»). Sin estrella. */
-export function pinoNavidad({ x, y, k }) {
-  const a = 21 * k, an = 6.6 * k;
-  const piso = (y0, h, w) => [[x, y0 - h], [x + w, y0], [x - w, y0]];
-  const p1 = piso(y - 4 * k, a * 0.62, an), p2 = piso(y - a * 0.42, a * 0.58, an * 0.74);
-  const mitad = (t) => poli([t[0], [x, t[1][1]], t[2]]);
-  const luz = `${poli([p1[0], p1[1], [x, p1[1][1]]])}${poli([p2[0], p2[1], [x, p2[1][1]]])}`;
-  const focos = ['', '', ''];
-  let j = 0;
-  for (const [y0, h, w] of [[y - 4 * k, a * 0.62, an], [y - a * 0.42, a * 0.58, an * 0.74]]) {
-    for (let t = 0.22; t < 0.98; t += 0.17) {
-      const yy = y0 - h + h * t, ww = w * t * 0.92, xx = x + (j % 2 ? ww : -ww) * (0.25 + 0.7 * ((j * 0.37) % 1));
-      focos[j % 3] += `M${P([xx, yy])}h0.01`;
-      j++;
-    }
-  }
-  const nav = 'v-navidad v-pino-nav'; // (sin grupo: cada trazo lleva la clase que lo enseña en Navidad)
-  return `<path class="${nav} v-pn-tronco" d="${poli([[x - 1.1 * k, y], [x + 1.1 * k, y], [x + 0.8 * k, y - 5 * k], [x - 0.8 * k, y - 5 * k]])}"/>`
-    + `<path class="${nav} v-pn" d="${mitad(p1)}${mitad(p2)}"/><path class="${nav} v-pn-l" d="${luz}"/>${focos.map((d, i) => `<path class="${nav} v-pn-foco v-pf-${i}" d="${d}" stroke-width="${f1(1.5 * k)}"/>`).join('')}`;
 }
 
 // ------------------------------------------------------------------------------------------------ la milpa (idea 23)
