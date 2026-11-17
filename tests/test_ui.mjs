@@ -872,6 +872,79 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- rendimiento iPhone: la escena en capas, el velo como capa propia y el ambiente quieto al deslizar
+  {
+    const srv = await servidor('anio');
+    try {
+      const init = [([d]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, ['2026-11-17']];
+      const r = await entrar(navegador, srv, ADMIN, { hora: 20, reducedMotion: 'no-preference' }, init);
+      await r.p.evaluate(() => { for (const d of document.querySelectorAll('dialog[open]')) d.close(); document.documentElement.style.scrollBehavior = 'auto'; scrollTo(0, 0); });
+      await r.p.waitForTimeout(300);
+      const e = await r.p.evaluate(() => {
+        const h = document.getElementById('montana'), cs = (x) => getComputedStyle(x);
+        return {
+          primero: `${h.firstElementChild.tagName.toLowerCase()}|${h.firstElementChild.getAttribute('role')}`,
+          capas: [...h.querySelectorAll(':scope > svg.capa')].map((s) => `${[...s.classList].find((c) => c.startsWith('par-'))}|${s.getAttribute('aria-hidden')}|${cs(s).zIndex}|${cs(s).willChange}|${cs(s).transform}`),
+          grupos: h.querySelector('svg').querySelectorAll('.par').length,
+          alba: document.getElementById('m-alba').ownerSVGElement.classList.contains('par-cielo'),
+          aislada: cs(h).isolation, velo: cs(document.querySelector('.escena-velo')).willChange,
+          toques: [cs(h.querySelector('svg')).pointerEvents, cs(h.querySelector('svg.capa')).pointerEvents],
+        };
+      });
+      eq(e.primero, 'svg|img', 'capas: el <svg> principal (role=img) sigue siendo el primero de la escena');
+      const m = 'matrix(1.05, 0, 0, 1.05, 0, 0)';
+      eq(e.capas, [`par-cielo|true|-1|transform|${m}`, `par-lejos|true|-1|transform|${m}`, `par-medio|true|-1|transform|${m}`], 'capas: cielo, sierra lejana y media en su propio <svg>, debajo, ocultas a los lectores y compuestas aparte (con su escala desde el principio)');
+      eq(e.grupos, 0, 'capas: ningún grupo del parallax queda dentro del <svg> principal (moverlo lo repintaría entero en Safari)');
+      ok(e.alba, 'capas: el velo de las celebraciones va en la capa del cielo (tiñe solo el cielo)');
+      eq([e.aislada, e.velo], ['isolate', 'opacity'], 'capas: la escena aísla su pila y el velo del cielo es una capa propia');
+      eq(e.toques, ['none', 'none'], 'capas: los <svg> de la escena no reciben toques (la luna sí: bloque del campamento 12)');
+      // Al deslizar, el ambiente que se repite se queda quieto; lo de una celebración (#m-fx) sigue; 200 ms después, todo retoma.
+      const pausa = await r.p.evaluate(async () => {
+        const brasa = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        brasa.setAttribute('class', 'brasa');
+        document.getElementById('m-fx').append(brasa);
+        const st = (x) => getComputedStyle(x).animationPlayState.split(', ')[0];
+        const estrella = document.querySelector('.estrella.t1'), lu = document.querySelector('.lu-v'), escena = document.querySelector('.escena');
+        const antes = [st(estrella), st(brasa)];
+        scrollTo(0, 60);
+        await new Promise((res) => setTimeout(res, 90));
+        const durante = [escena.dataset.desliza ?? null, st(estrella), st(lu), st(brasa)];
+        await new Promise((res) => setTimeout(res, 450));
+        const despues = [escena.dataset.desliza ?? null, st(estrella), st(lu)];
+        scrollTo(0, 0);
+        brasa.remove();
+        return { antes, durante, despues };
+      });
+      eq(pausa.antes, ['running', 'running'], 'pausa al deslizar: en reposo, todo corre');
+      eq(pausa.durante, ['1', 'paused', 'paused', 'running'], 'pausa al deslizar: estrellas y luciérnagas quietas; la celebración sigue');
+      eq(pausa.despues, [null, 'running', 'running'], 'pausa al deslizar: al parar, retoma');
+      // Interruptores para medir en el aparato (solo /medir): sin capas, el dibujo es el de antes; `?sin=` los quita.
+      await r.p.goto(`${srv.url}/medir?sin=capas,pausa`);
+      await r.p.waitForSelector('#d-medir[open]', { timeout: 15000 });
+      const sin = await r.p.evaluate(() => ({ sin: document.documentElement.dataset.sin, capas: document.querySelectorAll('svg.capa').length, grupos: document.querySelectorAll('#montana svg g.par').length, aparato: document.getElementById('me-aparato').textContent }));
+      eq([sin.sin, sin.capas, sin.grupos], ['capas pausa', 0, 3], 'medir: /medir?sin=capas,pausa apaga esas técnicas (la escena como antes)');
+      ok(sin.aparato.includes('para comparar, sin: capas, pausa'), `medir: el texto del aparato lo dice (${sin.aparato})`);
+      await r.p.goto(`${srv.url}/`);
+      await r.p.waitForTimeout(1500);
+      eq(await r.p.evaluate(() => [document.documentElement.dataset.sin ?? null, document.querySelectorAll('#montana > svg.capa').length]), [null, 3], 'medir: fuera de /medir no se lee nunca');
+      await r.p.goto(`${srv.url}/medir?sin=`);
+      await r.p.waitForSelector('#d-medir[open]', { timeout: 15000 });
+      eq(await r.p.evaluate(() => [document.documentElement.dataset.sin ?? null, document.querySelectorAll('#montana > svg.capa').length]), [null, 3], 'medir: /medir?sin= vuelve a medir con todo');
+      eq(r.consola, [], 'capas: consola limpia');
+      await r.ctx.close();
+      // La entrada: la misma escena en capas (sin sesión).
+      const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+      const p = await ctx.newPage();
+      await p.addInitScript(() => { try { localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.hora', '20'); } catch { /* sin almacenamiento */ } });
+      await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+      await p.waitForTimeout(800);
+      eq(await p.evaluate(() => [document.querySelector('#montana > svg')?.getAttribute('role'), document.querySelectorAll('#montana > svg.capa').length]), ['img', 3], 'capas: la entrada también');
+      await ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- se siente como app: recargar al arrastrar, hoja arrastrable, carga, avisos, tema
   {
     const srv = await servidor('nueve');
