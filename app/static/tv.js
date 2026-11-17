@@ -209,9 +209,18 @@ function programarColocar() {
   colocando = setTimeout(() => requestAnimationFrame(() => { colocando = 0; colocarTarjetas(); }), 60);
 }
 // La montaña se redibuja por su cuenta (cambio de tamaño, subida de «Tú» que quita y vuelve a poner los rótulos): se vuelve a mirar.
-new MutationObserver(() => programarColocar()).observe($('montana'), { childList: true, subtree: true });
-new ResizeObserver(() => programarColocar()).observe(document.querySelector('.escena'));
-for (const id of TARJETAS) new ResizeObserver(() => programarColocar()).observe($(id));
+// Los vigías solo se conectan mientras se ve la tele (`arrancar`) y se sueltan al salir: fuera de ella no cuestan nada.
+let vigias = null;
+function vigilar(si) {
+  if (!si) { for (const v of vigias ?? []) v.disconnect(); vigias = null; return; }
+  if (vigias) return;
+  const mo = new MutationObserver(() => programarColocar());
+  mo.observe($('montana'), { childList: true, subtree: true });
+  const ro = new ResizeObserver(() => programarColocar());
+  ro.observe(document.querySelector('.escena'));
+  for (const id of TARJETAS) ro.observe($(id));
+  vigias = [mo, ro];
+}
 document.fonts?.ready.then(() => programarColocar());
 
 // ------------------------------------------------------------------------- la tele duerme (campamento 21B, idea 42)
@@ -344,6 +353,7 @@ async function mantenerDespierta() {
 /** Lo que corre solo mientras se ve la tele: el pulso del reloj, la pantalla despierta y la primera colocación. */
 function arrancar() {
   if (!pulso) pulso = setInterval(latir, 5000);
+  vigilar(true);
   latir();
   mantenerDespierta();
   programarColocar();
@@ -363,6 +373,7 @@ export function salirTV() {
   delete raiz.dataset.tv;
   delete raiz.dataset.tvActivo;
   clearInterval(pulso); pulso = 0;
+  vigilar(false);
   clearTimeout(fundidoNoche); dormida = false; despiertaHasta = 0;
   delete raiz.dataset.tvDuerme;
   $('tv-noche').classList.remove('vis'); $('tv-noche').hidden = true;

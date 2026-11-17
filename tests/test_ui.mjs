@@ -68,6 +68,35 @@ const saldo = (p) => p.evaluate(() => {
   return { txt: document.querySelector('#s-sats .sr').textContent, w: Math.round(r.width), h: Math.round(r.height), unidad: document.getElementById('s-unidad').textContent, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
 });
 
+/**
+ * Ninguna tarjeta visible de la tele tapa el sendero (muestras del trazo cada 4 px, con su medio ancho), «Tú», los rótulos, los hitos,
+ * el saldo, el precio ni otra tarjeta, ni se sale de la pantalla. Se calcula aparte del código que las coloca.
+ */
+const sinTapar = (p) => p.evaluate(() => {
+  const vis = (e) => e && !e.hidden && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && Number(getComputedStyle(e).opacity) > 0;
+  const tarjetas = [...document.querySelectorAll('.tv-tarjeta')].filter(vis).map((e) => ({ id: e.id, r: e.getBoundingClientRect() }));
+  const camino = document.querySelector('#montana #m-sendero');
+  const m = camino.getScreenCTM(), largo = camino.getTotalLength();
+  const pts = [];
+  for (let l = 0; l <= largo; l += 4) { const q = camino.getPointAtLength(l); pts.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]); }
+  const marcas = [...document.querySelectorAll('#montana #m-etiquetas > *, #montana #m-yo .yo-anillo, #montana .campo .campo-ico, #montana .campo .banderin')].map((e) => e.getBoundingClientRect()).filter((r) => r.width);
+  const textos = ['#t-saldo', '#s-saldo-v', '#s-valor', '#cotizacion', '.escena .marca', '#tv-nombre'].map((s) => document.querySelector(s)).filter(vis).map((e) => e.getBoundingClientRect());
+  const cruza = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  const fallos = [];
+  for (const [i, t] of tarjetas.entries()) {
+    if (pts.some(([x, y]) => x > t.r.left - 6 && x < t.r.right + 6 && y > t.r.top - 6 && y < t.r.bottom + 6)) fallos.push(`${t.id} sobre el sendero`);
+    if (marcas.some((r) => cruza(t.r, r))) fallos.push(`${t.id} sobre «Tú», un rótulo o un hito`);
+    if (textos.some((r) => cruza(t.r, r))) fallos.push(`${t.id} sobre el saldo, el precio o la marca`);
+    if (t.r.left < 0 || t.r.top < 0 || t.r.right > innerWidth + 0.5 || t.r.bottom > innerHeight + 0.5) fallos.push(`${t.id} fuera de la pantalla`);
+    for (const o of tarjetas.slice(i + 1)) if (cruza(t.r, o.r)) fallos.push(`${t.id} sobre ${o.id}`);
+  }
+  // Las que no se ven, con su porqué (sin sitio: `data-sitio="0"`), para que un fallo diga qué pasó
+  const enFiesta = !document.getElementById('tv-fiesta').hidden; // durante la fiesta, el último movimiento le cede su sitio
+  const ocultas = [...document.querySelectorAll('.tv-tarjeta')].filter((e) => !e.hidden && !tarjetas.some((t) => t.id === e.id) && !(enFiesta && e.id === 'tv-ultimo'))
+    .map((e) => `${e.id} sin ver (sitio ${e.dataset.sitio ?? '—'}, ${e.offsetWidth}×${e.offsetHeight})`);
+  return { fallos, ocultas, vistas: tarjetas.map((t) => t.id), etiquetas: marcas.length, txt: `${tarjetas.map((t) => t.id).join(', ')}${fallos.length || ocultas.length ? `: ${[...fallos, ...ocultas].join('; ')}` : ''}` };
+});
+
 const navegador = await chromium.launch();
 try {
   // ---------------------------------------------------------------- un año de compras
@@ -3233,6 +3262,13 @@ try {
       await t.p.waitForFunction(() => !document.getElementById('tv-fiesta').hidden, null, { timeout: 80_000 });
       ok(/^(Compra nueva|Nueva etapa|Nuevo hito)$/.test((await t.p.textContent('#tvf-k')).trim()) && /\+[\d,]+ sats|sats/.test(await t.p.textContent('#tvf-txt')), `15B tele: la fiesta dice qué pasó (${await t.p.textContent('#tvf-k')} · ${await t.p.textContent('#tvf-txt')})`);
       ok(/\+[\d,]+ sats/.test(await t.p.textContent('#tvf-sub')) || /paso más/.test(await t.p.textContent('#tvf-sub')), '15B tele: y trae su línea de abajo');
+      // La fiesta de verdad (la montaña sube y quita y vuelve a poner sus rótulos mientras tanto): ni al salir ni con «Tú» ya arriba tapa nada.
+      for (const [espera, cuando] of [[1400, 'al entrar'], [3000, 'con «Tú» ya arriba']]) {
+        await t.p.waitForTimeout(espera); // la tarjeta entra con un fundido de algo menos de un segundo
+        const s = await sinTapar(t.p);
+        if (!(await ver(t.p, '#tv-fiesta'))) { ok(true, '15B tele: la fiesta ya se fue'); continue; }
+        ok(s.fallos.length === 0 && s.vistas.includes('tv-fiesta'), `15B tele: la fiesta (${cuando}) no tapa el sendero, «Tú» ni los rótulos (${s.txt})`);
+      }
       // sismógrafo: con dos precios ya sale la tira
       await t.p.waitForFunction(() => !document.getElementById('tv-sismo').hidden, null, { timeout: 70_000 }).catch(() => {});
       ok(await ver(t.p, '#tv-sismo') && await t.p.locator('#tv-sismo svg path').count() >= 1 && /^Tira del precio de BTC desde la medianoche: ahora \$[\d,]+/.test(await t.p.getAttribute('#tv-sismo', 'aria-label')), '15B tele: el sismógrafo dibuja la tira del precio');
@@ -4802,34 +4838,6 @@ try {
     };
     /** El módulo de la tele de esa página (la misma instancia: la dirección versionada del modulepreload). */
     const tvMod = (p, js) => p.evaluate(new Function(`return (async () => { const tv = await import(document.querySelector('link[rel=modulepreload][href^="/tv.js"]').href); const est = await import(document.querySelector('link[rel=modulepreload][href^="/estado.js"]').href); ${js} })()`));
-    /**
-     * Ninguna tarjeta visible de la tele tapa el sendero (muestras del trazo cada 4 px, con su medio ancho), «Tú», los rótulos, los hitos,
-     * el saldo, el precio ni otra tarjeta, ni se sale de la pantalla. Se calcula aparte del código que las coloca.
-     */
-    const sinTapar = (p) => p.evaluate(() => {
-      const vis = (e) => e && !e.hidden && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && Number(getComputedStyle(e).opacity) > 0;
-      const tarjetas = [...document.querySelectorAll('.tv-tarjeta')].filter(vis).map((e) => ({ id: e.id, r: e.getBoundingClientRect() }));
-      const camino = document.querySelector('#montana #m-sendero');
-      const m = camino.getScreenCTM(), largo = camino.getTotalLength();
-      const pts = [];
-      for (let l = 0; l <= largo; l += 4) { const q = camino.getPointAtLength(l); pts.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]); }
-      const marcas = [...document.querySelectorAll('#montana #m-etiquetas > *, #montana #m-yo .yo-anillo, #montana .campo .campo-ico, #montana .campo .banderin')].map((e) => e.getBoundingClientRect()).filter((r) => r.width);
-      const textos = ['#t-saldo', '#s-saldo-v', '#s-valor', '#cotizacion', '.escena .marca', '#tv-nombre'].map((s) => document.querySelector(s)).filter(vis).map((e) => e.getBoundingClientRect());
-      const cruza = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-      const fallos = [];
-      for (const [i, t] of tarjetas.entries()) {
-        if (pts.some(([x, y]) => x > t.r.left - 6 && x < t.r.right + 6 && y > t.r.top - 6 && y < t.r.bottom + 6)) fallos.push(`${t.id} sobre el sendero`);
-        if (marcas.some((r) => cruza(t.r, r))) fallos.push(`${t.id} sobre «Tú», un rótulo o un hito`);
-        if (textos.some((r) => cruza(t.r, r))) fallos.push(`${t.id} sobre el saldo, el precio o la marca`);
-        if (t.r.left < 0 || t.r.top < 0 || t.r.right > innerWidth + 0.5 || t.r.bottom > innerHeight + 0.5) fallos.push(`${t.id} fuera de la pantalla`);
-        for (const o of tarjetas.slice(i + 1)) if (cruza(t.r, o.r)) fallos.push(`${t.id} sobre ${o.id}`);
-      }
-      // Las que no se ven, con su porqué (sin sitio: `data-sitio="0"`), para que un fallo diga qué pasó
-      const enFiesta = !document.getElementById('tv-fiesta').hidden; // durante la fiesta, el último movimiento le cede su sitio
-      const ocultas = [...document.querySelectorAll('.tv-tarjeta')].filter((e) => !e.hidden && !tarjetas.some((t) => t.id === e.id) && !(enFiesta && e.id === 'tv-ultimo'))
-        .map((e) => `${e.id} sin ver (sitio ${e.dataset.sitio ?? '—'}, ${e.offsetWidth}×${e.offsetHeight})`);
-      return { fallos, ocultas, vistas: tarjetas.map((t) => t.id), etiquetas: marcas.length, txt: `${tarjetas.map((t) => t.id).join(', ')}${fallos.length || ocultas.length ? `: ${[...fallos, ...ocultas].join('; ')}` : ''}` };
-    });
     /** Dos precios nuevos: el sismógrafo ya tiene su tira (sin esperar un minuto). */
     const asentadas = (p) => p.waitForFunction(() => [...document.querySelectorAll('.tv-tarjeta')].every((e) => e.hidden || e.dataset.sitio === '1' || e.dataset.sitio === '0'), null, { timeout: 5000 });
     const conSismo = async (p) => { await tvMod(p, 'for (const k of [1, 2]) { est.S.precio = 77000 + k * 150; est.S.precioTs = Date.now() + k; tv.pintarTV(); }'); await asentadas(p); await p.waitForTimeout(300); };

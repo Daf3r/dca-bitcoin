@@ -3738,7 +3738,11 @@ html[data-efectos="ninguno"] .tvm-tiempo { display: none; } /* sin movimiento, l
 .login-caja #l-codigo { width: 100%; min-width: 0; min-height: 64px; padding: 0 12px; font: 600 2rem/1 var(--sans); letter-spacing: 0.16em; text-align: center; font-variant-numeric: tabular-nums lining-nums; }
 .login-caja #l-codigo::placeholder { color: var(--txt3); opacity: 0.55; }
 @media (max-height: 520px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
-  .l-otro { margin-top: 0; font-size: 0.8125rem; }
+  /* Acostado no cabe un renglón más (con letra grande la página bajaba unos píxeles): «Entrar» y el otro modo de entrar van lado a lado. */
+  .login-caja { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 8px; }
+  .login-caja > * { grid-column: 1 / -1; }
+  .login-caja > .guardar { grid-column: 1; }
+  .login-caja > .l-otro { grid-column: 2; align-self: stretch; margin-top: 2px; padding: 0 6px; font-size: 0.8125rem; line-height: 1.2; text-align: center; text-wrap: balance; }
   .login-caja #l-codigo { min-height: 48px; font-size: 1.5rem; }
 }
 
