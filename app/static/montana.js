@@ -202,6 +202,36 @@ function lago(c, W, H, ventas = 0, kv = 1) {
 }
 
 /**
+ * (Rendimiento iPhone) La escena en capas. El dibujo se sigue armando en un solo texto, como siempre: el cielo, la sierra lejana y la
+ * sierra media van cada una en su `<g class="par par-…">`. Aquí, ya en el DOM, cada uno de esos grupos pasa a su propio `<svg
+ * class="capa par par-…">`, hermano del principal. Motivo (medido): Safari no compone por separado los hijos de un SVG; mover un `<g>`
+ * con el parallax le obligaba a repintar el dibujo entero (unos 900 nodos, a ×3) en cada fotograma del desplazamiento, y el iPhone se
+ * quedaba en 24 fps con la montaña a la vista. Un `<svg>` hermano con `will-change: transform` (styles.css, solo con efectos «todos»,
+ * que es cuando hay parallax) es una capa de la GPU: al deslizar solo se mueven imágenes ya pintadas y nada se repinta.
+ * - El `<svg>` principal (role="img", la descripción, la montaña, el sendero, los campamentos: los datos, que no se mueven) sigue siendo
+ *   el PRIMERO de `host` (lo buscan `host.querySelector('svg')`, tv.js y las pruebas con `getScreenCTM`). Las capas van detrás en el
+ *   DOM, pero se pintan debajo: `z-index: -1` dentro de `host`, que aísla su propia pila (también en otro anfitrión, como la película).
+ * - `#m-alba` (el velo de las celebraciones) estaba entre el cielo y las sierras: va al final de la capa del cielo (tiñe solo el cielo).
+ * - Los ids no cambian y siguen siendo únicos: las capas usan los degradados (`url(#m-…)`) definidos en el `<svg>` principal.
+ * - Los `<svg>` no reciben toques (`pointer-events: none`); la luna sí (sus tres toques: la moneda), y el clic sube hasta `host`.
+ * La forma, los `rnd()` y el orden de pintado no cambian: se ve igual.
+ */
+function enCapas(host, W, H) {
+  const svg = host.querySelector('svg');
+  host.style.isolation = 'isolate';
+  const capas = [...svg.querySelectorAll('.par')].map((g) => {
+    const capa = document.createElementNS(NS, 'svg');
+    for (const [k, v] of [['viewBox', `0 0 ${W} ${H}`], ['width', W], ['height', H], ['aria-hidden', 'true'], ['focusable', 'false'], ['class', `capa ${g.getAttribute('class')}`]]) capa.setAttribute(k, v);
+    g.removeAttribute('class');
+    capa.append(g);
+    return capa;
+  });
+  const alba = svg.querySelector('#m-alba');
+  if (alba && capas[0]) capas[0].append(alba);
+  host.append(...capas);
+}
+
+/**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
 export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false, personas = 0, iniciales = '', primera = null, meses = 0, anios = 0 }) {
@@ -427,6 +457,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
   s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
   host.innerHTML = s + '</g></svg>';
+  enCapas(host, W, H); // (rendimiento iPhone) el cielo y las dos sierras del parallax, cada una en su <svg>: ver `enCapas`
   colocarReloj(host);
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
 

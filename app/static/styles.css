@@ -109,8 +109,20 @@ button, input { font: inherit; color: inherit; }
   /* Pantalla completa en móvil y tablet: bajo el botón fijo solo quedan los pinos. */
   height: 100vh; height: 100svh; min-height: 560px; max-height: 1100px;
 }
-.montana { position: absolute; inset: 0; }
+.montana { position: absolute; inset: 0; isolation: isolate; }
 .montana svg { display: block; width: 100%; height: 100%; }
+/* (Rendimiento iPhone) La escena en capas (montana.js: `enCapas`): el cielo, la sierra lejana y la media van cada una en su propio
+   <svg class="capa par par-…">, detrás del <svg> principal (que sigue siendo el primero del DOM). Con efectos «todos» (hay parallax)
+   cada capa es una capa de la GPU: al deslizar, el parallax solo mueve imágenes ya pintadas; antes, mover un <g> dentro del único
+   SVG obligaba a Safari a repintar todo el dibujo en cada fotograma. Sin «todos» no se mueven: no hace falta gastar memoria en ellas.
+   `svg.capa` no depende de `.montana` (sirve en otro anfitrión posicionado; montana.js le aísla la pila). Ningún <svg> de la escena
+   recibe toques (debajo hay capas y la luna tiene que poder tocarse: sus tres toques giran la moneda). */
+svg.capa { position: absolute; inset: 0; z-index: -1; display: block; width: 100%; height: 100%; }
+/* La escala del parallax (parallax.js la repite con el desplazamiento) ya desde el primer fotograma: la capa se rasteriza a su tamaño
+   final y nunca vuelve a rasterizarse (si se pintara a 1 y luego se agrandara un 5 %, se vería borrosa). */
+html[data-efectos="todos"] svg.capa { will-change: transform; transform: scale(1.05); }
+.montana svg, svg.capa { pointer-events: none; }
+:is(.montana, svg.capa) .luna { pointer-events: visiblePainted; }
 /* Grano estático (un PNG de 96 px en mosaico, mezclado al 5 %): disimula las bandas de los degradados largos en pantallas
    oscuras y da textura de papel. No se anima; fuera en modo ligero. */
 .montana::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: url("/grano.png") repeat; background-size: 96px 96px; opacity: 0.028; } /* motas claras y oscuras con transparencia (sin mix-blend-mode, que en iPhone obliga a recomponer toda la escena) */
