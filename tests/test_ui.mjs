@@ -5150,8 +5150,9 @@ try {
       eq(await a.p.evaluate(() => performance.getEntriesByName('libro:saldo').length), 1, '24: la app deja una sola marca cuando el saldo se ve con su cifra');
       eq((await a.p.textContent('#me-ver-t')).trim(), 'por medir', '24: antes de la prueba no hay veredicto');
       ok(/bajará y subirá sola/.test(await a.p.textContent('#me-fps-n')), '24: explica qué va a pasar antes de empezar');
-      const boton = await a.p.locator('#me-empezar').boundingBox();
-      ok(boton.height >= 47.5, `24: «Empezar la prueba» mide 48 px (${boton.height})`);
+      // offsetHeight ignora transformaciones: el diálogo entra con un breve ascenso y boundingBox lo medía a mitad (47.3 en el CI)
+      const altoBoton = await a.p.evaluate(() => document.getElementById('me-empezar').offsetHeight);
+      ok(altoBoton >= 48, `24: «Empezar la prueba» mide 48 px (${altoBoton})`);
       // La prueba: el diálogo se cierra, la cuenta atrás va con texto, la página baja sola en el Resumen y vuelve
       await a.p.click('#me-empezar');
       await a.p.waitForTimeout(700);
@@ -5202,8 +5203,8 @@ try {
       ok(revisar && revisar.e === 'aviso' && revisar.i === '!', '24: «Revisar» con su símbolo');
       ok(await a.p.locator('#sis-med-mas').isVisible() && /^2 medidas anteriores$/.test((await a.p.textContent('#sis-med-mas-t')).trim()), '24: las anteriores van plegadas, con su cuenta');
       eq(await a.p.evaluate(() => document.querySelectorAll('#sis-med .sis-fila, #sis-med-resto .sis-fila').length), 7, '24: siete medidas en total');
-      const resumen = (await a.p.locator('#sis-med-mas > summary').boundingBox()).height;
-      ok(resumen >= 47.5, `24: el pliegue se toca bien (${resumen} px)`);
+      const resumen = await a.p.evaluate(() => document.querySelector('#sis-med-mas > summary').offsetHeight);
+      ok(resumen >= 48, `24: el pliegue se toca bien (${resumen} px)`);
       // Borrar: pide un segundo toque
       await a.p.click('#sis-med-borrar');
       eq((await a.p.textContent('#sis-med-borrar')).trim(), 'Sí, borrar las 7 medidas', '24: borrar pide un segundo toque');
