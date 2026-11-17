@@ -93,6 +93,49 @@
   const fogon = (h) => (h >= 5 && h < 7) || (h >= 18 && h < 20);
   /** Noche de luna llena: con la luna iluminada al 97 % o más. */
   const lunaLlena = (fase) => (1 - Math.cos(2 * Math.PI * fase)) / 2 >= 0.97;
+  // Campamento 22B · el valle vivo, parte 2.
+  /**
+   * Verde de invierno y dorado de verano (idea 54): 1 = el verde de la lluviosa, 0 = el dorado de la seca; la misma partición que
+   * `epoca`, con la mezcla día a día del 1 al 14 de mayo (del dorado al verde) y del 1 al 14 de noviembre (del verde al dorado).
+   */
+  function verdor(f) {
+    const m = Number(f.slice(5, 7)), d = Number(f.slice(8, 10));
+    if (m === 5 && d <= 14) return d / 15;
+    if (m === 11 && d <= 14) return 1 - d / 15;
+    return m >= 5 && m <= 10 ? 1 : 0;
+  }
+  /** El mar de niebla del amanecer (idea 55): de 0 a 1. Se forma de 4:45 a 5:15, llena el valle hasta las 7 y se levanta antes de las 7:30. Sin niebla de la tarde. */
+  function marNiebla(h) {
+    if (h < 4.75 || h >= 7.5) return 0;
+    if (h < 5.25) return (h - 4.75) / 0.5;
+    return h <= 7 ? 1 : (7.5 - h) / 0.5;
+  }
+  /** Árboles de aquí en flor (idea 56): el maquilishuat en febrero y el árbol de fuego en abril; si no, ''. */
+  const flor = (f) => ({ '02': 'maquilishuat', '04': 'fuego' })[f.slice(5, 7)] ?? '';
+  /** Los azacuanes pasan del 10 al 31 de octubre (al sur: se acaban las lluvias) y del 1 al 20 de abril (de vuelta al norte). */
+  const azacuanes = (f) => (f.slice(5) >= '10-10' && f.slice(5) <= '10-31') || (f.slice(5) >= '04-01' && f.slice(5) <= '04-20');
+  /** Zompopos de mayo: la semana del 15 al 21 de mayo, con las primeras lluvias fuertes. */
+  const zompopos = (f) => f.slice(5) >= '05-15' && f.slice(5) <= '05-21';
+  /**
+   * Lo que se mueve en el valle y en el cielo (ideas 57, 60 y 61, con el torogoz y las luciérnagas de antes): **nunca más de un animal o
+   * bandada a la vez**, ni los relámpagos junto a ellos. Cada uno tiene su hora y no se pisan:
+   *   torogoz       5:00–7:00 (el amanecer, como siempre)
+   *   zompopos      7:30–10:00, del 15 al 21 de mayo (cuando se levanta la niebla)
+   *   azacuanes     8:00–16:00, del 10 al 31 de octubre y del 1 al 20 de abril (vuelan con el calor del día)
+   *   pericos       16:30–18:00 (el atardecer: van a dormir)
+   *   relámpagos    22:00–5:00, de mayo a octubre (tormentas lejanas de madrugada)
+   *   luciérnagas   18:00–5:00 (antes desde las 16:30: los pericos se quedan el primer rato del atardecer); en la lluviosa, hasta las 22:00
+   * Si no toca nada, ''.
+   */
+  function mueve(f, h) {
+    if (h >= 5 && h < 7) return 'torogoz';
+    if (zompopos(f) && h >= 7.5 && h < 10) return 'zompopos';
+    if (azacuanes(f) && h >= 8 && h < 16) return 'azacuanes';
+    if (h >= 16.5 && h < 18) return 'pericos';
+    if (epoca(f) === 'lluviosa' && (h >= 22 || h < 5)) return 'relampagos';
+    if (h >= 18 || h < 5) return 'luciernagas';
+    return '';
+  }
   /** La franja a la que pertenece la hora. */
   function franja(h) {
     if (h >= 19 || h < 5) return 'noche';
@@ -186,6 +229,15 @@
     raiz.toggleAttribute('data-piscuchas', piscuchas(d));
     raiz.toggleAttribute('data-fogon', fogon(h));
     raiz.toggleAttribute('data-luna-llena', lunaLlena(faseLunar()));
+    // El valle vivo, parte 2 (campamento 22B): el verdor del valle (variable de 0 a 1), el mar de niebla del amanecer (su espesor, de 0
+    // a 1), los árboles en flor y lo que se mueve (uno a la vez); la escena lo dibuja todo y el CSS enseña lo que toca.
+    raiz.style.setProperty('--v-verde', verdor(d).toFixed(3));
+    const mar = marNiebla(h);
+    raiz.style.setProperty('--v-mar', mar.toFixed(3));
+    raiz.toggleAttribute('data-mar-niebla', mar > 0);
+    const fl = flor(d), mv = mueve(d, h);
+    if (fl) raiz.dataset.flor = fl; else delete raiz.dataset.flor;
+    if (mv) raiz.dataset.mueve = mv; else delete raiz.dataset.mueve;
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
     raiz.dataset.tinta = ti;
@@ -204,5 +256,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

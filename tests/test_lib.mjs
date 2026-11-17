@@ -1282,4 +1282,49 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(lad.quebrada && lad.quebrada.pts.at(-1)[1] < 665 && Math.abs(lad.quebrada.pts.at(-1)[0] - 335) < 62, 'valle: la quebrada acaba en el lago');
   ok(!A.sitiosLadera({ W: 390, sx: 242, sy: 327, der: [[300, 420]], nv: 57, pts: [], lago: { cx: 335, cy: 665, rx: 62, ry: 12 }, grabado: false }).roca, 'valle: sin pedirlo (la entrada), no hay grabado');
 }
+// ---------------------------------------------------------------- Campamento 22B · el valle vivo, parte 2
+{
+  const almacen = {};
+  const raiz = { dataset: {}, atributos: new Set(), estilo: {}, toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty(k, v) { raiz.estilo[k] = v; } } };
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem: (k, v) => { almacen[k] = String(v); }, removeItem: (k) => { delete almacen[k]; } }, setInterval() {}, Intl, Date, Math, Number, Object };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo;
+  // 54 · verde de invierno y dorado de verano: la misma partición que la época, con la mezcla del 1 al 14 de mayo y de noviembre.
+  const v = (f) => Math.round(C.verdor(f) * 1000) / 1000;
+  eq(['2026-04-30', '2026-05-01', '2026-05-07', '2026-05-14', '2026-05-15', '2026-10-31', '2026-11-01', '2026-11-14', '2026-11-15', '2027-02-10'].map(v),
+    [0, 0.067, 0.467, 0.933, 1, 1, 0.933, 0.067, 0, 0], 'valle 22B: verde de la lluviosa (1) y dorado de la seca (0), con la mezcla día a día del 1 al 14 de mayo y de noviembre');
+  ok(['2026-05-01', '2026-05-14', '2026-11-01', '2026-11-14'].every((f) => C.epoca(f) === (f.slice(5, 7) === '05' ? 'lluviosa' : 'seca')), 'valle 22B: la mezcla empieza donde cambia la época (misma partición)');
+  const mezcla = ['2026-05-01', '2026-05-02', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07', '2026-05-08', '2026-05-09', '2026-05-10', '2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14', '2026-05-15'].map(C.verdor);
+  ok(mezcla.every((x, i) => !i || x > mezcla[i - 1]), 'valle 22B: en mayo el valle reverdece un poco cada día');
+  // 55 · mar de niebla de 5:00 a 7:30 (se forma desde las 4:45 y se levanta de 7:00 a 7:30); sin niebla de la tarde.
+  eq([4.5, 4.75, 5, 5.25, 6, 7, 7.25, 7.5, 12, 17.5, 18, 20].map((h) => Math.round(C.marNiebla(h) * 100) / 100), [0, 0, 0.5, 1, 1, 1, 0.5, 0, 0, 0, 0, 0], 'valle 22B: el mar de niebla llena el valle de 5:00 a 7:00 y se levanta antes de las 7:30; nada por la tarde');
+  // 56 · árboles en flor
+  eq(['2027-01-31', '2027-02-01', '2027-02-28', '2027-03-01', '2026-03-31', '2026-04-01', '2026-04-30', '2026-05-01'].map(C.flor), ['', 'maquilishuat', 'maquilishuat', '', '', 'fuego', 'fuego', ''], 'valle 22B: el maquilishuat florece en febrero y el árbol de fuego en abril');
+  // 57 y 60 · fechas de los azacuanes y de los zompopos
+  eq(['2026-10-09', '2026-10-10', '2026-10-31', '2026-11-01', '2026-03-31', '2026-04-01', '2026-04-20', '2026-04-21'].map(C.azacuanes), [false, true, true, false, false, true, true, false], 'valle 22B: azacuanes del 10 al 31 de octubre y del 1 al 20 de abril');
+  eq(['2026-05-14', '2026-05-15', '2026-05-21', '2026-05-22'].map(C.zompopos), [false, true, true, false], 'valle 22B: zompopos del 15 al 21 de mayo');
+  // Lo que se mueve: uno a la vez, cada uno a su hora.
+  eq([5, 6.9, 7, 7.5, 9.9, 10, 12, 16.4, 16.5, 17.9, 18, 21.9, 22, 2, 4.9].map((h) => C.mueve('2026-05-17', h)),
+    ['torogoz', 'torogoz', '', 'zompopos', 'zompopos', '', '', '', 'pericos', 'pericos', 'luciernagas', 'luciernagas', 'relampagos', 'relampagos', 'relampagos'], 'valle 22B: un 17 de mayo, torogoz, zompopos, pericos, luciérnagas y relámpagos, cada uno a su hora');
+  eq([7.9, 8, 15.9, 16, 16.5, 22, 2].map((h) => C.mueve('2026-10-15', h)), ['', 'azacuanes', 'azacuanes', '', 'pericos', 'relampagos', 'relampagos'], 'valle 22B: un 15 de octubre, los azacuanes de día; relámpagos de madrugada (lluviosa)');
+  eq([8, 12, 18, 22, 2, 5.5].map((h) => C.mueve('2027-02-10', h)), ['', '', 'luciernagas', 'luciernagas', 'luciernagas', 'torogoz'], 'valle 22B: en la seca no hay relámpagos y las luciérnagas siguen toda la noche');
+  eq([7.5, 12].map((h) => C.mueve('2026-04-20', h)), ['', 'azacuanes'], 'valle 22B: en abril pasan los azacuanes (sin zompopos)');
+  // Nunca dos a la vez: en cada media hora de todo un año, `mueve` da una sola cosa (o nada) y respeta sus fechas y horas.
+  let malos = 0;
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) {
+    const f = new Date(t).toISOString().slice(0, 10);
+    for (let h = 0; h < 24; h += 0.5) {
+      const m = C.mueve(f, h);
+      if ((m === 'zompopos' && !C.zompopos(f)) || (m === 'azacuanes' && !C.azacuanes(f)) || (m === 'relampagos' && C.epoca(f) !== 'lluviosa') || (m === 'torogoz' && C.franja(h) !== 'amanecer')) malos++;
+    }
+  }
+  eq(malos, 0, 'valle 22B: lo que se mueve respeta sus fechas y horas en todo el año (el torogoz, siempre en la franja del amanecer)');
+  // Lo que deja en <html>
+  almacen['libro.dia'] = '2026-05-07'; almacen['libro.hora'] = '6'; C.aplicar();
+  ok(raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '1.000' && raiz.estilo['--v-verde'] === '0.467' && raiz.dataset.mueve === 'torogoz' && !raiz.dataset.flor, `valle 22B: el 7 de mayo a las 6:00, mar de niebla, el valle a medio reverdecer y el torogoz (${JSON.stringify(raiz.estilo['--v-verde'])})`);
+  almacen['libro.dia'] = '2027-02-10'; almacen['libro.hora'] = '12'; C.aplicar();
+  ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === undefined, 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y nada que se mueva');
+  delete almacen['libro.dia']; delete almacen['libro.hora'];
+}
 console.log(`OK ${n} comprobaciones`);
