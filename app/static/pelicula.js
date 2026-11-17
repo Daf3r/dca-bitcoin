@@ -9,11 +9,11 @@
 import { PELICULA_MS, altitud, diaDeFecha, diaPelicula, entero, fechaLarga, hayAurora, hoyISO, mesesDelLibro, aniosDelLibro, peliculaAscenso, primeraCompra, textosPelicula } from './lib.js';
 import { dibujarMontana, escalaDe, fotograma } from './montana.js';
 import { $, R, S, reducido, vozLibro } from './estado.js';
-import { pintarMontana } from './pintar.js';
+import { diaVista, pintarMontana } from './pintar.js';
 import { enTV } from './tv.js';
 
 const dlg = $('d-pelicula'), host = $('pe-montana'), rango = $('pe-rango'), bPlay = $('pe-play');
-let abierta = false, jugando = false, raf = 0, ultimoT = null, P = null, dia = 0, ultimoDia = -1, altVis = 0, esc = null, abridor = null, arranque = 0;
+let abierta = false, jugando = false, raf = 0, ultimoT = null, desdeT = null, P = null, dia = 0, ultimoDia = -1, altVis = 0, esc = null, abridor = null, arranque = 0;
 let anchoDibujo = 0, altoDibujo = 0; // a qué tamaño se dibujó la montaña de la película (se redibuja si cambia: girar el teléfono)
 
 /** ¿Está abierta? Mientras lo está, la escena de la página no se redibuja (`pintar.js: pintarMontana`). */
@@ -66,11 +66,13 @@ function pintarBoton() {
 
 function cuadro(t) {
   if (!jugando) return;
-  // Se avanza por el tiempo acumulado entre fotogramas, con un tope de un cuarto de segundo: si el navegador deja de dibujar un rato, la
-  // película no salta; en un aparato lento (pocos fotogramas por segundo) sigue durando sus 15 s.
+  // El día sale del reloj desde que empezó a correr (`desdeT`, corrido si arrancó a mitad de camino): en un aparato lento, con pocos
+  // fotogramas por segundo, la película sigue durando sus 15 s. Con la pestaña oculta se detiene (ver abajo), así que no salta al volver.
+  // El deslizamiento del punto usa el tiempo entre fotogramas, con tope.
+  if (desdeT == null) desdeT = t - (dia / P.dias) * PELICULA_MS;
   const dt = ultimoT == null ? 16 : Math.min(250, t - ultimoT);
   ultimoT = t;
-  dia = Math.min(P.dias, dia + (dt * P.dias) / PELICULA_MS);
+  dia = Math.min(P.dias, ((t - desdeT) * P.dias) / PELICULA_MS);
   pintarDia(dia, dt);
   if (dia >= P.dias) { detener(true); return; }
   raf = requestAnimationFrame(cuadro);
@@ -80,6 +82,7 @@ function jugar() {
   if (dia >= P.dias) { dia = 0; ultimoDia = -1; altVis = 0; pintarDia(0, null); }
   jugando = true;
   ultimoT = null;
+  desdeT = null;
   $('pe-sr').textContent = '';
   pintarBoton();
   raf = requestAnimationFrame(cuadro);
@@ -102,7 +105,7 @@ function dibujar() {
   const caja = host.getBoundingClientRect();
   const techo = Math.max(0, $('pe-cap').getBoundingClientRect().bottom - caja.top);
   const pie = Number.parseFloat(getComputedStyle(host).getPropertyValue('--pie')) || 40;
-  const x = diaPelicula(P, dia), hoy = hoyISO();
+  const x = diaPelicula(P, dia), hoy = diaVista(); // el valle, como el de la página (con `libro.dia` al probar)
   dibujarMontana(host, {
     pie, techo, libro: vozLibro(), sats: R.sats, meta: R.meta, etapa: R.etapa, inicio: x.sats, compras: R.nCompras, ventas: R.nVentas, tocable: false, pelicula: true,
     aurora: hayAurora(R.racha), personas: S.familia?.personas ?? 0, iniciales: S.familia?.iniciales ?? '', primera: primeraCompra(S.compras), meses: mesesDelLibro(S.compras, hoy), anios: aniosDelLibro(S.compras, hoy), rotulo: rotuloDe(x),

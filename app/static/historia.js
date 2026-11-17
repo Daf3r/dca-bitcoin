@@ -270,9 +270,10 @@ $('dh-hoy-ver').addEventListener('click', () => {
 // abre detenida en ese día (las postales de la idea 30 quedaron aquí dentro). El foco vuelve al botón que la abrió.
 $('dh-peli-ver').addEventListener('click', (e) => abrirPelicula({ desde: e.currentTarget }));
 function verEseDia(fecha, que) {
-  const b = nodo('button', 'enlace h-ver', 'Ver ese día');
+  const b = nodo('button', 'enlace h-ver');
   b.type = 'button';
-  b.append(nodo('span', 'sr', ` en la película del ascenso (${que}, ${fechaLarga(fecha)})`));
+  b.insertAdjacentHTML('beforeend', ico('reproducir'));
+  b.append('Ver ese día', nodo('span', 'sr', ` en la película del ascenso (${que}, ${fechaLarga(fecha)})`));
   b.addEventListener('click', () => abrirPelicula({ fecha, desde: b }));
   return b;
 }

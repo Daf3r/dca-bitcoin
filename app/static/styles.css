@@ -4096,19 +4096,22 @@ html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite
 .dia-bloque .dia-tal { margin: 0 0 8px; font: italic 500 1.0625rem/1.45 var(--serif); }
 .dia-tal[hidden] { display: none; }
 
-/* La entrada a la película en «Tu historia», bajo el dibujo de hoy: una tarjeta baja con su botón (el material de las tarjetas). */
-.dh-peli { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 14px; margin: 0 0 16px; padding: 14px 16px 16px; border-radius: 22px;
+/* La entrada a la película en «Tu historia», bajo el dibujo de hoy: una tarjeta baja con el material de las tarjetas y su botón con el
+   mismo trazo que «Verlo de cerca» (abre algo para mirar; el naranja relleno queda para anotar y guardar). */
+.dh-peli { display: grid; gap: 10px 18px; margin: 0 0 16px; padding: 16px 18px 18px; border-radius: 22px;
   background-color: var(--s1); background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
 .dh-peli[hidden] { display: none; }
-.dh-peli-ico { width: 44px; height: 44px; padding: 11px 9px 11px 13px; box-sizing: border-box; border-radius: 50%; color: var(--naranja-txt); background: color-mix(in srgb, var(--naranja) 14%, var(--s1)); }
-.historia-pg .dh-peli h3 { margin: 0; font: 500 1.1875rem/1.2 var(--serif); color: var(--txt); }
-.dh-peli-txt p { margin: 2px 0 0; font-size: 0.875rem; line-height: 1.4; color: var(--txt2); }
-.dh-peli-ver { grid-column: 1 / -1; justify-self: start; display: inline-flex; align-items: center; gap: 10px; min-height: var(--toque, 48px); margin-top: 8px; padding: 0 20px;
-  border: 0; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font: 700 1rem var(--sans); cursor: pointer; }
+.historia-pg .dh-peli h3 { margin: 0; font: 500 1.25rem/1.2 var(--serif); color: var(--txt); }
+.dh-peli-txt p { margin: 3px 0 0; font-size: 0.9375rem; line-height: 1.45; color: var(--txt2); }
+.dh-peli-ver { justify-self: start; display: inline-flex; align-items: center; gap: 10px; min-height: var(--toque, 48px); padding: 0 22px 0 18px; border: 2px solid var(--naranja); border-radius: 999px;
+  background: color-mix(in srgb, var(--naranja) 12%, var(--s1)); color: var(--txt); font: 700 1rem var(--sans); cursor: pointer; }
+.dh-peli-ver .ico { width: 1.05em; height: 1.05em; color: var(--naranja-txt); }
+@media (hover: hover) and (pointer: fine) { .dh-peli-ver:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
 .dh-peli-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
-@media (min-width: 700px) { .dh-peli { grid-template-columns: auto minmax(0, 1fr) auto; padding: 14px 18px; } .dh-peli-ver { grid-column: auto; margin-top: 0; } }
-/* «Ver ese día» en la línea de «Tu historia»: un enlace pequeño bajo la etapa (zona de toque de 48 px, como todos). */
-.h-ev .h-ver { margin: -8px 0 -10px; font-size: 0.8125rem; color: var(--txt2); text-decoration-thickness: 1.5px; }
+@media (min-width: 700px) { .dh-peli { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 16px 22px; } }
+/* «Ver ese día» en la línea de «Tu historia»: un enlace pequeño bajo la etapa, con su ▶ (zona de toque de 48 px, como todos). */
+.h-ev .h-ver { display: flex; width: fit-content; gap: 6px; margin: -8px 0 -10px; font-size: 0.8125rem; color: var(--txt2); text-decoration-thickness: 1.5px; text-decoration-color: color-mix(in srgb, var(--naranja) 60%, transparent); }
+.h-ev .h-ver .ico { width: 0.8em; height: 0.8em; color: var(--naranja-txt); }
 .h-pasos li .h-ver { min-height: var(--toque); margin: -12px 0; }
 
 /* La película del ascenso: un diálogo a pantalla completa. Arriba, sobre el cielo, el título, «Cerrar» y el saldo de ese día (como la
