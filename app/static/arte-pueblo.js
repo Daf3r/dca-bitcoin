@@ -86,8 +86,10 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
     x = xb + (2 + (j % 3) * 3) * u;
   }
   const xFin = Math.max(cursor, x0 + 40);
+  // Los niños de la plaza (de octubre a noviembre sostienen el hilo de las piscuchas).
+  const ninos = plaza ? [0, 1, 2, 3, 4, 5].map((j) => [plaza.x + (5 + j * 3.4) * u * plaza.s, yg + (2.6 + (j % 2) * 1.2) * u]) : [];
   // La gente y los animales: en la calle, delante de las casas y en la plaza (siluetas quietas, sin nadie en particular).
-  return { u, yg, x0, xFin, piezas, atras, plaza, iglesia, sol, forma, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 14 * u), xFin + 4, yg + 4 * u] };
+  return { u, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 14 * u), xFin + 4, yg + 4 * u] };
 }
 
 // ------------------------------------------------------------------------------------------------ el dibujo
@@ -240,25 +242,48 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
       add('gallina', `M${P([cx - 1 * k, cy])}q${f1(0.2 * k)} ${f1(-1.6 * k)} ${f1(1.4 * k)} ${f1(-1.5 * k)}l${f1(0.5 * k)} ${f1(-0.7 * k)}l${f1(0.3 * k)} ${f1(0.7 * k)}q${f1(0.2 * k)} ${f1(1.2 * k)} ${f1(-1.2 * k)} ${f1(1.5 * k)}Z`);
     }
   }
+  // Los niños de la plaza: siluetas chicas (en octubre y noviembre, con el hilo de su piscucha en la mano).
+  for (const [x, y] of sit.ninos ?? []) add('gente', `M${P([x - 0.8 * u, y])}L${P([x + 0.8 * u, y])}L${P([x + 0.55 * u, y - 2.8 * u])}L${P([x - 0.55 * u, y - 2.8 * u])}ZM${P([x - 0.6 * u, y - 3.3 * u])}a${f1(0.6 * u)} ${f1(0.6 * u)} 0 1 0 ${f1(1.2 * u)} 0a${f1(0.6 * u)} ${f1(0.6 * u)} 0 1 0 ${f1(-1.2 * u)} 0Z`);
+  // Fiestas patrias (13 al 15 de septiembre): la bandera azul y blanca en su asta, en la plaza.
+  let patrias = '';
+  if (pz) {
+    const k = pz.k, ax = pz.cx + pz.w * 0.5, ay = yg - 0.4 * k, top = ay - 24 * k, fw = 9 * k, fh = 5.6 * k;
+    const franja = (i) => `M${P([ax, top + (fh / 3) * i])}C${P([ax + fw * 0.4, top + (fh / 3) * i - 1 * k])} ${P([ax + fw * 0.6, top + (fh / 3) * i + 1 * k])} ${P([ax + fw, top + (fh / 3) * i])}L${P([ax + fw, top + (fh / 3) * (i + 1)])}C${P([ax + fw * 0.6, top + (fh / 3) * (i + 1) + 1 * k])} ${P([ax + fw * 0.4, top + (fh / 3) * (i + 1) - 1 * k])} ${P([ax, top + (fh / 3) * (i + 1)])}Z`;
+    patrias = `<path class="v-patrias v-asta" d="M${P([ax, ay])}L${P([ax, top - 1.2 * k])}" stroke-width="${f1(0.6 * k)}"/><path class="v-patrias v-bandera-azul" d="${franja(0)}${franja(2)}"/><path class="v-patrias v-bandera-blanca" d="${franja(1)}"/>`;
+  }
   // El pino de Navidad de la plaza y el portal del nacimiento (solo en Navidad; el CSS lo enseña).
   let navidad = '';
   if (pz) navidad = pinoPlaza(pz.cx, yg - 0.6 * pz.k, pz.k * 1.05) + portal(pz.cx + pz.w * 0.62, yg + 0.4 * pz.k, pz.k * 0.9, sol);
-  // El árbol de la plaza (un mango) en las demás fechas.
-  const mango = pz ? (() => { const k = pz.k, c = facetas(pz.cx, yg - 12 * k, 8.4 * k, 6.2 * k, [1, 0.93, 1.05, 0.96, 1.02, 0.91, 1.04], sol, 0.3, undefined, 0.55); return `<path class="v-pz-tronco v-sin-navidad" d="${poli([[pz.cx - 0.9 * k, yg - 0.6 * k], [pz.cx + 0.9 * k, yg - 0.6 * k], [pz.cx + 0.6 * k, yg - 8 * k], [pz.cx - 0.6 * k, yg - 8 * k]])}"/><path class="copa v-mango v-sin-navidad" d="${c.base}"/><path class="copa-media v-mango v-sin-navidad" d="${c.media}"/><path class="copa-luz v-mango v-sin-navidad" d="${c.luz}"/><path class="copa-sombra v-mango v-sin-navidad" d="${c.sombra}"/>`; })() : '';
+  // El árbol de la plaza, un maquilishuat (en febrero, todo rosado); en Navidad deja su sitio al pino.
+  const mango = pz ? (() => { const k = pz.k, c = facetas(pz.cx, yg - 12 * k, 8.4 * k, 6.2 * k, [1, 0.93, 1.05, 0.96, 1.02, 0.91, 1.04], sol, 0.3, undefined, 0.55); return `<path class="v-pz-tronco v-sin-navidad" d="${poli([[pz.cx - 0.9 * k, yg - 0.6 * k], [pz.cx + 0.9 * k, yg - 0.6 * k], [pz.cx + 0.6 * k, yg - 8 * k], [pz.cx - 0.6 * k, yg - 8 * k]])}"/><path class="copa v-maqui v-sin-navidad" d="${c.base}"/><path class="copa-media v-maqui v-sin-navidad" d="${c.media}"/><path class="copa-luz v-maqui v-sin-navidad" d="${c.luz}"/><path class="copa-sombra v-maqui v-sin-navidad" d="${c.sombra}"/>`; })() : '';
   // El humo del fogón (ambiente, a sus horas): tres bocanadas a destiempo de la primera cocina.
   const humo = humos.slice(0, sit.forma === 'esc' ? 2 : 1).map(([hx, hy], i) => [0, 1, 2].map((j) => `<circle class="efecto-ambiente v-humos v-hu v-hu-${j}${i ? ' v-hu-b' : ''}" cx="${f1(hx)}" cy="${f1(hy)}" r="${f1((1.4 + j * 0.45) * u)}"/>`).join('')).join('');
   const sw = (n) => ` stroke-width="${f1(n * u)}"`;
   const p = (clase, k, extra = '') => (A[k] ? `<path class="${clase}" d="${A[k]}"${extra}/>` : '');
   const frentes = COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`)).join('');
-  const luzSuelo = charcos.map(([x, y, r]) => `<ellipse class="v-charco" cx="${f1(x)}" cy="${f1(y)}" rx="${f1(r)}" ry="${f1(r * 0.32)}" fill="url(#m-farol)"/>`).join('');
+  // Los árboles de aquí, detrás de las casas (campamento 22B, idea 56, ahora en el pueblo): un maquilishuat junto a la iglesia (en
+  // febrero, todo rosado) y un árbol de fuego al final de la calle (en abril, rojo). Con sus flores caídas cuando florecen.
+  const arbolito = (sp, x, y, r) => {
+    const fuego = sp === 'fuego', rx = r * (fuego ? 1.3 : 1), ry = r * (fuego ? 0.66 : 0.86), cy = y - r * (fuego ? 1.02 : 1.25), tw = r * 0.11;
+    let tronco = poli([[x - tw, y], [x + tw, y], [x + tw * 0.7, cy + ry * 0.4], [x - tw * 0.7, cy + ry * 0.4]]);
+    if (fuego) tronco += poli([[x - tw * 0.5, cy + ry * 0.9], [x - rx * 0.42, cy + ry * 0.2], [x - rx * 0.36, cy + ry * 0.05], [x, cy + ry * 0.62], [x + rx * 0.4, cy + ry * 0.08], [x + rx * 0.46, cy + ry * 0.24], [x + tw * 0.5, cy + ry * 0.9]]);
+    const c = facetas(x, cy, rx, ry, fuego ? [1, 0.9, 1.06, 0.95, 1.03, 0.92, 1.05, 0.97] : [1, 0.92, 1.05, 0.96, 1.02, 0.9, 1.04], sol, fuego ? 0.1 : 0.2, undefined, fuego ? 0.5 : 0.62);
+    const fx = x - sol * rx * 0.12, fr = rx * 0.95, fy = y + 0.5 * u;
+    return `<path class="v-flores v-flores-${sp}" d="M${f1(fx - fr)} ${f1(fy)}Q${f1(fx)} ${f1(fy - 1.6 * u)} ${f1(fx + fr)} ${f1(fy)}Q${f1(fx)} ${f1(fy + 1.6 * u)} ${f1(fx - fr)} ${f1(fy)}Z"/><path class="v-ar-tronco" d="${tronco}"/>`
+      + `<path class="copa v-${sp}" d="${c.base}"/><path class="copa-media v-${sp}" d="${c.media}"/><path class="copa-luz v-${sp}" d="${c.luz}"/><path class="copa-sombra v-${sp}" d="${c.sombra}"/>`;
+  };
+  const fuegoV = arbolito('fuego', Math.min(sit.xFin + 7 * u, (sit.xMaxArbol ?? Infinity)), yg + 0.6 * u, 6.6 * u); // al final de la calle, a la vista
+  // Los charcos de luz: dos trazos (el halo ancho y el centro), sin degradados (más baratos de pintar que una elipse con degradado cada uno).
+  const elipse = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
+  const luzSuelo = `<path class="v-charco" d="${charcos.map(([x, y, r]) => elipse(x, y, r, r * 0.32)).join('')}"/><path class="v-charco v-charco-c" d="${charcos.map(([x, y, r]) => elipse(x, y, r * 0.5, r * 0.16)).join('')}"/>`;
   return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}`
     + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
     + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-poste', 'poste', sw(0.55))}`
     + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`
-    + `${mango}${navidad}`
+    + `${mango}${fuegoV}${navidad}`
     + `${p('v-farol-poste', 'farol-poste', sw(0.55))}${p('v-farol-lampara', 'farol-lampara')}${p('v-farol-luz', 'farol-luz', sw(3.4))}`
     + `<path class="v-cordel" d="${cuerda}"${sw(0.3)}/>${foco.map((d, j) => `<path class="v-navidad v-foco v-foco-${j}" d="${d}"${sw(1.15)}/>`).join('')}${bandera.map((d, j) => `<path class="v-fiesta v-band v-band-${j}" d="${d}"/>`).join('')}`
-    + `${p('v-gente', 'gente')}${p('v-animal', 'animal')}${p('v-gallina', 'gallina')}${humo}</g>`;
+    + `${patrias}${p('v-gente', 'gente')}${p('v-animal', 'animal')}${p('v-gallina', 'gallina')}${humo}</g>`;
 }
 
 /** El pino de Navidad de la plaza: cuatro pisos en sombra y luz, una guirnalda dorada, esferas y foquitos de tres colores. Sin estrella. */
@@ -380,8 +405,16 @@ export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx }) {
       }
     }
   }
+  // El mar de niebla del amanecer también llena el valle de delante (campamento 22B, 5:00 a 7:30): dos velos que cubren los campos y
+  // dejan asomar el pueblo y las copas. Quieto (paisaje); su opacidad la pone `--v-mar`.
+  const velo = (dy, sem) => {
+    const r2 = azar(sem); let d = `M${P([x0 - 10, yF(1, x0) + dy])}`;
+    for (let x = x0; x <= x1 + 30; x += 26 * k) d += `Q${P([x + 13 * k, yF(1, x) + dy - (4 + r2() * 6) * k])} ${P([x + 26 * k, yF(1, x + 26 * k) + dy])}`;
+    return `${d}L${P([x1 + 30, yAbajo - 2 * k])}L${P([x0 - 10, yAbajo - 2 * k])}Z`;
+  };
   const svg = tono.map((d, i) => `<path class="v-parc v-parc-${i}" d="${d}"/>`).join('') + `<path class="v-surco" d="${surco}" stroke-width="${f1(0.8 * k)}"/><path class="v-loma-campo" d="${loma}" stroke-width="${f1(1.1 * k)}"/>`
-    + `<path class="v-arbolito-tronco" d="${tronco}" stroke-width="${f1(0.9 * k)}"/><path class="v-arbolito" d="${copa}"/><path class="v-arbolito-l" d="${copaL}"/>`;
+    + `<path class="v-arbolito-tronco" d="${tronco}" stroke-width="${f1(0.9 * k)}"/><path class="v-arbolito" d="${copa}"/><path class="v-arbolito-l" d="${copaL}"/>`
+    + `<path class="v-mar v-mar-luz v-mar-valle" d="${velo(-8 * k, 5)}"/><path class="v-mar v-mar-cuerpo v-mar-valle" d="${velo(2 * k, 9)}"/>`;
   return { svg, milpa };
 }
 

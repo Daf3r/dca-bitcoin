@@ -481,8 +481,11 @@ export function caminoReal({ ini, ctrl, fin, ancho: [a0, a1], k }) {
   const piedras = cerco.slice(0, -1).map(([x, y], i) => `M${f1(x)} ${f1(y)}L${f1(cerco[i + 1][0])} ${f1(cerco[i + 1][1])}`).join('');
   const palos = postes.map(([x, y, h]) => `M${f1(x)} ${f1(y)}l0 ${f1(-h)}`).join('');
   const brotes = postes.map(([x, y, h]) => `M${f1(x)} ${f1(y - h)}l${f1(-0.9 * k)} ${f1(-0.8 * k)}M${f1(x)} ${f1(y - h)}l${f1(0.9 * k)} ${f1(-0.7 * k)}`).join('');
+  // (22C) En Navidad, luminarias (farolitos de papel) a los dos lados del camino real, una de cada dos piedras.
+  const luminarias = [...izq, ...der].filter((_, i) => i % 2 === 1).map(([x, y]) => `M${f1(x)} ${f1(y - 0.8 * k)}h0.01`).join('');
   return `<path class="v-cm-talud" d="${talud}"/><path class="v-cm" d="${poli([...izq, ...der.reverse()])}"/>`
-    + `<path class="v-cm-cerco" d="${piedras}" stroke-width="${f1(1.8 * k)}"/><path class="v-cm-poste" d="${palos}" stroke-width="${f1(0.9 * k)}"/><path class="v-cm-brote" d="${brotes}" stroke-width="${f1(0.8 * k)}"/>`;
+    + `<path class="v-cm-cerco" d="${piedras}" stroke-width="${f1(1.8 * k)}"/><path class="v-cm-poste" d="${palos}" stroke-width="${f1(0.9 * k)}"/><path class="v-cm-brote" d="${brotes}" stroke-width="${f1(0.8 * k)}"/>`
+    + `<path class="v-navidad v-cm-luminaria" d="${luminarias}" stroke-width="${f1(2.4 * Math.min(1.6, k))}"/>`;
 }
 
 // ------------------------------------------------------------------------------------------------ el árbol del primer día (idea 50)

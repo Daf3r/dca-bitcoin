@@ -4106,7 +4106,7 @@ html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite
 /* Las casas: el frente de cara (luz a medias) y el hastial al astro (más luz). */
 .v-frente { fill: color-mix(in oklab, color-mix(in oklab, var(--vc) 84%, var(--monte-sombra)) var(--v-luz), var(--monte)); }
 .v-pueblo .v-pared-l { fill: color-mix(in oklab, color-mix(in oklab, var(--vc) 90%, var(--luz-roca)) calc(var(--v-luz) + 10%), var(--monte)); }
-.v-pueblo .v-alero { fill: #1a0e08; opacity: 0.26; }
+.v-pueblo .v-alero { fill: #1a0e08; fill-opacity: 0.26; }
 .v-teja { fill: none; stroke: color-mix(in oklab, var(--v-teja-s) var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
 .v-poste { fill: none; stroke: color-mix(in oklab, #5b3b22 var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
 /* La iglesia: encalada, con la torre en sombra de un lado, la cúpula de ladrillo y los huecos oscuros (encendidos de noche). */
@@ -4127,15 +4127,14 @@ html:is([data-cielo="atardecer"], [data-cielo="amanecer"]) .v-ig-ventana { fill:
 .v-plaza-borde { fill: none; stroke: color-mix(in oklab, #8f7a5c var(--v-som), var(--monte-sombra)); }
 .v-farol-poste { fill: none; stroke: color-mix(in oklab, #2a2725 74%, var(--monte-sombra)); stroke-linecap: round; }
 .v-farol-lampara { fill: color-mix(in oklab, #2a2725 70%, var(--monte-sombra)); }
-.v-farol-luz { fill: none; stroke: var(--v-calida); stroke-linecap: round; opacity: 0; }
-html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-farol-luz { opacity: 1; }
+.v-farol-luz { fill: none; stroke: var(--v-calida); stroke-linecap: round; display: none; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-farol-luz { display: inline; }
 html[data-cielo="noche"] .v-farol-lampara { fill: color-mix(in oklab, var(--v-calida) 60%, #fff4d8); }
 /* El mango de la plaza (en Navidad deja su sitio al pino). */
-.v-pueblo .v-mango { --copa: color-mix(in oklab, color-mix(in oklab, #2f6e3a calc(var(--v-verde, 1) * 100%), #6f7a3c) calc(var(--v-luz) + 8%), var(--pino0)); }
 .v-pz-tronco { fill: var(--corteza, #4a3a2c); }
 html[data-navidad] .v-sin-navidad { display: none; }
 /* Los cordeles de la plaza: en Navidad llevan foquitos; en las fiestas, banderitas de sus colores. */
-.v-cordel { fill: none; stroke: color-mix(in oklab, #2a2018 60%, var(--monte-sombra)); opacity: 0.6; display: none; }
+.v-cordel { fill: none; stroke: color-mix(in oklab, #2a2018 60%, var(--monte-sombra)); stroke-opacity: 0.6; display: none; }
 html:is([data-navidad], [data-fiesta="agostinas"], [data-fiesta="patrias"]) .v-cordel { display: inline; }
 .v-fiesta { display: none; }
 html:is([data-fiesta="agostinas"], [data-fiesta="patrias"]) .v-fiesta { display: inline; }
@@ -4147,14 +4146,14 @@ html:is([data-fiesta="agostinas"], [data-fiesta="patrias"]) .v-fiesta { display:
 .v-animal { fill: color-mix(in oklab, #6b4a2e var(--v-som), var(--monte-sombra)); }
 .v-gallina { fill: color-mix(in oklab, #b8643a var(--v-luz), var(--monte-sombra)); }
 /* El pino de Navidad de la plaza: guirnalda dorada, esferas y su lazo. */
-.v-pn-guirnalda { fill: none; stroke: #e8c25a; stroke-linecap: round; opacity: 0.9; }
+.v-pn-guirnalda { fill: none; stroke: #e8c25a; stroke-linecap: round; stroke-opacity: 0.9; }
 .v-pe-0 { fill: #d23a3a; } .v-pe-1 { fill: #f0c24a; }
 .v-pn-lazo { fill: #c8323a; }
 /* El portal del nacimiento: la champa de palma, los horcones, las figuras contra la luz del pesebre y, de noche, su halo. */
 .v-belen-fondo { fill: color-mix(in oklab, #ffcf7e 62%, var(--monte-sombra)); }
 html[data-cielo="noche"] .v-belen-fondo { fill: color-mix(in oklab, #ffd58c 86%, #fff3d0); }
-.v-belen-halo { opacity: 0; }
-html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-belen-halo { opacity: 1; }
+.v-belen-halo { display: none; }
+html[data-navidad]:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-belen-halo { display: inline; }
 .v-belen-horcon { fill: color-mix(in oklab, #5b3b22 var(--v-som), var(--monte-sombra)); }
 .v-belen-figuras { fill: #2a1a10; }
 .v-belen-nino { fill: none; stroke: #fff4d6; stroke-linecap: round; }
@@ -4163,7 +4162,7 @@ html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-belen-halo { opacity:
 /* El primer plano: lo más cercano, más oscuro y saturado que el valle (matas, magueyes, zacate y los árboles de las orillas). */
 .montana { --v-pp: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 50%, #10301d) calc(var(--v-luz) - 22%), var(--pino1)); }
 .v-pp-arbol { fill: color-mix(in oklab, var(--pino1) 70%, var(--v-pp)); }
-.v-pp-arbol-l { fill: color-mix(in oklab, var(--v-pp) 80%, var(--luz-roca)); opacity: 0.5; }
+.v-pp-arbol-l { fill: color-mix(in oklab, var(--v-pp) 80%, var(--luz-roca)); fill-opacity: 0.5; }
 .v-pp-mata { fill: var(--v-pp); }
 .v-pp-mata-l { fill: color-mix(in oklab, var(--v-pp) 74%, var(--luz-roca)); }
 .v-pp-zacate { fill: color-mix(in oklab, var(--v-pp) 82%, #000); }
@@ -4176,7 +4175,7 @@ html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-belen-halo { opacity:
 .v-parc-0 { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 70%, #9fd46a) calc(var(--v-luz) - 4%), var(--monte)); }
 .v-parc-1 { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 82%, #1f5a2c) calc(var(--v-luz) - 10%), var(--monte)); }
 .v-parc-2 { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 45%, #c9a45c) calc(var(--v-luz) - 6%), var(--monte)); }
-.v-surco { fill: none; stroke: color-mix(in oklab, #3e2c1c var(--v-som), var(--monte-sombra)); opacity: 0.35; }
+.v-surco { fill: none; stroke: color-mix(in oklab, #3e2c1c var(--v-som), var(--monte-sombra)); stroke-opacity: 0.35; }
 .v-parc-3 { fill: color-mix(in oklab, color-mix(in oklab, #8a6440 70%, var(--v-pasto)) calc(var(--v-luz) - 12%), var(--monte)); }
 .v-loma-campo { fill: none; stroke: var(--luz-roca); stroke-opacity: calc(0.12 + var(--halo-a, 0.2) * 0.35); stroke-linecap: round; }
 .v-arbolito { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 40%, #1d5a32) calc(var(--v-luz) - 8%), var(--pino0)); }
@@ -4184,19 +4183,21 @@ html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-belen-halo { opacity:
 .v-arbolito-tronco { fill: none; stroke: color-mix(in oklab, #4a3423 var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
 /* La calle de tierra y, de noche, los charcos de luz de las puertas, los faroles y la iglesia. */
 .v-calle { fill: color-mix(in oklab, color-mix(in oklab, var(--v-tierra) 80%, #e3cfa6) var(--v-luz), var(--monte)); }
-.v-charco { opacity: 0; }
-html[data-cielo="noche"] .v-charco { opacity: 0.85; }
-html:is([data-cielo="atardecer"], [data-cielo="amanecer"]) .v-charco { opacity: 0.4; }
+.v-charco { display: none; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"], [data-cielo="amanecer"]) .v-charco { display: inline; fill: #ffc874; fill-opacity: 0.16; }
+html[data-cielo="noche"] .v-charco-c { fill-opacity: 0.26; }
+/* El pino de la plaza titila suave con «todos»; en el teléfono, a saltos (como lo demás que se mueve en la escena). */
+@media (max-width: 899px) { html[data-efectos="todos"] .v-pn-foco { animation-timing-function: steps(6); } }
 
 /* ---- Campamento 22C · Navidad en toda la montaña (1 de diciembre al 6 de enero): la subida, los hitos, el bosque y «Tú». Encendido y
    quieto con cualquier nivel de efectos; con «todos», los foquitos titilan suave (en el teléfono, a saltos). */
 .ns-off, .ns-glow, .ns-on, .nb-foco { fill: none; stroke-linecap: round; }
 /* Las luminarias del sendero: encendidas hasta donde llegaste; las de más arriba, apagadas (vidrio sin luz). */
-.ns-off { stroke: color-mix(in oklab, #f6efe2 34%, var(--monte)); stroke-width: 2.4; opacity: 0.8; }
+.ns-off { stroke: color-mix(in oklab, #f6efe2 34%, var(--monte)); stroke-width: 2.4; stroke-opacity: 0.8; }
 .ns-on { stroke-width: 3.3; }
 .ns-0 { stroke: #ffd76e; } .ns-1 { stroke: #ff6f62; } .ns-2 { stroke: #86eaa0; }
-.ns-glow { stroke: #ffcb78; stroke-width: 10; opacity: 0; }
-html:is([data-cielo="noche"], [data-cielo="atardecer"]) .ns-glow { opacity: 0.2; }
+.ns-glow { stroke: #ffcb78; stroke-width: 10; display: none; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) .ns-glow { display: inline; stroke-opacity: 0.2; }
 html:not([data-cielo="noche"]) .ns-on { stroke-width: 3; }
 /* La corona de «Tú»: un aro de foquitos alrededor del punto (tres colores a destiempo). */
 .yo-nav { fill: none; stroke-width: 2.1; stroke-linecap: round; stroke-dasharray: 0 6.7; }
@@ -4209,7 +4210,7 @@ html[data-cielo="noche"] .nh-corona { stroke: #3c9a58; }
 /* Los foquitos del bosque. */
 .nb-foco { stroke-width: 1.9; }
 .nb-0 { stroke: #ffd76e; } .nb-1 { stroke: #ff6f62; } .nb-2 { stroke: #86eaa0; }
-html:not([data-cielo="noche"]):not([data-cielo="atardecer"]) .nb-foco { opacity: 0.8; }
+html:not([data-cielo="noche"]):not([data-cielo="atardecer"]) .nb-foco { stroke-opacity: 0.8; }
 @keyframes nav-gira { to { stroke-dashoffset: -20.1; } }
 html[data-efectos="todos"] .yo-nav { animation: nav-gira 9s linear infinite; }
 html[data-efectos="todos"] .yo-nav-1 { animation-delay: -1s; } html[data-efectos="todos"] .yo-nav-2 { animation-delay: -2s; }
@@ -4219,10 +4220,10 @@ html[data-efectos="todos"] .yo-nav-1 { animation-delay: -1s; } html[data-efectos
 /* En Navidad, las noches tienen las estrellas algo más vivas. */
 html[data-navidad][data-cielo="noche"] .estrella { filter: none; opacity: calc(var(--estrellas, 0.75) * 1.25); }
 /* La ladera baja (arte-pueblo.js: laderaBaja): claros de pasto, bosquecillos con su lado de luz y peñas facetadas. */
-.lb-claro { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 62%, var(--luz-roca)) calc(var(--v-luz) - 18%), var(--monte)); opacity: 0.5; }
+.lb-claro { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 62%, var(--luz-roca)) calc(var(--v-luz) - 18%), var(--monte)); fill-opacity: 0.5; }
 .lb-pino-s { fill: color-mix(in oklab, var(--pino1) 80%, var(--monte-sombra)); }
 .lb-pino-l { fill: color-mix(in oklab, color-mix(in srgb, var(--pino0) 66%, #3f8f55) 82%, var(--luz-roca)); }
-.lb-pino-f { fill: #000; opacity: 0.12; }
+.lb-pino-f { fill: #000; fill-opacity: 0.12; }
 .lb-roca-s { fill: color-mix(in oklab, var(--monte-sombra) 80%, #6b6f72); }
 .lb-roca-l { fill: color-mix(in oklab, var(--monte) 55%, var(--luz-roca)); }
 .lb-roca-t { fill: color-mix(in oklab, var(--monte) 30%, var(--luz-roca)); }
@@ -4236,3 +4237,12 @@ html[data-cielo="noche"] .rel-filo { stroke-opacity: 0.32; }
 /* En Navidad las matas del primer plano son flor de pascua. */
 .v-pascua { fill: color-mix(in oklab, #d7232f calc(var(--v-luz) + 22%), var(--monte-sombra)); }
 .v-pascua-c { fill: none; stroke: #f4c94a; stroke-linecap: round; }
+/* Las luminarias del camino real (Navidad): farolitos de papel cálidos; de noche, con más luz. */
+.v-cm-luminaria { fill: none; stroke: #ffc86a; stroke-linecap: round; stroke-opacity: 0.8; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-cm-luminaria { stroke: #ffd98c; stroke-opacity: 1; }
+/* Fiestas patrias (13 al 15 de septiembre): la bandera azul y blanca en la plaza. */
+.v-patrias { display: none; }
+html[data-fiesta="patrias"] .v-patrias { display: inline; }
+.v-asta { fill: none; stroke: color-mix(in oklab, #3a3530 70%, var(--monte-sombra)); stroke-linecap: round; }
+.v-bandera-azul { fill: color-mix(in oklab, #1f5fbf calc(var(--v-luz) + 22%), var(--monte-sombra)); }
+.v-bandera-blanca { fill: color-mix(in oklab, #f7f3ea calc(var(--v-luz) + 22%), var(--monte-sombra)); }

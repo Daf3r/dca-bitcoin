@@ -397,13 +397,16 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u * 0.55), vx: c.sx });
   const milpaV = cm.milpa ? { ...cm.milpa, k: Math.max(1, pb.u * 0.5), sol: solV } : null;
   s = s.replace('<!--v-campos-->', `<g class="v-campos" aria-hidden="true">${cm.svg}${milpaV ? milpa(milpaV) + zompopos({ milpa: milpaV, k: milpaV.k }) : ''}</g>`);
-  s += `<g id="m-v-pie">${caminoReal(valle.camino)}${pueblo(pb, { ventanas: personas })}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
+  // (22C) Las piscuchas vuelan a la izquierda de la montaña y su hilo baja a los niños de la plaza: van delante, con el pueblo.
+  const kp = Math.max(1, pb.u * 0.5);
+  const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q, i) => ({ ...q, k: kp, hilo: pb.ninos[i % Math.max(1, pb.ninos.length)] ? [pb.ninos[i % pb.ninos.length][0], pb.ninos[i % pb.ninos.length][1] - 2.6 * pb.u] : q.hilo }));
+  s += `<g id="m-v-pie">${caminoReal(valle.camino)}${pueblo(pb, { ventanas: personas })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
   // (Campamento 22B) El mar de niebla del amanecer: una capa detrás de la loma y otra delante de su falda (todo detrás de la montaña).
   const mar = marDeNiebla({ W, H, canton: valle.canton, milpa: valle.milpa, k: valle.k, cresta: crestaMedia, techo });
-  s = s.replace('<!--v-cielo-->', bandadas(valle.aves)).replace('<!--v-vacas-->', potrero({ vacas: valle.vacas, k: valle.k })).replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${mar.atras}${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H, soloLoma: true })}${lucesValle(valle.luces, valle.k, 1)}${mar.frente}</g>`);
+  s = s.replace('<!--v-cielo-->', bandadas(valle.aves)).replace('<!--v-vacas-->', potrero({ vacas: valle.vacas, k: valle.k })).replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${mar.atras}${canton({ ...valle.canton, sol: solV, ventanas: personas, H, soloLoma: true })}${lucesValle(valle.luces, valle.k, 1)}${mar.frente}</g>`);
   // El mismo trazo, entero (para medir la altitud y el tramo recorrido) y por tramos de zigzag (para la tierra del camino,
   // que se estrecha con la altura: más ancho abajo, más fino arriba, como visto en perspectiva).
   let d = `M${f1(bx)} ${f1(by)}`;
