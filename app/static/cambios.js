@@ -7,6 +7,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-12-c', fecha: '2026-12-15',
+    items: [
+      'Un día como hoy en que el libro llegó a un campamento o a una etapa, hace uno o más años, el saludo lo recuerda y el Diario lo cuenta al empezar «Hace un año».',
+      'En «Tu historia» está la película del ascenso: en quince segundos, el camino del libro desde la primera compra hasta hoy, sobre la montaña de hoy.',
+      'Mientras corre, arriba se ve el saldo de cada día; los faroles de los campamentos se encienden al pasarlos y el bosque crece con las compras.',
+      'Con el deslizador se va a cualquier día. Y en la línea de «Tu historia», cada etapa con fecha tiene «Ver ese día», que abre la película detenida ahí.',
+    ],
+  },
+  {
     id: '2026-12-b2', fecha: '2026-12-10',
     items: [
       'Al pie de la montaña ahora hay un pueblo de verdad: su iglesia, su plaza, casas de colores, gente y animales; el sendero empieza en él.',

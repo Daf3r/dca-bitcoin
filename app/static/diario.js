@@ -20,7 +20,7 @@ function pintarPliegue() {
   // Solo se escribe si cambió: el Diario se repinta con cada precio (cada 30 s) y el botón puede tener el foco.
   const poner = (id, txt) => { if ($(id).textContent !== txt) $(id).textContent = txt; };
   poner('dia-abrir-t', abierto ? 'Plegar el Diario' : 'Leer el Diario de hoy');
-  poner('dia-abrir-d', abierto || !ultimo ? '' : ` · ${ultimo.haceUnAnio || ultimo.notaAnio ? 'hace un año, ' : ''}clasificados y pronóstico`);
+  poner('dia-abrir-d', abierto || !ultimo ? '' : ` · ${ultimo.haceUnAnio || ultimo.notaAnio || ultimo.talDia ? 'hace un año, ' : ''}clasificados y pronóstico`);
 }
 $('dia-abrir').addEventListener('click', () => {
   if (!ultimo) return;
@@ -74,7 +74,10 @@ export function pintarDiario() {
   const grab = $('dia-grabado');
   grab.innerHTML = miniMontana({ altitud: d.altitud });
   grab.setAttribute('aria-label', `Grabado de la montaña: ${vozLibro() ? 'el libro va' : 'vas'} al ${Math.round(d.altitud * 100)} % de la altura de la cima.`);
-  $('dia-hace-b').hidden = !d.haceUnAnio && !d.notaAnio;
+  $('dia-hace-b').hidden = !d.haceUnAnio && !d.notaAnio && !d.talDia;
+  // Tal día como hoy (campamento 23): el campamento o la etapa a la que el libro llegó un día como hoy, encabeza «Hace un año».
+  $('dia-tal').hidden = !d.talDia;
+  pegado($('dia-tal'), d.talDia?.texto ?? '');
   pegado($('dia-hace'), d.haceUnAnio?.texto ?? '');
   // La semana en una línea (campamento 18): lo que se anotó con la compra de esa semana, hace un año. Siempre con `textContent`.
   $('dia-nota').hidden = !d.notaAnio;

@@ -4088,6 +4088,7 @@ html[data-cielo="noche"] :is(.v-vaca-pie, .v-garcita) { display: none; }
 /* 57, 60 y 61 · Lo que se mueve (ambiente: solo con «todos», y siempre uno a la vez, `data-mueve` de cielo.js): los azacuanes de octubre
    y abril, los pericos del atardecer, los zompopos de mayo y los relámpagos lejanos de las noches de lluvia. Solo transform y opacity. */
 .v-ave, .v-zompopos, .v-rayo { display: none; }
+
 html[data-mueve="azacuanes"] .v-aza, html[data-mueve="pericos"] .v-peri, html[data-mueve="zompopos"] .v-zompopos, html[data-mueve="relampagos"] .v-rayo { display: inline; }
 /* Los azacuanes: un remolino de gavilanes que planea en círculos (alas abiertas, sin aletear) y pasa despacio. */
 .v-aza { fill: none; stroke: color-mix(in oklab, #34281f 72%, var(--c2)); stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
@@ -4272,3 +4273,103 @@ html[data-fiesta="patrias"] .v-patrias { display: inline; }
 .v-asta { fill: none; stroke: color-mix(in oklab, #3a3530 70%, var(--monte-sombra)); stroke-linecap: round; }
 .v-bandera-azul { fill: color-mix(in oklab, #1f5fbf calc(var(--v-luz) + 22%), var(--monte-sombra)); }
 .v-bandera-blanca { fill: color-mix(in oklab, #f7f3ea calc(var(--v-luz) + 22%), var(--monte-sombra)); }
+
+/* ===================================================================================================================================
+   Campamento 23 · Tu camino, otra vez: «Tal día como hoy» (idea 41) y la película del ascenso (idea 29).
+   =================================================================================================================================== */
+/* Tal día como hoy en el Diario: encabeza «Hace un año», con la letra de las citas y una raya de la tinta del Diario. */
+.dia-bloque .dia-tal { margin: 0 0 8px; font: italic 500 1.0625rem/1.45 var(--serif); }
+.dia-tal[hidden] { display: none; }
+
+/* La entrada a la película en «Tu historia», bajo el dibujo de hoy: una tarjeta baja con el material de las tarjetas y su botón con el
+   mismo trazo que «Verlo de cerca» (abre algo para mirar; el naranja relleno queda para anotar y guardar). */
+.dh-peli { display: grid; gap: 10px 18px; margin: 0 0 16px; padding: 16px 18px 18px; border-radius: 22px;
+  background-color: var(--s1); background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
+.dh-peli[hidden] { display: none; }
+.historia-pg .dh-peli h3 { margin: 0; font: 500 1.25rem/1.2 var(--serif); color: var(--txt); }
+.dh-peli-txt p { margin: 3px 0 0; font-size: 0.9375rem; line-height: 1.45; color: var(--txt2); }
+.dh-peli-ver { justify-self: start; display: inline-flex; align-items: center; gap: 10px; min-height: var(--toque, 48px); padding: 0 22px 0 18px; border: 2px solid var(--naranja); border-radius: 999px;
+  background: color-mix(in srgb, var(--naranja) 12%, var(--s1)); color: var(--txt); font: 700 1rem var(--sans); cursor: pointer; }
+.dh-peli-ver .ico { width: 1.05em; height: 1.05em; color: var(--naranja-txt); }
+@media (hover: hover) and (pointer: fine) { .dh-peli-ver:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
+.dh-peli-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
+@media (min-width: 700px) { .dh-peli { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 16px 22px; } }
+/* «Ver ese día» en la línea de «Tu historia»: un enlace pequeño bajo la etapa, con su ▶ (zona de toque de 48 px, como todos). */
+.h-ev .h-ver { display: flex; width: fit-content; gap: 6px; margin: -8px 0 -10px; font-size: 0.8125rem; color: var(--txt2); text-decoration-thickness: 1.5px; text-decoration-color: color-mix(in srgb, var(--naranja) 60%, transparent); }
+.h-ev .h-ver .ico { width: 0.8em; height: 0.8em; color: var(--naranja-txt); }
+.h-pasos li .h-ver { min-height: var(--toque); margin: -12px 0; }
+
+/* La película del ascenso: un diálogo a pantalla completa. Arriba, sobre el cielo, el título, «Cerrar» y el saldo de ese día (como la
+   cabecera de la app: van uno bajo otro, así un título partido en dos renglones o la letra grande no los enciman); la montaña de hoy
+   ocupa el resto; abajo, el botón y el deslizador. En escritorio y acostado, botón y deslizador van a la izquierda, bajo el saldo del
+   día, donde la montaña deja sitio (una rejilla: `.pe-escena` se disuelve en ella). */
+.d-pelicula { width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--fondo); color: var(--txt); overflow: hidden; }
+.d-pelicula[open] { display: flex; flex-direction: column; }
+.d-pelicula::backdrop { background: var(--fondo); }
+html:is([data-efectos="todos"], [data-efectos="esenciales"]) .d-pelicula[open] { animation: pe-entra 0.3s ease-out; }
+@keyframes pe-entra { from { opacity: 0; } }
+.pe-escena { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--c0); }
+.pe-montana { --pie: 48; z-index: 0; }
+/* El bosque crece con las compras de cada día (montana.js: fotograma): lo que aún no había no se ve y, al aparecer, brota (como el pino de
+   una compra nueva). Con efectos «ninguno», aparece sin más. */
+.pe-montana .pe-fuera { display: none; }
+html:not([data-efectos="ninguno"]) .pe-montana :is(#m-bosque path, .arbol-honor) { transform-box: fill-box; transform-origin: 50% 100%; animation: planta 0.7s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.pe-cab, .pe-cap { position: relative; z-index: 1; color: var(--cielo-txt); text-shadow: 0 0 10px var(--cielo-sombra, transparent); }
+.pe-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); }
+.d-pelicula .pe-cab h2 { margin: 0; font: 400 1.125rem/1.2 var(--serif); }
+.pe-cerrar { flex: none; min-width: 96px; min-height: var(--toque); padding: 0 18px; border: 1px solid var(--s3); border-radius: 99px; background: var(--s1); color: var(--txt); font: 650 1rem var(--sans); text-shadow: none; cursor: pointer; touch-action: manipulation; }
+.pe-cap { margin: 8px max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); container-type: inline-size; pointer-events: none; }
+.d-pelicula .pe-cap p { margin: 0; color: inherit; }
+.d-pelicula .pe-k { font: 400 1rem/1.3 var(--serif); color: var(--cielo-txt2); }
+.d-pelicula .pe-v { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
+.pe-cifra { font: 300 clamp(1.5rem, min(14cqi, 80cqi / (var(--n, 7) * 0.575)), 3.75rem) / 1.05 var(--sans); letter-spacing: -0.03em; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
+.pe-v em { font: italic 400 clamp(1.1rem, 5cqi, 1.6rem) var(--serif); color: var(--cielo-txt2); }
+/* Lo que pasó ese día («Llegaste al campamento 1M»): su renglón se reserva siempre (no mueve nada al aparecer). */
+.d-pelicula .pe-ev { min-height: 1.45em; margin-top: 2px; font: 650 0.9375rem/1.45 var(--sans); }
+.pe-ev:not(:empty)::before { content: ""; display: inline-block; width: 0.5em; height: 0.5em; margin-right: 0.45em; border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 2px color-mix(in srgb, var(--naranja) 30%, transparent); vertical-align: 0.08em; }
+/* Abajo: el botón (naranja: es la acción de este cuadro) y el deslizador, a lo ancho. */
+.pe-ctl { position: relative; z-index: 1; flex: none; display: flex; align-items: center; gap: 14px; padding: 10px max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: var(--fondo); }
+.pe-play { flex: none; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: var(--naranja); color: var(--naranja-osc); cursor: pointer; touch-action: manipulation;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 2px 10px rgb(0 0 0 / 0.25); }
+.pe-play[hidden] { display: none; }
+.pe-play .ico { width: 24px; height: 24px; }
+.pe-play[data-estado="ver"] .ico, .pe-play[data-estado="otra"] .ico { transform: translateX(1.5px); }
+.pe-play:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
+.pe-riel { flex: 1 1 auto; min-width: 0; }
+.d-pelicula .pe-fechas { display: flex; justify-content: space-between; gap: 12px; margin: -6px 0 0; font-size: 0.8125rem; color: var(--txt2); }
+/* El deslizador: 48 px de toque, un riel fino y un tirador grande (las propiedades de cada navegador van aparte). Lo recorrido va en
+   naranja (`--p`, de 0 a 1: lo pone pelicula.js al cambiar de día). */
+.pe-rango { display: block; width: 100%; height: var(--toque, 48px); margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; touch-action: none; }
+.pe-rango::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--naranja) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--txt) 22%, var(--fondo)) 0); }
+.pe-rango::-moz-range-track { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--txt) 22%, var(--fondo)); }
+.pe-rango::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--naranja); }
+.pe-rango::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 26px; height: 26px; margin-top: -10px; border: 3px solid var(--fondo); border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 1.5px var(--naranja-txt); }
+.pe-rango::-moz-range-thumb { width: 22px; height: 22px; border: 3px solid var(--fondo); border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 1.5px var(--naranja-txt); }
+.pe-rango:focus-visible { outline: none; }
+.pe-rango:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1.5px var(--naranja-txt), 0 0 0 6px color-mix(in srgb, var(--naranja) 40%, transparent); }
+.pe-rango:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 1.5px var(--naranja-txt), 0 0 0 6px color-mix(in srgb, var(--naranja) 40%, transparent); }
+.pe-riel:has(.pe-rango:focus-visible) { outline: 3px solid var(--naranja-txt); outline-offset: 2px; border-radius: 12px; }
+/* Escritorio y teléfono acostado: la montaña ocupa todo y, encima, una rejilla con el título a lo ancho y, a la izquierda, el saldo
+   del día y los controles (la montaña está a la derecha). La escena se disuelve en la rejilla: sus hijos son celdas. */
+@media (min-width: 1100px), (max-height: 520px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
+  .d-pelicula[open] { display: grid; grid-template-columns: minmax(0, min(26rem, 40vw)) minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr); align-content: start; }
+  .pe-escena { display: contents; }
+  .pe-montana { position: absolute; inset: 0; }
+  .pe-cab { grid-column: 1 / -1; grid-row: 1; }
+  .pe-cap { grid-column: 1; grid-row: 2; margin-right: 0; }
+  .pe-ctl { grid-column: 1; grid-row: 3; margin: 12px 0 0 max(20px, env(safe-area-inset-left)); padding: 8px 14px 10px 10px;
+    border-radius: 20px; background: color-mix(in srgb, var(--s1) 92%, transparent); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
+}
+@media (min-width: 1100px) {
+  .d-pelicula[open] { grid-template-columns: max(32px, calc(50vw - var(--medio-ancho))) minmax(0, min(26rem, 40vw)) minmax(0, 1fr); }
+  .pe-cab { grid-column: 2 / -1; padding: max(16px, env(safe-area-inset-top)) max(24px, calc(50vw - var(--medio-ancho))) 0 0; }
+  .pe-cap { grid-column: 2; margin: 40px 0 0; }
+  .pe-ctl { grid-column: 2; margin-left: -10px; }
+}
+/* Acostado: todo más justo (390 px de alto o menos) y los controles abajo, donde la montaña deja sitio a la izquierda. */
+@media (max-height: 520px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
+  .d-pelicula[open] { grid-template-columns: minmax(0, min(22rem, 44vw)) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  .pe-cap { margin-top: 4px; }
+  .pe-ctl { grid-row: 4; margin: 0 0 max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .pe-cifra { font-size: clamp(1.4rem, min(11cqi, 80cqi / (var(--n, 7) * 0.575)), 2.4rem); }
+}

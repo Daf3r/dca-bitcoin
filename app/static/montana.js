@@ -247,7 +247,7 @@ function enCapas(host, W, H) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false, personas = 0, iniciales = '', primera = null, meses = 0, anios = 0 }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false, personas = 0, iniciales = '', primera = null, meses = 0, anios = 0, pelicula = false, rotulo = null }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo, pie);
@@ -547,7 +547,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // un campamento y el siguiente. Solo en la app (la entrada no enseña tus datos).
   // (Campamento 21) Con las etapas más juntas, solo las que caben: `lib.marcasDeEtapa` (la siguiente siempre; sin marcas pegadas
   // entre sí ni a un campamento; tope por tamaño). Las intermedias van más finas (`.menor`).
-  const etapas = !tocable ? [] : marcasDeEtapa(etapasHasta(esc.cima).filter((m) => m < esc.cima && m > esc.base && !esc.campos.includes(m)).map((m) => {
+  // (Campamento 23) La película del ascenso también las dibuja (se encienden al pasarlas), aunque su escena no se toca.
+  const etapas = !tocable && !pelicula ? [] : marcasDeEtapa(etapasHasta(esc.cima).filter((m) => m < esc.cima && m > esc.base && !esc.campos.includes(m)).map((m) => {
     const alt = altitud(m, esc), l = enAltura(alt), p = camino.getPointAtLength(l);
     const a = camino.getPointAtLength(Math.max(0, l - 4)), b = camino.getPointAtLength(Math.min(L, l + 4));
     return { m, p, ang: Math.atan2(b.y - a.y, b.x - a.x), mitad: (anchoAbajo * (1 - 0.58 * alt)) / 2 + 4 };
@@ -571,7 +572,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null } : null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -1049,18 +1050,21 @@ function etiquetar(yo, sats = estado.sats) {
   for (const { m, p } of estado.etapas || []) cajas.push({ x: p.x - 9, y: p.y - 9, w: 18, h: 18, m, fina: rangoEtapa(m) === 'intermedia' });
   // En el teléfono y la tablet el saldo ocupa todo el ancho de arriba: ninguna etiqueta sube por encima de él.
   const techoEt = W < 1100 && !estado.c.lago ? (estado.techo || 0) + 4 : 0;
-  const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || b.y < Math.max(4, techoEt) || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
+  // (Campamento 23) En la película «Tú» empieza al pie, junto a la salida: ningún rótulo baja hasta el suelo que funde la escena (no se leería).
+  const suelo = estado.pelicula ? estado.H * 0.95 - 2 : Infinity;
+  const choca = (b, propio) => b.x < 4 || b.x + b.w > W - 4 || b.y < Math.max(4, techoEt) || b.y + b.h > suelo || cajas.some((o) => o.m !== propio && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
   // «Tú» primero: arriba a la izquierda de tu punto y, si ahí hay un campamento, en otro rincón.
   // El rótulo del punto: «Tú» para quien anota y «Vamos aquí» para quien solo mira (no es esa persona la que sube). La caja mide
   // lo que el texto (36 px para «Tú», como siempre) y se aparta lo mismo del punto.
-  const rotulo = estado.libro ? 'Vamos aquí' : 'Tú';
-  const wYo = estado.libro ? rotulo.length * 7.4 + 16 : 36;
+  // (Campamento 23) La película del ascenso pone el suyo («Íbamos aquí» los días de antes, para quien solo mira).
+  const rotulo = estado.rotulo ?? (estado.libro ? 'Vamos aquí' : 'Tú');
+  const wYo = rotulo !== 'Tú' ? rotulo.length * 7.4 + 16 : 36;
   const yoOpc = [[-46, -38, 'end', -16], [10, -38, 'start', 16], [-46, 12, 'end', -16], [10, 12, 'start', 16], [-54, -8, 'end', -24], [18, -8, 'start', 24], [-18, -64, 'middle', 0], [-18, 26, 'middle', 0]]
     .map(([dx, dy, a, tx]) => ({ x: a === 'end' ? yo.x + dx + 36 - wYo : a === 'middle' ? yo.x - wYo / 2 : yo.x + dx, y: yo.y + dy, w: wYo, h: 24, anclaje: a, tx: yo.x + tx }));
   // (Con `middle` la caja ya va centrada: dx = −18.)
   // «Vamos aquí» es más largo que «Tú»: además se aparta del propio sendero (unas muestras del trazo a cada lado del punto).
   const senda = [];
-  if (estado.libro) {
+  if (rotulo !== 'Tú') {
     const l = estado.enAltura(altitud(sats, estado.esc));
     for (let d = -84; d <= 84; d += 12) {
       if (Math.abs(d) < 12 || l + d < 0 || l + d > estado.L) continue;
@@ -1224,6 +1228,40 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
     else if (festejo) llegar(festejo, p, hasta);
   };
   requestAnimationFrame(paso);
+}
+
+/** (Campamento 23) La escala de la escena dibujada en `host` (base y cumbre: la película mide la altitud con ella), o null si ya no es la suya. */
+export const escalaDe = (host) => (estado?.host === host ? estado.esc : null);
+/**
+ * (Campamento 23) Un fotograma de la película del ascenso: «Tú» donde estaba el saldo ese día, sobre la montaña de hoy (la escala no
+ * cambia). Mientras se mueve (`quieto` falso) va sin su rótulo ni sus huellas, como al subir; quieto, con todo (`rotulo` es el suyo).
+ * Los campamentos que pasa al avanzar encienden su farol (`iza`) y el bosque crece con las compras que llevaba (`compras`: los pinos
+ * y los árboles de honor que aún no había se esconden). No hace nada si la escena ya no es la de `host` (se redibujó o se cerró).
+ */
+export function fotograma(host, sats, { compras = null, quieto = false, rotulo = null } = {}) {
+  if (!estado || estado.host !== host || !host.isConnected) return;
+  estado.rotulo = rotulo;
+  if (!quieto && !estado.enMarcha) {
+    host.querySelectorAll('#m-etiquetas .yo-txt, #m-etiquetas .eti-yo').forEach((e) => e.remove());
+    host.querySelector('#m-huellas').innerHTML = '';
+    host.querySelectorAll('#m-etapas .etapa[visibility]').forEach((g) => g.removeAttribute('visibility'));
+  }
+  estado.enMarcha = !quieto;
+  const antes = estado.satsFoto;
+  colocar(sats, !quieto);
+  if (antes != null && sats > antes) {
+    for (const g of host.querySelectorAll('.campo')) {
+      const m = Number(g.dataset.m);
+      if (m > antes && m <= sats) { g.classList.add('iza'); setTimeout(() => g.classList.remove('iza'), 1800); }
+    }
+  }
+  estado.satsFoto = sats;
+  if (compras == null || !(estado.compras > 0)) return;
+  const por = Math.ceil(estado.compras / MAX_PINOS), vis = Math.ceil(compras / por);
+  if (vis === estado.pinosVis) return;
+  estado.pinosVis = vis;
+  host.querySelectorAll('#m-bosque path').forEach((p, i) => p.classList.toggle('pe-fuera', i >= vis));
+  for (const [tipo, desde] of [['ceibo', 100], ['amate', 500], ['maquilishuat', 1000]]) host.querySelector(`.arbol-honor.${tipo}`)?.classList.toggle('pe-fuera', compras < desde);
 }
 
 // ------------------------------------------------------------------ celebración

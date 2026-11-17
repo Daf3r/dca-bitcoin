@@ -70,6 +70,7 @@ const anio = await servidor('anio');
 const hoy = await servidor('hoy');
 const ballena = await servidor('ballena');
 const mil = await servidor('mil'); // con etiquetas
+const taldia = await servidor('taldia'); // (campamento 23) hoy hace un año llegó al campamento 1M
 try {
   for (const esquema of ['light', 'dark']) {
     const nuevo = async (srv, cuenta, init = null, hora = esquema === 'light' ? 12 : 22) => {
@@ -568,6 +569,41 @@ try {
       await auditar(p, `22C la entrada en Nochebuena ${esquema}`);
       await ctx.close();
     }
+    { // campamento 23: tal día como hoy (saludo y Diario) y la película del ascenso (corriendo, «Ver ese día», «ninguno» con letra muy grande, acostado)
+      const abrir = async (srv, cuenta, extra = {}, vp = null) => {
+        const ctx = await navegador.newContext({ ...(vp ? { viewport: vp, isMobile: vp.width < 700, hasTouch: vp.width < 1100 } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript(([h, x]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, [esquema === 'light' ? 12 : 20, extra]);
+        await entrar(p, srv.url, cuenta); await cerrarOferta(p);
+        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+        return { ctx, p };
+      };
+      let { ctx, p } = await abrir(taldia, ADMIN, { 'libro.pestana': 'resumen' });
+      await p.click('#dia-abrir'); await p.waitForTimeout(400);
+      await auditar(p, `23 tal día como hoy: saludo y Diario ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, ADMIN, { 'libro.pestana': 'historia', 'libro.efectos': 'todos' }));
+      await auditar(p, `23 «Tu historia» con la película ${esquema}`);
+      await p.click('#dh-peli-ver'); await p.waitForTimeout(5000);
+      await auditar(p, `23 la película corriendo ${esquema}`);
+      await p.waitForTimeout(11500);
+      await auditar(p, `23 la película al acabar ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(mil, LECTOR, { 'libro.pestana': 'historia', 'libro.historia.abiertas': 'linea' }));
+      await p.evaluate(() => { for (const d of document.querySelectorAll('#dh-linea .h-pasos details')) d.open = true; });
+      await auditar(p, `23 lectora: «Ver ese día» en la línea ${esquema}`);
+      await p.locator('#dh-linea .h-ver').nth(2).click(); await p.waitForTimeout(900);
+      await auditar(p, `23 lectora: la película detenida en un día ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, ADMIN, { 'libro.pestana': 'historia', 'libro.efectos': 'ninguno', 'libro.letra': 'muy-grande', 'libro.contraste': 'alto' }, { width: 320, height: 568 }));
+      await p.click('#dh-peli-ver'); await p.waitForTimeout(900);
+      await auditar(p, `23 la película con «ninguno», letra muy grande y alto contraste a 320 ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, ADMIN, { 'libro.pestana': 'historia' }, { width: 844, height: 390 }));
+      await p.click('#dh-peli-ver'); await p.waitForTimeout(3000);
+      await auditar(p, `23 la película acostada ${esquema}`);
+      await ctx.close();
+    }
     { // campamento 24: medir este aparato (antes de la prueba, durante, con el resultado) y las medidas en «Estado del sistema»
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
@@ -666,7 +702,7 @@ try {
     }
   }
 } finally {
-  anio.parar(); hoy.parar(); ballena.parar(); mil.parar(); await navegador.close();
+  anio.parar(); hoy.parar(); ballena.parar(); mil.parar(); taldia.parar(); await navegador.close();
 }
 console.log(`${estados} estados revisados con axe.`);
 if (hallazgos.length) {

@@ -1419,4 +1419,63 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(nodos <= 300, `valle 22C: el valle del teléfono con seis personas cabe en 300 nodos (${nodos})`);
   ok((lb.match(/<path/g) || []).length === 7, 'valle 22C: la ladera baja son siete trazos (claros, peñas en tres tonos y pinos en tres)');
 }
+
+// Campamento 23 · Tu camino, otra vez: «Tal día como hoy» (idea 41) y la película del ascenso (idea 29)
+{
+  const L = await import('../app/static/lib.js');
+  const c = (id, fecha, sats, tipo = 'compra') => ({ id, fecha, tipo, sats, precio: 100000, monto: sats / 1000, extra: 0 });
+  // Hace dos años llegó a 250k (principal) y hace un año al campamento 1M, los dos un 17 de noviembre: gana el campamento.
+  const its = [c(1, '2024-10-18', 200_000), c(2, '2024-11-17', 60_000), c(3, '2025-03-01', 660_000), c(4, '2025-11-17', 100_000), c(5, '2026-05-01', 275_000)];
+  const R = resumen(its, 90000, '2026-11-17');
+  const t = L.talDiaComoHoy(R.camino, '2026-11-17', '2024-10-18');
+  eq(t, { m: 1e6, fecha: '2025-11-17', rango: 'campamento', anios: 1 }, 'tal día: el campamento 1M de hace un año gana a la etapa 250k de hace dos');
+  eq([L.talDiaComoHoy(R.camino, '2026-11-18', '2024-10-18'), L.talDiaComoHoy(R.camino, '2025-11-17', '2024-10-18')?.m], [null, 250_000], 'tal día: otro día no hay nada; el año pasado, solo la de hace un año');
+  eq(L.talDiaComoHoy(R.camino, '2026-11-17', '2024-10-18'), L.talDiaComoHoy(R.camino, '2026-11-17', '2024-10-18'), 'tal día: el mismo día, lo mismo');
+  // A igual rango, la más alta: 750k (2024) y 1.25M (2025), dos intermedias.
+  const inter = resumen([c(1, '2024-01-05', 700_000), c(2, '2024-11-17', 60_000), c(3, '2025-02-01', 400_000), c(4, '2025-11-17', 100_000)], 90000, '2026-11-17');
+  eq(L.talDiaComoHoy(inter.camino, '2026-11-17', '2024-01-05')?.m, 1_250_000, 'tal día: a igual rango, la etapa más alta');
+  // El día de la primera compra es el aniversario del libro (ya se dice aparte): sus etapas no cuentan.
+  const primera = resumen([c(1, '2025-11-17', 1_000_000), c(2, '2026-02-01', 30_000)], 90000, '2026-11-17');
+  eq(L.talDiaComoHoy(primera.camino, '2026-11-17', '2025-11-17'), null, 'tal día: las etapas de la primera compra no cuentan (su día ya tiene su aviso)');
+  // El 29 de febrero se recuerda el 28 en los años sin 29, y el 29 en los bisiestos.
+  const bis = resumen([c(1, '2024-01-10', 50_000), c(2, '2024-02-29', 60_000)], 90000, '2028-03-01');
+  eq([L.talDiaComoHoy(bis.camino, '2025-02-28', '2024-01-10')?.anios, L.talDiaComoHoy(bis.camino, '2028-02-28', '2024-01-10'), L.talDiaComoHoy(bis.camino, '2028-02-29', '2024-01-10')?.anios], [1, null, 4], 'tal día: un 29 de febrero se recuerda el 28 en los años sin 29');
+  eq(L.talDiaComoHoy(resumen([c(1, '2026-01-02', 50_000), c(2, '2026-11-17', 60_000)], 90000, '2026-11-17').camino, '2026-11-17', '2026-01-02'), null, 'tal día: lo de este mismo año no es «hace un año»');
+  eq(L.saludoTalDia(t, 'Daf3r'), ['Daf3r, hoy hace un año llegaste a 1M sats', 'Hoy hace un año llegaste a 1M sats', 'Hoy hace un año: 1M sats'], 'tal día: las formas del saludo, de la larga a la corta');
+  eq(L.saludoTalDia({ m: 2.5e8, anios: 3 }, 'Ana', true), ['Ana, hoy hace 3 años el libro llegó a 2.5 BTC', 'Hoy hace 3 años el libro llegó a 2.5 BTC', 'Hoy hace 3 años: 2.5 BTC'], 'tal día: a quien solo mira se le habla del libro, sin tutear');
+  ok(L.saludoTalDia(t, 'Ana', true).every((s) => !/\b(llegaste|tu|tus|te)\b/i.test(s)), 'tal día: la voz del libro no tutea');
+  eq([L.textoTalDia(t), L.textoTalDia({ m: 1_250_000, rango: 'intermedia', anios: 2 })], ['Tal día como hoy, hace un año, el libro llegó al campamento 1M.', 'Tal día como hoy, hace 2 años, el libro llegó a 1.25M sats.'], 'tal día: la línea del Diario');
+  const d = diario(R, '2026-11-17');
+  ok(d.talDia?.m === 1e6 && d.talDia.texto === 'Tal día como hoy, hace un año, el libro llegó al campamento 1M.' && diario(R, '2026-11-18').talDia === null, 'tal día: el Diario lo trae ese día y no otro');
+  const oido = diarioParaOir(d);
+  ok(oido.indexOf('Hace un año.') >= 0 && oido[oido.indexOf('Hace un año.') + 1] === 'Tal día como hoy, hace un año, el libro llegó al campamento 1 millón.', `tal día: «Escuchar» lo lee al empezar «Hace un año» (${oido.slice(3, 6).join(' | ')})`);
+  ok(!/compra ahora|conviene|deberías|recomend/i.test(L.saludoTalDia(t, 'Daf3r').join(' ') + d.talDia.texto), 'tal día: informa, no presiona');
+
+  // La película: de la primera compra a hoy, día por día.
+  const mov = [c(1, '2025-01-10', 60_000), c(2, '2025-01-20', 50_000), c(3, '2025-03-01', 200_000), c(4, '2025-03-01', 20_000, 'venta'), c(5, '2025-06-15', 800_000), c(6, '2025-06-20', 30_000)];
+  const Rm = resumen(mov, 90000, '2025-07-10');
+  const P = L.peliculaAscenso(Rm.items, Rm.camino, '2025-07-10');
+  eq([P.desde, P.dias, P.pasos.length, P.pasos.map((p) => p.d)], ['2025-01-10', 181, 5, [0, 10, 50, 156, 161]], 'película: de la primera compra a hoy, un paso por día con movimientos');
+  eq(P.pasos[2], { d: 50, fecha: '2025-03-01', sats: 290_000, compras: 3 }, 'película: el día con compra y venta, el saldo al cerrar el día');
+  const x0 = L.diaPelicula(P, 0);
+  eq([x0.fecha, x0.sats, x0.compras, x0.evento, x0.hoy], ['2025-01-10', 60_000, 1, { tipo: 'primera' }, false], 'película: el primer día, la primera compra');
+  eq([L.diaPelicula(P, 30).sats, L.diaPelicula(P, 30).evento], [110_000, null], 'película: entre compras, el saldo del último día con movimientos (y nada que contar lejos de una etapa)');
+  eq(L.diaPelicula(P, 10).evento, { tipo: 'etapa', m: 100_000, rango: 'campamento' }, 'película: el día en que llegó a 100k, el campamento');
+  eq(L.diaPelicula(P, 156).evento, { tipo: 'etapa', m: 1e6, rango: 'campamento' }, 'película: si cruzó varias el mismo día, la destacada (el campamento 1M, no 750k)');
+  eq([L.diaPelicula(P, 160).evento?.m, L.diaPelicula(P, 156 + 10).evento], [1e6, null], 'película: lo que pasó se queda unos días (una semana) y luego se va');
+  eq([L.diaPelicula(P, -5).d, L.diaPelicula(P, 1e9).d, L.diaPelicula(P, 1e9).hoy, L.diaPelicula(P, 1e9).sats], [0, 181, true, Rm.sats], 'película: acotada a su principio y a hoy, y hoy es el saldo de hoy');
+  eq([L.diaDeFecha(P, '2025-06-15'), L.diaDeFecha(P, '2024-01-01'), L.diaDeFecha(P, '2030-01-01')], [156, 0, 181], 'película: el día de una fecha («Ver ese día»)');
+  eq(L.textosPelicula(L.diaPelicula(P, 156)), { rotulo: 'Tu saldo el 15 jun 2025', evento: 'Llegaste al campamento 1M', lectura: '15 jun 2025: 1,090,000 sats. Llegaste al campamento 1M.' }, 'película: lo que dice un día');
+  const tl = L.textosPelicula(L.diaPelicula(P, 181), true);
+  eq([tl.rotulo, tl.evento, tl.lectura], ['Saldo del libro hoy', '', `Hoy, 10 jul 2025: ${Rm.sats.toLocaleString('en-US')} sats.`], 'película: hoy, en la voz del libro');
+  eq([L.textosPelicula(x0).evento, L.textosPelicula(x0, true).evento, L.textosPelicula(L.diaPelicula(P, 10), true).evento], ['Tu primera compra', 'La primera compra del libro', 'El libro llegó al campamento 100k'], 'película: la voz de quien anota y la del libro');
+  eq([L.peliculaAscenso([], [], '2025-07-10'), L.peliculaAscenso(null, null)], [null, null], 'película: sin movimientos no hay película');
+  eq(L.PELICULA_MS, 15000, 'película: dura 15 segundos');
+  // 2,000 días y 1,000 compras: buscar un día es instantáneo (búsqueda binaria).
+  const mucho = resumen(Array.from({ length: 1000 }, (_, i) => c(i + 1, L.sumarDias('2020-01-01', i * 2), 25_000)), 90000, '2025-07-01');
+  const Pm = L.peliculaAscenso(mucho.items, mucho.camino, '2025-07-01');
+  const t0 = performance.now();
+  for (let d2 = 0; d2 <= Pm.dias; d2++) L.diaPelicula(Pm, d2);
+  ok(performance.now() - t0 < 200 && L.diaPelicula(Pm, Pm.dias).sats === mucho.sats, `película: ${Pm.dias} días con mil compras en ${Math.round(performance.now() - t0)} ms`);
+}
 console.log(`OK ${n} comprobaciones`);
