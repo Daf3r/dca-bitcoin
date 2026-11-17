@@ -1253,7 +1253,7 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq([L.inicialesGrabadas('ADM'), L.inicialesGrabadas(''), L.fechaGrabada('2025-11-20'), L.fechaGrabada('2026-01-03'), L.fechaGrabada('x')], ['A · D · M', '', '20 · XI · 2025', '3 · I · 2026', ''], 'valle: lo que se graba en la roca');
   eq([L.ventanasEncendidas(2, 4), L.ventanasEncendidas(9, 4), L.ventanasEncendidas(0, 6), L.piscuchasDelValle(3), L.piscuchasDelValle(11)], [2, 4, 0, 3, 6], 'valle: una ventana y una piscucha por persona, hasta las que caben');
   const tv = L.textoValle({ luces: 13, arbol: { fecha: '2025-11-20', etapa: 'joven' } });
-  ok(/cantón/.test(tv) && /13 luces, una por mes del libro/.test(tv) && /conacaste joven, sembrado el 20 nov 2025/.test(tv) && !/\btu\b|\btus\b/i.test(tv), `valle: la frase del valle, sin tutear (${tv})`);
+  ok(/pueblo con su iglesia/.test(tv) && /13 luces, una por mes del libro/.test(tv) && /conacaste joven, sembrado el 20 nov 2025/.test(tv) && !/\btu\b|\btus\b/i.test(tv), `valle: la frase del valle, sin tutear (${tv})`);
 
   // El arte del valle: funciones puras, sin estilos en línea, con sus clases propias (prefijo v-) y pocos nodos.
   const A = await import('../app/static/arte-valle.js');
@@ -1262,19 +1262,18 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   const cresta = [[0, 560], [60, 548], [120, 566], [200, 552], [300, 570], [400, 556]];
   const sv = A.sitiosValle({ W: 390, H: 760, techo: 270, izq, der: [[242, 327], [300, 420], [360, 560], [420, 700]], cresta, bx: 55, by: 714, pts: [[55, 714], [232, 638], [120, 560], [242, 327]], lago: { cx: 335, cy: 665, rx: 62, ry: 12 }, personas: 3, meses: 13, anios: 1.2, primera: '2025-09-01' });
   const xIzq = (y) => { const s = [...izq].sort((a, b) => a[1] - b[1]); for (let i = 1; i < s.length; i++) if (y <= s[i][1]) return s[i - 1][0] + ((s[i][0] - s[i - 1][0]) * (y - s[i - 1][1])) / (s[i][1] - s[i - 1][1]); return s.at(-1)[0]; };
-  ok(sv.canton.n === 2 && sv.canton.caja[2] <= xIzq(sv.canton.y) && sv.canton.caja[0] >= 0 && sv.canton.y > 270, `valle: en el teléfono, dos ranchos a la izquierda de la montaña, por debajo del saldo (${sv.canton.caja.map(Math.round)})`);
+  ok(sv.canton.n === 2 && sv.canton.caja[2] <= xIzq(sv.canton.y) && sv.canton.caja[0] >= 0 && sv.canton.y > 270, `valle: en el teléfono, la loma lejana (antes el cantón) a la izquierda de la montaña, por debajo del saldo (${sv.canton.caja.map(Math.round)})`);
   const xDer = (y) => { const s = [[242, 327], [300, 420], [360, 560], [420, 700]]; for (let i = 1; i < s.length; i++) if (y <= s[i][1]) return s[i - 1][0] + ((s[i][0] - s[i - 1][0]) * (y - s[i - 1][1])) / (s[i][1] - s[i - 1][1]); return s.at(-1)[0]; };
   ok(sv.luces.length === 13 && sv.luces.every(([x, y]) => (x < xIzq(y) || x > xDer(y)) && y > 270), `valle: las 13 luces caen fuera de la montaña y por debajo del saldo (${sv.luces.length})`);
   ok(sv.luces.filter((l) => l[2] === 1).every(([, y]) => y > sv.canton.y - 4), 'valle: las luces del valle de cerca van sobre la loma (se dibujan con ella: no quedan tapadas)');
   ok(sv.piscuchas.length === 3 && sv.piscuchas.every(({ x, y }) => x < xIzq(y) && y > 270 + 20), 'valle: tres piscuchas a la izquierda de la montaña, por debajo del saldo');
   ok(sv.arbol && sv.arbol.x + sv.arbol.ra * 0.62 < 55 && sv.camino.fin[0] < 55, 'valle: el árbol del primer día y el camino real quedan del lado de la salida contrario al sendero');
-  const piezas = [A.canton({ ...sv.canton, ventanas: 3, H: 760 }), A.milpa(sv.milpa), A.pinoNavidad(sv.pino), A.caminoReal(sv.camino), A.arbolPrimerDia({ ...sv.arbol, ...L.arbolDelPrimerDia(1.2) }), A.lucesValle(sv.luces), A.piscuchas(sv.piscuchas), A.tule({ cx: 335, cy: 665, rx: 62, ry: 12, k: 1 }), A.vidaLago({ cx: 335, cy: 665, rx: 62, ry: 12, k: 1 }), A.grabadoLuna({ x: 300, y: 600, k: 1, iniciales: 'A · D', fecha: '20 · XI · 2025' })];
+  const piezas = [A.canton({ ...sv.canton, H: 760 }), A.milpa(sv.milpa), A.caminoReal(sv.camino), A.arbolPrimerDia({ ...sv.arbol, ...L.arbolDelPrimerDia(1.2) }), A.lucesValle(sv.luces), A.piscuchas(sv.piscuchas), A.tule({ cx: 335, cy: 665, rx: 62, ry: 12, k: 1 }), A.vidaLago({ cx: 335, cy: 665, rx: 62, ry: 12, k: 1 }), A.grabadoLuna({ x: 300, y: 600, k: 1, iniciales: 'A · D', fecha: '20 · XI · 2025' })];
   const svg = piezas.join('');
   const nodos = (svg.match(/<(?!\/)[a-zA-Z]/g) || []).length;
   ok(!/style=|<script|on[a-z]+=/i.test(svg) && (svg.match(/class="([^"]+)"/g) || []).every((x) => /class="(efecto-ambiente |copa|v-|lago-)/.test(x)), 'valle: SVG sin estilos ni scripts en línea, con clases propias (v-…)');
-  ok(nodos <= 150, `valle: todas las piezas del teléfono caben en el presupuesto de 150 nodos (${nodos}, con tres personas)`);
-  eq((A.canton({ ...sv.canton, ventanas: 3, H: 760 }).match(/<path class="v-luz" d="([^"]*)"/)[1].match(/M/g) || []).length, 3, 'valle: tres personas, tres ventanas encendidas');
-  eq((A.canton({ ...sv.canton, ventanas: 9, H: 760 }).match(/<path class="v-luz" d="([^"]*)"/)[1].match(/M/g) || []).length, 4, 'valle: en el teléfono caben cuatro ventanas (dos ranchos)');
+  ok(nodos <= 150, `valle: las piezas de arte-valle del teléfono caben en 150 nodos (${nodos}; el pueblo, en el campamento 22C)`);
+  eq((A.canton({ ...sv.canton, H: 760 }).match(/<path/g) || []).length, 4, 'valle: la loma lejana son cuatro trazos (sin casas: bajaron al pueblo)');
   ok(['siembra', 'jilote', 'doblada', 'tapisca', 'rastrojo'].every((e) => A.milpa(sv.milpa).includes(`v-mp-${e}`)), 'valle: la milpa trae sus cinco etapas (el CSS enseña la del día)');
   ok(/&lt;b&gt;/.test(A.grabadoLuna({ x: 1, y: 1, k: 1, iniciales: '<b>', fecha: '' })), 'valle: lo grabado se escapa');
   eq(A.piscuchas([]).includes('v-pis-a'), false, 'valle: sin personas no hay piscuchas');
@@ -1349,9 +1348,11 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(esc.length === 3 && esc.every((v) => v.x > 1160 + 120 && v.x < 1440) && esc[0].dir === -1, `valle 22B: tres vacas en escritorio, en la orilla de afuera (la que da al campo) (${esc.map((v) => Math.round(v.x))})`);
   const pot = A.potrero({ vacas: esc, k: 1.45 });
   eq([(pot.match(/<path/g) || []).length, A.potrero({ vacas: [] })], [6, ''], 'valle 22B: seis trazos para todas las vacas (de pie, echadas, sombra y garcitas); sin sitio, nada');
-  // 56 · los dos árboles del cantón, cada uno con sus trazos y sus flores caídas.
-  const cant = A.canton({ ...sv.canton, ventanas: 2, H: 760 });
-  ok(['copa v-maqui', 'copa v-fuego', 'v-flores v-flores-maqui', 'v-flores v-flores-fuego'].every((c) => cant.includes(`class="${c}"`)), 'valle 22B: el maquilishuat y el árbol de fuego con sus copas y sus flores caídas');
+  // 56 · los dos árboles de aquí (desde el campamento 22C, en el pueblo), cada uno con sus trazos y sus flores caídas.
+  const P = await import('../app/static/arte-pueblo.js');
+  const sp = P.sitiosPueblo({ W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270, sol: 1 });
+  const cant = P.pueblo(sp, { ventanas: 2 });
+  ok(['copa v-maqui v-sin-navidad', 'copa v-fuego', 'v-flores v-flores-maqui v-sin-navidad', 'v-flores v-flores-fuego'].every((c) => cant.includes(`class="${c}"`)), 'valle 22B: el maquilishuat (el árbol de la plaza) y el árbol de fuego con sus copas y sus flores caídas');
   // 57 · las bandadas: en el teléfono el remolino va sobre el valle, a la izquierda de la montaña y por debajo del saldo; los pericos entran por la derecha.
   ok(sv.aves.aza[0] < 200 && sv.aves.aza[1] > 270 && sv.aves.aza[1] < 548 && sv.aves.peri[0] > 390 && sv.aves.dist > 390, `valle 22B: el remolino de azacuanes sobre el valle y los pericos desde el borde derecho, de lado a lado (${sv.aves.aza.map(Math.round)}, ${Math.round(sv.aves.dist)})`);
   const avE = A.avesSitios({ W: 1440, H: 774, techo: 400, cresta, forma: 'esc', k: 1.45, cima: [890, 62], astro: [1310, 170], xIzq: () => 0 });
@@ -1362,10 +1363,60 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(A.sitioRayo(1440, 774, 294).x > 1440 / 2 && A.sitioRayo(390, 760, 470).x < 390 / 2, 'valle 22B: la tormenta, a la derecha en escritorio (a la izquierda está el saldo) y sobre el valle en el teléfono');
   // El presupuesto: todo el valle del teléfono, con seis personas (seis piscuchas y seis ventanas), más sus tres capas y el agua del lago, en 150 nodos.
   const lad = A.sitiosLadera({ W: 390, sx: 242, sy: 327, der: der.slice(1), nv: 57, pts, lago, cajas: [], grabado: true, k: 1 });
-  const todo = [A.canton({ ...sv.canton, ventanas: 6, H: 760 }), A.milpa(sv.milpa), A.pinoNavidad(sv.pino), A.caminoReal(sv.camino), A.arbolPrimerDia({ ...sv.arbol, ...L.arbolDelPrimerDia(1.2) }), A.lucesValle(sv.luces, 1, 0), A.lucesValle(sv.luces, 1, 1),
+  const todo = [A.canton({ ...sv.canton, H: 760 }), A.milpa(sv.milpa), A.caminoReal(sv.camino), A.arbolPrimerDia({ ...sv.arbol, ...L.arbolDelPrimerDia(1.2) }), A.lucesValle(sv.luces, 1, 0), A.lucesValle(sv.luces, 1, 1),
     A.piscuchas(sv.piscuchas), A.tule(lago), A.vidaLago(lago), A.grabadoLuna({ x: 300, y: 600, k: 1, iniciales: 'A · D · M · J · L · R', fecha: '20 · XI · 2025' }), lad.quebrada ? A.quebrada(lad.quebrada) : '', mar.atras, mar.frente, A.potrero({ vacas: sv.vacas, k: sv.k }), band, zom, ray].join('');
   const nodos = (todo.match(/<(?!\/)[a-zA-Z]/g) || []).length + 3 + 2; // + #m-v-fondo, #m-v-pie, #m-v-ladera y el agua del lago (.lago-playa, .lago-nivel)
-  ok(sv.piscuchas.length === 6 && nodos <= 150, `valle 22B: con seis personas, todo el valle del teléfono cabe en 150 nodos (${nodos})`);
+  ok(sv.piscuchas.length === 6 && nodos <= 150, `valle 22B: con seis personas, lo de arte-valle en el teléfono cabe en 150 nodos (${nodos}; el pueblo y sus campos tienen su presupuesto en 22C)`);
   ok(!/style=|<script|on[a-z]+=/i.test(todo) && (todo.match(/class="([^"]+)"/g) || []).every((x) => /class="(efecto-ambiente |copa|v-|vq-|lago-)/.test(x)), 'valle 22B: todo sin estilos ni scripts en línea, con clases propias');
+}
+// ---------------------------------------------------------------- Campamento 22C · el valle, de verdad (arte-pueblo.js)
+{
+  const P = await import('../app/static/arte-pueblo.js');
+  const A = await import('../app/static/arte-valle.js');
+  // Un teléfono de 390 × 764 con la franja del valle: la salida a 600 y el primer tramo del sendero que sube hacia la derecha.
+  const pts = [[55, 600], [232, 540], [120, 470], [242, 327]];
+  const lago = { cx: 320, cy: 680, rx: 62, ry: 12 };
+  const muestras = [];
+  for (let i = 1; i < pts.length; i++) for (let j = 0; j <= 40; j++) muestras.push([pts[i - 1][0] + ((pts[i][0] - pts[i - 1][0]) * j) / 40, pts[i - 1][1] + ((pts[i][1] - pts[i - 1][1]) * j) / 40]);
+  const sp = P.sitiosPueblo({ W: 390, H: 764, forma: 'tel', by: 600, bx: 55, pts, lago, techo: 270, sol: 1 });
+  const iglesia = sp.piezas.find((q) => q.tipo === 'iglesia'), casas = sp.piezas.filter((q) => q.tipo === 'casa');
+  ok(iglesia && sp.plaza && casas.length >= 2 && casas.length + sp.atras.length >= 5, `pueblo: en el teléfono, la iglesia, la plaza, ${casas.length} casas delante y ${sp.atras.length} detrás`);
+  // Nada del pueblo se acerca al sendero: cada pieza, con su alto, queda a 10 px o más por debajo del camino que pasa encima.
+  const alto = (q) => (q.tipo === 'iglesia' ? 40 : q.tipo === 'plaza' ? 24 : 18) * sp.u * q.s;
+  const ancho = (q) => (q.tipo === 'iglesia' ? 30 : q.tipo === 'plaza' ? 24 : 26) * sp.u * q.s;
+  const pisa = sp.piezas.filter((q) => muestras.some(([x, y]) => x > q.x - 8 && x < q.x + ancho(q) + 8 && y > sp.yg - alto(q) - 10));
+  eq(pisa.map((q) => q.tipo), [], 'pueblo: ninguna pieza se acerca al sendero');
+  ok(sp.caja[1] > 270 && sp.caja[2] <= lago.cx - lago.rx + 8 && sp.yg < 764, `pueblo: por debajo del saldo y a la izquierda del lago (${sp.caja.map(Math.round)})`);
+  const svg = P.pueblo(sp, { ventanas: 3 });
+  const subtrazos = (t, clase) => ((t.match(new RegExp(`<path class="${clase}" d="([^"]*)"`)) || ['', ''])[1].match(/M/g) || []).length;
+  eq(subtrazos(svg, 'v-luz'), 3, 'pueblo: tres personas, tres ventanas encendidas (una por persona, nunca más)');
+  ok(subtrazos(P.pueblo(sp, { ventanas: 99 }), 'v-luz') === casas.length * 2 && subtrazos(P.pueblo(sp, { ventanas: 0 }), 'v-luz') === 0, 'pueblo: cada casa del frente tiene dos ventanas; sin personas, ninguna encendida (la entrada)');
+  ok(!/style=|<script|on[a-z]+=|NaN/i.test(svg) && (svg.match(/class="([^"]+)"/g) || []).every((x) => /class="(efecto-ambiente |copa|v-)/.test(x)), 'pueblo: SVG sin estilos ni scripts en línea, sin NaN, con clases propias');
+  ok(['v-ig-frente', 'v-ig-torre', 'v-ig-cupula', 'v-plaza', 'v-farol-poste', 'v-gente', 'v-navidad v-pino-nav v-pn', 'v-navidad v-belen-figuras', 'v-navidad v-foco v-foco-0', 'v-fiesta v-band v-band-0', 'v-patrias v-bandera-azul'].every((c) => svg.includes(`class="${c}`)),
+    'pueblo: la iglesia, la plaza con sus faroles, la gente, el pino y el portal (Navidad), los foquitos, las banderitas (fiestas) y la bandera (patrias)');
+  eq([(svg.match(/v-hu v-hu-/g) || []).length, sp.ninos.length], [3, 6], 'pueblo: el humo de un fogón (tres bocanadas) y seis niños en la plaza (sostienen las piscuchas)');
+  ok(!/v-estrella|estrella/.test(P.pinoPlaza(100, 700, 2)), 'pueblo: el pino de Navidad no lleva estrella (nada sobresale contra el cielo)');
+  // Escritorio: a la izquierda de la salida, más grande.
+  const se = P.sitiosPueblo({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400, sol: 1 });
+  ok(se.u > sp.u && se.caja[2] < 466 && se.piezas.filter((q) => q.tipo === 'casa').length >= 2 && se.atras.length >= 1, `pueblo: en escritorio, a la izquierda de la salida y más grande (${se.caja.map(Math.round)})`);
+  // El llano, los campos, la ladera baja y el primer plano: sin NaN ni estilos, con sus clases.
+  const geo = { W: 390, H: 764, forma: 'tel', by: 600, bx: 55 };
+  const borde = P.bordeLlano(geo);
+  ok(borde.length > 10 && borde.every(([x, y]) => Number.isFinite(x) && y > 590 && y < 620), 'llano: su borde va justo bajo la salida, de lado a lado');
+  const cm = P.campos({ borde, yAbajo: sp.yg - 3, x0: -6, x1: 396, k: 1, vx: 242 });
+  ok(cm.milpa && cm.milpa.w > 30 && cm.milpa.y > 600 && cm.milpa.y + cm.milpa.h <= sp.yg && !/NaN/.test(cm.svg), `campos: la milpa es una parcela de delante, entre el bosque y el pueblo (${JSON.stringify(cm.milpa)})`);
+  const lb = P.laderaBaja({ W: 390, sy: 327, by: 600, L: [[242, 327], [200, 400], [95, 550], [-23, 752]], R: [[242, 327], [300, 420], [360, 560], [420, 700]], pts, cajas: [], k: 1, sol: 1 });
+  const pinosLadera = [...(lb.match(/class="lb-pino-s" d="([^"]*)"/)?.[1] ?? '').matchAll(/M([\d.]+) ([\d.]+)L/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  ok(pinosLadera.length > 20 && pinosLadera.every(([x, y]) => muestras.every(([a, b]) => Math.hypot(a - x, b - y) > 6)), `ladera baja: ${pinosLadera.length} pinos y ninguno sobre el sendero`);
+  const pp = P.primerPlano({ W: 390, H: 764, sitios: [10, 40, 80, 120, 160, 200, 240, 280, 320, 360, 380], huecos: [[0, 260]], k: 1.3, forma: 'tel' });
+  const todo = [P.llano(geo), cm.svg, svg, pp, lb].join('');
+  ok(!/style=|<script|on[a-z]+=|NaN/i.test(todo) && (todo.match(/class="([^"]+)"/g) || []).every((x) => /class="(efecto-ambiente |copa|v-|vll-|lb-)/.test(x)), 'valle 22C: todo sin estilos ni scripts en línea ni NaN, con clases propias');
+  // El presupuesto del valle en el teléfono (campamento 22C): el pueblo, sus campos y el primer plano, más lo de arte-valle (con seis
+  // personas): 300 nodos. La ladera baja y la Navidad de la subida son unos pocos trazos más (fuera del valle).
+  const sv = A.sitiosValle({ W: 390, H: 764, techo: 270, izq: [[-23, 752], [40, 640], [95, 550], [150, 470], [200, 400], [242, 327]], der: [[242, 327], [300, 420], [360, 560], [420, 700]], cresta: [[0, 560], [60, 548], [120, 566], [200, 552], [300, 570], [400, 556]], bx: 55, by: 600, pts, lago, personas: 6, meses: 13, anios: 1.2, primera: '2025-09-01' });
+  const restoValle = [A.canton({ ...sv.canton, H: 764 }), A.milpa(cm.milpa), A.caminoReal(sv.camino), A.arbolPrimerDia({ ...sv.arbol, etapa: 'joven', tam: 0.5 }), A.lucesValle(sv.luces, 1, 0), A.lucesValle(sv.luces, 1, 1), A.piscuchas(sv.piscuchas), A.tule(lago), A.vidaLago(lago), A.potrero({ vacas: sv.vacas, k: sv.k })].join('');
+  const nodos = ((todo.replace(lb, '') + P.pueblo(sp, { ventanas: 6 }) + restoValle).match(/<(?!\/)[a-zA-Z]/g) || []).length - (svg.match(/<(?!\/)[a-zA-Z]/g) || []).length;
+  ok(nodos <= 300, `valle 22C: el valle del teléfono con seis personas cabe en 300 nodos (${nodos})`);
+  ok((lb.match(/<path/g) || []).length === 7, 'valle 22C: la ladera baja son siete trazos (claros, peñas en tres tonos y pinos en tres)');
 }
 console.log(`OK ${n} comprobaciones`);

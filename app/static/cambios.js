@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-12-b2', fecha: '2026-12-10',
+    items: [
+      'Al pie de la montaña ahora hay un pueblo de verdad: su iglesia, su plaza, casas de colores, gente y animales; el sendero empieza en él.',
+      'Alrededor del pueblo hay campos con su milpa, un bosque que crece con cada compra y un lago; la montaña tiene bosquecillos y peñas.',
+      'En Navidad toda la montaña se viste: luminarias a los lados del camino que se encienden hasta donde llegaste, una corona en cada campamento y una de luces en «Tú».',
+      'En el pueblo, el pino de la plaza con sus luces, el nacimiento en su portal, flores de pascua y farolitos por el camino real.',
+      'Las fiestas también se ven en la plaza: banderitas en agosto y la bandera en las fiestas patrias.',
+    ],
+  },
+  {
     id: '2026-12-b', fecha: '2026-12-08',
     items: [
       'El valle cambia de color con el año: verde en la época de lluvias y dorado en la seca, poco a poco en las primeras semanas de mayo y de noviembre.',
