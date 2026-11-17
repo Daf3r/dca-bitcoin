@@ -2190,6 +2190,37 @@ export function textosPelicula(x, libro = false) {
 }
 
 // ---------------------------------------------------------------- Campamento 24 · Confianza
+/**
+ * La suma de la lista filtrada por una etiqueta (campamento 24): lo que se compró y lo que se vendió (o gastó) con esa etiqueta entre los
+ * movimientos que se ven, cada cosa con su nombre; con las dos, el neto con esa palabra. Nunca es «el saldo» de la etiqueta (por eso se
+ * descartó la alcancía: una venta sin etiqueta no tiene regla honesta): solo dice qué movimientos se ven. Los traslados no llevan
+ * etiquetas y no cuentan. Sin compras ni ventas, null.
+ * @param {{ tipo: string, sats: number }[]} movs
+ * @returns {{ compras: number, ventas: number, comprados: number, vendidos: number, neto: number, texto: string } | null}
+ */
+export function sumaEtiqueta(movs) {
+  let compras = 0, ventas = 0, comprados = 0, vendidos = 0;
+  for (const m of movs) {
+    if (m.tipo === 'compra') { compras++; comprados += m.sats; } else if (m.tipo === 'venta') { ventas++; vendidos += m.sats; }
+  }
+  if (!compras && !ventas) return null;
+  const neto = comprados - vendidos;
+  const texto = !ventas ? `${entero(comprados)} sats comprados` : !compras ? `${entero(vendidos)} sats vendidos`
+    : `neto ${neto > 0 ? '+' : neto < 0 ? '−' : ''}${entero(Math.abs(neto))} sats (${entero(comprados)} comprados, ${entero(vendidos)} vendidos)`;
+  return { compras, ventas, comprados, vendidos, neto, texto };
+}
+/**
+ * El renglón de resultados de la lista filtrada («12 de 140 movimientos») y, con una etiqueta elegida, su suma («· 310,000 sats
+ * comprados»). No tutea: es el mismo para quien anota y para quien solo mira.
+ * @param {number} vistos
+ * @param {number} todos
+ * @param {{ tipo: string, sats: number }[] | null} [conEtiqueta] los movimientos que se ven, si hay una etiqueta elegida
+ */
+export function textoResultadosLista(vistos, todos, conEtiqueta = null) {
+  const s = conEtiqueta && vistos ? sumaEtiqueta(conEtiqueta) : null;
+  return `${entero(vistos)} de ${entero(todos)} ${todos === 1 ? 'movimiento' : 'movimientos'}${s ? ` · ${s.texto}` : ''}`;
+}
+
 /** Cada cuántos días pregunta la revisión del respaldo (la regla vive en el servidor: `server.resguardo`). */
 export const RESGUARDO_DIAS = 180;
 /**

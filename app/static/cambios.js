@@ -7,6 +7,14 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-12-d', fecha: '2026-12-17',
+    items: [
+      'En «Movimientos», al elegir una etiqueta en «Fechas y orden», el renglón de arriba de la lista dice además cuántos sats suman esos movimientos: «12 de 140 movimientos · 310,000 sats comprados».',
+      'Si con esa etiqueta también hay ventas o gastos, los cuenta aparte y da el neto: «neto +290,000 sats (310,000 comprados, 20,000 vendidos)».',
+      'Solo suma lo que se ve con los filtros de ese momento; el saldo de arriba sigue siendo el de todo el libro.',
+    ],
+  },
+  {
     id: '2026-12-c', fecha: '2026-12-15',
     items: [
       'Un día como hoy en que el libro llegó a un campamento o a una etapa, hace uno o más años, el saludo lo recuerda y el Diario lo cuenta al empezar «Hace un año».',

@@ -1,6 +1,6 @@
-import { agruparPorMes, nombreWallet, piedritasPorCompra, textoPiedritas, ultimaPiedrita, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, usd, usd0, usdSigno } from './lib.js';
+import { agruparPorMes, nombreWallet, piedritasPorCompra, textoPiedritas, ultimaPiedrita, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, textoResultadosLista, usd, usd0, usdSigno } from './lib.js';
 import { avisar } from './avisar.js';
-import { pegarHtml } from './cifras.js';
+import { pegado, pegarHtml } from './cifras.js';
 import { apacheta, piedrita } from './arte.js';
 import { copiarTexto } from './copiar.js';
 import { ico, ilustracion } from './iconos.js';
@@ -216,7 +216,9 @@ export function pintarLista() {
   host.innerHTML = html.join('');
   reordenarAnimado(host, viejos, filas, JSON.stringify([F.texto, F.filtro, F.desde, F.hasta, F.etiqueta, F.orden, F.limite]));
   // Resumen y botones
-  $('l-res').textContent = hayFiltros() ? `${vistos.length} de ${todos.length} ${todos.length === 1 ? 'movimiento' : 'movimientos'}` : '';
+  // Con una etiqueta elegida, la suma de sus sats (campamento 24): de TODO lo que se ve con los filtros, no solo del tramo pintado, y
+  // con «310,000 sats» sin partirse. Sin filtros queda vacío de verdad (`.l-res:empty` no ocupa sitio).
+  pegado($('l-res'), hayFiltros() ? textoResultadosLista(vistos.length, todos.length, F.etiqueta ? vistos : null) : '');
   $('l-limpiar').hidden = !hayFiltros();
   const vt = $('ver-todas');
   const faltan = vistos.length - filas.length;
