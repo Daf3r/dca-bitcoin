@@ -4884,6 +4884,86 @@ try {
         ok(!(await a.p.isVisible('#tv-reloj')) && !(await a.p.isVisible('#tv-ultimo')), '21B·15 fuera de la tele no se ve el reloj ni el último movimiento');
         await a.ctx.close();
       }
+
+      // ---- 42 · la tele duerme de 23:00 a 5:00, con la hora tenue que se corre cada 5 minutos, y despierta sola
+      {
+        const L = await import('../app/static/lib.js');
+        const noche = (p) => p.evaluate(() => {
+          const n = document.getElementById('tv-noche'), caja = document.getElementById('tvn-caja');
+          const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+          const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+          const cH = lum(rgb(getComputedStyle(document.getElementById('tvn-h')).color)), cN = lum(rgb(getComputedStyle(document.querySelector('.tvn-nota')).color)), cF = lum(rgb(getComputedStyle(n).backgroundColor));
+          const fondo = cF;
+          return {
+            duerme: document.documentElement.dataset.tvDuerme === '1', visible: !n.hidden, op: getComputedStyle(n).opacity, hora: `${document.getElementById('tvn-h').textContent} ${document.getElementById('tvn-ap').textContent}`,
+            corre: caja.style.translate, contraste: Math.min((cH + 0.05) / (fondo + 0.05), (cN + 0.05) / (fondo + 0.05)), oscuro: cF < 0.01,
+            saldo: getComputedStyle(document.querySelector('.saldo')).visibility, luna: document.querySelectorAll('#tvn-luna .tvn-luz').length,
+            pie: document.getElementById('tv-salir').getBoundingClientRect().width > 0,
+          };
+        });
+        const t = await tele(sAnio, LECTOR, { hora: 23.5, pares: [['libro.efectos', 'todos']] });
+        await t.p.waitForTimeout(3000);
+        let n = await noche(t.p);
+        const c1410 = L.corrimientoReloj(23 * 60 + 30);
+        ok(n.duerme && n.visible && n.op === '1' && n.hora === '11:30 p. m.' && n.oscuro && n.saldo === 'hidden' && n.luna === 1, `21B·42 a las 23:30 la tele duerme: casi negra, con la hora y la luna (${JSON.stringify(n)})`);
+        ok(n.contraste >= 4.5 && n.contraste < 7, `21B·42 la hora se lee pero sin brillo (contraste ${n.contraste.toFixed(2)}: ≥ 4.5 y < 7)`);
+        eq(n.corre, `${c1410.x}px ${c1410.y}px`, '21B·42 la hora está corrida según la hora (lib.corrimientoReloj)');
+        // Cinco minutos después se corre unos píxeles
+        await t.p.evaluate(() => localStorage.setItem('libro.hora', String(23 + 36 / 60)));
+        await tvMod(t.p, 'tv.latir();');
+        const n2 = await noche(t.p);
+        const [x1, y1] = n.corre.split(' ').map(Number.parseFloat), [x2, y2] = n2.corre.split(' ').map(Number.parseFloat);
+        const paso = Math.hypot(x2 - x1, y2 - y1);
+        ok(n2.hora === '11:36 p. m.' && paso > 0 && paso <= 10, `21B·42 cada 5 minutos la hora se corre unos píxeles (${paso.toFixed(1)} px)`);
+        // Un toque la despierta un minuto; pasado el minuto vuelve a dormir
+        await t.p.keyboard.press('Shift');
+        await t.p.waitForFunction(() => !document.documentElement.dataset.tvDuerme, null, { timeout: 4000 });
+        await t.p.waitForTimeout(1500);
+        let s = await sinTapar(t.p);
+        ok(s.fallos.length === 0 && s.vistas.includes('tv-ultimo') && await t.p.locator('#montana #m-etiquetas .eti-yo').count() === 1, `21B·42 un toque la despierta un rato, con la montaña entera y sus tarjetas en su sitio (${s.txt})`);
+        await tvMod(t.p, 'tv.latir(Date.now() + 61_000);');
+        await t.p.waitForTimeout(3000); // el fundido a negro dura 2.4 s
+        ok((await noche(t.p)).duerme, '21B·42 pasado el minuto vuelve a dormir');
+        // Una compra de noche no la despierta (sin fiesta) y al despertar la montaña ya está al día
+        const adm = await entrar(navegador, sAnio, ADMIN, { hora: 23.5 }, conLocal([]));
+        const ultimoAntes = await t.p.textContent('#tvu-v');
+        await adm.p.evaluate(async () => { const p = (await (await fetch('/api/precio')).json()).precio; await fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date()), monto: 20, sats: Math.round((20 / p) * 1e8) }) }); });
+        await adm.ctx.close();
+        await t.p.evaluate(async () => { const d = await import(document.querySelector('link[rel=modulepreload][href^="/datos.js"]').href); await d.actualizarSuave(); });
+        await t.p.waitForTimeout(800);
+        ok((await noche(t.p)).duerme && await t.p.evaluate(() => document.getElementById('tv-fiesta').hidden), '21B·42 una compra de noche no la despierta ni hace fiesta');
+        // A las 5:00 despierta sola
+        await t.p.evaluate(() => localStorage.setItem('libro.hora', '5'));
+        await tvMod(t.p, 'tv.latir();');
+        await t.p.waitForTimeout(3200);
+        n = await noche(t.p);
+        s = await sinTapar(t.p);
+        ok(!n.duerme && !n.visible && n.saldo === 'visible' && s.fallos.length === 0 && s.vistas.includes('tv-ultimo'), `21B·42 a las 5:00 despierta sola (${s.txt})`);
+        ok((await t.p.textContent('#tvu-v')) !== ultimoAntes && await t.p.locator('#montana #m-etiquetas .eti-yo').count() === 1, '21B·42 y la montaña ya trae la compra de la noche, con «Vamos aquí» en su placa');
+        eq(t.consola, [], `21B·42 consola limpia (${t.consola.join(' | ')})`);
+        await t.ctx.close();
+        // Con efectos «ninguno» se apaga de golpe; a las 22:59 no duerme
+        const z = await tele(sAnio, LECTOR, { hora: 23.2, pares: [['libro.efectos', 'ninguno']] });
+        n = await noche(z.p);
+        ok(n.duerme && n.op === '1', `21B·42 con efectos «ninguno» se apaga sin fundido (${n.op})`);
+        await z.p.evaluate(() => localStorage.setItem('libro.hora', String(22 + 59 / 60)));
+        await tvMod(z.p, 'tv.latir();');
+        ok(!(await noche(z.p)).duerme, '21B·42 a las 22:59 todavía está despierta');
+        await z.ctx.close();
+        // «La tele duerme de noche: no», en «Tu cuenta → Este dispositivo»
+        const c = await entrar(navegador, sAnio, LECTOR, { hora: 23.5, viewport: { width: 1280, height: 800 }, ...fijo }, conLocal([]));
+        for (let k = 0; k < 3 && await c.p.locator('dialog[open]').count(); k++) { await c.p.keyboard.press('Escape'); await c.p.waitForTimeout(300); }
+        await c.p.click('#cuenta-btn'); await c.p.waitForTimeout(300);
+        const enGrupo = await c.p.evaluate(() => { const b = document.getElementById('dc-tv-duerme'); let e = b.previousElementSibling; while (e && !e.classList.contains('dc-grupo')) e = e.previousElementSibling; return e?.textContent; });
+        eq([(await c.p.textContent('#dc-tv-duerme')).trim(), enGrupo], ['La tele duerme de noche: sí', 'Este dispositivo'], '21B·42 el interruptor, en «Este dispositivo», encendido por defecto');
+        await c.p.click('#dc-tv-duerme');
+        ok((await c.p.textContent('#dc-tv-duerme')).trim() === 'La tele duerme de noche: no' && await c.p.evaluate(() => localStorage.getItem('libro.tv.duerme')) === '0', '21B·42 se apaga y se recuerda en el dispositivo');
+        await c.p.keyboard.press('Escape');
+        await c.p.evaluate(() => { location.hash = '#tv'; }); await c.p.reload({ waitUntil: 'networkidle' }); await c.p.waitForTimeout(2500);
+        ok(!(await noche(c.p)).duerme, '21B·42 con el interruptor apagado, a las 23:30 la tele sigue despierta');
+        eq(c.consola, [], `21B·42 interruptor: consola limpia (${c.consola.join(' | ')})`);
+        await c.ctx.close();
+      }
     } finally { sAnio.parar(); }
     for (const esc of ['ballena', 'mil', 'hoy']) {
       const srv = await servidor(esc);

@@ -478,6 +478,26 @@ try {
         await ctx.close();
       } finally { largo.parar(); }
     }
+    { // campamento 21B: la tele de la sala a 1920×1080 (con reloj, sismógrafo y la fiesta en su sitio) y la tele dormida
+      const tele = async (hora) => {
+        const ctx = await navegador.newContext({ viewport: { width: 1920, height: 1080 }, colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, hora);
+        await entrar(p, anio.url, LECTOR);
+        await p.evaluate(() => { location.hash = '#tv'; }); await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(3200);
+        return { ctx, p };
+      };
+      const tvMod = (p, js) => p.evaluate(new Function(`return (async () => { const tv = await import(document.querySelector('link[rel=modulepreload][href^="/tv.js"]').href); const est = await import(document.querySelector('link[rel=modulepreload][href^="/estado.js"]').href); ${js} })()`));
+      let { ctx, p } = await tele(esquema === 'light' ? 12 : 20);
+      await tvMod(p, 'for (const k of [1, 2]) { est.S.precio = 77000 + k * 150; est.S.precioTs = Date.now() + k; tv.pintarTV(); }'); await p.waitForTimeout(800);
+      await auditar(p, `tele de la sala con reloj y sismógrafo ${esquema}`);
+      await tvMod(p, 'tv.fiestaTV(990000, 1211769, 221769);'); await p.waitForTimeout(1500);
+      await auditar(p, `tele de la sala con la fiesta en su sitio ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await tele(23.5));
+      await auditar(p, `tele dormida ${esquema}`);
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

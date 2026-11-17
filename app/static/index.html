@@ -149,6 +149,14 @@
   <div class="tv-sismo tv-tarjeta" id="tv-sismo" role="img" aria-label="" hidden></div>
   <p class="tv-pie tv-tarjeta" id="tv-ultimo" aria-live="polite"><span class="tvu-k" id="tvu-k"></span><span class="tvu-v" id="tvu-v"></span></p>
   <p class="tv-reloj tv-tarjeta" id="tv-reloj"><time class="tvr-t" id="tvr-t"><b id="tvr-h"></b> <small id="tvr-ap"></small></time><span class="tvr-f" id="tvr-f"></span></p>
+  <!-- La tele duerme (idea 42): de 23:00 a 5:00, casi negra, con la hora tenue y la luna de hoy; la hora se corre unos píxeles cada 5 minutos. -->
+  <div class="tv-noche" id="tv-noche" hidden>
+    <div class="tvn-caja" id="tvn-caja">
+      <span class="tvn-luna" id="tvn-luna" aria-hidden="true"></span>
+      <p class="tvn-hora"><b id="tvn-h"></b> <small id="tvn-ap"></small></p>
+      <p class="tvn-nota">La tele duerme hasta las 5:00</p>
+    </div>
+  </div>
   <button type="button" class="tv-salir" id="tv-salir">Salir de pantalla grande</button>
 </section>
 
@@ -573,6 +581,7 @@
       <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
       <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
       <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
+      <button type="button" data-cuenta="tv-duerme" id="dc-tv-duerme">La tele duerme de noche: sí</button>
       <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
       <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
       <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>

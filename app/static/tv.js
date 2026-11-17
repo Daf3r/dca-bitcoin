@@ -1,6 +1,8 @@
 import { $, R, S } from './estado.js';
-import { entero, fechaCorta, fechaEscrita, horaSV, medianocheSV, muestrasSismo, rejilla, riel, sitioLibre, tarjetaFiesta, textoReloj, usd } from './lib.js';
+import { corrimientoReloj, entero, fechaCorta, fechaEscrita, horaSV, medianocheSV, modoTele, muestrasSismo, rejilla, riel, sitioLibre, tarjetaFiesta, textoReloj, usd } from './lib.js';
 import { sismografo } from './arte.js';
+import { sinMovimiento } from './movimiento.js';
+import { pintarMontana } from './pintar.js';
 
 // Modo pantalla grande (idea 59): la montaña, el saldo y el último movimiento a pantalla completa, con letra grande y sin controles,
 // para dejar la app en un televisor de casa. Se entra desde «Tu cuenta» o abriendo la dirección con `#tv` (el televisor inicia sesión una
@@ -158,7 +160,7 @@ let colocando = 0;
  * poner al llegar) las que ya tienen sitio no se mueven si siguen libres, para no ir y venir. Se llama sola cuando cambia algo.
  */
 export function colocarTarjetas() {
-  if (!enTV() || !S.cargado) return;
+  if (!enTV() || !S.cargado || dormida) return; // dormida, la escena no se dibuja: se coloca al despertar
   const escena = document.querySelector('.escena'), base = escena.getBoundingClientRect();
   const W = base.width, H = base.height;
   if (!W || !H) return;
@@ -210,11 +212,79 @@ new ResizeObserver(() => programarColocar()).observe(document.querySelector('.es
 for (const id of TARJETAS) new ResizeObserver(() => programarColocar()).observe($(id));
 document.fonts?.ready.then(() => programarColocar());
 
+// ------------------------------------------------------------------------- la tele duerme (campamento 21B, idea 42)
+// De 23:00 a 5:00 (hora de El Salvador) la tele se queda en reposo: casi negra, con la hora tenue y la luna de hoy, sin brillo fuerte
+// (es una sala). La hora se corre unos píxeles cada 5 minutos para no marcar la pantalla. Despierta sola a las 5:00; un toque o una tecla
+// la despiertan un minuto. «La tele duerme de noche: no» (en «Tu cuenta», por dispositivo) la deja despierta toda la noche.
+// Mientras duerme la pantalla sigue encendida (`wakeLock`): si se soltara, el aparato apagaría la pantalla y a las 5:00 no podría
+// encenderla solo. Casi negro gasta poco. Una compra de noche no la despierta (la montaña se pone al día sin fiesta).
+const CLAVE_DUERME = 'libro.tv.duerme';
+/** ¿Duerme la tele de noche en este dispositivo? Sí, salvo que se apagara (`libro.tv.duerme` = `0`). */
+export const teleDuermeActiva = () => { try { return localStorage.getItem(CLAVE_DUERME) !== '0'; } catch { return true; } };
+export function fijarTeleDuerme(si) {
+  try { if (si) localStorage.removeItem(CLAVE_DUERME); else localStorage.setItem(CLAVE_DUERME, '0'); } catch { /* vale para esta visita */ }
+  latir();
+}
+const DESPIERTA_UN_RATO = 60_000;
+let dormida = false, despiertaHasta = 0, fundidoNoche = 0;
+/** ¿Está dormida ahora la tele? (La fiesta de una compra de noche no la despierta: datos.js lo mira.) */
+export const teleDormida = () => dormida;
+
+/** La luna de hoy, pequeña y tenue: el disco apagado y la parte iluminada (semicírculo y media elipse, como en la escena; sin ids). */
+function lunaReposo(fase) {
+  const r = 10, k = Math.cos(2 * Math.PI * fase), rx = Math.abs(k) * r, barrido = k > 0 ? 0 : 1;
+  const luz = `M0 ${-r}A${r} ${r} 0 0 1 0 ${r}A${rx.toFixed(2)} ${r} 0 0 ${barrido} 0 ${-r}Z`;
+  return `<svg viewBox="-13 -13 26 26" aria-hidden="true" focusable="false"><circle class="tvn-disco" r="${r}"/><path class="tvn-luz" d="${luz}"${fase > 0.5 ? ' transform="scale(-1 1)"' : ''}/></svg>`;
+}
+function pintarNoche(h, m) {
+  const t = textoReloj(h, m);
+  $('tvn-h').textContent = t.hora;
+  $('tvn-ap').textContent = t.sufijo;
+  const c = corrimientoReloj(h * 60 + m);
+  $('tvn-caja').style.translate = `${c.x}px ${c.y}px`;
+  const fase = window.libroCielo?.faseLunar?.() ?? 0.5;
+  const luna = $('tvn-luna');
+  if (luna.dataset.fase !== fase.toFixed(2)) { luna.dataset.fase = fase.toFixed(2); luna.innerHTML = lunaReposo(fase); }
+}
+function dormir(si) {
+  const noche = $('tv-noche');
+  if (si === dormida) return;
+  clearTimeout(fundidoNoche);
+  dormida = si;
+  if (si) {
+    // Se apaga: la pantalla se funde a negro y, ya a oscuras, la escena deja de dibujarse (no gasta nada mientras duerme).
+    $('tv-fiesta').hidden = true;
+    noche.hidden = false;
+    void noche.offsetWidth;
+    noche.classList.add('vis');
+    fundidoNoche = setTimeout(() => { raiz.dataset.tvDuerme = '1'; }, sinMovimiento() ? 0 : 2600);
+  } else {
+    // Despierta: la escena vuelve a dibujarse (con la montaña al día: lo que llegó de noche, sin fiesta) y la noche se funde.
+    delete raiz.dataset.tvDuerme;
+    noche.classList.remove('vis');
+    fundidoNoche = setTimeout(() => { if (!dormida) noche.hidden = true; }, sinMovimiento() ? 0 : 2600);
+    if (S.cargado) pintarMontana(false);
+    pintarTV();
+  }
+}
+
 // ------------------------------------------------------------------------- el pulso de la tele (cada 5 s, solo en la tele)
 let pulso = 0;
-function latir() {
+/** Mira la hora y decide qué enseña la tele (escena, marco o reposo). `ahoraMs` se puede pasar para probar. */
+export function latir(ahoraMs = Date.now()) {
   if (!enTV() || document.visibilityState !== 'visible') return;
-  pintarReloj();
+  pintarReloj(ahoraMs);
+  const { h, m } = horaReloj(ahoraMs);
+  if (despiertaHasta && ahoraMs >= despiertaHasta) despiertaHasta = 0; // el rato despierta ya pasó
+  const estado = modoTele({ hora: h + m / 60, ahoraMs, duerme: teleDuermeActiva(), despiertaHasta, fiesta: !$('tv-fiesta').hidden, ritual: ritualEnCurso });
+  dormir(estado.modo === 'duerme');
+  if (dormida) pintarNoche(h, m);
+}
+/** Un toque o una tecla con la tele dormida la despiertan un minuto (mover el ratón no: un gato o un ratón que tiembla la encenderían). */
+function despertarUnRato() {
+  if (!enTV() || !dormida) return;
+  despiertaHasta = Date.now() + DESPIERTA_UN_RATO;
+  latir();
 }
 
 /** Los controles (salir) se ven unos segundos cuando alguien toca, mueve el ratón o usa el teclado. */
@@ -247,6 +317,9 @@ export function salirTV() {
   delete raiz.dataset.tv;
   delete raiz.dataset.tvActivo;
   clearInterval(pulso); pulso = 0;
+  clearTimeout(fundidoNoche); dormida = false; despiertaHasta = 0;
+  delete raiz.dataset.tvDuerme;
+  $('tv-noche').classList.remove('vis'); $('tv-noche').hidden = true;
   if (location.hash === '#tv') history.replaceState(null, '', `${location.pathname}${location.search}`);
   try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ya salió */ }
   try { bloqueo?.release(); } catch { /* ya liberado */ }
@@ -295,6 +368,7 @@ setInterval(vigilarAtardecer, 20_000);
 
 $('tv-salir').addEventListener('click', salirTV);
 for (const ev of ['pointermove', 'pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, () => enTV() && mostrarControles(), { passive: true });
+for (const ev of ['pointerdown', 'keydown', 'touchstart']) document.addEventListener(ev, despertarUnRato, { passive: true });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && enTV() && !document.fullscreenElement) salirTV(); });
 document.addEventListener('visibilitychange', () => { if (enTV() && document.visibilityState === 'visible') { mantenerDespierta(); latir(); programarColocar(); } });
 window.addEventListener('hashchange', () => { if (location.hash === '#tv' && !enTV()) entrarTV({ pantallaCompleta: false }); else if (location.hash !== '#tv' && enTV()) salirTV(); });

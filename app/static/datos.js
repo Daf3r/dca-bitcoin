@@ -4,7 +4,7 @@ import { pintarMercado, pintarSatsDolar, pintarValor, pintarVistas } from './mer
 import { pintar, pintarLinea, pintarPrecio } from './pintar.js';
 import { entradaTarjetas } from './entrada.js';
 import { pintarCaida } from './reportes.js';
-import { enTV, fiestaTV } from './tv.js';
+import { enTV, fiestaTV, teleDormida } from './tv.js';
 import { actualizarFirmas } from './montana.js';
 
 /**
@@ -43,7 +43,7 @@ export async function actualizarSuave() {
     S.wallets = wallets;
     S.mensajes = mensajes;
     S.capsulas = capsulas;
-    if (enTV() && nuevas.length) {
+    if (enTV() && nuevas.length && !teleDormida()) { // (dormida, la tele no hace fiesta: al despertar ya está al día)
       const delta = nuevas.reduce((a, c) => a + c.sats, 0);
       pintar({ montana: true, desde: antesSats, festejo: { antes: antesSats, delta } });
       fiestaTV(antesSats, R.sats, delta);

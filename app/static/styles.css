@@ -3677,3 +3677,20 @@ html[data-tv] .tv-fiesta.compacta { min-width: 0; padding: 0.6em 1.1em 0.7em; bo
 html[data-tv] .tv-fiesta.compacta b { font-size: 2.2rem; }
 html[data-tv] .tv-fiesta.compacta.grande b { font-size: 2.6rem; }
 html[data-tv] .tv-fiesta.compacta span:not(.tvf-brasas) { font-size: 1rem; }
+
+/* (42) La tele duerme: casi negra (siempre oscura, también con el tema claro: es una sala de noche), la hora fina y tenue (≥ 4.5:1 sobre
+   ese negro, pero sin brillo), la luna de hoy y una nota. Entra y sale con un fundido de opacidad (sin él con efectos «ninguno»). Ya a
+   oscuras (`data-tv-duerme`), la escena deja de dibujarse: la montaña con `content-visibility` y lo demás oculto. «Salir» queda encima. */
+.tv-noche { display: none; }
+html[data-tv] .tv-noche:not([hidden]) { position: fixed; inset: 0; z-index: 13; display: grid; place-items: center; background: #030409; color-scheme: dark; opacity: 0; transition: opacity 2.4s ease; }
+html[data-tv] .tv-noche.vis { opacity: 1; }
+.tvn-caja { display: grid; justify-items: center; gap: 0.35em; transition: translate 4s ease-in-out; }
+.tvn-luna svg { display: block; width: 2.6rem; height: 2.6rem; }
+.tvn-disco { fill: #12151d; }
+.tvn-luz { fill: #6d6b5e; }
+.tvn-hora { display: flex; align-items: baseline; gap: 0.3em; margin: 0; color: #7e8397; }
+.tvn-hora b { font: 300 4.4rem/1 var(--sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums lining-nums; }
+.tvn-hora small { font: 600 1rem var(--sans); letter-spacing: 0.06em; }
+.tvn-nota { margin: 0.2em 0 0; font: italic 400 0.875rem var(--serif); color: #777c91; }
+html[data-tv-duerme] .montana { content-visibility: hidden; }
+html[data-tv-duerme] .escena > :not(.tv-noche, .tv-salir, .montana) { visibility: hidden; }
