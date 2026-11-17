@@ -299,6 +299,37 @@ def _m_codigos_tv(conn: sqlite3.Connection) -> None:
     )""")
 
 
+def _m_medidas_aparato(conn: sqlite3.Connection) -> None:
+    # «Medir este aparato» (campamento 24, idea 44): cuánto tardó en verse el saldo y cuántos fotogramas por segundo dio al deslizar,
+    # en el aparato donde el admin lo midió. Solo números, ajustes de la pantalla y el agente resumido («Safari · iPhone»): ni la cuenta,
+    # ni la IP, ni el texto del agente. Se guardan las últimas 50 (el tope lo pone `POST /api/medidas`).
+    conn.execute("""CREATE TABLE IF NOT EXISTS medidas_aparato (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        creado      INTEGER NOT NULL,
+        agente      TEXT    NOT NULL,
+        instalada   INTEGER NOT NULL DEFAULT 0,
+        saldo_ms    INTEGER NOT NULL,
+        red_ms      INTEGER,
+        fps         REAL    NOT NULL,
+        fps_escena  REAL,
+        fps_peor    REAL    NOT NULL,
+        fps_p5      REAL    NOT NULL,
+        tirones     INTEGER NOT NULL,
+        hz          INTEGER NOT NULL,
+        duracion_ms INTEGER NOT NULL,
+        recorrido   INTEGER NOT NULL,
+        efectos     TEXT    NOT NULL CHECK (efectos IN ('todos', 'esenciales', 'ninguno')),
+        ligero      INTEGER NOT NULL DEFAULT 0,
+        tema        TEXT    NOT NULL CHECK (tema IN ('claro', 'oscuro')),
+        ancho       INTEGER NOT NULL,
+        alto        INTEGER NOT NULL,
+        dpr         REAL    NOT NULL,
+        memoria     REAL,
+        nucleos     INTEGER,
+        carga       TEXT    NOT NULL DEFAULT 'otra'
+    )""")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -317,6 +348,7 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (15, "usuarios.cumple (farol por cumpleaños)", _m_usuarios_cumple),
     (16, "firmas (el libro de cumbre: una por persona y campamento)", _m_firmas),
     (17, "codigos_tv (entrar en la tele con un código de un solo uso)", _m_codigos_tv),
+    (18, "medidas_aparato (medir este aparato: tiempo hasta el saldo y fotogramas al deslizar)", _m_medidas_aparato),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -869,8 +901,10 @@ def cerrar_peticion(resp: Response) -> Response:
 
 
 def _agente_corto(ua: str) -> str:
-    """«Safari · iPhone»: solo el navegador y el sistema, nunca el texto completo del agente."""
-    nav = next((n for k, n in (("Edg/", "Edge"), ("OPR/", "Opera"), ("Firefox/", "Firefox"), ("Chrome/", "Chrome"), ("Safari/", "Safari")) if k in ua), "otro")
+    """«Safari · iPhone»: solo el navegador y el sistema, nunca el texto completo del agente. La app instalada en el iPhone no lleva
+    «Safari/» en su agente (solo «AppleWebKit/… Mobile/…»): también es Safari (campamento 24; antes salía «otro · iPhone»)."""
+    nav = next((n for k, n in (("Edg/", "Edge"), ("OPR/", "Opera"), ("Firefox/", "Firefox"), ("Chrome/", "Chrome"), ("Safari/", "Safari"),
+                               ("AppleWebKit/", "Safari")) if k in ua), "otro")
     so = next((n for k, n in (("iPhone", "iPhone"), ("iPad", "iPad"), ("Android", "Android"), ("Windows", "Windows"), ("Macintosh", "Mac"), ("Linux", "Linux")) if k in ua), "otro")
     return f"{nav} · {so}"
 
@@ -1094,6 +1128,16 @@ def pantalla_guia() -> Any:
     if g.usuario["rol"] != "admin":
         return Response("No existe.", status=404, mimetype="text/plain")
     return _servir_versionado("guia.html", "text/html", _REF_HTML, "no-store")
+
+
+@app.get("/medir")
+def pantalla_medir() -> Any:
+    """«Medir este aparato» (campamento 24, idea 44): la app de siempre (el mismo index.html) que, abierta por aquí, mide cuánto tardó en
+    verse el saldo y ofrece la prueba de desplazamiento (medir.js). Solo el admin; un lector recibe 404, como en /guia. Sin enlace en la
+    app salvo el botón de «Estado del sistema»."""
+    if g.usuario["rol"] != "admin":
+        return Response("No existe.", status=404, mimetype="text/plain")
+    return _servir_versionado("index.html", "text/html", _REF_HTML, "no-store")
 
 
 @app.get("/api/estado")
@@ -1558,6 +1602,7 @@ def estado_sistema(conn: sqlite3.Connection) -> dict[str, Any]:
                                                "JOIN usuarios u ON u.id = s.usuario_id ORDER BY u.nombre, s.id")],
         "metricas": metricas,
         "errores": [dict(r) for r in conn.execute("SELECT ultimo, pantalla, mensaje, agente, usuario, n FROM errores_js ORDER BY ultimo DESC LIMIT 20")],
+        "medidas": [_medida_json(r) for r in conn.execute(f"SELECT {MEDIDA_COLS} FROM medidas_aparato ORDER BY id DESC LIMIT ?", (MEDIDAS_MAX,))],
     }
 
 
@@ -1566,6 +1611,82 @@ def ver_sistema() -> Any:
     if g.usuario["rol"] != "admin":
         return jsonify(error="Solo el admin ve el estado del sistema."), 403
     return jsonify(estado_sistema(db()))
+
+
+# ------------------------------------------------- medir este aparato (campamento 24, idea 44)
+# El admin abre /medir en un aparato (el iPhone, sobre todo): la app mide cuánto tardó en verse el saldo y, al pedirlo, cuántos fotogramas
+# por segundo da al deslizar. Aquí solo se valida y se guarda: números en sus rangos, tres textos de una lista y el agente resumido que
+# saca el servidor (nunca el texto completo, ni la IP, ni la cuenta). No se audita, como los errores del navegador y las métricas: es un
+# dato del aparato, no del libro, y el Historial es para lo que cambia el libro o el acceso. Cuenta para el límite de escrituras.
+MEDIDAS_MAX = 50
+MEDIDA_COLS = ("id, creado, agente, instalada, saldo_ms, red_ms, fps, fps_escena, fps_peor, fps_p5, tirones, hz, duracion_ms, recorrido, "
+               "efectos, ligero, tema, ancho, alto, dpr, memoria, nucleos, carga")
+# (campo, entero?, mínimo, máximo, opcional)
+_MEDIDA_NUMEROS: tuple[tuple[str, bool, float, float, bool], ...] = (
+    ("saldo_ms", True, 0, 120_000, False), ("red_ms", True, 0, 120_000, True),
+    ("fps", False, 0.5, 1000, False), ("fps_escena", False, 0.5, 1000, True), ("fps_peor", False, 0.1, 1000, False), ("fps_p5", False, 0.1, 1000, False),
+    ("tirones", True, 0, 100_000, False), ("hz", True, 1, 1000, False), ("duracion_ms", True, 1000, 60_000, False), ("recorrido", True, 0, 1_000_000, False),
+    ("ancho", True, 100, 20_000, False), ("alto", True, 100, 20_000, False), ("dpr", False, 0.25, 10, False),
+    ("memoria", False, 0.1, 4096, True), ("nucleos", True, 1, 1024, True),
+)
+_MEDIDA_TEXTOS = {"efectos": ("todos", "esenciales", "ninguno"), "tema": ("claro", "oscuro"), "carga": ("navegar", "recargar", "historial", "otra")}
+
+
+def parse_medida(body: Any) -> dict[str, Any]:
+    """Valida una medida; ValueError con el motivo (en español) si algo no está en su rango."""
+    if not isinstance(body, dict):
+        raise ValueError("Medida inválida.")
+    out: dict[str, Any] = {}
+    for campo, entero, lo, hi, opcional in _MEDIDA_NUMEROS:
+        v = body.get(campo)
+        if v is None and opcional:
+            out[campo] = None
+            continue
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or not lo <= v <= hi or (entero and not float(v).is_integer()):
+            raise ValueError(f"Medida inválida: «{campo}» debe ser {'un entero' if entero else 'un número'} entre {lo:g} y {hi:g}.")
+        out[campo] = int(v) if entero else round(float(v), 2)
+    for campo, valores in _MEDIDA_TEXTOS.items():
+        v = body.get(campo, "otra" if campo == "carga" else None)
+        if v not in valores:
+            raise ValueError(f"Medida inválida: «{campo}» debe ser {', '.join(valores)}.")
+        out[campo] = v
+    for campo in ("ligero", "instalada"):
+        v = body.get(campo, False)
+        if not isinstance(v, bool):
+            raise ValueError(f"Medida inválida: «{campo}» debe ser verdadero o falso.")
+        out[campo] = int(v)
+    return out
+
+
+def _medida_json(r: sqlite3.Row) -> dict[str, Any]:
+    return {**dict(r), "instalada": bool(r["instalada"]), "ligero": bool(r["ligero"])}
+
+
+@app.post("/api/medidas")
+def guardar_medida() -> Any:
+    if g.usuario["rol"] != "admin":
+        return jsonify(error="Solo quien administra el libro mide los aparatos."), 403
+    try:
+        m = parse_medida(request.get_json(silent=True))
+    except ValueError as e:
+        return jsonify(error=str(e)), 400
+    conn = db()
+    m.update(creado=int(time.time()), agente=_agente_corto(request.headers.get("User-Agent", "")))
+    cols = [c.strip() for c in MEDIDA_COLS.split(",") if c.strip() != "id"]
+    cur = conn.execute(f"INSERT INTO medidas_aparato ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})", [m[c] for c in cols])
+    conn.execute("DELETE FROM medidas_aparato WHERE id NOT IN (SELECT id FROM medidas_aparato ORDER BY id DESC LIMIT ?)", (MEDIDAS_MAX,))
+    conn.commit()
+    return jsonify(_medida_json(conn.execute(f"SELECT {MEDIDA_COLS} FROM medidas_aparato WHERE id = ?", (cur.lastrowid,)).fetchone())), 201
+
+
+@app.delete("/api/medidas")
+def borrar_medidas() -> Any:
+    if g.usuario["rol"] != "admin":
+        return jsonify(error="Solo quien administra el libro borra las medidas."), 403
+    conn = db()
+    n = conn.execute("DELETE FROM medidas_aparato").rowcount
+    conn.commit()
+    return jsonify(quitados=n)
 
 
 @app.get("/api/auditoria")

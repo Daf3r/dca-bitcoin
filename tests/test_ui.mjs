@@ -2056,7 +2056,8 @@ try {
     eq(sm.txt, entero(satsMil), 'con mil compras el saldo es el real');
     ok(sm.w > 0 && sm.h > 0, 'con mil compras el saldo se ve');
     const nodos = await p.evaluate(() => document.getElementsByTagName('*').length);
-    ok(nodos < 3000, `el DOM no crece con las compras (${nodos} nodos)`);
+    // Tope 3100: el HTML fijo del diálogo «Medir este aparato» y su lista suman ~50 nodos (campamento 24); lo que importa es que no crezca con las compras.
+    ok(nodos < 3100, `el DOM no crece con las compras (${nodos} nodos)`);
     await p.waitForSelector('.g-linea', { timeout: 15000 });
     await verVista(p, 'valor');
     ok(await p.locator('#valor').isVisible(), 'con mil compras sale el gráfico de valor');
@@ -5130,6 +5131,148 @@ try {
         await c.close();
       }
     } finally { sCod.parar(); }
+  }
+
+  // ---------------------------------------------------------------- campamento 24: medir este aparato (idea 44)
+  {
+    const srv = await servidor('anio');
+    try {
+      const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestana', 'graficos'); } catch { /* sin almacenamiento */ } };
+      const abierto = (p, id) => p.evaluate((i) => document.getElementById(i).open, id);
+      // El dueño, en el teléfono y por pestañas (con el dock), estaba en «Gráficos». Entra directo a /medir sin cerrar «Qué hay de nuevo»:
+      // en /medir no sale (ni la oferta de avisos ni el aviso del día); sale el diálogo de la medición.
+      const a = await entrar(navegador, srv, ADMIN, { viewport: { width: 390, height: 844 }, pestanas: true }, sinAvisos);
+      await a.p.goto(`${srv.url}/medir`, { waitUntil: 'load' });
+      await a.p.waitForSelector('#d-medir[open]', { timeout: 30000 });
+      ok(!(await abierto(a.p, 'd-cambios')) && !(await abierto(a.p, 'd-avisos')) && (await a.p.locator('#aviso').isHidden()), '24: en /medir no sale «Qué hay de nuevo», la oferta de avisos ni el aviso del día');
+      ok(await a.p.evaluate(() => document.activeElement?.id === 'me-t'), '24: el diálogo abre con el foco en su título');
+      ok(/^\d+\.\d\d s$/.test((await a.p.textContent('#me-carga')).trim()), `24: dice cuánto tardó en verse el saldo (${await a.p.textContent('#me-carga')})`);
+      eq(await a.p.evaluate(() => performance.getEntriesByName('libro:saldo').length), 1, '24: la app deja una sola marca cuando el saldo se ve con su cifra');
+      eq((await a.p.textContent('#me-ver-t')).trim(), 'por medir', '24: antes de la prueba no hay veredicto');
+      ok(/bajará y subirá sola/.test(await a.p.textContent('#me-fps-n')), '24: explica qué va a pasar antes de empezar');
+      // offsetHeight ignora transformaciones: el diálogo entra con un breve ascenso y boundingBox lo medía a mitad (47.3 en el CI)
+      const altoBoton = await a.p.evaluate(() => document.getElementById('me-empezar').offsetHeight);
+      ok(altoBoton >= 48, `24: «Empezar la prueba» mide 48 px (${altoBoton})`);
+      // La prueba: el diálogo se cierra, la cuenta atrás va con texto, la página baja sola en el Resumen y vuelve
+      await a.p.click('#me-empezar');
+      await a.p.waitForTimeout(700);
+      ok(!(await abierto(a.p, 'd-medir')) && (await a.p.locator('#me-pildora').isVisible()), '24: durante la prueba el diálogo se cierra y se ve la píldora');
+      ok(/^Empieza en [123]$/.test((await a.p.textContent('#me-pi-t')).trim()), `24: cuenta atrás con texto (${await a.p.textContent('#me-pi-t')})`);
+      ok(/empieza en 3 segundos/i.test(await a.p.textContent('#me-sr')), '24: y se anuncia a los lectores de pantalla');
+      eq(await a.p.evaluate(() => [document.getElementById('principal').dataset.pestana, localStorage.getItem('libro.pestana'), document.documentElement.hasAttribute('data-medir')]),
+        ['resumen', 'graficos', true], '24: la prueba es en el Resumen sin cambiar la pestaña recordada, y sigue en /medir');
+      await a.p.waitForFunction(() => /Midiendo/.test(document.getElementById('me-pi-t').textContent), null, { timeout: 6000 });
+      await a.p.waitForTimeout(1500);
+      const bajo = await a.p.evaluate(() => scrollY);
+      ok(bajo > 150, `24: la página baja sola (${bajo} px)`);
+      ok(/^Midiendo · \d s$/.test((await a.p.textContent('#me-pi-t')).trim()), '24: mientras mide, cuánto le queda, con texto');
+      await a.p.waitForSelector('#d-medir[open]', { timeout: 15000 });
+      await a.p.waitForTimeout(300);
+      eq(await a.p.evaluate(() => [scrollY, document.documentElement.hasAttribute('data-midiendo'), document.getElementById('me-pildora').hidden, document.getElementById('principal').dataset.pestana, document.documentElement.style.scrollBehavior]),
+        [0, false, true, 'graficos', ''], '24: al acabar vuelve arriba, a su pestaña y a su desplazamiento de siempre');
+      ok(/^\d+ fps$/.test((await a.p.textContent('#me-fps')).trim()), `24: dice los fotogramas por segundo (${await a.p.textContent('#me-fps')})`);
+      ok(['Fluido', 'Revisar', 'Lento'].includes((await a.p.textContent('#me-ver-t')).trim()) && (await a.p.textContent('#me-ver-ico')).trim().length === 1, '24: el veredicto con palabra y símbolo');
+      ok(/Guardada en «Estado del sistema»/.test(await a.p.textContent('#me-res')) && /Listo: \d+ fotogramas por segundo/.test(await a.p.textContent('#me-res')), '24: se guarda y se anuncia el resultado (role=status)');
+      ok(/pantalla a \d+ Hz/.test(await a.p.textContent('#me-fps-n')) && /390 × 844 px/.test(await a.p.textContent('#me-aparato')), '24: el detalle y el aparato');
+      ok(await a.p.locator('#me-otra').isVisible() && (await a.p.locator('#me-sistema').isVisible()) && (await a.p.locator('#me-empezar').isHidden()), '24: tras guardar, «Medir otra vez» y «Ver todas las medidas»');
+      const s = await datos(a.p, '/api/sistema');
+      eq(s.medidas.length, 1, '24: queda una medida guardada');
+      const m = s.medidas[0];
+      ok(m.fps > 0 && m.fps <= 1000 && m.fps_peor > 0 && m.saldo_ms > 0 && m.recorrido > 300 && m.duracion_ms >= 6500 && m.hz > 0, `24: con números en su sitio (${m.fps} fps, ${m.saldo_ms} ms, ${m.recorrido} px)`);
+      eq([m.agente, m.ancho, m.alto, m.efectos, m.carga, m.instalada], ['Safari · iPhone', 390, 844, 'todos', 'navegar', false], '24: con el aparato y sus ajustes, y el agente resumido');
+      // «Ver todas las medidas»: «Estado del sistema» con la fila; se sale de /medir
+      await a.p.click('#me-sistema');
+      await a.p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent), null, { timeout: 5000 });
+      eq(await a.p.evaluate(() => [location.pathname, document.documentElement.hasAttribute('data-medir'), document.getElementById('dc-sistema').hidden]), ['/', false, false], '24: «Ver todas las medidas» abre «Estado del sistema» y deja /medir');
+      eq(await a.p.locator('#sis-lista .sis-fila').count(), 7, '24: las filas del estado siguen siendo 7 (las medidas van aparte)');
+      const fila = await a.p.$eval('#sis-med .sis-fila', (f) => ({ t: f.querySelector('b').textContent, p: f.querySelector('.sis-palabra').textContent.trim(), d: f.querySelector('small').textContent }));
+      ok(/^\d+ fps · Safari · iPhone$/.test(fila.t) && /^· (Fluido|Revisar|Lento)$/.test(fila.p) && /hasta ver el saldo/.test(fila.d), `24: la medida en «Estado del sistema» (${fila.t} ${fila.p})`);
+      // Varios veredictos (sembrados por la API): palabra, símbolo y forma; «Lento» dice qué se revisaría; las anteriores van plegadas
+      const sembrar = (cambios) => a.p.evaluate((c) => fetch('/api/medidas', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' },
+        body: JSON.stringify({ saldo_ms: 900, red_ms: 80, fps: 59, fps_escena: 58, fps_peor: 50, fps_p5: 55, tirones: 1, hz: 60, duracion_ms: 7000, recorrido: 2400, efectos: 'todos', ligero: false, tema: 'oscuro', ancho: 390, alto: 844, dpr: 3, memoria: null, nucleos: 6, instalada: true, carga: 'navegar', ...c }) }).then((r) => r.status), cambios);
+      for (const c of [{ fps: 56, fps_escena: 47.4 }, { fps: 30, fps_escena: 30, hz: 30 }, { fps: 53, fps_escena: 54 }, { fps: 59.6 }, { fps: 58 }, { fps: 57 }]) eq(await sembrar(c), 201, '24: se guarda una medida sembrada');
+      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-sistema-btn');
+      await a.p.waitForFunction(() => document.querySelectorAll('#sis-med .sis-fila, #sis-med-resto .sis-fila').length === 7, null, { timeout: 5000 });
+      const filas = await a.p.$$eval('#sis-med .sis-fila', (fs) => fs.map((f) => ({ e: f.dataset.estado, v: f.dataset.veredicto, p: f.querySelector('.sis-palabra').textContent.trim(), i: f.querySelector('.sis-ico').textContent, d: f.querySelector('small').textContent })));
+      eq(filas.length, 5, '24: se ven las cinco más recientes');
+      eq(filas.slice(0, 5).map((f) => f.v), ['fluido', 'fluido', 'fluido', 'revisar', 'revisar'], '24: de la más nueva a la más vieja');
+      const todas = await a.p.$$eval('#sis-med .sis-fila, #sis-med-resto .sis-fila', (fs) => fs.map((f) => ({ v: f.dataset.veredicto, e: f.dataset.estado, p: f.querySelector('.sis-palabra').textContent.trim(), i: f.querySelector('.sis-ico').textContent, d: f.querySelector('small').textContent })));
+      const lento = todas.find((f) => f.v === 'lento'), limitada = todas.find((f) => /ahorro de batería/.test(f.d)), revisar = todas.find((f) => f.v === 'revisar');
+      ok(lento && lento.e === 'mal' && lento.p === '· Lento' && lento.i === '✘' && /desenfoque de la sierra del fondo/.test(lento.d), '24: «Lento» con su símbolo, su palabra y qué se revisaría');
+      ok(limitada && limitada.v === 'revisar' && limitada.p === '· Revisar', '24: una pantalla limitada a 30 en reposo dice «Revisar» y por qué, no «Lento»');
+      ok(revisar && revisar.e === 'aviso' && revisar.i === '!', '24: «Revisar» con su símbolo');
+      ok(await a.p.locator('#sis-med-mas').isVisible() && /^2 medidas anteriores$/.test((await a.p.textContent('#sis-med-mas-t')).trim()), '24: las anteriores van plegadas, con su cuenta');
+      eq(await a.p.evaluate(() => document.querySelectorAll('#sis-med .sis-fila, #sis-med-resto .sis-fila').length), 7, '24: siete medidas en total');
+      const resumen = await a.p.evaluate(() => document.querySelector('#sis-med-mas > summary').offsetHeight);
+      ok(resumen >= 48, `24: el pliegue se toca bien (${resumen} px)`);
+      // Borrar: pide un segundo toque
+      await a.p.click('#sis-med-borrar');
+      eq((await a.p.textContent('#sis-med-borrar')).trim(), 'Sí, borrar las 7 medidas', '24: borrar pide un segundo toque');
+      eq((await datos(a.p, '/api/sistema')).medidas.length, 7, '24: el primer toque no borra nada');
+      await a.p.click('#sis-med-borrar');
+      await a.p.waitForFunction(() => /Aún no hay medidas/.test(document.getElementById('sis-med').textContent), null, { timeout: 5000 });
+      ok((await a.p.locator('#sis-med-borrar').isHidden()) && (await a.p.locator('#sis-med-mas').isHidden()), '24: borradas, sin botón de borrar ni pliegue');
+      // Un toque durante la prueba la detiene: no se guarda nada
+      await a.p.goto(`${srv.url}/medir`, { waitUntil: 'load' });
+      await a.p.waitForSelector('#d-medir[open]', { timeout: 30000 });
+      await a.p.click('#me-empezar');
+      await a.p.waitForTimeout(1200);
+      await a.p.mouse.click(30, 400);
+      await a.p.waitForSelector('#d-medir[open]', { timeout: 5000 });
+      ok(/se detuvo porque se tocó la pantalla/.test(await a.p.textContent('#me-res')) && (await a.p.locator('#me-empezar').isVisible()), '24: un toque detiene la prueba y se puede volver a empezar');
+      eq((await datos(a.p, '/api/sistema')).medidas.length, 0, '24: una prueba detenida no se guarda');
+      eq(await a.p.evaluate(() => [scrollY, document.documentElement.hasAttribute('data-midiendo'), location.pathname]), [0, false, '/medir'], '24: y la página queda como estaba');
+      // «Cerrar» deja la app normal en «/»
+      await a.p.click('#me-cerrar');
+      await a.p.waitForTimeout(300);
+      eq(await a.p.evaluate(() => [location.pathname, document.documentElement.hasAttribute('data-medir')]), ['/', false], '24: «Cerrar» vuelve a la app de siempre');
+      eq(a.consola.filter((c) => !/Failed to load resource/.test(c)), [], '24: sin errores en la consola');
+      await a.ctx.close();
+      // 320 px con letra muy grande y efectos «ninguno»: cabe sin desbordes y la medición funciona (y lo dice)
+      const ch = await entrar(navegador, srv, ADMIN, { viewport: { width: 320, height: 568 } }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.letra', 'muy-grande'); localStorage.setItem('libro.efectos', 'ninguno'); } catch { /* */ } });
+      await ch.p.goto(`${srv.url}/medir`, { waitUntil: 'load' });
+      await ch.p.waitForSelector('#d-medir[open]', { timeout: 30000 });
+      const cabe = () => ch.p.evaluate(() => {
+        const d = document.getElementById('d-medir');
+        const bot = [...d.querySelectorAll('button')].filter((b) => b.getClientRects().length).map((b) => b.getBoundingClientRect());
+        return { dlg: d.scrollWidth <= d.clientWidth + 1, pag: document.documentElement.scrollWidth <= innerWidth, dentro: d.getBoundingClientRect().right <= innerWidth + 0.5, toques: bot.every((r) => r.height >= 47.5 && r.width >= 47.5) };
+      });
+      eq(await cabe(), { dlg: true, pag: true, dentro: true, toques: true }, '24: a 320 px con letra muy grande, sin desbordes y con toques de 48 px');
+      ok(/Efectos «ninguno»: se mide sin animaciones/.test(await ch.p.textContent('#me-ef')), '24: con efectos «ninguno» lo dice');
+      await ch.p.click('#me-empezar');
+      await ch.p.waitForSelector('#d-medir[open]', { timeout: 20000 });
+      await ch.p.waitForTimeout(300);
+      ok(/^\d+ fps$/.test((await ch.p.textContent('#me-fps')).trim()), '24: con efectos «ninguno» la medición funciona');
+      eq(await cabe(), { dlg: true, pag: true, dentro: true, toques: true }, '24: con el resultado, tampoco se desborda');
+      eq((await datos(ch.p, '/api/sistema')).medidas[0].efectos, 'ninguno', '24: y guarda el nivel de efectos');
+      await ch.ctx.close();
+      // Una lectora: sin /medir (404) y sin poder guardar medidas
+      const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, sinAvisos);
+      const r404 = await l.p.goto(`${srv.url}/medir`);
+      eq(r404.status(), 404, '24: una lectora no tiene /medir');
+      await l.p.goto(srv.url, { waitUntil: 'load' }); await l.p.waitForTimeout(800);
+      eq(await l.p.evaluate(() => fetch('/api/medidas', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: '{}' }).then((r) => r.status)), 403, '24: ni guarda medidas (403)');
+      ok(!(await l.p.evaluate(() => document.documentElement.hasAttribute('data-medir'))), '24: en su app no hay nada de la medición');
+      await l.ctx.close();
+    } finally {
+      srv.parar();
+    }
+    // Con SOLO_LECTURA se mide, pero no se guarda: lo dice y el resultado se queda a la vista
+    const sl = await servidor('anio', { SOLO_LECTURA: '1' });
+    try {
+      const a = await entrar(navegador, sl, ADMIN, { viewport: { width: 390, height: 844 } }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* */ } });
+      await a.p.goto(`${sl.url}/medir`, { waitUntil: 'load' });
+      await a.p.waitForSelector('#d-medir[open]', { timeout: 30000 });
+      await a.p.click('#me-empezar');
+      await a.p.waitForSelector('#d-medir[open]', { timeout: 20000 });
+      await a.p.waitForTimeout(300);
+      ok(/^\d+ fps$/.test((await a.p.textContent('#me-fps')).trim()) && /No se guardó: .*mantenimiento/.test(await a.p.textContent('#me-res')), `24: en mantenimiento mide y dice que no se guardó (${await a.p.textContent('#me-res')})`);
+      ok((await a.p.locator('#me-sistema').isHidden()) && (await a.p.locator('#me-otra').isVisible()), '24: sin «Ver todas las medidas» (no hay nada nuevo allí)');
+      eq((await datos(a.p, '/api/sistema')).medidas.length, 0, '24: y no queda ninguna medida');
+      await a.ctx.close();
+    } finally {
+      sl.parar();
+    }
   }
 
   // ---------------------------------------------------------------- sin histórico de precios

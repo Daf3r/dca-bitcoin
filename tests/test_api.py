@@ -2651,4 +2651,91 @@ finally:
     server.SOLO_LECTURA = _ant_sl3
 server._CODIGO_TV_INTENTOS.clear()
 
+# --- Campamento 24: medir este aparato (idea 44)
+check(len(sql("SELECT name FROM sqlite_master WHERE name = 'medidas_aparato'")) == 1 and server.version_esquema(server.connect()) >= 18, "la tabla de las medidas existe (migración 18)")
+_cx = server.connect(); server._m_medidas_aparato(_cx); server._m_medidas_aparato(_cx); _cx.commit()
+_cols_med = {r[1] for r in _cx.execute("PRAGMA table_info(medidas_aparato)")}
+check(_cols_med == {"id", "creado", "agente", "instalada", "saldo_ms", "red_ms", "fps", "fps_escena", "fps_peor", "fps_p5", "tirones", "hz", "duracion_ms", "recorrido",
+                    "efectos", "ligero", "tema", "ancho", "alto", "dpr", "memoria", "nucleos", "carga"}, f"la migración 18 es idempotente (dos veces, la misma tabla) {sorted(_cols_med)}")
+check(not _cols_med & {"usuario", "ip", "ua", "user_agent"}, "las medidas no guardan la cuenta, la IP ni el texto del agente")
+_cx.close()
+# Una base sin la migración 18 (vuelta a la 17): al arrancar se aplica solo esa
+_ruta_m = os.path.join(tmp, "sin18.db")
+_src = server.connect(); _cm = sqlite3.connect(_ruta_m); _src.backup(_cm); _src.close()  # (una copia completa, con lo que haya en el WAL)
+_cm.execute("DROP TABLE medidas_aparato"); _cm.execute("DELETE FROM esquema WHERE version = 18"); _cm.commit(); _cm.close()
+_ant_db = server.DB_PATH
+try:
+    server.DB_PATH = _ruta_m
+    _cm = server.connect()
+    check(server.migrar(_cm) == [18] and server.version_esquema(_cm) == server.VERSION_ESQUEMA and _cm.execute("SELECT COUNT(*) FROM medidas_aparato").fetchone()[0] == 0,
+          "una base en la versión 17 aplica solo la 18")
+    _cm.close()
+finally:
+    server.DB_PATH = _ant_db
+_UA_APP = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+check(server._agente_corto(_UA_APP) == "Safari · iPhone", "la app instalada del iPhone (sin «Safari/» en su agente) es Safari · iPhone")
+check(server._agente_corto("Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0 Mobile/15E148 Safari/604.1") == "Safari · iPhone"
+      and server._agente_corto("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36") == "Chrome · Android",
+      "Chrome en iPhone sigue siendo Safari (WebKit) y Chrome en Android sigue siendo Chrome")
+# La página /medir: la app de siempre, solo para el admin
+r = adm.get("/medir")
+check(r.status_code == 200 and 'id="d-medir"' in r.get_data(as_text=True) and f"/medir.js?v={server.VERSION}" in r.get_data(as_text=True) and r.headers["Cache-Control"] == "no-store",
+      "el admin abre /medir: la app, versionada y sin caché")
+check(luz.get("/medir").status_code == 404, "un lector no tiene /medir (404, como la guía)")
+_sin = server.app.test_client(); _sin.environ_base.update({"wsgi.url_scheme": "https", "HTTP_X_LIBRO": "1"})
+check(_sin.get("/medir", follow_redirects=False).status_code == 302, "sin sesión, /medir lleva a la entrada")
+check(not _re.search(r'href="/medir[?#"]', open(os.path.join(server.ESTATICOS, "index.html"), encoding="utf-8").read()), "/medir no está enlazada en la página (solo la abre el botón de «Estado del sistema»)")
+# Guardar una medida
+_MED = {"saldo_ms": 840, "red_ms": 120, "fps": 58.3, "fps_escena": 54.1, "fps_peor": 41.2, "fps_p5": 47.5, "tirones": 3, "hz": 60, "duracion_ms": 7000, "recorrido": 2532,
+        "efectos": "todos", "ligero": False, "tema": "oscuro", "ancho": 390, "alto": 844, "dpr": 3, "memoria": None, "nucleos": 6, "instalada": True, "carga": "navegar"}
+sql("DELETE FROM medidas_aparato")
+_aud0 = sql("SELECT COUNT(*) FROM auditoria")[0][0]
+r = adm.post("/api/medidas", json=_MED, headers={"User-Agent": _UA_APP})
+_m = r.get_json()
+check(r.status_code == 201 and _m["agente"] == "Safari · iPhone" and _m["instalada"] is True and _m["fps"] == 58.3 and _m["memoria"] is None and _m["ligero"] is False and isinstance(_m["id"], int),
+      f"el admin guarda una medida con el agente resumido por el servidor {r.status_code} {_m}")
+check(abs(_m["creado"] - __import__("time").time()) < 30, "con su fecha")
+check(sql("SELECT COUNT(*) FROM auditoria")[0][0] == _aud0, "guardar una medida no se audita (es un dato del aparato, no del libro)")
+_sm = adm.get("/api/sistema").get_json()
+check(_sm["medidas"][0]["id"] == _m["id"] and _sm["medidas"][0]["fps_escena"] == 54.1, "«Estado del sistema» trae las medidas")
+check(set(_sm["medidas"][0]) == _cols_med - {"usuario"} and "ip" not in _sm["medidas"][0], "cada medida trae solo sus números, sus ajustes y el agente resumido")
+_r2 = adm.post("/api/medidas", json={k: v for k, v in _MED.items() if k not in ("carga", "ligero", "instalada", "red_ms", "fps_escena", "memoria", "nucleos")})
+check(_r2.status_code == 201 and _r2.get_json()["carga"] == "otra" and _r2.get_json()["red_ms"] is None and _r2.get_json()["instalada"] is False, "los opcionales pueden faltar")
+# Validación: 400 con el motivo
+for _campo, _malo in (("fps", True), ("fps", "58"), ("fps", 0), ("fps", 5000), ("fps", float("nan")), ("fps", float("inf")), ("saldo_ms", 1.5), ("saldo_ms", -1),
+                      ("saldo_ms", 200_000), ("saldo_ms", None), ("tirones", 2.5), ("hz", 0), ("duracion_ms", 10), ("ancho", 50), ("dpr", 0), ("dpr", 20),
+                      ("efectos", "mucho"), ("efectos", None), ("tema", "rosa"), ("carga", "x"), ("ligero", "sí"), ("instalada", 1), ("nucleos", 0), ("memoria", -2)):
+    r = adm.post("/api/medidas", data=json.dumps({**_MED, _campo: _malo}), content_type="application/json")
+    check(r.status_code == 400 and _campo in r.get_json()["error"], f"medida con {_campo}={_malo!r}: 400 que lo dice ({r.status_code} {r.get_data(as_text=True)[:120]})")
+for _cuerpo in ("[]", "x", "null"):
+    check(adm.post("/api/medidas", data=_cuerpo, content_type="application/json").status_code == 400, f"cuerpo {_cuerpo}: 400")
+# Permisos: un lector no mide ni borra; sin sesión, nada
+check(luz.post("/api/medidas", json=_MED).status_code == 403 and luz.delete("/api/medidas").status_code == 403, "un lector no guarda ni borra medidas (403)")
+check(_sin.post("/api/medidas", json=_MED).status_code == 401 and _sin.delete("/api/medidas").status_code == 401, "sin sesión: 401")
+check(server.app.test_client().post("/api/medidas", json=_MED, environ_base={"wsgi.url_scheme": "https"}).status_code == 403, "sin la cabecera X-Libro: 403 (CSRF)")
+# Tope de 50: se van las más viejas
+for i in range(55):
+    adm.post("/api/medidas", json={**_MED, "tirones": i})
+_ids = [r_[0] for r_ in sql("SELECT id FROM medidas_aparato ORDER BY id")]
+check(len(_ids) == server.MEDIDAS_MAX == 50 and sql("SELECT MAX(tirones) FROM medidas_aparato")[0][0] == 54 and _m["id"] not in _ids, "se guardan las últimas 50 (las más viejas se van)")
+_sm = adm.get("/api/sistema").get_json()["medidas"]
+check(len(_sm) == 50 and [x["id"] for x in _sm] == sorted(_ids, reverse=True), "«Estado del sistema» las da de la más nueva a la más vieja")
+# Solo lectura: medir es una escritura (503); la página se sigue abriendo
+_ant_sl4 = server.SOLO_LECTURA
+try:
+    server.SOLO_LECTURA = True
+    r = adm.post("/api/medidas", json=_MED)
+    check(r.status_code == 503 and r.get_json()["mantenimiento"] is True and adm.delete("/api/medidas").status_code == 503, "con SOLO_LECTURA no se guardan ni borran medidas (503)")
+    check(adm.get("/medir").status_code == 200, "pero /medir se abre (es mirar)")
+finally:
+    server.SOLO_LECTURA = _ant_sl4
+# Borrar todas
+_aud1 = sql("SELECT COUNT(*) FROM auditoria")[0][0]
+r = adm.delete("/api/medidas")
+check(r.status_code == 200 and r.get_json()["quitados"] == 50 and adm.get("/api/sistema").get_json()["medidas"] == [] and sql("SELECT COUNT(*) FROM auditoria")[0][0] == _aud1,
+      "el admin borra las medidas (sin auditoría)")
+# Nada de esto sale fuera de la sesión del admin
+_pub = anon.get("/login").get_data(as_text=True) + anon.get("/login.js").get_data(as_text=True)
+check("medid" not in _pub.lower() and "/medir" not in _pub and anon.get("/api/estado").get_json() == {"abierto": True}, "la entrada y /api/estado no dicen nada de las medidas")
+
 print("OK", ok, "comprobaciones")

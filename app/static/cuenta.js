@@ -7,6 +7,7 @@ import { pintarSesiones } from './sesiones.js';
 import { pintarEnlaces } from './enlaces.js';
 import { pintarWallets } from './wallets.js';
 import { pintarSistema } from './sistema.js';
+import { enMedir } from './medir.js';
 import { etiquetaModo, fijarModoPestanas, enPestanas, verHistoria } from './pestanas.js';
 import { abrirCumple, etiquetaCumple } from './cumple.js';
 import { abrirMontana, etiquetaMontana } from './bautizo.js';
@@ -35,6 +36,12 @@ function vistaCuenta(cual) {
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
 const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
+/** (Campamento 24) «Ver en Estado del sistema» tras medir este aparato: «Tu cuenta» abierta directo en esa vista. */
+export function abrirSistema() {
+  $('cuenta-btn').click();
+  vistaCuenta('sistema');
+  pintarSistema();
+}
 /** El avatar de la persona y su texto (con `textContent`: el nombre nunca se interpreta como HTML). */
 function conAvatar(el, nombre, texto, opciones) {
   el.innerHTML = avatar(nombre, opciones);
@@ -234,7 +241,7 @@ $('hist-mas').addEventListener('click', () => cargarHistorial(true));
 const avisosUI = montarAvisos(api);
 // Tras entrar: una sola vez por dispositivo se ofrece activar los avisos. Los lectores primero ven su bienvenida.
 export async function ofrecerAvisos() {
-  if (avisosOfrecidos || !S.rol || !S.cargado || document.querySelector('dialog[open]') || enTV()) return;
+  if (avisosOfrecidos || !S.rol || !S.cargado || document.querySelector('dialog[open]') || enTV() || enMedir()) return;
   if (S.rol === 'lector' && !novedadesMostradas) return;
   if (cambiosPendientes()) { mostrarCambios(); return; } // «Qué hay de nuevo»: antes de la oferta de avisos
   avisosOfrecidos = true;

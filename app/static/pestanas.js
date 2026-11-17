@@ -43,6 +43,18 @@ export function irAPestana(cual, { desplazar = true } = {}) {
   if (desplazar && porPestanas) subirAlInicio();
 }
 
+/**
+ * (Campamento 24) Para la prueba de «Medir este aparato»: enseña una pestaña un rato sin recordarla, sin moverse y sin avisar a nadie
+ * (no es una visita). Devuelve cómo volver a la de antes. En «Todo junto» no cambia nada.
+ */
+export function verPestanaUnRato(cual) {
+  const antes = actual;
+  if (!porPestanas || cual === actual || !PESTANAS.includes(cual)) return () => {};
+  actual = cual;
+  aplicar();
+  return () => { actual = antes; aplicar(); };
+}
+
 /** ¿La barra va en el dock de abajo? (teléfono y tablet, por pestañas; campamento 20). En escritorio va arriba, pegajosa. */
 const DOCK = window.matchMedia('(max-width: 1099px)');
 export const enDock = () => porPestanas && DOCK.matches;

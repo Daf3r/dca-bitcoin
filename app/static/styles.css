@@ -3765,3 +3765,66 @@ html[data-efectos="ninguno"] .tvm-tiempo { display: none; } /* sin movimiento, l
 .tc-g { font: 600 2.4rem/1 var(--sans); letter-spacing: 0.12em; font-variant-numeric: tabular-nums lining-nums; color: var(--txt); white-space: nowrap; }
 .tc-vence { font-size: 0.875rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
 .tc-estado:empty, .tele-con .hoja-error:empty { display: none; }
+
+/* ------------------------------------------------------------ Campamento 24 · Medir este aparato (idea 44)
+   El diálogo de /medir (dos cifras grandes, «Al abrir» y «Al deslizar», con su veredicto en palabra y símbolo), la píldora que acompaña
+   la prueba (fija arriba, opaca y sin desenfoque: no pesa en lo que se mide) y la lista de «Estado del sistema». */
+.d-medir { width: min(calc(100vw - 24px), 34rem); padding: 20px 18px 16px; }
+.d-medir h2 { margin: 0 0 6px; }
+/* El título recibe el foco al abrirse el diálogo solo (al cargar /medir), para que se lea primero; no es un control: sin anillo. */
+.d-medir h2:focus { outline: none; }
+.d-medir p { margin: 0; }
+.me-intro { margin-bottom: 14px !important; font-size: 0.9375rem; line-height: 1.45; }
+/* Dos fichas lado a lado también en el teléfono: la cifra se ajusta al ancho de su ficha (`cqi`), sin medir nada. */
+.me-tarjetas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.me-tar { container-type: inline-size; display: grid; align-content: start; gap: 2px; padding: 12px 14px 12px; border-radius: 18px; background: var(--s2); box-shadow: inset 0 1px 0 var(--filo); }
+.me-tar h3 { margin: 0; font: 650 0.75rem/1.3 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--txt2); }
+.me-cifra { margin: 2px 0 0 !important; font: 300 clamp(1.375rem, 27cqi, 3rem)/1.1 var(--sans); letter-spacing: -0.02em; color: var(--txt) !important; white-space: nowrap; }
+.me-pie { font-size: 0.8125rem; line-height: 1.35; color: var(--txt2) !important; }
+.me-nota { margin-top: 8px !important; font-size: 0.8125rem; line-height: 1.5; color: var(--txt2) !important; overflow-wrap: anywhere; }
+.me-nota b { color: var(--txt); font-weight: 650; }
+.me-ver { display: flex; align-items: center; gap: 7px; min-height: 1.5rem; color: var(--txt) !important; }
+.me-ver b { font-weight: 650; }
+.me-ver[data-estado=""] b { font-weight: 500; color: var(--txt2); }
+.me-ver-ico { flex: none; width: 1.375rem; height: 1.375rem; display: grid; place-items: center; border-radius: 50%; font-weight: 800; font-size: 0.75rem; background: var(--s3); }
+.me-ver[data-estado="ok"] .me-ver-ico { background: color-mix(in srgb, var(--sube) 20%, var(--s3)); color: var(--sube); }
+.me-ver[data-estado="aviso"] .me-ver-ico { background: var(--naranja); color: var(--naranja-osc); }
+.me-ver[data-estado="mal"] .me-ver-ico { background: var(--baja); color: var(--fondo); }
+/* Con «Lento»: la regla decidida, en una línea, con el borde a la izquierda (como un «Falla» de «Estado del sistema», sin alarma). */
+.me-regla { margin-top: 10px !important; padding: 10px 12px; border-radius: 12px; background: var(--s2); box-shadow: inset 3px 0 0 var(--baja); font-size: 0.875rem; line-height: 1.45; color: var(--txt) !important; }
+.me-aparato { color: var(--txt3) !important; }
+.me-guardada { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; margin-top: 6px; }
+.me-res { font-size: 0.875rem; font-weight: 650; color: var(--txt) !important; }
+.me-res:empty { display: none; }
+/* Los botones se quedan a la vista aunque el diálogo se desplace (teléfono bajo, acostado, letra grande), como en el comprobante:
+   «Cerrar» a la izquierda y la acción, que crece, a la derecha (si no caben, la acción baja a su renglón). */
+.me-bot { position: sticky; bottom: -16px; z-index: 1; flex-wrap: wrap; margin: 8px -18px -16px; padding: 10px 18px 16px; background: linear-gradient(to top, var(--s1) calc(100% - 10px), color-mix(in srgb, var(--s1) 0%, transparent)); }
+.me-bot button { flex: 1 1 auto; }
+.me-bot .primario { flex-grow: 4; }
+/* En pantallas bajas (teléfono pequeño, acostado) la frase de arriba sobra: las fichas y su detalle ya lo dicen. */
+@media (max-height: 600px) { .me-intro { display: none; } }
+@media (max-width: 359px) {
+  .d-medir { padding: 16px 12px 12px; }
+  .me-tar { padding: 10px 10px 10px; }
+  .me-bot { bottom: -12px; margin: 12px -12px -12px; padding: 10px 12px 12px; }
+  .me-bot button { padding: 0 14px; }
+}
+.me-pildora { position: fixed; z-index: 40; top: max(10px, env(safe-area-inset-top)); left: 50%; translate: -50% 0; display: grid; justify-items: center; gap: 2px;
+  width: max-content; max-width: calc(100vw - 32px); padding: 10px 20px 12px; border-radius: 18px; background: var(--s1); color: var(--txt);
+  box-shadow: inset 0 1px 0 var(--filo), var(--sombra-alta); text-align: center; pointer-events: none; contain: layout paint; }
+.me-pildora b { font: 600 1.0625rem/1.25 var(--sans); font-variant-numeric: tabular-nums; }
+.me-pildora small { font-size: 0.8125rem; color: var(--txt2); }
+.me-barra { display: block; width: 12rem; max-width: 100%; height: 4px; margin-top: 6px; border-radius: 4px; background: var(--s3); overflow: hidden; }
+.me-barra i { display: block; height: 100%; background: var(--naranja); transform: scaleX(0); transform-origin: left; transition: transform 1s linear; }
+.me-pildora[data-fase="cuenta"] .me-barra { display: none; }
+/* «Estado del sistema»: cada medida, compacta (la cifra primero; el detalle en un bloque con su propio interlineado); los botones de la
+   medición y las medidas anteriores, plegadas. */
+.sis-medida b { font-variant-numeric: tabular-nums; }
+.sis-medida small { display: block; margin-top: 3px; line-height: 1.45; }
+.sis-med-bot { flex-wrap: wrap; justify-content: flex-start; margin-top: 10px; }
+.sis-mas { margin-top: 6px; }
+.sis-mas > summary { display: flex; align-items: center; min-height: var(--toque); font-size: 0.875rem; font-weight: 650; color: var(--txt2); cursor: pointer; list-style: none; }
+.sis-mas > summary::-webkit-details-marker { display: none; }
+.sis-mas > summary::before { content: ""; width: 7px; height: 7px; margin: 0 10px 0 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; }
+.sis-mas[open] > summary::before { transform: rotate(45deg); }
+.sis-mas > summary:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; border-radius: 8px; }

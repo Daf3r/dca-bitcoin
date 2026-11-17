@@ -527,6 +527,31 @@ try {
       await auditar(p, `entrar con un código, con un error ${esquema}`);
       await ctx.close();
     }
+    { // campamento 24: medir este aparato (antes de la prueba, durante, con el resultado) y las medidas en «Estado del sistema»
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.goto(`${anio.url}/medir`, { waitUntil: 'load' });
+      await p.waitForSelector('#d-medir[open]', { timeout: 30000 }); await p.waitForTimeout(400);
+      await auditar(p, `medir este aparato ${esquema}`);
+      await p.click('#me-empezar'); await p.waitForTimeout(4500);
+      await auditar(p, `medir este aparato, durante la prueba ${esquema}`);
+      await p.waitForSelector('#d-medir[open]', { timeout: 20000 }); await p.waitForTimeout(400);
+      await auditar(p, `medir este aparato, con el resultado ${esquema}`);
+      // Una de cada veredicto (Lento con su regla, Revisar, la pantalla limitada) y más de cinco, para que salgan las anteriores plegadas
+      for (const c of [{ fps: 56, fps_escena: 47 }, { fps: 30, fps_escena: 30, hz: 30 }, { fps: 53, fps_escena: 54 }, { fps: 59 }, { fps: 58 }]) {
+        await p.evaluate((x) => fetch('/api/medidas', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' },
+          body: JSON.stringify({ saldo_ms: 900, red_ms: 80, fps_escena: 58, fps_peor: 50, fps_p5: 55, tirones: 1, hz: 60, duracion_ms: 7000, recorrido: 2400, efectos: 'todos', ligero: false, tema: 'oscuro', ancho: 390, alto: 844, dpr: 3, memoria: null, nucleos: 6, instalada: true, carga: 'navegar', ...x }) }), c);
+      }
+      await p.click('#me-sistema');
+      await p.waitForFunction(() => document.querySelectorAll('#sis-med .sis-fila, #sis-med-resto .sis-fila').length === 6, null, { timeout: 8000 });
+      await p.click('#sis-med-mas > summary'); await p.waitForTimeout(300);
+      await auditar(p, `medidas de los aparatos ${esquema}`);
+      await p.click('#sis-med-borrar'); await p.waitForTimeout(200);
+      await auditar(p, `borrar las medidas, segundo toque ${esquema}`);
+      await p.click('#sis-med-borrar'); await p.waitForFunction(() => /Aún no hay medidas/.test(document.getElementById('sis-med').textContent), null, { timeout: 5000 });
+      await auditar(p, `medidas de los aparatos, vacía ${esquema}`);
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
