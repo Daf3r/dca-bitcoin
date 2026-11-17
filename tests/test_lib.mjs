@@ -1388,7 +1388,7 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq(pisa.map((q) => q.tipo), [], 'pueblo: ninguna pieza se acerca al sendero');
   ok(sp.caja[1] > 270 && sp.caja[2] <= lago.cx - lago.rx + 8 && sp.yg < 764, `pueblo: por debajo del saldo y a la izquierda del lago (${sp.caja.map(Math.round)})`);
   const svg = P.pueblo(sp, { ventanas: 3 });
-  const subtrazos = (t, clase) => ((t.match(new RegExp(`<path class="${clase}" d="([^"]*)"`)) || [, ''])[1].match(/M/g) || []).length;
+  const subtrazos = (t, clase) => ((t.match(new RegExp(`<path class="${clase}" d="([^"]*)"`)) || ['', ''])[1].match(/M/g) || []).length;
   eq(subtrazos(svg, 'v-luz'), 3, 'pueblo: tres personas, tres ventanas encendidas (una por persona, nunca más)');
   ok(subtrazos(P.pueblo(sp, { ventanas: 99 }), 'v-luz') === casas.length * 2 && subtrazos(P.pueblo(sp, { ventanas: 0 }), 'v-luz') === 0, 'pueblo: cada casa del frente tiene dos ventanas; sin personas, ninguna encendida (la entrada)');
   ok(!/style=|<script|on[a-z]+=|NaN/i.test(svg) && (svg.match(/class="([^"]+)"/g) || []).every((x) => /class="(efecto-ambiente |copa|v-)/.test(x)), 'pueblo: SVG sin estilos ni scripts en línea, sin NaN, con clases propias');
