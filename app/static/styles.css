@@ -974,8 +974,10 @@ html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, ht
    se queda quieto el ambiente que se repite sin fin, y retoma donde iba. Safari pinta esas animaciones en el procesador: cada una
    repinta su trozo de la escena, y en el desplazamiento eso se sumaba a cada fotograma. Lo que acompaña a una acción (la subida de
    «Tú», la celebración en #m-fx, la bandera que se iza, el pino que se planta, la moneda) no está en la lista y nunca se pausa.
-   Un adorno nuevo con una animación infinita se pausa solo si lleva `efecto-ambiente` (o va dentro de uno); si no, se añade aquí. */
-.escena[data-desliza] :is(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
+   Un adorno nuevo con una animación infinita se pausa solo si lleva `efecto-ambiente` (o va dentro de uno); si no, se añade aquí.
+   Lo mismo mientras corre la película del ascenso (pelicula.js: `data-corre` en su escena): «Tú» sube, los faroles se encienden y
+   el bosque brota (no están en la lista); el resto del paisaje espera quieto y retoma al detenerse. */
+:is(.escena[data-desliza], .pe-montana[data-corre]) :is(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
   .eco-fantasma, .yo-halo, .yo-nav, .llama, .llama-i, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
   .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
   .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }

@@ -62,6 +62,9 @@ function pintarBoton() {
   bPlay.querySelector('use').setAttribute('href', jugando ? '#i-pausa' : '#i-reproducir');
   $('pe-play-t').textContent = jugando ? 'Pausar la película' : fin ? 'Ver la película otra vez' : 'Ver la película';
   bPlay.dataset.estado = jugando ? 'pausa' : fin ? 'otra' : 'ver';
+  // (Rendimiento iPhone) Mientras corre, el ambiente que se repite (estrellas, luciérnagas, humo…) se queda quieto, como al deslizar la
+  // página (la lista está en styles.css), y retoma donde iba al detenerse. Todo cambio de `jugando` pasa por aquí.
+  host.toggleAttribute('data-corre', jugando);
 }
 
 function cuadro(t) {
