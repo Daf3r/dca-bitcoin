@@ -414,6 +414,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // De temporada (el CSS los muestra solo cuando toca): papel picado en las fiestas y cohetes la noche de fin de año.
   const anio = (window.libroCielo?.dia?.() ?? '').slice(0, 4) || String(new Date().getFullYear());
   const sitio = sitioPapel(W, H, by, pts, [...honor.cajas, ...cajasValle.map(([x0, y0, x1]) => [x0, x1, y0])]);
+  const sitioPapelV = sitio ? [sitio[0] - 4, sitio[2] - 6, sitio[1] + 4, sitio[2] + 36 * sitio[3]] : null; // (el grabado de luna llena lo esquiva)
   if (sitio) s += papelPicado(sitio[0], sitio[1], sitio[2], anio, sitio[3], sitio[4]); // (acostado y sin sitio libre: mejor sin tira que encima de algo)
   const altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
@@ -453,8 +454,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   });
   host.querySelector('#m-terrazas').innerHTML = cumbre({ e: ec, sx: c.sx, sy: c.sy, izq, quiebre, pico: picoC, nieve: nieveMedidas }) + terrazas(campos, ec, c.sol[0] >= c.sx ? 1 : -1, [c.sx, c.sy]);
   // (Campamento 22) La quebrada y el grabado de luna llena esquivan el sendero y cada campamento con su rótulo (a su lado del sendero).
-  const cajasCampos = campos.map(({ p, lado, cima }) => { const l = cima ? 1 : lado, x1 = p.x + l * (DH + 72) * ec; return [Math.min(p.x, x1) - 6, p.y - 38 * ec, Math.max(p.x, x1) + 6, p.y + 10]; });
-  const ladera = sitiosLadera({ W, sx: c.sx, sy: c.sy, der, nv: nieveMedidas.nv, pts, lago: lg, cajas: cajasCampos, grabado: tocable && Boolean(iniciales) && Boolean(primera), k: valle.k });
+  const cajasCampos0 = [];
+  if (sitioPapelV) cajasCampos0.push(sitioPapelV);
+  const cajasCampos = cajasCampos0.concat(campos.map(({ p, lado, cima }) => { const l = cima ? 1 : lado, x1 = p.x + l * (DH + 72) * ec; return [Math.min(p.x, x1) - 6, p.y - 38 * ec, Math.max(p.x, x1) + 6, p.y + 10]; }));
+  const ladera = sitiosLadera({ W, H, sx: c.sx, sy: c.sy, izq, der, nv: nieveMedidas.nv, pts, lago: lg, cajas: cajasCampos, grabado: tocable && Boolean(iniciales) && Boolean(primera), k: valle.k });
   host.querySelector('#m-v-ladera').innerHTML = (ladera.quebrada ? quebrada(ladera.quebrada) : '') + (ladera.roca ? grabadoLuna({ ...ladera.roca, iniciales: inicialesGrabadas(iniciales), fecha: fechaGrabada(primera) }) : '');
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec, c.sol[0] >= c.sx ? 1 : -1)).join('');
   // Las etapas intermedias (250k, 500k…) que no son campamento van como una marca atravesada en el sendero: así se ve el avance entre

@@ -3929,6 +3929,7 @@ html:is([data-milpa="siembra"], [data-milpa="jilote"], [data-milpa="doblada"]) .
 :is(.v-arbol, .v-canton) .copa-sombra { fill: color-mix(in oklab, var(--copa) 55%, var(--monte-sombra)); }
 .v-arbol .copa-filo { fill: none; stroke: var(--astro); stroke-opacity: calc(0.16 + var(--halo-a, 0.2) * 0.5); stroke-width: 0.9; stroke-linecap: round; }
 .v-ar-hoja-l { fill: color-mix(in oklab, var(--copa) 70%, var(--astro)); } .v-ar-hoja-s { fill: color-mix(in oklab, var(--copa) 70%, var(--monte-sombra)); }
+html[data-cielo="noche"] .v-arbol :is(.copa-luz, .copa-media) { fill: color-mix(in oklab, var(--copa) 86%, var(--astro)); }
 html[data-epoca="seca"] .v-arbol { --copa: color-mix(in oklab, #9c9456 calc(var(--v-luz) + 4%), var(--pino0)); }
 .v-ar-copa { transform-box: fill-box; transform-origin: 50% 100%; }
 html[data-epoca="seca"] .v-arbol:not(.v-retono) .v-ar-copa { transform: scale(0.84, 0.8); }
@@ -3936,12 +3937,12 @@ html[data-epoca="seca"] .v-ar-ramas-secas { display: inline; }
 
 /* La quebrada: el cauce tallado en la roca y, según la época, el agua llena que brilla o un hilo entre piedras. */
 .v-q-cauce { fill: var(--monte-sombra); opacity: 0.45; }
-.vq-0, .vq-1, .vq-2 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--c3) 50%, var(--nieve)) var(--v-agua, 78%), var(--monte)); }
-.vq-0 { stop-opacity: 0.1; } .vq-1 { stop-opacity: 0.55; } .vq-2 { stop-opacity: 0.95; }
+.vq-0, .vq-1 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--c3) 50%, var(--nieve)) var(--v-agua, 78%), var(--monte)); }
+.vq-0 { stop-opacity: 0.08; } .vq-1 { stop-opacity: 0.95; }
 .v-q-brillo { fill: none; stroke: var(--astro); opacity: 0.6; stroke-linecap: round; }
 .v-q-piedra { fill: color-mix(in oklab, var(--nieve) 30%, var(--monte)); }
 html[data-epoca="lluviosa"] .v-q-hilo, html[data-epoca="seca"] .v-q-llena { display: none; }
-html[data-epoca="seca"] .v-q-hilo .v-q-agua { opacity: 0.7; }
+html[data-epoca="seca"] .v-q-hilo.v-q-agua { opacity: 0.7; }
 
 /* El lago de época: en la seca el agua baja y deja ver su playa; en la lluviosa la cubre. */
 .lago-playa { fill: color-mix(in oklab, #d4bf96 var(--v-luz), var(--monte)); opacity: 0.85; }

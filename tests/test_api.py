@@ -451,6 +451,13 @@ check(lec.post("/api/clave", json={"actual": "mal-mal-mal-mal", "nueva": "otra-c
 check(lec.post("/api/clave", json={"actual": "lectora-de-la-familia", "nueva": "corta"}).status_code == 400, "clave corta")
 check(lec.post("/api/clave", json={"actual": "lectora-de-la-familia", "nueva": "otra-clave-larga-1"}).status_code == 200, "cambio de clave")
 check(lec.get("/api/yo").status_code == 200 and otra.get("/api/yo").status_code == 401, "cierra las demás sesiones")
+# Campamento 22 · el valle vivo: /api/yo trae lo mínimo del valle (cuántas cuentas activas y sus iniciales), sin nombres y solo con sesión
+_c = server.connect(); _act = [r["nombre"] for r in _c.execute("SELECT nombre FROM usuarios WHERE activo = 1").fetchall()]; _c.close()
+_fam = lec.get("/api/yo").get_json()["familia"]
+check(_fam == {"personas": len(_act), "iniciales": "".join(sorted(x.strip()[:1].upper() for x in _act))} and _fam["personas"] >= 2, f"valle: /api/yo trae cuántas cuentas activas hay y sus iniciales ({_fam})")
+check(not any(x in str(_fam) for x in _act if len(x) > 1), "valle: sin nombres")
+check(cliente().get("/api/yo").get_json()["familia"] == _fam, "valle: lo mismo para quien anota")
+check("familia" not in str(server.app.test_client().get("/api/estado").get_json()) and server.app.test_client().get("/api/yo").status_code == 401, "valle: la entrada no lo dice y sin sesión no se ve")
 # Salir y salir en todos
 a1, a2 = cliente(), cliente()
 a1.post("/api/logout", json={})
@@ -629,7 +636,7 @@ check(any(x["accion"] == "alta" and '"venta"' in (x["despues"] or "") for x in a
 # --- Novedades: cuándo vio cada persona el resumen (un lector también puede marcarlo)
 _c = server.connect(); auth.crear_usuario(_c, "Luz", "clave-de-luz-2026", "lector", "prueba"); _c.close()
 luz = cliente("Luz", "clave-de-luz-2026")
-check(luz.get("/api/yo").get_json() == {"usuario": "Luz", "rol": "lector", "visto": None, "cambios": None, "cumple": None, "mantenimiento": False}, "sin visita ni cambios vistos al principio")
+check({k: v for k, v in luz.get("/api/yo").get_json().items() if k != "familia"} == {"usuario": "Luz", "rol": "lector", "visto": None, "cambios": None, "cumple": None, "mantenimiento": False}, "sin visita ni cambios vistos al principio")
 check("visto_ts" in [r[1] for r in sql("PRAGMA table_info(usuarios)")], "columna visto_ts")
 r = luz.post("/api/visto"); v1 = r.get_json()["visto"]
 check(r.status_code == 200 and isinstance(v1, int) and abs(v1 - _tt.time() * 1000) < 5000, f"un lector puede marcar que vio las novedades {r.data}")

@@ -2056,8 +2056,8 @@ try {
     eq(sm.txt, entero(satsMil), 'con mil compras el saldo es el real');
     ok(sm.w > 0 && sm.h > 0, 'con mil compras el saldo se ve');
     const nodos = await p.evaluate(() => document.getElementsByTagName('*').length);
-    // Tope 3100: el HTML fijo del diálogo «Medir este aparato» y su lista suman ~50 nodos (campamento 24); lo que importa es que no crezca con las compras.
-    ok(nodos < 3100, `el DOM no crece con las compras (${nodos} nodos)`);
+    // Tope 3250: el HTML fijo suma ~50 nodos del diálogo «Medir este aparato» (campamento 24) y ~120 del valle (campamento 22); lo que importa es que no crezca con las compras.
+    ok(nodos < 3250, `el DOM no crece con las compras (${nodos} nodos)`);
     await p.waitForSelector('.g-linea', { timeout: 15000 });
     await verVista(p, 'valor');
     ok(await p.locator('#valor').isVisible(), 'con mil compras sale el gráfico de valor');
@@ -4122,7 +4122,7 @@ try {
       });
       ok(tonos.every((x) => x.dE >= 0.045 && x.nieve !== '255,0,255'), `cumbre: la nieve en sombra se distingue del cielo a las 6, 12, 17:30 y 20 h (${tonos.map((x) => `${x.h} h ${x.dE.toFixed(3)}`).join(', ')})`);
       ok(tonos.every((x) => x.borde >= 3), `cumbre: el canto de la bandera se recorta contra la nieve en sombra (${tonos.map((x) => x.borde.toFixed(1)).join(', ')} : 1)`);
-      ok(c.nodos < 800 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
+      ok(c.nodos < 950 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
       await t.ctx.close();
     } finally {
       srv.parar();
@@ -5273,6 +5273,134 @@ try {
     } finally {
       sl.parar();
     }
+  }
+
+  // ---------------------------------------------------------------- campamento 22: el valle vivo
+  {
+    // Todo lo de fecha se prueba con `libro.dia` (y `libro.hora`): nunca depende del día en que corra la prueba.
+    const conDia = (dia, extra = {}) => [([d, x]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, [dia, extra]];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const valle = (p) => p.evaluate(() => {
+      const visto = (s) => [...document.querySelectorAll(s)].some((e) => { let x = e; while (x && x.tagName !== 'svg') { if (getComputedStyle(x).display === 'none') return false; x = x.parentElement; } return true; });
+      const subtrazos = (s) => ((document.querySelector(s)?.getAttribute('d') || '').match(/M/g) || []).length;
+      const caja = (s) => { const r = document.querySelector(s)?.getBoundingClientRect(); return r && { x: r.x, y: r.y, w: r.width, h: r.height, r: r.right, b: r.bottom }; };
+      const camino = document.querySelector('#montana #m-sendero'), m = camino.getScreenCTM(), L = camino.getTotalLength(), sendero = [];
+      for (let l = 0; l <= L; l += 4) { const q = camino.getPointAtLength(l); sendero.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]); }
+      const rotulos = [...document.querySelectorAll('#m-etiquetas > *')].map((e) => e.getBoundingClientRect()).filter((r) => r.width);
+      const cruza = (a, b) => a.x < b.right && a.r > b.left && a.y < b.bottom && a.b > b.top;
+      const casas = document.querySelector('.v-pared-l');
+      const ca = casas?.getBoundingClientRect();
+      const nodos = document.querySelectorAll('#m-v-fondo, #m-v-fondo *, #m-v-pie, #m-v-pie *, #m-v-ladera, #m-v-ladera *, .v-luces, .v-luces *, .lago-playa, .lago-nivel, .v-tule, .v-tule *, .v-lago-vida, .v-lago-vida *').length;
+      const saldo = document.querySelector('.saldo').getBoundingClientRect();
+      const fill = (s) => { const e = document.querySelector(s); return e ? getComputedStyle(e).fill : ''; };
+      return {
+        ranchos: subtrazos('.v-pared-l'), ventanas: subtrazos('.v-luz'), luzVentana: fill('.v-luz'), luces: subtrazos('.v-luz-lejos') + subtrazos('.v-luz-cerca'),
+        lucesVis: visto('.v-luces'), casas: ca && { x: ca.x, y: ca.y, r: ca.right, b: ca.bottom }, saldoAbajo: saldo.bottom,
+        casasSobreSendero: !!ca && sendero.some(([x, y]) => x > ca.x && x < ca.right && y > ca.y && y < ca.bottom),
+        casasSobreRotulo: !!ca && rotulos.some((r) => cruza({ x: ca.x, y: ca.y, r: ca.right, b: ca.bottom }, r)),
+        nodos, total: document.querySelectorAll('.montana svg *').length,
+        llena: visto('.v-q-llena'), hilo: visto('.v-q-hilo'), playa: visto('.lago-playa'), nivel: getComputedStyle(document.querySelector('.lago-nivel')).transform,
+        milpa: ['siembra', 'jilote', 'doblada', 'tapisca', 'rastrojo'].filter((e) => visto(`.v-mp-${e}`)),
+        humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: getComputedStyle(document.querySelector('.v-pn-foco')).animationName,
+        pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-piscuchas .v-pis'),
+        grabado: visto('.v-grabado'), grabadoTxt: document.querySelector('.v-grabado')?.textContent ?? null,
+        garza: visto('.v-garza'), cuerpo: visto('.v-cy-cuerpo'), lampara: visto('.v-cy-lampara'),
+        arbol: document.querySelector('.v-arbol')?.getAttribute('class') ?? null, arbolCaja: caja('.v-arbol .v-ar-tronco, .v-arbol .v-ar-tallo'), salida: caja('.salida'),
+        camino: !!document.querySelector('.v-camino .v-cm'), cohetes: document.documentElement.hasAttribute('data-cohetes'),
+        desc: document.getElementById('m-desc').textContent,
+      };
+    });
+    const srv = await servidor('anio');
+    const srvB = await servidor('ballena');
+    try {
+      // Época lluviosa, de día: la quebrada corre llena, el lago tapa su playa, la milpa jilotea; el cantón en su loma, sin pisar nada.
+      let t = await entrar(navegador, srv, ADMIN, { hora: 12 }, conDia('2026-07-10')); await cerrar(t.p);
+      let v = await valle(t.p);
+      // Lo que se espera sale de los datos del escenario (que dependen del día real): meses y años del libro hasta el día pedido.
+      const primera = (await datos(t.p, '/api/compras')).filter((c) => c.tipo !== 'venta').map((c) => c.fecha).sort()[0];
+      const meses = (d) => Math.max(1, (Number(d.slice(0, 4)) - Number(primera.slice(0, 4))) * 12 + Number(d.slice(5, 7)) - Number(primera.slice(5, 7)) + 1);
+      const etapa = (d) => { const a = Math.max(0, (Date.parse(d) - Date.parse(primera)) / (365.2425 * 864e5)); return a < 1 ? 'retono' : a < 2 ? 'joven' : a < 5 ? 'arbol' : 'grande'; };
+      ok(v.ranchos === 2 && v.casas && v.casas.x >= 0 && v.casas.y > v.saldoAbajo && !v.casasSobreSendero && !v.casasSobreRotulo, `22 cantón: en el teléfono, dos ranchos por debajo del saldo, sin pisar el sendero ni un rótulo (${JSON.stringify(v.casas)})`);
+      ok(v.nodos <= 150 && v.total < 950, `22 presupuesto: el valle en el teléfono son ${v.nodos} nodos (tope 150), la escena ${v.total} (tope 950)`);
+      ok(v.llena && !v.hilo && !v.playa && v.nivel === 'none', '22 quebrada y lago: en la lluviosa la quebrada baja llena y el lago cubre su playa');
+      eq(v.milpa, ['jilote'], '22 milpa: el 10 de julio jilotea');
+      ok(v.garza && v.cuerpo && !v.lampara && !v.humo && !v.lucesVis && !v.pisVis && !v.navidad && !v.grabado, '22 de día: la garza y el cayuco con su pescador; sin humo (no es hora del fogón), sin luces, sin piscuchas ni Navidad');
+      ok(v.camino && (v.arbol ?? '').includes(`v-${etapa('2026-07-10')}`) && v.arbolCaja && v.salida && v.arbolCaja.r < v.salida.x + 2, `22 camino real y árbol del primer día: llegan a la salida por el lado contrario al sendero (${v.arbol})`);
+      ok(/En el valle hay un cantón/.test(v.desc) && /conacaste[^.]*, sembrado el [^.]*, el día de la primera compra/.test(v.desc), '22 descripción: la montaña cuenta el valle y el árbol para lectores de pantalla');
+      ok(t.consola.length === 0, `22: consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+      // De noche: una luz por mes del libro, una ventana encendida por persona con cuenta (Daf3r y Ana), del cayuco solo su lámpara.
+      t = await entrar(navegador, srv, ADMIN, { hora: 20 }, conDia('2026-07-10')); await cerrar(t.p);
+      v = await valle(t.p);
+      const fam = await datos(t.p, '/api/yo');
+      ok(v.lucesVis && v.luces === Math.max(6, Math.min(60, meses('2026-07-10'))) && v.ventanas === fam.familia.personas && /255, 197, 107/.test(v.luzVentana), `22 de noche: ${v.luces} luces del valle (los meses del libro) y ${v.ventanas} ventanas encendidas, una por persona (${fam.familia.personas})`);
+      ok(!v.garza && !v.cuerpo && v.lampara, '22 lago de noche: sin garza; del cayuco, solo su lámpara y su reflejo');
+      await t.ctx.close();
+      // Al amanecer, el humo del fogón (ambiente: solo con «todos»).
+      t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'todos' })); await cerrar(t.p);
+      ok((await valle(t.p)).humo, '22 fogón: humo a la hora del café con «todos»');
+      await t.ctx.close();
+      t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
+      ok(!(await valle(t.p)).humo, '22 fogón: con «esenciales» no hay humo (es ambiente)');
+      await t.ctx.close();
+      // Época seca: el lago baja y enseña su playa, la quebrada es un hilo; en febrero, rastrojo.
+      t = await entrar(navegador, srv, ADMIN, { hora: 12 }, conDia('2027-02-10')); await cerrar(t.p);
+      v = await valle(t.p);
+      ok(!v.llena && v.hilo && v.playa && /matrix\(0\.8/.test(v.nivel), `22 quebrada y lago: en la seca, un hilo y la playa a la vista (${v.nivel})`);
+      eq(v.milpa, ['rastrojo'], '22 milpa: en febrero, rastrojo');
+      await t.ctx.close();
+      // Piscuchas de octubre (ambiente): una por persona, por debajo del saldo; con «esenciales», ninguna.
+      t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'todos' })); await cerrar(t.p);
+      v = await valle(t.p);
+      ok(v.pisVis && v.pis === fam.familia.personas && v.pisCaja && v.pisCaja.y > v.saldoAbajo, `22 piscuchas: ${v.pis} en el cielo del valle, por debajo del saldo`);
+      eq(v.milpa, ['doblada'], '22 milpa: en octubre, doblada');
+      await t.ctx.close();
+      t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
+      ok(!(await valle(t.p)).pisVis, '22 piscuchas: con «esenciales» no salen');
+      await t.ctx.close();
+      // Nochebuena de 2026 (con luna llena): foquitos, nacimiento y pino con luces, cohetes y el grabado con las iniciales y la fecha.
+      t = await entrar(navegador, srv, ADMIN, { hora: 23.95 }, conDia('2026-12-24', { 'libro.efectos': 'todos', 'libro.madrugada': '0' })); await cerrar(t.p);
+      v = await valle(t.p);
+      const romanos = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+      const fechaG = `${Number(primera.slice(8))} · ${romanos[Number(primera.slice(5, 7)) - 1]} · ${primera.slice(0, 4)}`;
+      ok(v.navidad && v.cohetes && v.pinoParpadea === 'v-parpadeo', '22 Navidad: luces en los ranchos, el nacimiento, el pino con luces que parpadea y los cohetes de Nochebuena');
+      ok(v.grabado && v.grabadoTxt.includes([...fam.familia.iniciales].join(' · ')) && v.grabadoTxt.includes(fechaG), `22 luna llena: en la roca, las iniciales y la fecha de la primera compra (${v.grabadoTxt})`);
+      await t.ctx.close();
+      t = await entrar(navegador, srv, ADMIN, { hora: 23.95 }, conDia('2026-12-24', { 'libro.efectos': 'esenciales', 'libro.madrugada': '0' })); await cerrar(t.p);
+      v = await valle(t.p);
+      ok(v.navidad && v.pinoParpadea === 'none' && v.grabado, '22 Navidad con «esenciales»: las luces se quedan quietas (la Navidad y el grabado son paisaje)');
+      await t.ctx.close();
+      t = await entrar(navegador, srv, ADMIN, { hora: 20 }, conDia('2026-12-31', { 'libro.madrugada': '0' })); await cerrar(t.p);
+      ok(!(await valle(t.p)).grabado, '22 luna llena: una noche sin luna llena no hay grabado');
+      await t.ctx.close();
+      // Quien solo mira ve el mismo valle (sin nombres) y la frase del valle no tutea.
+      t = await entrar(navegador, srv, LECTOR, { hora: 20 }, conDia('2026-07-10')); await cerrar(t.p);
+      v = await valle(t.p);
+      ok(v.ranchos === 2 && v.ventanas === fam.familia.personas && !/\b(tu|tus)\b/i.test(v.desc.slice(v.desc.indexOf('En el valle'))), '22 lectora: el mismo valle, y la frase del valle sin tutear');
+      await t.ctx.close();
+      // Escritorio: tres ranchos; el valle no se mete en el saldo.
+      t = await entrar(navegador, srv, ADMIN, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false, hora: 12 }, conDia('2026-07-10')); await cerrar(t.p);
+      v = await valle(t.p);
+      ok(v.ranchos === 3 && v.casas.y > v.saldoAbajo && !v.casasSobreSendero && !v.casasSobreRotulo, '22 escritorio: tres ranchos por debajo del saldo, sin pisar el sendero ni un rótulo');
+      await t.ctx.close();
+      // Con muchos años, el árbol es grande; y el presupuesto del teléfono se mantiene con la escena más cargada.
+      t = await entrar(navegador, srvB, ADMIN, { hora: 20 }, conDia('2026-07-10', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
+      v = await valle(t.p);
+      ok(v.nodos <= 150 && v.total < 950, `22 presupuesto con ballena: valle ${v.nodos}, escena ${v.total}`);
+      await t.ctx.close();
+    } finally { srv.parar(); srvB.parar(); }
+    // La entrada: el paisaje del valle sin nada de nadie (sin ventanas encendidas, árbol, piscuchas ni grabado).
+    const srvE = await servidor('anio');
+    try {
+      const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+      const p = await ctx.newPage();
+      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '20'); localStorage.setItem('libro.dia', '2026-10-20'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      await p.goto(`${srvE.url}/login`, { waitUntil: 'networkidle' });
+      await p.waitForTimeout(800);
+      const e = await p.evaluate(() => ({ canton: !!document.querySelector('.v-canton'), ventanas: document.querySelector('.v-luz')?.getAttribute('d') ?? null, arbol: !!document.querySelector('.v-arbol'), pis: document.querySelectorAll('.v-pis').length, grabado: !!document.querySelector('.v-grabado') }));
+      ok(e.canton && e.ventanas === '' && !e.arbol && e.pis === 0 && !e.grabado, '22 entrada: el cantón está, pero sin ventanas encendidas, árbol del primer día, piscuchas ni grabado (sin datos de nadie)');
+      await ctx.close();
+    } finally { srvE.parar(); }
   }
 
   // ---------------------------------------------------------------- sin histórico de precios

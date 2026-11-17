@@ -15,6 +15,7 @@ function azar(s) {
 }
 /** La x de una polilínea (ordenada por y) a esa altura. */
 function enY(pts, y) {
+  if (!pts.length) return 0;
   if (y <= pts[0][1]) return pts[0][0];
   for (let i = 1; i < pts.length; i++) if (y <= pts[i][1]) { const [x0, y0] = pts[i - 1], [x1, y1] = pts[i]; return x0 + ((x1 - x0) * (y - y0)) / Math.max(1e-6, y1 - y0); }
   return pts[pts.length - 1][0];
@@ -137,7 +138,7 @@ function piscuchasSitios({ W, H, techo, xIzq, n, canton, k, sy }) {
  * Sobre la ladera (con los campamentos ya puestos): la quebrada baja de la nieve al lago por la cara que mira al astro, lejos del sendero
  * y de los hitos con sus rótulos, y el grabado de luna llena busca una roca libre. `cajas`: [x0, y0, x1, y1] de cada campamento.
  */
-export function sitiosLadera({ W, sx, sy, der, nv, pts = [], lago, cajas = [], grabado = false, k = 1 }) {
+export function sitiosLadera({ W, H = 1e4, sx, sy, izq = [], der, nv, pts = [], lago, cajas = [], grabado = false, k = 1 }) {
   const R = [[sx, sy], ...der].sort((a, b) => a[1] - b[1]);
   const xDer = (y) => Math.min(W - 6, enY(R, y));
   const libre = (x, y, m) => distLinea(x, y, pts) > m && !cajas.some((c) => cruza([x - 4, y - 4, x + 4, y + 4], c));
@@ -156,21 +157,25 @@ export function sitiosLadera({ W, sx, sy, der, nv, pts = [], lago, cajas = [], g
       if (buenos === tramo.length) break;
     }
   }
-  // El grabado: en la roca baja de la montaña, lejos del sendero, de los campamentos y de la quebrada; si no hay sitio, no sale.
+  // El grabado: en la roca baja de la montaña (en cualquiera de sus dos caras), lejos del sendero, de los campamentos y de la quebrada;
+  // se prueba de abajo arriba y gana el sitio más bajo. Si no hay ninguno, no sale (es un secreto: nadie lo echa de menos).
   let roca = null;
   if (grabado && lago) {
-    const a = 62 * k, b = 26 * k;
-    for (const y of [lago.cy - lago.ry - 52 * k, lago.cy - lago.ry - 90 * k, lago.cy - lago.ry - 130 * k, lago.cy - lago.ry - 170 * k]) {
-      for (const u of [0.42, 0.62, 0.25, 0.8]) {
-        const x = sx + u * (xDer(y) - sx);
-        if (y < sy + nv * 2.1 || x - a / 2 < 8 || x + a / 2 > xDer(y) - 6 || x + a / 2 > W - 6) continue;
-        const esquinas = [[x - a / 2, y - b / 2], [x + a / 2, y - b / 2], [x - a / 2, y + b / 2], [x + a / 2, y + b / 2], [x, y]];
-        if (!esquinas.every(([px, py]) => libre(px, py, 16 * k))) continue;
-        if (quebrada && esquinas.some(([px, py]) => distLinea(px, py, quebrada.pts) < 12 * k)) continue;
-        roca = { x, y, k };
-        break;
+    const g = W < 700 ? 0.82 : 1, a = 62 * k * g, b = 26 * k * g, I = [...izq].sort((p, q) => p[1] - q[1]), xIzq = (y) => Math.max(6, enY(I, y));
+    const bajo = Math.min(lago.cy - lago.ry - 30 * k, (pts[0]?.[1] ?? H) - 36 * k), alto = sy + nv * 1.7;
+    for (let y = bajo; y >= alto && !roca; y -= 10 * k) {
+      for (const [x0, x1] of [[sx, xDer(y)], [sx, xIzq(y)]]) {
+        for (const u of [0.45, 0.65, 0.28, 0.82]) {
+          const x = x0 + u * (x1 - x0);
+          if (x - a / 2 < Math.max(8, xIzq(y) + 4) || x + a / 2 > Math.min(xDer(y) - 6, W - 6)) continue;
+          const esquinas = [[x - a / 2, y - b / 2], [x + a / 2, y - b / 2], [x - a / 2, y + b / 2], [x + a / 2, y + b / 2], [x, y]];
+          if (!esquinas.every(([px, py]) => libre(px, py, 12 * k))) continue;
+          if (quebrada && esquinas.filter(([px, py]) => distLinea(px, py, quebrada.pts) < 6 * k).length > 1) continue;
+          roca = { x, y, k: k * g };
+          break;
+        }
+        if (roca) break;
       }
-      if (roca) break;
     }
   }
   return { quebrada, roca };
@@ -247,7 +252,7 @@ export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900 }) {
       A.nav[j % 3] += `M${P(p)}h0.01`;
     }
     for (let j = 1; j <= 3; j++) { const p = m(fw / 2 - j * 1.6, -wh - gh + j * 1.25 + 0.7); A.nav[(j + 1) % 3] += `M${P(p)}h0.01`; }
-    if (i < 2) humos.push(m(fw / 2 + dx2 * 0.62, -wh - gh + dy2 * 0.62 - 0.6));
+    if (i < n - 1) humos.push(m(fw / 2 + dx2 * 0.62, -wh - gh + dy2 * 0.62 - 0.6));
   });
   // Ventanas: se encienden tantas como personas con cuenta, empezando por las de delante; las demás quedan oscuras.
   sitiosVentana.forEach(({ q, c }) => {
@@ -413,9 +418,9 @@ export function quebrada({ pts, k }) {
   const charcos = pts.filter((_, i) => i % 3 === 2).map(([x, y]) => `M${f1(x - 2 * k)} ${f1(y)}a${f1(2 * k)} ${f1(1 * k)} 0 1 0 ${f1(4 * k)} 0a${f1(2 * k)} ${f1(1 * k)} 0 1 0 ${f1(-4 * k)} 0Z`).join('');
   // Arriba es un hilo que nace bajo la nieve y casi no se ve; se hace agua al bajar (un degradado a lo largo de la quebrada).
   const y0 = pts[0][1], y1 = pts[N][1];
-  return `<g class="v-quebrada" aria-hidden="true"><defs><linearGradient id="m-v-q" gradientUnits="userSpaceOnUse" x1="0" y1="${f1(y0)}" x2="0" y2="${f1(y1)}"><stop offset="0" class="vq-0"/><stop offset="0.45" class="vq-1"/><stop offset="1" class="vq-2"/></linearGradient></defs><path class="v-q-cauce" d="${cauce}"/>`
-    + `<g class="v-q-llena"><path class="v-q-agua" d="${llena}" fill="url(#m-v-q)"/><path class="v-q-brillo" d="${brillos}" stroke-width="${f1(0.7 * k)}"/></g>`
-    + `<g class="v-q-hilo"><path class="v-q-piedra" d="${piedras}"/><path class="v-q-agua" d="${hilo}${charcos}" fill="url(#m-v-q)"/></g></g>`;
+  return `<g class="v-quebrada" aria-hidden="true"><defs><linearGradient id="m-v-q" gradientUnits="userSpaceOnUse" x1="0" y1="${f1(y0)}" x2="0" y2="${f1(y1)}"><stop offset="0" class="vq-0"/><stop offset="0.7" class="vq-1"/></linearGradient></defs><path class="v-q-cauce" d="${cauce}"/>`
+    + `<path class="v-q-llena v-q-agua" d="${llena}" fill="url(#m-v-q)"/><path class="v-q-llena v-q-brillo" d="${brillos}" stroke-width="${f1(0.7 * k)}"/>`
+    + `<path class="v-q-hilo v-q-piedra" d="${piedras}"/><path class="v-q-hilo v-q-agua" d="${hilo}${charcos}" fill="url(#m-v-q)"/></g>`;
 }
 
 // ------------------------------------------------------------------------------------------------ el lago con vida (idea 49)
