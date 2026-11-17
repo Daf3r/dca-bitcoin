@@ -47,7 +47,7 @@ export function filaMedida(m, ahora) {
   if (e != null && e < f) partes.push(`con la montaña a la vista (${f} en toda la prueba)`);
   partes.push(`el peor medio segundo, ${Math.round(m.fps_peor)} fps`, `${m.tirones} ${m.tirones === 1 ? 'tirón' : 'tirones'}`);
   let detalle = `${partes.join(' · ')}. ${hace(m.creado, ahora)[0].toUpperCase()}${hace(m.creado, ahora).slice(1)} · ${m.ancho} × ${m.alto} ×${m.dpr} · efectos ${m.efectos}${m.ligero ? ' (modo ligero)' : ''} · ${m.tema}.`;
-  if (v.limitada) detalle += ` La pantalla ya iba a ${m.hz} Hz en reposo (¿ahorro de batería?): así no se puede juzgar.`;
+  if (v.limitada) detalle += ` La pantalla ya iba a ${m.hz} Hz en reposo (¿el ahorro de batería, o el aparato ocupado?): así no se puede juzgar.`;
   if (v.estado === 'lento') detalle += ` ${REGLA_LENTO}`;
   const li = fila(ESTADO_FPS[v.estado], titulo, detalle, PALABRA_FPS[v.estado]);
   li.classList.add('sis-medida');

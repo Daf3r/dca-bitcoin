@@ -3771,8 +3771,8 @@ html[data-efectos="ninguno"] .tvm-tiempo { display: none; } /* sin movimiento, l
    la prueba (fija arriba, opaca y sin desenfoque: no pesa en lo que se mide) y la lista de «Estado del sistema». */
 .d-medir { width: min(calc(100vw - 24px), 34rem); padding: 20px 18px 16px; }
 .d-medir h2 { margin: 0 0 6px; }
+/* El título recibe el foco al abrirse el diálogo solo (al cargar /medir), para que se lea primero; no es un control: sin anillo. */
 .d-medir h2:focus { outline: none; }
-.d-medir h2:focus-visible { outline: 2px solid var(--naranja); outline-offset: 4px; border-radius: 6px; }
 .d-medir p { margin: 0; }
 .me-intro { margin-bottom: 14px !important; font-size: 0.9375rem; line-height: 1.45; }
 /* Dos fichas lado a lado también en el teléfono: la cifra se ajusta al ancho de su ficha (`cqi`), sin medir nada. */
@@ -3801,6 +3801,8 @@ html[data-efectos="ninguno"] .tvm-tiempo { display: none; } /* sin movimiento, l
 .me-bot { position: sticky; bottom: -16px; z-index: 1; flex-wrap: wrap; margin: 8px -18px -16px; padding: 10px 18px 16px; background: linear-gradient(to top, var(--s1) calc(100% - 10px), color-mix(in srgb, var(--s1) 0%, transparent)); }
 .me-bot button { flex: 1 1 auto; }
 .me-bot .primario { flex-grow: 4; }
+/* En pantallas bajas (teléfono pequeño, acostado) la frase de arriba sobra: las fichas y su detalle ya lo dicen. */
+@media (max-height: 600px) { .me-intro { display: none; } }
 @media (max-width: 359px) {
   .d-medir { padding: 16px 12px 12px; }
   .me-tar { padding: 10px 10px 10px; }

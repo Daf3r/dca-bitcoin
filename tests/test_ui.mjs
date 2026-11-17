@@ -5255,6 +5255,22 @@ try {
     } finally {
       srv.parar();
     }
+    // Con SOLO_LECTURA se mide, pero no se guarda: lo dice y el resultado se queda a la vista
+    const sl = await servidor('anio', { SOLO_LECTURA: '1' });
+    try {
+      const a = await entrar(navegador, sl, ADMIN, { viewport: { width: 390, height: 844 } }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* */ } });
+      await a.p.goto(`${sl.url}/medir`, { waitUntil: 'load' });
+      await a.p.waitForSelector('#d-medir[open]', { timeout: 30000 });
+      await a.p.click('#me-empezar');
+      await a.p.waitForSelector('#d-medir[open]', { timeout: 20000 });
+      await a.p.waitForTimeout(300);
+      ok(/^\d+ fps$/.test((await a.p.textContent('#me-fps')).trim()) && /No se guardó: .*mantenimiento/.test(await a.p.textContent('#me-res')), `24: en mantenimiento mide y dice que no se guardó (${await a.p.textContent('#me-res')})`);
+      ok((await a.p.locator('#me-sistema').isHidden()) && (await a.p.locator('#me-otra').isVisible()), '24: sin «Ver todas las medidas» (no hay nada nuevo allí)');
+      eq((await datos(a.p, '/api/sistema')).medidas.length, 0, '24: y no queda ninguna medida');
+      await a.ctx.close();
+    } finally {
+      sl.parar();
+    }
   }
 
   // ---------------------------------------------------------------- sin histórico de precios

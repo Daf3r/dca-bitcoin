@@ -81,7 +81,7 @@ function pintarDialogo(fase, medida = null, guardada = null) {
   const hecha = fase === 'hecha';
   $('me-empezar').hidden = hecha || fase === 'sin-carga';
   $('me-otra').hidden = !(hecha || fase === 'sin-carga');
-  $('me-sistema').hidden = !hecha;
+  $('me-sistema').hidden = !(hecha && guardada === true); // si no se guardó (p. ej. en mantenimiento), no hay nada nuevo que ver allí
   // El aviso de estado: a la vista, solo si se guardó; para los lectores de pantalla, además, el resultado completo.
   const res = $('me-res');
   res.replaceChildren();
@@ -107,7 +107,7 @@ function detalleFps(m, v) {
   partes.push(`el peor medio segundo, ${Math.round(m.fps_peor)} fps`,`${m.tirones} ${m.tirones === 1 ? 'tirón' : 'tirones'}`, `pantalla a ${m.hz} Hz`);
   let t = `${partes.join(' · ')}.`;
   if (m.recorrido < m.alto) t += ` La página era corta: solo bajó ${m.recorrido} px.`;
-  if (v.limitada) t += ` La pantalla ya iba a ${m.hz} fotogramas por segundo en reposo (¿ahorro de batería?): así no se puede juzgar. Quítalo y mide otra vez.`;
+  if (v.limitada) t += ` La pantalla ya iba a ${m.hz} fotogramas por segundo en reposo (¿el ahorro de batería, o el aparato ocupado con otra cosa?): así no se puede juzgar. Quita el ahorro y mide otra vez.`;
   return t;
 }
 function abrir() {

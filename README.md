@@ -173,7 +173,7 @@ Cada compra puede llevar su **TXID** (64 caracteres hexadecimales, o pega el enl
 
 **Verificación contra mempool.space.** Bajo cada TXID la lista muestra su estado («Confirmada · N confirmaciones · comisión X sats», «Pendiente de confirmar», «No encontrada»). Lo consulta **el servidor** (`GET /api/tx/<txid>`; el navegador nunca habla con mempool.space, así que la CSP no cambia) y solo para TXID que están en una compra vigente, para que no sirva de proxy abierto. Las confirmadas se guardan para siempre en la tabla `tx_cache` (se crea sola); pendientes y no encontradas se reconsultan pasados 60 s; si mempool.space no responde se sirve lo guardado marcado como «dato guardado». Es informativo: no bloquea guardar nada.
 
-**Probar la celebración (solo admin).** En «Tu cuenta → Estado del sistema», al final, cinco botones (Compra, Etapa, Hito grande, 1 BTC y Constancia) reproducen la animación con datos de prueba, sin guardar nada ni dejar rastro en el Historial. Sirve para ver la celebración después de un cambio.
+**Probar la celebración (solo admin).** En «Tu cuenta → Estado del sistema», al final, seis botones (Compra, Etapa, Etapa con sello, Hito grande, 1 BTC y Constancia) reproducen la animación con datos de prueba, sin guardar nada ni dejar rastro en el Historial. Sirve para ver la celebración después de un cambio.
 
 **«Tu cuenta» por grupos.** *El libro* (la historia y sus medallas, el nombre de la montaña y tu cumpleaños), *Este dispositivo* (avisos, tema, letra, contraste, efectos y lo demás que solo vale en ese aparato) y *Administrar* (contraseña y sesiones de cada quien; para el admin, además, el Historial, tus datos, el enlace para la hoja de cálculo y el estado del sistema). Al final, Salir.
 
