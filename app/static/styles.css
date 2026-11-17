@@ -3828,3 +3828,182 @@ html[data-efectos="ninguno"] .tvm-tiempo { display: none; } /* sin movimiento, l
 .sis-mas > summary::before { content: ""; width: 7px; height: 7px; margin: 0 10px 0 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; }
 .sis-mas[open] > summary::before { transform: rotate(45deg); }
 .sis-mas > summary:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; border-radius: 8px; }
+
+/* ---------------------------------------------------------------- Campamento 22 · el valle vivo (arte-valle.js) */
+/* Cada material lleva su color propio mezclado con el de la escena: de día se ve su color; al anochecer, la hora manda (--v-luz y
+   --v-som: cuánto de su color llega a la cara iluminada y a la de sombra). */
+.montana {
+  --v-luz: 66%; --v-som: 48%; --v-pis: 92%; --v-blanco: 92%;
+  --v-adobe: #e8d2ab; --v-adobe-s: #b0906e; --v-teja: #b8553a; --v-teja-s: #7a3424; --v-tierra: #c4a274; --v-calida: #ffc56b;
+}
+html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .montana { --v-luz: 48%; --v-som: 34%; --v-pis: 74%; --v-blanco: 76%; }
+html[data-cielo="noche"] .montana { --v-luz: 20%; --v-som: 14%; --v-pis: 46%; --v-blanco: 40%; --v-agua: 42%; }
+
+/* La loma del cantón: el lomo con su cara al astro y su cara en sombra; abajo se pierde en la bruma del valle. */
+.vlo-0 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--medio) 22%, var(--monte)) 92%, var(--luz-roca)); }
+.vlo-1 { stop-color: color-mix(in oklab, var(--medio) 16%, var(--monte)); }
+.vlo-2 { stop-color: color-mix(in oklab, var(--monte) 70%, var(--monte-sombra)); }
+.v-loma-s { fill: var(--monte-sombra); opacity: 0.38; }
+.v-loma-l { fill: var(--luz-roca); opacity: 0.08; }
+.v-loma-filo { fill: none; stroke: var(--luz-roca); stroke-opacity: calc(0.12 + var(--halo-a, 0.2) * 0.4); stroke-linecap: round; }
+.v-rellano { fill: color-mix(in oklab, color-mix(in oklab, var(--v-tierra) 70%, var(--monte)) var(--v-luz), var(--monte)); }
+.v-canto { fill: var(--monte-sombra); opacity: 0.55; }
+.v-sombra { fill: #000; opacity: 0.26; }
+.v-canton { --copa: color-mix(in oklab, #4f8f48 calc(var(--v-luz) + 6%), var(--pino0)); }
+
+/* Los ranchos: el costado al astro (adobe con luz), el hastial en sombra, el tejado de teja y su canto, el alero que sombrea la pared. */
+.v-pared-l { fill: color-mix(in oklab, color-mix(in oklab, var(--v-adobe) 86%, var(--luz-roca)) var(--v-luz), var(--monte)); }
+.v-pared-s { fill: color-mix(in oklab, var(--v-adobe-s) var(--v-som), var(--monte-sombra)); }
+.v-alero { fill: var(--monte-sombra); opacity: 0.45; }
+.v-techo-l { fill: color-mix(in oklab, var(--v-teja) var(--v-luz), var(--monte)); }
+.v-techo-s { fill: color-mix(in oklab, var(--v-teja-s) var(--v-som), var(--monte-sombra)); }
+.v-puerta { fill: color-mix(in oklab, #3a2618 55%, var(--monte-sombra)); }
+.v-ventana, .v-luz { fill: color-mix(in oklab, #2b2420 45%, var(--monte-sombra)); }
+.v-halo { fill: none; stroke: var(--v-calida); stroke-linecap: round; opacity: 0; }
+/* De noche (y a medias al amanecer y al atardecer) se enciende una ventana por persona con cuenta. */
+html:is([data-cielo="noche"], [data-cielo="amanecer"], [data-cielo="atardecer"]) .v-luz { fill: var(--v-calida); }
+html[data-cielo="noche"] .v-halo { opacity: 0.2; }
+html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .v-halo { opacity: 0.1; }
+
+/* El humo del fogón (ambiente): a la hora del café y de la cena, tres bocanadas que suben y se deshacen. */
+.v-humos { display: none; }
+html[data-fogon][data-efectos="todos"] .v-humos { display: inline; }
+.v-hu { fill: color-mix(in oklab, #ebe5dc 62%, var(--c3)); opacity: 0; transform-box: fill-box; transform-origin: center; animation: v-humo 6.6s ease-out infinite; }
+.v-hu:nth-child(3n+2) { animation-delay: -2.2s; } .v-hu:nth-child(3n) { animation-delay: -4.4s; }
+.v-hu:nth-child(n+4) { animation-duration: 7.4s; }
+@keyframes v-humo { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 18% { opacity: 0.5; } 100% { transform: translate(5px, -16px) scale(2.2); opacity: 0; } }
+@media (max-width: 899px) { .v-hu { animation-timing-function: steps(30); } }
+
+/* Navidad en el valle (1 de diciembre al 6 de enero): foquitos en los aleros, el nacimiento en su nicho y el pino con luces. */
+.v-navidad { display: none; }
+html[data-navidad] .v-navidad { display: inline; }
+.v-foco, .v-pn-foco { fill: none; stroke-linecap: round; }
+.v-foco-0, .v-pf-0 { stroke: #ff6a5e; } .v-foco-1, .v-pf-1 { stroke: #7fe39a; } .v-foco-2, .v-pf-2 { stroke: #ffd56e; }
+html:not([data-cielo="noche"]) :is(.v-foco, .v-pn-foco) { opacity: 0.75; }
+.v-nicho { fill: color-mix(in oklab, var(--v-calida) 80%, #fff0c8); }
+html:not([data-cielo="noche"]) .v-nicho { fill: color-mix(in oklab, var(--v-calida) 45%, var(--monte-sombra)); }
+.v-figuras { fill: #2a1a10; opacity: 0.85; }
+.v-pn { fill: color-mix(in srgb, var(--pino0) 72%, #3f8f55); }
+.v-pn-l { fill: color-mix(in oklab, color-mix(in srgb, var(--pino0) 72%, #3f8f55) 82%, var(--luz-roca)); }
+.v-pn-tronco { fill: color-mix(in oklab, #4a3423 50%, var(--monte-sombra)); }
+@keyframes v-parpadeo { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+html[data-efectos="todos"] .v-pn-foco { animation: v-parpadeo 2.8s ease-in-out infinite; }
+html[data-efectos="todos"] .v-pf-1 { animation-delay: -0.95s; } html[data-efectos="todos"] .v-pf-2 { animation-delay: -1.9s; }
+
+/* La milpa: la tierra y lo que toca en el año (`data-milpa`, de cielo.js). */
+.v-mp { display: none; }
+html[data-milpa="siembra"] .v-mp-siembra, html[data-milpa="jilote"] .v-mp-jilote, html[data-milpa="doblada"] .v-mp-doblada,
+html[data-milpa="tapisca"] .v-mp-tapisca, html[data-milpa="rastrojo"] .v-mp-rastrojo { display: inline; }
+.v-mp-suelo { fill: color-mix(in oklab, #b79c6c var(--v-luz), var(--monte)); }
+html:is([data-milpa="siembra"], [data-milpa="jilote"], [data-milpa="doblada"]) .v-mp-suelo { fill: color-mix(in oklab, #6e4c31 var(--v-luz), var(--monte)); }
+.v-mp-surco { fill: none; stroke: color-mix(in oklab, #4a3220 var(--v-som), var(--monte-sombra)); opacity: 0.55; }
+.v-milpa path:not(.v-mp-suelo, .v-mp-tercio) { fill: none; stroke-linecap: round; }
+.v-mp-brote { stroke: color-mix(in oklab, #93d05c var(--v-luz), var(--monte)); }
+.v-mp-mata { stroke: color-mix(in oklab, #6fa848 var(--v-luz), var(--monte)); }
+.v-mp-mata-s { stroke: color-mix(in oklab, #3e6c33 var(--v-som), var(--monte-sombra)); }
+.v-mp-espiga { stroke: color-mix(in oklab, #ecd894 var(--v-luz), var(--monte)); }
+.v-mp-dobl { stroke: color-mix(in oklab, #c0a25a var(--v-luz), var(--monte)); }
+.v-mp-mazorca { stroke: color-mix(in oklab, #e6c470 var(--v-luz), var(--monte)); }
+.v-mp-cana { stroke: color-mix(in oklab, #d2bf92 var(--v-luz), var(--monte)); }
+.v-mp-tercio { fill: color-mix(in oklab, #dcb45e var(--v-luz), var(--monte)); }
+.v-mp-rastro { stroke: color-mix(in oklab, #bba67a var(--v-luz), var(--monte)); }
+
+/* El camino real: tierra polvosa con su talud, el cerco de piedra y los postes de brotón con sus retoños. */
+.v-cm { fill: color-mix(in oklab, #c9aa7e var(--v-luz), var(--monte)); }
+.v-cm-talud { fill: var(--monte-sombra); opacity: 0.5; }
+.v-camino path:is(.v-cm-cerco, .v-cm-poste, .v-cm-brote) { fill: none; stroke-linecap: round; }
+.v-cm-cerco { stroke: color-mix(in oklab, #9d978a var(--v-luz), var(--monte-sombra)); stroke-dasharray: 2.6 0.7 1.7 0.7 2.1 0.7; stroke-linecap: butt !important; }
+.v-cm-poste { stroke: color-mix(in oklab, #5c4632 var(--v-som), var(--monte-sombra)); }
+.v-cm-brote { stroke: color-mix(in oklab, #6fa848 var(--v-luz), var(--monte)); }
+
+/* El árbol del primer día: un conacaste. En la época seca bota la hoja (la copa se ralea y enseña sus ramas). */
+.v-arbol { --copa: color-mix(in oklab, #5c9c4c calc(var(--v-luz) + 8%), var(--pino0)); --corteza: color-mix(in oklab, var(--monte-sombra) 40%, #7a6650); }
+.v-ar-sombra { fill: #000; opacity: 0.22; }
+.v-ar-tronco { fill: var(--corteza); }
+.v-ar-tronco-l { fill: color-mix(in oklab, var(--corteza) 70%, var(--luz-roca)); opacity: 0.7; }
+.v-ar-ramas, .v-ar-tallo { fill: none; stroke: var(--corteza); stroke-linecap: round; }
+.v-ar-ramas-secas { display: none; }
+:is(.v-arbol, .v-canton) .copa { fill: var(--copa); }
+:is(.v-arbol, .v-canton) .copa-media { fill: color-mix(in oklab, var(--copa) 84%, var(--astro)); }
+:is(.v-arbol, .v-canton) .copa-luz { fill: color-mix(in oklab, var(--copa) 66%, var(--astro)); }
+:is(.v-arbol, .v-canton) .copa-sombra { fill: color-mix(in oklab, var(--copa) 55%, var(--monte-sombra)); }
+.v-arbol .copa-filo { fill: none; stroke: var(--astro); stroke-opacity: calc(0.16 + var(--halo-a, 0.2) * 0.5); stroke-width: 0.9; stroke-linecap: round; }
+.v-ar-hoja-l { fill: color-mix(in oklab, var(--copa) 70%, var(--astro)); } .v-ar-hoja-s { fill: color-mix(in oklab, var(--copa) 70%, var(--monte-sombra)); }
+html[data-epoca="seca"] .v-arbol { --copa: color-mix(in oklab, #9c9456 calc(var(--v-luz) + 4%), var(--pino0)); }
+.v-ar-copa { transform-box: fill-box; transform-origin: 50% 100%; }
+html[data-epoca="seca"] .v-arbol:not(.v-retono) .v-ar-copa { transform: scale(0.84, 0.8); }
+html[data-epoca="seca"] .v-ar-ramas-secas { display: inline; }
+
+/* La quebrada: el cauce tallado en la roca y, según la época, el agua llena que brilla o un hilo entre piedras. */
+.v-q-cauce { fill: var(--monte-sombra); opacity: 0.45; }
+.vq-0, .vq-1, .vq-2 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--c3) 50%, var(--nieve)) var(--v-agua, 78%), var(--monte)); }
+.vq-0 { stop-opacity: 0.1; } .vq-1 { stop-opacity: 0.55; } .vq-2 { stop-opacity: 0.95; }
+.v-q-brillo { fill: none; stroke: var(--astro); opacity: 0.6; stroke-linecap: round; }
+.v-q-piedra { fill: color-mix(in oklab, var(--nieve) 30%, var(--monte)); }
+html[data-epoca="lluviosa"] .v-q-hilo, html[data-epoca="seca"] .v-q-llena { display: none; }
+html[data-epoca="seca"] .v-q-hilo .v-q-agua { opacity: 0.7; }
+
+/* El lago de época: en la seca el agua baja y deja ver su playa; en la lluviosa la cubre. */
+.lago-playa { fill: color-mix(in oklab, #d4bf96 var(--v-luz), var(--monte)); opacity: 0.85; }
+html[data-epoca="lluviosa"] .lago-playa { display: none; }
+.lago-nivel { transform-box: fill-box; transform-origin: 50% 60%; }
+html[data-epoca="seca"] .lago-nivel { transform: scale(0.84, 0.8); }
+
+/* El lago con vida: tule en la orilla, la garza quieta y el cayuco con su lámpara (de noche solo la lámpara y su reflejo). */
+.v-tule path { fill: none; stroke-linecap: round; }
+.v-tu-l { stroke: color-mix(in oklab, #82aa5c var(--v-luz), var(--monte)); }
+.v-tu-s { stroke: color-mix(in oklab, #4b6e3a var(--v-som), var(--monte-sombra)); }
+.v-tu-cab { stroke: color-mix(in oklab, #6e4a2a var(--v-som), var(--monte-sombra)); }
+.v-gz { fill: color-mix(in oklab, #f6f3ec var(--v-blanco), var(--monte)); }
+.v-gz-s { fill: color-mix(in oklab, #c9cdd4 var(--v-luz), var(--monte-sombra)); }
+.v-gz-cuello { fill: none; stroke: color-mix(in oklab, #f6f3ec var(--v-blanco), var(--monte)); stroke-linecap: round; }
+.v-gz-pico { fill: color-mix(in oklab, #e1b24a var(--v-luz), var(--monte)); }
+.v-gz-pata { fill: none; stroke: color-mix(in oklab, #2b2b2b 60%, var(--monte-sombra)); }
+.v-gz-reflejo { fill: none; stroke: #fff; opacity: 0.18; stroke-linecap: round; }
+html[data-cielo="noche"] .v-garza { display: none; }
+.v-cy-casco { fill: color-mix(in oklab, #5a3a22 var(--v-som), var(--monte-sombra)); }
+.v-cy-borda { fill: color-mix(in oklab, #a0703f var(--v-luz), var(--monte)); }
+.v-cy-pescador { fill: color-mix(in oklab, #3a3430 55%, var(--monte-sombra)); }
+.v-cy-remo, .v-cy-palo { fill: none; stroke: color-mix(in oklab, #6e4c2c var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
+.v-cy-halo, .v-cy-lampara, .v-cy-reflejo { display: none; }
+.v-cy-lampara { fill: var(--v-calida); }
+.v-cy-reflejo { fill: none; stroke: var(--v-calida); opacity: 0.5; stroke-linecap: round; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) :is(.v-cy-halo, .v-cy-lampara, .v-cy-reflejo) { display: inline; }
+html[data-cielo="noche"] .v-cy-cuerpo { display: none; }
+html[data-cielo="atardecer"] .v-cy-halo { opacity: 0.6; }
+/* Al amanecer el pescador rema (ambiente): el remo va y viene y el cayuco avanza despacio. */
+.v-cy-remo { transform-box: fill-box; transform-origin: 0 0; }
+@keyframes v-remo { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(14deg); } }
+@keyframes v-deriva { from { transform: translateX(4px); } to { transform: translateX(-7px); } }
+html[data-efectos="todos"][data-cielo="amanecer"] .v-cy-remo { animation: v-remo 2.6s ease-in-out infinite; }
+html[data-efectos="todos"][data-cielo="amanecer"] .v-cayuco { animation: v-deriva 26s ease-in-out infinite alternate; }
+
+/* Las luces del valle: quietas y cálidas, solo de noche (con cualquier nivel de efectos). */
+.v-luces { display: none; }
+html[data-cielo="noche"] .v-luces { display: inline; }
+.v-luces path { fill: none; stroke-linecap: round; }
+.v-luz-lejos { stroke: #ffd790; opacity: 0.72; } .v-luz-cerca { stroke: var(--v-calida); opacity: 0.92; }
+
+/* Las piscuchas de octubre y noviembre (ambiente): una por persona, de colores de aquí; se mecen con el viento. */
+.v-piscuchas { display: none; }
+html[data-piscuchas][data-efectos="todos"] .v-piscuchas { display: inline; }
+.v-pis { --pa: #e2463a; --pb: #f2c14e; }
+.v-pis-1 { --pa: #2f7fd0; --pb: #f1ede4; } .v-pis-2 { --pa: #3da35a; --pb: #f2d15a; } .v-pis-3 { --pa: #c8408f; --pb: #ff9a3c; }
+.v-pis-4 { --pa: #f08a24; --pb: #6a4bb8; } .v-pis-5 { --pa: #18a0a0; --pb: #f4e6c8; }
+.v-pis-a { fill: color-mix(in oklab, var(--pa) var(--v-pis), var(--monte)); }
+.v-pis-b { fill: color-mix(in oklab, var(--pb) var(--v-pis), var(--monte)); }
+.v-pis-cola, .v-pis-hilo { fill: none; stroke-linecap: round; }
+.v-pis-cola { stroke: color-mix(in oklab, var(--pb) var(--v-pis), var(--monte)); }
+.v-pis-hilo { stroke: color-mix(in oklab, var(--nieve) 45%, transparent); stroke-width: 0.5; }
+.v-pis { transform-box: fill-box; transform-origin: 50% 80%; animation: v-pis 5.2s ease-in-out infinite alternate; }
+.v-pis:nth-child(2n) { animation-duration: 6.3s; animation-delay: -2s; }
+.v-pis:nth-child(3n) { animation-duration: 4.6s; animation-delay: -3.1s; }
+@keyframes v-pis { from { transform: rotate(-5deg) translate(-1px, 1px); } to { transform: rotate(6deg) translate(2px, -2px); } }
+
+/* El grabado de luna llena: en la roca, solo esas noches. El surco oscuro y el filo de la luz de luna. */
+.v-grabado { display: none; }
+html[data-luna-llena][data-cielo="noche"] .v-grabado { display: inline; }
+.v-gr-surco { fill: none; stroke: #000; opacity: 0.42; stroke-linejoin: round; }
+.v-grabado text { font-family: var(--serif); font-weight: 600; letter-spacing: 0.06em; }
+/* El surco: oscuro por dentro, con un filo fino de luz de luna por fuera. */
+.v-gr-texto { fill: rgb(0 0 0 / 0.42); stroke: color-mix(in oklab, var(--astro) 55%, transparent); }

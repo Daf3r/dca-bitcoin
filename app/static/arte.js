@@ -180,7 +180,7 @@ export function clima(W, H, yH) {
  * borde: las que miran al astro van en luz, las de abajo y del otro lado en sombra; las aristas en luz llevan un filo. Devuelve
  * el contorno y tres trazos (luz, media luz y sombra), cada uno una sola pieza.
  */
-function facetas(cx, cy, rx, ry, radios, L, giro = 0, acc = { base: '', luz: '', media: '', sombra: '', filo: '' }, abajo = 0.7) {
+export function facetas(cx, cy, rx, ry, radios, L, giro = 0, acc = { base: '', luz: '', media: '', sombra: '', filo: '' }, abajo = 0.7) {
   const n = radios.length;
   // Dos anillos de vértices (el de fuera con radios irregulares fijos y uno interior a media distancia, girado medio paso) y la
   // cima: como una cúpula vista de frente. Por debajo la copa es más plana (`abajo`).

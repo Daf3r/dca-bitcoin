@@ -2067,7 +2067,7 @@ export const piscuchasDelValle = (personas) => Math.max(0, Math.min(PISCUCHAS_MA
  * @param {{ luces?: number, arbol?: { fecha: string, etapa: string } | null }} [valle]
  */
 export function textoValle({ luces = 0, arbol = null } = {}) {
-  let t = `Al pie, en el valle, hay un cantón con su milpa, un camino real que llega a la salida y una quebrada que baja al lago${luces ? `; de noche se ven ${luces} luces, una por mes del libro` : ''}.`;
+  let t = `En el valle hay un cantón con su milpa, un camino real que llega a la salida y una quebrada que baja al lago${luces ? `; de noche se ven ${luces} luces, una por mes del libro` : ''}.`;
   if (arbol?.fecha) t += ` Junto a la salida crece ${{ retono: 'el retoño de un conacaste', joven: 'un conacaste joven', arbol: 'un conacaste', grande: 'un conacaste grande' }[arbol.etapa] ?? 'un conacaste'}, sembrado el ${fechaLarga(arbol.fecha)}, el día de la primera compra.`;
   return t;
 }
