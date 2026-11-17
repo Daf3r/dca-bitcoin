@@ -1297,8 +1297,8 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(['2026-05-01', '2026-05-14', '2026-11-01', '2026-11-14'].every((f) => C.epoca(f) === (f.slice(5, 7) === '05' ? 'lluviosa' : 'seca')), 'valle 22B: la mezcla empieza donde cambia la época (misma partición)');
   const mezcla = ['2026-05-01', '2026-05-02', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07', '2026-05-08', '2026-05-09', '2026-05-10', '2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14', '2026-05-15'].map(C.verdor);
   ok(mezcla.every((x, i) => !i || x > mezcla[i - 1]), 'valle 22B: en mayo el valle reverdece un poco cada día');
-  // 55 · mar de niebla de 5:00 a 7:30 (se forma desde las 4:45 y se levanta de 7:00 a 7:30); sin niebla de la tarde.
-  eq([4.5, 4.75, 5, 5.25, 6, 7, 7.25, 7.5, 12, 17.5, 18, 20].map((h) => Math.round(C.marNiebla(h) * 100) / 100), [0, 0, 0.5, 1, 1, 1, 0.5, 0, 0, 0, 0, 0], 'valle 22B: el mar de niebla llena el valle de 5:00 a 7:00 y se levanta antes de las 7:30; nada por la tarde');
+  // 55 · mar de niebla de 5:00 a 7:30 (se forma hasta las 5:30 y se levanta de 7:00 a 7:30); sin niebla de la tarde.
+  eq([4.5, 4.9, 5, 5.25, 5.5, 6, 7, 7.25, 7.5, 12, 17.5, 18, 20].map((h) => Math.round(C.marNiebla(h) * 100) / 100), [0, 0, 0, 0.5, 1, 1, 1, 0.5, 0, 0, 0, 0, 0], 'valle 22B: el mar de niebla solo de 5:00 a 7:30 (se forma hasta las 5:30 y se levanta desde las 7:00); nada por la tarde');
   // 56 · árboles en flor
   eq(['2027-01-31', '2027-02-01', '2027-02-28', '2027-03-01', '2026-03-31', '2026-04-01', '2026-04-30', '2026-05-01'].map(C.flor), ['', 'maquilishuat', 'maquilishuat', '', '', 'fuego', 'fuego', ''], 'valle 22B: el maquilishuat florece en febrero y el árbol de fuego en abril');
   // 57 y 60 · fechas de los azacuanes y de los zompopos

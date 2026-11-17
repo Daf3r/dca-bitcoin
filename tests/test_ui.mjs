@@ -5307,6 +5307,9 @@ try {
         lucesTapadas: (() => { const loma = document.querySelector('.v-loma'), monte = document.querySelector('path.monte'); return [...(document.querySelector('.v-luz-lejos')?.getAttribute('d') ?? '').matchAll(/M([\d.]+) ([\d.]+)/g)].filter(([, x, y]) => { const q = new DOMPoint(Number(x), Number(y)); return loma.isPointInFill(q) || monte.isPointInFill(q); }).length; })(),
         humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: getComputedStyle(document.querySelector('.v-pn-foco')).animationName,
         pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-pis'),
+        // El ritmo de cada piscucha y de cada bocanada de humo (campamento 22B: va por clase, no por su orden): duración/retraso.
+        ritmoPis: [...document.querySelectorAll('.v-pis')].map((e) => `${getComputedStyle(e).animationDuration}/${getComputedStyle(e).animationDelay}`),
+        ritmoHumo: [...document.querySelectorAll('.v-hu')].map((e) => `${getComputedStyle(e).animationDuration}/${getComputedStyle(e).animationDelay}`),
         grabado: visto('.v-grabado'), grabadoTxt: [...document.querySelectorAll('text.v-grabado')].map((t) => t.textContent).join(' ') || null,
         garza: visto('.v-garza'), cuerpo: visto('.v-cy-cuerpo'), lampara: visto('.v-cy-lampara'),
         arbol: document.querySelector('.v-arbol')?.getAttribute('class') ?? null, arbolCaja: caja('.v-arbol .v-ar-tronco, .v-arbol .v-ar-tallo'), salida: caja('.salida'),
@@ -5342,7 +5345,9 @@ try {
       await t.ctx.close();
       // Al amanecer, el humo del fogón (ambiente: solo con «todos»).
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'todos' })); await cerrar(t.p);
-      ok((await valle(t.p)).humo, '22 fogón: humo a la hora del café con «todos»');
+      v = await valle(t.p);
+      ok(v.humo, '22 fogón: humo a la hora del café con «todos»');
+      eq(v.ritmoHumo, ['6.6s/0s', '6.6s/-2.2s', '6.6s/-4.4s'], '22 fogón: las tres bocanadas, a destiempo como siempre (22B: por clase)');
       await t.ctx.close();
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
       ok(!(await valle(t.p)).humo, '22 fogón: con «esenciales» no hay humo (es ambiente)');
@@ -5357,6 +5362,7 @@ try {
       t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'todos' })); await cerrar(t.p);
       v = await valle(t.p);
       ok(v.pisVis && v.pis === fam.familia.personas && v.pisCaja && v.pisCaja.y > v.saldoAbajo, `22 piscuchas: ${v.pis} en el cielo del valle, por debajo del saldo`);
+      eq(v.ritmoPis, ['6.3s/-2s', '4.6s/-3.1s', '6.3s/-2s', '5.2s/0s', '4.6s/-3.1s', '5.2s/0s'].slice(0, v.pis), '22 piscuchas: cada una con su ritmo de siempre (22B: por clase)');
       eq(v.milpa, ['doblada'], '22 milpa: en octubre, doblada');
       await t.ctx.close();
       t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
@@ -5498,6 +5504,29 @@ try {
       const aza = await t.p.evaluate(() => { const r = document.querySelector('#montana .v-aza').getBoundingClientRect(), s = document.querySelector('.saldo').getBoundingClientRect(); return { x: r.x, r: r.right, saldo: s.right }; });
       ok(v.vacas === 3 && !v.vacaSobreSendero && !v.vacaSobreRotulo && aza.x > aza.saldo, `22B escritorio: tres vacas en la orilla y los azacuanes a la derecha del saldo (${Math.round(aza.x)} > ${Math.round(aza.saldo)})`);
       await t.ctx.close();
+      // Las bandadas nunca pasan por detrás de un texto (el saldo, la cotización, los datos de la escena): se mide todo su viaje en reposo
+      // (el remolino con su deriva y su giro; los pericos de su sitio hasta donde acaban). En escritorio y acostado los pericos acaban tapados
+      // por la montaña (si no, asomarían junto a la cumbre y se apagarían de golpe).
+      for (const [vp, letra] of [[{ width: 390, height: 844 }, ''], [{ width: 320, height: 568 }, 'muy-grande'], [{ width: 844, height: 390 }, ''], [{ width: 1440, height: 900 }, '']]) {
+        for (const hora of [12, 17]) {
+          t = await entrar(navegador, srv, ADMIN, { viewport: vp, isMobile: vp.width < 700, hasTouch: vp.width < 1100, hora }, conDia('2026-10-15', { 'libro.efectos': 'todos', 'libro.letra': letra }));
+          await cerrar(t.p);
+          const a = await t.p.evaluate((h) => {
+            const els = [...document.querySelectorAll(`#montana ${h === 12 ? '.v-aza' : '.v-peri'}`)];
+            for (const e of els) { e.style.animation = 'none'; e.style.opacity = '1'; } // en reposo (CSSOM: lo permite la CSP)
+            const u = els.map((e) => e.getBoundingClientRect()).reduce((x, q) => ({ x: Math.min(x.x, q.x), y: Math.min(x.y, q.y), r: Math.max(x.r, q.right), b: Math.max(x.b, q.bottom) }), { x: 1e9, y: 1e9, r: -1e9, b: -1e9 });
+            const d = parseFloat(getComputedStyle(document.getElementById('montana')).getPropertyValue('--v-peri-d'));
+            const viaje = h === 12 ? { x: u.x - 43, y: u.y - 15, r: u.r + 43, b: u.b + 8 } : { x: u.x - d, y: u.y - 2, r: u.r, b: u.b + 11 };
+            const textos = ['#cotizacion', '.saldo', '#esc-datos'].map((s) => document.querySelector(s)).filter((e) => e?.getClientRects().length).map((e) => e.getBoundingClientRect());
+            const choca = textos.some((q) => viaje.x < q.right && viaje.r > q.left && viaje.y < q.bottom && viaje.b > q.top);
+            const monte = document.querySelector('#montana path.monte');
+            const asoman = h === 12 ? 0 : els.flatMap((e) => [...e.getAttribute('d').matchAll(/M([\d.]+) ([\d.]+)/g)]).filter(([, x, y]) => !monte.isPointInFill(new DOMPoint(Number(x) - d, Number(y) + 9)) && Number(x) - d > 0).length;
+            return { ancho: u.r > u.x, choca, asoman };
+          }, hora);
+          ok(a.ancho && !a.choca && (vp.width < 700 || a.asoman === 0), `22B bandadas a ${vp.width}×${vp.height}${letra ? ' con letra muy grande' : ''}: ${hora === 12 ? 'el remolino' : 'los pericos'} no pasa${hora === 12 ? '' : 'n'} por detrás de ningún texto${vp.width >= 700 && hora === 17 ? ' y acaban detrás de la montaña' : ''} (${JSON.stringify(a)})`);
+          await t.ctx.close();
+        }
+      }
       // Quien solo mira ve lo mismo.
       t = await entrar(navegador, srv, LECTOR, { hora: 6 }, conDia('2026-10-15')); await cerrar(t.p);
       v = await estado(t.p);

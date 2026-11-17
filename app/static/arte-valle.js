@@ -65,7 +65,7 @@ export function escalaValle(W, H) {
   const forma = formaValle(W, H);
   return forma === 'tel' ? Math.max(0.78, Math.min(1, W / 390)) : forma === 'tab' ? 1.05 : forma === 'esc' ? Math.max(1.2, Math.min(1.75, H / 620)) : 0.72;
 }
-export function sitiosValle({ W, H, techo = 0, izq, der = [], cresta = [], bx, by, pts = [], lago = null, personas = 0, meses = 0, anios = 0, primera = null, astro = null }) {
+export function sitiosValle({ W, H, techo = 0, izq, der = [], cresta = [], bx, by, pts = [], lago = null, personas = 0, meses = 0, anios = 0, primera = null, astro = null, volcanes = null }) {
   const forma = formaValle(W, H);
   const k = escalaValle(W, H);
   const L = [...izq].sort((a, b) => a[1] - b[1]);
@@ -107,7 +107,7 @@ export function sitiosValle({ W, H, techo = 0, izq, der = [], cresta = [], bx, b
   // La vida del lago se coloca con el lago. (Campamento 22B) Las vacas, en la orilla del lago con más sitio.
   const vacas = vacasSitios({ W, lago, pts, k, forma, sx: der[0]?.[0] });
   // Las bandadas (campamento 22B): el remolino de azacuanes y los pericos, en el cielo libre.
-  const aves = avesSitios({ W, H, techo, cresta, forma, k, cima: der[0] ?? [W / 2, H / 2], astro, xIzq });
+  const aves = avesSitios({ W, H, techo, cresta, forma, k, cima: der[0] ?? [W / 2, H / 2], astro, xIzq, xDer, volcanes });
   return { forma, k, canton, milpa, pino, camino, arbol, luces, piscuchas, lago, vacas, aves, ventanas: Math.max(0, Math.floor(personas) || 0) };
 }
 
@@ -141,22 +141,30 @@ export function vacasSitios({ W, lago, pts, k, forma, sx = W / 2 }) {
  * Dónde vuelan las bandadas (idea 57). En el teléfono y la tablet, el remolino de azacuanes va sobre el valle, a la izquierda de la
  * montaña, entre el saldo y la sierra; en escritorio y acostado, entre la cumbre y el astro (la columna de la izquierda es del saldo).
  * Los pericos entran por el borde derecho, por debajo del saldo, y vuelan hacia la montaña: en el teléfono y la tablet la cruzan por
- * detrás y salen por la izquierda; en escritorio y acostado se pierden detrás de ella (`dist`: cuánto recorren).
+ * detrás y salen por la izquierda; en escritorio y acostado se pierden detrás de ella (`dist`: cuánto recorren): vuelan a una altura
+ * donde la montaña es más ancha que la bandada, por encima de los volcanes del fondo (`volcanes`, la y de sus cumbres), y acaban todos
+ * tapados por ella (si no, asomarían junto a la cumbre y se apagarían de golpe).
  */
-export function avesSitios({ W, H, techo, cresta, forma, k, cima: [sx, sy], astro, xIzq }) {
+export const alturaVolcanes = (W, H) => Math.min(H * (W < 1100 ? 0.11 : 0.12), W * (W < 700 ? 0.14 : 0.1)); // la misma cuenta que `arte.volcanes`
+export function avesSitios({ W, H, techo, cresta, forma, k, cima: [sx, sy], astro, xIzq, xDer = () => W, volcanes = null }) {
   const alta = cresta.length ? Math.min(...cresta.filter(([x]) => x < W * 0.45).map((p) => p[1])) : H * 0.6;
   const ancho = forma === 'esc' || forma === 'acostado';
   const [ax, ay] = astro ?? [W * 0.85, H * 0.25];
-  let aza, peri;
+  let aza, peri, dist;
   if (ancho) {
     aza = [(sx + ax) / 2, Math.max(sy + 30 * k, ay - H * 0.02)];
-    peri = [W + 8 * k, Math.max(sy + 16 * k, ay - H * 0.05)]; // por encima de los volcanes del fondo (van delante del cielo)
+    const bandada = 80 * k, yMin = Math.max(sy + 16 * k, ay - H * 0.05), yMax = Math.max(yMin, (volcanes ?? H) - 10 * k);
+    let y = yMin;
+    while (y < yMax && xDer(y + 9) - xIzq(y + 9) < bandada + 24 * k) y += 3;
+    peri = [W + 8 * k, Math.min(y, yMax)];
+    dist = peri[0] + bandada - (xDer(peri[1] + 9) - 10 * k); // el último pájaro acaba ya detrás de la montaña
   } else {
     const y = techo + (alta - techo) * 0.42;
     aza = [Math.min(W * 0.22, (xIzq(y) || W) - 30 * k), y];
     peri = [W + 8 * k, techo + (alta - techo) * 0.6];
+    dist = W + 110 * k;
   }
-  return { aza, peri, k, dist: ancho ? W - sx + 70 * k : W + 110 * k };
+  return { aza, peri, k, dist };
 }
 
 function lucesSitios({ W, H, techo, xIzq, xDer, cresta, n, canton, milpa, loma, k, forma }) {
@@ -680,7 +688,7 @@ export function zompopos({ milpa: { x, y, w }, k = 1 }) {
  */
 export function sitioRayo(W, H, base) {
   const ancho = formaValle(W, H) === 'esc' || formaValle(W, H) === 'acostado';
-  const A = Math.min(H * (W < 1100 ? 0.11 : 0.12), W * (W < 700 ? 0.14 : 0.1)); // la altura de los volcanes (la misma cuenta que `volcanes`)
+  const A = alturaVolcanes(W, H);
   // La base de la nube va a media ladera de los volcanes: el yunque asoma por encima de sus cumbres y lo de abajo queda tapado.
   return { x: W * (ancho ? 0.74 : 0.26), y: base - A * (ancho ? 0.8 : 0.6), ancho: W * (ancho ? 0.14 : 0.42) };
 }

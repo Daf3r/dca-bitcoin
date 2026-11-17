@@ -104,10 +104,10 @@
     if (m === 11 && d <= 14) return 1 - d / 15;
     return m >= 5 && m <= 10 ? 1 : 0;
   }
-  /** El mar de niebla del amanecer (idea 55): de 0 a 1. Se forma de 4:45 a 5:15, llena el valle hasta las 7 y se levanta antes de las 7:30. Sin niebla de la tarde. */
+  /** El mar de niebla del amanecer (idea 55): de 0 a 1, solo de 5:00 a 7:30. Se forma de 5:00 a 5:30, llena el valle hasta las 7 y se levanta antes de las 7:30. Sin niebla de la tarde. */
   function marNiebla(h) {
-    if (h < 4.75 || h >= 7.5) return 0;
-    if (h < 5.25) return (h - 4.75) / 0.5;
+    if (h < 5 || h >= 7.5) return 0;
+    if (h < 5.5) return (h - 5) / 0.5;
     return h <= 7 ? 1 : (7.5 - h) / 0.5;
   }
   /** Árboles de aquí en flor (idea 56): el maquilishuat en febrero y el árbol de fuego en abril; si no, ''. */
