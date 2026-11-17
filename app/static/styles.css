@@ -147,7 +147,10 @@ html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .rayos { display: inl
 .ry-0 { stop-color: var(--astro); stop-opacity: 0; } .ry-1 { stop-color: var(--astro); stop-opacity: 0.2; } .ry-2 { stop-color: var(--astro); stop-opacity: 0; }
 .faceta { fill: var(--astro); opacity: 0.07; } .faceta.f1 { opacity: 0.05; } .faceta.f2 { opacity: 0.03; }
 .arista { fill: none; stroke: var(--astro); stroke-opacity: 0.32; stroke-width: 1.4; stroke-linejoin: round; stroke-linecap: round; }
-.nieve-sombra { fill: color-mix(in oklab, var(--nieve) 72%, var(--nieve-s)); opacity: 1; }
+/* La nieve en sombra: fría y opaca; el mismo tono en la cara en sombra del cuerno. Sale de la nieve y de la roca en sombra (no del
+   cielo: así nunca se confunde con él ni deja ver nada detrás). */
+.montana { --nieve-sb: color-mix(in oklab, var(--nieve) 60%, color-mix(in oklab, var(--monte-sombra) 35%, #7c78c8)); }
+.nieve-sombra, .cn-sombra { fill: var(--nieve-sb); }
 .nb-0 { stop-color: var(--nube); } .nb-1 { stop-color: color-mix(in oklab, var(--nube) 55%, transparent); }
 .nl-0 { stop-color: var(--nube); stop-opacity: 0; } .nl-1 { stop-color: var(--nube); }
 .lg-0 { stop-color: color-mix(in oklab, var(--c4) 55%, var(--medio)); } .lg-1 { stop-color: color-mix(in oklab, var(--c3) 45%, var(--monte)); }
@@ -1441,14 +1444,16 @@ html[data-cielo="dia"] .campo { --farol-a: 0.32; } html[data-cielo="amanecer"] .
 .campo.iza .farol-halo { transform-box: fill-box; transform-origin: center; animation: farol-enciende 1.3s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
 @keyframes farol-enciende { 0% { opacity: 0; transform: scale(0.3); } 45% { opacity: 1; transform: scale(1.35); } 100% { transform: scale(1); } }
 /* La cumbre: un mojón de dos piedras con la banderita de la meta (cálida, con un pliegue en sombra que le da cuerpo) y el farol a su pie. */
-.es-cima { --pd-media: color-mix(in oklab, var(--monte) 58%, #9c8f7c); }
+/* (Tercera ronda) El mojón de la cumbre es de la roca oscura de la montaña: se lee sobre la nieve en sombra que tiene detrás; la
+   banderita lleva un canto oscuro más grueso, que es lo que la recorta contra la nieve a cualquier hora. */
+.es-cima { --pd-media: color-mix(in oklab, var(--monte) 78%, #8a7f70); }
 .campo .cima-mastil { stroke: color-mix(in oklab, var(--pd-sombra) 72%, #3a2512); stroke-width: 1.3; }
-.es-cima .banderin { fill: #ffc062; stroke: #6b3e12; stroke-width: 0.6; stroke-linejoin: round; opacity: 1; }
+.es-cima .banderin { fill: #ffc062; stroke: #6b3e12; stroke-width: 1.1; stroke-linejoin: round; opacity: 1; }
 .banderin-pliegue { fill: #6b3e12; fill-opacity: 0.24; stroke: none; }
 /* El sol: un disco de borde suave (degradado) que se funde con su halo, no una moneda plana. */
 .sol-disco { fill: url(#m-sol); }
 .so-0 { stop-color: color-mix(in oklab, var(--astro) 70%, #fff); } .so-1 { stop-color: var(--astro); } .so-2 { stop-color: var(--astro); stop-opacity: 0.35; }
-.nieve-faceta { fill: #fff; opacity: 0.28; } .nieve-pliegue { fill: none; stroke: var(--monte-sombra); stroke-width: 2; stroke-linecap: round; opacity: 0.18; }
+.nieve-faceta { fill: color-mix(in oklab, var(--nieve) 56%, #fff); } /* (opaca: es la nieve al sol con algo más de luz) */
 /* La luz del farol respira (ambiente): un segundo halo que crece y se apaga despacio, sin aros. En el teléfono va por pasos (se
    redibuja unas pocas veces por segundo, como las nubes). */
 .humo { opacity: 0; transform-box: fill-box; transform-origin: center; pointer-events: none; }
@@ -3566,9 +3571,7 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
 /* ================================================================ Campamento 21 · Montaña asentada
    Lo que hay en la montaña está tallado en ella. Cada campamento se asienta en un rellano (montana.js: terrazas): el suelo, el corte
    de roca de detrás, la roca que lo sostiene y su sombra; es terreno, en los tonos de la roca, y sigue a la hora. La repisa se alarga
-   bajo el rótulo. En la cumbre el rellano es un escalón en la nieve. La nieve en sombra toma el color del cielo (`--nieve-s`) y el
-   relieve de la montaña se pinta encima de ella: los mismos planos tallan roca y nieve. */
-.montana { --nieve-s: color-mix(in oklab, var(--c0) 55%, var(--monte-sombra)); --tz-roca: color-mix(in oklab, var(--monte) 84%, var(--luz-roca, var(--astro))); }
+   bajo el rótulo. En la cumbre el rellano es un escalón en la nieve con su canto de roca (montana.js: cumbre). */
 .tz-suelo { fill: color-mix(in oklab, color-mix(in oklab, var(--monte) 86%, #a8865c) 80%, var(--luz-roca, var(--astro))); }
 .tz-corte { fill: color-mix(in oklab, var(--monte-sombra) 84%, #000); opacity: 0.72; }
 .tz-corte-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.09; }
@@ -3576,10 +3579,13 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
 .tz-sombra { fill: var(--monte-sombra); opacity: 0.36; }
 .tz-pie { fill: color-mix(in oklab, var(--monte-sombra) 80%, #000); opacity: 0.5; }
 .tz-nieve { fill: color-mix(in oklab, var(--nieve) 92%, #fff); }
-.espolon-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.09; }
-.tz-pared { fill: color-mix(in oklab, var(--monte-sombra) 62%, var(--monte)); }
-.tz-pared-luz { fill: var(--luz-roca, var(--astro)); opacity: 0.14; }
-.nieve-s2 { fill: var(--nieve-s); opacity: 0.22; }
+/* La cumbre, un pico nevado (tercera ronda): un plano algo más oscuro en la nieve en sombra, opaco, y el canto de roca del rellano. */
+.cn-pliegue { fill: color-mix(in oklab, var(--nieve-sb) 86%, var(--monte-sombra)); }
+.cn-bisel { fill: color-mix(in oklab, var(--nieve-sb) 58%, var(--nieve)); }
+/* El suelo del rellano de la cumbre está en la cara en sombra: recibe la luz del cielo desde arriba (más claro que la cara), sin
+   brillar como la nieve al sol (un rellano blanco se leía como un plato puesto encima). */
+.tz-nieve.cn-rellano { fill: color-mix(in oklab, var(--nieve-sb) 34%, var(--nieve)); }
+.cn-canto { fill: color-mix(in oklab, var(--monte-sombra) 62%, var(--monte)); }
 /* El camino tallado: el corte de roca por encima (sombra) y el talud por debajo (luz). */
 :is(.sendero-talud, .sendero-corte) path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .sendero-corte path { stroke: color-mix(in oklab, var(--monte-sombra) 84%, #000); opacity: 0.6; }

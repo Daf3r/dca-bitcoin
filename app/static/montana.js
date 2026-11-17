@@ -152,7 +152,7 @@ const NIEVE_MIN = 0.55; // con la altitud en cero: una capa fina
 const NIEVE_MAX = 1.5;  // llegando a la cumbre: la cumbre bien cubierta
 function trazoNieve({ sx, sy, ancho, nv }, alt) {
   const hondo = nv * (NIEVE_MIN + (NIEVE_MAX - NIEVE_MIN) * Math.min(1, Math.max(0, alt)));
-  let d = `M${f1(sx - ancho)} ${f1(sy - 60)}L${f1(sx + ancho)} ${f1(sy - 60)}`;
+  let d = `M${f1(sx - ancho)} ${f1(sy - 120)}L${f1(sx + ancho)} ${f1(sy - 120)}`; // (arriba con holgura: el cuerno de la cumbre llega a 39 · 1.6 px)
   for (const [u, k] of DIENTES) d += `L${f1(sx + ancho - 2 * ancho * u)} ${f1(sy + hondo * k)}`;
   return `${d}Z`;
 }
@@ -277,15 +277,14 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     const f = k / 8, ruido = k < 8;
     der.push([c.sx + (derX - c.sx) * f + (ruido ? (rnd() - 0.5) * W * 0.025 : 0), c.sy + (piso * 0.97 - c.sy) * f ** 0.8 + (ruido ? (rnd() - 0.5) * H * 0.035 : 0)]);
   }
-  // La cumbre no es una aguja: el sendero llega a un rellano (la meta) y, a su derecha, un cuerno de roca un poco más alto
-  // la resguarda. Así la bandera de la meta queda por debajo del cuerno, dentro de la silueta, y no sobresale contra el cielo.
+  // La cumbre no es una aguja: el sendero llega a un rellano (la meta) y, a su derecha, el cuerno nevado sube un poco más.
+  // Así la bandera de la meta queda por debajo de la cima, dentro de la silueta, y no sobresale contra el cielo.
   // Los campamentos y el detalle de la cumbre crecen con la escena, y encogen si la montaña es baja (teléfono pequeño o acostado).
   const ec = Math.min(W >= 1100 ? 1.6 : W >= 700 ? 1.25 : 1.1, Math.max(0.74, (piso - c.sy) / 240)), ecC = ec;
-  // El cuerno es una pequeña cima con hombro (no una aguja): sube en dos tramos, tiene su pico y baja por la cara derecha en
-  // pendiente, así que se lee como parte de la montaña. Todo son puntos fijos que crecen con la escena (sin `rnd()`).
-  // (Montaña asentada) La arista de la izquierda llega a un rellano que es parte de la silueta (el escalón de la meta) y de ahí
-  // sube, casi a plomo, la pared de roca del cuerno: la bandera queda delante de esa pared, no contra el cielo.
-  const CUERNO = [[-15, 5], [-10.5, 2.6], [-7.5, 1.5], [-6, -9], [-3, -19], [2, -25], [9, -29], [17, -39], [28, -20], [38, -4], [46, 7]];
+  // El cuerno es la cima: sube en dos tramos desde el rellano (el escalón de la meta, que es parte de la silueta), tiene su pico
+  // y baja por la cara derecha en pendiente. Su filo oeste es casi a plomo (ahí la nieve no se sostiene y asoma la roca: ver
+  // `cumbre`). Todo son puntos fijos que crecen con la escena (sin `rnd()`).
+  const CUERNO = [[-15, 5], [-10.5, 2.6], [-7.5, 1.5], [-7, -9], [-5, -19], [0, -26], [8, -30], [17, -39], [28, -20], [38, -4], [46, 7]];
   const enC = ([x, y]) => [c.sx + x * ecC, c.sy + y * ecC];
   const cuerno = CUERNO.map(enC);
   const N_CARA = 5; // desde este punto del cuerno hacia la derecha, la cara que mira al astro
@@ -316,15 +315,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // Su profundidad sigue a tu altitud (`colocar` la actualiza), así que la cumbre se va cubriendo a medida que subes.
   const nieveMedidas = { sx: c.sx, sy: c.sy, ancho: Math.max(W * 0.12, 140), nv: H * 0.075 };
   const dNieve = trazoNieve(nieveMedidas, altitud(inicio, esc));
-  // La nieve con luz y sombra: el lado de la arista que mira al astro brilla un poco más y el otro queda en sombra.
-  s += `<defs><clipPath id="m-der"><path d="${cara}"/></clipPath></defs><path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/><path class="nieve-luz" clip-path="url(#m-der)" d="${dNieve}"/>`
-    // Facetas de la nieve: un plano más claro que baja del vértice hacia el astro y un pliegue en sombra al otro lado.
-    + `${(() => { // El espolón: la roca de la montaña asoma por la nieve, de la pared del cuerno hasta más abajo de la línea de nieve
-      // (es del mismo material que la ladera: por debajo de la nieve se pierde en ella). Su flanco que mira al astro recibe algo de luz.
-      const pe = [enC([-12.5, 3.6]), enC([-15, 14]), ...quiebre.slice(1, 5).map((q, i) => [q[0] - [27, 31, 38, 47][i] * ecC, Math.max(q[1] + (i % 2 ? 5 : -3) * ecC, c.sy + 24 * ecC)]), ...quiebre.slice(1, 5).reverse().filter((q) => q[1] > c.sy + 26 * ecC), enC([19, 16]), enC([23, 4]), enC([21, 2])], tr = (ps) => ps.map((q) => q.map(f1).join(' ')).join('L');
-      const n = pe.length, dcha = pe.slice(Math.ceil(n / 2) - 1, n - 1);
-      return `<path class="espolon" fill="url(#m-ladera)" d="M${tr(pe)}Z"/><path class="espolon-luz" d="M${tr([...dcha, ...dcha.map((q) => [q[0] - 8 * ecC, q[1]]).reverse()])}Z"/>`;
-    })()}<g clip-path="url(#m-nieve-c)"><path class="nieve-s2" d="M${[[-13, 4], [-70, 96], [-34, 88], [-9, 14]].map((q) => enC(q).map(f1).join(' ')).join('L')}Z"/><path class="nieve-faceta" d="M${f1(picoC[0])} ${f1(picoC[1])}L${f1(picoC[0] + nieveMedidas.ancho * 0.3)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}L${f1(picoC[0] + nieveMedidas.ancho * 0.03)} ${f1(picoC[1] + nieveMedidas.nv * 2.3)}Z"/><path class="nieve-pliegue" d="M${f1(picoC[0] - 2)} ${f1(picoC[1] + 4)}L${f1(picoC[0] - nieveMedidas.ancho * 0.2)} ${f1(picoC[1] + nieveMedidas.nv * 2.1)}"/></g></g>`;
+  // La nieve con luz y sombra: el lado de la arista que mira al astro brilla un poco más y el otro queda en sombra (nieve fría y
+  // opaca). La cumbre (su cara en sombra, la roca del filo y el rellano) va en `cumbre`.
+  s += `<defs><clipPath id="m-der"><path d="${cara}"/></clipPath></defs>`
+    + `<path class="nieve" clip-path="url(#m-silueta)" d="${dNieve}"/><g clip-path="url(#m-silueta)"><path class="nieve-sombra" clip-path="url(#m-izq)" d="${dNieve}"/><path class="nieve-luz" clip-path="url(#m-der)" d="${dNieve}"/></g>`;
 
 
   s += lago(c, W, H, ventas);
@@ -432,7 +426,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     };
     return { m, p, cima: m === esc.cima, lado: lejania(-1) > lejania(1) + 0.5 ? -1 : 1 };
   });
-  host.querySelector('#m-terrazas').innerHTML = terrazas(campos, ec, c.sol[0] >= c.sx ? 1 : -1, [c.sx, c.sy]);
+  host.querySelector('#m-terrazas').innerHTML = cumbre({ e: ec, sx: c.sx, sy: c.sy, izq, quiebre, pico: picoC, nieve: nieveMedidas }) + terrazas(campos, ec, c.sol[0] >= c.sx ? 1 : -1, [c.sx, c.sy]);
   host.querySelector('#m-campos').innerHTML = campos.map(({ m, p, cima, lado }) => campamento(m, p, cima, cima ? 3 : esc.campos.indexOf(m), cima ? 1 : lado, ec, c.sol[0] >= c.sx ? 1 : -1)).join('');
   // Las etapas intermedias (250k, 500k…) que no son campamento van como una marca atravesada en el sendero: así se ve el avance entre
   // un campamento y el siguiente. Solo en la app (la entrada no enseña tus datos).
@@ -507,6 +501,43 @@ function campamento(m, p, cima, i, lado, ec = 1, sol = 1) {
 const DH = 15, RELLANO_CIMA = 4.2, K_HITO = 1.2, K_CIMA = 1.25; // (K_HITO: cuánto se agranda el hito sobre su rellano)
 
 /**
+ * La cumbre (montaña asentada, tercera ronda): UN pico nevado. Todo en unidades de la cumbre (×`e`) desde el final del sendero.
+ * - El rellano de la meta es un escalón de la propia silueta (`CUERNO`): su suelo de nieve (`RELLANO_PLANO`, en `terrazas`) nace en
+ *   el filo oeste y se pierde, sin punta, en la cara del cuerno; debajo, su canto de roca (`.cn-canto`), que adelgaza hasta nada.
+ * - El cuerno es nieve: su cara que mira al astro, blanca (la de siempre, con su faceta de luz), y la otra, nieve fría y opaca
+ *   (`.cn-sombra`, el mismo tono que la nieve en sombra de la ladera), hasta una arista que baja del pico y se une a la arista
+ *   central de la montaña. La bandera y el mojón quedan delante de esa nieve en sombra, nunca contra el cielo.
+ * - La roca asoma solo donde la nieve no se sostiene: por el filo oeste, casi a plomo, del cuerno (una franja estrecha) y, bajo el
+ *   rellano, por la arista oeste hasta la línea de nieve (`.cn-roca`, con el mismo degradado que la ladera: es la misma roca y por
+ *   debajo de la nieve se pierde en ella). Va unida al filo de la silueta y nunca cruza la arista central: no hay islas ni torres.
+ * - Dos planos en la nieve en sombra le dan volumen: uno algo más oscuro en la ladera, bajo el rellano (`.cn-pliegue`), y otro más
+ *   claro bajo el pico, que recibe la luz del cielo (`.cn-bisel`). Todo en tonos planos, como las facetas de la roca.
+ * Todo va recortado por la nieve (`#m-nieve-c`), así que sigue a la altitud cuando `colocar` la cambia. Sin `rnd()`.
+ */
+const RELLANO_PLANO = [[-10.5, 2.6], [-7.5, 1.5], [6, 1.3], [14, 2.4], [7, 5.4], [-4.5, 7]];
+function cumbre({ e, sx, sy, izq, quiebre, pico, nieve }) {
+  const P = ([x, y]) => [sx + x * e, sy + y * e];
+  const d = (pts) => `M${pts.map((q) => q.map(f1).join(' ')).join('L')}Z`;
+  const q0 = quiebre[0], abajo = (q0[1] - sy) / e;
+  // La cara en sombra del cuerno, hasta la arista que baja del pico y se une a la central (lo de más abajo ya es `.nieve-sombra`).
+  const sombra = d([P([-60, -70]), P([17.3, -70]), P([17, -39]), P([17, -20]), P([16, 2]), P([12, 11]), q0, P([-60, abajo])]);
+  // La roca: el filo oeste del cuerno (la franja se pierde en un punto bajo la cima) y la arista oeste, del rellano a la línea de nieve.
+  let roca = d([[-40, 2], [-40, -45], [-1, -28], [1.5, -25.5], [-0.5, -20.5], [-1.5, -15], [-3, -11.5], [-2, -6], [-3.5, -2], [-4, 1.5]].map(P));
+  const filo = [P([-15, 5]), ...izq.filter((q) => q[1] > sy + 6 * e && q[1] < sy + nieve.nv * 2.2).sort((a, b) => a[1] - b[1])];
+  const anchos = [2.5, 3.6, 6.5, 3.6, 7.5, 4.5, 8]; // (nace fina bajo el canto del rellano)
+  roca += d([...filo.map(([x, y]) => [x - 60, y]), ...filo.map(([x, y], i) => [x + anchos[i % anchos.length] * e, y]).reverse()]);
+  // El canto del escalón: grueso bajo el mojón, adelgaza hasta nada donde el rellano se pierde en la cara del cuerno.
+  const canto = d([[-15, 4.6], [-10.5, 2.6], [-4.5, 7], [7, 5.4], [14, 2.4], [12.4, 5.2], [7.5, 8.2], [1, 9.6], [-5, 10.4], [-9.5, 8], [-12.5, 5.6], [-16, 6.4]].map(P));
+  const pliegue = d([[-13, 4], [-70, 96], [-34, 88], [-9, 14]].map(P));
+  // Y arriba, bajo el pico, un plano de la cara en sombra que recibe la luz del cielo (más claro): el cuerno tiene volumen.
+  const bisel = d([[17, -39], [8, -30], [13.5, -19.5], [17, -20.5]].map(P));
+  // La faceta de luz de la cara blanca: un plano más claro que baja del pico hacia el astro.
+  const faceta = d([pico, [pico[0] + nieve.ancho * 0.3, pico[1] + nieve.nv * 2.3], [pico[0] + nieve.ancho * 0.03, pico[1] + nieve.nv * 2.3]]);
+  return `<g class="cumbre" clip-path="url(#m-nieve-c)"><path class="cn-sombra" d="${sombra}"/><path class="cn-pliegue" d="${pliegue}"/><path class="cn-bisel" d="${bisel}"/><path class="nieve-faceta" d="${faceta}"/>`
+    + `<path class="cn-roca" fill="url(#m-ladera)" d="${roca}"/><path class="cn-canto" d="${canto}"/></g>`;
+}
+
+/**
  * Los rellanos (Montaña: campamentos asentados). Cada campamento se asienta en una repisa tallada en la ladera: el suelo (el plano que
  * más luz recibe), el corte de roca que queda detrás (en sombra, con una cara que recibe algo de luz), la roca que lo sostiene por
  * debajo y la sombra que echa sobre la ladera. La repisa sigue hacia fuera, cada vez más fina, hasta donde llega el rótulo del
@@ -515,16 +546,13 @@ const DH = 15, RELLANO_CIMA = 4.2, K_HITO = 1.2, K_CIMA = 1.25; // (K_HITO: cuá
  * todos los campamentos (pocos nodos) y no se apaga con los campamentos pendientes. En la cumbre, el rellano está tallado en la nieve.
  */
 function terrazas(campos, e, sol, [sx, sy]) {
-  const t = { sombra: '', pie: '', corte: '', corteLuz: '', muro: '', suelo: '', nieve: '', pared: '', paredLuz: '' };
+  const t = { sombra: '', pie: '', corte: '', corteLuz: '', muro: '', suelo: '', nieve: '' };
   for (const { p, cima, lado } of campos) {
     if (cima) {
-      // La cumbre: la pared de roca del cuerno (su cara oeste, en sombra, con un plano que recibe algo de luz), el suelo de nieve del
-      // rellano, que nace en la silueta, y el canto del escalón en la sombra de la nieve.
+      // La cumbre: el suelo de nieve del rellano (nace en la silueta y se pierde en la cara del cuerno) y la sombra del mojón. Su canto
+      // de roca, la cara en sombra del cuerno y la roca del filo van en `cumbre`.
       const d = (pts) => `M${pts.map(([x, y]) => `${f1(sx + x * e)} ${f1(sy + y * e)}`).join('L')}Z`, r = RELLANO_CIMA;
-      t.pared += d([[-7.5, 1.5], [-6, -9], [-3, -19], [2, -25], [10, -26], [16, -20], [18, -11], [22, -4], [21, r - 1], [13, r - 2.6]]);
-      t.paredLuz += d([[10, -26], [16, -20], [18, -11], [22, -4], [21, r - 1], [13, r - 2.6], [11, -12]]);
-      t.nieve += d([[-10.5, 2.6], [-7.5, 1.5], [13, r - 2.6], [19.5, 0.6], [17, r + 0.8], [10, r + 2.6], [-5.5, r + 2.6]]);
-      t.sombra += d([[-10.5, 2.6], [-5.5, r + 2.6], [10, r + 2.6], [17, r + 0.8], [21, r - 1], [20.5, r + 2.4], [10.5, r + 5.2], [-6, r + 5], [-12.5, 3.8]]);
+      t.nieve += d(RELLANO_PLANO);
       t.pie += d([[-5.6, r + 0.2], [5.8, r + 0.2], [5.8 - sol * 10, r + 1.7], [-5.6 - sol * 10, r + 1.7]]);
       continue;
     }
@@ -538,8 +566,8 @@ function terrazas(campos, e, sol, [sx, sy]) {
     t.pie += d([[DH - 6.6, 0.1], [DH + 6.6, 0.1], [DH + 6.6 - s * 13, 2], [DH - 6.6 - s * 13, 2]]);
   }
   return `<path class="tz-sombra" d="${t.sombra}"/><path class="tz-corte" d="${t.corte}"/><path class="tz-corte-luz" d="${t.corteLuz}"/><path class="tz-muro" d="${t.muro}"/>`
-    + `<path class="tz-muro" id="m-repisa-m"/><path class="tz-suelo" d="${t.suelo}"/><path class="tz-suelo" id="m-repisa"/><path class="tz-pared" d="${t.pared}"/><path class="tz-pared-luz" d="${t.paredLuz}"/>`
-    + `<path class="tz-nieve" d="${t.nieve}"/><g clip-path="url(#m-nieve-c)"><path class="tz-nieve" d="${t.suelo}"/></g><path class="tz-pie" d="${t.pie}"/>`;
+    + `<path class="tz-muro" id="m-repisa-m"/><path class="tz-suelo" d="${t.suelo}"/><path class="tz-suelo" id="m-repisa"/>`
+    + `<path class="tz-nieve cn-rellano" d="${t.nieve}"/><g clip-path="url(#m-nieve-c)"><path class="tz-nieve" d="${t.suelo}"/></g><path class="tz-pie" d="${t.pie}"/>`;
 }
 
 /**
