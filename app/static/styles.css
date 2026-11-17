@@ -3634,3 +3634,46 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
    etapa conserva su naranja y su grosor aunque sea intermedia. */
 .etapa.menor:not(.sig) .etapa-sombra { display: none; }
 .etapa.menor:not(.sig, .alcanzada) .etapa-tick { opacity: 0.42; }
+
+/* ============================================================================================================================
+   Campamento 21B · La tele de la sala: un reloj, ninguna tarjeta sobre el sendero, la tele que duerme y el marco de la historia.
+   Solo con `html[data-tv]` (fuera de la tele nada de esto existe). Lo animado, en `transform`/`translate`/`opacity`.
+   ============================================================================================================================ */
+.tv-reloj { display: none; }
+/* (15) Las tarjetas se colocan desde tv.js (`translate`, medido para no tapar el sendero, «Tú», los rótulos ni el saldo): aquí solo su
+   punto de partida. Hasta que tienen sitio no se ven, y si no cabe en ninguno (`data-sitio="0"`) tampoco. */
+html[data-tv] .tv-tarjeta { position: absolute; z-index: 3; left: 0; top: 0; right: auto; bottom: auto; margin: 0; }
+html[data-tv] .tv-fiesta.tv-tarjeta { z-index: 4; }
+html[data-tv] .tv-tarjeta:not([data-sitio="1"]), html[data-tv] .tv-fiesta:not([hidden]) ~ .tv-sismo.tv-tarjeta:not([data-sitio="1"]) { visibility: hidden; }
+html[data-tv] .tv-fiesta:not([hidden]) ~ .tv-sismo.tv-tarjeta[data-sitio="1"] { visibility: visible; } /* antes se escondía en pantallas angostas: ahora tiene su sitio */
+html[data-tv] .tv-tarjeta[data-asentada] { transition: translate 0.7s var(--resorte); }
+/* El sismógrafo, a la medida de la pantalla (antes, en una pantalla de 1024 px ocupaba 30rem y no cabía junto a la montaña). */
+html[data-tv] .tv-sismo.tv-tarjeta { width: clamp(16rem, 26vw, 28rem); translate: none; }
+/* Las fichas de la tele (el último movimiento y el reloj): el mismo material, opaco casi del todo para leerse sobre cualquier cosa. */
+html[data-tv] :is(.tv-pie, .tv-reloj) {
+  border-radius: 20px; background: var(--s1); background: color-mix(in srgb, var(--s1) 88%, transparent); color: var(--txt);
+  box-shadow: inset 0 1px 0 var(--filo), var(--sombra); text-shadow: none;
+}
+/* El último movimiento: una etiqueta pequeña encima del dato (se lee desde el sofá y ocupa poco a lo ancho). */
+html[data-tv] .tv-pie { display: grid; gap: 0.08em; transform: none; width: max-content; max-width: min(24em, calc(100vw - 48px)); padding: 0.5em 1em 0.6em; text-align: left; font: 600 1.1rem/1.3 var(--sans); }
+.tvu-k { font: 650 0.62rem/1.2 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--txt2); }
+.tvu-v { font-variant-numeric: tabular-nums lining-nums; }
+.tvu-v[hidden] { display: none; }
+/* El reloj: la hora en cifras finas y grandes, «a. m./p. m.» chico y el día debajo, en cursiva. */
+html[data-tv] .tv-reloj { display: grid; justify-items: end; padding: 0.42em 0.95em 0.5em; line-height: 1.05; }
+.tvr-t { display: flex; align-items: baseline; gap: 0.3em; }
+.tvr-t b { font: 300 1.55rem/1 var(--sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums lining-nums; }
+.tvr-t small { font: 650 0.62rem var(--sans); letter-spacing: 0.06em; color: var(--txt2); }
+.tvr-f { margin-top: 0.2em; font: italic 400 0.75rem/1.2 var(--serif); color: var(--txt2); white-space: nowrap; }
+/* En la fila de arriba, junto al precio, el reloj lleva el mismo fondo de cielo que la cotización y la tinta del cielo (es su barra). */
+html[data-tv] .tv-reloj[data-donde="cielo"] { background: color-mix(in srgb, var(--c0) 46%, transparent); box-shadow: none; color: var(--cielo-txt); text-shadow: 0 0 10px var(--cielo-sombra, transparent); }
+html[data-tv] .tv-reloj[data-donde="cielo"] :is(small, .tvr-f) { color: var(--cielo-txt2); }
+/* Con el nombre de la montaña bajo la marca, el saldo baja lo que haga falta para no pisarlo (con la letra de la tele en pantallas grandes
+   la fila de arriba mide más que el hueco de siempre). */
+@media (min-width: 1100px) { html[data-tv] .escena:has(.tv-nombre:not([hidden])) .saldo { top: max(110px, calc(18px + 3.3rem)); } }
+@media (max-width: 1099px) { html[data-tv] .escena:has(.tv-nombre:not([hidden])) .saldo { top: max(84px, calc(18px + 3.3rem)); } }
+/* La fiesta, cuando no cabe entera: la misma tarjeta, más baja. */
+html[data-tv] .tv-fiesta.compacta { min-width: 0; padding: 0.6em 1.1em 0.7em; border-radius: 22px; }
+html[data-tv] .tv-fiesta.compacta b { font-size: 2.2rem; }
+html[data-tv] .tv-fiesta.compacta.grande b { font-size: 2.6rem; }
+html[data-tv] .tv-fiesta.compacta span:not(.tvf-brasas) { font-size: 1rem; }

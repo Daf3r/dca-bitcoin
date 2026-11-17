@@ -143,10 +143,12 @@
   </div>
   <!-- Banderas tocables de la montaña y su tarjeta (montana.js): van aquí, después del saldo, para que el orden de tabulación siga el visual. -->
   <div class="m-banderas" id="m-banderas"></div>
-  <!-- Modo pantalla grande (tv.js): solo se ve con html[data-tv]. -->
-  <div class="tv-fiesta" id="tv-fiesta" hidden aria-live="polite"><small id="tvf-k"></small><b id="tvf-txt"></b><span id="tvf-sub"></span><span class="tvf-brasas" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
-  <div class="tv-sismo" id="tv-sismo" role="img" aria-label="" hidden></div>
-  <p class="tv-pie" id="tv-ultimo" aria-live="polite"></p>
+  <!-- Modo pantalla grande (tv.js): solo se ve con html[data-tv]. Cada tarjeta se coloca donde no tapa el sendero, «Tú», los rótulos ni el
+       saldo (campamento 21B: se mide lo dibujado y se elige el primer sitio libre; si no cabe en ninguno, no sale). -->
+  <div class="tv-fiesta tv-tarjeta" id="tv-fiesta" hidden aria-live="polite"><small id="tvf-k"></small><b id="tvf-txt"></b><span id="tvf-sub"></span><span class="tvf-brasas" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+  <div class="tv-sismo tv-tarjeta" id="tv-sismo" role="img" aria-label="" hidden></div>
+  <p class="tv-pie tv-tarjeta" id="tv-ultimo" aria-live="polite"><span class="tvu-k" id="tvu-k"></span><span class="tvu-v" id="tvu-v"></span></p>
+  <p class="tv-reloj tv-tarjeta" id="tv-reloj"><time class="tvr-t" id="tvr-t"><b id="tvr-h"></b> <small id="tvr-ap"></small></time><span class="tvr-f" id="tvr-f"></span></p>
   <button type="button" class="tv-salir" id="tv-salir">Salir de pantalla grande</button>
 </section>
 
