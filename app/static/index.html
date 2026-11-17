@@ -90,6 +90,7 @@
 <link rel="modulepreload" href="/cumple.js">
 <link rel="modulepreload" href="/arte-historia.js">
 <link rel="modulepreload" href="/arte-sellos.js">
+<link rel="modulepreload" href="/medir.js">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
@@ -708,6 +709,12 @@
     <h2>Estado del sistema</h2>
     <p class="sis-res" id="sis-res" role="status">Cargando…</p>
     <ul class="sis-lista" id="sis-lista"></ul>
+    <!-- Medidas de los aparatos (campamento 24, idea 44): lo que guardó «Medir este aparato» (/medir) en cada aparato; las últimas 50. -->
+    <h3 id="sis-med-h">Medidas de los aparatos</h3>
+    <p class="dc-nota">Cuánto tarda en verse el saldo al abrir y cuántos fotogramas por segundo da al deslizar, en el aparato donde se mide. Desde 55, fluido; bajo 50, lento.</p>
+    <ul class="sis-lista" id="sis-med" aria-labelledby="sis-med-h"></ul>
+    <details class="sis-mas" id="sis-med-mas" hidden><summary id="sis-med-mas-t"></summary><ul class="sis-lista" id="sis-med-resto"></ul></details>
+    <div class="d-bot sis-med-bot"><button type="button" class="primario" id="sis-medir">Medir este aparato</button><button type="button" id="sis-med-borrar" hidden>Borrar las medidas</button></div>
     <h3>Dispositivos con avisos</h3>
     <ul class="sis-lista" id="sis-disp"></ul>
     <h3>Peticiones de los últimos 7 días</h3>
@@ -914,6 +921,39 @@
     </div>
   </form>
 </dialog>
+
+<!-- Medir este aparato (campamento 24, idea 44): solo el admin, en /medir (esta misma app). Cuánto tardó en verse el saldo y, al pedirlo,
+     cuántos fotogramas por segundo da al deslizar; se guarda en «Estado del sistema». La píldora de abajo acompaña la prueba (fuera del
+     diálogo: durante la prueba la página tiene que verse y moverse). -->
+<dialog id="d-medir" class="d-medir" aria-labelledby="me-t">
+  <h2 id="me-t" tabindex="-1">Medir este aparato</h2>
+  <p class="me-intro">Cuánto tarda en verse el saldo y qué tan fluido va al deslizar, aquí y con lo que este aparato tiene puesto ahora.</p>
+  <div class="me-tarjetas">
+    <section class="me-tar" aria-labelledby="me-carga-t">
+      <h3 id="me-carga-t">Al abrir</h3>
+      <p class="me-cifra" id="me-carga">—</p>
+      <p class="me-pie">hasta ver el saldo</p>
+    </section>
+    <section class="me-tar" aria-labelledby="me-desl-t">
+      <h3 id="me-desl-t">Al deslizar</h3>
+      <p class="me-cifra" id="me-fps">—</p>
+      <p class="me-pie me-ver" id="me-ver"><span class="me-ver-ico" id="me-ver-ico" aria-hidden="true" hidden></span><b id="me-ver-t">por medir</b></p>
+    </section>
+  </div>
+  <p class="me-nota" id="me-carga-n"></p>
+  <p class="me-nota" id="me-fps-n"></p>
+  <p class="me-regla" id="me-regla" hidden></p>
+  <p class="me-nota" id="me-ef" hidden></p>
+  <p class="me-nota me-aparato" id="me-aparato"></p>
+  <div class="me-guardada"><p class="me-res" id="me-res" role="status"></p><button type="button" class="enlace" id="me-sistema" hidden>Ver todas las medidas</button></div>
+  <div class="d-bot me-bot">
+    <button type="button" id="me-cerrar">Cerrar</button>
+    <button type="button" class="primario" id="me-empezar">Empezar la prueba</button>
+    <button type="button" class="primario" id="me-otra" hidden>Medir otra vez</button>
+  </div>
+</dialog>
+<div class="me-pildora" id="me-pildora" aria-hidden="true" hidden><b id="me-pi-t"></b><small id="me-pi-c"></small><i class="me-barra"><i id="me-barra"></i></i></div>
+<p class="sr" id="me-sr" role="status"></p>
 
 <div class="hito-cel" id="hito-cel" hidden aria-live="polite"><p><span class="hc-lacre" id="hc-lacre" aria-hidden="true"></span><small id="hc-k">Nueva etapa</small><b id="hc-txt"></b></p></div>
 <div class="aviso" id="aviso" role="status" hidden><span id="aviso-txt"></span><button type="button" class="enlace" id="aviso-btn" hidden></button></div>

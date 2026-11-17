@@ -1912,3 +1912,102 @@ export function rejilla(ax, ay, { x1, x2, y1, y2, paso = 24, ky = 1 }) {
   for (let x = x1; x <= x2; x += paso) for (let y = y1; y <= y2; y += paso) out.push({ x, y, d: Math.abs(x - ax) + ky * Math.abs(y - ay) });
   return out.sort((a, b) => a.d - b.d);
 }
+
+// ---------------------------------------------------------------- Campamento 24 · Medir este aparato (idea 44)
+// Las cuentas de la prueba de desplazamiento, puras (medir.js mide y sistema.js enseña). La regla es del dueño: desde 55 fotogramas por
+// segundo, fluido; de 50 a 55, revisar; bajo 50, lento (y entonces lo primero que se quitaría en el teléfono es el desenfoque de la sierra
+// del fondo, `#m-bruma`; partir la escena o «hornearla» no se hace).
+export const FPS_FLUIDO = 55;
+export const FPS_LENTO = 50;
+/** Una pantalla que ya en reposo va a menos de esto (el ahorro de batería del iPhone la deja en 30) no sirve para juzgar. */
+export const HZ_MINIMO = 50;
+/** La prueba: cuánto dura (ms) y cuántas pantallas baja como mucho antes de volver arriba. */
+export const PRUEBA_MS = 7000;
+export const PRUEBA_PANTALLAS = 3;
+
+/**
+ * Dónde va la página (px desde arriba) en el instante `t` (ms) de una prueba de `T` ms que baja `D` px y vuelve: arranca y frena
+ * suave, como un dedo, y la mitad del tiempo baja y la otra mitad sube. Es la misma prueba en cualquier aparato.
+ * @param {number} t
+ * @param {number} T
+ * @param {number} D
+ * @returns {number}
+ */
+export const desplazamientoPrueba = (t, T, D) => (t <= 0 || t >= T || !(D > 0) ? 0 : Math.round((D * (1 - Math.cos((2 * Math.PI * t) / T))) / 2));
+
+/**
+ * Los intervalos (ms) entre fotogramas seguidos, a partir de sus instantes (el `performance.now()` que da requestAnimationFrame).
+ * `incluir(i)` elige cuáles: el intervalo `i` va del fotograma `i − 1` al `i` (p. ej. solo mientras se veía la montaña).
+ * @param {ArrayLike<number>} t instantes en ms, en orden (el arreglo puede ser más largo: va preasignado)
+ * @param {number} [n] cuántos instantes valen
+ * @param {(i: number) => boolean} [incluir]
+ * @returns {number[]}
+ */
+export function intervalosDe(t, n = t.length, incluir) {
+  const out = [];
+  for (let i = 1; i < n; i++) if (!incluir || incluir(i)) out.push(t[i] - t[i - 1]);
+  return out;
+}
+
+/**
+ * La frecuencia de la pantalla en reposo (fotogramas por segundo, redondeada): la mediana de los intervalos, que no se mueve por un
+ * tirón suelto. null con menos de 5 intervalos.
+ * @param {number[]} d intervalos en ms
+ * @returns {number|null}
+ */
+export function hzReposo(d) {
+  const v = d.filter((x) => x > 0).sort((a, b) => a - b);
+  if (v.length < 5) return null;
+  const m = v.length % 2 ? v[(v.length - 1) / 2] : (v[v.length / 2 - 1] + v[v.length / 2]) / 2;
+  return Math.round(1000 / m);
+}
+
+/**
+ * Lo que se vio al deslizar, a partir de los intervalos entre fotogramas: los fotogramas por segundo de media, el medio segundo más lento
+ * (`peor`, la peor ventana de `ventana` ms), el 5 % más lento (`p5`: los fotogramas por segundo del intervalo del percentil 95) y los
+ * `tirones` (intervalos de más de 1.5 veces el de la pantalla en reposo: ahí se perdió al menos un fotograma). null con menos de 2.
+ * @param {number[]} d intervalos en ms
+ * @param {{ ventana?: number, intervalo?: number }} [opciones] `intervalo`: el de la pantalla en reposo, en ms (1000 / Hz)
+ * @returns {{ fps: number, peor: number, p5: number, tirones: number, fotogramas: number, duracion: number } | null}
+ */
+export function resumenFotogramas(d, { ventana = 500, intervalo = 1000 / 60 } = {}) {
+  const v = d.filter((x) => x > 0);
+  if (v.length < 2) return null;
+  const duracion = v.reduce((a, x) => a + x, 0);
+  const r1 = (x) => Math.round(x * 10) / 10;
+  const fps = (v.length * 1000) / duracion;
+  // La peor ventana: desde cada fotograma, los que caben hasta juntar `ventana` ms (si toda la prueba es más corta, es la media).
+  let peor = fps;
+  if (duracion > ventana) {
+    let j = 0, suma = 0;
+    for (let i = 0; i < v.length; i++) {
+      while (j < v.length && suma < ventana) suma += v[j++];
+      if (suma < ventana) break;
+      peor = Math.min(peor, ((j - i) * 1000) / suma);
+      suma -= v[i];
+    }
+  }
+  const orden = [...v].sort((a, b) => a - b);
+  const p95 = orden[Math.min(orden.length - 1, Math.ceil(orden.length * 0.95) - 1)];
+  return { fps: r1(fps), peor: r1(peor), p5: r1(1000 / p95), tirones: v.filter((x) => x > intervalo * 1.5).length, fotogramas: v.length + 1, duracion: Math.round(duracion) };
+}
+
+/**
+ * Cómo fue al deslizar, con la regla del dueño: «fluido» desde 55 fps, «revisar» de 50 a 55 y «lento» bajo 50 (con la cifra redondeada,
+ * la misma que se enseña). Cuenta lo peor de toda la prueba y del rato con la montaña a la vista (la parte pesada). Si la pantalla ya iba
+ * a menos de 50 en reposo (`limitada`: el ahorro de batería del iPhone la deja en 30), con eso no se puede juzgar: «revisar».
+ * @param {{ fps: number, fps_escena?: number|null, hz?: number|null }} m
+ * @returns {{ estado: 'fluido'|'revisar'|'lento', fps: number, limitada: boolean }}
+ */
+export function veredictoFps({ fps, fps_escena = null, hz = null }) {
+  const v = Math.round(fps_escena != null ? Math.min(fps, fps_escena) : fps);
+  const limitada = hz != null && hz < HZ_MINIMO;
+  /** @type {'fluido'|'revisar'|'lento'} */
+  const estado = limitada ? 'revisar' : v >= FPS_FLUIDO ? 'fluido' : v >= FPS_LENTO ? 'revisar' : 'lento';
+  return { estado, fps: v, limitada };
+}
+/** Cómo se dice cada veredicto (con su símbolo, para no depender del color) y cómo lo pinta «Estado del sistema». */
+export const PALABRA_FPS = { fluido: 'Fluido', revisar: 'Revisar', lento: 'Lento' };
+export const ESTADO_FPS = { fluido: 'ok', revisar: 'aviso', lento: 'mal' };
+/** Lo que se revisaría con un «Lento» (la regla decidida): una línea, sin tecnicismos. */
+export const REGLA_LENTO = 'Si pasa en el iPhone, lo primero que se quitaría en el teléfono es el desenfoque de la sierra del fondo.';

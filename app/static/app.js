@@ -23,16 +23,19 @@ import './firmas.js';
 import './bautizo.js';
 import './cumple.js';
 import './anotar.js';
+import { midiendo } from './medir.js';
 
 instalarParallax();
 cargarYo();
 cargarCompras();
 consultarPrecio();
-setInterval(() => document.visibilityState === 'visible' && consultarPrecio(), 30_000);
+// (Durante la prueba de «Medir este aparato», unos segundos, no se refresca nada: un repintado a mitad sería ruido en la medida.)
+const aLaVista = () => document.visibilityState === 'visible' && !midiendo();
+setInterval(() => aLaVista() && consultarPrecio(), 30_000);
 // Compras nuevas de otros dispositivos o personas: cada minuto, solo con la app a la vista y sin hoja ni diálogo abiertos.
-setInterval(() => document.visibilityState === 'visible' && hoja.hidden && !document.querySelector('dialog[open]') && actualizarSuave(), 60_000);
+setInterval(() => aLaVista() && hoja.hidden && !document.querySelector('dialog[open]') && actualizarSuave(), 60_000);
 // El «hace X s» del precio avanza solo, sin volver a consultar.
-setInterval(() => document.visibilityState === 'visible' && S.precio && pintarPrecio(), 5_000);
+setInterval(() => aLaVista() && S.precio && pintarPrecio(), 5_000);
 // Al volver a la pestaña: precio fresco y compras al día (la base es compartida por la familia).
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;

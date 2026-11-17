@@ -4,6 +4,7 @@ import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
 import { ico } from './iconos.js';
 import { pintarInsignia } from './insignia.js';
+import { enMedir } from './medir.js';
 import { pintarTV } from './tv.js';
 import { dual, miniLinea, pegado } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
@@ -202,7 +203,7 @@ function pintarSaldo(desde) {
   const u = unidadVista();
   const valor = valorSaldo(u);
   if (mostrado !== valor || unidadPintada !== u) {
-    if (mostrado === null) pintarCifraGrande(el, 0, valor, 2000, fmtUnidad[u]); // la primera vez, sube desde cero
+    if (mostrado === null) { pintarCifraGrande(el, 0, valor, 2000, fmtUnidad[u]); marcarSaldo(); } // la primera vez, sube desde cero
     else if (unidadPintada !== u) pintarCifraGrande(el, null, valor, 0, fmtUnidad[u]); // cambió la unidad: sin conteo
     else pintarCifraGrande(el, (u === 'sats' ? desde : null) ?? mostrado, valor, u === 'usd' ? 900 : 1400, fmtUnidad[u]);
     mostrado = valor;
@@ -215,6 +216,16 @@ function pintarSaldo(desde) {
   pintarDatosEscena();
 }
 /**
+ * (Campamento 24) Una marca en la línea de tiempo de la página cuando el saldo ya está pintado con su cifra real (el conteo del odómetro
+ * empieza ahí, con cualquier nivel de efectos): «Medir este aparato» la lee. Una vez por carga; el fotograma siguiente al pintado.
+ */
+let saldoMarcado = false;
+function marcarSaldo() {
+  if (saldoMarcado) return;
+  saldoMarcado = true;
+  requestAnimationFrame(() => setTimeout(() => { try { performance.mark('libro:saldo'); } catch { /* sin la API: no hay medida */ } }, 0));
+}
+/**
  * Lo del día, una sola vez por día y por dispositivo (ideas 6, 42 y 43): el aniversario de tu primera compra, o una efeméride
  * bitcoiner, o una lluvia de estrellas real. Es un aviso temporal; nunca recomienda nada. Para probar otro día:
  * `localStorage` `libro.dia` = AAAA-MM-DD (como `libro.hora` con el cielo).
@@ -222,7 +233,7 @@ function pintarSaldo(desde) {
 let delDiaHecho = false;
 export const diaVista = () => { try { return localStorage.getItem('libro.dia') || hoyISO(); } catch { return hoyISO(); } };
 function pintarDelDia() {
-  if (delDiaHecho || !S.cargado || S.errorCarga || document.documentElement.hasAttribute('data-tv')) return;
+  if (delDiaHecho || !S.cargado || S.errorCarga || document.documentElement.hasAttribute('data-tv') || enMedir()) return;
   delDiaHecho = true;
   const hoy = diaVista();
   let txt = null;
