@@ -3897,7 +3897,7 @@ html[data-milpa="tapisca"] .v-mp-tapisca, html[data-milpa="rastrojo"] .v-mp-rast
 .v-mp-suelo { fill: color-mix(in oklab, #b79c6c var(--v-luz), var(--monte)); }
 html:is([data-milpa="siembra"], [data-milpa="jilote"], [data-milpa="doblada"]) .v-mp-suelo { fill: color-mix(in oklab, #6e4c31 var(--v-luz), var(--monte)); }
 .v-mp-surco { fill: none; stroke: color-mix(in oklab, #4a3220 var(--v-som), var(--monte-sombra)); opacity: 0.55; }
-.v-milpa path:not(.v-mp-suelo, .v-mp-tercio) { fill: none; stroke-linecap: round; }
+.v-mp:not(.v-mp-tercio), .v-mp-surco { fill: none; stroke-linecap: round; }
 .v-mp-brote { stroke: color-mix(in oklab, #93d05c var(--v-luz), var(--monte)); }
 .v-mp-mata { stroke: color-mix(in oklab, #6fa848 var(--v-luz), var(--monte)); }
 .v-mp-mata-s { stroke: color-mix(in oklab, #3e6c33 var(--v-som), var(--monte-sombra)); }
@@ -3911,7 +3911,7 @@ html:is([data-milpa="siembra"], [data-milpa="jilote"], [data-milpa="doblada"]) .
 /* El camino real: tierra polvosa con su talud, el cerco de piedra y los postes de brotón con sus retoños. */
 .v-cm { fill: color-mix(in oklab, #c9aa7e var(--v-luz), var(--monte)); }
 .v-cm-talud { fill: var(--monte-sombra); opacity: 0.5; }
-.v-camino path:is(.v-cm-cerco, .v-cm-poste, .v-cm-brote) { fill: none; stroke-linecap: round; }
+:is(.v-cm-cerco, .v-cm-poste, .v-cm-brote) { fill: none; stroke-linecap: round; }
 .v-cm-cerco { stroke: color-mix(in oklab, #9d978a var(--v-luz), var(--monte-sombra)); stroke-dasharray: 2.6 0.7 1.7 0.7 2.1 0.7; stroke-linecap: butt !important; }
 .v-cm-poste { stroke: color-mix(in oklab, #5c4632 var(--v-som), var(--monte-sombra)); }
 .v-cm-brote { stroke: color-mix(in oklab, #6fa848 var(--v-luz), var(--monte)); }
@@ -3952,7 +3952,7 @@ html[data-epoca="lluviosa"] .lago-playa { display: none; }
 html[data-epoca="seca"] .lago-nivel { transform: scale(0.84, 0.8); }
 
 /* El lago con vida: tule en la orilla, la garza quieta y el cayuco con su lámpara (de noche solo la lámpara y su reflejo). */
-.v-tule path { fill: none; stroke-linecap: round; }
+.v-tule { fill: none; stroke-linecap: round; }
 .v-tu-l { stroke: color-mix(in oklab, #82aa5c var(--v-luz), var(--monte)); }
 .v-tu-s { stroke: color-mix(in oklab, #4b6e3a var(--v-som), var(--monte-sombra)); }
 .v-tu-cab { stroke: color-mix(in oklab, #6e4a2a var(--v-som), var(--monte-sombra)); }
@@ -3983,7 +3983,7 @@ html[data-efectos="todos"][data-cielo="amanecer"] .v-cayuco { animation: v-deriv
 /* Las luces del valle: quietas y cálidas, solo de noche (con cualquier nivel de efectos). */
 .v-luces { display: none; }
 html[data-cielo="noche"] .v-luces { display: inline; }
-.v-luces path { fill: none; stroke-linecap: round; }
+.v-luces { fill: none; stroke-linecap: round; }
 .v-luz-lejos { stroke: #ffd790; opacity: 0.72; } .v-luz-cerca { stroke: var(--v-calida); opacity: 0.92; }
 
 /* Las piscuchas de octubre y noviembre (ambiente): una por persona, de colores de aquí; se mecen con el viento. */

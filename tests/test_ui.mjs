@@ -5290,7 +5290,9 @@ try {
       const cruza = (a, b) => a.x < b.right && a.r > b.left && a.y < b.bottom && a.b > b.top;
       const casas = document.querySelector('.v-pared-l');
       const ca = casas?.getBoundingClientRect();
-      const nodos = document.querySelectorAll('#m-v-fondo, #m-v-fondo *, #m-v-pie, #m-v-pie *, #m-v-ladera, #m-v-ladera *, .v-luces, .v-luces *, .lago-playa, .lago-nivel, .v-tule, .v-tule *, .v-lago-vida, .v-lago-vida *').length;
+      // Los nodos del valle: lo que está en sus capas (`#m-v-…`) y todo lo que lleva una clase `v-…` (también en el cielo, la sierra y el
+      // lago), más el agua del lago de época; los degradados de los `<defs>` de la escena no cuentan (como en el campamento 22).
+      const nodos = [...document.querySelectorAll('#montana svg *')].filter((e) => !e.closest('defs') && (e.closest('[id^="m-v-"]') || [...e.classList].some((c) => c.startsWith('v-')) || e.matches('.lago-playa, .lago-nivel'))).length;
       const saldo = document.querySelector('.saldo').getBoundingClientRect();
       const fill = (s) => { const e = document.querySelector(s); return e ? getComputedStyle(e).fill : ''; };
       return {
@@ -5308,7 +5310,7 @@ try {
         grabado: visto('.v-grabado'), grabadoTxt: document.querySelector('.v-grabado')?.textContent ?? null,
         garza: visto('.v-garza'), cuerpo: visto('.v-cy-cuerpo'), lampara: visto('.v-cy-lampara'),
         arbol: document.querySelector('.v-arbol')?.getAttribute('class') ?? null, arbolCaja: caja('.v-arbol .v-ar-tronco, .v-arbol .v-ar-tallo'), salida: caja('.salida'),
-        camino: !!document.querySelector('.v-camino .v-cm'), cohetes: document.documentElement.hasAttribute('data-cohetes'),
+        camino: !!document.querySelector('.v-cm'), cohetes: document.documentElement.hasAttribute('data-cohetes'),
         desc: document.getElementById('m-desc').textContent,
       };
     });

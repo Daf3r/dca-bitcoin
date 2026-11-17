@@ -300,8 +300,9 @@ export function pinoNavidad({ x, y, k }) {
       j++;
     }
   }
-  return `<g class="v-navidad v-pino-nav" aria-hidden="true"><path class="v-pn-tronco" d="${poli([[x - 1.1 * k, y], [x + 1.1 * k, y], [x + 0.8 * k, y - 5 * k], [x - 0.8 * k, y - 5 * k]])}"/>`
-    + `<path class="v-pn" d="${mitad(p1)}${mitad(p2)}"/><path class="v-pn-l" d="${luz}"/>${focos.map((d, i) => `<path class="v-pn-foco v-pf-${i}" d="${d}" stroke-width="${f1(1.5 * k)}"/>`).join('')}</g>`;
+  const nav = 'v-navidad v-pino-nav'; // (sin grupo: cada trazo lleva la clase que lo enseña en Navidad)
+  return `<path class="${nav} v-pn-tronco" d="${poli([[x - 1.1 * k, y], [x + 1.1 * k, y], [x + 0.8 * k, y - 5 * k], [x - 0.8 * k, y - 5 * k]])}"/>`
+    + `<path class="${nav} v-pn" d="${mitad(p1)}${mitad(p2)}"/><path class="${nav} v-pn-l" d="${luz}"/>${focos.map((d, i) => `<path class="${nav} v-pn-foco v-pf-${i}" d="${d}" stroke-width="${f1(1.5 * k)}"/>`).join('')}`;
 }
 
 // ------------------------------------------------------------------------------------------------ la milpa (idea 23)
@@ -345,12 +346,12 @@ export function milpa({ x, y, w, h, k, sol = 1, caida = 0 }) {
   }
   const g = (clase, d, extra = '') => `<path class="${clase}" d="${d}"${extra}/>`;
   const sw = (n) => ` stroke-width="${f1(n * k)}"`;
-  return `<g class="v-milpa" aria-hidden="true">${g('v-mp-suelo', suelo)}${g('v-mp-surco', surcos, sw(0.9))}`
+  return `${g('v-mp-suelo', suelo)}${g('v-mp-surco', surcos, sw(0.9))}`
     + g('v-mp v-mp-siembra v-mp-brote', brote, sw(0.8))
     + g('v-mp v-mp-jilote v-mp-mata-s', mataS, sw(1.2)) + g('v-mp v-mp-jilote v-mp-mata', mata, sw(1.1)) + g('v-mp v-mp-jilote v-mp-espiga', espiga, sw(0.75))
     + g('v-mp v-mp-doblada v-mp-dobl', doblada, sw(1.1)) + g('v-mp v-mp-doblada v-mp-mazorca', mazorca, sw(2))
     + g('v-mp v-mp-tapisca v-mp-cana', tapisca, sw(0.9)) + g('v-mp v-mp-tapisca v-mp-tercio', tercio)
-    + `${g('v-mp v-mp-rastrojo v-mp-rastro', rastrojo, sw(0.8))}</g>`;
+    + g('v-mp v-mp-rastrojo v-mp-rastro', rastrojo, sw(0.8));
 }
 
 // ------------------------------------------------------------------------------------------------ el camino real (idea 46)
@@ -371,8 +372,8 @@ export function caminoReal({ ini, ctrl, fin, ancho: [a0, a1], k }) {
   const piedras = cerco.slice(0, -1).map(([x, y], i) => `M${f1(x)} ${f1(y)}L${f1(cerco[i + 1][0])} ${f1(cerco[i + 1][1])}`).join('');
   const palos = postes.map(([x, y, h]) => `M${f1(x)} ${f1(y)}l0 ${f1(-h)}`).join('');
   const brotes = postes.map(([x, y, h]) => `M${f1(x)} ${f1(y - h)}l${f1(-0.9 * k)} ${f1(-0.8 * k)}M${f1(x)} ${f1(y - h)}l${f1(0.9 * k)} ${f1(-0.7 * k)}`).join('');
-  return `<g class="v-camino" aria-hidden="true"><path class="v-cm-talud" d="${talud}"/><path class="v-cm" d="${poli([...izq, ...der.reverse()])}"/>`
-    + `<path class="v-cm-cerco" d="${piedras}" stroke-width="${f1(1.8 * k)}"/><path class="v-cm-poste" d="${palos}" stroke-width="${f1(0.9 * k)}"/><path class="v-cm-brote" d="${brotes}" stroke-width="${f1(0.8 * k)}"/></g>`;
+  return `<path class="v-cm-talud" d="${talud}"/><path class="v-cm" d="${poli([...izq, ...der.reverse()])}"/>`
+    + `<path class="v-cm-cerco" d="${piedras}" stroke-width="${f1(1.8 * k)}"/><path class="v-cm-poste" d="${palos}" stroke-width="${f1(0.9 * k)}"/><path class="v-cm-brote" d="${brotes}" stroke-width="${f1(0.8 * k)}"/>`;
 }
 
 // ------------------------------------------------------------------------------------------------ el árbol del primer día (idea 50)
@@ -432,9 +433,9 @@ export function quebrada({ pts, k }) {
   const charcos = pts.filter((_, i) => i % 3 === 2).map(([x, y]) => `M${f1(x - 2 * k)} ${f1(y)}a${f1(2 * k)} ${f1(1 * k)} 0 1 0 ${f1(4 * k)} 0a${f1(2 * k)} ${f1(1 * k)} 0 1 0 ${f1(-4 * k)} 0Z`).join('');
   // Arriba es un hilo que nace bajo la nieve y casi no se ve; se hace agua al bajar (un degradado a lo largo de la quebrada).
   const y0 = pts[0][1], y1 = pts[N][1];
-  return `<g class="v-quebrada" aria-hidden="true"><defs><linearGradient id="m-v-q" gradientUnits="userSpaceOnUse" x1="0" y1="${f1(y0)}" x2="0" y2="${f1(y1)}"><stop offset="0" class="vq-0"/><stop offset="0.7" class="vq-1"/></linearGradient></defs><path class="v-q-cauce" d="${cauce}"/>`
+  return `<linearGradient id="m-v-q" gradientUnits="userSpaceOnUse" x1="0" y1="${f1(y0)}" x2="0" y2="${f1(y1)}"><stop offset="0" class="vq-0"/><stop offset="0.7" class="vq-1"/></linearGradient><path class="v-q-cauce" d="${cauce}"/>`
     + `<path class="v-q-llena v-q-agua" d="${llena}" fill="url(#m-v-q)"/><path class="v-q-llena v-q-brillo" d="${brillos}" stroke-width="${f1(0.7 * k)}"/>`
-    + `<path class="v-q-hilo v-q-piedra" d="${piedras}"/><path class="v-q-hilo v-q-agua" d="${hilo}${charcos}" fill="url(#m-v-q)"/></g>`;
+    + `<path class="v-q-hilo v-q-piedra" d="${piedras}"/><path class="v-q-hilo v-q-agua" d="${hilo}${charcos}" fill="url(#m-v-q)"/>`;
 }
 
 // ------------------------------------------------------------------------------------------------ el lago con vida (idea 49)
@@ -449,7 +450,7 @@ export function tule({ cx, cy, rx, ry, k }) {
       if (i % 3 === 1) cab += `M${f1(x + inc * 0.9)} ${f1(y - h * 0.9)}l${f1(inc * 0.1)} ${f1(-2.2 * k)}`;
     }
   }
-  return `<g class="v-tule" aria-hidden="true"><path class="v-tu-s" d="${som}" stroke-width="${f1(0.9 * k)}"/><path class="v-tu-l" d="${luz}" stroke-width="${f1(0.9 * k)}"/><path class="v-tu-cab" d="${cab}" stroke-width="${f1(1.5 * k)}"/></g>`;
+  return `<path class="v-tule v-tu-s" d="${som}" stroke-width="${f1(0.9 * k)}"/><path class="v-tule v-tu-l" d="${luz}" stroke-width="${f1(0.9 * k)}"/><path class="v-tule v-tu-cab" d="${cab}" stroke-width="${f1(1.5 * k)}"/>`;
 }
 /**
  * La garza quieta en la orilla y el cayuco del pescador. De noche no hay garza y del cayuco solo se ven su lámpara y su reflejo; al
@@ -463,8 +464,8 @@ export function vidaLago({ cx, cy, rx, ry, k }) {
   const pico = `M${f1(gx + 3.2 * s)} ${f1(gy - 13.1 * s)}L${f1(gx + 6 * s)} ${f1(gy - 12.4 * s)}L${f1(gx + 3.2 * s)} ${f1(gy - 12.4 * s)}Z`;
   const patas = `M${f1(gx - 0.4 * s)} ${f1(gy - 4.5 * s)}L${f1(gx - 0.2 * s)} ${f1(gy)}M${f1(gx + 0.6 * s)} ${f1(gy - 4.5 * s)}L${f1(gx + 1 * s)} ${f1(gy)}`;
   const reflejo = `M${f1(gx - 3 * s)} ${f1(gy + 1.2 * s)}Q${f1(gx)} ${f1(gy + 3.4 * s)} ${f1(gx + 2.4 * s)} ${f1(gy + 1.4 * s)}`;
-  const garza = `<g class="v-garza"><path class="v-gz-pata" d="${patas}" stroke-width="${f1(0.55 * s)}"/><path class="v-gz-reflejo" d="${reflejo}" stroke-width="${f1(1.4 * s)}"/><path class="v-gz-cuello" d="${cuello}" stroke-width="${f1(1.1 * s)}"/>`
-    + `<path class="v-gz" d="${cuerpo}"/><path class="v-gz-s" d="${sombraG}"/><path class="v-gz-pico" d="${pico}"/></g>`;
+  const garza = `<path class="v-garza v-gz-pata" d="${patas}" stroke-width="${f1(0.55 * s)}"/><path class="v-garza v-gz-reflejo" d="${reflejo}" stroke-width="${f1(1.4 * s)}"/><path class="v-garza v-gz-cuello" d="${cuello}" stroke-width="${f1(1.1 * s)}"/>`
+    + `<path class="v-garza v-gz" d="${cuerpo}"/><path class="v-garza v-gz-s" d="${sombraG}"/><path class="v-garza v-gz-pico" d="${pico}"/>`;
   // El cayuco: casco de madera (borda clara y costado en sombra), el pescador sentado con su sombrero, el remo y la lámpara.
   const qx = cx + rx * 0.08, qy = cy + ry * 0.12, l = 15 * k, h = 2.2 * k;
   const casco = poli([[qx - l / 2, qy - h * 0.6], [qx + l / 2, qy - h * 0.8], [qx + l / 2 - 2.4 * k, qy + h * 0.5], [qx - l / 2 + 2 * k, qy + h * 0.5]]);
@@ -474,17 +475,17 @@ export function vidaLago({ cx, cy, rx, ry, k }) {
     + `M${f1(px - 2.6 * k)} ${f1(py - 4.4 * k)}L${f1(px + 2.6 * k)} ${f1(py - 4.4 * k)}L${f1(px + 1 * k)} ${f1(py - 5.7 * k)}L${f1(px - 1 * k)} ${f1(py - 5.7 * k)}Z`;
   const remo = `M${f1(px + 0.8 * k)} ${f1(py - 2.6 * k)}L${f1(px + 6.4 * k)} ${f1(qy + 2.8 * k)}`;
   const lx = qx + l / 2 - 1.6 * k, ly = qy - h - 3.4 * k;
-  const cayuco = `<g class="v-cayuco"><g class="v-cy-cuerpo"><path class="v-cy-remo" d="${remo}" stroke-width="${f1(0.7 * k)}"/><path class="v-cy-casco" d="${casco}"/><path class="v-cy-borda" d="${borda}"/><path class="v-cy-pescador" d="${pescador}M${f1(lx - 0.25 * k)} ${f1(qy - h * 0.6)}L${f1(lx - 0.25 * k)} ${f1(ly)}h${f1(0.5 * k)}L${f1(lx + 0.25 * k)} ${f1(qy - h * 0.6)}Z"/></g>`
+  const cayuco = `<g class="v-cayuco"><path class="v-cy-cuerpo v-cy-remo" d="${remo}" stroke-width="${f1(0.7 * k)}"/><path class="v-cy-cuerpo v-cy-casco" d="${casco}"/><path class="v-cy-cuerpo v-cy-borda" d="${borda}"/><path class="v-cy-cuerpo v-cy-pescador" d="${pescador}M${f1(lx - 0.25 * k)} ${f1(qy - h * 0.6)}L${f1(lx - 0.25 * k)} ${f1(ly)}h${f1(0.5 * k)}L${f1(lx + 0.25 * k)} ${f1(qy - h * 0.6)}Z"/>`
     + `<circle class="v-cy-halo" cx="${f1(lx)}" cy="${f1(ly)}" r="${f1(9 * k)}" fill="url(#m-farol)"/><circle class="v-cy-lampara" cx="${f1(lx)}" cy="${f1(ly)}" r="${f1(1 * k)}"/>`
     + `<path class="v-cy-reflejo" d="M${f1(lx)} ${f1(qy + h * 0.9)}l0 ${f1(5.5 * k)}" stroke-width="${f1(1.3 * k)}"/></g>`;
-  return `<g class="v-lago-vida" aria-hidden="true">${garza}${cayuco}</g>`;
+  return garza + cayuco;
 }
 
 // ------------------------------------------------------------------------------------------------ luces, piscuchas y grabado
 /** Las luces del valle (idea 47): un punto cálido y quieto por mes del libro, en caseríos; dos trazos (las lejanas, más chicas). */
 export function lucesValle(puntos, k = 1, capa = 0) {
   const d = puntos.filter((p) => p[2] === capa).map((p) => `M${P(p)}h0.01`).join('');
-  return `<g class="v-luces" aria-hidden="true"><path class="${capa ? 'v-luz-cerca' : 'v-luz-lejos'}" d="${d}" stroke-width="${f1((capa ? 2.1 : 1.5) * Math.min(1.2, k))}"/></g>`;
+  return `<path class="v-luces ${capa ? 'v-luz-cerca' : 'v-luz-lejos'}" d="${d}" stroke-width="${f1((capa ? 2.1 : 1.5) * Math.min(1.2, k))}"/>`;
 }
 /** Las piscuchas (idea 22): una por persona con cuenta, de colores de aquí (no el de nadie: ninguna se puede asociar a una persona). */
 export function piscuchas(lista) {
