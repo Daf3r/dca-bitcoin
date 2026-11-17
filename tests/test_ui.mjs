@@ -4785,11 +4785,16 @@ try {
 
   // ---------------------------------------------------------------- campamento 21B: la tele de la sala (tarjetas que no tapan, reloj, la tele duerme, el marco y entrar con un código)
   {
-    const conLocal = (pares) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    // `marco`: el reloj de la página se adelanta (solo `Date`, no los temporizadores) hasta 4 s dentro de la ventana del marco de la historia
+    // (las :05, :15… de `lib.marcoTele`), en cada carga: así el pulso de la tele, que mira la hora de verdad, lo enseña sin esperar 10 minutos.
+    const conLocal = (pares, marco = false) => [([ps, mc]) => {
+      try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ }
+      if (mc) { const D = Date, real = D.now(), d = Math.floor((real - 300000) / 600000) * 600000 + 304000 - real; class F extends D { constructor(...a) { if (a.length) super(...a); else super(D.now() + d); } static now() { return D.now() + d; } } globalThis.Date = F; }
+    }, [pares, marco]];
     const fijo = { isMobile: false, hasTouch: false, deviceScaleFactor: 1 };
     /** Entra y abre la tele (la dirección con #tv), sin diálogos. */
-    const tele = async (srv, cuenta, { w = 1920, h = 1080, hora = 22, pares = [] } = {}) => {
-      const r = await entrar(navegador, srv, cuenta, { hora, viewport: { width: w, height: h }, ...fijo }, conLocal(pares));
+    const tele = async (srv, cuenta, { w = 1920, h = 1080, hora = 22, pares = [], marco = false, pestanas = false } = {}) => {
+      const r = await entrar(navegador, srv, cuenta, { hora, pestanas, viewport: { width: w, height: h }, ...fijo }, conLocal(pares, marco));
       await r.p.evaluate(() => { location.hash = '#tv'; });
       await r.p.reload({ waitUntil: 'networkidle' });
       await r.p.waitForTimeout(2500);
@@ -4963,6 +4968,59 @@ try {
         ok(!(await noche(c.p)).duerme, '21B·42 con el interruptor apagado, a las 23:30 la tele sigue despierta');
         eq(c.consola, [], `21B·42 interruptor: consola limpia (${c.consola.join(' | ')})`);
         await c.ctx.close();
+      }
+
+      // ---- 32 · el marco de tu historia: cada 10 minutos, 40 s, un dibujo de «Tu historia» que ya se ve bien, en la voz del libro
+      {
+        const marco = (p) => p.evaluate(async () => {
+          const lib = await import(document.querySelector('link[rel=modulepreload][href^="/lib.js"]').href);
+          const est = await import(document.querySelector('link[rel=modulepreload][href^="/estado.js"]').href);
+          const m = document.getElementById('tv-marco'), lienzo = document.getElementById('tvm-lienzo');
+          const mt = lib.marcoTele(Date.now(), lib.dibujosListos(est.R.items, lib.hoyISO())), esperado = mt?.visible ? mt.dibujo : undefined;
+          const id = lienzo.querySelector('[id^="h-"]')?.id;
+          const r = m.getBoundingClientRect();
+          return {
+            visible: !m.hidden, op: getComputedStyle(m).opacity, vh: lienzo.dataset.vh, esperado: esperado?.vh, nombre: document.getElementById('tvm-t').textContent, nombreEsperado: esperado?.nombre,
+            desc: document.getElementById('tvm-desc').textContent, svg: lienzo.querySelectorAll('svg').length, idDelMarco: id ? document.getElementById(id)?.closest('#tv-marco') === m : null,
+            pantalla: Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight, animaciones: m.getAnimations({ subtree: true }).length, ids: lienzo.querySelectorAll('[id]').length,
+          };
+        });
+        const t = await tele(sAnio, LECTOR, { hora: 20, marco: true, pares: [['libro.efectos', 'todos']] });
+        await t.p.waitForFunction(() => !document.getElementById('tv-marco').hidden && getComputedStyle(document.getElementById('tv-marco')).opacity === '1', null, { timeout: 15000 });
+        let m = await marco(t.p);
+        ok(m.visible && m.svg === 1 && m.vh === m.esperado && m.nombre === m.nombreEsperado && m.pantalla, `21B·32 a las :05 la tele enseña «${m.nombre}» (el que toca por la vuelta, de los que ya se ven bien) a toda la pantalla`);
+        ok(m.desc.length > 40 && !/\b(tu|tus|tienes|llevas)\b/i.test(m.desc), `21B·32 con su texto, en la voz del libro («${m.desc.slice(0, 70)}…»)`);
+        ok(m.idDelMarco === true, '21B·32 las definiciones del dibujo (ids h-…) que valen son las del marco');
+        await t.p.mouse.move(600, 400); await t.p.waitForTimeout(400); // un movimiento enseña «Salir»
+        const salir = await t.p.evaluate(() => { const b = document.getElementById('tv-salir').getBoundingClientRect(); return document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)?.id; });
+        ok(await t.p.evaluate(() => getComputedStyle(document.getElementById('tv-marco')).pointerEvents === 'none') && salir === 'tv-salir', `21B·32 el marco no estorba: «Salir» queda encima y a mano (${salir})`);
+        // Una compra nueva siempre gana al marco
+        await tvMod(t.p, 'tv.fiestaTV(1180000, 1211769, 31769);');
+        await t.p.waitForTimeout(300);
+        m = await marco(t.p);
+        ok(!m.visible && m.ids === 0 && await t.p.evaluate(() => !document.getElementById('tv-fiesta').hidden), '21B·32 una compra nueva gana al marco: se va de inmediato (y se vacía) y sale la fiesta');
+        await tvMod(t.p, 'tv.latir();');
+        ok(!(await marco(t.p)).visible, '21B·32 mientras dura la fiesta el marco no vuelve');
+        // Pasados los 40 s se va solo y no deja sus ids en la página
+        await t.p.waitForFunction(() => (Date.now() - 300000) % 600000 > 41_000 && document.getElementById('tv-marco').hidden && document.getElementById('tv-fiesta').hidden, null, { timeout: 60_000 });
+        await t.p.waitForTimeout(1500);
+        m = await marco(t.p);
+        ok(!m.visible && m.ids === 0 && m.esperado === undefined, '21B·32 a los 40 s se va solo y queda vacío');
+        const s = await sinTapar(t.p);
+        ok(s.fallos.length === 0 && s.vistas.includes('tv-ultimo'), `21B·32 y la tele sigue como estaba (${s.txt})`);
+        eq(t.consola, [], `21B·32 consola limpia (${t.consola.join(' | ')})`);
+        await t.ctx.close();
+        // El dueño, con la historia pintada en la página (la pestaña Historia) y efectos «ninguno»: sin fundido, en la voz del libro, y el
+        // dibujo del marco usa sus propias definiciones aunque el mismo dibujo esté en la página
+        const a = await tele(sAnio, ADMIN, { hora: 20, marco: true, pestanas: true, pares: [['libro.efectos', 'ninguno'], ['libro.pestana', 'historia']] });
+        await a.p.waitForFunction(() => !document.getElementById('tv-marco').hidden, null, { timeout: 15000 });
+        m = await marco(a.p);
+        ok(m.op === '1' && m.animaciones === 0, `21B·32 con efectos «ninguno» aparece sin fundido ni animaciones (${m.op}, ${m.animaciones})`);
+        ok(m.idDelMarco === true && !/\b(tu|tus|tienes|llevas)\b/i.test(m.desc), '21B·32 también con la cuenta del dueño habla del libro, y sus definiciones son las del marco');
+        await tvMod(a.p, 'tv.salirTV();');
+        ok(await a.p.evaluate(() => document.getElementById('tv-marco').hidden && !document.querySelector('#tvm-lienzo [id]')), '21B·32 al salir de la tele el marco se va y se vacía');
+        eq(a.consola, [], `21B·32 dueño: consola limpia (${a.consola.join(' | ')})`);
+        await a.ctx.close();
       }
     } finally { sAnio.parar(); }
     for (const esc of ['ballena', 'mil', 'hoy']) {

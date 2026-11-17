@@ -1,8 +1,9 @@
 import { $, R, S } from './estado.js';
-import { corrimientoReloj, entero, fechaCorta, fechaEscrita, horaSV, medianocheSV, modoTele, muestrasSismo, rejilla, riel, sitioLibre, tarjetaFiesta, textoReloj, usd } from './lib.js';
+import { corrimientoReloj, dibujosListos, entero, fechaCorta, fechaEscrita, horaSV, hoyISO, medianocheSV, modoTele, muestrasSismo, rejilla, riel, sitioLibre, tarjetaFiesta, textoReloj, usd } from './lib.js';
 import { sismografo } from './arte.js';
 import { sinMovimiento } from './movimiento.js';
 import { pintarMontana } from './pintar.js';
+import { dibujoDe } from './historia.js';
 
 // Modo pantalla grande (idea 59): la montaña, el saldo y el último movimiento a pantalla completa, con letra grande y sin controles,
 // para dejar la app en un televisor de casa. Se entra desde «Tu cuenta» o abriendo la dirección con `#tv` (el televisor inicia sesión una
@@ -39,6 +40,7 @@ function pintarSismo() {
 let fiestaTimer = 0;
 export function fiestaTV(antes, despues, sats) {
   const t = tarjetaFiesta(antes, despues, sats);
+  ocultarMarco(true); // una compra nueva siempre gana al marco de la historia
   const caja = $('tv-fiesta');
   $('tvf-k').textContent = t.titulo;
   $('tvf-txt').textContent = t.texto;
@@ -268,6 +270,48 @@ function dormir(si) {
   }
 }
 
+// ------------------------------------------------------------------------- el marco de la historia (campamento 21B, idea 32)
+// Cada 10 minutos (a las :05, :15, …; `lib.marcoTele`), durante 40 s, la tele enseña a toda la pantalla uno de los dibujos de «Tu historia»
+// que ya se ven bien con los datos (`lib.dibujosListos`), con su nombre y su texto, siempre en la voz del libro (es la pantalla de la
+// sala). Cuál, por el número de la vuelta: siempre el mismo a la misma hora. Entra y sale con un fundido (sin él con efectos «ninguno»).
+// La fiesta de una compra nueva siempre le gana. Los dibujos usan ids `h-…` que la hoja de estilos nombra (`url(#h-…)`): el marco va en la
+// escena, antes que «Tu historia» en la página, así que sus definiciones son las que valen mientras se ve; al irse se vacía.
+let marcoVuelta = null, fundidoMarco = 0, finMarco = 0, listosFirma = '', listosCache = [];
+function listosTele() {
+  if (!S.cargado || !R.nCompras) return [];
+  const hoy = hoyISO(), firma = `${hoy}:${R.items.length}:${R.items.at(-1)?.id ?? 0}`;
+  if (firma !== listosFirma) { listosFirma = firma; listosCache = dibujosListos(R.items, hoy); }
+  return listosCache;
+}
+function mostrarMarco(m) {
+  const caja = $('tv-marco');
+  clearTimeout(finMarco);
+  finMarco = setTimeout(() => latir(), m.faltaMs + 50); // se va a su hora (el pulso es cada 5 s)
+  if (marcoVuelta === m.vuelta && !caja.hidden && caja.classList.contains('vis')) return;
+  marcoVuelta = m.vuelta;
+  clearTimeout(fundidoMarco);
+  const d = dibujoDe(m.dibujo.vh, null, { libro: true, anio: null });
+  const lienzo = $('tvm-lienzo');
+  lienzo.innerHTML = d.svg;
+  lienzo.dataset.vh = m.dibujo.vh;
+  $('tvm-t').textContent = m.dibujo.nombre;
+  $('tvm-desc').textContent = d.desc;
+  caja.style.setProperty('--tvm-ms', `${Math.max(1000, Math.round(m.faltaMs))}ms`); // la rayita del tiempo dura lo que le queda
+  caja.hidden = false;
+  void caja.offsetWidth;
+  caja.classList.add('vis');
+}
+function ocultarMarco(ya = false) {
+  const caja = $('tv-marco');
+  clearTimeout(finMarco);
+  if (caja.hidden) return;
+  marcoVuelta = null;
+  caja.classList.remove('vis');
+  clearTimeout(fundidoMarco);
+  const quitar = () => { caja.hidden = true; $('tvm-lienzo').textContent = ''; }; // vacío: sus ids h-… no se quedan en la página
+  if (ya || sinMovimiento()) quitar(); else fundidoMarco = setTimeout(quitar, 1300);
+}
+
 // ------------------------------------------------------------------------- el pulso de la tele (cada 5 s, solo en la tele)
 let pulso = 0;
 /** Mira la hora y decide qué enseña la tele (escena, marco o reposo). `ahoraMs` se puede pasar para probar. */
@@ -276,9 +320,10 @@ export function latir(ahoraMs = Date.now()) {
   pintarReloj(ahoraMs);
   const { h, m } = horaReloj(ahoraMs);
   if (despiertaHasta && ahoraMs >= despiertaHasta) despiertaHasta = 0; // el rato despierta ya pasó
-  const estado = modoTele({ hora: h + m / 60, ahoraMs, duerme: teleDuermeActiva(), despiertaHasta, fiesta: !$('tv-fiesta').hidden, ritual: ritualEnCurso });
+  const estado = modoTele({ hora: h + m / 60, ahoraMs, duerme: teleDuermeActiva(), despiertaHasta, fiesta: !$('tv-fiesta').hidden, ritual: ritualEnCurso, listos: listosTele() });
   dormir(estado.modo === 'duerme');
   if (dormida) pintarNoche(h, m);
+  if (estado.modo === 'marco') mostrarMarco(estado.marco); else ocultarMarco();
 }
 /** Un toque o una tecla con la tele dormida la despiertan un minuto (mover el ratón no: un gato o un ratón que tiembla la encenderían). */
 function despertarUnRato() {
@@ -314,6 +359,7 @@ export async function entrarTV({ pantallaCompleta = true } = {}) {
   arrancar();
 }
 export function salirTV() {
+  ocultarMarco(true);
   delete raiz.dataset.tv;
   delete raiz.dataset.tvActivo;
   clearInterval(pulso); pulso = 0;

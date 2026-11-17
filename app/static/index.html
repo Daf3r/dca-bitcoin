@@ -149,6 +149,16 @@
   <div class="tv-sismo tv-tarjeta" id="tv-sismo" role="img" aria-label="" hidden></div>
   <p class="tv-pie tv-tarjeta" id="tv-ultimo" aria-live="polite"><span class="tvu-k" id="tvu-k"></span><span class="tvu-v" id="tvu-v"></span></p>
   <p class="tv-reloj tv-tarjeta" id="tv-reloj"><time class="tvr-t" id="tvr-t"><b id="tvr-h"></b> <small id="tvr-ap"></small></time><span class="tvr-f" id="tvr-f"></span></p>
+  <!-- El marco de la historia (idea 32): cada 10 minutos, 40 segundos, uno de los dibujos de «Tu historia» a toda la pantalla. -->
+  <section class="tv-marco" id="tv-marco" aria-labelledby="tvm-t" hidden>
+    <div class="tvm-lienzo dh-lienzo" id="tvm-lienzo"></div>
+    <div class="tvm-txt">
+      <p class="tvm-k">De la historia del libro</p>
+      <h2 class="tvm-t" id="tvm-t"></h2>
+      <p class="tvm-desc" id="tvm-desc"></p>
+      <i class="tvm-tiempo" aria-hidden="true"></i>
+    </div>
+  </section>
   <!-- La tele duerme (idea 42): de 23:00 a 5:00, casi negra, con la hora tenue y la luna de hoy; la hora se corre unos píxeles cada 5 minutos. -->
   <div class="tv-noche" id="tv-noche" hidden>
     <div class="tvn-caja" id="tvn-caja">

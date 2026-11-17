@@ -3694,3 +3694,33 @@ html[data-tv] .tv-noche.vis { opacity: 1; }
 .tvn-nota { margin: 0.2em 0 0; font: italic 400 0.875rem var(--serif); color: #777c91; }
 html[data-tv-duerme] .montana { content-visibility: hidden; }
 html[data-tv-duerme] .escena > :not(.tv-noche, .tv-salir, .montana) { visibility: hidden; }
+
+/* (32) El marco de la historia: el dibujo grande a la izquierda (o arriba, en una tele vertical) y su nombre y su texto a la derecha, sobre el
+   fondo de la página (opaco: una escena traslúcida detrás del texto distraía). Una rayita lleva el tiempo que le queda (`--tvm-ms`, solo `transform`).
+   El dibujo respira muy despacio (solo con efectos «todos»). Los colores del dibujo son los de «Tu historia» (`.dh-lienzo`). */
+.tv-marco { display: none; }
+html[data-tv] .tv-marco:not([hidden]) {
+  position: fixed; inset: 0; z-index: 12; display: grid; grid-template-columns: minmax(0, min(62vh, 42vw)) minmax(0, 26rem);
+  align-items: center; justify-content: center; gap: 0 5vw; padding: 6vh 6vw; pointer-events: none;
+  background: var(--fondo) radial-gradient(ellipse 60% 70% at 32% 50%, var(--s1), var(--fondo) 70%); /* opaco: la escena no se trasluce detrás del texto */
+  color: var(--txt); opacity: 0; transition: opacity 1.2s ease;
+}
+html[data-tv] .tv-marco.vis { opacity: 1; }
+html[data-tv] .tvm-lienzo.dh-lienzo { width: 100%; max-width: none; margin: 0; }
+.tvm-lienzo svg { display: block; width: 100%; height: auto; }
+.tvm-k { margin: 0; font: 650 0.75rem var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--naranja-txt); }
+.tvm-t { margin: 0.25em 0 0.45em; font: 500 2.5rem/1.08 var(--serif); letter-spacing: -0.01em; color: var(--txt); }
+.tvm-desc { margin: 0; font: 400 1.05rem/1.55 var(--sans); color: var(--txt2); text-wrap: pretty; }
+.tvm-tiempo { display: block; height: 3px; margin-top: 1.6em; overflow: hidden; border-radius: 3px; background: color-mix(in srgb, var(--txt) 12%, transparent); }
+.tvm-tiempo::after { content: ""; display: block; height: 100%; background: var(--naranja); transform-origin: left center; transform: scaleX(0); }
+html[data-tv] .tv-marco.vis .tvm-tiempo::after { animation: tvm-tiempo var(--tvm-ms, 40s) linear both; }
+@keyframes tvm-tiempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+html[data-tv][data-efectos="todos"] .tv-marco.vis .tvm-lienzo svg { animation: tvm-respira 40s ease-out both; }
+@keyframes tvm-respira { from { transform: scale(0.985); } to { transform: scale(1.025); } }
+/* Tele vertical o casi cuadrada: el dibujo arriba y el texto debajo, centrados. */
+@media (max-aspect-ratio: 5/4) {
+  html[data-tv] .tv-marco:not([hidden]) { grid-template-columns: minmax(0, min(78vw, 48vh)); grid-auto-rows: auto; align-content: center; justify-items: center; gap: 4vh 0; text-align: center;
+    background: var(--fondo) radial-gradient(ellipse 80% 50% at 50% 35%, var(--s1), var(--fondo) 70%); }
+  html[data-tv] .tvm-txt { max-width: 34rem; }
+}
+html[data-efectos="ninguno"] .tvm-tiempo { display: none; } /* sin movimiento, la rayita no corre: mejor no enseñarla */
