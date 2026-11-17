@@ -962,6 +962,15 @@ html:not([data-efectos="todos"]) .efecto-ambiente { display: none !important; }
 /* Pausar lo que no se ve: pestaña oculta o escena fuera de la pantalla; al volver retoman donde iban. */
 html[data-oculta] *, html[data-oculta] *::before, html[data-oculta] *::after,
 html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, html[data-escena-fuera] .escena *::after { animation-play-state: paused !important; }
+/* (Rendimiento iPhone) Mientras se desliza (efectos.js: `data-desliza` en la escena, hasta 200 ms después del último desplazamiento)
+   se queda quieto el ambiente que se repite sin fin, y retoma donde iba. Safari pinta esas animaciones en el procesador: cada una
+   repinta su trozo de la escena, y en el desplazamiento eso se sumaba a cada fotograma. Lo que acompaña a una acción (la subida de
+   «Tú», la celebración en #m-fx, la bandera que se iza, el pino que se planta, la moneda) no está en la lista y nunca se pausa.
+   Un adorno nuevo con una animación infinita se pausa solo si lleva `efecto-ambiente` (o va dentro de uno); si no, se añade aquí. */
+.escena[data-desliza] :is(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
+  .eco-fantasma, .yo-halo, .llama, .llama-i, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
+  .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
+  .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }
 
 /* ------------------------------------------------------------ cuenta y roles */
 /* Mientras no se sabe el rol (o si es lector), no se muestra nada que escriba. */

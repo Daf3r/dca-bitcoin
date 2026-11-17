@@ -6,7 +6,8 @@
 // La preferencia se recuerda por dispositivo: «auto» (por defecto) decide sola —«ninguno» si el sistema pide movimiento
 // reducido, «esenciales» si el teléfono es modesto o pidió ahorrar datos, «todos» si no—, o una de las tres a mano.
 // Además se pausa lo que no se ve: con la pestaña oculta (`data-oculta`) o con la escena fuera de la pantalla
-// (`data-escena-fuera`), el CSS pone en pausa las animaciones, que retoman donde iban.
+// (`data-escena-fuera`), el CSS pone en pausa las animaciones, que retoman donde iban; y, mientras se desliza, el ambiente de la
+// escena (`data-desliza`, ver abajo).
 (() => {
   const CLAVE = 'libro.efectos';
   const NIVELES = ['todos', 'esenciales', 'ninguno'];
@@ -82,5 +83,17 @@
     new IntersectionObserver(([e]) => {
       if (e.isIntersecting) delete raiz.dataset.escenaFuera; else raiz.dataset.escenaFuera = '1';
     }).observe(escena);
+    // (Rendimiento iPhone) Mientras se desliza con la escena a la vista, el ambiente que se repite sin fin (estrellas, nubes,
+    // luciérnagas, humo…) se queda quieto (`data-desliza` en la escena; la lista está en styles.css) y retoma donde iba 200 ms después
+    // del último desplazamiento. Safari pinta esas animaciones en el procesador: cada una repinta su trozo de la escena, y en cada
+    // fotograma del desplazamiento eso se sumaba al resto. Lo que acompaña a una acción (la subida de «Tú», la celebración) no se pausa.
+    let quieta = 0;
+    const soltar = () => { delete escena.dataset.desliza; };
+    addEventListener('scroll', () => {
+      if (raiz.dataset.escenaFuera && !escena.dataset.desliza) return; // fuera de la vista ya está en pausa
+      if (!escena.dataset.desliza) escena.dataset.desliza = '1';
+      clearTimeout(quieta);
+      quieta = setTimeout(soltar, 200);
+    }, { passive: true });
   });
 })();
