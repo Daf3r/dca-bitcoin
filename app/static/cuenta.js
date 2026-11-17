@@ -1,4 +1,4 @@
-import { cumpleHoy, entero, fechaLarga, nombreHito, textoCumple, usd } from './lib.js';
+import { cumpleHoy, entero, fechaLarga, nombreHito, primeraCompra, saludoTalDia, talDiaComoHoy, textoCumple, usd } from './lib.js';
 import { montarAvisos } from './avisos.js';
 import { cambiosPendientes, mostrarCambios } from './cambios.js';
 import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
@@ -13,7 +13,7 @@ import { abrirCumple, etiquetaCumple } from './cumple.js';
 import { abrirMontana, etiquetaMontana } from './bautizo.js';
 import { avatar, ilustracion } from './iconos.js';
 import { avisar } from './avisar.js';
-import { $, S, api } from './estado.js';
+import { $, R, S, api, vozLibro } from './estado.js';
 import { conTransicion, sinMovimiento } from './movimiento.js';
 import { novedadesMostradas } from './novedades.js';
 import { atajosActivos, fijarAtajos } from './atajos.js';
@@ -80,26 +80,46 @@ export async function cargarYo() {
     pintar();
   } catch { /* el 401 ya redirige; si falla la red, la app sigue en solo lectura */ }
 }
-/** «Buenas noches, Daf3r»: según la hora de El Salvador (cielo.js). Se renueva cada 5 minutos y al volver a la pestaña. */
-let nombreSaludo = '';
-export function pintarSaludo(nombre = nombreSaludo) {
+/**
+ * «Buenas noches, Daf3r»: según la hora de El Salvador (cielo.js). Se renueva cada 5 minutos y al volver a la pestaña.
+ * El día de tu cumpleaños, «Feliz cumpleaños» (campamento 15B). (Campamento 23) Un día como hoy en que el libro llegó a un campamento o
+ * a una etapa, hace uno o más años, el saludo lo recuerda («Daf3r, hoy hace un año llegaste a 1M sats»): uno por día, el más grande
+ * (`lib.talDiaComoHoy`). El cumpleaños gana; el día de la primera compra ya tiene su aviso (`pintarDelDia`). `pintar()` lo llama al
+ * llegar las compras con `forzar: false`: así no mide nada en cada repintado del precio si el saludo no cambió.
+ */
+let nombreSaludo = '', formasSaludo = [], claveSaludo = '';
+export function pintarSaludo(nombre = nombreSaludo, { forzar = true } = {}) {
   nombreSaludo = nombre;
   const cielo = window.libroCielo;
   if (!cielo || !nombre) return;
-  // El día de tu cumpleaños el saludo cambia (campamento 15B).
-  const cumple = S.cumple && cumpleHoy([{ nombre, cumple: S.cumple }], cielo.dia()).length;
-  $('saludo').textContent = cumple ? textoCumple(nombre) : `${cielo.saludo(cielo.hora())}, ${nombre}`;
+  const dia = cielo.dia();
+  const cumple = S.cumple && cumpleHoy([{ nombre, cumple: S.cumple }], dia).length;
+  const tal = !cumple && S.cargado && R?.camino ? talDiaComoHoy(R.camino, dia, primeraCompra(S.compras)) : null;
+  const formas = cumple ? [textoCumple(nombre)] : [...(tal ? saludoTalDia(tal, nombre, vozLibro()) : []), `${cielo.saludo(cielo.hora())}, ${nombre}`];
+  const clave = formas.join('|');
+  if (!forzar && clave === claveSaludo) return;
+  claveSaludo = clave;
+  formasSaludo = formas;
   encajarSaludo();
 }
 /**
  * Si la marca y el botón de la cuenta no caben en un renglón (teléfonos de 360 px, letra grande, un nombre largo), el saludo baja
  * un renglón y caía encima del rótulo del saldo. En ese caso no se enseña (el nombre ya está en el botón de la cuenta). Se mide en
  * el mismo fotograma (mostrar, leer, decidir): no parpadea. Se revisa al cambiar el tamaño de la cabecera.
+ * (Campamento 23) Un día como hoy hay varias formas, de la más larga a la más corta: se enseña la primera que cabe entera en su renglón
+ * (sin partirse ni cortarse con «…», que con letra grande no se parte); si ninguna, el saludo de siempre, con la regla de siempre.
  */
 function encajarSaludo() {
-  const s = $('saludo');
+  const s = $('saludo'), k = $('t-saldo');
   s.hidden = false;
-  if (s.textContent && s.getBoundingClientRect().bottom > $('t-saldo').getBoundingClientRect().top + 2) s.hidden = true;
+  const lh = Number.parseFloat(getComputedStyle(s).lineHeight) || 20;
+  for (const t of formasSaludo.slice(0, -1)) {
+    s.textContent = t;
+    const r = s.getBoundingClientRect();
+    if (r.height <= lh * 1.5 && s.scrollWidth <= s.clientWidth + 1 && r.bottom <= k.getBoundingClientRect().top + 2) return;
+  }
+  s.textContent = formasSaludo.at(-1) ?? '';
+  if (s.textContent && s.getBoundingClientRect().bottom > k.getBoundingClientRect().top + 2) s.hidden = true;
 }
 if ('ResizeObserver' in window) new ResizeObserver(() => encajarSaludo()).observe(document.querySelector('.cima'));
 setInterval(() => document.visibilityState === 'visible' && pintarSaludo(), 300_000);

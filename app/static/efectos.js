@@ -6,11 +6,25 @@
 // La preferencia se recuerda por dispositivo: «auto» (por defecto) decide sola —«ninguno» si el sistema pide movimiento
 // reducido, «esenciales» si el teléfono es modesto o pidió ahorrar datos, «todos» si no—, o una de las tres a mano.
 // Además se pausa lo que no se ve: con la pestaña oculta (`data-oculta`) o con la escena fuera de la pantalla
-// (`data-escena-fuera`), el CSS pone en pausa las animaciones, que retoman donde iban.
+// (`data-escena-fuera`), el CSS pone en pausa las animaciones, que retoman donde iban; y, mientras se desliza, el ambiente de la
+// escena (`data-desliza`, ver abajo).
 (() => {
   const CLAVE = 'libro.efectos';
   const NIVELES = ['todos', 'esenciales', 'ninguno'];
   const raiz = document.documentElement;
+  // (Rendimiento iPhone) Para medir en el aparato técnica por técnica: `/medir?sin=capas,velo,pausa,bruma` apaga esas técnicas
+  // (`html[data-sin]`): «capas», la escena en capas (montana.js); «velo», el velo como capa propia (CSS); «pausa», el ambiente quieto
+  // al deslizar (abajo); «bruma», devuelve el desenfoque de la sierra lejana en el teléfono (CSS). Solo en /medir y solo en esta
+  // pestaña (lo guarda sessionStorage: «Medir otra vez» lo conserva; `/medir?sin=` lo quita). «Medir este aparato» lo dice en el
+  // texto del aparato. La app normal nunca lo lee.
+  try {
+    if (location.pathname === '/medir') {
+      const q = new URLSearchParams(location.search);
+      if (q.has('sin')) sessionStorage.setItem('libro.sin', q.get('sin') || '');
+      const sin = (sessionStorage.getItem('libro.sin') || '').split(',').map((x) => x.trim()).filter((x) => ['capas', 'velo', 'pausa', 'bruma'].includes(x));
+      if (sin.length) raiz.dataset.sin = sin.join(' ');
+    }
+  } catch { /* sin almacenamiento: se mide con todo */ }
   // (Campamento 17) La app sale con `<html data-pestanas>` ya puesto (es lo normal: por pestañas) para que la escena tenga su alto
   // definitivo desde el primer pintado; quien eligió «Todo junto» lo quita aquí, antes de pintar (pestanas.js lo mantiene después).
   // `data-boton`: en este dispositivo flota el botón «Anotar» (la última cuenta que entró aquí era la de quien anota; lo guarda
@@ -82,5 +96,18 @@
     new IntersectionObserver(([e]) => {
       if (e.isIntersecting) delete raiz.dataset.escenaFuera; else raiz.dataset.escenaFuera = '1';
     }).observe(escena);
+    // (Rendimiento iPhone) Mientras se desliza con la escena a la vista, el ambiente que se repite sin fin (estrellas, nubes,
+    // luciérnagas, humo…) se queda quieto (`data-desliza` en la escena; la lista está en styles.css) y retoma donde iba 200 ms después
+    // del último desplazamiento. Safari pinta esas animaciones en el procesador: cada una repinta su trozo de la escena, y en cada
+    // fotograma del desplazamiento eso se sumaba al resto. Lo que acompaña a una acción (la subida de «Tú», la celebración) no se pausa.
+    let quieta = 0;
+    const soltar = () => { delete escena.dataset.desliza; };
+    addEventListener('scroll', () => {
+      if (raiz.dataset.escenaFuera && !escena.dataset.desliza) return; // fuera de la vista ya está en pausa
+      if (raiz.dataset.sin?.includes('pausa')) return; // (para medir: /medir?sin=pausa)
+      if (!escena.dataset.desliza) escena.dataset.desliza = '1';
+      clearTimeout(quieta);
+      quieta = setTimeout(soltar, 200);
+    }, { passive: true });
   });
 })();

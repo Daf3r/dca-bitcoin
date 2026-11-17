@@ -24,13 +24,15 @@ import './bautizo.js';
 import './cumple.js';
 import './anotar.js';
 import { midiendo } from './medir.js';
+import { reproduciendo } from './pelicula.js';
 
 instalarParallax();
 cargarYo();
 cargarCompras();
 consultarPrecio();
-// (Durante la prueba de «Medir este aparato», unos segundos, no se refresca nada: un repintado a mitad sería ruido en la medida.)
-const aLaVista = () => document.visibilityState === 'visible' && !midiendo();
+// (Durante la prueba de «Medir este aparato», unos segundos, no se refresca nada: un repintado a mitad sería ruido en la medida. Tampoco
+// mientras corre la película del ascenso, 15 s como mucho: un repintado de toda la página a mitad se notaría.)
+const aLaVista = () => document.visibilityState === 'visible' && !midiendo() && !reproduciendo();
 setInterval(() => aLaVista() && consultarPrecio(), 30_000);
 // Compras nuevas de otros dispositivos o personas: cada minuto, solo con la app a la vista y sin hoja ni diálogo abiertos.
 setInterval(() => aLaVista() && hoja.hidden && !document.querySelector('dialog[open]') && actualizarSuave(), 60_000);

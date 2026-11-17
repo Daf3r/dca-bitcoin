@@ -69,6 +69,7 @@
 <link rel="modulepreload" href="/montana.js">
 <link rel="modulepreload" href="/arte.js">
 <link rel="modulepreload" href="/arte-valle.js">
+<link rel="modulepreload" href="/arte-pueblo.js">
 <link rel="modulepreload" href="/odometro.js">
 <link rel="modulepreload" href="/grafico.js">
 <link rel="modulepreload" href="/valor.js">
@@ -92,6 +93,7 @@
 <link rel="modulepreload" href="/arte-historia.js">
 <link rel="modulepreload" href="/arte-sellos.js">
 <link rel="modulepreload" href="/medir.js">
+<link rel="modulepreload" href="/pelicula.js">
 <script type="module" src="/app.js"></script>
 </head>
 <body>
@@ -117,6 +119,8 @@
   <symbol id="i-zopilote" viewBox="0 0 24 24"><path d="M12 8.3c.9 0 1.3.8 1.3 1.6 2.8-.8 6-1.2 9.2-1.2-1.2 1.6-3.4 3-6.2 3.6l-2.2.6.7 3.1h-5.6l.7-3.1-2.2-.6C4.7 11.7 2.5 10.3 1.3 8.7c3.2 0 6.4.4 9.2 1.2 0-.8.6-1.6 1.5-1.6Z"/></symbol>
   <symbol id="i-bocina" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11"/></symbol>
   <symbol id="i-libro" viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.6 4 5v13c3-.4 6 0 8 1.5 2-1.5 5-1.9 8-1.5V5c-3-.4-6 0-8 1.5zM12 6.5v13"/></symbol>
+  <symbol id="i-reproducir" viewBox="0 0 24 24"><path d="M8.5 5.6v12.8a.8.8 0 0 0 1.2.7l10-6.4a.8.8 0 0 0 0-1.4l-10-6.4a.8.8 0 0 0-1.2.7Z" fill="currentColor"/></symbol>
+  <symbol id="i-pausa" viewBox="0 0 24 24"><path d="M7 5.5h3.6v13H7zM13.4 5.5H17v13h-3.6z" fill="currentColor"/></symbol>
 </svg>
 <section class="escena" aria-labelledby="t-saldo">
   <div class="montana" id="montana"></div>
@@ -219,7 +223,7 @@
     <button type="button" class="dia-abrir" id="dia-abrir" aria-expanded="false" aria-controls="dia-grabado dia-cols"><b id="dia-abrir-t">Leer el Diario de hoy</b><span id="dia-abrir-d"></span></button>
     <div class="dia-grabado" id="dia-grabado" role="img" aria-label=""></div>
     <div class="dia-cols" id="dia-cols">
-      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p id="dia-hace"></p><p class="dia-nota" id="dia-nota" hidden><span id="dia-nota-k"></span> <span class="dia-nota-q" id="dia-nota-q"></span></p></section>
+      <section class="dia-bloque" id="dia-hace-b" aria-labelledby="t-dia-hace"><h3 id="t-dia-hace">Hace un año</h3><p class="dia-tal" id="dia-tal" hidden></p><p id="dia-hace"></p><p class="dia-nota" id="dia-nota" hidden><span id="dia-nota-k"></span> <span class="dia-nota-q" id="dia-nota-q"></span></p></section>
       <section class="dia-bloque" aria-labelledby="t-dia-cla"><h3 id="t-dia-cla">Clasificados</h3><ul class="dia-clasif" id="dia-clasif"></ul></section>
       <section class="dia-bloque" aria-labelledby="t-dia-pro"><h3 id="t-dia-pro">Pronóstico de la montaña</h3><p id="dia-pron"></p></section>
     </div>
@@ -439,6 +443,11 @@
           <button type="button" class="dh-hoy-ver" id="dh-hoy-ver">Verlo de cerca</button>
         </div>
       </article>
+      <!-- La película del ascenso (campamento 23): el camino del libro, de la primera compra a hoy, sobre la montaña de hoy. -->
+      <section class="dh-peli" id="dh-peli" aria-labelledby="dh-peli-t" hidden>
+        <div class="dh-peli-txt"><h3 id="dh-peli-t">La película del ascenso</h3><p id="dh-peli-d"></p></div>
+        <button type="button" class="dh-peli-ver" id="dh-peli-ver"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-reproducir"/></svg>Ver la película</button>
+      </section>
       <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia" data-libro-aria="Cómo ver la historia del libro">
         <button type="button" data-vh="linea" aria-pressed="true">Línea</button>
         <button type="button" data-vh="tronco" aria-pressed="false">Tronco</button>
@@ -903,6 +912,30 @@
       <div class="gt-acciones"><button type="button" class="gt-editar" hidden>Editar</button><button type="button" class="gt-cerrar">Cerrar</button></div>
     </div>
   </div>
+</dialog>
+
+<!-- La película del ascenso (campamento 23, idea 29): «Tú» repite el camino día por día sobre la montaña de hoy, en 15 s, con un
+     deslizador (con efectos «ninguno», solo el deslizador). Mientras está abierta, la escena de la página sale del documento (pelicula.js):
+     sus `url(#m-…)` se resolverían contra la otra escena. El dibujo es decorativo: el rótulo y el deslizador lo dicen todo. -->
+<dialog id="d-pelicula" class="d-pelicula" aria-labelledby="pe-t" aria-describedby="pe-cap">
+  <div class="pe-escena" id="pe-escena">
+    <div class="montana pe-montana" id="pe-montana" aria-hidden="true"></div>
+    <header class="pe-cab"><h2 id="pe-t">La película del ascenso</h2><button type="button" class="pe-cerrar" id="pe-cerrar">Cerrar</button></header>
+    <div class="pe-cap" id="pe-cap">
+      <p class="pe-k" id="pe-fecha"></p>
+      <p class="pe-v"><span class="pe-cifra" id="pe-sats"></span> <em>sats</em></p>
+      <p class="pe-ev" id="pe-ev"></p>
+    </div>
+  </div>
+  <div class="pe-ctl" id="pe-ctl">
+    <button type="button" class="pe-play" id="pe-play"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-reproducir"/></svg><span class="sr" id="pe-play-t">Ver la película</span></button>
+    <div class="pe-riel">
+      <label class="sr" for="pe-rango">Día del ascenso</label>
+      <input type="range" class="pe-rango" id="pe-rango" min="0" max="1" step="1" value="0">
+      <p class="pe-fechas" aria-hidden="true"><span id="pe-desde"></span><span>Hoy</span></p>
+    </div>
+  </div>
+  <p class="sr" id="pe-sr" aria-live="polite"></p>
 </dialog>
 
 <!-- La lista como tabla (solo en pantallas anchas): los mismos movimientos, con los filtros y el orden de ahora. -->

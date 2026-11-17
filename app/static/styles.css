@@ -109,8 +109,25 @@ button, input { font: inherit; color: inherit; }
   /* Pantalla completa en móvil y tablet: bajo el botón fijo solo quedan los pinos. */
   height: 100vh; height: 100svh; min-height: 560px; max-height: 1100px;
 }
-.montana { position: absolute; inset: 0; }
+.montana { position: absolute; inset: 0; isolation: isolate; }
 .montana svg { display: block; width: 100%; height: 100%; }
+/* (Rendimiento iPhone) La escena en capas (montana.js: `enCapas`): el cielo, la sierra lejana y la media van cada una en su propio
+   <svg class="capa par par-…">, detrás del <svg> principal (que sigue siendo el primero del DOM). Con efectos «todos» (hay parallax)
+   cada capa es una capa de la GPU: al deslizar, el parallax solo mueve imágenes ya pintadas; antes, mover un <g> dentro del único
+   SVG obligaba a Safari a repintar todo el dibujo en cada fotograma. Sin «todos» no se mueven: no hace falta gastar memoria en ellas.
+   `svg.capa` no depende de `.montana` (sirve en otro anfitrión posicionado; montana.js le aísla la pila). Ningún <svg> de la escena
+   recibe toques (debajo hay capas y la luna tiene que poder tocarse: sus tres toques giran la moneda). */
+svg.capa { position: absolute; inset: 0; z-index: -1; display: block; width: 100%; height: 100%; }
+/* La escala del parallax (parallax.js la repite con el desplazamiento) ya desde el primer fotograma: la capa se rasteriza a su tamaño
+   final y nunca vuelve a rasterizarse (si se pintara a 1 y luego se agrandara un 5 %, se vería borrosa). Solo en `#montana` (la escena
+   de la app y de la entrada, que son las que tienen parallax): otra escena sin parallax (la película) ve sus capas a escala 1, como antes. */
+html[data-efectos="todos"] #montana > svg.capa { will-change: transform; transform: scale(1.05); }
+/* El frente (montana.js: `enCapas`): lo que cambia con el avance (el camino recorrido, «Tú», los faroles, las luminarias, la celebración),
+   encima del principal y en su propia capa siempre que haya animación: al subir o en la película solo se repinta él, no la montaña. */
+svg.frente { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+html:not([data-efectos="ninguno"]) svg.frente { will-change: transform; }
+.montana svg, svg.capa, svg.frente { pointer-events: none; }
+:is(.montana, svg.capa) .luna { pointer-events: visiblePainted; }
 /* Grano estático (un PNG de 96 px en mosaico, mezclado al 5 %): disimula las bandas de los degradados largos en pantallas
    oscuras y da textura de papel. No se anima; fuera en modo ligero. */
 .montana::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: url("/grano.png") repeat; background-size: 96px 96px; opacity: 0.028; } /* motas claras y oscuras con transparencia (sin mix-blend-mode, que en iPhone obliga a recomponer toda la escena) */
@@ -187,6 +204,8 @@ html[data-efectos="todos"][data-cielo="noche"] .fugaz { animation: fugaz 34s lin
 @media (min-width: 900px) {
   html[data-efectos="todos"]:not([data-ligero]) .lejos { filter: url(#m-bruma); }
 }
+/* (Para medir en el aparato: /medir?sin=bruma, ver efectos.js) el desenfoque también en el teléfono, como antes. */
+html[data-sin~="bruma"][data-efectos="todos"]:not([data-ligero]) .lejos { filter: url(#m-bruma); }
 /* Nubes y niebla: el color sale del cielo de la hora (--nube). */
 .nube path { fill: url(#m-nube); }
 .niebla { opacity: 0.85; }
@@ -213,7 +232,8 @@ html[data-efectos="todos"][data-mueve="torogoz"] .ave { animation: ave 52s linea
   html[data-efectos="todos"] .estrella.t1, html[data-efectos="todos"] .estrella.t2, html[data-efectos="todos"] .estrella.t3, html[data-efectos="todos"] .estrella.t4 { animation-timing-function: steps(15); }
 }
 .escena-velo { display: none; position: absolute; inset: 0; z-index: 0; background: var(--fondo); opacity: 0; pointer-events: none; }
-html[data-efectos="todos"] .escena-velo { display: block; }
+html[data-efectos="todos"] .escena-velo { display: block; will-change: opacity; } /* (rendimiento iPhone) su opacidad cambia en cada fotograma del desplazamiento: como capa propia de la GPU no obliga a repintar la escena que tapa */
+html[data-sin~="velo"] .escena-velo { will-change: auto; } /* (para medir en el aparato: /medir?sin=velo, ver efectos.js) */
 /* La escena despierta al abrir (entrada.js, solo con todos los efectos): `translate` es independiente de `transform`, así que no
    pisa el parallax. */
 @keyframes asienta { from { translate: 0 18px; opacity: 0.4; } to { translate: none; opacity: 1; } }
@@ -950,6 +970,22 @@ html:not([data-efectos="todos"]) .efecto-ambiente { display: none !important; }
 /* Pausar lo que no se ve: pestaña oculta o escena fuera de la pantalla; al volver retoman donde iban. */
 html[data-oculta] *, html[data-oculta] *::before, html[data-oculta] *::after,
 html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, html[data-escena-fuera] .escena *::after { animation-play-state: paused !important; }
+/* (Rendimiento iPhone) Mientras se desliza (efectos.js: `data-desliza` en la escena, hasta 200 ms después del último desplazamiento)
+   se queda quieto el ambiente que se repite sin fin, y retoma donde iba. Safari pinta esas animaciones en el procesador: cada una
+   repinta su trozo de la escena, y en el desplazamiento eso se sumaba a cada fotograma. Lo que acompaña a una acción (la subida de
+   «Tú», la celebración en #m-fx, la bandera que se iza, el pino que se planta, la moneda) no está en la lista y nunca se pausa.
+   Un adorno nuevo con una animación infinita se pausa solo si lleva `efecto-ambiente` (o va dentro de uno); si no, se añade aquí.
+   Lo mismo mientras corre la película del ascenso (pelicula.js: `data-corre` en su escena): «Tú» sube, los faroles se encienden y
+   el bosque brota (no están en la lista); el resto del paisaje espera quieto y retoma al detenerse. La lista va en `:where` (sin peso)
+   para que la regla de abajo pueda dejar correr en la película lo que cruza de paso. */
+:is(.escena[data-desliza], .pe-montana[data-corre]) :where(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
+  .eco-fantasma, .yo-halo, .yo-nav, .llama, .llama-i, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
+  .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
+  .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }
+/* En la película son 15 s, no un instante: lo que cruza de paso (una estrella fugaz, el torogoz, los cohetes, la llovizna, los pétalos,
+   las bandadas, los zompopos, el relámpago) se quedaría colgado a medio camino. Eso sigue: va y viene, y pesa poco. */
+.pe-montana[data-corre] :is(.fugaz, .ave, .ave *, .cohetes, .cohetes *, .gotas, .gotas *, .petalos, .petalos *, .v-aza, .v-aza *, .v-peri,
+  .v-peri *, .v-zompopos, .v-zompopos *, .v-rayo, .v-rayo *) { animation-play-state: running !important; }
 
 /* ------------------------------------------------------------ cuenta y roles */
 /* Mientras no se sabe el rol (o si es lector), no se muestra nada que escriba. */
@@ -4063,6 +4099,7 @@ html[data-cielo="noche"] :is(.v-vaca-pie, .v-garcita) { display: none; }
 /* 57, 60 y 61 · Lo que se mueve (ambiente: solo con «todos», y siempre uno a la vez, `data-mueve` de cielo.js): los azacuanes de octubre
    y abril, los pericos del atardecer, los zompopos de mayo y los relámpagos lejanos de las noches de lluvia. Solo transform y opacity. */
 .v-ave, .v-zompopos, .v-rayo { display: none; }
+
 html[data-mueve="azacuanes"] .v-aza, html[data-mueve="pericos"] .v-peri, html[data-mueve="zompopos"] .v-zompopos, html[data-mueve="relampagos"] .v-rayo { display: inline; }
 /* Los azacuanes: un remolino de gavilanes que planea en círculos (alas abiertas, sin aletear) y pasa despacio. */
 .v-aza { fill: none; stroke: color-mix(in oklab, #34281f 72%, var(--c2)); stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
@@ -4091,4 +4128,262 @@ html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite
 @media (max-width: 899px) {
   html[data-mueve="azacuanes"] .v-aza { animation-timing-function: steps(330), steps(52); }
   html[data-mueve="zompopos"] .v-zompopos { animation-timing-function: steps(56); }
+}
+
+/* ---------------------------------------------------------------- Campamento 22C · el valle, de verdad (arte-pueblo.js) */
+/* Colores de pueblo de aquí (cal, añil, ocre, rosa y verde agua) mezclados con la hora como el resto del valle: de día se ve su color;
+   de noche manda la noche (y las luces). */
+.montana { --v-cal: #f3ead9; --v-anil: #5d88bd; --v-ocre: #dca757; --v-rosa: #dc8f88; --v-menta: #86c2a2; }
+.v-c-cal { --vc: var(--v-cal); } .v-c-anil { --vc: var(--v-anil); } .v-c-ocre { --vc: var(--v-ocre); } .v-c-rosa { --vc: var(--v-rosa); } .v-c-menta { --vc: var(--v-menta); }
+/* El llano: el pasto de la época, con luz arriba y más hondo abajo. */
+.vll-0 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 74%, var(--luz-roca)) calc(var(--v-luz) - 6%), var(--monte)); }
+.vll-1 { stop-color: color-mix(in oklab, var(--v-pasto) calc(var(--v-luz) - 14%), var(--monte)); }
+.vll-2 { stop-color: color-mix(in oklab, var(--v-pasto) calc(var(--v-som) - 10%), var(--monte-sombra)); }
+.v-llano-filo { fill: none; stroke: var(--luz-roca); stroke-opacity: calc(0.18 + var(--halo-a, 0.2) * 0.4); stroke-width: 1.2; }
+/* Las casas: el frente de cara (luz a medias) y el hastial al astro (más luz). */
+.v-frente { fill: color-mix(in oklab, color-mix(in oklab, var(--vc) 84%, var(--monte-sombra)) var(--v-luz), var(--monte)); }
+.v-pueblo .v-pared-l { fill: color-mix(in oklab, color-mix(in oklab, var(--vc) 90%, var(--luz-roca)) calc(var(--v-luz) + 10%), var(--monte)); }
+.v-pueblo .v-alero { fill: #1a0e08; fill-opacity: 0.26; }
+.v-teja { fill: none; stroke: color-mix(in oklab, var(--v-teja-s) var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
+.v-poste { fill: none; stroke: color-mix(in oklab, #5b3b22 var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
+/* La iglesia: encalada, con la torre en sombra de un lado, la cúpula de ladrillo y los huecos oscuros (encendidos de noche). */
+.v-ig-frente { fill: color-mix(in oklab, var(--v-cal) calc(var(--v-luz) + 14%), var(--monte)); }
+.v-ig-lado { fill: color-mix(in oklab, color-mix(in oklab, var(--v-cal) 88%, var(--luz-roca)) calc(var(--v-luz) + 8%), var(--monte)); }
+.v-ig-torre { fill: color-mix(in oklab, color-mix(in oklab, var(--v-cal) 90%, var(--monte-sombra)) calc(var(--v-luz) + 4%), var(--monte)); }
+.v-ig-torre-s { fill: color-mix(in oklab, var(--v-adobe-s) var(--v-som), var(--monte-sombra)); }
+.v-ig-cupula { fill: color-mix(in oklab, #c9774b var(--v-luz), var(--monte)); }
+.v-ig-moldura { fill: none; stroke: color-mix(in oklab, #b9a68a var(--v-som), var(--monte-sombra)); }
+.v-ig-cruz { fill: none; stroke: color-mix(in oklab, #3a2c22 70%, var(--monte-sombra)); stroke-linecap: round; }
+.v-ig-hueco, .v-ig-ventana { fill: color-mix(in oklab, #2e2219 60%, var(--monte-sombra)); }
+.v-ig-campana { fill: color-mix(in oklab, #b48a3a var(--v-luz), var(--monte-sombra)); }
+html[data-cielo="noche"] .v-ig-frente { fill: color-mix(in oklab, #f6d8a6 42%, var(--monte)); }
+html[data-cielo="noche"] :is(.v-ig-hueco, .v-ig-ventana) { fill: color-mix(in oklab, var(--v-calida) 70%, #7a3a12); }
+html:is([data-cielo="atardecer"], [data-cielo="amanecer"]) .v-ig-ventana { fill: color-mix(in oklab, var(--v-calida) 55%, #5a2e12); }
+/* La plaza: el empedrado y su bordillo; los faroles, que de noche dan su luz. */
+.v-plaza { fill: color-mix(in oklab, #d9c6a0 var(--v-luz), var(--monte)); }
+.v-plaza-borde { fill: none; stroke: color-mix(in oklab, #8f7a5c var(--v-som), var(--monte-sombra)); }
+.v-farol-poste { fill: none; stroke: color-mix(in oklab, #2a2725 74%, var(--monte-sombra)); stroke-linecap: round; }
+.v-farol-lampara { fill: color-mix(in oklab, #2a2725 70%, var(--monte-sombra)); }
+.v-farol-luz { fill: none; stroke: var(--v-calida); stroke-linecap: round; display: none; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-farol-luz { display: inline; }
+html[data-cielo="noche"] .v-farol-lampara { fill: color-mix(in oklab, var(--v-calida) 60%, #fff4d8); }
+/* El mango de la plaza (en Navidad deja su sitio al pino). */
+.v-pz-tronco { fill: var(--corteza, #4a3a2c); }
+html[data-navidad] .v-sin-navidad { display: none; }
+/* Los cordeles de la plaza: en Navidad llevan foquitos; en las fiestas, banderitas de sus colores. */
+.v-cordel { fill: none; stroke: color-mix(in oklab, #2a2018 60%, var(--monte-sombra)); stroke-opacity: 0.6; display: none; }
+html:is([data-navidad], [data-fiesta="agostinas"], [data-fiesta="patrias"]) .v-cordel { display: inline; }
+.v-fiesta { display: none; }
+html:is([data-fiesta="agostinas"], [data-fiesta="patrias"]) .v-fiesta { display: inline; }
+.v-band-0 { fill: color-mix(in oklab, var(--pp-1, #2f62c9) var(--pp-luz, 88%), var(--monte-sombra)); }
+.v-band-1 { fill: color-mix(in oklab, var(--pp-2, #f3eee2) var(--pp-luz, 88%), var(--monte-sombra)); }
+.v-band-2 { fill: color-mix(in oklab, var(--pp-3, #d0453b) var(--pp-luz, 88%), var(--monte-sombra)); }
+/* La gente y los animales: siluetas quietas. */
+.v-gente { fill: color-mix(in oklab, #2b2019 72%, var(--monte-sombra)); }
+.v-animal { fill: color-mix(in oklab, #6b4a2e var(--v-som), var(--monte-sombra)); }
+.v-gallina { fill: color-mix(in oklab, #b8643a var(--v-luz), var(--monte-sombra)); }
+/* El pino de Navidad de la plaza: guirnalda dorada, esferas y su lazo. */
+.v-pn-guirnalda { fill: none; stroke: #e8c25a; stroke-linecap: round; stroke-opacity: 0.9; }
+.v-pe-0 { fill: #d23a3a; } .v-pe-1 { fill: #f0c24a; }
+.v-pn-lazo { fill: #c8323a; }
+/* El portal del nacimiento: la champa de palma, los horcones, las figuras contra la luz del pesebre y, de noche, su halo. */
+.v-belen-fondo { fill: color-mix(in oklab, #ffcf7e 62%, var(--monte-sombra)); }
+html[data-cielo="noche"] .v-belen-fondo { fill: color-mix(in oklab, #ffd58c 86%, #fff3d0); }
+.v-belen-halo { display: none; }
+html[data-navidad]:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-belen-halo { display: inline; }
+html[data-navidad]:not([data-cielo="noche"]):not([data-cielo="atardecer"]) .v-belen-halo { display: none; } /* (gana a `html[data-navidad] .v-navidad`: de día, sin halo) */
+.v-belen-horcon { fill: color-mix(in oklab, #5b3b22 var(--v-som), var(--monte-sombra)); }
+.v-belen-figuras { fill: #2a1a10; }
+.v-belen-nino { fill: none; stroke: #fff4d6; stroke-linecap: round; }
+.v-belen-techo { fill: color-mix(in oklab, #c9a35a var(--v-luz), var(--monte)); }
+.v-belen-palma { fill: none; stroke: color-mix(in oklab, #7a5a2a var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
+/* El primer plano: lo más cercano, más oscuro y saturado que el valle (matas, magueyes, zacate y los árboles de las orillas). */
+.montana { --v-pp: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 50%, #10301d) calc(var(--v-luz) - 22%), var(--pino1)); }
+.v-pp-arbol { fill: color-mix(in oklab, var(--pino1) 70%, var(--v-pp)); }
+.v-pp-arbol-l { fill: color-mix(in oklab, var(--v-pp) 80%, var(--luz-roca)); fill-opacity: 0.5; }
+.v-pp-mata { fill: var(--v-pp); }
+.v-pp-mata-l { fill: color-mix(in oklab, var(--v-pp) 74%, var(--luz-roca)); }
+.v-pp-zacate { fill: color-mix(in oklab, var(--v-pp) 82%, #000); }
+.v-pp-zacate-l { fill: color-mix(in oklab, var(--v-pp) 70%, var(--v-pasto)); }
+.v-pp-maguey { fill: color-mix(in oklab, #4c7c69 calc(var(--v-luz) - 8%), var(--pino1)); }
+.v-pp-flor { fill: none; stroke: color-mix(in oklab, #f4c95a calc(var(--v-luz) + 10%), var(--monte-sombra)); stroke-linecap: round; }
+/* El bosque de tus compras, al pie de la montaña: dos verdes que se alternan. */
+.pino-2b { fill: color-mix(in srgb, var(--pino0) 60%, #2e7a4c); }
+/* Los campos del llano: tres tonos de parcela (el tierno, el hondo y el de la época), surcos y setos de matas. */
+.v-parc-0 { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 70%, #9fd46a) calc(var(--v-luz) - 4%), var(--monte)); }
+.v-parc-1 { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 82%, #1f5a2c) calc(var(--v-luz) - 10%), var(--monte)); }
+.v-parc-2 { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 45%, #c9a45c) calc(var(--v-luz) - 6%), var(--monte)); }
+.v-surco { fill: none; stroke: color-mix(in oklab, #3e2c1c var(--v-som), var(--monte-sombra)); stroke-opacity: 0.35; }
+.v-parc-3 { fill: color-mix(in oklab, color-mix(in oklab, #8a6440 70%, var(--v-pasto)) calc(var(--v-luz) - 12%), var(--monte)); }
+.v-loma-campo { fill: none; stroke: var(--luz-roca); stroke-opacity: calc(0.12 + var(--halo-a, 0.2) * 0.35); stroke-linecap: round; }
+.v-arbolito { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 40%, #1d5a32) calc(var(--v-luz) - 8%), var(--pino0)); }
+.v-arbolito-l { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 55%, #6fbf5a) calc(var(--v-luz) + 2%), var(--pino0)); }
+.v-arbolito-tronco { fill: none; stroke: color-mix(in oklab, #4a3423 var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
+/* La calle de tierra y, de noche, los charcos de luz de las puertas, los faroles y la iglesia. */
+.v-calle { fill: color-mix(in oklab, color-mix(in oklab, var(--v-tierra) 80%, #e3cfa6) var(--v-luz), var(--monte)); }
+.v-charco { display: none; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"], [data-cielo="amanecer"]) .v-charco { display: inline; fill: #ffc874; fill-opacity: 0.16; }
+html[data-cielo="noche"] .v-charco-c { fill-opacity: 0.26; }
+/* El pino de la plaza titila suave con «todos»; en el teléfono, a saltos (como lo demás que se mueve en la escena). */
+@media (max-width: 899px) { html[data-efectos="todos"] .v-pn-foco { animation-timing-function: steps(6); } }
+
+/* ---- Campamento 22C · Navidad en toda la montaña (1 de diciembre al 6 de enero): la subida, los hitos, el bosque y «Tú». Encendido y
+   quieto con cualquier nivel de efectos; con «todos», los foquitos titilan suave (en el teléfono, a saltos). */
+.ns-off, .ns-glow, .ns-on, .nb-foco { fill: none; stroke-linecap: round; }
+/* Las luminarias del sendero: encendidas hasta donde llegaste; las de más arriba, apagadas (vidrio sin luz). */
+.ns-off { stroke: color-mix(in oklab, #f6efe2 34%, var(--monte)); stroke-width: 2.4; stroke-opacity: 0.8; }
+.ns-on { stroke-width: 3.3; }
+.ns-0 { stroke: #ffd76e; } .ns-1 { stroke: #ff6f62; } .ns-2 { stroke: #86eaa0; }
+.ns-glow { stroke: #ffcb78; stroke-width: 10; display: none; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) .ns-glow { display: inline; stroke-opacity: 0.2; }
+html:not([data-cielo="noche"]) .ns-on { stroke-width: 3; }
+/* La corona de «Tú»: un aro de foquitos alrededor del punto (tres colores a destiempo). */
+.yo-nav { fill: none; stroke-width: 2.1; stroke-linecap: round; stroke-dasharray: 0 6.7; }
+.yo-nav-0 { stroke: #ffd76e; } .yo-nav-1 { stroke: #ff6f62; stroke-dashoffset: -2.23; } .yo-nav-2 { stroke: #86eaa0; stroke-dashoffset: -4.46; }
+/* La corona de cada hito y de la meta. */
+.nh-corona { fill: none; stroke: #2f7d45; stroke-width: 1.15; }
+html[data-cielo="noche"] .nh-corona { stroke: #3c9a58; }
+.nh-bola { fill: #ffcf5a; }
+.nh-lazo { fill: #d8343c; }
+/* Los foquitos del bosque. */
+.nb-foco { stroke-width: 1.9; }
+.nb-0 { stroke: #ffd76e; } .nb-1 { stroke: #ff6f62; } .nb-2 { stroke: #86eaa0; }
+html:not([data-cielo="noche"]):not([data-cielo="atardecer"]) .nb-foco { stroke-opacity: 0.8; }
+@keyframes nav-gira { to { stroke-dashoffset: -20.1; } }
+html[data-efectos="todos"] .yo-nav { animation: nav-gira 9s linear infinite; }
+html[data-efectos="todos"] .yo-nav-1 { animation-delay: -1s; } html[data-efectos="todos"] .yo-nav-2 { animation-delay: -2s; }
+@media (max-width: 899px) {
+  html[data-efectos="todos"] .yo-nav { animation-timing-function: steps(36); }
+}
+/* En Navidad, las noches tienen las estrellas algo más vivas. */
+html[data-navidad][data-cielo="noche"]:not([data-entrada="usuario"]) .estrella { opacity: calc(var(--estrellas, 0.75) * 1.25); }
+/* La ladera baja (arte-pueblo.js: laderaBaja): claros de pasto, bosquecillos con su lado de luz y peñas facetadas. */
+.lb-claro { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 62%, var(--luz-roca)) calc(var(--v-luz) - 18%), var(--monte)); fill-opacity: 0.5; }
+.lb-pino-s { fill: color-mix(in oklab, var(--pino1) 80%, var(--monte-sombra)); }
+.lb-pino-l { fill: color-mix(in oklab, color-mix(in srgb, var(--pino0) 66%, #3f8f55) 82%, var(--luz-roca)); }
+.lb-pino-f { fill: #000; fill-opacity: 0.12; }
+.lb-roca-s { fill: color-mix(in oklab, var(--monte-sombra) 80%, #6b6f72); }
+.lb-roca-l { fill: color-mix(in oklab, var(--monte) 55%, var(--luz-roca)); }
+.lb-roca-t { fill: color-mix(in oklab, var(--monte) 30%, var(--luz-roca)); }
+html[data-cielo="noche"] .lb-roca-l { fill: color-mix(in oklab, var(--monte) 70%, var(--luz-roca)); }
+html[data-cielo="noche"] .lb-roca-t { fill: color-mix(in oklab, var(--monte) 55%, var(--luz-roca)); }
+/* El relieve, más legible (antes casi no se veía), y de noche con la luz de la luna en los planos y los filos. */
+.rel-luz { opacity: 0.07; } .rel-luz.rl2 { opacity: 0.12; }
+.rel-sombra { opacity: 0.24; } .rel-sombra.rs2 { opacity: 0.38; }
+html[data-cielo="noche"] .rel-luz { opacity: 0.1; } html[data-cielo="noche"] .rel-luz.rl2 { opacity: 0.17; }
+html[data-cielo="noche"] .rel-filo { stroke-opacity: 0.32; }
+/* En Navidad las matas del primer plano son flor de pascua. */
+.v-pascua { fill: color-mix(in oklab, #d7232f calc(var(--v-luz) + 22%), var(--monte-sombra)); }
+.v-pascua-c { fill: none; stroke: #f4c94a; stroke-linecap: round; }
+/* Las luminarias del camino real (Navidad): farolitos de papel cálidos; de noche, con más luz. */
+.v-cm-luminaria { fill: none; stroke: #ffc86a; stroke-linecap: round; stroke-opacity: 0.8; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-cm-luminaria { stroke: #ffd98c; stroke-opacity: 1; }
+/* Fiestas patrias (13 al 15 de septiembre): la bandera azul y blanca en la plaza. */
+.v-patrias { display: none; }
+html[data-fiesta="patrias"] .v-patrias { display: inline; }
+.v-asta { fill: none; stroke: color-mix(in oklab, #3a3530 70%, var(--monte-sombra)); stroke-linecap: round; }
+.v-bandera-azul { fill: color-mix(in oklab, #1f5fbf calc(var(--v-luz) + 22%), var(--monte-sombra)); }
+.v-bandera-blanca { fill: color-mix(in oklab, #f7f3ea calc(var(--v-luz) + 22%), var(--monte-sombra)); }
+
+/* ===================================================================================================================================
+   Campamento 23 · Tu camino, otra vez: «Tal día como hoy» (idea 41) y la película del ascenso (idea 29).
+   =================================================================================================================================== */
+/* Tal día como hoy en el Diario: encabeza «Hace un año», con la letra de las citas y una raya de la tinta del Diario. */
+.dia-bloque .dia-tal { margin: 0 0 8px; font: italic 500 1.0625rem/1.45 var(--serif); }
+.dia-tal[hidden] { display: none; }
+
+/* La entrada a la película en «Tu historia», bajo el dibujo de hoy: una tarjeta baja con el material de las tarjetas y su botón con el
+   mismo trazo que «Verlo de cerca» (abre algo para mirar; el naranja relleno queda para anotar y guardar). */
+.dh-peli { display: grid; gap: 10px 18px; margin: 0 0 16px; padding: 16px 18px 18px; border-radius: 22px;
+  background-color: var(--s1); background-image: var(--velo-tarjeta); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
+.dh-peli[hidden] { display: none; }
+.historia-pg .dh-peli h3 { margin: 0; font: 500 1.25rem/1.2 var(--serif); color: var(--txt); }
+.dh-peli-txt p { margin: 3px 0 0; font-size: 0.9375rem; line-height: 1.45; color: var(--txt2); }
+.dh-peli-ver { justify-self: start; display: inline-flex; align-items: center; gap: 10px; min-height: var(--toque, 48px); padding: 0 22px 0 18px; border: 2px solid var(--naranja); border-radius: 999px;
+  background: color-mix(in srgb, var(--naranja) 12%, var(--s1)); color: var(--txt); font: 700 1rem var(--sans); cursor: pointer; }
+.dh-peli-ver .ico { width: 1.05em; height: 1.05em; color: var(--naranja-txt); }
+@media (hover: hover) and (pointer: fine) { .dh-peli-ver:hover { background: color-mix(in srgb, var(--naranja) 22%, var(--s1)); } }
+.dh-peli-ver:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
+@media (min-width: 700px) { .dh-peli { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 16px 22px; } }
+/* «Ver ese día» en la línea de «Tu historia»: un enlace pequeño bajo la etapa, con su ▶ (zona de toque de 48 px, como todos). */
+.h-ev .h-ver { display: flex; width: fit-content; gap: 6px; margin: -8px 0 -10px; font-size: 0.8125rem; color: var(--txt2); text-decoration-thickness: 1.5px; text-decoration-color: color-mix(in srgb, var(--naranja) 60%, transparent); }
+.h-ev .h-ver .ico { width: 0.8em; height: 0.8em; color: var(--naranja-txt); }
+.h-pasos li .h-ver { min-height: var(--toque); margin: -12px 0; }
+
+/* La película del ascenso: un diálogo a pantalla completa. Arriba, sobre el cielo, el título, «Cerrar» y el saldo de ese día (como la
+   cabecera de la app: van uno bajo otro, así un título partido en dos renglones o la letra grande no los enciman); la montaña de hoy
+   ocupa el resto; abajo, el botón y el deslizador. En escritorio y acostado, botón y deslizador van a la izquierda, bajo el saldo del
+   día, donde la montaña deja sitio (una rejilla: `.pe-escena` se disuelve en ella). */
+.d-pelicula { width: 100vw; max-width: none; height: 100vh; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--fondo); color: var(--txt); overflow: hidden; }
+.d-pelicula[open] { display: flex; flex-direction: column; }
+.d-pelicula::backdrop { background: var(--fondo); }
+/* (Rendimiento iPhone) El fondo de la película es opaco, así que el desenfoque de lo de detrás («Cristal», `dialog::backdrop`) no se ve
+   nunca, ni durante su fundido (el fondo opaco lo tapa por dentro); pero Safari lo recalculaba mientras corre la película. */
+html:not([data-ligero]) dialog.d-pelicula::backdrop { backdrop-filter: none; }
+html:is([data-efectos="todos"], [data-efectos="esenciales"]) .d-pelicula[open] { animation: pe-entra 0.3s ease-out; }
+@keyframes pe-entra { from { opacity: 0; } }
+.pe-escena { position: relative; flex: 1 1 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; background: var(--c0); }
+.pe-montana { --pie: 48; z-index: 0; }
+/* El bosque crece con las compras de cada día (montana.js: fotograma): lo que aún no había no se ve y, al aparecer, brota (como el pino de
+   una compra nueva). Con efectos «ninguno», aparece sin más. */
+.pe-montana .pe-fuera { display: none; }
+html:not([data-efectos="ninguno"]) .pe-montana :is(#m-bosque path, .arbol-honor) { transform-box: fill-box; transform-origin: 50% 100%; animation: planta 0.7s cubic-bezier(0.2, 1.2, 0.4, 1) both; }
+.pe-cab, .pe-cap { position: relative; z-index: 1; color: var(--cielo-txt); text-shadow: 0 0 10px var(--cielo-sombra, transparent); }
+.pe-cab { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); }
+.d-pelicula .pe-cab h2 { margin: 0; font: 400 1.125rem/1.2 var(--serif); }
+.pe-cerrar { flex: none; min-width: 96px; min-height: var(--toque); padding: 0 18px; border: 1px solid var(--s3); border-radius: 99px; background: var(--s1); color: var(--txt); font: 650 1rem var(--sans); text-shadow: none; cursor: pointer; touch-action: manipulation; }
+.pe-cap { margin: 8px max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); container-type: inline-size; pointer-events: none; }
+.d-pelicula .pe-cap p { margin: 0; color: inherit; }
+.d-pelicula .pe-k { font: 400 1rem/1.3 var(--serif); color: var(--cielo-txt2); }
+.d-pelicula .pe-v { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
+.pe-cifra { font: 300 clamp(1.5rem, min(14cqi, 80cqi / (var(--n, 7) * 0.575)), 3.75rem) / 1.05 var(--sans); letter-spacing: -0.03em; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
+.pe-v em { font: italic 400 clamp(1.1rem, 5cqi, 1.6rem) var(--serif); color: var(--cielo-txt2); }
+/* Lo que pasó ese día («Llegaste al campamento 1M»): su renglón se reserva siempre (no mueve nada al aparecer). */
+.d-pelicula .pe-ev { min-height: 1.45em; margin-top: 2px; font: 650 0.9375rem/1.45 var(--sans); }
+.pe-ev:not(:empty)::before { content: ""; display: inline-block; width: 0.5em; height: 0.5em; margin-right: 0.45em; border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 2px color-mix(in srgb, var(--naranja) 30%, transparent); vertical-align: 0.08em; }
+/* Abajo: el botón (naranja: es la acción de este cuadro) y el deslizador, a lo ancho. */
+.pe-ctl { position: relative; z-index: 1; flex: none; display: flex; align-items: center; gap: 14px; padding: 10px max(16px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: var(--fondo); }
+.pe-play { flex: none; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%; background: var(--naranja); color: var(--naranja-osc); cursor: pointer; touch-action: manipulation;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 2px 10px rgb(0 0 0 / 0.25); }
+.pe-play[hidden] { display: none; }
+.pe-play .ico { width: 24px; height: 24px; }
+.pe-play[data-estado="ver"] .ico, .pe-play[data-estado="otra"] .ico { transform: translateX(1.5px); }
+.pe-play:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 3px; }
+.pe-riel { flex: 1 1 auto; min-width: 0; }
+.d-pelicula .pe-fechas { display: flex; justify-content: space-between; gap: 12px; margin: -6px 0 0; font-size: 0.8125rem; color: var(--txt2); }
+/* El deslizador: 48 px de toque, un riel fino y un tirador grande (las propiedades de cada navegador van aparte). Lo recorrido va en
+   naranja (`--p`, de 0 a 1: lo pone pelicula.js al cambiar de día). */
+.pe-rango { display: block; width: 100%; height: var(--toque, 48px); margin: 0; background: none; cursor: pointer; -webkit-appearance: none; appearance: none; touch-action: none; }
+.pe-rango::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--naranja) calc(var(--p, 0) * 100%), color-mix(in srgb, var(--txt) 22%, var(--fondo)) 0); }
+.pe-rango::-moz-range-track { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--txt) 22%, var(--fondo)); }
+.pe-rango::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--naranja); }
+.pe-rango::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 26px; height: 26px; margin-top: -10px; border: 3px solid var(--fondo); border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 1.5px var(--naranja-txt); }
+.pe-rango::-moz-range-thumb { width: 22px; height: 22px; border: 3px solid var(--fondo); border-radius: 50%; background: var(--naranja); box-shadow: 0 0 0 1.5px var(--naranja-txt); }
+.pe-rango:focus-visible { outline: none; }
+.pe-rango:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1.5px var(--naranja-txt), 0 0 0 6px color-mix(in srgb, var(--naranja) 40%, transparent); }
+.pe-rango:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 1.5px var(--naranja-txt), 0 0 0 6px color-mix(in srgb, var(--naranja) 40%, transparent); }
+.pe-riel:has(.pe-rango:focus-visible) { outline: 3px solid var(--naranja-txt); outline-offset: 2px; border-radius: 12px; }
+/* Escritorio y teléfono acostado: la montaña ocupa todo y, encima, una rejilla con el título a lo ancho y, a la izquierda, el saldo
+   del día y los controles (la montaña está a la derecha). La escena se disuelve en la rejilla: sus hijos son celdas. */
+@media (min-width: 1100px), (max-height: 520px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
+  .d-pelicula[open] { display: grid; grid-template-columns: minmax(0, min(26rem, 40vw)) minmax(0, 1fr); grid-template-rows: auto auto auto minmax(0, 1fr); align-content: start; }
+  .pe-escena { display: contents; }
+  .pe-montana { position: absolute; inset: 0; }
+  .pe-cab { grid-column: 1 / -1; grid-row: 1; }
+  .pe-cap { grid-column: 1; grid-row: 2; margin-right: 0; }
+  .pe-ctl { grid-column: 1; grid-row: 3; margin: 12px 0 0 max(20px, env(safe-area-inset-left)); padding: 8px 14px 10px 10px;
+    border-radius: 20px; background: color-mix(in srgb, var(--s1) 92%, transparent); box-shadow: inset 0 1px 0 var(--filo), var(--sombra); }
+}
+@media (min-width: 1100px) {
+  .d-pelicula[open] { grid-template-columns: max(32px, calc(50vw - var(--medio-ancho))) minmax(0, min(26rem, 40vw)) minmax(0, 1fr); }
+  .pe-cab { grid-column: 2 / -1; padding: max(16px, env(safe-area-inset-top)) max(24px, calc(50vw - var(--medio-ancho))) 0 0; }
+  .pe-cap { grid-column: 2; margin: 40px 0 0; }
+  .pe-ctl { grid-column: 2; margin-left: -10px; }
+}
+/* Acostado: todo más justo (390 px de alto o menos) y los controles abajo, donde la montaña deja sitio a la izquierda. */
+@media (max-height: 520px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
+  .d-pelicula[open] { grid-template-columns: minmax(0, min(22rem, 44vw)) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  .pe-cap { margin-top: 4px; }
+  .pe-ctl { grid-row: 4; margin: 0 0 max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .pe-cifra { font-size: clamp(1.4rem, min(11cqi, 80cqi / (var(--n, 7) * 0.575)), 2.4rem); }
 }

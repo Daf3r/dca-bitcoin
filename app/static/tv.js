@@ -125,8 +125,10 @@ export function obstaculosTV(base = document.querySelector('.escena').getBoundin
       }
     }
     // «Tú», los rótulos (campamentos, cumbre, etapa, «hace 1 año», la placa de «Tú»), los hitos y la bandera de la meta.
-    for (const el of svg.querySelectorAll('#m-etiquetas > *, #m-yo .yo-anillo, #m-eco .eco-fantasma, .campo .campo-ico, .campo .banderin')) duros.push(cajaDe(el, base));
-    for (const el of svg.querySelectorAll('.sol .sol-disco, .luna .luna-sombra')) suaves.push(cajaDe(el, base)); // el disco, no su halo
+    // (Van en el frente, otro <svg> sobre el principal: montana.js, `enCapas`; por eso se buscan en todo #montana.)
+    for (const el of $('montana').querySelectorAll('#m-etiquetas > *, #m-yo .yo-anillo, #m-eco .eco-fantasma, .campo .campo-ico, .campo .banderin')) duros.push(cajaDe(el, base));
+    // (El sol y la luna van en la capa del cielo, un <svg> aparte del principal: montana.js, `enCapas`.)
+    for (const el of $('montana').querySelectorAll('.sol .sol-disco, .luna .luna-sombra')) suaves.push(cajaDe(el, base)); // el disco, no su halo
   }
   // Lo que se lee arriba: la marca, el nombre de la montaña, el precio y el saldo.
   for (const el of document.querySelectorAll('.escena .marca, #tv-nombre:not([hidden]), #cotizacion, #t-saldo, #s-saldo-v, #s-valor')) duros.push(cajaDe(el, base));

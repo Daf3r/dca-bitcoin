@@ -50,6 +50,8 @@ function textoAparato(a) {
   if (a.nucleos) partes.push(`${a.nucleos} núcleos`);
   if (a.memoria) partes.push(`${a.memoria} GB de memoria`);
   if (a.instalada) partes.push('app instalada');
+  // (Rendimiento iPhone) Si se abrió con /medir?sin=… (efectos.js), que la captura lo diga: esa medida es para comparar.
+  if (raiz.dataset.sin) partes.push(`para comparar, sin: ${raiz.dataset.sin.split(' ').join(', ')}`);
   return `Este aparato: ${partes.join(' · ')}.`;
 }
 
