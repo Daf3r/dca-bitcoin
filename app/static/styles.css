@@ -181,8 +181,12 @@ html[data-efectos="todos"][data-cielo="noche"] .fugaz { animation: fugaz 34s lin
    Cada capa va un 5 % más grande desde el centro para que al moverse no deje huecos en los bordes. */
 .par { transform-box: view-box; transform-origin: 50% 50%; }
 /* (El transform de cada capa lo escribe parallax.js directamente: ver ese archivo.) */
-/* Desenfoque leve de la sierra lejana (profundidad de campo); fuera del modo ligero. */
-html[data-efectos="todos"]:not([data-ligero]) .lejos { filter: url(#m-bruma); }
+/* Desenfoque leve de la sierra lejana (profundidad de campo); fuera del modo ligero y solo en pantallas grandes:
+   «Medir este aparato» en un iPhone real dio 24 fps con la montaña a la vista (regla decidida: lo primero que se
+   quita en el teléfono es este desenfoque, que WebKit recalcula en cada fotograma del parallax). */
+@media (min-width: 900px) {
+  html[data-efectos="todos"]:not([data-ligero]) .lejos { filter: url(#m-bruma); }
+}
 /* Nubes y niebla: el color sale del cielo de la hora (--nube). */
 .nube path { fill: url(#m-nube); }
 .niebla { opacity: 0.85; }
