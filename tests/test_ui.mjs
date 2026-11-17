@@ -5306,8 +5306,8 @@ try {
         // Ninguna luz de la sierra queda tapada por la loma del cantón ni por la montaña (se cuentan las que se ven).
         lucesTapadas: (() => { const loma = document.querySelector('.v-loma'), monte = document.querySelector('path.monte'); return [...(document.querySelector('.v-luz-lejos')?.getAttribute('d') ?? '').matchAll(/M([\d.]+) ([\d.]+)/g)].filter(([, x, y]) => { const q = new DOMPoint(Number(x), Number(y)); return loma.isPointInFill(q) || monte.isPointInFill(q); }).length; })(),
         humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: getComputedStyle(document.querySelector('.v-pn-foco')).animationName,
-        pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-piscuchas .v-pis'),
-        grabado: visto('.v-grabado'), grabadoTxt: document.querySelector('.v-grabado')?.textContent ?? null,
+        pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-pis'),
+        grabado: visto('.v-grabado'), grabadoTxt: [...document.querySelectorAll('text.v-grabado')].map((t) => t.textContent).join(' ') || null,
         garza: visto('.v-garza'), cuerpo: visto('.v-cy-cuerpo'), lampara: visto('.v-cy-lampara'),
         arbol: document.querySelector('.v-arbol')?.getAttribute('class') ?? null, arbolCaja: caja('.v-arbol .v-ar-tronco, .v-arbol .v-ar-tallo'), salida: caja('.salida'),
         camino: !!document.querySelector('.v-cm'), cohetes: document.documentElement.hasAttribute('data-cohetes'),

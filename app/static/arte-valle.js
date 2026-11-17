@@ -588,15 +588,18 @@ export function lucesValle(puntos, k = 1, capa = 0) {
 /** Las piscuchas (idea 22): una por persona con cuenta, de colores de aquí (no el de nadie: ninguna se puede asociar a una persona). */
 export function piscuchas(lista) {
   const hilos = lista.map(({ x, y, k, hilo }) => `M${P([x, y + k])}Q${P([(x + hilo[0]) / 2 + 8 * k, (y + hilo[1]) / 2 + 14 * k])} ${P(hilo)}`).join('');
-  return `<g class="efecto-ambiente v-piscuchas" aria-hidden="true"><path class="v-pis-hilo" d="${hilos}"/>${lista.map(({ x, y, k, i }) => {
+  // (Sin grupo de afuera: cada pieza lleva `efecto-ambiente v-piscuchas`; el ritmo de cada una, por clase.)
+  if (!lista.length) return '';
+  return `<path class="efecto-ambiente v-piscuchas v-pis-hilo" d="${hilos}"/>${lista.map(({ x, y, k, i }) => {
     const a = 6.4 * k, b = 9.6 * k; // medio ancho y alto
     const arriba = [x, y - b * 0.42], abajo = [x, y + b * 0.58], izq = [x - a, y - b * 0.1], der = [x + a, y - b * 0.1], cruz = [x, y - b * 0.1];
     // La cola con sus moños (crucecitas sobre la misma línea).
     const cola = `M${P(abajo)}q${f1(-3 * k)} ${f1(4 * k)} 0 ${f1(7 * k)}t0 ${f1(7 * k)}t0 ${f1(6 * k)}`
       + [5, 11.5, 18].map((t) => `M${f1(x - 1.4 * k)} ${f1(y + b * 0.58 + t * k - 0.9 * k)}l${f1(2.8 * k)} ${f1(1.8 * k)}M${f1(x + 1.4 * k)} ${f1(y + b * 0.58 + t * k - 0.9 * k)}l${f1(-2.8 * k)} ${f1(1.8 * k)}`).join('');
-    return `<g class="v-pis v-pis-${i % 6}"><path class="v-pis-cola" d="${cola}" stroke-width="${f1(0.7 * k)}"/>`
+    const ritmo = [' v-pis-r2', ' v-pis-r3', ' v-pis-r2', '', ' v-pis-r3', ''][i % 6];
+    return `<g class="efecto-ambiente v-piscuchas v-pis v-pis-${i % 6}${ritmo}"><path class="v-pis-cola" d="${cola}" stroke-width="${f1(0.7 * k)}"/>`
       + `<path class="v-pis-a" d="${poli([arriba, der, abajo, cruz])}${poli([izq, arriba, cruz])}"/><path class="v-pis-b" d="${poli([izq, cruz, abajo])}"/></g>`;
-  }).join('')}</g>`;
+  }).join('')}`;
 }
 // ------------------------------------------------------------------------------------------------ campamento 22B · el mar de niebla (idea 55)
 /**
@@ -699,7 +702,7 @@ export function grabadoLuna({ x, y, k, iniciales, fecha }) {
   const a = 31 * k, b = 13 * k;
   const marco = `M${f1(x - a)} ${f1(y - b * 0.4)}Q${f1(x - a * 1.02)} ${f1(y - b)} ${f1(x - a * 0.7)} ${f1(y - b * 1.05)}L${f1(x + a * 0.72)} ${f1(y - b * 0.98)}Q${f1(x + a * 1.03)} ${f1(y - b * 0.9)} ${f1(x + a)} ${f1(y - b * 0.3)}`
     + `L${f1(x + a * 0.98)} ${f1(y + b * 0.5)}Q${f1(x + a)} ${f1(y + b * 1.02)} ${f1(x + a * 0.66)} ${f1(y + b)}L${f1(x - a * 0.7)} ${f1(y + b * 1.04)}Q${f1(x - a * 1.03)} ${f1(y + b * 0.95)} ${f1(x - a)} ${f1(y + b * 0.4)}Z`;
-  return `<g class="v-grabado" aria-hidden="true"><path class="v-gr-surco" d="${marco}" stroke-width="${f1(1.1 * k)}"/>`
-    + `<text class="v-gr-texto" x="${f1(x)}" y="${f1(y - 1.2 * k)}" text-anchor="middle" font-size="${f1(8.4 * k)}" stroke-width="${f1(0.35 * k)}">${esc(iniciales)}</text>`
-    + `<text class="v-gr-texto" x="${f1(x)}" y="${f1(y + 7.4 * k)}" text-anchor="middle" font-size="${f1(5.6 * k)}" stroke-width="${f1(0.3 * k)}">${esc(fecha)}</text></g>`;
+  return `<path class="v-grabado v-gr-surco" d="${marco}" stroke-width="${f1(1.1 * k)}"/>`
+    + `<text class="v-grabado v-gr-texto" x="${f1(x)}" y="${f1(y - 1.2 * k)}" text-anchor="middle" font-size="${f1(8.4 * k)}" stroke-width="${f1(0.35 * k)}">${esc(iniciales)}</text>`
+    + `<text class="v-grabado v-gr-texto" x="${f1(x)}" y="${f1(y + 7.4 * k)}" text-anchor="middle" font-size="${f1(5.6 * k)}" stroke-width="${f1(0.3 * k)}">${esc(fecha)}</text>`;
 }

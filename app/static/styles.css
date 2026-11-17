@@ -4000,8 +4000,8 @@ html[data-piscuchas][data-efectos="todos"] .v-piscuchas { display: inline; }
 .v-pis-cola { stroke: color-mix(in oklab, var(--pb) var(--v-pis), var(--monte)); }
 .v-pis-hilo { stroke: color-mix(in oklab, var(--nieve) 45%, transparent); stroke-width: 0.5; }
 .v-pis { transform-box: fill-box; transform-origin: 50% 80%; animation: v-pis 5.2s ease-in-out infinite alternate; }
-.v-pis:nth-child(2n) { animation-duration: 6.3s; animation-delay: -2s; }
-.v-pis:nth-child(3n) { animation-duration: 4.6s; animation-delay: -3.1s; }
+.v-pis-r2 { animation-duration: 6.3s; animation-delay: -2s; }
+.v-pis-r3 { animation-duration: 4.6s; animation-delay: -3.1s; }
 @media (max-width: 899px) { .v-pis { animation-timing-function: steps(30); } .v-cayuco { animation-timing-function: steps(26) !important; } }
 @keyframes v-pis { from { transform: rotate(-5deg) translate(-1px, 1px); } to { transform: rotate(6deg) translate(2px, -2px); } }
 
@@ -4009,7 +4009,7 @@ html[data-piscuchas][data-efectos="todos"] .v-piscuchas { display: inline; }
 .v-grabado { display: none; }
 html[data-luna-llena][data-cielo="noche"] .v-grabado { display: inline; }
 .v-gr-surco { fill: none; stroke: #000; opacity: 0.42; stroke-linejoin: round; }
-.v-grabado text { font-family: var(--serif); font-weight: 600; letter-spacing: 0.06em; }
+text.v-grabado { font-family: var(--serif); font-weight: 600; letter-spacing: 0.06em; }
 /* El surco: oscuro por dentro, con un filo fino de luz de luna por fuera. */
 .v-gr-texto { fill: rgb(0 0 0 / 0.42); stroke: color-mix(in oklab, var(--astro) 55%, transparent); }
 
