@@ -5036,6 +5036,81 @@ try {
         }
       } finally { srv.parar(); }
     }
+
+    // ---- 43 · entrar con un código: el dueño lo crea en su teléfono y se teclea en la tele (dos dispositivos, solo teclado en la tele)
+    const sCod = await servidor('anio');
+    try {
+      const a = await entrar(navegador, sCod, ADMIN, { hora: 20 }, conLocal([]));
+      await a.p.evaluate(() => fetch('/api/montana', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ nombre: 'La Ceiba' }) }));
+      for (let k = 0; k < 3 && await a.p.locator('dialog[open]').count(); k++) { await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(300); }
+      await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(300);
+      await a.p.click('#dc-sesiones-btn'); await a.p.waitForTimeout(900);
+      const panel = await a.p.evaluate(() => ({ ver: !document.getElementById('tele-con').hidden, ops: [...document.querySelectorAll('#tc-opciones button')].map((b) => [b.textContent, b.getAttribute('aria-pressed'), Math.round(b.getBoundingClientRect().height)]), crear: !document.getElementById('tc-crear').disabled }));
+      ok(panel.ver && panel.ops.length === 1 && panel.ops[0][0] === 'Ana' && panel.ops[0][1] === 'true' && panel.ops[0][2] >= 47.5 && panel.crear, `21B·43 «Conectar una tele» en «Sesiones abiertas»: elige entre las cuentas que solo miran (${JSON.stringify(panel)})`);
+      await a.p.click('#tc-crear'); await a.p.waitForTimeout(600);
+      const cod = await a.p.evaluate(() => ({ g: `${document.getElementById('tc-g1').textContent}${document.getElementById('tc-g2').textContent}`, sr: document.getElementById('tc-cifras-sr').textContent, vence: document.getElementById('tc-vence').textContent, sw: document.documentElement.scrollWidth, cw: innerWidth }));
+      ok(/^\d{8}$/.test(cod.g) && cod.sr === `Código: ${cod.g.split('').join(' ')}` && /^Caduca en [45]:\d\d · entra como Ana · sirve una vez$/.test(cod.vence) && cod.sw <= cod.cw, `21B·43 el código se ve una vez, en dos grupos, con su cuenta atrás (${cod.vence})`);
+      // La tele: sin sesión, va a la entrada (como una tele con la sesión caducada: /login#tv abre «Entrar con un código»)
+      const tv = await navegador.newContext({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+      const tp = await tv.newPage();
+      const consolaTv = [];
+      tp.on('console', (m) => ['error', 'warning'].includes(m.type()) && !/401|Failed to load resource/.test(m.text()) && consolaTv.push(m.text()));
+      tp.on('pageerror', (e) => consolaTv.push(`pageerror ${e.message}`));
+      await tp.addInitScript(() => { try { localStorage.setItem('libro.hora', '20'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+      await tp.goto(`${sCod.url}/#tv`, { waitUntil: 'networkidle' }); await tp.waitForTimeout(500);
+      const ent = await tp.evaluate(() => ({ url: location.pathname + location.hash, codigo: !document.getElementById('f-codigo').hidden, clave: document.getElementById('f-login').hidden, foco: document.activeElement?.id, tv: document.documentElement.dataset.tv ?? null, texto: document.body.textContent }));
+      ok(ent.url === '/login#tv' && ent.codigo && ent.clave && ent.foco === 'l-codigo' && ent.tv === null, `21B·43 una tele sin sesión llega a «Entrar con un código», con el campo listo (${ent.url}, foco ${ent.foco})`);
+      ok(!/Ceiba|Ana|Daf3r/.test(ent.texto), '21B·43 la entrada no enseña ningún dato (ni la montaña ni las cuentas)');
+      // Un código mal tecleado: un solo mensaje; el campo se vacía y sigue con el foco
+      await tp.keyboard.type(cod.g === '00000000' ? '11111111' : '00000000'); await tp.keyboard.press('Enter'); await tp.waitForTimeout(700);
+      const mal = await tp.evaluate(() => ({ err: document.getElementById('l-c-error').textContent, v: document.getElementById('l-codigo').value, foco: document.activeElement?.id }));
+      ok(/^Ese código no sirve\. Pide uno nuevo/.test(mal.err) && mal.v === '' && mal.foco === 'l-codigo', `21B·43 un código mal tecleado: «${mal.err}»`);
+      // El bueno, solo con el teclado (el espacio lo pone solo)
+      await tp.keyboard.type(cod.g.slice(0, 4));
+      ok((await tp.inputValue('#l-codigo')) === cod.g.slice(0, 4), '21B·43 se escribe como se dicta');
+      await tp.keyboard.type(cod.g.slice(4));
+      ok((await tp.inputValue('#l-codigo')) === `${cod.g.slice(0, 4)} ${cod.g.slice(4)}`, '21B·43 «1234 5678»: el espacio lo pone solo');
+      await Promise.all([tp.waitForURL('**/#tv'), tp.keyboard.press('Enter')]);
+      await tp.waitForTimeout(3000);
+      const dentro = await tp.evaluate(async () => ({ tv: document.documentElement.dataset.tv, yo: await (await fetch('/api/yo')).json(), nombre: document.getElementById('tv-nombre').textContent, saldo: document.getElementById('t-saldo').textContent }));
+      ok(dentro.tv === '1' && dentro.yo.usuario === 'Ana' && dentro.yo.rol === 'lector' && dentro.nombre === 'Montaña «La Ceiba»' && dentro.saldo === 'Saldo del libro', `21B·43 la tele entra como Ana (solo mira) y abre la pantalla grande (${JSON.stringify(dentro.yo)})`);
+      eq(consolaTv, [], `21B·43 tele: consola limpia (${consolaTv.join(' | ')})`);
+      // El teléfono del dueño se entera solo: «Listo»
+      await a.p.waitForFunction(() => /^Listo: la tele entró con la cuenta de Ana/.test(document.getElementById('tc-estado').textContent), null, { timeout: 8000 });
+      ok(await a.p.evaluate(() => document.getElementById('tc-codigo').hidden), '21B·43 el teléfono del dueño dice «Listo» y retira el código');
+      // Otro código; al salir de la vista y volver ya no se enseña (se muestra una sola vez)
+      await a.p.click('#tc-crear'); await a.p.waitForTimeout(500);
+      await a.p.click('#dc-sesiones [data-cuenta="volver"]'); await a.p.waitForTimeout(1500);
+      await a.p.click('#dc-sesiones-btn'); await a.p.waitForTimeout(900);
+      const otra = await a.p.evaluate(() => ({ oculto: document.getElementById('tc-codigo').hidden, est: document.getElementById('tc-estado').textContent }));
+      ok(otra.oculto && /^Hay un código vivo para Ana .* no se vuelve a mostrar/.test(otra.est), `21B·43 al volver a la vista el código no se vuelve a enseñar («${otra.est}»)`);
+      // El Historial lo cuenta, sin el código
+      await a.p.click('#dc-sesiones [data-cuenta="volver"]'); await a.p.waitForTimeout(400);
+      await a.p.click('#dc-historial'); await a.p.waitForTimeout(900);
+      const hist = await a.p.textContent('#hist-lista');
+      ok(hist.includes('creó un código para conectar una tele con la cuenta de Ana') && hist.includes('entró en una tele con un código') && !hist.includes(cod.g), '21B·43 el Historial lo cuenta, sin el código');
+      eq(a.consola, [], `21B·43 dueño: consola limpia (${a.consola.join(' | ')})`);
+      await a.ctx.close(); await tv.close();
+      // Una lectora no ve «Conectar una tele»; la entrada con código, a 320 px y con letra muy grande, sin desbordes y con toques de 48 px
+      const l = await entrar(navegador, sCod, LECTOR, { hora: 20 }, conLocal([]));
+      for (let k = 0; k < 3 && await l.p.locator('dialog[open]').count(); k++) { await l.p.keyboard.press('Escape'); await l.p.waitForTimeout(300); }
+      await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(300);
+      await l.p.click('#dc-sesiones-btn'); await l.p.waitForTimeout(800);
+      ok(await l.p.evaluate(() => document.getElementById('tele-con').hidden), '21B·43 una lectora no ve «Conectar una tele»');
+      await l.ctx.close();
+      for (const letra of ['', 'muy-grande']) {
+        const c = await navegador.newContext({ ...devices['iPhone SE'], viewport: { width: 320, height: 568 } });
+        const cp = await c.newPage();
+        await cp.addInitScript((lt) => { try { localStorage.setItem('libro.hora', '12'); if (lt) localStorage.setItem('libro.letra', lt); } catch { /* sin almacenamiento */ } }, letra);
+        await cp.goto(`${sCod.url}/login`, { waitUntil: 'networkidle' });
+        await cp.click('#l-a-codigo'); await cp.waitForTimeout(300);
+        const m = await cp.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: innerWidth, foco: document.activeElement?.id, toques: ['l-codigo', 'l-c-entrar', 'l-a-clave'].map((i) => Math.round(document.getElementById(i).getBoundingClientRect().height)) }));
+        ok(m.sw <= m.cw && m.foco === 'l-codigo' && m.toques.every((h) => h >= 47.5), `21B·43 a 320 px${letra ? ' con letra muy grande' : ''}: sin desbordes y con toques de 48 px (${JSON.stringify(m)})`);
+        await cp.click('#l-a-clave'); await cp.waitForTimeout(200);
+        ok(await cp.evaluate(() => !document.getElementById('f-login').hidden && document.getElementById('f-codigo').hidden && document.activeElement?.id === 'l-usuario'), '21B·43 y se vuelve a usuario y contraseña');
+        await c.close();
+      }
+    } finally { sCod.parar(); }
   }
 
   // ---------------------------------------------------------------- sin histórico de precios

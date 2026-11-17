@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import gzip
 import hashlib
+import hmac
 import io
 import json
 import math
@@ -283,6 +284,21 @@ def _m_firmas(conn: sqlite3.Connection) -> None:
     )""")
 
 
+def _m_codigos_tv(conn: sqlite3.Connection) -> None:
+    # Entrar en la tele con un código (campamento 21B, idea 43): el admin lo crea en su teléfono para una cuenta lectora y se teclea en la
+    # tele. Solo se guarda el SHA-256 del código; caduca a los 5 minutos, sirve una vez y 5 fallos lo anulan (`caduca` pasa a «ahora»).
+    conn.execute("""CREATE TABLE IF NOT EXISTS codigos_tv (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        hash       TEXT    NOT NULL,
+        usuario_id INTEGER NOT NULL REFERENCES usuarios(id),
+        creado     INTEGER NOT NULL,
+        caduca     INTEGER NOT NULL,
+        usado_ts   INTEGER,
+        fallos     INTEGER NOT NULL DEFAULT 0,
+        creado_por INTEGER REFERENCES usuarios(id)
+    )""")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -300,6 +316,7 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (14, "piedritas (la apacheta: una por persona y compra)", _m_piedritas),
     (15, "usuarios.cumple (farol por cumpleaños)", _m_usuarios_cumple),
     (16, "firmas (el libro de cumbre: una por persona y campamento)", _m_firmas),
+    (17, "codigos_tv (entrar en la tele con un código de un solo uso)", _m_codigos_tv),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -759,7 +776,7 @@ def importar_traslados_csv(conn: sqlite3.Connection, texto: str, usuario: str = 
 
 # ------------------------------------------------------------------------ rutas
 ESCRITURA = ("POST", "PUT", "DELETE", "PATCH")
-PUBLICAS = {"/healthz", "/login", "/api/login", "/api/estado"}
+PUBLICAS = {"/healthz", "/login", "/api/login", "/api/login/codigo", "/api/estado"}  # entrar con un código es entrar (campamento 21B)
 # El código de la página no es secreto: módulos, estilos, fuentes e icono se sirven sin sesión.
 RECURSO_PUBLICO = re.compile(r"/(?:[\w-]+\.js|styles\.css|icon\.svg|manifest\.webmanifest|(?:icon-[\w-]+|apple-touch-icon|arranque-\d+x\d+|grano)\.png|icon-(?:luna|oro)-\d\.svg|curvas\.svg|fonts/[\w.-]+)")
 
@@ -919,7 +936,7 @@ _ESCRITURAS: dict[str, deque[float]] = {}
 @app.before_request
 def modo_mantenimiento() -> Any:
     """Con `SOLO_LECTURA=1` la app se sigue viendo entera pero ninguna escritura entra (salvo entrar y salir)."""
-    if SOLO_LECTURA and request.method in ESCRITURA and request.path not in ("/api/login", "/api/logout"):
+    if SOLO_LECTURA and request.method in ESCRITURA and request.path not in ("/api/login", "/api/login/codigo", "/api/logout"):
         return jsonify(error="La app está en mantenimiento: por ahora solo se puede mirar, no anotar.", mantenimiento=True), 503
     return None
 
@@ -1185,6 +1202,119 @@ def cerrar_una_sesion(sid: str) -> Any:
     auth.auditar(conn, g.usuario["nombre"], "sesion_cerrada", "usuario", g.usuario["id"], ip=auth.ip_resumida(ip_real()))
     conn.commit()
     return "", 204
+
+
+# ------------------------------------------------- conectar una tele con un código (campamento 21B, idea 43)
+# Al revés que un «apruébalo en el teléfono»: desde la tele nadie pide nada (no hay una puerta pública que cree filas ni un «aprobar» que
+# alguien pueda pedir con engaños). El admin crea en su teléfono un código de 8 cifras para una cuenta **lectora** («Tu cuenta → Sesiones
+# abiertas → Conectar una tele»), lo ve una sola vez y lo teclea en la tele («Entrar con un código»). Caduca a los 5 minutos, sirve una vez,
+# crear otro anula el que hubiera vivo y 5 fallos anulan los vivos; además, 10 intentos por minuto y proceso (429). En la base solo queda
+# su SHA-256 y la auditoría nunca lo lleva. Da una sesión normal de esa cuenta (90 días, como cualquier otra), que se ve en sus
+# «Sesiones abiertas» como «Tele · …».
+CODIGO_TV_VIDA = 300
+CODIGO_TV_FALLOS = 5
+CODIGO_TV_POR_MINUTO = 10
+_CODIGO_TV_INTENTOS: deque[float] = deque()  # instantes de los últimos intentos (por proceso)
+CODIGO_TV_ERROR = "Ese código no sirve. Pide uno nuevo en «Tu cuenta → Sesiones abiertas → Conectar una tele»."
+
+
+def _hash_codigo(codigo: str) -> str:
+    return hashlib.sha256(codigo.encode()).hexdigest()
+
+
+def _estado_codigo(f: sqlite3.Row, ahora: int) -> str:
+    if f["usado_ts"]:
+        return "usado"
+    if f["fallos"] >= CODIGO_TV_FALLOS:
+        return "anulado"
+    return "vivo" if f["caduca"] > ahora else "caducado"
+
+
+@app.get("/api/tv/codigo")
+def ver_codigo_tv() -> Any:
+    """Para «Conectar una tele» (solo admin): las cuentas lectoras y cómo va el último código que creó (vivo, usado…). Nunca el código."""
+    if g.usuario["rol"] != "admin":
+        return jsonify(error="Solo quien administra el libro conecta una tele."), 403
+    conn = db()
+    ahora = int(time.time())
+    lectores = [r["nombre"] for r in conn.execute("SELECT nombre FROM usuarios WHERE rol = 'lector' AND activo = 1 ORDER BY nombre COLLATE NOCASE")]
+    f = conn.execute("SELECT c.id, c.creado, c.caduca, c.usado_ts, c.fallos, u.nombre FROM codigos_tv c JOIN usuarios u ON u.id = c.usuario_id "
+                     "WHERE c.creado_por = ? AND c.creado > ? ORDER BY c.id DESC LIMIT 1", (g.usuario["id"], ahora - 3600)).fetchone()
+    codigo = {"id": f["id"], "usuario": f["nombre"], "caduca": f["caduca"], "usado": f["usado_ts"], "estado": _estado_codigo(f, ahora)} if f else None
+    return jsonify(lectores=lectores, codigo=codigo, vida=CODIGO_TV_VIDA)
+
+
+@app.post("/api/tv/codigo")
+def crear_codigo_tv() -> Any:
+    """Crea el código para que una tele entre con una cuenta lectora (nunca con la de un admin). Se muestra esta única vez."""
+    if g.usuario["rol"] != "admin":
+        return jsonify(error="Solo quien administra el libro conecta una tele."), 403
+    body = request.get_json(silent=True)
+    nombre = body.get("usuario") if isinstance(body, dict) else None
+    if not isinstance(nombre, str) or not 0 < len(nombre.strip()) <= 64:
+        return jsonify(error="Elige con qué cuenta entra la tele."), 400
+    conn = db()
+    u = auth.buscar(conn, nombre.strip())
+    if not u or u["activo"] != 1:
+        return jsonify(error="Esa cuenta no existe."), 400
+    if u["rol"] != "lector":
+        return jsonify(error="La tele solo entra con una cuenta de solo lectura: con una que anota se podría escribir desde la sala."), 400
+    ahora = int(time.time())
+    codigo = f"{secrets.randbelow(10**8):08d}"  # texto: los ceros de delante cuentan
+    if conn.in_transaction:
+        conn.commit()
+    conn.execute("BEGIN IMMEDIATE")
+    anulados = conn.execute("UPDATE codigos_tv SET caduca = ? WHERE usado_ts IS NULL AND caduca > ?", (ahora, ahora)).rowcount  # solo uno vivo
+    cur = conn.execute("INSERT INTO codigos_tv (hash, usuario_id, creado, caduca, creado_por) VALUES (?, ?, ?, ?, ?)",
+                       (_hash_codigo(codigo), u["id"], ahora, ahora + CODIGO_TV_VIDA, g.usuario["id"]))
+    auth.auditar(conn, g.usuario["nombre"], "tele_codigo", "usuario", u["id"], None,
+                 {"usuario": u["nombre"], "caduca": ahora + CODIGO_TV_VIDA, **({"anulados": anulados} if anulados else {})}, auth.ip_resumida(ip_real()))
+    conn.commit()
+    return jsonify(id=cur.lastrowid, codigo=codigo, usuario=u["nombre"], caduca=ahora + CODIGO_TV_VIDA, vida=CODIGO_TV_VIDA), 201
+
+
+@app.post("/api/login/codigo")
+def login_codigo() -> Any:
+    """Entrar en la tele con el código. Pública como /api/login, con sus mismas defensas (Sec-Fetch-Site y X-Libro: `mismo_origen`).
+    Un único mensaje de error: no dice si el código caducó, ya se usó o nunca existió."""
+    ahora_f = time.time()
+    while _CODIGO_TV_INTENTOS and ahora_f - _CODIGO_TV_INTENTOS[0] > 60:
+        _CODIGO_TV_INTENTOS.popleft()
+    if len(_CODIGO_TV_INTENTOS) >= CODIGO_TV_POR_MINUTO:  # el freno se mira antes de hacer ningún trabajo
+        resp = jsonify(error="Demasiados intentos. Espera un minuto.")
+        resp.headers["Retry-After"] = str(max(1, int(61 - (ahora_f - _CODIGO_TV_INTENTOS[0]))))
+        return resp, 429
+    _CODIGO_TV_INTENTOS.append(ahora_f)
+    body = request.get_json(silent=True)
+    crudo = body.get("codigo") if isinstance(body, dict) else None
+    codigo = re.sub(r"[\s-]", "", crudo) if isinstance(crudo, str) and len(crudo) <= 32 else ""
+    if not re.fullmatch(r"\d{8}", codigo):
+        return jsonify(error="Escribe las 8 cifras del código."), 400
+    conn = db()
+    ahora, h = int(ahora_f), _hash_codigo(codigo)
+    if conn.in_transaction:
+        conn.commit()
+    conn.execute("BEGIN IMMEDIATE")  # buscar, marcarlo usado y crear la sesión van juntos: dos teles con el mismo código, solo entra una
+    acierto = None
+    for f in conn.execute("SELECT id, hash, usuario_id FROM codigos_tv WHERE usado_ts IS NULL AND caduca > ?", (ahora,)).fetchall():
+        if hmac.compare_digest(f["hash"], h) and acierto is None:  # se comparan todos, en tiempo constante
+            acierto = f
+    u = conn.execute("SELECT id, nombre, rol, activo FROM usuarios WHERE id = ?", (acierto["usuario_id"],)).fetchone() if acierto else None
+    if not acierto or not u or u["activo"] != 1 or u["rol"] != "lector" \
+            or conn.execute("UPDATE codigos_tv SET usado_ts = ? WHERE id = ? AND usado_ts IS NULL AND caduca > ?", (ahora, acierto["id"], ahora)).rowcount != 1:
+        # Un fallo cuenta contra los códigos vivos: al quinto se anulan (aunque alguien adivinara, tendría 5 intentos entre 100 millones).
+        conn.execute("UPDATE codigos_tv SET fallos = fallos + 1 WHERE usado_ts IS NULL AND caduca > ?", (ahora,))
+        conn.execute("UPDATE codigos_tv SET caduca = ? WHERE usado_ts IS NULL AND caduca > ? AND fallos >= ?", (ahora, ahora, CODIGO_TV_FALLOS))
+        conn.commit()
+        return jsonify(error=CODIGO_TV_ERROR), 401
+    auth.cerrar_sesion(conn, request.cookies.get(COOKIE))  # la cookie anterior, si había, deja de valer (como al entrar con contraseña)
+    ip = ip_real()
+    token = auth.crear_sesion(conn, u["id"], ip, f"Tele · {_agente_corto(request.headers.get('User-Agent', ''))}")
+    auth.auditar(conn, u["nombre"], "tele_entro", "usuario", u["id"], None, {"codigo_id": acierto["id"]}, auth.ip_resumida(ip))
+    conn.commit()
+    resp = jsonify(usuario=u["nombre"], rol=u["rol"])
+    _poner_cookie(resp, token)
+    return resp
 
 
 @app.post("/api/visto")

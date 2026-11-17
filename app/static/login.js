@@ -15,10 +15,11 @@ const form = $('f-login');
 // se añade el alto del teclado como relleno y se sube lo justo para que quepa.
 const vv = window.visualViewport;
 function encajar() {
-  if (!vv || !form.contains(document.activeElement)) return;
+  const f = form.hidden ? $('f-codigo') : form; // el formulario a la vista (el de siempre o el del código)
+  if (!vv || !f.contains(document.activeElement)) return;
   const teclado = Math.max(0, window.innerHeight - vv.height);
   document.body.style.paddingBottom = teclado > 80 ? `${teclado}px` : '';
-  const caja = form.getBoundingClientRect();
+  const caja = f.getBoundingClientRect();
   const sobra = caja.bottom - (vv.offsetTop + vv.height) + 12;
   if (sobra > 0) window.scrollBy({ top: Math.min(sobra, caja.top - vv.offsetTop - 8), behavior: 'auto' });
 }
@@ -67,8 +68,56 @@ fetch('/api/estado', { cache: 'no-store' }).then((r) => r.json()).then((j) => {
   const aviso = $('l-aviso');
   aviso.hidden = false;
   aviso.textContent = 'Aún no hay cuentas. En el servidor: docker compose exec app python usuarios.py crear TU_NOMBRE --rol admin';
-  form.querySelectorAll('input, button').forEach((el) => { el.disabled = true; });
+  document.querySelectorAll('.login-caja :is(input, button)').forEach((el) => { el.disabled = true; });
 }).catch(() => {});
+
+// ---------------------------------------------------------------- entrar con un código (campamento 21B, idea 43)
+// Para la tele de la sala: quien administra el libro crea en su teléfono un código de 8 cifras para una cuenta de lectura y aquí se teclea.
+// Sirve una vez y caduca a los 5 minutos. Se abre con «Entrar con un código» o directamente con /login#codigo (y con /login#tv, adonde
+// llega una tele cuya sesión caducó). Al entrar, la tele vuelve a su modo de pantalla grande (/#tv).
+const fCodigo = $('f-codigo'), codigo = $('l-codigo');
+const quiereTele = ['#tv', '#codigo'].includes(location.hash);
+function modoCodigo(si, foco = true) {
+  form.hidden = si;
+  fCodigo.hidden = !si;
+  $('l-c-error').textContent = '';
+  if (foco) (si ? codigo : $('l-usuario')).focus();
+}
+$('l-a-codigo').addEventListener('click', () => modoCodigo(true));
+$('l-a-clave').addEventListener('click', () => modoCodigo(false));
+// Se escribe como se dicta: «1234 5678» (solo cifras; el espacio lo pone solo).
+const cifras = () => codigo.value.replace(/\D/g, '').slice(0, 8);
+codigo.addEventListener('input', () => {
+  const c = cifras(), bonito = c.length > 4 ? `${c.slice(0, 4)} ${c.slice(4)}` : c;
+  if (codigo.value !== bonito) codigo.value = bonito;
+  if ($('l-c-error').textContent) $('l-c-error').textContent = '';
+});
+fCodigo.addEventListener('focusin', () => { marcar('clave'); setTimeout(encajar, 60); });
+fCodigo.addEventListener('focusout', () => setTimeout(() => { if (!fCodigo.contains(document.activeElement)) marcar(''); }, 60));
+fCodigo.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const c = cifras(), boton = $('l-c-entrar'), err = $('l-c-error');
+  if (c.length !== 8) { err.textContent = 'Escribe las 8 cifras del código.'; codigo.focus(); return; }
+  boton.disabled = true;
+  boton.textContent = 'Entrando…';
+  err.textContent = '';
+  try {
+    const r = await fetch('/api/login/codigo', {
+      method: 'POST', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Libro': '1' },
+      body: JSON.stringify({ codigo: c }),
+    });
+    if (r.ok) { location.replace('/#tv'); return; }
+    const j = await r.json().catch(() => null);
+    err.textContent = j?.error || `Error ${r.status}.`;
+    if (r.status === 401) { codigo.value = ''; codigo.focus(); }
+  } catch {
+    err.textContent = 'Sin conexión con el servidor. Revisa tu conexión y vuelve a intentarlo.';
+  }
+  boton.disabled = false;
+  boton.textContent = 'Entrar';
+});
+if (quiereTele) modoCodigo(true); // quien llega aquí viene a teclear el código: el campo ya está listo
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -85,7 +134,7 @@ form.addEventListener('submit', async (e) => {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Libro': '1' },
       body: JSON.stringify({ usuario, clave, compartido: $('l-compartido').checked }),
     });
-    if (r.ok) { location.replace('/'); return; }
+    if (r.ok) { location.replace(quiereTele ? '/#tv' : '/'); return; } // una tele con la sesión caducada vuelve a su pantalla grande
     const j = await r.json().catch(() => null);
     error(j?.error || `Error ${r.status}.`);
     if (r.status === 401) { huboFallo = true; pintarMayus(); $('l-clave').value = ''; $('l-clave').focus(); }

@@ -63,7 +63,19 @@
     <label class="l-comp" for="l-compartido"><input type="checkbox" id="l-compartido"> <span>Este dispositivo es compartido<span class="l-comp-det">: se cierra solo a las 4 horas</span></span></label>
     <p class="login-error" id="l-error" role="alert"></p>
     <button type="submit" class="guardar" id="l-entrar">Entrar</button>
+    <button type="button" class="l-otro" id="l-a-codigo">Entrar con un código</button>
     <p class="login-pie">¿Olvidaste tu contraseña? Pídele al administrador que te ponga una nueva.</p>
+  </form>
+  <!-- Entrar con un código (campamento 21B): para la tele de la sala. Quien administra el libro lo crea en su teléfono y se teclea aquí;
+       sirve una vez y caduca a los 5 minutos. La entrada sigue sin enseñar ningún dato. -->
+  <form class="login-caja" id="f-codigo" novalidate hidden>
+    <h1>Entrar con un código</h1>
+    <p class="login-lema">Para la tele de la sala. El código lo crea quien administra el libro en su teléfono: Tu cuenta → Sesiones abiertas → Conectar una tele.</p>
+    <label class="campo-l" for="l-codigo">Código de 8 cifras</label>
+    <input id="l-codigo" name="codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="9" placeholder="0000 0000" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="l-c-error">
+    <p class="login-error" id="l-c-error" role="alert"></p>
+    <button type="submit" class="guardar" id="l-c-entrar">Entrar</button>
+    <button type="button" class="l-otro" id="l-a-clave">Entrar con usuario y contraseña</button>
   </form>
 </main>
 </body>

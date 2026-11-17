@@ -511,6 +511,21 @@ try {
       await p.waitForFunction(() => !document.getElementById('tv-marco').hidden && getComputedStyle(document.getElementById('tv-marco')).opacity === '1', null, { timeout: 15000 });
       await auditar(p, `tele con el marco de la historia ${esquema}`);
       await ctx.close();
+      // Conectar una tele (el dueño, con el código a la vista) y la entrada con «Entrar con un código» (con un error)
+      ({ ctx, p } = await nuevo(anio, ADMIN, conPush));
+      await cerrarOferta(p);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-sesiones-btn'); await p.waitForTimeout(900);
+      await auditar(p, `conectar una tele ${esquema}`);
+      await p.click('#tc-crear'); await p.waitForTimeout(600);
+      await auditar(p, `conectar una tele con el código a la vista ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await nuevo(anio, null));
+      await p.goto(`${anio.url}/login#codigo`, { waitUntil: 'networkidle' }); await p.waitForTimeout(400);
+      await auditar(p, `entrar con un código ${esquema}`);
+      await p.keyboard.type('12345678'); await p.keyboard.press('Enter'); await p.waitForTimeout(700);
+      await auditar(p, `entrar con un código, con un error ${esquema}`);
+      await ctx.close();
     }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);

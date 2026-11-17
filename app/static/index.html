@@ -687,6 +687,21 @@
     <h2>Sesiones abiertas</h2>
     <p>Los dispositivos donde tu cuenta está abierta. Si perdiste un teléfono o la dejaste en una computadora ajena, ciérrala desde aquí.</p>
     <ul class="sis-lista" id="ses-lista"></ul>
+    <!-- Conectar una tele (campamento 21B, solo quien administra): un código de un solo uso para una cuenta que solo mira; se teclea en la tele. -->
+    <section class="tele-con" id="tele-con" aria-labelledby="tc-t" hidden>
+      <h3 id="tc-t">Conectar una tele</h3>
+      <p class="dc-nota">La tele de la sala entra con un código de un solo uso y con una cuenta que solo mira (nunca con la tuya: desde la sala no se podrá anotar). En la tele: «Entrar con un código».</p>
+      <div class="tc-quien" id="tc-quien" role="group" aria-labelledby="tc-quien-t"><span class="tc-k" id="tc-quien-t">¿Con qué cuenta entra la tele?</span><span class="tc-opciones" id="tc-opciones"></span></div>
+      <button type="button" class="primario tc-crear" id="tc-crear">Crear código</button>
+      <div class="tc-codigo" id="tc-codigo" hidden>
+        <p class="tc-k">Escribe en la tele estas 8 cifras:</p>
+        <p class="tc-cifras"><span class="sr" id="tc-cifras-sr"></span><span class="tc-g" id="tc-g1" aria-hidden="true"></span><span class="tc-g" id="tc-g2" aria-hidden="true"></span></p>
+        <p class="tc-vence" id="tc-vence"></p>
+        <button type="button" class="ses-cerrar" id="tc-copiar">Copiar el código</button>
+      </div>
+      <p class="dc-nota tc-estado" id="tc-estado" role="status"></p>
+      <p class="hoja-error" id="tc-error" role="alert"></p>
+    </section>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-sistema" id="dc-sistema" hidden>

@@ -198,6 +198,7 @@ function textoAuditoria(a) {
     cuenta_activada: `activó la cuenta ${d.nombre}`, cuenta_desactivada: `desactivó la cuenta ${d.nombre}`,
     token_creado: `creó el enlace de solo lectura «${d.nombre}»`, token_revocado: `revocó el enlace de solo lectura «${d.nombre}»`,
     sesion_cerrada: 'cerró una de sus sesiones abiertas',
+    tele_codigo: `creó un código para conectar una tele con la cuenta de ${d.usuario}`, tele_entro: 'entró en una tele con un código',
     wallet_creada: `añadió la wallet «${d.nombre}»`, wallet_archivada: `archivó la wallet «${d.nombre}»`,
     sesiones_cerradas: `cerró las sesiones de ${d.nombre}`, desbloqueo: `desbloqueó la cuenta ${d.nombre}`,
   }[a.accion] ?? a.accion;

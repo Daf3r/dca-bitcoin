@@ -3724,3 +3724,40 @@ html[data-tv][data-efectos="todos"] .tv-marco.vis .tvm-lienzo svg { animation: t
   html[data-tv] .tvm-txt { max-width: 34rem; }
 }
 html[data-efectos="ninguno"] .tvm-tiempo { display: none; } /* sin movimiento, la rayita no corre: mejor no enseñarla */
+
+/* (43) Entrar con un código: el otro formulario de la entrada. El código se escribe grande y espaciado, como se dicta («1234 5678»).
+   «Entrar con un código» / «Entrar con usuario y contraseña» son botones de texto (48 px de toque), sin competir con «Entrar». */
+.login-caja[hidden] { display: none; }
+.l-otro {
+  justify-self: center; min-height: var(--toque); margin-top: 6px; padding: 0 12px; border: 0; border-radius: 12px; background: none;
+  color: var(--naranja-txt); font: 600 0.9375rem var(--sans); text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; cursor: pointer;
+}
+.l-otro:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .l-otro:hover { background: color-mix(in srgb, var(--naranja) 12%, transparent); } }
+@media (min-width: 1100px) { .l-otro { justify-self: start; padding: 0 2px; } }
+.login-caja #l-codigo { width: 100%; min-width: 0; min-height: 64px; padding: 0 12px; font: 600 2rem/1 var(--sans); letter-spacing: 0.16em; text-align: center; font-variant-numeric: tabular-nums lining-nums; }
+.login-caja #l-codigo::placeholder { color: var(--txt3); opacity: 0.55; }
+@media (max-height: 520px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
+  .l-otro { margin-top: 0; font-size: 0.8125rem; }
+  .login-caja #l-codigo { min-height: 48px; font-size: 1.5rem; }
+}
+
+/* (43) Conectar una tele, en «Sesiones abiertas» (solo quien administra): elegir la cuenta (selector con la píldora de tinta), crear el
+   código y verlo una vez, grande, en dos grupos de cuatro como se dicta, con su cuenta atrás. */
+.tele-con { display: grid; gap: 10px; margin-top: 18px; padding: 16px; border-radius: 18px; background: var(--s2); box-shadow: inset 0 1px 0 var(--filo); }
+.tele-con[hidden], .tc-codigo[hidden], .tc-quien[hidden], .tc-crear[hidden] { display: none; }
+.tele-con h3 { margin: 0; font: 600 1.0625rem var(--serif); color: var(--txt); }
+.dc-sesiones .tele-con p { margin: 0; }
+.tc-quien { display: grid; gap: 8px; }
+.tc-k { font-size: 0.875rem; font-weight: 600; color: var(--txt2); }
+.tc-opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.tc-opciones button { min-height: var(--toque); min-width: var(--toque); padding: 0 18px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; color: var(--txt); font: 600 0.9375rem var(--sans); cursor: pointer; }
+.tc-opciones button[aria-pressed="true"] { border-color: var(--txt); background: var(--txt); color: var(--fondo); }
+@media (hover: hover) and (pointer: fine) { .tc-opciones button:not([aria-pressed="true"]):hover { background: var(--s3); } }
+.tc-crear { width: 100%; min-height: var(--toque); border: 1.5px solid var(--naranja); border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font-weight: 650; cursor: pointer; }
+.tc-crear:disabled { opacity: 0.55; cursor: default; }
+.tc-codigo { display: grid; justify-items: center; gap: 8px; padding: 14px 10px 12px; border: 1.5px dashed color-mix(in srgb, var(--naranja) 60%, var(--s3)); border-radius: 16px; background: var(--s1); text-align: center; }
+.tc-cifras { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0.6em; margin: 0; }
+.tc-g { font: 600 2.4rem/1 var(--sans); letter-spacing: 0.12em; font-variant-numeric: tabular-nums lining-nums; color: var(--txt); white-space: nowrap; }
+.tc-vence { font-size: 0.875rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
+.tc-estado:empty, .tele-con .hoja-error:empty { display: none; }
