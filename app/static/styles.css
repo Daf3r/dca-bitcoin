@@ -3937,8 +3937,9 @@ html[data-epoca="seca"] .v-ar-ramas-secas { display: inline; }
 
 /* La quebrada: el cauce tallado en la roca y, según la época, el agua llena que brilla o un hilo entre piedras. */
 .v-q-cauce { fill: var(--monte-sombra); opacity: 0.45; }
-.vq-0, .vq-1 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--c3) 50%, var(--nieve)) var(--v-agua, 78%), var(--monte)); }
-.vq-0 { stop-opacity: 0.08; } .vq-1 { stop-opacity: 0.95; }
+/* Opaca: arriba el agua apenas se distingue de la roca (se mezcla con ella, no se transparenta) y abajo es agua. */
+.vq-0 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--c3) 50%, var(--nieve)) 14%, var(--monte)); }
+.vq-1 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--c3) 50%, var(--nieve)) var(--v-agua, 78%), var(--monte)); }
 .v-q-brillo { fill: none; stroke: var(--astro); opacity: 0.6; stroke-linecap: round; }
 .v-q-piedra { fill: color-mix(in oklab, var(--nieve) 30%, var(--monte)); }
 html[data-epoca="lluviosa"] .v-q-hilo, html[data-epoca="seca"] .v-q-llena { display: none; }
@@ -3999,6 +4000,7 @@ html[data-piscuchas][data-efectos="todos"] .v-piscuchas { display: inline; }
 .v-pis { transform-box: fill-box; transform-origin: 50% 80%; animation: v-pis 5.2s ease-in-out infinite alternate; }
 .v-pis:nth-child(2n) { animation-duration: 6.3s; animation-delay: -2s; }
 .v-pis:nth-child(3n) { animation-duration: 4.6s; animation-delay: -3.1s; }
+@media (max-width: 899px) { .v-pis { animation-timing-function: steps(30); } .v-cayuco { animation-timing-function: steps(26) !important; } }
 @keyframes v-pis { from { transform: rotate(-5deg) translate(-1px, 1px); } to { transform: rotate(6deg) translate(2px, -2px); } }
 
 /* El grabado de luna llena: en la roca, solo esas noches. El surco oscuro y el filo de la luz de luna. */

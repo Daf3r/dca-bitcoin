@@ -46,6 +46,11 @@ export function formaValle(W, H) {
 }
 
 // ------------------------------------------------------------------------------------------------ dónde va cada cosa
+/** La cresta de la loma del cantón (de izquierda a derecha); por debajo de ella, la loma tapa lo que haya detrás. */
+function crestaLoma({ x, y, k, n }) {
+  const span = (RANCHOS[n - 1][0] + ANCHO_RANCHO) * k, xa = x - 26 * k, xb = x + span + 6 * k;
+  return [[-30, y + 46 * k], [xa - 44 * k, y + 20 * k], [xa - 10 * k, y + 5 * k], [x + span * 0.35, y - 1.5 * k], [xb, y + 1.5 * k], [xb + 34 * k, y + 13 * k], [xb + 96 * k, y + 44 * k]];
+}
 // Cada rancho en unidades (u): fachada del hastial de 11 de ancho, paredes de 7, hastial de 5 y un costado de 14 de fondo. El cantón
 // son tres ranchos (dos en el teléfono) a distinto fondo y tamaño, más el pino de Navidad.
 const RANCHOS = [[0, 0, 1], [27, -3.2, 0.86], [52, 0.8, 0.94]];
@@ -60,7 +65,7 @@ export function escalaValle(W, H) {
   const forma = formaValle(W, H);
   return forma === 'tel' ? Math.max(0.78, Math.min(1, W / 390)) : forma === 'tab' ? 1.05 : forma === 'esc' ? Math.max(1.2, Math.min(1.75, H / 620)) : 0.72;
 }
-export function sitiosValle({ W, H, techo = 0, izq, cresta = [], bx, by, pts = [], lago = null, personas = 0, meses = 0, anios = 0, primera = null }) {
+export function sitiosValle({ W, H, techo = 0, izq, der = [], cresta = [], bx, by, pts = [], lago = null, personas = 0, meses = 0, anios = 0, primera = null }) {
   const forma = formaValle(W, H);
   const k = escalaValle(W, H);
   const L = [...izq].sort((a, b) => a[1] - b[1]);
@@ -95,26 +100,35 @@ export function sitiosValle({ W, H, techo = 0, izq, cresta = [], bx, by, pts = [
   const xa = derecha ? Math.min(W - ra * 0.7, bx + 10 + ra) : Math.max(ra * 0.55, bx - 10 - ra);
   const arbol = primera ? { x: xa, y: by + 3, k, ra, anios } : null;
   // Las luces del valle (de noche): caseríos en la sierra media y en el valle, fuera de la montaña y por debajo del saldo.
-  const luces = lucesSitios({ W, H, techo, xIzq, cresta, n: meses, canton: canton.caja, k, forma });
+  const D = [...der].sort((a, b) => a[1] - b[1]), xDer = (y) => (D.length ? enY(D, y) : Infinity);
+  const luces = lucesSitios({ W, H, techo, xIzq, xDer, cresta, n: meses, canton: canton.caja, milpa: [milpa.x - 2, milpa.y - 11 * k, milpa.x + milpa.w + 2, milpa.y + milpa.h + milpa.caida + 2], loma: crestaLoma(canton), k, forma });
   // Las piscuchas: en el cielo del valle, a la izquierda de la montaña, por debajo del saldo y de la cumbre.
   const piscuchas = piscuchasSitios({ W, H, techo, xIzq, n: personas, canton, k, sy: L[0][1] });
   // La vida del lago se coloca con el lago.
   return { forma, k, canton, milpa, pino, camino, arbol, luces, piscuchas, lago, ventanas: Math.max(0, Math.floor(personas) || 0) };
 }
 
-function lucesSitios({ W, H, techo, xIzq, cresta, n, canton, k, forma }) {
+function lucesSitios({ W, H, techo, xIzq, xDer, cresta, n, canton, milpa, loma, k, forma }) {
   if (!n) return [];
   const rnd = azar(31), out = [];
   const abajo = forma === 'esc' ? H * 0.86 : H * 0.84;
-  const tierra = (x, y) => y > Math.max(techo + 10, enX(cresta, x) + 3) && y < abajo && x > 3 && x < W - 3 && x < xIzq(y) - 4 && !cruza([x - 2, y - 2, x + 2, y + 2], canton);
+  // Dos sitios: en la sierra media, a los dos lados de la montaña (capa 0: se mueve con la sierra) y sobre la loma del cantón, que es el
+  // valle de cerca (capa 1: se dibuja con la loma). Nunca dentro de la montaña, en el cielo, en el saldo ni en las casas del cantón.
+  const fuera = (x, y) => y > techo + 10 && y < abajo && x > 3 && x < W - 3 && (x < xIzq(y) - 4 || x > xDer(y) + 4) && !cruza([x - 2, y - 2, x + 2, y + 2], canton) && !cruza([x - 2, y - 2, x + 2, y + 2], milpa);
+  const bajoLoma = (x, y) => x < loma.at(-1)[0] && y > enX(loma, x) - 2;
+  const capa = (x, y) => {
+    if (!fuera(x, y)) return -1;
+    if (bajoLoma(x, y)) return y > enX(loma, x) + 3 && x < xIzq(y) - 4 ? 1 : -1;
+    return y > enX(cresta, x) + 3 ? 0 : -1;
+  };
   // Primero los centros de cada caserío; después, unas casas alrededor de cada uno.
-  for (let intento = 0; out.length < n && intento < 900; intento++) {
-    const cx = rnd() * W, cy = enX(cresta, cx) + 4 + rnd() * (abajo - enX(cresta, cx)) * 0.6;
-    if (!tierra(cx, cy)) continue;
+  for (let intento = 0; out.length < n && intento < 2500; intento++) {
+    const cx = rnd() * W, top = Math.max(techo + 10, Math.min(enX(cresta, cx), cx < loma.at(-1)[0] ? enX(loma, cx) : Infinity)), cy = top + 4 + rnd() * Math.max(4, (abajo - top) * 0.7);
+    if (capa(cx, cy) < 0) continue;
     const m = 2 + Math.floor(rnd() * 5);
     for (let j = 0; j < m && out.length < n; j++) {
-      const x = cx + (rnd() - 0.5) * 18 * k, y = cy + (rnd() - 0.5) * 6 * k;
-      if (tierra(x, y) && out.every(([a, b]) => Math.hypot(a - x, b - y) > 2.6)) out.push([x, y, rnd() < 0.3 ? 1 : 0]);
+      const x = cx + (rnd() - 0.5) * 18 * k, y = cy + (rnd() - 0.5) * 6 * k, c = capa(x, y);
+      if (c >= 0 && out.every(([a, b]) => Math.hypot(a - x, b - y) > 2.4)) out.push([x, y, c]);
     }
   }
   return out;
@@ -195,7 +209,7 @@ export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900 }) {
   // montaña (por detrás de su falda); llega hasta el pie de la escena (no flota en la bruma). Su cara izquierda queda en sombra.
   const span = (RANCHOS[n - 1][0] + ANCHO_RANCHO) * k;
   const xa = x - 26 * k, xb = x + span + 6 * k, fondo = H + 12;
-  const cima = [[-30, y + 46 * k], [xa - 44 * k, y + 20 * k], [xa - 10 * k, y + 5 * k], [x + span * 0.35, y - 1.5 * k], [xb, y + 1.5 * k], [xb + 34 * k, y + 13 * k], [xb + 96 * k, y + 44 * k]];
+  const cima = crestaLoma({ x, y, k, n });
   const suave = (pts) => `M${P(pts[0])}${pts.slice(1).map((q, i) => `Q${P(pts[i])} ${P([(pts[i][0] + q[0]) / 2, (pts[i][1] + q[1]) / 2])}`).join('')}L${P(pts[pts.length - 1])}`;
   const lomaBase = `${suave(cima)}L${f1(xb + 96 * k)} ${f1(fondo)}L-30 ${f1(fondo)}Z`;
   A.lomaS = poli([[xa - 44 * k, y + 20 * k], [xa - 10 * k, y + 5 * k], [x + 4 * k, y + 30 * k], [x - 22 * k, fondo], [-30, fondo], [-30, y + 46 * k]]);
@@ -237,7 +251,7 @@ export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900 }) {
     for (const t of [0.3, 0.7]) {
       const p0 = [fw + dx2 * t - 1.3, dy2 * t - 3.2], p1 = [fw + dx2 * t + 1.3, dy2 * (t + 0.093) - 3.2];
       const q = [m(p0[0], p0[1]), m(p1[0], p1[1]), m(p1[0], p1[1] - 2.4), m(p0[0], p0[1] - 2.4)];
-      sitiosVentana.push({ q, c: m(fw + dx2 * t, dy2 * t - 4.4) });
+      sitiosVentana.push({ q, c: m(fw + dx2 * t, dy2 * t - 4.4), orden: (t > 0.5 ? 10 : 0) + i });
     }
     if (i === Math.min(1, n - 1)) {
       const nq = [m(6.2, -1.2), m(9.2, -1.2), m(9.2, -4.4), m(7.7, -5.4), m(6.2, -4.4)];
@@ -255,7 +269,7 @@ export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900 }) {
     if (i < n - 1) humos.push(m(fw / 2 + dx2 * 0.62, -wh - gh + dy2 * 0.62 - 0.6));
   });
   // Ventanas: se encienden tantas como personas con cuenta, empezando por las de delante; las demás quedan oscuras.
-  sitiosVentana.forEach(({ q, c }) => {
+  sitiosVentana.sort((a, b) => a.orden - b.orden).forEach(({ q, c }) => {
     if (vent > 0) { A.luz += poli(q); A.halo += `M${P(c)}h0.01`; vent--; } else A.ventana += poli(q);
   });
   const sw = 7.5 * k;
@@ -468,9 +482,9 @@ export function vidaLago({ cx, cy, rx, ry, k }) {
 
 // ------------------------------------------------------------------------------------------------ luces, piscuchas y grabado
 /** Las luces del valle (idea 47): un punto cálido y quieto por mes del libro, en caseríos; dos trazos (las lejanas, más chicas). */
-export function lucesValle(puntos, k = 1) {
-  const d = (t) => puntos.filter((p) => p[2] === t).map((p) => `M${P(p)}h0.01`).join('');
-  return `<g class="v-luces" aria-hidden="true"><path class="v-luz-lejos" d="${d(0)}" stroke-width="${f1(1.5 * Math.min(1.2, k))}"/><path class="v-luz-cerca" d="${d(1)}" stroke-width="${f1(2.1 * Math.min(1.2, k))}"/></g>`;
+export function lucesValle(puntos, k = 1, capa = 0) {
+  const d = puntos.filter((p) => p[2] === capa).map((p) => `M${P(p)}h0.01`).join('');
+  return `<g class="v-luces" aria-hidden="true"><path class="${capa ? 'v-luz-cerca' : 'v-luz-lejos'}" d="${d}" stroke-width="${f1((capa ? 2.1 : 1.5) * Math.min(1.2, k))}"/></g>`;
 }
 /** Las piscuchas (idea 22): una por persona con cuenta, de colores de aquí (no el de nadie: ninguna se puede asociar a una persona). */
 export function piscuchas(lista) {

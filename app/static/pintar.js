@@ -359,8 +359,12 @@ let vozMontana = false; // con qué voz se dibujó la montaña («Tú» o «Vamo
 // (Campamento 22) Con qué familia se dibujó el valle (ventanas, piscuchas, iniciales): si la cuenta llega después que las compras, se rehace.
 let familiaMontana = '';
 const firmaFamilia = () => `${S.familia?.personas ?? 0}:${S.familia?.iniciales ?? ''}`;
+let revisionValle = 0;
 function revisarValle() {
-  if (S.cargado && anchoMontana && familiaMontana !== firmaFamilia()) pintarMontana(false);
+  if (!S.cargado || !anchoMontana || familiaMontana === firmaFamilia()) return;
+  // Si «Tú» está subiendo (o hay celebración), se espera a que acabe: rehacer la escena a medias cortaría la animación.
+  clearTimeout(revisionValle);
+  revisionValle = setTimeout(() => { if (familiaMontana !== firmaFamilia()) pintarMontana(false); }, Math.max(0, ocupadaHasta - performance.now()));
 }
 /**
  * La voz de la página (campamento 17): a quien solo mira se le habla «del libro» y no de «tu» saldo. Los textos fijos de la página

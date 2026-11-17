@@ -361,14 +361,14 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 22) El valle vivo: dónde va cada cosa (su propia versión en el teléfono). El camino real y el árbol del primer día van
   // al pie, por delante de la falda y por detrás del sendero; el cantón, su milpa, las piscuchas y las luces, detrás de la montaña.
   const lg = geoLago(c, W, H);
-  const valle = sitiosValle({ W, H, techo, izq, cresta: crestaMedia, bx, by, pts, lago: lg, personas, meses: lucesDelValle(meses), anios, primera });
+  const valle = sitiosValle({ W, H, techo, izq, der: [[c.sx, c.sy], ...der], cresta: crestaMedia, bx, by, pts, lago: lg, personas, meses: lucesDelValle(meses), anios, primera });
   const solV = c.sol[0] >= c.sx ? 1 : -1;
   const arbolV = valle.arbol ? { ...valle.arbol, ...arbolDelPrimerDia(anios), sol: solV } : null;
   s += `<g id="m-v-pie">${caminoReal(valle.camino)}${arbolV ? arbolPrimerDia(arbolV) : ''}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
-  s = s.replace('<!--v-luces-->', lucesValle(valle.luces, valle.k)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${milpa({ ...valle.milpa, sol: solV })}${pinoNavidad(valle.pino)}</g>`);
+  s = s.replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${lucesValle(valle.luces, valle.k, 1)}${milpa({ ...valle.milpa, sol: solV })}${pinoNavidad(valle.pino)}</g>`);
   // El mismo trazo, entero (para medir la altitud y el tramo recorrido) y por tramos de zigzag (para la tierra del camino,
   // que se estrecha con la altura: más ancho abajo, más fino arriba, como visto en perspectiva).
   let d = `M${f1(bx)} ${f1(by)}`;

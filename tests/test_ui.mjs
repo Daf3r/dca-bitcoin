@@ -5301,6 +5301,8 @@ try {
         nodos, total: document.querySelectorAll('.montana svg *').length,
         llena: visto('.v-q-llena'), hilo: visto('.v-q-hilo'), playa: visto('.lago-playa'), nivel: getComputedStyle(document.querySelector('.lago-nivel')).transform,
         milpa: ['siembra', 'jilote', 'doblada', 'tapisca', 'rastrojo'].filter((e) => visto(`.v-mp-${e}`)),
+        // Ninguna luz de la sierra queda tapada por la loma del cantón ni por la montaña (se cuentan las que se ven).
+        lucesTapadas: (() => { const loma = document.querySelector('.v-loma'), monte = document.querySelector('path.monte'); return [...(document.querySelector('.v-luz-lejos')?.getAttribute('d') ?? '').matchAll(/M([\d.]+) ([\d.]+)/g)].filter(([, x, y]) => { const q = new DOMPoint(Number(x), Number(y)); return loma.isPointInFill(q) || monte.isPointInFill(q); }).length; })(),
         humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: getComputedStyle(document.querySelector('.v-pn-foco')).animationName,
         pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-piscuchas .v-pis'),
         grabado: visto('.v-grabado'), grabadoTxt: document.querySelector('.v-grabado')?.textContent ?? null,
@@ -5333,7 +5335,7 @@ try {
       t = await entrar(navegador, srv, ADMIN, { hora: 20 }, conDia('2026-07-10')); await cerrar(t.p);
       v = await valle(t.p);
       const fam = await datos(t.p, '/api/yo');
-      ok(v.lucesVis && v.luces === Math.max(6, Math.min(60, meses('2026-07-10'))) && v.ventanas === fam.familia.personas && /255, 197, 107/.test(v.luzVentana), `22 de noche: ${v.luces} luces del valle (los meses del libro) y ${v.ventanas} ventanas encendidas, una por persona (${fam.familia.personas})`);
+      ok(v.lucesVis && v.lucesTapadas === 0 && v.luces === Math.max(6, Math.min(60, meses('2026-07-10'))) && v.ventanas === fam.familia.personas && /255, 197, 107/.test(v.luzVentana), `22 de noche: ${v.luces} luces del valle (los meses del libro) y ${v.ventanas} ventanas encendidas, una por persona (${fam.familia.personas})`);
       ok(!v.garza && !v.cuerpo && v.lampara, '22 lago de noche: sin garza; del cayuco, solo su lámpara y su reflejo');
       await t.ctx.close();
       // Al amanecer, el humo del fogón (ambiente: solo con «todos»).
