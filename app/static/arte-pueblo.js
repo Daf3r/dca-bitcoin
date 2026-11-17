@@ -63,7 +63,8 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
   // La plaza: un hueco de 26 unidades (el pino de Navidad y, en otras fechas, su árbol), con los faroles en sus esquinas.
   const plazaU = tel || acostado ? 24 : 30;
   const plaza = colocar(plazaU, 24, { tipo: 'plaza' });
-  if (plaza) piezas.push(plaza);
+  // Lo alto de la plaza (el pino de Navidad, unas 36 unidades, y el asta de la bandera) se ajusta al sitio que deja el sendero encima.
+  if (plaza) { plaza.alto = (yg - limite(plaza.x, plaza.x + plazaU * u * plaza.s)) / (u * plaza.s); piezas.push(plaza); }
   // Las casas del frente, hasta donde quepan.
   const casasFrente = [];
   for (let i = 0; i < CASAS.length; i++) {
@@ -179,12 +180,12 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     charcos.push([...m(w / 2, 0.8), 10 * k]);
   };
   // ---- la plaza: el empedrado, el árbol de la plaza (un mango, que en Navidad deja su sitio al pino), los faroles y el portal.
-  const plaza = (x, s) => {
+  const plaza = (x, s, alto = 40) => {
     const k = u * s, w = (sit.forma === 'tel' || sit.forma === 'acostado' ? 24 : 30) * k;
     add('plaza', `M${f1(x - 4 * k)} ${f1(yg + 1.6 * k)}L${f1(x + w + 4 * k)} ${f1(yg + 1.6 * k)}L${f1(x + w - 1 * k)} ${f1(yg - 3.2 * k)}L${f1(x + 2 * k)} ${f1(yg - 3.2 * k)}Z`);
     add('plaza-borde', `M${f1(x + 2 * k)} ${f1(yg - 3.2 * k)}L${f1(x + w - 1 * k)} ${f1(yg - 3.2 * k)}`);
     for (const fx of [x + 1 * k, x + w - 1 * k]) faroles.push([fx, yg - 0.6 * k, k]);
-    return { cx: x + w * 0.42, w, k };
+    return { cx: x + w * 0.42, w, k, alto: Math.min(1, alto / 36) };
   };
   // ---- dibujar, de atrás adelante
   for (const a of atras) casa(a.x, a.y, a.s, a.i, 1);
@@ -192,7 +193,7 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
   const altos = [];
   for (const p of piezas) {
     if (p.tipo === 'iglesia') iglesia(p.x, p.s);
-    else if (p.tipo === 'plaza') pz = plaza(p.x, p.s);
+    else if (p.tipo === 'plaza') pz = plaza(p.x, p.s, p.alto);
     else { const r = casa(p.x, yg, p.s, p.i, 0); altos.push(r); if (altos.length % 2 === 0 && altos.length < 6) { const [a, b] = [altos[altos.length - 2], r]; cordeles.push([a.alero[1], b.alero[0]]); } }
   }
   // Las ventanas: tantas encendidas como personas con cuenta, empezando por las del frente; las demás, oscuras.
@@ -247,13 +248,13 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
   // Fiestas patrias (13 al 15 de septiembre): la bandera azul y blanca en su asta, en la plaza.
   let patrias = '';
   if (pz) {
-    const k = pz.k, ax = pz.cx + pz.w * 0.5, ay = yg - 0.4 * k, top = ay - 24 * k, fw = 9 * k, fh = 5.6 * k;
+    const k = pz.k, ax = pz.cx + pz.w * 0.5, ay = yg - 0.4 * k, top = ay - Math.min(24, 34 * pz.alto) * k, fw = 9 * k, fh = 5.6 * k;
     const franja = (i) => `M${P([ax, top + (fh / 3) * i])}C${P([ax + fw * 0.4, top + (fh / 3) * i - 1 * k])} ${P([ax + fw * 0.6, top + (fh / 3) * i + 1 * k])} ${P([ax + fw, top + (fh / 3) * i])}L${P([ax + fw, top + (fh / 3) * (i + 1)])}C${P([ax + fw * 0.6, top + (fh / 3) * (i + 1) + 1 * k])} ${P([ax + fw * 0.4, top + (fh / 3) * (i + 1) - 1 * k])} ${P([ax, top + (fh / 3) * (i + 1)])}Z`;
     patrias = `<path class="v-patrias v-asta" d="M${P([ax, ay])}L${P([ax, top - 1.2 * k])}" stroke-width="${f1(0.6 * k)}"/><path class="v-patrias v-bandera-azul" d="${franja(0)}${franja(2)}"/><path class="v-patrias v-bandera-blanca" d="${franja(1)}"/>`;
   }
   // El pino de Navidad de la plaza y el portal del nacimiento (solo en Navidad; el CSS lo enseña).
   let navidad = '';
-  if (pz) navidad = pinoPlaza(pz.cx, yg - 0.6 * pz.k, pz.k * 1.05) + portal(pz.cx + pz.w * 0.62, yg + 0.4 * pz.k, pz.k * 0.9, sol);
+  if (pz) navidad = pinoPlaza(pz.cx, yg - 0.6 * pz.k, pz.k * 1.05 * pz.alto) + portal(pz.cx + pz.w * 0.62, yg + 0.4 * pz.k, pz.k * 0.9, sol);
   // El árbol de la plaza, un maquilishuat (en febrero, todo rosado); en Navidad deja su sitio al pino.
   const mango = pz ? (() => { const k = pz.k, c = facetas(pz.cx, yg - 12 * k, 8.4 * k, 6.2 * k, [1, 0.93, 1.05, 0.96, 1.02, 0.91, 1.04], sol, 0.3, undefined, 0.55); return `<path class="v-flores v-flores-maqui v-sin-navidad" d="M${f1(pz.cx - 9 * k)} ${f1(yg + 0.4 * k)}Q${f1(pz.cx)} ${f1(yg - 1.4 * k)} ${f1(pz.cx + 9 * k)} ${f1(yg + 0.4 * k)}Q${f1(pz.cx)} ${f1(yg + 1.8 * k)} ${f1(pz.cx - 9 * k)} ${f1(yg + 0.4 * k)}Z"/><path class="v-pz-tronco v-sin-navidad" d="${poli([[pz.cx - 0.9 * k, yg - 0.6 * k], [pz.cx + 0.9 * k, yg - 0.6 * k], [pz.cx + 0.6 * k, yg - 8 * k], [pz.cx - 0.6 * k, yg - 8 * k]])}"/><path class="copa v-maqui v-sin-navidad" d="${c.base}"/><path class="copa-media v-maqui v-sin-navidad" d="${c.media}"/><path class="copa-luz v-maqui v-sin-navidad" d="${c.luz}"/><path class="copa-sombra v-maqui v-sin-navidad" d="${c.sombra}"/>`; })() : '';
   // El humo del fogón (ambiente, a sus horas): tres bocanadas a destiempo de la primera cocina.
