@@ -13,6 +13,8 @@ En cada pasada:
     BTC se recupera y queda a menos de 10 % de su máximo). Solo informa; solo de 8:00 a 21:00;
   · el Diario del domingo (idea 20): el domingo desde las 18:00, una vez, el titular del Diario sin cifras a quien lo pidió (cada
     dispositivo con su horario: el que duerme lo recibe al despertar). Sin compras no hay Diario ni aviso;
+  · revisión tranquila del respaldo (campamento 24, idea 36): cada 180 días desde lo más reciente de la última revisión («Revisado»), el
+    último aviso o el día en que se encendió, una pregunta al admin que lo pidió. La app no guarda nada de la wallet;
   · cuentas (idea 46): si las reglas contables no cuadran (saldo negativo, wallet con más sats de los que hay), avisa al admin una vez
     por problema nuevo. Solo avisa: nunca corrige nada;
   · limpieza (una vez al día): quita lo que solo crece y ya no sirve (TXID cerrados, caché de TXID de movimientos que ya no existen,
@@ -195,6 +197,30 @@ def _diario(conn: sqlite3.Connection) -> bool:
     return True
 
 
+def _resguardo(conn: sqlite3.Connection) -> bool:
+    """Revisión tranquila del respaldo (campamento 24, idea 36): una pregunta al admin cada 180 días (la regla está en `server.resguardo`).
+    · Nadie con la categoría encendida: no hay ciclo (se olvida el inicio, así volver a encenderla vuelve a contar desde ese día).
+    · Recién encendida: se anota el inicio y no se avisa (nunca suena el día en que se enciende).
+    · Vencido el ciclo y con alguien despierto: se anota el aviso ANTES de mandarlo (uno por ciclo; si nadie toca «Revisado», el siguiente
+      llega 180 días después de este, nunca antes) y `push.notificar` respeta el horario de cada dispositivo (al que duerme se le guarda)."""
+    if not push.destinatarios(conn, "resguardo"):
+        if server._meta(conn, "resguardo_inicio") is not None:
+            conn.execute("DELETE FROM meta WHERE clave = 'resguardo_inicio'")
+            conn.commit()
+        return False
+    ahora = push.ahora()
+    if server._meta(conn, "resguardo_inicio") is None:
+        server._meta_poner(conn, "resguardo_inicio", str(int(ahora.timestamp())))
+        conn.commit()
+        return False
+    if not server.resguardo(conn)["toca"] or not push.alguien_despierto(conn):
+        return False
+    server._meta_poner(conn, "aviso_resguardo", str(int(ahora.timestamp())))
+    conn.commit()
+    push.notificar(conn, "resguardo", "Libro DCA", server.TEXTO_RESGUARDO, "resguardo")
+    return True
+
+
 def _una_vez_al_dia(conn: sqlite3.Connection, clave: str) -> bool:
     """True la primera vez que se pregunta cada día (y deja marcado el día)."""
     hoy = ritmo.hoy_sv(push.ahora()).isoformat()
@@ -311,7 +337,7 @@ def una_pasada() -> dict[str, Any]:
         server._meta_poner(conn, "avisos_latido", str(int(time.time())))  # «sigo vivo»: lo lee el chequeo de salud
         conn.commit()
         return {"pendientes": push.vaciar_pendientes(conn), "recordatorio": _recordatorio(conn), "txid": _txid(conn), "caida": _caida(conn),
-                "wallet": _wallet(conn), "diario": _diario(conn), "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "cuentas": _cuentas(conn), "limpieza": _limpieza(conn)}
+                "wallet": _wallet(conn), "diario": _diario(conn), "resguardo": _resguardo(conn), "respaldo": _respaldo_viejo(conn), "integridad": _integridad(conn), "disco": _disco(conn), "cuentas": _cuentas(conn), "limpieza": _limpieza(conn)}
     finally:
         conn.close()
 

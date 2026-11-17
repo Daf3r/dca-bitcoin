@@ -1,10 +1,11 @@
 import { $, api } from './estado.js';
 import { avisar } from './avisar.js';
-import { ESTADO_FPS, PALABRA_FPS, REGLA_LENTO, veredictoFps } from './lib.js';
+import { ESTADO_FPS, PALABRA_FPS, REGLA_LENTO, fechaLarga, textoResguardo, veredictoFps } from './lib.js';
 
 // «Estado del sistema» (ideas 53, 145, 96, 74, 46): una vista de «Tu cuenta» solo para el admin. Muestra estados y fechas, nunca claves ni
 // contenido de las compras. Cada fila lleva una palabra («Bien», «Revisar», «Falla») además del símbolo: no depende del color.
-const MARCA = { ok: ['✔', 'Bien'], aviso: ['!', 'Revisar'], mal: ['✘', 'Falla'] };
+// `calma` (campamento 24) es la de la revisión del respaldo cuando toca o nunca se hizo: un hábito, no una avería; sin color de alarma.
+const MARCA = { ok: ['✔', 'Bien'], aviso: ['!', 'Revisar'], mal: ['✘', 'Falla'], calma: ['○', 'Cuando puedas'] };
 
 export function hace(ts, ahora) {
   const s = Math.max(0, ahora - ts);
@@ -82,7 +83,31 @@ $('sis-med-borrar').addEventListener('click', async () => {
   try { await api('/api/medidas', { metodo: 'DELETE' }); avisar('Medidas borradas.', null, true); } catch (err) { avisar(`No se pudieron borrar. ${err.message}`); }
   pintarSistema();
 });
-const SENTIDO_CAT = { movimiento: 'movimientos', hito: 'hitos', recordatorio: 'recordatorio', txid: 'TXID', respaldo: 'respaldo y sistema', caida: 'gran caída' };
+const SENTIDO_CAT = { movimiento: 'movimientos', hito: 'hitos', recordatorio: 'recordatorio', txid: 'TXID', respaldo: 'respaldo y sistema', resguardo: 'revisión del respaldo',
+  caida: 'gran caída', piedrita: 'piedritas y firmas', diario: 'Diario del domingo', wallet: 'retirar a la wallet' };
+
+// ---- Revisión tranquila del respaldo (campamento 24, idea 36): la fecha de la última vez que el admin miró el respaldo de su wallet y la
+// nota para su familia, y cuándo llega el próximo recordatorio. Va aparte de las siete filas: no es una avería ni «cosa por revisar».
+function pintarResguardo(r) {
+  if (!r) return;
+  const t = textoResguardo(r);
+  const li = fila(t.estado, 'Revisión del respaldo', t.detalle, t.palabra);
+  li.classList.add('sis-resguardo');
+  $('sis-rg').replaceChildren(li);
+}
+let revisando = false;
+$('sis-revisado').addEventListener('click', async () => {
+  if (revisando) return; // un doble toque no manda dos (el servidor, además, no anota dos veces el mismo día)
+  revisando = true;
+  const res = $('sis-rg-res');
+  try {
+    const r = await api('/api/resguardo', { metodo: 'POST', cuerpo: {} });
+    pintarResguardo(r);
+    res.textContent = r.ya ? 'Ya estaba anotado: hoy revisaste el respaldo.'
+      : `Anotado: hoy revisaste el respaldo.${r.proximo ? ` El próximo recordatorio, el ${fechaLarga(r.proximo)}.` : ''}`;
+  } catch (err) { res.textContent = `No se pudo anotar. ${err.message}`; }
+  revisando = false;
+});
 
 export function filasDelEstado(e) {
   const ahora = e.ahora, f = [];
@@ -119,6 +144,8 @@ export async function pintarSistema() {
   res.textContent = revisar ? `${revisar} ${revisar === 1 ? 'cosa por revisar' : 'cosas por revisar'}.` : 'Todo en orden.';
   $('sis-lista').replaceChildren(...filas);
   pintarMedidas(e.medidas ?? [], e.ahora);
+  pintarResguardo(e.resguardo);
+  $('sis-rg-res').textContent = '';
   $('sis-disp').replaceChildren(...(e.dispositivos.length ? e.dispositivos.map((x) => {
     const sano = x.fallos < 3;
     const cats = x.categorias.map((c) => SENTIDO_CAT[c] ?? c).join(', ') || 'ninguna';

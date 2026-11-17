@@ -735,6 +735,13 @@
     </table></div>
     <h3>Errores del navegador</h3>
     <ul class="sis-lista" id="sis-err"></ul>
+    <!-- Revisión tranquila del respaldo (campamento 24, idea 36): solo la fecha en que el admin miró su respaldo; la app no pide ni guarda
+         nada de la wallet. Va aparte de las siete filas de arriba: no cuenta como «cosa por revisar». -->
+    <h3 id="sis-rg-h">Revisión del respaldo</h3>
+    <p class="dc-nota">De vez en cuando conviene mirar que el respaldo de tu wallet y la nota para tu familia siguen donde los dejaste. Revisar es mirarlo tú: la app no pide ni guarda nada de eso, solo la fecha en que tocas «Revisado».</p>
+    <ul class="sis-lista" id="sis-rg" aria-labelledby="sis-rg-h"></ul>
+    <div class="d-bot sis-med-bot"><button type="button" id="sis-revisado">Revisado<span class="sr">: hoy miré el respaldo</span></button></div>
+    <p class="dc-nota sis-rg-res" id="sis-rg-res" role="status"></p>
     <!-- Probar la celebración (antes «vista previa temporal» en el menú; campamento 20): la animación con datos de prueba. No guarda nada ni queda en el Historial. -->
     <h3 id="dc-previa-t">Probar la celebración</h3>
     <p class="dc-nota">La animación de una compra, una etapa o un hito, con datos de prueba. No guarda nada ni queda en el Historial.</p>

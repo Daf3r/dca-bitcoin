@@ -1612,6 +1612,7 @@ def estado_sistema(conn: sqlite3.Connection) -> dict[str, Any]:
         "metricas": metricas,
         "errores": [dict(r) for r in conn.execute("SELECT ultimo, pantalla, mensaje, agente, usuario, n FROM errores_js ORDER BY ultimo DESC LIMIT 20")],
         "medidas": [_medida_json(r) for r in conn.execute(f"SELECT {MEDIDA_COLS} FROM medidas_aparato ORDER BY id DESC LIMIT ?", (MEDIDAS_MAX,))],
+        "resguardo": resguardo(conn),
     }
 
 
@@ -1696,6 +1697,68 @@ def borrar_medidas() -> Any:
     n = conn.execute("DELETE FROM medidas_aparato").rowcount
     conn.commit()
     return jsonify(quitados=n)
+
+
+# ------------------------------------------------- revisión tranquila del respaldo (campamento 24, idea 36)
+# Cada 180 días, una pregunta al admin (categoría push `resguardo`, apagada): ¿el respaldo de la wallet y la nota para la familia siguen
+# donde los dejó? Revisar es mirarlo él mismo: la app NUNCA pide ni guarda la frase ni nada de la wallet, solo la fecha en que tocó
+# «Revisado». Todo vive en `meta` (sin migración): `resguardo_revisado` (la última revisión), `resguardo_inicio` (cuándo se encendió el
+# aviso en algún dispositivo; lo pone y lo quita `avisos._resguardo`) y `aviso_resguardo` (el último aviso). Las fechas salen de
+# `push.ahora()` (hora de El Salvador), así las pruebas pueden mover el reloj.
+RESGUARDO_DIAS = 180
+TEXTO_RESGUARDO = ("¿Tu respaldo de la wallet y la nota para tu familia siguen donde los dejaste? Cuando puedas, míralo tú y marca "
+                   "«Revisado» en «Estado del sistema». La app no guarda nada de eso.")
+
+
+def _ts_meta(conn: sqlite3.Connection, clave: str) -> int | None:
+    v = _meta(conn, clave)
+    try:
+        return int(v) if v else None
+    except ValueError:
+        return None
+
+
+def _dia_sv(ts: int) -> date:
+    return datetime.fromtimestamp(ts, ritmo.ZONA).date()
+
+
+def resguardo(conn: sqlite3.Connection) -> dict[str, Any]:
+    """La regla de la revisión del respaldo, la misma para «Estado del sistema» y para el aviso (así la fecha que se ve es la que suena).
+    El próximo aviso llega 180 días después de lo más reciente de: la última revisión («Revisado»), el último aviso y el día en que se
+    encendió el aviso. Así nunca suena el día en que se enciende (ni el del despliegue: viene apagado) ni más de una vez cada 180 días.
+    Sin ningún dispositivo con la categoría encendida no hay próximo aviso (`proximo` None)."""
+    ahora = push.ahora()
+    hoy = ritmo.hoy_sv(ahora)
+    revisado = _ts_meta(conn, "resguardo_revisado")
+    encendido = bool(push.destinatarios(conn, "resguardo"))
+    # Antes de la primera pasada de `avisos` (cada 2 minutos) aún no hay inicio: se cuenta desde ahora, que es lo que va a anotar.
+    inicio = (_ts_meta(conn, "resguardo_inicio") or int(ahora.timestamp())) if encendido else None
+    base = max((t for t in (revisado, inicio, _ts_meta(conn, "aviso_resguardo")) if t), default=None)
+    proximo = _dia_sv(base) + timedelta(days=RESGUARDO_DIAS) if encendido and base else None
+    dias = (hoy - _dia_sv(revisado)).days if revisado else None
+    return {"revisado": _dia_sv(revisado).isoformat() if revisado else None, "dias": dias, "cada": RESGUARDO_DIAS,
+            "al_dia": dias is not None and dias < RESGUARDO_DIAS, "encendido": encendido, "proximo": proximo.isoformat() if proximo else None,
+            "toca": proximo is not None and hoy >= proximo}
+
+
+@app.post("/api/resguardo")
+def marcar_resguardo() -> Any:
+    """«Revisado»: anota (y audita) que hoy el admin miró su respaldo. Tocarlo otra vez el mismo día no cambia nada ni se audita dos veces.
+    Lo que ya estaba guardado de noche para este aviso se descarta: no llega después de revisar."""
+    if g.usuario["rol"] != "admin":
+        return jsonify(error="Solo quien lleva el libro anota la revisión del respaldo."), 403
+    conn = db()
+    ahora = push.ahora()
+    hoy = ritmo.hoy_sv(ahora)
+    previo = _ts_meta(conn, "resguardo_revisado")
+    antes = _dia_sv(previo) if previo else None
+    if antes != hoy:
+        _meta_poner(conn, "resguardo_revisado", str(int(ahora.timestamp())))
+        conn.execute("DELETE FROM avisos_pendientes WHERE categoria = 'resguardo'")
+        auth.auditar(conn, quien(), "resguardo_revisado", "libro", None, {"fecha": antes.isoformat()} if antes else None, {"fecha": hoy.isoformat()},
+                     auth.ip_resumida(ip_real()))
+        conn.commit()
+    return jsonify({**resguardo(conn), "ya": antes == hoy})
 
 
 @app.get("/api/auditoria")

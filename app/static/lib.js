@@ -2188,3 +2188,23 @@ export function textosPelicula(x, libro = false) {
     : `${libro ? 'El libro llegó' : 'Llegaste'} ${e.rango === 'campamento' ? `al campamento ${nombreHito(e.m ?? 0)}` : `a ${metaTxt(e.m ?? 0)}`}`;
   return { rotulo, evento, lectura: `${x.hoy ? `Hoy, ${fechaLarga(x.fecha)}` : fechaLarga(x.fecha)}: ${entero(x.sats)} sats.${evento ? ` ${evento}.` : ''}` };
 }
+
+// ---------------------------------------------------------------- Campamento 24 · Confianza
+/** Cada cuántos días pregunta la revisión del respaldo (la regla vive en el servidor: `server.resguardo`). */
+export const RESGUARDO_DIAS = 180;
+/**
+ * La fila de la revisión del respaldo en «Estado del sistema» (campamento 24, idea 36): estado, palabra y detalle. Tranquila a propósito:
+ * no haber revisado no es nunca «Falla» ni rojo (es un hábito, no una avería) y no cuenta como «cosa por revisar». La app no guarda nada de la
+ * wallet: solo la fecha en que se tocó «Revisado».
+ * @param {{ revisado: string|null, dias: number|null, al_dia: boolean, encendido: boolean, proximo: string|null, toca?: boolean, cada?: number }} r
+ * @returns {{ estado: 'ok'|'calma', palabra: string, detalle: string }}
+ */
+export function textoResguardo(r) {
+  const cada = r.cada ?? RESGUARDO_DIAS;
+  const cuando = r.dias == null ? 'nunca' : r.dias <= 0 ? 'hoy' : r.dias === 1 ? 'ayer' : `hace ${entero(r.dias)} días (${fechaLarga(r.revisado ?? '')})`;
+  const ultima = `Última revisión: ${cuando}.`;
+  const sigue = r.toca ? ' El recordatorio sale hoy.' : r.proximo ? ` Próximo recordatorio: el ${fechaLarga(r.proximo)}.`
+    : ` Para que te lo recuerde cada ${cada} días, enciende «Revisión tranquila del respaldo» en «Avisos en este dispositivo».`;
+  if (r.al_dia) return { estado: 'ok', palabra: 'Al día', detalle: ultima + sigue };
+  return { estado: 'calma', palabra: r.revisado ? 'Cuando puedas' : 'Sin anotar', detalle: ultima + (r.revisado ? '' : ' Cuando mires dónde está, toca «Revisado».') + sigue };
+}
