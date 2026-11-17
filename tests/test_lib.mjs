@@ -1326,5 +1326,46 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   almacen['libro.dia'] = '2027-02-10'; almacen['libro.hora'] = '12'; C.aplicar();
   ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === undefined, 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y nada que se mueva');
   delete almacen['libro.dia']; delete almacen['libro.hora'];
+
+  // El arte de la parte 2: funciones puras, sin estilos en línea, con clases v-…; lo que se mueve lleva `efecto-ambiente`.
+  const L = await import('../app/static/lib.js');
+  const A = await import('../app/static/arte-valle.js');
+  const izq = [[-23, 752], [40, 640], [95, 550], [150, 470], [200, 400], [242, 327]];
+  const der = [[242, 327], [300, 420], [360, 560], [420, 700]];
+  const cresta = [[0, 560], [60, 548], [120, 566], [200, 552], [300, 570], [400, 556]];
+  const pts = [[55, 714], [232, 638], [120, 560], [242, 327]];
+  const lago = { cx: 335, cy: 665, rx: 62, ry: 12 };
+  const tel = (personas) => A.sitiosValle({ W: 390, H: 760, techo: 270, izq, der, cresta, bx: 55, by: 714, pts, lago, personas, meses: 13, anios: 1.2, primera: '2025-09-01', astro: [335, 357] });
+  const sv = tel(6);
+  // 55 · el mar de niebla: detrás de la montaña, por debajo del saldo; dos capas, la que más se ve con su sombra.
+  const mar = A.marDeNiebla({ W: 390, H: 760, canton: sv.canton, milpa: sv.milpa, k: sv.k, cresta, techo: 270 });
+  const topes = (svg) => [...svg.matchAll(/d="M[-\d.]+ ([\d.]+)/g)].map((m) => Number(m[1]));
+  ok(topes(mar.atras).every((y) => y > 270 + 20) && Math.min(...topes(mar.frente)) > sv.milpa.y + sv.milpa.h, `valle 22B: el mar de niebla, por debajo del saldo y (la capa de delante) de la milpa (${topes(mar.atras)} / ${topes(mar.frente)})`);
+  eq([(mar.atras.match(/<path/g) || []).length, (mar.frente.match(/<path/g) || []).length, /v-mar-sombra/.test(mar.frente)], [2, 3, true], 'valle 22B: dos planos detrás de la loma y tres delante (con su sombra) en el teléfono');
+  // 58 · las vacas: una en el teléfono, en la orilla de afuera (aquí la izquierda: la derecha no cabe), mirando al agua y lejos del sendero.
+  const dist = (px, py) => Math.min(...pts.slice(1).map(([bx2, by2], i) => { const [ax, ay] = pts[i], dx = bx2 - ax, dy = by2 - ay, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - ax - t * dx, py - ay - t * dy); }));
+  ok(sv.vacas.length === 1 && sv.vacas[0].x < lago.cx - lago.rx && sv.vacas[0].dir === 1 && dist(sv.vacas[0].x, sv.vacas[0].y - 4) > 13, `valle 22B: una vaca en el teléfono, en la orilla, mirando al agua y lejos del sendero (${JSON.stringify(sv.vacas[0])})`);
+  const esc = A.vacasSitios({ W: 1440, lago: { cx: 1160, cy: 697, rx: 120, ry: 14 }, pts: [[465, 708], [860, 600], [500, 480], [890, 62]], k: 1.45, forma: 'esc', sx: 890 });
+  ok(esc.length === 3 && esc.every((v) => v.x > 1160 + 120 && v.x < 1440) && esc[0].dir === -1, `valle 22B: tres vacas en escritorio, en la orilla de afuera (la que da al campo) (${esc.map((v) => Math.round(v.x))})`);
+  const pot = A.potrero({ vacas: esc, k: 1.45 });
+  eq([(pot.match(/<path/g) || []).length, A.potrero({ vacas: [] })], [6, ''], 'valle 22B: seis trazos para todas las vacas (de pie, echadas, sombra y garcitas); sin sitio, nada');
+  // 56 · los dos árboles del cantón, cada uno con sus trazos y sus flores caídas.
+  const cant = A.canton({ ...sv.canton, ventanas: 2, H: 760 });
+  ok(['copa v-maqui', 'copa v-fuego', 'v-flores v-flores-maqui', 'v-flores v-flores-fuego'].every((c) => cant.includes(`class="${c}"`)), 'valle 22B: el maquilishuat y el árbol de fuego con sus copas y sus flores caídas');
+  // 57 · las bandadas: en el teléfono el remolino va sobre el valle, a la izquierda de la montaña y por debajo del saldo; los pericos entran por la derecha.
+  ok(sv.aves.aza[0] < 200 && sv.aves.aza[1] > 270 && sv.aves.aza[1] < 548 && sv.aves.peri[0] > 390 && sv.aves.dist > 390, `valle 22B: el remolino de azacuanes sobre el valle y los pericos desde el borde derecho, de lado a lado (${sv.aves.aza.map(Math.round)}, ${Math.round(sv.aves.dist)})`);
+  const avE = A.avesSitios({ W: 1440, H: 774, techo: 400, cresta, forma: 'esc', k: 1.45, cima: [890, 62], astro: [1310, 170], xIzq: () => 0 });
+  ok(avE.aza[0] > 890 && avE.aza[0] < 1310 && avE.peri[1] < 200 && avE.dist < 1440 - 890 + 120, `valle 22B: en escritorio, entre la cumbre y el sol, y los pericos se pierden detrás de la montaña (${avE.aza.map(Math.round)}, ${Math.round(avE.dist)})`);
+  const band = A.bandadas(sv.aves), zom = A.zompopos({ milpa: sv.milpa, k: sv.k }), ray = A.relampago(A.sitioRayo(390, 760, 470));
+  ok([band, zom, ray].every((t) => (t.match(/class="([^"]+)"/g) || []).every((c) => c.startsWith('class="efecto-ambiente v-'))), 'valle 22B: las bandadas, los zompopos y los relámpagos son ambiente (solo con «todos»)');
+  eq([(band.match(/v-aza/g) || []).length, (band.match(/v-peri/g) || []).length, (zom.match(/<path/g) || []).length, (ray.match(/<path/g) || []).length, /url\(#m-v-rayo\)/.test(ray)], [2, 2, 2, 1, true], 'valle 22B: dos medias bandadas de cada una, dos columnas de zompopos y una nube');
+  ok(A.sitioRayo(1440, 774, 294).x > 1440 / 2 && A.sitioRayo(390, 760, 470).x < 390 / 2, 'valle 22B: la tormenta, a la derecha en escritorio (a la izquierda está el saldo) y sobre el valle en el teléfono');
+  // El presupuesto: todo el valle del teléfono, con seis personas (seis piscuchas y seis ventanas), más sus tres capas y el agua del lago, en 150 nodos.
+  const lad = A.sitiosLadera({ W: 390, sx: 242, sy: 327, der: der.slice(1), nv: 57, pts, lago, cajas: [], grabado: true, k: 1 });
+  const todo = [A.canton({ ...sv.canton, ventanas: 6, H: 760 }), A.milpa(sv.milpa), A.pinoNavidad(sv.pino), A.caminoReal(sv.camino), A.arbolPrimerDia({ ...sv.arbol, ...L.arbolDelPrimerDia(1.2) }), A.lucesValle(sv.luces, 1, 0), A.lucesValle(sv.luces, 1, 1),
+    A.piscuchas(sv.piscuchas), A.tule(lago), A.vidaLago(lago), A.grabadoLuna({ x: 300, y: 600, k: 1, iniciales: 'A · D · M · J · L · R', fecha: '20 · XI · 2025' }), lad.quebrada ? A.quebrada(lad.quebrada) : '', mar.atras, mar.frente, A.potrero({ vacas: sv.vacas, k: sv.k }), band, zom, ray].join('');
+  const nodos = (todo.match(/<(?!\/)[a-zA-Z]/g) || []).length + 3 + 2; // + #m-v-fondo, #m-v-pie, #m-v-ladera y el agua del lago (.lago-playa, .lago-nivel)
+  ok(sv.piscuchas.length === 6 && nodos <= 150, `valle 22B: con seis personas, todo el valle del teléfono cabe en 150 nodos (${nodos})`);
+  ok(!/style=|<script|on[a-z]+=/i.test(todo) && (todo.match(/class="([^"]+)"/g) || []).every((x) => /class="(efecto-ambiente |copa|v-|vq-|lago-)/.test(x)), 'valle 22B: todo sin estilos ni scripts en línea, con clases propias');
 }
 console.log(`OK ${n} comprobaciones`);
