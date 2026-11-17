@@ -18,6 +18,7 @@ export const S = {
   montana: null, // el nombre de la montaña (19), si quien anota le puso uno
   capsulas: [], // las cartas selladas (15A): { id, abre_fecha, abre_sats, abierta, texto (solo si ya se abrió o eres el dueño), … }
   usuario: null, rol: null,
+  familia: null, // el valle (22): { personas, iniciales } de las cuentas activas (llega con /api/yo)
 };
 export let R = resumen([], null);
 /** R se reasigna solo desde aquí: los demás módulos la leen (enlace vivo) pero no la pueden asignar. */

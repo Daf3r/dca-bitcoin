@@ -56,6 +56,7 @@ export async function cargarYo() {
   try {
     const yo = await api('/api/yo');
     Object.assign(S, { usuario: yo.usuario, rol: yo.rol, visto: yo.visto ?? null, cambios: yo.cambios ?? null });
+    S.familia = yo.familia ?? null; // el valle (campamento 22): cuántas cuentas hay y sus iniciales, sin nombres
     document.body.dataset.rol = yo.rol;
     document.body.dataset.mant = yo.mantenimiento ? '1' : ''; // modo solo lectura de emergencia (SOLO_LECTURA=1 en el servidor)
     $('mant').hidden = !yo.mantenimiento;

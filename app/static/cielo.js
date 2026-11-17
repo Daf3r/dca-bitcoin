@@ -70,11 +70,29 @@
   }
   /** Época del año en El Salvador: lluviosa de mayo a octubre, seca el resto. */
   const epoca = (f) => (Number(f.slice(5, 7)) >= 5 && Number(f.slice(5, 7)) <= 10 ? 'lluviosa' : 'seca');
-  /** Cohetes de fin de año: del 31 de diciembre a las 23:50 hasta el 1 de enero a las 0:30. */
+  /** Cohetes de Nochebuena y de fin de año: del 24 (y del 31) de diciembre a las 23:50 hasta las 0:30 del día siguiente. */
   function cohetes(f, h) {
     const md = f.slice(5);
-    return (md === '12-31' && h >= 23 + 50 / 60) || (md === '01-01' && h < 0.5);
+    return ((md === '12-24' || md === '12-31') && h >= 23 + 50 / 60) || ((md === '12-25' || md === '01-01') && h < 0.5);
   }
+  // Campamento 22 · el valle vivo. Lo que sigue al calendario de aquí; la escena lo dibuja siempre y el CSS enseña lo que toca.
+  /** Navidad en el valle: del 1 de diciembre al 6 de enero (luces en los ranchos, el nacimiento y el pino con luces). */
+  const navidad = (f) => f.slice(5) >= '12-01' || f.slice(5) <= '01-06';
+  /** Piscuchas: con los vientos de octubre y noviembre. */
+  const piscuchas = (f) => f.slice(5) >= '10-01' && f.slice(5) <= '11-30';
+  /** La milpa del valle: se siembra el 1 de mayo, jilotea en julio, se dobla el 15 de agosto, se tapisca en noviembre y queda el rastrojo de diciembre a abril. */
+  function milpa(f) {
+    const md = f.slice(5);
+    if (md >= '05-01' && md < '07-01') return 'siembra';
+    if (md >= '07-01' && md < '08-15') return 'jilote';
+    if (md >= '08-15' && md < '11-01') return 'doblada';
+    if (md >= '11-01' && md < '12-01') return 'tapisca';
+    return 'rastrojo';
+  }
+  /** El fogón de leña: humo de la cocina a la hora del café (5 a 7) y de la cena (18 a 20). */
+  const fogon = (h) => (h >= 5 && h < 7) || (h >= 18 && h < 20);
+  /** Noche de luna llena: con la luna iluminada al 97 % o más. */
+  const lunaLlena = (fase) => (1 - Math.cos(2 * Math.PI * fase)) / 2 >= 0.97;
   /** La franja a la que pertenece la hora. */
   function franja(h) {
     if (h >= 19 || h < 5) return 'noche';
@@ -126,10 +144,18 @@
     return peor('clara') >= peor('oscura') ? 'clara' : 'oscura';
   }
   /** Fase de la luna (0 = nueva, 0.25 = cuarto creciente, 0.5 = llena, 0.75 = cuarto menguante), con una luna nueva conocida. */
-  function faseLunar(fecha = new Date()) {
+  function faseLunar(fecha = ahoraVista()) {
     const CICLO = 29.530588853 * 864e5;
     const NUEVA = Date.UTC(2000, 0, 6, 18, 14);
     return (((fecha.getTime() - NUEVA) / CICLO) % 1 + 1) % 1;
+  }
+  /** El instante que se ve: el de ahora o, si se pidió otro día para probar (`libro.dia`), ese día a la hora del cielo (El Salvador es UTC−6). */
+  function ahoraVista() {
+    let forzado = '';
+    try { forzado = localStorage.getItem('libro.dia') ?? ''; } catch { /* sin almacenamiento */ }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(forzado)) return new Date();
+    const [a, m, d] = forzado.split('-').map(Number);
+    return new Date(Date.UTC(a, m - 1, d) + (hora() + 6) * 3600e3);
   }
   /** «Buenos días / tardes / noches» según la hora. */
   function saludo(h) {
@@ -154,6 +180,12 @@
     if (fi) raiz.dataset.fiesta = fi; else delete raiz.dataset.fiesta;
     raiz.dataset.epoca = epoca(d);
     raiz.toggleAttribute('data-cohetes', cohetes(d, h));
+    // El valle vivo (campamento 22): la milpa, la Navidad, las piscuchas, el humo del fogón y la noche de luna llena.
+    raiz.dataset.milpa = milpa(d);
+    raiz.toggleAttribute('data-navidad', navidad(d));
+    raiz.toggleAttribute('data-piscuchas', piscuchas(d));
+    raiz.toggleAttribute('data-fogon', fogon(h));
+    raiz.toggleAttribute('data-luna-llena', lunaLlena(faseLunar()));
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
     raiz.dataset.tinta = ti;
@@ -172,5 +204,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();
