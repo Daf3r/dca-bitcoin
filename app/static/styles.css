@@ -4154,6 +4154,7 @@ html:is([data-fiesta="agostinas"], [data-fiesta="patrias"]) .v-fiesta { display:
 html[data-cielo="noche"] .v-belen-fondo { fill: color-mix(in oklab, #ffd58c 86%, #fff3d0); }
 .v-belen-halo { display: none; }
 html[data-navidad]:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-belen-halo { display: inline; }
+html[data-navidad]:not([data-cielo="noche"]):not([data-cielo="atardecer"]) .v-belen-halo { display: none; } /* (gana a `html[data-navidad] .v-navidad`: de día, sin halo) */
 .v-belen-horcon { fill: color-mix(in oklab, #5b3b22 var(--v-som), var(--monte-sombra)); }
 .v-belen-figuras { fill: #2a1a10; }
 .v-belen-nino { fill: none; stroke: #fff4d6; stroke-linecap: round; }
@@ -4218,7 +4219,7 @@ html[data-efectos="todos"] .yo-nav-1 { animation-delay: -1s; } html[data-efectos
   html[data-efectos="todos"] .yo-nav { animation-timing-function: steps(36); }
 }
 /* En Navidad, las noches tienen las estrellas algo más vivas. */
-html[data-navidad][data-cielo="noche"] .estrella { filter: none; opacity: calc(var(--estrellas, 0.75) * 1.25); }
+html[data-navidad][data-cielo="noche"]:not([data-entrada="usuario"]) .estrella { opacity: calc(var(--estrellas, 0.75) * 1.25); }
 /* La ladera baja (arte-pueblo.js: laderaBaja): claros de pasto, bosquecillos con su lado de luz y peñas facetadas. */
 .lb-claro { fill: color-mix(in oklab, color-mix(in oklab, var(--v-pasto) 62%, var(--luz-roca)) calc(var(--v-luz) - 18%), var(--monte)); fill-opacity: 0.5; }
 .lb-pino-s { fill: color-mix(in oklab, var(--pino1) 80%, var(--monte-sombra)); }

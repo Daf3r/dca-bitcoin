@@ -377,7 +377,7 @@ export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx }) {
   // Franjas que siguen el terreno (lomas suaves): cada franja ondula a su ritmo; entre una y otra, una hilera de árboles.
   const fr = [0, 0.36, 0.68, 1], fase = [0, 1.7, 3.1, 4.4];
   const yF = (j, x) => { const t = enBorde(borde, x) + 4 * k; return t + (yAbajo - t) * fr[j] + (j && j < 3 ? Math.sin(x / (70 * k) + fase[j]) * 5 * k : 0); };
-  const curva = (j, a, b) => { const out = []; for (let x = a; x <= b + 0.1; x += Math.max(4, (b - a) / 8)) out.push([x, yF(j, x)]); return out; };
+  const curva = (j, a, b) => { const out = []; for (let x = a; x <= b + 0.1; x += Math.max(6, (b - a) / 5)) out.push([x, yF(j, x)]); return out; };
   const inclina = (x, j) => x + (x - vx) * 0.22 * fr[j];
   let milpa = null, mejor = -1;
   for (let j = 0; j < 3; j++) {
@@ -388,7 +388,7 @@ export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx }) {
       const t = Math.floor(rnd() * 4);
       tono[t] += poli([...arriba, ...abajo.reverse()]);
       // Surcos: en las parcelas aradas y en las de la época, rayas que siguen la loma.
-      if (t >= 2) for (const s of [0.3, 0.55, 0.8]) surco += `M${curva(j, a + 3 * k, b - 3 * k).map(([x, y]) => P([x + (x - vx) * 0.22 * (fr[j] + (fr[j + 1] - fr[j]) * s), y + (yF(j + 1, x) - y) * s])).join('L')}`;
+      if (t >= 2) for (const s of [0.35, 0.7]) surco += `M${curva(j, a + 3 * k, b - 3 * k).map(([x, y]) => P([x + (x - vx) * 0.22 * (fr[j] + (fr[j + 1] - fr[j]) * s), y + (yF(j + 1, x) - y) * s])).join('L')}`;
       if (j === 2 && b - a > mejor) { mejor = b - a; const ya = Math.max(yF(2, a), yF(2, b)); milpa = { x: inclina(a, 2) + 3 * k, y: ya + 2 * k, w: b - a - 8 * k, h: Math.max(8 * k, yAbajo - ya - 4 * k), caida: 0 }; }
       a = b;
     }
@@ -442,7 +442,7 @@ export function laderaBaja({ W, sy, by, L, R, pts = [], cajas = [], k = 1, sol =
   }
   // Bosquecillos: centros al azar en la mitad de abajo; cada uno, unos pinos alrededor.
   const pinos = [];
-  for (let g = 0; g < 20; g++) {
+  for (let g = 0; g < (W < 700 ? 14 : 20); g++) {
     const v = Math.sqrt(rnd()), y = y0 + (by - y0) * v, x = xL(y) + (xR(y) - xL(y)) * (0.04 + rnd() * 0.92);
     const n = 3 + Math.floor(rnd() * 6);
     for (let j = 0; j < n; j++) {
@@ -457,7 +457,7 @@ export function laderaBaja({ W, sy, by, L, R, pts = [], cajas = [], k = 1, sol =
     const w = h * 0.34;
     pinoS += poli([[x, y - h], [x - w, y], [x, y + 0.6]]);
     pinoL += poli([[x, y - h], [x + w, y], [x, y + 0.6]].map(([px, py]) => [x + (px - x) * sol, py]));
-    if (h > 9 * k) pinoF += poli([[x, y - h * 1.02], [x - w * 0.7, y - h * 0.32], [x + w * 0.7, y - h * 0.32]]);
+    if (h > 11 * k) pinoF += poli([[x, y - h * 1.02], [x - w * 0.7, y - h * 0.32], [x + w * 0.7, y - h * 0.32]]);
   }
   // Peñas facetadas: la cara al astro, la de sombra y su techo.
   for (let i = 0; i < 9; i++) {

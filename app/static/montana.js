@@ -448,7 +448,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // Reloj de sol (16A): sobre los pinos de adorno, pero detrás de los árboles de honor (antes sus piedras quedaban encima de las copas).
   const suelo = W < 1100 ? by - 4 : H * 0.93;
   s += relojDeSol(c.sx, suelo, W); // 16A
-  const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0], cajasValle);
+  const bordeHonor = c.valle > 30 ? borde : null;
+  const evitarHonor = bordeHonor ? cajasValle : [...cajasValle, pb.caja, [lg.cx - lg.rx, lg.cy - lg.ry * 4, lg.cx + lg.rx, lg.cy + lg.ry]];
+  const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0], evitarHonor, bordeHonor);
   s += `<rect class="suelo" x="0" y="${f1(H * 0.965)}" width="${W}" height="${f1(H * 0.035 + 1)}" fill="url(#m-suelo)"/>`;
   s += honor.svg; // por delante del suelo que funde el pie de la escena: sus troncos se ven
   // De temporada (el CSS los muestra solo cuando toca): papel picado en las fiestas y cohetes la noche de fin de año.
@@ -538,7 +540,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null } : null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null } : null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   colocar(inicio, false);
   describir(sats, etapa);
@@ -758,12 +760,14 @@ function instalarMoneda(host) {
  * pinos y en sitios fijos entre ellos (sin azar: la forma de la montaña y del bosque no cambia). Formas sencillas, de dos o tres
  * piezas; el color sale del CSS.
  */
-function arbolesHonor(W, H, bx, compras, plantar, pts, solX, evitar = []) {
-  const yb = H * 0.955;
+function arbolesHonor(W, H, bx, compras, plantar, pts, solX, evitar = [], borde = null) {
+  // (22C) Con la franja del valle delante (teléfono y tablet altos), los árboles de honor crecen al pie de la montaña, en el borde del
+  // llano, con el bosque (más chicos: están más lejos), y no delante del pueblo ni del lago.
+  const ybDe = (x) => (borde ? enBorde(borde, x) + 8 : H * 0.955), escala = borde ? 0.72 : 1;
   // ¿Pasa el sendero por la caja de un árbol de ancho `a` y alto `h` centrado en x? (se mira cada tramo del zigzag a trozos)
   const tapa = (x, a, h) => pts.some(([x1, y1], i) => i && [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].some((k) => {
     const px = pts[i - 1][0] + (x1 - pts[i - 1][0]) * k, py = pts[i - 1][1] + (y1 - pts[i - 1][1]) * k;
-    return Math.abs(px - x) < a && py > yb - h - 6;
+    return Math.abs(px - x) < a && py > ybDe(x) - h - 6 && py < ybDe(x) + 4;
   }));
   const usados = [], cajas = [];
   let s = '';
@@ -771,14 +775,15 @@ function arbolesHonor(W, H, bx, compras, plantar, pts, solX, evitar = []) {
   // `a` es media copa: el ceibo es una sombrilla ancha, el maquilishuat una copa rala y estrecha.
   const base = Math.min(H, W * 1.3);
   for (const tipo of arbolesDe(compras)) {
-    const h = base * (tipo === 'ceibo' ? 0.15 : tipo === 'amate' ? 0.12 : 0.115), a = h * (tipo === 'ceibo' ? 0.75 : tipo === 'amate' ? 0.64 : 0.42);
+    const h = base * escala * (tipo === 'ceibo' ? 0.15 : tipo === 'amate' ? 0.12 : 0.115), a = h * (tipo === 'ceibo' ? 0.75 : tipo === 'amate' ? 0.64 : 0.42);
     // Primero los sitios de siempre (de derecha a izquierda); si ninguno está libre, cualquier otro hueco del pie que no pise el
     // sendero ni otro árbol; y si tampoco, el que quede más lejos de los demás.
     const sitios = [0.88, 0.7, 0.54, 0.38, 0.22, 0.1, 0.94, 0.8, 0.62, 0.46, 0.3, 0.16, 0.05].map((f) => W * f).filter((c) => c > a * 0.6 && c < W - a * 0.6 && Math.abs(c - bx) > a + 12);
     const lejos = (c) => Math.min(Infinity, ...usados.map(([u, au]) => Math.abs(u - c) - (a + au) * 0.9));
-    const libreValle = (c) => !evitar.some((b) => b[0] < c + a && b[2] > c - a && b[3] > yb - h); // (campamento 22) ni el camino real ni el árbol del primer día
+    const libreValle = (c) => !evitar.some((b) => b[0] < c + a && b[2] > c - a && b[3] > ybDe(c) - h && b[1] < ybDe(c)); // (campamento 22) ni el camino real ni el árbol del primer día (22C: ni el pueblo ni el lago)
     const x = sitios.find((c) => !tapa(c, a, h) && lejos(c) > 0 && libreValle(c)) ?? sitios.find((c) => !tapa(c, a, h) && lejos(c) > 0) ?? sitios.find((c) => lejos(c) > 0) ?? [...sitios].sort((p, q) => lejos(q) - lejos(p))[0] ?? W * 0.9;
     usados.push([x, a]);
+    const yb = ybDe(x);
     cajas.push([x - a, x + a, yb - h]);
     const nuevo = plantar && ((tipo === 'ceibo' && compras === 100) || (tipo === 'amate' && compras === 500) || (tipo === 'maquilishuat' && compras === 1000)) ? ' pino-nuevo' : '';
     s += `<g class="arbol-honor ${tipo}${nuevo}">${arbolHonor(tipo, x, yb, h, solX >= x ? 1 : -1)}</g>`;
