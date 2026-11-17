@@ -5826,9 +5826,10 @@ try {
       ok(e.valor > e.max * 0.3 && e.valor < e.max * 0.75 && e.play === 'Pausar la película' && !e.yoTxt.length, `23·29 a medio camino corre sola, sin el rótulo de «Tú» (${e.valor} de ${e.max})`);
       ok(e.yoY < yoInicio - 40 && e.pinos[0] > 1 && e.pinos[0] < e.pinos[1], `23·29 «Tú» subió y el bosque crece con las compras (${yoInicio} → ${e.yoY}, pinos ${e.pinos})`);
       eq(await quieto(x.p), 'corre|paused|paused|running', '23·29 (rendimiento) mientras corre, el ambiente de su escena (estrellas, el halo de «Tú») se queda quieto; el bosque que brota, no');
-      // Dura 15 s: se mira cuándo llega a hoy (la película arranca a los 0.7 s de abrir).
+      // Dura 15 s: se mira cuándo llega a hoy (la película arranca a los 0.7 s de abrir). Se espera a que acabe de verdad (el botón dice
+      // «otra vez»): el deslizador redondea el día y marca hoy un fotograma antes del final (de 359.5 a 360), y leer ahí daba un falso fallo.
       let fin = null;
-      for (let k = 0; k < 60 && fin == null; k++) { await x.p.waitForTimeout(200); if ((await x.p.evaluate(() => Number(document.getElementById('pe-rango').value) >= Number(document.getElementById('pe-rango').max)))) fin = Date.now() - t0 - 700; }
+      for (let k = 0; k < 60 && fin == null; k++) { await x.p.waitForTimeout(200); if (await x.p.evaluate(() => document.getElementById('pe-play').dataset.estado === 'otra')) fin = Date.now() - t0 - 700; }
       ok(fin != null && fin > 14000 && fin < 17500, `23·29 de la primera compra a hoy en unos 15 s (${fin} ms)`);
       e = await peli(x.p);
       ok(e.rotulo === 'Tu saldo hoy' && e.sats === hoySats.replace(/[^\d,]/g, '') && e.ev === '' && e.yoTxt[0] === 'Tú', `23·29 acaba hoy, con el saldo de hoy (${e.sats} / ${hoySats})`);
