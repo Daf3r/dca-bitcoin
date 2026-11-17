@@ -65,7 +65,7 @@ export function escalaValle(W, H) {
   const forma = formaValle(W, H);
   return forma === 'tel' ? Math.max(0.78, Math.min(1, W / 390)) : forma === 'tab' ? 1.05 : forma === 'esc' ? Math.max(1.2, Math.min(1.75, H / 620)) : 0.72;
 }
-export function sitiosValle({ W, H, techo = 0, izq, der = [], cresta = [], bx, by, pts = [], lago = null, personas = 0, meses = 0, anios = 0, primera = null }) {
+export function sitiosValle({ W, H, techo = 0, izq, der = [], cresta = [], bx, by, pts = [], lago = null, personas = 0, meses = 0, anios = 0, primera = null, astro = null }) {
   const forma = formaValle(W, H);
   const k = escalaValle(W, H);
   const L = [...izq].sort((a, b) => a[1] - b[1]);
@@ -106,7 +106,9 @@ export function sitiosValle({ W, H, techo = 0, izq, der = [], cresta = [], bx, b
   const piscuchas = piscuchasSitios({ W, H, techo, xIzq, n: personas, canton, k, sy: L[0][1] });
   // La vida del lago se coloca con el lago. (Campamento 22B) Las vacas, en la orilla del lago con más sitio.
   const vacas = vacasSitios({ W, lago, pts, k, forma, sx: der[0]?.[0] });
-  return { forma, k, canton, milpa, pino, camino, arbol, luces, piscuchas, lago, vacas, ventanas: Math.max(0, Math.floor(personas) || 0) };
+  // Las bandadas (campamento 22B): el remolino de azacuanes y los pericos, en el cielo libre.
+  const aves = avesSitios({ W, H, techo, cresta, forma, k, cima: der[0] ?? [W / 2, H / 2], astro, xIzq });
+  return { forma, k, canton, milpa, pino, camino, arbol, luces, piscuchas, lago, vacas, aves, ventanas: Math.max(0, Math.floor(personas) || 0) };
 }
 
 /**
@@ -133,6 +135,28 @@ export function vacasSitios({ W, lago, pts, k, forma, sx = W / 2 }) {
     }
   }
   return mejor;
+}
+
+/**
+ * Dónde vuelan las bandadas (idea 57). En el teléfono y la tablet, el remolino de azacuanes va sobre el valle, a la izquierda de la
+ * montaña, entre el saldo y la sierra; en escritorio y acostado, entre la cumbre y el astro (la columna de la izquierda es del saldo).
+ * Los pericos entran por el borde derecho, por debajo del saldo, y vuelan hacia la montaña: en el teléfono y la tablet la cruzan por
+ * detrás y salen por la izquierda; en escritorio y acostado se pierden detrás de ella (`dist`: cuánto recorren).
+ */
+export function avesSitios({ W, H, techo, cresta, forma, k, cima: [sx, sy], astro, xIzq }) {
+  const alta = cresta.length ? Math.min(...cresta.filter(([x]) => x < W * 0.45).map((p) => p[1])) : H * 0.6;
+  const ancho = forma === 'esc' || forma === 'acostado';
+  const [ax, ay] = astro ?? [W * 0.85, H * 0.25];
+  let aza, peri;
+  if (ancho) {
+    aza = [(sx + ax) / 2, Math.max(sy + 30 * k, ay - H * 0.02)];
+    peri = [W + 8 * k, Math.max(sy + 16 * k, ay - H * 0.05)]; // por encima de los volcanes del fondo (van delante del cielo)
+  } else {
+    const y = techo + (alta - techo) * 0.42;
+    aza = [Math.min(W * 0.22, (xIzq(y) || W) - 30 * k), y];
+    peri = [W + 8 * k, techo + (alta - techo) * 0.6];
+  }
+  return { aza, peri, k, dist: ancho ? W - sx + 70 * k : W + 110 * k };
 }
 
 function lucesSitios({ W, H, techo, xIzq, xDer, cresta, n, canton, milpa, loma, k, forma }) {
@@ -600,6 +624,70 @@ export function marDeNiebla({ W, H, canton, milpa, k, cresta = [], techo = 0 }) 
     + (hondo ? `<path class="v-mar v-mar-sombra ${clase}" d="${borde(y0 + hondo, semilla + 2, paso * 2.2, 3)}${fin}"/>` : '');
   const tel = W < 700 || (H <= 520 && W >= H * 1.5 && W < 1100);
   return { atras: capa(yAtras, 41, 34 * k, 'v-mar-atras', tel ? 0 : Math.max(20 * k, (yFrente - yAtras) * 0.42)), frente: capa(yFrente, 43, 30 * k, 'v-mar-frente', tel ? 24 * k : 0) };
+}
+
+// ------------------------------------------------------------------------------------------------ campamento 22B · aves de paso (idea 57)
+/**
+ * Las bandadas del cielo (ambiente, solo con «todos»; una a la vez, lo decide `data-mueve`): los azacuanes, un remolino de gavilanes
+ * que planean en círculos (alas abiertas, sin aletear), y los pericos del atardecer, una banda de dardos verdes de cola larga que cruza
+ * deprisa hacia la montaña. Cuatro trazos: dos medias bandadas de cada una, que el CSS mueve a destiempo. `aza`: el centro del
+ * remolino; `peri`: dónde empiezan los pericos (al borde derecho).
+ */
+export function bandadas({ aza, peri, k = 1 }) {
+  const rnd = azar(53);
+  const halcones = ['', ''];
+  for (let i = 0; i < 14; i++) {
+    // Repartidos en una nube más alta que ancha (el remolino sube); los de atrás, más chicos; cada uno, algo ladeado.
+    const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()), x = aza[0] + Math.cos(a) * r * 22 * k, y = aza[1] + Math.sin(a) * r * 17 * k;
+    const s = (0.8 + rnd() * 0.45) * k, t = (rnd() - 0.5) * 1.4;
+    halcones[i % 2] += `M${f1(x - 2.7 * s)} ${f1(y + (0.5 + t) * s)}Q${f1(x - 1.3 * s)} ${f1(y - (0.7 - t * 0.3) * s)} ${f1(x)} ${f1(y)}Q${f1(x + 1.3 * s)} ${f1(y - (0.7 + t * 0.3) * s)} ${f1(x + 2.7 * s)} ${f1(y + (0.5 - t) * s)}`;
+  }
+  const pericos = ['', ''];
+  for (let i = 0; i < 10; i++) {
+    // En fila suelta, volando a la izquierda: cabeza, cuerpo y la cola larga en punta; el ala arriba o abajo según el pájaro.
+    const x = peri[0] + i * 7.5 * k + rnd() * 4 * k, y = peri[1] + Math.sin(i * 1.7) * 3 * k + rnd() * 2 * k, s = (0.9 + rnd() * 0.3) * k, ala = i % 2 ? -1 : 1;
+    pericos[i % 2] += `M${f1(x)} ${f1(y)}L${f1(x + 2.2 * s)} ${f1(y - 0.6 * s)}L${f1(x + 5.8 * s)} ${f1(y + 0.5 * s)}L${f1(x + 2.2 * s)} ${f1(y + 0.6 * s)}Z`
+      + `M${f1(x + 1.3 * s)} ${f1(y)}L${f1(x + 3.1 * s)} ${f1(y)}L${f1(x + 2.5 * s)} ${f1(y - ala * 2.3 * s)}Z`;
+  }
+  const sw = f1(0.85 * k);
+  return halcones.map((d, i) => `<path class="efecto-ambiente v-ave v-aza v-av${i + 1}" d="${d}" stroke-width="${sw}"/>`).join('')
+    + pericos.map((d, i) => `<path class="efecto-ambiente v-ave v-peri v-av${i + 1}" d="${d}"/>`).join('');
+}
+
+// ------------------------------------------------------------------------------------------------ campamento 22B · zompopos de mayo (idea 60)
+/**
+ * Del 15 al 21 de mayo, cuando se levanta la niebla, los zompopos alados salen de la tierra y suben sobre la milpa (ambiente, solo con
+ * «todos»). Dos trazos de puntitos oscuros, cada uno una columna suelta, que el CSS hace subir y desvanecerse a destiempo.
+ */
+export function zompopos({ milpa: { x, y, w }, k = 1 }) {
+  const rnd = azar(37), d = ['', ''];
+  for (let i = 0; i < 18; i++) {
+    const px = x + w * (0.15 + rnd() * 0.75) + (rnd() - 0.5) * 6 * k, py = y - rnd() * 32 * k;
+    d[i % 2] += `M${f1(px)} ${f1(py)}h0.01`;
+  }
+  return d.map((t, i) => `<path class="efecto-ambiente v-zompopos v-zo${i + 1}" d="${t}" stroke-width="${f1(1.3 * Math.min(1.3, k))}"/>`).join('');
+}
+
+// ------------------------------------------------------------------------------------------------ campamento 22B · relámpagos lejanos (idea 61)
+/**
+ * Una tormenta lejana detrás de los volcanes (noches de la lluviosa; ambiente, solo con «todos»): un cumulonimbo con su yunque que se
+ * enciende por dentro de vez en cuando, muy leve. Un solo trazo con un degradado radial (`#m-v-rayo`); los volcanes van delante y su
+ * silueta se recorta contra la nube encendida. En el teléfono y la tablet, sobre el valle (izquierda); en escritorio y acostado, a la
+ * derecha de la cumbre (a la izquierda está el saldo: nunca se enciende el fondo de una cifra).
+ */
+export function sitioRayo(W, H, base) {
+  const ancho = formaValle(W, H) === 'esc' || formaValle(W, H) === 'acostado';
+  const A = Math.min(H * (W < 1100 ? 0.11 : 0.12), W * (W < 700 ? 0.14 : 0.1)); // la altura de los volcanes (la misma cuenta que `volcanes`)
+  // La base de la nube va a media ladera de los volcanes: el yunque asoma por encima de sus cumbres y lo de abajo queda tapado.
+  return { x: W * (ancho ? 0.74 : 0.26), y: base - A * (ancho ? 0.8 : 0.6), ancho: W * (ancho ? 0.14 : 0.42) };
+}
+export function relampago({ x, y, ancho }) {
+  const a = ancho / 2, h = ancho * 0.42;
+  const p = (dx, dy) => `${f1(x + dx * a)} ${f1(y + dy * h)}`;
+  // La base sobre el horizonte, las torres de la nube y el yunque plano arriba, más largo hacia un lado.
+  const d = `M${p(-1, 0)}C${p(-1.05, -0.3)} ${p(-0.82, -0.42)} ${p(-0.64, -0.4)}C${p(-0.6, -0.7)} ${p(-0.36, -0.78)} ${p(-0.2, -0.74)}`
+    + `L${p(-0.5, -0.92)}L${p(0.85, -1)}L${p(0.42, -0.8)}C${p(0.6, -0.72)} ${p(0.74, -0.5)} ${p(0.66, -0.36)}C${p(0.9, -0.36)} ${p(1.04, -0.16)} ${p(1, 0)}Z`;
+  return `<path class="efecto-ambiente v-rayo" d="${d}" fill="url(#m-v-rayo)"/>`;
 }
 
 /**

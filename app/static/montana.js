@@ -2,7 +2,7 @@
 import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
-import { escalaValle, sitiosValle, sitiosLadera, canton, pinoNavidad, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla, potrero } from './arte-valle.js';
+import { escalaValle, sitiosValle, sitiosLadera, canton, pinoNavidad, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 
 function azar(s) {
@@ -235,7 +235,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-ceniza', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ce-0'], [0.75, 'ce-1']])
     + grad('m-via', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vl-0'], [0.5, 'vl-1'], [1, 'vl-0']])
     + grad('m-aire', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ai-0'], [0.62, 'ai-1'], [1, 'ai-0']])
-    + grad('m-v-loma', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vlo-0'], [0.55, 'vlo-1'], [1, 'vlo-2']]);
+    + grad('m-v-loma', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vlo-0'], [0.55, 'vlo-1'], [1, 'vlo-2']])
+    + '<radialGradient id="m-v-rayo" cx="0.48" cy="0.55" r="0.62"><stop offset="0" class="ry-0"/><stop offset="0.45" class="ry-1"/><stop offset="1" class="ry-2"/></radialGradient>';
   let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><radialGradient id="m-farol"><stop offset="0" class="fa-0"/><stop offset="0.42" class="fa-1"/><stop offset="1" class="fa-2"/></radialGradient><linearGradient id="m-bano" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ba-0"/><stop offset="1" class="ba-1"/></linearGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
   // Capa del cielo (parallax): cielo, estrellas, fugaz, sol, luna, nubes y aves.
@@ -254,7 +255,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s += `<g class="sol">${halo}<circle class="astro sol-disco" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 0.9)}" fill="url(#m-sol)"/></g>`; // el sol, algo menor que la luna: con su halo se lee como luz, no como un disco
   s += `<g class="luna">${halo}${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}${monedaB(c.sol[0], c.sol[1], c.rs)}</g>`;
   // El torogoz cruza al amanecer por el cielo libre entre el saldo y la cumbre.
-  s += (aurora ? auroraBoreal(W, H, techo) : '') + nubes(H) + torogoz(Math.min(Math.max(techo + 44, H * 0.2), c.sy - 20), W >= 1100 ? 1.45 : W >= 700 ? 1.3 : 1.2) + '</g>';
+  s += (aurora ? auroraBoreal(W, H, techo) : '') + nubes(H) + torogoz(Math.min(Math.max(techo + 44, H * 0.2), c.sy - 20), W >= 1100 ? 1.45 : W >= 700 ? 1.3 : 1.2) + '<!--v-cielo--></g>';
   // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
   s += `<rect class="alba" id="m-alba" x="0" y="0" width="${W}" height="${H}"/>`;
   const sierra = (base, amp, paso, clase) => {
@@ -268,6 +269,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // La sierra lejana es la cadena volcánica de Occidente (puntos fijos). Se consumen igual los números de `rnd()` que gastaba
   // la sierra genérica de antes: así la montaña principal, que viene después, conserva su forma.
   for (let x = 0, paso = Math.max(24, W / 18); x <= W + paso; x += paso) rnd();
+  s += relampago(sitioRayo(W, H, (c.sy / H + 0.2) * H + H * 0.02)); // (22B) la tormenta lejana: detrás de los volcanes
   s += volcanes(W, H, (c.sy / H + 0.2) * H + H * 0.02, lado);
   s += clima(W, H, yH); // la llovizna de la tarde (época lluviosa) y el aire dorado (seca): delante de los volcanes, detrás de la montaña
   s += '</g><g class="par par-medio">';
@@ -363,7 +365,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 22) El valle vivo: dónde va cada cosa (su propia versión en el teléfono). El camino real y el árbol del primer día van
   // al pie, por delante de la falda y por detrás del sendero; el cantón, su milpa, las piscuchas y las luces, detrás de la montaña.
   const lg = geoLago(c, W, H);
-  const valle = sitiosValle({ W, H, techo, izq, der: [[c.sx, c.sy], ...der], cresta: crestaMedia, bx, by, pts, lago: lg, personas, meses: lucesDelValle(meses), anios, primera });
+  const valle = sitiosValle({ W, H, techo, izq, der: [[c.sx, c.sy], ...der], cresta: crestaMedia, bx, by, pts, lago: lg, personas, meses: lucesDelValle(meses), anios, primera, astro: c.sol });
+  host.style.setProperty('--v-peri-d', `${f1(valle.aves.dist)}px`); // (22B) cuánto vuelan los pericos
   const solV = c.sol[0] >= c.sx ? 1 : -1;
   const arbolV = valle.arbol ? { ...valle.arbol, ...arbolDelPrimerDia(anios), sol: solV } : null;
   s += `<g id="m-v-pie">${caminoReal(valle.camino)}${arbolV ? arbolPrimerDia(arbolV) : ''}</g>`;
@@ -372,7 +375,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
   // (Campamento 22B) El mar de niebla del amanecer: una capa detrás de la loma y otra delante de su falda (todo detrás de la montaña).
   const mar = marDeNiebla({ W, H, canton: valle.canton, milpa: valle.milpa, k: valle.k, cresta: crestaMedia, techo });
-  s = s.replace('<!--v-vacas-->', potrero({ vacas: valle.vacas, k: valle.k })).replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${mar.atras}${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${lucesValle(valle.luces, valle.k, 1)}${milpa({ ...valle.milpa, sol: solV })}${pinoNavidad(valle.pino)}${mar.frente}</g>`);
+  s = s.replace('<!--v-cielo-->', bandadas(valle.aves)).replace('<!--v-vacas-->', potrero({ vacas: valle.vacas, k: valle.k })).replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${mar.atras}${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${lucesValle(valle.luces, valle.k, 1)}${milpa({ ...valle.milpa, sol: solV })}${pinoNavidad(valle.pino)}${zompopos({ milpa: valle.milpa, k: valle.k })}${mar.frente}</g>`);
   // El mismo trazo, entero (para medir la altitud y el tramo recorrido) y por tramos de zigzag (para la tierra del camino,
   // que se estrecha con la altura: más ancho abajo, más fino arriba, como visto en perspectiva).
   let d = `M${f1(bx)} ${f1(by)}`;

@@ -197,7 +197,8 @@ html[data-efectos="todos"] .niebla-b { animation: niebla 110s ease-in-out -40s i
 /* Al amanecer cruza un torogoz (el ave nacional), muy de vez en cuando: aletea a ratos y planea (arte.js: torogoz). */
 .ave { opacity: 0; }
 @keyframes ave { 0%, 88% { opacity: 0; transform: translate(-60px, 0); } 89% { opacity: 0.95; } 99% { opacity: 0.95; } 100% { opacity: 0; transform: translate(calc(var(--escena-w, 400px) + 60px), -34px); } }
-html[data-efectos="todos"][data-cielo="amanecer"] .ave { animation: ave 52s linear 4s infinite; }
+/* (Campamento 22B) Lo que se mueve lo decide `data-mueve` (cielo.js): el torogoz, de 5:00 a 7:00 (la franja del amanecer), nunca junto a otra bandada. */
+html[data-efectos="todos"][data-mueve="torogoz"] .ave { animation: ave 52s linear 4s infinite; }
 /* El cielo se funde con la página al bajar: un velo del color del fondo que sube con el desplazamiento (oscurece en el tema oscuro, aclara en el claro). */
 /* Rendimiento en teléfono: las nubes, la niebla y las estrellas se mueven tan despacio (un píxel por segundo o menos) que no
    hace falta redibujar el SVG sesenta veces por segundo. Con `steps()` se actualizan unas pocas veces por segundo, con saltos de
@@ -1748,8 +1749,8 @@ html[data-madrugada]:not([data-tv]):not([data-contraste="alto"])::after { conten
 /* Aletea tres veces y planea (las alas casi planas); el cuerpo sube con cada aleteo y baja al planear. */
 @keyframes toro-aleteo { 0%, 20%, 40% { transform: scaleY(1); animation-timing-function: ease-in; } 10%, 30% { transform: scaleY(-0.5); animation-timing-function: ease-out; } 56%, 100% { transform: scaleY(0.22); } }
 @keyframes toro-ondula { 0% { transform: translateY(1.5px); } 42% { transform: translateY(-2.5px); } 100% { transform: translateY(1.5px); } }
-html[data-efectos="todos"][data-cielo="amanecer"] .toro-ala { animation: toro-aleteo 1.9s infinite; }
-html[data-efectos="todos"][data-cielo="amanecer"] .toro-bota { animation: toro-ondula 1.9s ease-in-out infinite; }
+html[data-efectos="todos"][data-mueve="torogoz"] .toro-ala { animation: toro-aleteo 1.9s infinite; }
+html[data-efectos="todos"][data-mueve="torogoz"] .toro-bota { animation: toro-ondula 1.9s ease-in-out infinite; }
 
 /* Papel picado (fiestas): oculto el resto del año. Los colores de cada fiesta; de noche, un poco en sombra. */
 .papel-picado { display: none; pointer-events: none; }
@@ -2916,7 +2917,9 @@ html[data-contraste="alto"] .cu-campos select { border-color: var(--txt2); }
 /* --- Luciérnagas (arte.js: luciernagas): al atardecer y de noche, solo con «todos» (llevan `efecto-ambiente`). Cada una deriva en un
    lazo lento y se enciende a su ritmo; una gota de luz la sigue un instante atrás (la estela). Las cuatro últimas, en la época de lluvias. */
 .luciernagas { display: none; }
-html:is([data-cielo="noche"], [data-cielo="atardecer"]) .luciernagas { display: inline; }
+/* (Campamento 22B) Desde las 18:00 (antes, desde las 16:30: el primer rato del atardecer es de los pericos) y, en la lluviosa, hasta las 22:00
+   (después, los relámpagos lejanos): `data-mueve="luciernagas"` (cielo.js). */
+html[data-mueve="luciernagas"] .luciernagas { display: inline; }
 html[data-cielo="atardecer"] .luciernagas { opacity: 0.75; }
 .luciernagas .lu:nth-child(n+9) { display: none; }
 html[data-epoca="lluviosa"] .luciernagas .lu:nth-child(n+9) { display: inline; }
@@ -4052,3 +4055,36 @@ html[data-flor="fuego"] .v-fuego.copa-sombra { fill: color-mix(in oklab, color-m
 html[data-cielo="noche"] .v-vaca-echada { display: inline; }
 html[data-cielo="noche"] :is(.v-vaca-pie, .v-garcita) { display: none; }
 .v-garcita { fill: color-mix(in oklab, #f7f4ee var(--v-blanco), var(--monte)); }
+
+/* 57, 60 y 61 · Lo que se mueve (ambiente: solo con «todos», y siempre uno a la vez, `data-mueve` de cielo.js): los azacuanes de octubre
+   y abril, los pericos del atardecer, los zompopos de mayo y los relámpagos lejanos de las noches de lluvia. Solo transform y opacity. */
+.v-ave, .v-zompopos, .v-rayo { display: none; }
+html[data-mueve="azacuanes"] .v-aza, html[data-mueve="pericos"] .v-peri, html[data-mueve="zompopos"] .v-zompopos, html[data-mueve="relampagos"] .v-rayo { display: inline; }
+/* Los azacuanes: un remolino de gavilanes que planea en círculos (alas abiertas, sin aletear) y pasa despacio. */
+.v-aza { fill: none; stroke: color-mix(in oklab, #34281f 72%, var(--c2)); stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+@keyframes v-aza-pasa { 0% { opacity: 0; translate: -34px 5px; } 9% { opacity: 1; } 78% { opacity: 1; } 86%, 100% { opacity: 0; translate: 34px -12px; } }
+@keyframes v-aza-gira { 0%, 100% { transform: translate(9px, 0); } 12.5% { transform: translate(6.4px, 2.1px); } 25% { transform: translate(0, 3px); } 37.5% { transform: translate(-6.4px, 2.1px); } 50% { transform: translate(-9px, 0); } 62.5% { transform: translate(-6.4px, -2.1px); } 75% { transform: translate(0, -3px); } 87.5% { transform: translate(6.4px, -2.1px); } }
+html[data-mueve="azacuanes"] .v-aza { animation: v-aza-pasa 110s linear 2s infinite, v-aza-gira 13s linear infinite; }
+html[data-mueve="azacuanes"] .v-aza.v-av2 { animation-duration: 110s, 17s; animation-delay: 2s, -7s; }
+/* Los pericos: una banda verde que cruza deprisa hacia la montaña, ondulando. */
+.v-peri { fill: color-mix(in oklab, #3c9a47 74%, var(--c3)); opacity: 0; }
+@keyframes v-peri-pasa { 0% { opacity: 0; translate: 0 0; } 1% { opacity: 1; } 22% { opacity: 1; translate: calc(var(--v-peri-d, 500px) * -1) 9px; } 23%, 100% { opacity: 0; translate: calc(var(--v-peri-d, 500px) * -1) 9px; } }
+@keyframes v-peri-ondula { from { transform: translateY(1.3px); } to { transform: translateY(-1.3px); } }
+html[data-mueve="pericos"] .v-peri { animation: v-peri-pasa 34s linear 3s infinite, v-peri-ondula 0.45s ease-in-out infinite alternate; }
+html[data-mueve="pericos"] .v-peri.v-av2 { animation-delay: 3.3s, -0.22s; }
+/* Los zompopos de mayo: puntitos oscuros que suben de la milpa y se pierden. */
+.v-zompopos { fill: none; stroke: color-mix(in oklab, #3a2416 82%, var(--monte-sombra)); stroke-linecap: round; opacity: 0; }
+@keyframes v-zo { 0% { opacity: 0; transform: translate(0, 5px); } 14% { opacity: 0.95; } 70% { opacity: 0.85; } 100% { opacity: 0; transform: translate(7px, -30px); } }
+html[data-mueve="zompopos"] .v-zompopos { animation: v-zo 7s linear infinite; }
+html[data-mueve="zompopos"] .v-zo2 { animation-delay: -3.5s; }
+/* Los relámpagos lejanos: la nube de la tormenta se enciende por dentro de vez en cuando, muy leve (un destello y su eco: nunca más de
+   dos en un segundo; sin parpadeos rápidos). */
+.ry-0 { stop-color: #f2eeff; stop-opacity: 0.95; } .ry-1 { stop-color: #b7a8ea; stop-opacity: 0.5; } .ry-2 { stop-color: #6b5aa6; stop-opacity: 0; }
+.v-rayo { opacity: 0; }
+@keyframes v-rayo { 0%, 90% { opacity: 0; } 90.6% { opacity: 0.6; } 91.5% { opacity: 0.16; } 92.3% { opacity: 0.42; } 94.4%, 100% { opacity: 0; } }
+html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite; }
+/* En el teléfono, lo lento va a saltos (como las nubes): el remolino y los zompopos. Los pericos cruzan rápido y van suaves. */
+@media (max-width: 899px) {
+  html[data-mueve="azacuanes"] .v-aza { animation-timing-function: steps(330), steps(52); }
+  html[data-mueve="zompopos"] .v-zompopos { animation-timing-function: steps(56); }
+}
