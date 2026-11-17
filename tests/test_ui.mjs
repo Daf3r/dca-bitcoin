@@ -4122,7 +4122,7 @@ try {
       });
       ok(tonos.every((x) => x.dE >= 0.045 && x.nieve !== '255,0,255'), `cumbre: la nieve en sombra se distingue del cielo a las 6, 12, 17:30 y 20 h (${tonos.map((x) => `${x.h} h ${x.dE.toFixed(3)}`).join(', ')})`);
       ok(tonos.every((x) => x.borde >= 3), `cumbre: el canto de la bandera se recorta contra la nieve en sombra (${tonos.map((x) => x.borde.toFixed(1)).join(', ')} : 1)`);
-      ok(c.nodos < 950 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
+      ok(c.nodos < 1000 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
       await t.ctx.close();
     } finally {
       srv.parar();
@@ -5290,7 +5290,9 @@ try {
       const cruza = (a, b) => a.x < b.right && a.r > b.left && a.y < b.bottom && a.b > b.top;
       const casas = document.querySelector('.v-pared-l');
       const ca = casas?.getBoundingClientRect();
-      const nodos = document.querySelectorAll('#m-v-fondo, #m-v-fondo *, #m-v-pie, #m-v-pie *, #m-v-ladera, #m-v-ladera *, .v-luces, .v-luces *, .lago-playa, .lago-nivel, .v-tule, .v-tule *, .v-lago-vida, .v-lago-vida *').length;
+      // Los nodos del valle: lo que está en sus capas (`#m-v-…`) y todo lo que lleva una clase `v-…` (también en el cielo, la sierra y el
+      // lago), más el agua del lago de época; los degradados de los `<defs>` de la escena no cuentan (como en el campamento 22).
+      const nodos = [...document.querySelectorAll('#montana svg *')].filter((e) => !e.closest('defs') && (e.closest('[id^="m-v-"]') || [...e.classList].some((c) => c.startsWith('v-')) || e.matches('.lago-playa, .lago-nivel'))).length;
       const saldo = document.querySelector('.saldo').getBoundingClientRect();
       const fill = (s) => { const e = document.querySelector(s); return e ? getComputedStyle(e).fill : ''; };
       return {
@@ -5304,11 +5306,14 @@ try {
         // Ninguna luz de la sierra queda tapada por la loma del cantón ni por la montaña (se cuentan las que se ven).
         lucesTapadas: (() => { const loma = document.querySelector('.v-loma'), monte = document.querySelector('path.monte'); return [...(document.querySelector('.v-luz-lejos')?.getAttribute('d') ?? '').matchAll(/M([\d.]+) ([\d.]+)/g)].filter(([, x, y]) => { const q = new DOMPoint(Number(x), Number(y)); return loma.isPointInFill(q) || monte.isPointInFill(q); }).length; })(),
         humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: getComputedStyle(document.querySelector('.v-pn-foco')).animationName,
-        pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-piscuchas .v-pis'),
-        grabado: visto('.v-grabado'), grabadoTxt: document.querySelector('.v-grabado')?.textContent ?? null,
+        pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-pis'),
+        // El ritmo de cada piscucha y de cada bocanada de humo (campamento 22B: va por clase, no por su orden): duración/retraso.
+        ritmoPis: [...document.querySelectorAll('.v-pis')].map((e) => `${getComputedStyle(e).animationDuration}/${getComputedStyle(e).animationDelay}`),
+        ritmoHumo: [...document.querySelectorAll('.v-hu')].map((e) => `${getComputedStyle(e).animationDuration}/${getComputedStyle(e).animationDelay}`),
+        grabado: visto('.v-grabado'), grabadoTxt: [...document.querySelectorAll('text.v-grabado')].map((t) => t.textContent).join(' ') || null,
         garza: visto('.v-garza'), cuerpo: visto('.v-cy-cuerpo'), lampara: visto('.v-cy-lampara'),
         arbol: document.querySelector('.v-arbol')?.getAttribute('class') ?? null, arbolCaja: caja('.v-arbol .v-ar-tronco, .v-arbol .v-ar-tallo'), salida: caja('.salida'),
-        camino: !!document.querySelector('.v-camino .v-cm'), cohetes: document.documentElement.hasAttribute('data-cohetes'),
+        camino: !!document.querySelector('.v-cm'), cohetes: document.documentElement.hasAttribute('data-cohetes'),
         desc: document.getElementById('m-desc').textContent,
       };
     });
@@ -5323,7 +5328,7 @@ try {
       const meses = (d) => Math.max(1, (Number(d.slice(0, 4)) - Number(primera.slice(0, 4))) * 12 + Number(d.slice(5, 7)) - Number(primera.slice(5, 7)) + 1);
       const etapa = (d) => { const a = Math.max(0, (Date.parse(d) - Date.parse(primera)) / (365.2425 * 864e5)); return a < 1 ? 'retono' : a < 2 ? 'joven' : a < 5 ? 'arbol' : 'grande'; };
       ok(v.ranchos === 2 && v.casas && v.casas.x >= 0 && v.casas.y > v.saldoAbajo && !v.casasSobreSendero && !v.casasSobreRotulo, `22 cantón: en el teléfono, dos ranchos por debajo del saldo, sin pisar el sendero ni un rótulo (${JSON.stringify(v.casas)})`);
-      ok(v.nodos <= 150 && v.total < 950, `22 presupuesto: el valle en el teléfono son ${v.nodos} nodos (tope 150), la escena ${v.total} (tope 950)`);
+      ok(v.nodos <= 150 && v.total < 1000, `22 presupuesto: el valle en el teléfono son ${v.nodos} nodos (tope 150), la escena ${v.total} (tope 1000, desde el campamento 22B)`);
       ok(v.llena && !v.hilo && !v.playa && v.nivel === 'none', '22 quebrada y lago: en la lluviosa la quebrada baja llena y el lago cubre su playa');
       eq(v.milpa, ['jilote'], '22 milpa: el 10 de julio jilotea');
       ok(v.garza && v.cuerpo && !v.lampara && !v.humo && !v.lucesVis && !v.pisVis && !v.navidad && !v.grabado, '22 de día: la garza y el cayuco con su pescador; sin humo (no es hora del fogón), sin luces, sin piscuchas ni Navidad');
@@ -5340,7 +5345,9 @@ try {
       await t.ctx.close();
       // Al amanecer, el humo del fogón (ambiente: solo con «todos»).
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'todos' })); await cerrar(t.p);
-      ok((await valle(t.p)).humo, '22 fogón: humo a la hora del café con «todos»');
+      v = await valle(t.p);
+      ok(v.humo, '22 fogón: humo a la hora del café con «todos»');
+      eq(v.ritmoHumo, ['6.6s/0s', '6.6s/-2.2s', '6.6s/-4.4s'], '22 fogón: las tres bocanadas, a destiempo como siempre (22B: por clase)');
       await t.ctx.close();
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
       ok(!(await valle(t.p)).humo, '22 fogón: con «esenciales» no hay humo (es ambiente)');
@@ -5355,6 +5362,7 @@ try {
       t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'todos' })); await cerrar(t.p);
       v = await valle(t.p);
       ok(v.pisVis && v.pis === fam.familia.personas && v.pisCaja && v.pisCaja.y > v.saldoAbajo, `22 piscuchas: ${v.pis} en el cielo del valle, por debajo del saldo`);
+      eq(v.ritmoPis, ['6.3s/-2s', '4.6s/-3.1s', '6.3s/-2s', '5.2s/0s', '4.6s/-3.1s', '5.2s/0s'].slice(0, v.pis), '22 piscuchas: cada una con su ritmo de siempre (22B: por clase)');
       eq(v.milpa, ['doblada'], '22 milpa: en octubre, doblada');
       await t.ctx.close();
       t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
@@ -5388,7 +5396,7 @@ try {
       // Con muchos años, el árbol es grande; y el presupuesto del teléfono se mantiene con la escena más cargada.
       t = await entrar(navegador, srvB, ADMIN, { hora: 20 }, conDia('2026-07-10', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
       v = await valle(t.p);
-      ok(v.nodos <= 150 && v.total < 950, `22 presupuesto con ballena: valle ${v.nodos}, escena ${v.total}`);
+      ok(v.nodos <= 150 && v.total < 1000, `22 presupuesto con ballena: valle ${v.nodos}, escena ${v.total}`);
       await t.ctx.close();
     } finally { srv.parar(); srvB.parar(); }
     // La entrada: el paisaje del valle sin nada de nadie (sin ventanas encendidas, árbol, piscuchas ni grabado).
@@ -5401,6 +5409,140 @@ try {
       await p.waitForTimeout(800);
       const e = await p.evaluate(() => ({ canton: !!document.querySelector('.v-canton'), ventanas: document.querySelector('.v-luz')?.getAttribute('d') ?? null, arbol: !!document.querySelector('.v-arbol'), pis: document.querySelectorAll('.v-pis').length, grabado: !!document.querySelector('.v-grabado') }));
       ok(e.canton && e.ventanas === '' && !e.arbol && e.pis === 0 && !e.grabado, '22 entrada: el cantón está, pero sin ventanas encendidas, árbol del primer día, piscuchas ni grabado (sin datos de nadie)');
+      await ctx.close();
+    } finally { srvE.parar(); }
+  }
+
+  // ---------------------------------------------------------------- campamento 22B: el valle vivo, parte 2
+  {
+    const conDia = (dia, extra = {}) => [([d, x]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, [dia, extra]];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Lo que se mueve en la escena: el torogoz (si su vuelo está animado), las luciérnagas y las bandadas, los zompopos y los relámpagos (si se ven y están animados).
+    const MOVIL = { torogoz: '.ave', luciernagas: '.luciernagas', azacuanes: '.v-aza', pericos: '.v-peri', zompopos: '.v-zompopos', relampagos: '.v-rayo' };
+    const estado = (p) => p.evaluate((MOV) => {
+      const visto = (e) => { let x = e; while (x && x.tagName !== 'svg') { if (getComputedStyle(x).display === 'none') return false; x = x.parentElement; } return true; };
+      const mueve = Object.entries(MOV).filter(([n, s]) => [...document.querySelectorAll(`#montana ${s}`)].some((e) => visto(e) && (n === 'luciernagas' || getComputedStyle(e).animationName !== 'none'))).map(([n]) => n);
+      const cs = (s) => { const e = document.querySelector(`#montana ${s}`); return e ? getComputedStyle(e) : null; };
+      const vis = (s) => [...document.querySelectorAll(`#montana ${s}`)].some(visto);
+      // Cuánto tira a rojo (positivo) o a verde (negativo) un color: el eje «a» de oklab (lo que devuelve `color-mix`), o rojo menos verde.
+      const rojez = (c) => { const n = (c.match(/-?[\d.]+/g) || []).map(Number); return /^oklab/.test(c) ? n[1] : (n[0] - n[1]) / 255; };
+      const caja = (s) => { const r = document.querySelector(`#montana ${s}`)?.getBoundingClientRect(); return r && { x: r.x, y: r.y, r: r.right, b: r.bottom }; };
+      const camino = document.querySelector('#montana #m-sendero'), m = camino.getScreenCTM(), L = camino.getTotalLength(), sendero = [];
+      for (let l = 0; l <= L; l += 4) { const q = camino.getPointAtLength(l); sendero.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]); }
+      const rotulos = [...document.querySelectorAll('#m-etiquetas > *')].map((e) => e.getBoundingClientRect()).filter((r) => r.width);
+      const vaca = caja('.v-vaca-pie.v-vaca-s');
+      const monte = document.querySelector('#montana path.monte'), fondo = document.getElementById('m-v-fondo');
+      return {
+        mueve, mar: vis('.v-mar-cuerpo'), marOp: Number(cs('.v-mar-cuerpo')?.opacity ?? 0),
+        // El mar de niebla va detrás de la montaña (dentro de la capa del fondo, que se dibuja antes que ella).
+        marDetras: !!fondo && !!monte && fondo.contains(document.querySelector('.v-mar')) && !!(fondo.compareDocumentPosition(monte) & Node.DOCUMENT_POSITION_FOLLOWING),
+        marTop: Math.min(...[...document.querySelectorAll('#montana .v-mar')].map((e) => e.getBoundingClientRect().top)), saldoAbajo: document.querySelector('.saldo').getBoundingClientRect().bottom,
+        verde: Number(getComputedStyle(document.documentElement).getPropertyValue('--v-verde')), falda: rojez(cs('.cr-3')?.stopColor ?? ''),
+        maqui: rojez(cs('.copa.v-maqui')?.fill ?? ''), fuego: rojez(cs('.copa.v-fuego')?.fill ?? ''), flores: ['.v-flores-maqui', '.v-flores-fuego'].filter(vis).length,
+        vacaPie: vis('.v-vaca-pie'), vacaEchada: vis('.v-vaca-echada'), garcitas: vis('.v-garcita'), vacas: ((document.querySelector('.v-vaca-sombra')?.getAttribute('d') || '').match(/M/g) || []).length,
+        vacaSobreSendero: !!vaca && sendero.some(([x, y]) => x > vaca.x - 4 && x < vaca.r + 4 && y > vaca.y - 4 && y < vaca.b + 4),
+        vacaSobreRotulo: !!vaca && rotulos.some((r) => vaca.x < r.right && vaca.r > r.left && vaca.y < r.bottom && vaca.b > r.top),
+        pausa: cs('.v-aza')?.animationPlayState ?? '',
+      };
+    }, MOVIL);
+    const srv = await servidor('anio');
+    try {
+      // Uno a la vez: en una sola página, recorriendo días y horas (cielo.js deja `data-mueve` y el CSS enseña lo que toca).
+      let t = await entrar(navegador, srv, ADMIN, { hora: 12 }, conDia('2026-10-15', { 'libro.efectos': 'todos' })); await cerrar(t.p);
+      const recorrido = [['2026-10-15', 6, 'torogoz'], ['2026-10-15', 12, 'azacuanes'], ['2026-10-15', 17, 'pericos'], ['2026-10-15', 19, 'luciernagas'], ['2026-10-15', 23, 'relampagos'],
+        ['2026-05-17', 8.5, 'zompopos'], ['2026-05-17', 12, ''], ['2027-02-10', 23, 'luciernagas'], ['2027-02-10', 12, ''], ['2026-04-10', 10, 'azacuanes'], ['2026-08-10', 2, 'relampagos'], ['2026-08-10', 20, 'luciernagas']];
+      const vistos = [];
+      for (const [dia, hora, esperado] of recorrido) {
+        await t.p.evaluate(([d, h]) => { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); window.libroCielo.aplicar(); }, [dia, hora]);
+        await t.p.waitForTimeout(120);
+        const e = await estado(t.p);
+        vistos.push(`${dia} ${hora}: ${e.mueve.join('+') || '—'}`);
+        ok(e.mueve.length <= 1 && (e.mueve[0] ?? '') === esperado, `22B uno a la vez: ${dia} a las ${hora} se mueve «${esperado || 'nada'}» (${e.mueve.join(', ') || 'nada'})`);
+      }
+      // Con la pestaña oculta, lo que se mueve se queda quieto (la regla general de la escena).
+      await t.p.evaluate(() => { localStorage.setItem('libro.dia', '2026-10-15'); localStorage.setItem('libro.hora', '12'); window.libroCielo.aplicar(); document.documentElement.toggleAttribute('data-oculta', true); });
+      eq((await estado(t.p)).pausa, 'paused', '22B: con la pestaña oculta, los azacuanes se quedan quietos');
+      await t.p.evaluate(() => document.documentElement.toggleAttribute('data-oculta', false));
+      ok(t.consola.length === 0, `22B: consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+      // Con «esenciales» no se mueve nada del valle (es ambiente); el mar de niebla, las vacas y los árboles en flor sí están (son paisaje).
+      for (const [dia, hora] of [['2026-10-15', 12], ['2026-10-15', 17], ['2026-05-17', 8.5], ['2026-08-10', 23]]) {
+        t = await entrar(navegador, srv, ADMIN, { hora }, conDia(dia, { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
+        eq((await estado(t.p)).mueve.filter((m) => m !== 'luciernagas' && m !== 'torogoz'), [], `22B esenciales: ${dia} a las ${hora} no se mueve nada del valle`);
+        await t.ctx.close();
+      }
+      // 55 · el mar de niebla: a las 6:00 lleno, detrás de la montaña y por debajo del saldo; a las 7:15 se levanta; a mediodía no hay. También con «ninguno».
+      t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-10-15', { 'libro.efectos': 'ninguno' })); await cerrar(t.p);
+      let v = await estado(t.p);
+      ok(v.mar && v.marOp > 0.95 && v.marDetras && v.marTop > v.saldoAbajo, `22B mar de niebla: a las 6:00, opaco, detrás de la montaña y por debajo del saldo (desde ${Math.round(v.marTop)} px; el saldo acaba en ${Math.round(v.saldoAbajo)})`);
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '7.25'); window.libroCielo.aplicar(); });
+      v = await estado(t.p);
+      ok(v.mar && v.marOp > 0.3 && v.marOp < 0.7, `22B mar de niebla: a las 7:15 se está levantando (${v.marOp})`);
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '17.5'); window.libroCielo.aplicar(); });
+      ok(!(await estado(t.p)).mar, '22B mar de niebla: sin niebla de la tarde');
+      await t.ctx.close();
+      // 54 · verde de invierno y dorado de verano; 56 · árboles en flor; 58 · vacas de día.
+      t = await entrar(navegador, srv, ADMIN, { hora: 12 }, conDia('2026-07-10')); await cerrar(t.p);
+      const julio = await estado(t.p);
+      await t.p.evaluate(() => { localStorage.setItem('libro.dia', '2027-02-10'); window.libroCielo.aplicar(); });
+      const febrero = await estado(t.p);
+      await t.p.evaluate(() => { localStorage.setItem('libro.dia', '2026-04-20'); window.libroCielo.aplicar(); });
+      const abril = await estado(t.p);
+      await t.p.evaluate(() => { localStorage.setItem('libro.dia', '2026-05-07'); window.libroCielo.aplicar(); });
+      const mayo = await estado(t.p);
+      const r3 = (x) => Math.round(x * 1000) / 1000;
+      ok(julio.verde === 1 && febrero.verde === 0 && mayo.verde > 0.4 && mayo.verde < 0.5 && julio.falda < febrero.falda - 0.01 && mayo.falda > julio.falda && mayo.falda < febrero.falda, `22B verdor: la falda baja, verde en julio (${r3(julio.falda)}), dorada en febrero (${r3(febrero.falda)}) y a medio camino el 7 de mayo (${r3(mayo.falda)}, ${mayo.verde})`);
+      ok(febrero.maqui > 0.04 && febrero.flores === 1 && abril.fuego > 0.08 && abril.flores === 1 && julio.flores === 0 && julio.maqui < 0 && julio.fuego < 0, `22B árboles: el maquilishuat rosado en febrero (${r3(febrero.maqui)}), el árbol de fuego rojo en abril (${r3(abril.fuego)}), verdes en julio y flores caídas solo cuando florecen`);
+      ok(julio.vacas === 1 && julio.vacaPie && julio.garcitas && !julio.vacaEchada && !julio.vacaSobreSendero && !julio.vacaSobreRotulo, '22B vacas: en el teléfono una vaca de pie con sus garcitas, sin pisar el sendero ni un rótulo');
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '21'); window.libroCielo.aplicar(); });
+      v = await estado(t.p);
+      ok(!v.vacaPie && v.vacaEchada && !v.garcitas, '22B vacas: de noche, echadas y sin garcitas');
+      await t.ctx.close();
+      // Escritorio: tres vacas en la orilla de afuera; el remolino de azacuanes entre la cumbre y el sol, lejos del saldo.
+      t = await entrar(navegador, srv, ADMIN, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false, hora: 12 }, conDia('2026-10-15', { 'libro.efectos': 'todos' })); await cerrar(t.p);
+      v = await estado(t.p);
+      const aza = await t.p.evaluate(() => { const r = document.querySelector('#montana .v-aza').getBoundingClientRect(), s = document.querySelector('.saldo').getBoundingClientRect(); return { x: r.x, r: r.right, saldo: s.right }; });
+      ok(v.vacas === 3 && !v.vacaSobreSendero && !v.vacaSobreRotulo && aza.x > aza.saldo, `22B escritorio: tres vacas en la orilla y los azacuanes a la derecha del saldo (${Math.round(aza.x)} > ${Math.round(aza.saldo)})`);
+      await t.ctx.close();
+      // Las bandadas nunca pasan por detrás de un texto (el saldo, la cotización, los datos de la escena): se mide todo su viaje en reposo
+      // (el remolino con su deriva y su giro; los pericos de su sitio hasta donde acaban). En escritorio y acostado los pericos acaban tapados
+      // por la montaña (si no, asomarían junto a la cumbre y se apagarían de golpe).
+      for (const [vp, letra] of [[{ width: 390, height: 844 }, ''], [{ width: 320, height: 568 }, 'muy-grande'], [{ width: 844, height: 390 }, ''], [{ width: 1440, height: 900 }, '']]) {
+        for (const hora of [12, 17]) {
+          t = await entrar(navegador, srv, ADMIN, { viewport: vp, isMobile: vp.width < 700, hasTouch: vp.width < 1100, hora }, conDia('2026-10-15', { 'libro.efectos': 'todos', 'libro.letra': letra }));
+          await cerrar(t.p);
+          const a = await t.p.evaluate((h) => {
+            const els = [...document.querySelectorAll(`#montana ${h === 12 ? '.v-aza' : '.v-peri'}`)];
+            for (const e of els) { e.style.animation = 'none'; e.style.opacity = '1'; } // en reposo (CSSOM: lo permite la CSP)
+            const u = els.map((e) => e.getBoundingClientRect()).reduce((x, q) => ({ x: Math.min(x.x, q.x), y: Math.min(x.y, q.y), r: Math.max(x.r, q.right), b: Math.max(x.b, q.bottom) }), { x: 1e9, y: 1e9, r: -1e9, b: -1e9 });
+            const d = parseFloat(getComputedStyle(document.getElementById('montana')).getPropertyValue('--v-peri-d'));
+            const viaje = h === 12 ? { x: u.x - 43, y: u.y - 15, r: u.r + 43, b: u.b + 8 } : { x: u.x - d, y: u.y - 2, r: u.r, b: u.b + 11 };
+            const textos = ['#cotizacion', '.saldo', '#esc-datos'].map((s) => document.querySelector(s)).filter((e) => e?.getClientRects().length).map((e) => e.getBoundingClientRect());
+            const choca = textos.some((q) => viaje.x < q.right && viaje.r > q.left && viaje.y < q.bottom && viaje.b > q.top);
+            const monte = document.querySelector('#montana path.monte');
+            const asoman = h === 12 ? 0 : els.flatMap((e) => [...e.getAttribute('d').matchAll(/M([\d.]+) ([\d.]+)/g)]).filter(([, x, y]) => !monte.isPointInFill(new DOMPoint(Number(x) - d, Number(y) + 9)) && Number(x) - d > 0).length;
+            return { ancho: u.r > u.x, choca, asoman };
+          }, hora);
+          ok(a.ancho && !a.choca && (vp.width < 700 || a.asoman === 0), `22B bandadas a ${vp.width}×${vp.height}${letra ? ' con letra muy grande' : ''}: ${hora === 12 ? 'el remolino' : 'los pericos'} no pasa${hora === 12 ? '' : 'n'} por detrás de ningún texto${vp.width >= 700 && hora === 17 ? ' y acaban detrás de la montaña' : ''} (${JSON.stringify(a)})`);
+          await t.ctx.close();
+        }
+      }
+      // Quien solo mira ve lo mismo.
+      t = await entrar(navegador, srv, LECTOR, { hora: 6 }, conDia('2026-10-15')); await cerrar(t.p);
+      v = await estado(t.p);
+      ok(v.mar && v.vacas === 1, '22B lectora: el mismo valle (mar de niebla y vacas)');
+      await t.ctx.close();
+    } finally { srv.parar(); }
+    // La entrada: el mar de niebla y las vacas también (son paisaje, sin nada de nadie).
+    const srvE = await servidor('anio');
+    try {
+      const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+      const p = await ctx.newPage();
+      await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '6'); localStorage.setItem('libro.dia', '2026-10-15'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
+      await p.goto(`${srvE.url}/login`, { waitUntil: 'networkidle' });
+      await p.waitForTimeout(800);
+      const e = await p.evaluate(() => ({ mar: !!document.querySelector('.v-mar-cuerpo') && getComputedStyle(document.querySelector('.v-mar-cuerpo')).display !== 'none', vacas: !!document.querySelector('.v-vaca'), mueve: document.documentElement.dataset.mueve }));
+      ok(e.mar && e.vacas && e.mueve === 'torogoz', '22B entrada: el mar de niebla y las vacas también (paisaje, sin datos de nadie)');
       await ctx.close();
     } finally { srvE.parar(); }
   }

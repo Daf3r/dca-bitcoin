@@ -197,7 +197,8 @@ html[data-efectos="todos"] .niebla-b { animation: niebla 110s ease-in-out -40s i
 /* Al amanecer cruza un torogoz (el ave nacional), muy de vez en cuando: aletea a ratos y planea (arte.js: torogoz). */
 .ave { opacity: 0; }
 @keyframes ave { 0%, 88% { opacity: 0; transform: translate(-60px, 0); } 89% { opacity: 0.95; } 99% { opacity: 0.95; } 100% { opacity: 0; transform: translate(calc(var(--escena-w, 400px) + 60px), -34px); } }
-html[data-efectos="todos"][data-cielo="amanecer"] .ave { animation: ave 52s linear 4s infinite; }
+/* (Campamento 22B) Lo que se mueve lo decide `data-mueve` (cielo.js): el torogoz, de 5:00 a 7:00 (la franja del amanecer), nunca junto a otra bandada. */
+html[data-efectos="todos"][data-mueve="torogoz"] .ave { animation: ave 52s linear 4s infinite; }
 /* El cielo se funde con la página al bajar: un velo del color del fondo que sube con el desplazamiento (oscurece en el tema oscuro, aclara en el claro). */
 /* Rendimiento en teléfono: las nubes, la niebla y las estrellas se mueven tan despacio (un píxel por segundo o menos) que no
    hace falta redibujar el SVG sesenta veces por segundo. Con `steps()` se actualizan unas pocas veces por segundo, con saltos de
@@ -1748,8 +1749,8 @@ html[data-madrugada]:not([data-tv]):not([data-contraste="alto"])::after { conten
 /* Aletea tres veces y planea (las alas casi planas); el cuerpo sube con cada aleteo y baja al planear. */
 @keyframes toro-aleteo { 0%, 20%, 40% { transform: scaleY(1); animation-timing-function: ease-in; } 10%, 30% { transform: scaleY(-0.5); animation-timing-function: ease-out; } 56%, 100% { transform: scaleY(0.22); } }
 @keyframes toro-ondula { 0% { transform: translateY(1.5px); } 42% { transform: translateY(-2.5px); } 100% { transform: translateY(1.5px); } }
-html[data-efectos="todos"][data-cielo="amanecer"] .toro-ala { animation: toro-aleteo 1.9s infinite; }
-html[data-efectos="todos"][data-cielo="amanecer"] .toro-bota { animation: toro-ondula 1.9s ease-in-out infinite; }
+html[data-efectos="todos"][data-mueve="torogoz"] .toro-ala { animation: toro-aleteo 1.9s infinite; }
+html[data-efectos="todos"][data-mueve="torogoz"] .toro-bota { animation: toro-ondula 1.9s ease-in-out infinite; }
 
 /* Papel picado (fiestas): oculto el resto del año. Los colores de cada fiesta; de noche, un poco en sombra. */
 .papel-picado { display: none; pointer-events: none; }
@@ -2916,7 +2917,9 @@ html[data-contraste="alto"] .cu-campos select { border-color: var(--txt2); }
 /* --- Luciérnagas (arte.js: luciernagas): al atardecer y de noche, solo con «todos» (llevan `efecto-ambiente`). Cada una deriva en un
    lazo lento y se enciende a su ritmo; una gota de luz la sigue un instante atrás (la estela). Las cuatro últimas, en la época de lluvias. */
 .luciernagas { display: none; }
-html:is([data-cielo="noche"], [data-cielo="atardecer"]) .luciernagas { display: inline; }
+/* (Campamento 22B) Desde las 18:00 (antes, desde las 16:30: el primer rato del atardecer es de los pericos) y, en la lluviosa, hasta las 22:00
+   (después, los relámpagos lejanos): `data-mueve="luciernagas"` (cielo.js). */
+html[data-mueve="luciernagas"] .luciernagas { display: inline; }
 html[data-cielo="atardecer"] .luciernagas { opacity: 0.75; }
 .luciernagas .lu:nth-child(n+9) { display: none; }
 html[data-epoca="lluviosa"] .luciernagas .lu:nth-child(n+9) { display: inline; }
@@ -3869,8 +3872,8 @@ html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .v-halo { opacity: 0.
 .v-humos { display: none; }
 html[data-fogon][data-efectos="todos"] .v-humos { display: inline; }
 .v-hu { fill: color-mix(in oklab, #ebe5dc 62%, var(--c3)); opacity: 0; transform-box: fill-box; transform-origin: center; animation: v-humo 6.6s ease-out infinite; }
-.v-hu:nth-child(3n+2) { animation-delay: -2.2s; } .v-hu:nth-child(3n) { animation-delay: -4.4s; }
-.v-hu:nth-child(n+4) { animation-duration: 7.4s; }
+.v-hu-1 { animation-delay: -2.2s; } .v-hu-2 { animation-delay: -4.4s; }
+.v-hu-b { animation-duration: 7.4s; }
 @keyframes v-humo { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 18% { opacity: 0.5; } 100% { transform: translate(5px, -16px) scale(2.2); opacity: 0; } }
 @media (max-width: 899px) { .v-hu { animation-timing-function: steps(30); } }
 
@@ -3897,7 +3900,7 @@ html[data-milpa="tapisca"] .v-mp-tapisca, html[data-milpa="rastrojo"] .v-mp-rast
 .v-mp-suelo { fill: color-mix(in oklab, #b79c6c var(--v-luz), var(--monte)); }
 html:is([data-milpa="siembra"], [data-milpa="jilote"], [data-milpa="doblada"]) .v-mp-suelo { fill: color-mix(in oklab, #6e4c31 var(--v-luz), var(--monte)); }
 .v-mp-surco { fill: none; stroke: color-mix(in oklab, #4a3220 var(--v-som), var(--monte-sombra)); opacity: 0.55; }
-.v-milpa path:not(.v-mp-suelo, .v-mp-tercio) { fill: none; stroke-linecap: round; }
+.v-mp:not(.v-mp-tercio), .v-mp-surco { fill: none; stroke-linecap: round; }
 .v-mp-brote { stroke: color-mix(in oklab, #93d05c var(--v-luz), var(--monte)); }
 .v-mp-mata { stroke: color-mix(in oklab, #6fa848 var(--v-luz), var(--monte)); }
 .v-mp-mata-s { stroke: color-mix(in oklab, #3e6c33 var(--v-som), var(--monte-sombra)); }
@@ -3911,7 +3914,7 @@ html:is([data-milpa="siembra"], [data-milpa="jilote"], [data-milpa="doblada"]) .
 /* El camino real: tierra polvosa con su talud, el cerco de piedra y los postes de brotón con sus retoños. */
 .v-cm { fill: color-mix(in oklab, #c9aa7e var(--v-luz), var(--monte)); }
 .v-cm-talud { fill: var(--monte-sombra); opacity: 0.5; }
-.v-camino path:is(.v-cm-cerco, .v-cm-poste, .v-cm-brote) { fill: none; stroke-linecap: round; }
+:is(.v-cm-cerco, .v-cm-poste, .v-cm-brote) { fill: none; stroke-linecap: round; }
 .v-cm-cerco { stroke: color-mix(in oklab, #9d978a var(--v-luz), var(--monte-sombra)); stroke-dasharray: 2.6 0.7 1.7 0.7 2.1 0.7; stroke-linecap: butt !important; }
 .v-cm-poste { stroke: color-mix(in oklab, #5c4632 var(--v-som), var(--monte-sombra)); }
 .v-cm-brote { stroke: color-mix(in oklab, #6fa848 var(--v-luz), var(--monte)); }
@@ -3930,7 +3933,6 @@ html:is([data-milpa="siembra"], [data-milpa="jilote"], [data-milpa="doblada"]) .
 .v-arbol .copa-filo { fill: none; stroke: var(--astro); stroke-opacity: calc(0.16 + var(--halo-a, 0.2) * 0.5); stroke-width: 0.9; stroke-linecap: round; }
 .v-ar-hoja-l { fill: color-mix(in oklab, var(--copa) 70%, var(--astro)); } .v-ar-hoja-s { fill: color-mix(in oklab, var(--copa) 70%, var(--monte-sombra)); }
 html[data-cielo="noche"] .v-arbol :is(.copa-luz, .copa-media) { fill: color-mix(in oklab, var(--copa) 86%, var(--astro)); }
-html[data-epoca="seca"] .v-arbol { --copa: color-mix(in oklab, #9c9456 calc(var(--v-luz) + 4%), var(--pino0)); }
 .v-ar-copa { transform-box: fill-box; transform-origin: 50% 100%; }
 html[data-epoca="seca"] .v-arbol:not(.v-retono) .v-ar-copa { transform: scale(0.84, 0.8); }
 html[data-epoca="seca"] .v-ar-ramas-secas { display: inline; }
@@ -3952,7 +3954,7 @@ html[data-epoca="lluviosa"] .lago-playa { display: none; }
 html[data-epoca="seca"] .lago-nivel { transform: scale(0.84, 0.8); }
 
 /* El lago con vida: tule en la orilla, la garza quieta y el cayuco con su lámpara (de noche solo la lámpara y su reflejo). */
-.v-tule path { fill: none; stroke-linecap: round; }
+.v-tule { fill: none; stroke-linecap: round; }
 .v-tu-l { stroke: color-mix(in oklab, #82aa5c var(--v-luz), var(--monte)); }
 .v-tu-s { stroke: color-mix(in oklab, #4b6e3a var(--v-som), var(--monte-sombra)); }
 .v-tu-cab { stroke: color-mix(in oklab, #6e4a2a var(--v-som), var(--monte-sombra)); }
@@ -3983,7 +3985,7 @@ html[data-efectos="todos"][data-cielo="amanecer"] .v-cayuco { animation: v-deriv
 /* Las luces del valle: quietas y cálidas, solo de noche (con cualquier nivel de efectos). */
 .v-luces { display: none; }
 html[data-cielo="noche"] .v-luces { display: inline; }
-.v-luces path { fill: none; stroke-linecap: round; }
+.v-luces { fill: none; stroke-linecap: round; }
 .v-luz-lejos { stroke: #ffd790; opacity: 0.72; } .v-luz-cerca { stroke: var(--v-calida); opacity: 0.92; }
 
 /* Las piscuchas de octubre y noviembre (ambiente): una por persona, de colores de aquí; se mecen con el viento. */
@@ -3998,8 +4000,8 @@ html[data-piscuchas][data-efectos="todos"] .v-piscuchas { display: inline; }
 .v-pis-cola { stroke: color-mix(in oklab, var(--pb) var(--v-pis), var(--monte)); }
 .v-pis-hilo { stroke: color-mix(in oklab, var(--nieve) 45%, transparent); stroke-width: 0.5; }
 .v-pis { transform-box: fill-box; transform-origin: 50% 80%; animation: v-pis 5.2s ease-in-out infinite alternate; }
-.v-pis:nth-child(2n) { animation-duration: 6.3s; animation-delay: -2s; }
-.v-pis:nth-child(3n) { animation-duration: 4.6s; animation-delay: -3.1s; }
+.v-pis-r2 { animation-duration: 6.3s; animation-delay: -2s; }
+.v-pis-r3 { animation-duration: 4.6s; animation-delay: -3.1s; }
 @media (max-width: 899px) { .v-pis { animation-timing-function: steps(30); } .v-cayuco { animation-timing-function: steps(26) !important; } }
 @keyframes v-pis { from { transform: rotate(-5deg) translate(-1px, 1px); } to { transform: rotate(6deg) translate(2px, -2px); } }
 
@@ -4007,6 +4009,82 @@ html[data-piscuchas][data-efectos="todos"] .v-piscuchas { display: inline; }
 .v-grabado { display: none; }
 html[data-luna-llena][data-cielo="noche"] .v-grabado { display: inline; }
 .v-gr-surco { fill: none; stroke: #000; opacity: 0.42; stroke-linejoin: round; }
-.v-grabado text { font-family: var(--serif); font-weight: 600; letter-spacing: 0.06em; }
+text.v-grabado { font-family: var(--serif); font-weight: 600; letter-spacing: 0.06em; }
 /* El surco: oscuro por dentro, con un filo fino de luz de luna por fuera. */
 .v-gr-texto { fill: rgb(0 0 0 / 0.42); stroke: color-mix(in oklab, var(--astro) 55%, transparent); }
+
+/* ---------------------------------------------------------------- Campamento 22B · el valle vivo, parte 2 (arte-valle.js) */
+/* 54 · Verde de invierno y dorado de verano: `--v-verde` (cielo.js) va de 1 (lluviosa) a 0 (seca), con la mezcla del 1 al 14 de mayo y
+   de noviembre. Solo el valle y la falda baja: la última parada de cada cara de la montaña, la loma del cantón y las copas del valle.
+   Cuánto se nota lo decide la hora (`--v-tin`): de noche manda la noche. */
+.montana { --v-tin: 27%; --v-pasto: color-mix(in oklab, #4f8d39 calc(var(--v-verde, 1) * 100%), #b4954c); }
+html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .montana { --v-tin: 15%; }
+html[data-cielo="noche"] .montana { --v-tin: 7%; }
+.ld-2 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--monte-sombra) 72%, var(--medio)) calc(100% - var(--v-tin)), var(--v-pasto)); }
+.cr-3 { stop-color: color-mix(in oklab, var(--monte) calc(100% - var(--v-tin)), var(--v-pasto)); }
+.vlo-0 { stop-color: color-mix(in oklab, color-mix(in oklab, color-mix(in oklab, var(--medio) 22%, var(--monte)) 92%, var(--luz-roca)) calc(100% - var(--v-tin) * 1.2), var(--v-pasto)); }
+.vlo-1 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--medio) 16%, var(--monte)) calc(100% - var(--v-tin)), var(--v-pasto)); }
+.v-canton { --copa: color-mix(in oklab, color-mix(in oklab, #4f8f48 calc(var(--v-verde, 1) * 100%), #8f8a4c) calc(var(--v-luz) + 6%), var(--pino0)); --corteza: color-mix(in oklab, var(--monte-sombra) 45%, #6f5a46); }
+.v-arbol { --copa: color-mix(in oklab, color-mix(in oklab, #5c9c4c calc(var(--v-verde, 1) * 100%), #9c9456) calc(var(--v-luz) + 4% + var(--v-verde, 1) * 4%), var(--pino0)); }
+
+/* 55 · El mar de niebla del amanecer (5:00 a 7:30): quieto, opaco, detrás de la montaña; se forma y se levanta con `--v-mar`. */
+.v-mar { display: none; }
+html[data-mar-niebla] .v-mar { display: inline; }
+.montana { --v-niebla: color-mix(in oklab, var(--c3) 24%, #efe9ea); --v-niebla-luz: color-mix(in oklab, var(--c2) 30%, #fffbf4); }
+.v-mar-cuerpo { fill: var(--v-niebla); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
+.v-mar-luz { fill: var(--v-niebla-luz); opacity: calc(var(--v-mar, 0) * 0.9); transition: opacity 4s linear; }
+.v-mar-sombra { fill: color-mix(in oklab, var(--v-niebla) 80%, var(--medio)); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
+
+/* 56 · Árboles de aquí: el maquilishuat del patio florece en febrero (toda la copa rosada) y el árbol de fuego en abril (la copa roja
+   sobre su follaje verde, que queda en la sombra); a su pie, las flores caídas. `data-flor` (cielo.js). Es paisaje: con cualquier nivel
+   de efectos. */
+.v-flores { display: none; }
+html[data-flor="maquilishuat"] .v-flores-maqui, html[data-flor="fuego"] .v-flores-fuego { display: inline; }
+html[data-flor="maquilishuat"] .v-maqui { --copa: color-mix(in oklab, #e899c3 calc(var(--v-luz) + 16%), var(--monte)); }
+html[data-flor="fuego"] .v-fuego { --copa: color-mix(in oklab, #e2502b calc(var(--v-luz) + 16%), var(--monte)); }
+html[data-flor="fuego"] .v-fuego.copa-sombra { fill: color-mix(in oklab, color-mix(in oklab, #3f7f3a calc(var(--v-luz) + 6%), var(--pino0)) 70%, var(--monte-sombra)); }
+.v-flores-maqui { fill: color-mix(in oklab, #f2b4d3 var(--v-luz), var(--monte)); }
+.v-flores-fuego { fill: color-mix(in oklab, #e6603c var(--v-luz), var(--monte)); }
+
+/* 58 · Vacas y garcitas en la orilla del lago, quietas: de pie de día; de noche echadas y sin garcitas. Criollas, cafés, con la luz en el
+   lomo; la garcita, blanca como la garza del lago. */
+.v-vaca-sombra { fill: #000; opacity: 0.24; }
+.v-vaca-l { fill: color-mix(in oklab, #c58a55 calc(var(--v-luz) + 8%), var(--monte)); }
+.v-vaca-s { fill: color-mix(in oklab, #5e3a24 var(--v-som), var(--monte-sombra)); }
+.v-vaca-echada { display: none; }
+html[data-cielo="noche"] .v-vaca-echada { display: inline; }
+html[data-cielo="noche"] :is(.v-vaca-pie, .v-garcita) { display: none; }
+.v-garcita { fill: color-mix(in oklab, #f7f4ee var(--v-blanco), var(--monte)); }
+
+/* 57, 60 y 61 · Lo que se mueve (ambiente: solo con «todos», y siempre uno a la vez, `data-mueve` de cielo.js): los azacuanes de octubre
+   y abril, los pericos del atardecer, los zompopos de mayo y los relámpagos lejanos de las noches de lluvia. Solo transform y opacity. */
+.v-ave, .v-zompopos, .v-rayo { display: none; }
+html[data-mueve="azacuanes"] .v-aza, html[data-mueve="pericos"] .v-peri, html[data-mueve="zompopos"] .v-zompopos, html[data-mueve="relampagos"] .v-rayo { display: inline; }
+/* Los azacuanes: un remolino de gavilanes que planea en círculos (alas abiertas, sin aletear) y pasa despacio. */
+.v-aza { fill: none; stroke: color-mix(in oklab, #34281f 72%, var(--c2)); stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+@keyframes v-aza-pasa { 0% { opacity: 0; translate: -34px 5px; } 9% { opacity: 1; } 78% { opacity: 1; } 86%, 100% { opacity: 0; translate: 34px -12px; } }
+@keyframes v-aza-gira { 0%, 100% { transform: translate(9px, 0); } 12.5% { transform: translate(6.4px, 2.1px); } 25% { transform: translate(0, 3px); } 37.5% { transform: translate(-6.4px, 2.1px); } 50% { transform: translate(-9px, 0); } 62.5% { transform: translate(-6.4px, -2.1px); } 75% { transform: translate(0, -3px); } 87.5% { transform: translate(6.4px, -2.1px); } }
+html[data-mueve="azacuanes"] .v-aza { animation: v-aza-pasa 110s linear 2s infinite, v-aza-gira 13s linear infinite; }
+html[data-mueve="azacuanes"] .v-aza.v-av2 { animation-duration: 110s, 17s; animation-delay: 2s, -7s; }
+/* Los pericos: una banda verde que cruza deprisa hacia la montaña, ondulando. */
+.v-peri { fill: color-mix(in oklab, #3c9a47 74%, var(--c3)); opacity: 0; }
+@keyframes v-peri-pasa { 0% { opacity: 0; translate: 0 0; } 1% { opacity: 1; } 22% { opacity: 1; translate: calc(var(--v-peri-d, 500px) * -1) 9px; } 23%, 100% { opacity: 0; translate: calc(var(--v-peri-d, 500px) * -1) 9px; } }
+@keyframes v-peri-ondula { from { transform: translateY(1.3px); } to { transform: translateY(-1.3px); } }
+html[data-mueve="pericos"] .v-peri { animation: v-peri-pasa 34s linear 3s infinite, v-peri-ondula 0.45s ease-in-out infinite alternate; }
+html[data-mueve="pericos"] .v-peri.v-av2 { animation-delay: 3.3s, -0.22s; }
+/* Los zompopos de mayo: puntitos oscuros que suben de la milpa y se pierden. */
+.v-zompopos { fill: none; stroke: color-mix(in oklab, #3a2416 82%, var(--monte-sombra)); stroke-linecap: round; opacity: 0; }
+@keyframes v-zo { 0% { opacity: 0; transform: translate(0, 5px); } 14% { opacity: 0.95; } 70% { opacity: 0.85; } 100% { opacity: 0; transform: translate(7px, -30px); } }
+html[data-mueve="zompopos"] .v-zompopos { animation: v-zo 7s linear infinite; }
+html[data-mueve="zompopos"] .v-zo2 { animation-delay: -3.5s; }
+/* Los relámpagos lejanos: la nube de la tormenta se enciende por dentro de vez en cuando, muy leve (un destello y su eco: nunca más de
+   dos en un segundo; sin parpadeos rápidos). */
+.ry-0 { stop-color: #f2eeff; stop-opacity: 0.95; } .ry-1 { stop-color: #b7a8ea; stop-opacity: 0.5; } .ry-2 { stop-color: #6b5aa6; stop-opacity: 0; }
+.v-rayo { opacity: 0; }
+@keyframes v-rayo { 0%, 90% { opacity: 0; } 90.6% { opacity: 0.6; } 91.5% { opacity: 0.16; } 92.3% { opacity: 0.42; } 94.4%, 100% { opacity: 0; } }
+html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite; }
+/* En el teléfono, lo lento va a saltos (como las nubes): el remolino y los zompopos. Los pericos cruzan rápido y van suaves. */
+@media (max-width: 899px) {
+  html[data-mueve="azacuanes"] .v-aza { animation-timing-function: steps(330), steps(52); }
+  html[data-mueve="zompopos"] .v-zompopos { animation-timing-function: steps(56); }
+}

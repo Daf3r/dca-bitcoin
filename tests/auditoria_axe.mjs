@@ -538,6 +538,18 @@ try {
         await ctx.close();
       }
     }
+    { // campamento 22B: el valle vivo, parte 2 (mar de niebla, azacuanes, pericos, zompopos, relámpagos, árboles en flor y vacas echadas)
+      for (const [nombre, dia, hora, vp] of [['mar de niebla', '2026-10-15', 6, null], ['azacuanes', '2026-10-15', 12, null], ['pericos', '2026-10-15', 17, null], ['zompopos y el valle reverdeciendo', '2026-05-17', 8.5, null],
+        ['relámpagos lejanos', '2026-08-10', 23, null], ['maquilishuat en flor y valle dorado', '2027-02-10', 12, null], ['mar de niebla en escritorio', '2026-10-15', 6.5, { width: 1440, height: 900 }], ['árbol de fuego y vacas en escritorio', '2026-04-20', 12, { width: 1440, height: 900 }]]) {
+        const ctx = await navegador.newContext({ ...(vp ? { viewport: vp } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript(([h, d]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); } catch { /* sin almacenamiento */ } }, [hora, dia]);
+        await entrar(p, anio.url, ADMIN); await cerrarOferta(p);
+        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+        await auditar(p, `22B ${nombre} ${esquema}`);
+        await ctx.close();
+      }
+    }
     { // campamento 24: medir este aparato (antes de la prueba, durante, con el resultado) y las medidas en «Estado del sistema»
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
