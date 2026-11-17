@@ -1173,4 +1173,48 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   const rej = L.rejilla(50, 50, { x1: 0, x2: 100, y1: 0, y2: 100, paso: 25 });
   ok(rej.length === 25 && rej[0].x === 50 && rej[0].y === 50 && rej.every((p, i) => i === 0 || p.d >= rej[i - 1].d), 'rejilla: de la más cercana al ancla a la más lejana');
 }
+
+// ---------------------------------------------------------------- campamento 24: medir este aparato (idea 44)
+{
+  const L = await import('../app/static/lib.js');
+  // La prueba: baja y vuelve, suave en los extremos, siempre igual
+  const D = 2532, T = L.PRUEBA_MS;
+  eq([L.desplazamientoPrueba(0, T, D), L.desplazamientoPrueba(T / 2, T, D), L.desplazamientoPrueba(T, T, D), L.desplazamientoPrueba(T + 50, T, D), L.desplazamientoPrueba(-5, T, D)], [0, D, 0, 0, 0],
+    'desplazamiento: arriba al empezar, abajo del todo a la mitad, arriba al acabar (y fuera de la prueba, arriba)');
+  ok(L.desplazamientoPrueba(T / 4, T, D) === Math.round(D / 2) && L.desplazamientoPrueba(T / 8, T, D) < D / 4, 'desplazamiento: arranca despacio (a un octavo del tiempo va por menos de un cuarto)');
+  eq(L.desplazamientoPrueba(T / 3, T, 0), 0, 'desplazamiento: sin página que bajar, no se mueve');
+  eq([L.desplazamientoPrueba(T * 0.3, T, D), L.desplazamientoPrueba(T * 0.7, T, D)], [L.desplazamientoPrueba(T * 0.3, T, D), L.desplazamientoPrueba(T * 0.3, T, D)], 'desplazamiento: la vuelta es el espejo de la ida');
+  // Intervalos a partir de instantes (en un arreglo preasignado, con `n`) y elegidos con `incluir`
+  const t = new Float64Array(16);
+  [0, 16, 33, 50, 100, 116].forEach((x, i) => { t[i] = x; });
+  eq(L.intervalosDe(t, 6), [16, 17, 17, 50, 16], 'intervalos: solo los `n` primeros instantes');
+  eq(L.intervalosDe(t, 6, (i) => i >= 4), [50, 16], 'intervalos: `incluir` elige por el índice del fotograma que cierra');
+  // La pantalla en reposo: la mediana, que un tirón suelto no mueve
+  eq(L.hzReposo([16.7, 16.6, 16.7, 16.7, 120, 16.6, 16.7]), 60, 'hz en reposo: 60 aunque haya un tirón');
+  eq(L.hzReposo(Array(30).fill(8.33)), 120, 'hz en reposo: 120 (ProMotion o un monitor rápido)');
+  eq(L.hzReposo(Array(30).fill(33.3)), 30, 'hz en reposo: 30 (ahorro de batería del iPhone)');
+  eq(L.hzReposo([16.7, 16.7]), null, 'hz en reposo: null con muy pocos fotogramas');
+  // El resumen de los fotogramas
+  const fluido = L.resumenFotogramas(Array(420).fill(1000 / 60));
+  eq([fluido.fps, fluido.peor, fluido.p5, fluido.tirones, fluido.fotogramas, fluido.duracion], [60, 60, 60, 0, 421, 7000], 'resumen: 60 fps parejos, sin tirones');
+  const con = Array(420).fill(1000 / 60);
+  for (const i of [50, 51, 52, 53, 54, 55]) con[i] = 100; // un tropiezo: seis fotogramas de 100 ms seguidos
+  const r = L.resumenFotogramas(con);
+  ok(r.fps < 60 && r.fps > 50, `resumen: la media baja con el tropiezo (${r.fps})`);
+  ok(r.peor < 15, `resumen: el medio segundo más lento lo cuenta (${r.peor} fps)`);
+  eq(r.tirones, 6, 'resumen: seis tirones (cada intervalo de más de 1.5 veces el de reposo)');
+  ok(Math.abs(r.p5 - 60) < 0.1, `resumen: el 5 % más lento no se mueve por solo 6 de 420 (${r.p5})`);
+  eq(L.resumenFotogramas(con, { intervalo: 1000 / 120 }).tirones, 420, 'resumen: a 120 Hz en reposo, 60 fps es perder un fotograma de cada dos');
+  eq(L.resumenFotogramas([16.7]), null, 'resumen: null con menos de dos intervalos');
+  eq(L.resumenFotogramas([10, 10, 10]).peor, L.resumenFotogramas([10, 10, 10]).fps, 'resumen: una prueba más corta que la ventana: el peor momento es la media');
+  // El veredicto (la regla del dueño, con la cifra redondeada que se enseña)
+  const ver = (fps, fps_escena = null, hz = 60) => L.veredictoFps({ fps, fps_escena, hz });
+  eq([ver(60).estado, ver(55).estado, ver(54.6).estado, ver(54.4).estado, ver(50).estado, ver(49.6).estado, ver(49.4).estado],
+    ['fluido', 'fluido', 'fluido', 'revisar', 'revisar', 'revisar', 'lento'], 'veredicto: desde 55 fluido, de 50 a 55 revisar, bajo 50 lento (redondeado)');
+  eq([ver(59, 37).estado, ver(59, 37).fps, ver(52, 58).fps], ['lento', 37, 52], 'veredicto: cuenta lo peor de toda la prueba y del rato con la montaña a la vista');
+  eq([ver(30, 30, 30).estado, ver(30, 30, 30).limitada, ver(58, 58, 60).limitada], ['revisar', true, false], 'veredicto: una pantalla limitada a 30 en reposo no dice «lento» (no se puede juzgar)');
+  eq([ver(120, 118, 120).estado, ver(56, 56, 120).estado], ['fluido', 'fluido'], 'veredicto: en fotogramas por segundo de verdad (a 120 Hz, 56 sigue siendo fluido para el ojo)');
+  eq([L.PALABRA_FPS.fluido, L.PALABRA_FPS.revisar, L.PALABRA_FPS.lento, L.ESTADO_FPS.lento], ['Fluido', 'Revisar', 'Lento', 'mal'], 'palabras y estados del veredicto');
+  ok(/desenfoque de la sierra del fondo/.test(L.REGLA_LENTO) && !/compr/i.test(L.REGLA_LENTO), 'la regla de un «Lento» dice qué se revisaría y no recomienda comprar nada');
+}
 console.log(`OK ${n} comprobaciones`);
