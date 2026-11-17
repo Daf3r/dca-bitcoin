@@ -30,7 +30,7 @@ flowchart LR
 
 - **La app** sirve la página (módulos ES sin build, con `?v=<hash>`), la API y el login. El navegador nunca habla con terceros: precio, histórico y estado de TXID los pide el servidor y los guarda en la base.
 - **`backup`** copia la base cada 24 h (verificada), conserva 30 y una vez por semana prueba restaurar el último. **`avisos`** manda lo programado por Web Push y deja su marca de «sigo vivo»; los dos tienen su `healthcheck`.
-- **Estado del sistema** (Tu cuenta, solo admin) junta lo que mira cada pieza: respaldo, avisos, integridad, disco, versión y errores. El registro de la app sale en JSON (`docker compose logs app`).
+- **Estado del sistema** (Tu cuenta, solo admin) junta lo que mira cada pieza: respaldo, avisos, integridad, disco, versión, errores y las medidas de los aparatos («Medir este aparato», abajo). El registro de la app sale en JSON (`docker compose logs app`).
 - Lo que no se puede probar fuera del servidor (Caddy, Cloudflare, el build de Docker, iPhone real) se valida con `scripts/verificar-despliegue.sh`.
 
 ## Qué necesitas
@@ -127,6 +127,12 @@ Conectar una tele, sin teclear usuario ni contraseña con el control remoto:
 3. En la tele, abre `https://dca.tudominio.com/login#tv` (o «Entrar con un código» en la entrada) y escribe las 8 cifras. Entra y queda en pantalla grande.
 
 El código caduca a los 5 minutos, sirve una vez, crear otro anula el anterior y 5 intentos fallidos lo anulan (se crea otro y listo). La sesión de la tele es la normal (90 días que se renuevan con el uso) y aparece en las «Sesiones abiertas» de esa cuenta como «Tele · …», desde donde se cierra. El historial anota quién creó cada código y cuándo entró la tele, nunca el código. Con `SOLO_LECTURA=1` la tele puede entrar con un código, pero no se pueden crear códigos nuevos.
+
+## Medir este aparato (¿va fluida en el iPhone?)
+En «Tu cuenta → Estado del sistema» (solo el admin), **«Medir este aparato»** abre la app en `/medir`: dice cuánto tardó en verse el saldo y, con «Empezar la prueba», tras una cuenta atrás la página baja y sube sola durante 7 segundos mientras cuenta los fotogramas por segundo. La medida se guarda (las últimas 50, sin la cuenta ni la IP: solo números, los ajustes de la pantalla y «Safari · iPhone») y sale en esa misma vista como **Fluido** (55 o más), **Revisar** (de 50 a 55) o **Lento** (menos de 50).
+- Mídelo en el iPhone, con la app instalada y **sin el modo de ahorro de batería** (limita la pantalla a 30 fotogramas y la medida sale como «Revisar», no como «Lento»). No toques la pantalla durante la prueba: un toque la detiene.
+- Si en el iPhone sale «Lento», lo primero que se quita en el teléfono es el desenfoque de la sierra del fondo (está decidido; partir la escena en varias imágenes no se hace).
+- Con `SOLO_LECTURA=1` se puede medir, pero la medida no se guarda.
 
 ## Importar y exportar
 Están en **«Tu cuenta → Tus datos: descargar e importar»** (solo el admin). *Exportar compras (CSV)* descarga todas las compras (`fecha,monto_usd,precio_btc_usd,sats,btc`). *Importar compras (CSV)* acepta ese mismo formato o uno viejo sin `sats` (usa `precio_btc_usd`). Salta filas repetidas e inválidas y dice cuáles, así que puedes importar el mismo archivo dos veces sin duplicar.
