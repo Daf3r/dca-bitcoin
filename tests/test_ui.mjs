@@ -4001,7 +4001,7 @@ try {
             return { recorte: g.getAttribute('clip-path'), piezas: [...g.children].map((x) => x.getAttribute('class')),
               opacas: [...g.children, document.querySelector('.nieve-sombra'), rellano].every((x) => getComputedStyle(x).opacity === '1' && getComputedStyle(x).fillOpacity === '1'),
               viejos: document.querySelectorAll('.espolon, .espolon-luz, .nieve-s2, .tz-pared, .tz-pared-luz, .nieve-pliegue').length,
-              trasBandera: tras.every((q) => en(sombra, q.x, q.y) && !en(roca, q.x, q.y)), roca: enRoca / Math.max(1, dentro), dentro,
+              trasBandera: tras.every((q) => en(monte, q.x, q.y) && en(sombra, q.x, q.y) && !en(roca, q.x, q.y)), roca: enRoca / Math.max(1, dentro), dentro,
               brota: monte.getAttribute('d').includes(`L${labio}`), rocaLadera: roca.getAttribute('fill') };
           })(),
           rotulos: [...document.querySelectorAll('#m-etiquetas .campo-txt:not(.etapa-txt)')].map((t) => { const r = t.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; }),
