@@ -22,9 +22,10 @@ const parar = () => { pararMusica?.(); pararMusica = null; };
  * El dibujo de una vista, con su texto (lo usan el selector y la portada del dibujo de hoy). `tipo` y `lista` sirven para leer una
  * pieza al tocarla o con el teclado. (Campamento 20) En el primer año del libro, el tronco y la manta tienen su forma propia
  * (`lib.primerAnio`): el tronco por meses y la manta como una pieza de cuatro hileras.
+ * (Campamento 21B) La tele lo usa para su marco: pide la voz del libro y el último año de la partitura, sin mirar lo elegido aquí.
  */
-function dibujoDe(vh, sel = null) {
-  const hoy = hoyISO(), items = R.items, lb = vozLibro();
+export function dibujoDe(vh, sel = null, { libro = vozLibro(), anio = anioPartitura } = {}) {
+  const hoy = hoyISO(), items = R.items, lb = libro;
   if (vh === 'tronco') {
     if (primerAnio(items, hoy)) {
       const t = mesesTronco(items, hoy);
@@ -37,7 +38,7 @@ function dibujoDe(vh, sel = null) {
   if (vh === 'estratos') { const e = estratosMes(items, hoy); return { tipo: vh, lista: e, svg: estratos(e, { sel }), desc: textoEstratos(e, lb) }; }
   if (vh === 'partitura') {
     const as = partitura(items);
-    const y = as.find((x) => x.anio === anioPartitura) ?? as.at(-1);
+    const y = as.find((x) => x.anio === anio) ?? as.at(-1);
     return { tipo: vh, lista: y?.notas ?? [], anios: as, anio: y, svg: y ? dibujarPartitura(y, { sel }) : '', desc: textoPartitura(as, lb) };
   }
   if (vh === 'manta') {

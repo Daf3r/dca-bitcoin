@@ -22,6 +22,9 @@
     // `data-lector`: aquí entró por última vez alguien que solo mira; la página le habla «del libro» desde el primer pintado.
     if (rol === 'lector') raiz.setAttribute('data-lector', '');
   } catch { /* sin almacenamiento: por pestañas y sin pista */ }
+  // (Campamento 21B) La app abierta con `#tv` entra directo en la tele: se marca antes de pintar (si no, se vería un instante la página
+  // normal). Solo en la app: la entrada (`/login#tv`, adonde lleva una sesión caducada) no es la tele.
+  if (location.pathname === '/' && location.hash === '#tv') raiz.dataset.tv = '1';
   const sistema = matchMedia('(prefers-reduced-motion: reduce)');
   const ahorro = matchMedia('(prefers-reduced-data: reduce)');
 

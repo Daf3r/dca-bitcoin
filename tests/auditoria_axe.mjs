@@ -478,6 +478,55 @@ try {
         await ctx.close();
       } finally { largo.parar(); }
     }
+    { // campamento 21B: la tele de la sala a 1920×1080 (con reloj, sismógrafo y la fiesta en su sitio) y la tele dormida
+      const tele = async (hora) => {
+        const ctx = await navegador.newContext({ viewport: { width: 1920, height: 1080 }, colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, hora);
+        await entrar(p, anio.url, LECTOR);
+        await p.evaluate(() => { location.hash = '#tv'; }); await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(3200);
+        return { ctx, p };
+      };
+      const tvMod = (p, js) => p.evaluate(new Function(`return (async () => { const tv = await import(document.querySelector('link[rel=modulepreload][href^="/tv.js"]').href); const est = await import(document.querySelector('link[rel=modulepreload][href^="/estado.js"]').href); ${js} })()`));
+      let { ctx, p } = await tele(esquema === 'light' ? 12 : 20);
+      await tvMod(p, 'for (const k of [1, 2]) { est.S.precio = 77000 + k * 150; est.S.precioTs = Date.now() + k; tv.pintarTV(); }'); await p.waitForTimeout(800);
+      await auditar(p, `tele de la sala con reloj y sismógrafo ${esquema}`);
+      await tvMod(p, 'tv.fiestaTV(990000, 1211769, 221769);'); await p.waitForTimeout(1500);
+      await auditar(p, `tele de la sala con la fiesta en su sitio ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await tele(23.5));
+      await auditar(p, `tele dormida ${esquema}`);
+      await ctx.close();
+      // El marco de la historia: el reloj de la página (solo `Date`) se adelanta hasta la ventana del marco (las :05, :15…)
+      ctx = await navegador.newContext({ viewport: { width: 1920, height: 1080 }, colorScheme: esquema, bypassCSP: true });
+      p = await ctx.newPage();
+      await p.addInitScript((h) => {
+        try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ }
+        const D = Date, real = D.now(), d = Math.floor((real - 300000) / 600000) * 600000 + 304000 - real;
+        class F extends D { constructor(...a) { if (a.length) super(...a); else super(D.now() + d); } static now() { return D.now() + d; } }
+        globalThis.Date = F;
+      }, esquema === 'light' ? 12 : 20);
+      await entrar(p, anio.url, LECTOR);
+      await p.evaluate(() => { location.hash = '#tv'; }); await p.reload({ waitUntil: 'networkidle' });
+      await p.waitForFunction(() => !document.getElementById('tv-marco').hidden && getComputedStyle(document.getElementById('tv-marco')).opacity === '1', null, { timeout: 15000 });
+      await auditar(p, `tele con el marco de la historia ${esquema}`);
+      await ctx.close();
+      // Conectar una tele (el dueño, con el código a la vista) y la entrada con «Entrar con un código» (con un error)
+      ({ ctx, p } = await nuevo(anio, ADMIN, conPush));
+      await cerrarOferta(p);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await p.click('#dc-sesiones-btn'); await p.waitForTimeout(900);
+      await auditar(p, `conectar una tele ${esquema}`);
+      await p.click('#tc-crear'); await p.waitForTimeout(600);
+      await auditar(p, `conectar una tele con el código a la vista ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await nuevo(anio, null));
+      await p.goto(`${anio.url}/login#codigo`, { waitUntil: 'networkidle' }); await p.waitForTimeout(400);
+      await auditar(p, `entrar con un código ${esquema}`);
+      await p.keyboard.type('12345678'); await p.keyboard.press('Enter'); await p.waitForTimeout(700);
+      await auditar(p, `entrar con un código, con un error ${esquema}`);
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

@@ -3634,3 +3634,134 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
    etapa conserva su naranja y su grosor aunque sea intermedia. */
 .etapa.menor:not(.sig) .etapa-sombra { display: none; }
 .etapa.menor:not(.sig, .alcanzada) .etapa-tick { opacity: 0.42; }
+
+/* ============================================================================================================================
+   Campamento 21B · La tele de la sala: un reloj, ninguna tarjeta sobre el sendero, la tele que duerme y el marco de la historia.
+   Solo con `html[data-tv]` (fuera de la tele nada de esto existe). Lo animado, en `transform`/`translate`/`opacity`.
+   ============================================================================================================================ */
+.tv-reloj { display: none; }
+/* (15) Las tarjetas se colocan desde tv.js (`translate`, medido para no tapar el sendero, «Tú», los rótulos ni el saldo): aquí solo su
+   punto de partida. Hasta que tienen sitio no se ven, y si no cabe en ninguno (`data-sitio="0"`) tampoco. */
+html[data-tv] .tv-tarjeta { position: absolute; z-index: 3; left: 0; top: 0; right: auto; bottom: auto; margin: 0; }
+html[data-tv] .tv-fiesta.tv-tarjeta { z-index: 4; }
+html[data-tv] .tv-tarjeta:not([data-sitio="1"]), html[data-tv] .tv-fiesta:not([hidden]) ~ .tv-sismo.tv-tarjeta:not([data-sitio="1"]) { visibility: hidden; }
+html[data-tv] .tv-fiesta:not([hidden]) ~ .tv-sismo.tv-tarjeta[data-sitio="1"] { visibility: visible; } /* antes se escondía en pantallas angostas: ahora tiene su sitio */
+html[data-tv] .tv-tarjeta[data-asentada] { transition: translate 0.7s var(--resorte); }
+/* El sismógrafo, a la medida de la pantalla (antes, en una pantalla de 1024 px ocupaba 30rem y no cabía junto a la montaña). */
+html[data-tv] .tv-sismo.tv-tarjeta { width: clamp(16rem, 26vw, 28rem); translate: none; }
+/* Las fichas de la tele (el último movimiento y el reloj): el mismo material, opaco casi del todo para leerse sobre cualquier cosa. */
+html[data-tv] :is(.tv-pie, .tv-reloj) {
+  border-radius: 20px; background: var(--s1); background: color-mix(in srgb, var(--s1) 88%, transparent); color: var(--txt);
+  box-shadow: inset 0 1px 0 var(--filo), var(--sombra); text-shadow: none;
+}
+/* El último movimiento: una etiqueta pequeña encima del dato (se lee desde el sofá y ocupa poco a lo ancho). */
+html[data-tv] .tv-pie { display: grid; gap: 0.08em; transform: none; width: max-content; max-width: min(24em, calc(100vw - 48px)); padding: 0.5em 1em 0.6em; text-align: left; font: 600 1.1rem/1.3 var(--sans); }
+.tvu-k { font: 650 0.62rem/1.2 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--txt2); }
+.tvu-v { font-variant-numeric: tabular-nums lining-nums; }
+.tvu-v[hidden] { display: none; }
+/* El reloj: la hora en cifras finas y grandes, «a. m./p. m.» chico y el día debajo, en cursiva. */
+html[data-tv] .tv-reloj { display: grid; justify-items: end; padding: 0.42em 0.95em 0.5em; line-height: 1.05; }
+.tvr-t { display: flex; align-items: baseline; gap: 0.3em; }
+.tvr-t b { font: 300 1.55rem/1 var(--sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums lining-nums; }
+.tvr-t small { font: 650 0.62rem var(--sans); letter-spacing: 0.06em; color: var(--txt2); }
+.tvr-f { margin-top: 0.2em; font: italic 400 0.75rem/1.2 var(--serif); color: var(--txt2); white-space: nowrap; }
+/* En la fila de arriba, junto al precio, el reloj lleva el mismo fondo de cielo que la cotización y la tinta del cielo (es su barra). */
+html[data-tv] .tv-reloj[data-donde="cielo"] { background: color-mix(in srgb, var(--c0) 46%, transparent); box-shadow: none; color: var(--cielo-txt); text-shadow: 0 0 10px var(--cielo-sombra, transparent); }
+html[data-tv] .tv-reloj[data-donde="cielo"] :is(small, .tvr-f) { color: var(--cielo-txt2); }
+/* Con el nombre de la montaña bajo la marca, el saldo baja lo que haga falta para no pisarlo (con la letra de la tele en pantallas grandes
+   la fila de arriba mide más que el hueco de siempre). */
+@media (min-width: 1100px) { html[data-tv] .escena:has(.tv-nombre:not([hidden])) .saldo { top: max(110px, calc(18px + 3.3rem)); } }
+@media (max-width: 1099px) { html[data-tv] .escena:has(.tv-nombre:not([hidden])) .saldo { top: max(84px, calc(18px + 3.3rem)); } }
+/* La fiesta, cuando no cabe entera: la misma tarjeta, más baja. */
+html[data-tv] .tv-fiesta.compacta { min-width: 0; padding: 0.6em 1.1em 0.7em; border-radius: 22px; }
+html[data-tv] .tv-fiesta.compacta b { font-size: 2.2rem; }
+html[data-tv] .tv-fiesta.compacta.grande b { font-size: 2.6rem; }
+html[data-tv] .tv-fiesta.compacta span:not(.tvf-brasas) { font-size: 1rem; }
+
+/* (42) La tele duerme: casi negra (siempre oscura, también con el tema claro: es una sala de noche), la hora fina y tenue (≥ 4.5:1 sobre
+   ese negro, pero sin brillo), la luna de hoy y una nota. Entra y sale con un fundido de opacidad (sin él con efectos «ninguno»). Ya a
+   oscuras (`data-tv-duerme`), la escena deja de dibujarse: la montaña con `content-visibility` y lo demás oculto. «Salir» queda encima. */
+.tv-noche { display: none; }
+html[data-tv] .tv-noche:not([hidden]) { position: fixed; inset: 0; z-index: 13; display: grid; place-items: center; background: #030409; color-scheme: dark; opacity: 0; transition: opacity 2.4s ease; }
+html[data-tv] .tv-noche.vis { opacity: 1; }
+.tvn-caja { display: grid; justify-items: center; gap: 0.35em; transition: translate 4s ease-in-out; }
+.tvn-luna svg { display: block; width: 2.6rem; height: 2.6rem; }
+.tvn-disco { fill: #12151d; }
+.tvn-luz { fill: #6d6b5e; }
+.tvn-hora { display: flex; align-items: baseline; gap: 0.3em; margin: 0; color: #7e8397; }
+.tvn-hora b { font: 300 4.4rem/1 var(--sans); letter-spacing: -0.02em; font-variant-numeric: tabular-nums lining-nums; }
+.tvn-hora small { font: 600 1rem var(--sans); letter-spacing: 0.06em; }
+.tvn-nota { margin: 0.2em 0 0; font: italic 400 0.875rem var(--serif); color: #777c91; }
+html[data-tv-duerme] .montana { content-visibility: hidden; }
+html[data-tv-duerme] .escena > :not(.tv-noche, .tv-salir, .montana) { visibility: hidden; }
+
+/* (32) El marco de la historia: el dibujo grande a la izquierda (o arriba, en una tele vertical) y su nombre y su texto a la derecha, sobre el
+   fondo de la página (opaco: una escena traslúcida detrás del texto distraía). Una rayita lleva el tiempo que le queda (`--tvm-ms`, solo `transform`).
+   El dibujo respira muy despacio (solo con efectos «todos»). Los colores del dibujo son los de «Tu historia» (`.dh-lienzo`). */
+.tv-marco { display: none; }
+html[data-tv] .tv-marco:not([hidden]) {
+  position: fixed; inset: 0; z-index: 12; display: grid; grid-template-columns: minmax(0, min(62vh, 42vw)) minmax(0, 26rem);
+  align-items: center; justify-content: center; gap: 0 5vw; padding: 6vh 6vw; pointer-events: none;
+  background: var(--fondo) radial-gradient(ellipse 60% 70% at 32% 50%, var(--s1), var(--fondo) 70%); /* opaco: la escena no se trasluce detrás del texto */
+  color: var(--txt); opacity: 0; transition: opacity 1.2s ease;
+}
+html[data-tv] .tv-marco.vis { opacity: 1; }
+html[data-tv] .tvm-lienzo.dh-lienzo { width: 100%; max-width: none; margin: 0; }
+.tvm-lienzo svg { display: block; width: 100%; height: auto; }
+.tvm-k { margin: 0; font: 650 0.75rem var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--naranja-txt); }
+.tvm-t { margin: 0.25em 0 0.45em; font: 500 2.5rem/1.08 var(--serif); letter-spacing: -0.01em; color: var(--txt); }
+.tvm-desc { margin: 0; font: 400 1.05rem/1.55 var(--sans); color: var(--txt2); text-wrap: pretty; }
+.tvm-tiempo { display: block; height: 3px; margin-top: 1.6em; overflow: hidden; border-radius: 3px; background: color-mix(in srgb, var(--txt) 12%, transparent); }
+.tvm-tiempo::after { content: ""; display: block; height: 100%; background: var(--naranja); transform-origin: left center; transform: scaleX(0); }
+html[data-tv] .tv-marco.vis .tvm-tiempo::after { animation: tvm-tiempo var(--tvm-ms, 40s) linear both; }
+@keyframes tvm-tiempo { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+html[data-tv][data-efectos="todos"] .tv-marco.vis .tvm-lienzo svg { animation: tvm-respira 40s ease-out both; }
+@keyframes tvm-respira { from { transform: scale(0.985); } to { transform: scale(1.025); } }
+/* Tele vertical o casi cuadrada: el dibujo arriba y el texto debajo, centrados. */
+@media (max-aspect-ratio: 5/4) {
+  html[data-tv] .tv-marco:not([hidden]) { grid-template-columns: minmax(0, min(78vw, 48vh)); grid-auto-rows: auto; align-content: center; justify-items: center; gap: 4vh 0; text-align: center;
+    background: var(--fondo) radial-gradient(ellipse 80% 50% at 50% 35%, var(--s1), var(--fondo) 70%); }
+  html[data-tv] .tvm-txt { max-width: 34rem; }
+}
+html[data-efectos="ninguno"] .tvm-tiempo { display: none; } /* sin movimiento, la rayita no corre: mejor no enseñarla */
+
+/* (43) Entrar con un código: el otro formulario de la entrada. El código se escribe grande y espaciado, como se dicta («1234 5678»).
+   «Entrar con un código» / «Entrar con usuario y contraseña» son botones de texto (48 px de toque), sin competir con «Entrar». */
+.login-caja[hidden] { display: none; }
+.l-otro {
+  justify-self: center; min-height: var(--toque); margin-top: 6px; padding: 0 12px; border: 0; border-radius: 12px; background: none;
+  color: var(--naranja-txt); font: 600 0.9375rem var(--sans); text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; cursor: pointer;
+}
+.l-otro:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .l-otro:hover { background: color-mix(in srgb, var(--naranja) 12%, transparent); } }
+@media (min-width: 1100px) { .l-otro { justify-self: start; padding: 0 2px; } }
+.login-caja #l-codigo { width: 100%; min-width: 0; min-height: 64px; padding: 0 12px; font: 600 2rem/1 var(--sans); letter-spacing: 0.16em; text-align: center; font-variant-numeric: tabular-nums lining-nums; }
+.login-caja #l-codigo::placeholder { color: var(--txt3); opacity: 0.55; }
+@media (max-height: 520px) and (max-width: 1099px) and (min-aspect-ratio: 3/2) {
+  /* Acostado no cabe un renglón más (con letra grande la página bajaba unos píxeles): «Entrar» y el otro modo de entrar van lado a lado. */
+  .login-caja { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 8px; }
+  .login-caja > * { grid-column: 1 / -1; }
+  .login-caja > .guardar { grid-column: 1; }
+  .login-caja > .l-otro { grid-column: 2; align-self: stretch; margin-top: 2px; padding: 0 6px; font-size: 0.8125rem; line-height: 1.2; text-align: center; text-wrap: balance; }
+  .login-caja #l-codigo { min-height: 48px; font-size: 1.5rem; }
+}
+
+/* (43) Conectar una tele, en «Sesiones abiertas» (solo quien administra): elegir la cuenta (selector con la píldora de tinta), crear el
+   código y verlo una vez, grande, en dos grupos de cuatro como se dicta, con su cuenta atrás. */
+.tele-con { display: grid; gap: 10px; margin-top: 18px; padding: 16px; border-radius: 18px; background: var(--s2); box-shadow: inset 0 1px 0 var(--filo); }
+.tele-con[hidden], .tc-codigo[hidden], .tc-quien[hidden], .tc-crear[hidden] { display: none; }
+.tele-con h3 { margin: 0; font: 600 1.0625rem var(--serif); color: var(--txt); }
+.dc-sesiones .tele-con p { margin: 0; }
+.tc-quien { display: grid; gap: 8px; }
+.tc-k { font-size: 0.875rem; font-weight: 600; color: var(--txt2); }
+.tc-opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.tc-opciones button { min-height: var(--toque); min-width: var(--toque); padding: 0 18px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; color: var(--txt); font: 600 0.9375rem var(--sans); cursor: pointer; }
+.tc-opciones button[aria-pressed="true"] { border-color: var(--txt); background: var(--txt); color: var(--fondo); }
+@media (hover: hover) and (pointer: fine) { .tc-opciones button:not([aria-pressed="true"]):hover { background: var(--s3); } }
+.tc-crear { width: 100%; min-height: var(--toque); border: 1.5px solid var(--naranja); border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font-weight: 650; cursor: pointer; }
+.tc-crear:disabled { opacity: 0.55; cursor: default; }
+.tc-codigo { display: grid; justify-items: center; gap: 8px; padding: 14px 10px 12px; border: 1.5px dashed color-mix(in srgb, var(--naranja) 60%, var(--s3)); border-radius: 16px; background: var(--s1); text-align: center; }
+.tc-cifras { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0.6em; margin: 0; }
+.tc-g { font: 600 2.4rem/1 var(--sans); letter-spacing: 0.12em; font-variant-numeric: tabular-nums lining-nums; color: var(--txt); white-space: nowrap; }
+.tc-vence { font-size: 0.875rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
+.tc-estado:empty, .tele-con .hoja-error:empty { display: none; }

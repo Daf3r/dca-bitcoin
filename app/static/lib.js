@@ -1831,3 +1831,84 @@ export function comprasPorMes(compras) {
       precio: sats ? (monto * 1e8) / sats : null, fecha: orden[orden.length >> 1].fecha, desde: orden[0].fecha, hasta: orden.at(-1).fecha };
   });
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 21B · La tele de la sala: el reloj, la noche, el marco de la historia y dónde va cada tarjeta. Cuentas puras.
+// ---------------------------------------------------------------------------------------------
+
+/** La hora de El Salvador (UTC−6, sin horario de verano) de un instante en ms: `{ h, m, s }`. */
+export function horaSV(ms) {
+  const t = Math.floor((ms - 6 * 3600e3) / 1000);
+  const d = ((t % 86400) + 86400) % 86400;
+  return { h: Math.floor(d / 3600), m: Math.floor((d % 3600) / 60), s: d % 60 };
+}
+/** El reloj como se lee aquí, de 12 horas: `{ hora: '8:05', sufijo: 'p. m.' }` (las 12:30 del mediodía son «p. m.»; las 0:30, «12:30 a. m.»). */
+export function textoReloj(h, m) {
+  return { hora: `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')}`, sufijo: h < 12 ? 'a. m.' : 'p. m.' };
+}
+/** De qué hora a qué hora duerme la tele (idea 42): de 23:00 a 5:00 de El Salvador. */
+export const TELE_DUERME = { desde: 23, hasta: 5 };
+/** ¿Duerme la tele a esta hora (decimal, 0 a 24)? Solo si el dispositivo no lo apagó. */
+export const teleDuerme = (hora, activa = true) => Boolean(activa) && (hora >= TELE_DUERME.desde || hora < TELE_DUERME.hasta);
+/**
+ * Cuánto se corre el reloj de la tele dormida (para no marcar la pantalla): cambia cada 5 minutos, solo unos píxeles cada vez, y en
+ * unas horas recorre un rectángulo de ±`ax` × ±`ay` sin volver al mismo sitio (dos senos de periodos primos entre sí: 37 y 23 vueltas).
+ * `minutos` desde la medianoche.
+ */
+export function corrimientoReloj(minutos, { ax = 36, ay = 22 } = {}) {
+  const k = Math.floor(minutos / 5);
+  return { k, x: Math.round(ax * Math.sin((2 * Math.PI * k) / 37)), y: Math.round(ay * Math.sin((2 * Math.PI * k) / 23 + 1)) };
+}
+/**
+ * El marco de la historia (idea 32): cada 10 minutos, alineado al reloj (a las :05, :15, :25… para no coincidir con el atardecer de
+ * las 18:00), la tele enseña durante 40 s uno de los dibujos de «Tu historia» que ya se ven bien. Cuál, por el número de la vuelta:
+ * siempre el mismo a la misma hora y, en la vuelta siguiente, el siguiente de la lista. Sin dibujos, null.
+ * Devuelve `{ visible, dibujo, vuelta, faltaMs }` (`faltaMs`: lo que le queda a lo que se ve ahora, sea el marco o la espera).
+ */
+export function marcoTele(ahoraMs, listos, { cadaMs = 600e3, duraMs = 40e3, desfaseMs = 300e3 } = {}) {
+  const n = listos?.length ?? 0;
+  if (!n) return null;
+  const t = ahoraMs - desfaseMs, vuelta = Math.floor(t / cadaMs), dentro = t - vuelta * cadaMs;
+  const visible = dentro < duraMs;
+  return { visible, dibujo: listos[((vuelta % n) + n) % n], vuelta, faltaMs: visible ? duraMs - dentro : cadaMs - dentro };
+}
+/**
+ * Lo que enseña la tele en este momento: `'duerme'` (de 23:00 a 5:00, si el dispositivo no lo apagó y nadie la despertó un rato con un
+ * toque), `'marco'` (el dibujo de la historia, si toca y no hay fiesta ni atardecer en curso: una compra nueva siempre gana) o `'escena'`.
+ */
+export function modoTele({ hora, ahoraMs, duerme = true, despiertaHasta = 0, fiesta = false, ritual = false, listos = [] }) {
+  if (teleDuerme(hora, duerme) && ahoraMs >= despiertaHasta) return { modo: 'duerme', marco: null };
+  const m = fiesta || ritual ? null : marcoTele(ahoraMs, listos);
+  return m?.visible ? { modo: 'marco', marco: m } : { modo: 'escena', marco: null };
+}
+
+/** ¿Se tocan dos rectángulos `{x, y, w, h}`, dejando `margen` entre ellos? Tocarse justo en el borde (sin margen) no cuenta. */
+export const chocan = (a, b, margen = 0) => a.x < b.x + b.w + margen && a.x + a.w + margen > b.x && a.y < b.y + b.h + margen && a.y + a.h + margen > b.y;
+/**
+ * Dónde va una tarjeta de la tele (idea 15): el primer candidato `{x, y}` en el que la caja `{w, h}` cabe en la pantalla (`W` × `H`,
+ * dejando `borde`) sin pisar ningún obstáculo (el sendero, «Tú», los rótulos, el saldo, las tarjetas ya puestas…) con su `margen`.
+ * Los candidatos van en orden de preferencia (el primero suele ser donde ya estaba: así no salta si no hace falta). Si no cabe en
+ * ningún sitio, null: la tarjeta no se enseña (nunca tapa un dato).
+ */
+export function sitioLibre(caja, candidatos, obstaculos, { W, H, margen = 0, borde = 0 }) {
+  for (const c of candidatos ?? []) {
+    if (!c) continue;
+    const r = { x: c.x, y: c.y, w: caja.w, h: caja.h };
+    if (r.x < borde || r.y < borde || r.x + r.w > W - borde || r.y + r.h > H - borde) continue;
+    if (!obstaculos.some((o) => chocan(r, o, margen))) return { ...c };
+  }
+  return null;
+}
+/** Candidatos a lo largo de una línea: de (x0, y0) en pasos de (dx, dy) mientras sigan dentro de [x1…x2] × [y1…y2]. */
+export function riel(x0, y0, dx, dy, { x1 = -Infinity, x2 = Infinity, y1 = -Infinity, y2 = Infinity } = {}) {
+  if (!dx && !dy) return [{ x: x0, y: y0 }];
+  const out = [];
+  for (let x = x0, y = y0; x >= x1 && x <= x2 && y >= y1 && y <= y2 && out.length < 2000; x += dx, y += dy) out.push({ x, y });
+  return out;
+}
+/** Una rejilla de candidatos en [x1…x2] × [y1…y2], de la más cercana a (ax, ay) a la más lejana (la distancia vertical pesa `ky`). */
+export function rejilla(ax, ay, { x1, x2, y1, y2, paso = 24, ky = 1 }) {
+  const out = [];
+  for (let x = x1; x <= x2; x += paso) for (let y = y1; y <= y2; y += paso) out.push({ x, y, d: Math.abs(x - ax) + ky * Math.abs(y - ay) });
+  return out.sort((a, b) => a.d - b.d);
+}

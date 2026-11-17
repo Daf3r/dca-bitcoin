@@ -143,10 +143,30 @@
   </div>
   <!-- Banderas tocables de la montaña y su tarjeta (montana.js): van aquí, después del saldo, para que el orden de tabulación siga el visual. -->
   <div class="m-banderas" id="m-banderas"></div>
-  <!-- Modo pantalla grande (tv.js): solo se ve con html[data-tv]. -->
-  <div class="tv-fiesta" id="tv-fiesta" hidden aria-live="polite"><small id="tvf-k"></small><b id="tvf-txt"></b><span id="tvf-sub"></span><span class="tvf-brasas" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
-  <div class="tv-sismo" id="tv-sismo" role="img" aria-label="" hidden></div>
-  <p class="tv-pie" id="tv-ultimo" aria-live="polite"></p>
+  <!-- Modo pantalla grande (tv.js): solo se ve con html[data-tv]. Cada tarjeta se coloca donde no tapa el sendero, «Tú», los rótulos ni el
+       saldo (campamento 21B: se mide lo dibujado y se elige el primer sitio libre; si no cabe en ninguno, no sale). -->
+  <div class="tv-fiesta tv-tarjeta" id="tv-fiesta" hidden aria-live="polite"><small id="tvf-k"></small><b id="tvf-txt"></b><span id="tvf-sub"></span><span class="tvf-brasas" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></div>
+  <div class="tv-sismo tv-tarjeta" id="tv-sismo" role="img" aria-label="" hidden></div>
+  <p class="tv-pie tv-tarjeta" id="tv-ultimo" aria-live="polite"><span class="tvu-k" id="tvu-k"></span><span class="tvu-v" id="tvu-v"></span></p>
+  <p class="tv-reloj tv-tarjeta" id="tv-reloj"><time class="tvr-t" id="tvr-t"><b id="tvr-h"></b> <small id="tvr-ap"></small></time><span class="tvr-f" id="tvr-f"></span></p>
+  <!-- El marco de la historia (idea 32): cada 10 minutos, 40 segundos, uno de los dibujos de «Tu historia» a toda la pantalla. -->
+  <section class="tv-marco" id="tv-marco" aria-labelledby="tvm-t" hidden>
+    <div class="tvm-lienzo dh-lienzo" id="tvm-lienzo"></div>
+    <div class="tvm-txt">
+      <p class="tvm-k">De la historia del libro</p>
+      <h2 class="tvm-t" id="tvm-t"></h2>
+      <p class="tvm-desc" id="tvm-desc"></p>
+      <i class="tvm-tiempo" aria-hidden="true"></i>
+    </div>
+  </section>
+  <!-- La tele duerme (idea 42): de 23:00 a 5:00, casi negra, con la hora tenue y la luna de hoy; la hora se corre unos píxeles cada 5 minutos. -->
+  <div class="tv-noche" id="tv-noche" hidden>
+    <div class="tvn-caja" id="tvn-caja">
+      <span class="tvn-luna" id="tvn-luna" aria-hidden="true"></span>
+      <p class="tvn-hora"><b id="tvn-h"></b> <small id="tvn-ap"></small></p>
+      <p class="tvn-nota">La tele duerme hasta las 5:00</p>
+    </div>
+  </div>
   <button type="button" class="tv-salir" id="tv-salir">Salir de pantalla grande</button>
 </section>
 
@@ -571,6 +591,7 @@
       <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
       <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
       <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
+      <button type="button" data-cuenta="tv-duerme" id="dc-tv-duerme">La tele duerme de noche: sí</button>
       <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
       <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
       <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
@@ -666,6 +687,21 @@
     <h2>Sesiones abiertas</h2>
     <p>Los dispositivos donde tu cuenta está abierta. Si perdiste un teléfono o la dejaste en una computadora ajena, ciérrala desde aquí.</p>
     <ul class="sis-lista" id="ses-lista"></ul>
+    <!-- Conectar una tele (campamento 21B, solo quien administra): un código de un solo uso para una cuenta que solo mira; se teclea en la tele. -->
+    <section class="tele-con" id="tele-con" aria-labelledby="tc-t" hidden>
+      <h3 id="tc-t">Conectar una tele</h3>
+      <p class="dc-nota">La tele de la sala entra con un código de un solo uso y con una cuenta que solo mira (nunca con la tuya: desde la sala no se podrá anotar). En la tele: «Entrar con un código».</p>
+      <div class="tc-quien" id="tc-quien" role="group" aria-labelledby="tc-quien-t"><span class="tc-k" id="tc-quien-t">¿Con qué cuenta entra la tele?</span><span class="tc-opciones" id="tc-opciones"></span></div>
+      <button type="button" class="primario tc-crear" id="tc-crear">Crear código</button>
+      <div class="tc-codigo" id="tc-codigo" hidden>
+        <p class="tc-k">Escribe en la tele estas 8 cifras:</p>
+        <p class="tc-cifras"><span class="sr" id="tc-cifras-sr"></span><span class="tc-g" id="tc-g1" aria-hidden="true"></span><span class="tc-g" id="tc-g2" aria-hidden="true"></span></p>
+        <p class="tc-vence" id="tc-vence"></p>
+        <button type="button" class="ses-cerrar" id="tc-copiar">Copiar el código</button>
+      </div>
+      <p class="dc-nota tc-estado" id="tc-estado" role="status"></p>
+      <p class="hoja-error" id="tc-error" role="alert"></p>
+    </section>
     <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-sistema" id="dc-sistema" hidden>

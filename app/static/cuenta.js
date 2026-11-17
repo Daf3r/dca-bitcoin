@@ -2,7 +2,7 @@ import { cumpleHoy, entero, fechaLarga, nombreHito, textoCumple, usd } from './l
 import { montarAvisos } from './avisos.js';
 import { cambiosPendientes, mostrarCambios } from './cambios.js';
 import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
-import { enTV, entrarTV } from './tv.js';
+import { enTV, entrarTV, fijarTeleDuerme, teleDuermeActiva } from './tv.js';
 import { pintarSesiones } from './sesiones.js';
 import { pintarEnlaces } from './enlaces.js';
 import { pintarWallets } from './wallets.js';
@@ -111,6 +111,8 @@ function fundirTema() {
 }
 const etiquetaMadrugada = () => { $('dc-madrugada').textContent = `Modo madrugada (22:00 a 5:00): ${window.libroCielo?.madrugadaPref() ? 'automático' : 'apagado'}`; };
 const etiquetaSonido = () => { $('dc-sonido').textContent = `Sonido al guardar: ${sonidoActivo() ? 'encendido' : 'apagado'}`; };
+// (Campamento 21B) La tele duerme de 23:00 a 5:00; por dispositivo se puede dejar despierta toda la noche.
+const etiquetaTeleDuerme = () => { $('dc-tv-duerme').textContent = `La tele duerme de noche: ${teleDuermeActiva() ? 'sí' : 'no'}`; };
 const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'con saldo y precio' : 'sin saldo'}`; };
 // Tamaño de letra (normal → grande → muy grande) y contraste (automático → alto → normal): `accesibilidad.js` los aplica antes de pintar.
 const NOMBRE_LETRA = { '': 'normal', grande: 'grande', 'muy-grande': 'muy grande' };
@@ -143,7 +145,7 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetaMontana(); etiquetasAccesibilidad(); dCuenta.showModal(); });
+$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaTeleDuerme(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetaMontana(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -196,6 +198,7 @@ function textoAuditoria(a) {
     cuenta_activada: `activó la cuenta ${d.nombre}`, cuenta_desactivada: `desactivó la cuenta ${d.nombre}`,
     token_creado: `creó el enlace de solo lectura «${d.nombre}»`, token_revocado: `revocó el enlace de solo lectura «${d.nombre}»`,
     sesion_cerrada: 'cerró una de sus sesiones abiertas',
+    tele_codigo: `creó un código para conectar una tele con la cuenta de ${d.usuario}`, tele_entro: 'entró en una tele con un código',
     wallet_creada: `añadió la wallet «${d.nombre}»`, wallet_archivada: `archivó la wallet «${d.nombre}»`,
     sesiones_cerradas: `cerró las sesiones de ${d.nombre}`, desbloqueo: `desbloqueó la cuenta ${d.nombre}`,
   }[a.accion] ?? a.accion;
@@ -250,6 +253,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'madrugada') { window.libroCielo?.fijarMadrugada(!window.libroCielo.madrugadaPref()); etiquetaMadrugada(); }
   else if (accion === 'sonido') { fijarSonido(!sonidoActivo()); etiquetaSonido(); if (sonidoActivo()) sonar('compra'); } // al encenderlo suena una muestra
   else if (accion === 'tv') { dCuenta.close(); entrarTV(); }
+  else if (accion === 'tv-duerme') { fijarTeleDuerme(!teleDuermeActiva()); etiquetaTeleDuerme(); }
   else if (accion === 'titulo') { fijarTituloConSaldo(!tituloConSaldo()); etiquetaTitulo(); }
   else if (accion === 'tema') { fundirTema(); window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
   else if (accion === 'efectos') { window.libroEfectos?.fijar(SIGUIENTE_EFECTOS[window.libroEfectos.preferencia()]); etiquetaEfectos(); }

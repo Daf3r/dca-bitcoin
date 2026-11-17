@@ -2046,6 +2046,9 @@ try:
     _lc.execute("INSERT INTO avisos_pendientes (categoria, titulo, cuerpo, etiqueta, creado) VALUES ('movimiento','t','c','e',?)", (_viejo,))
     _lc.execute("INSERT INTO avisos_pendientes (categoria, titulo, cuerpo, etiqueta, creado) VALUES ('movimiento','t','c','e',?)", (_ya - 3600,))
     _uid = _lc.execute("SELECT id FROM usuarios LIMIT 1").fetchone()[0]
+    _lc.execute("DELETE FROM codigos_tv")  # (los de las pruebas de la tele, más abajo; aquí solo uno viejo y uno de hace poco)
+    for _cr in (_viejo, _ya - 3600):
+        _lc.execute("INSERT INTO codigos_tv (hash, usuario_id, creado, caduca) VALUES ('x', ?, ?, ?)", (_uid, _cr, _cr + 300))
     for ep, fallos, ult, creado in (("https://fcm.googleapis.com/muerto", 5, _viejo, _viejo), ("https://fcm.googleapis.com/sano-sin-envios", 0, None, _viejo),
                                     ("https://fcm.googleapis.com/falla-reciente", 5, _ya - 86400, _viejo), ("https://fcm.googleapis.com/nunca-respondio", 4, None, _viejo)):
         _lc.execute("INSERT INTO suscripciones (usuario_id, endpoint, p256dh, auth, prefs, creado, ultimo_ok, fallos) VALUES (?, ?, 'k', 'a', '{}', ?, ?, ?)", (_uid, ep, creado, ult, fallos))
@@ -2057,7 +2060,7 @@ try:
     _aud_antes = _lc.execute("SELECT COUNT(*) FROM auditoria").fetchone()[0]
     _usr_antes = _lc.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]
     _n = avisos.limpiar(_lc, ahora=_ya)
-    check(_n == {"tx_vigilados": 1, "tx_cache": 1, "avisos_pendientes": 1, "suscripciones": 2, "meta": 1}, f"la limpieza quita solo lo viejo e inútil {_n}")
+    check(_n == {"tx_vigilados": 1, "tx_cache": 1, "avisos_pendientes": 1, "codigos_tv": 1, "suscripciones": 2, "meta": 1}, f"la limpieza quita solo lo viejo e inútil {_n}")
     check({r[0] for r in _lc.execute("SELECT txid FROM tx_cache")} == {_tx_vivo}, "la caché conserva el TXID de un movimiento que sigue ahí")
     check({r[0] for r in _lc.execute("SELECT txid FROM tx_vigilados")} == {_tx_abierto, "5b" * 32}, "un TXID abierto o cerrado hace poco se conserva")
     check([r[0].rsplit("/", 1)[1] for r in _lc.execute("SELECT endpoint FROM suscripciones ORDER BY endpoint")] == ["falla-reciente", "sano-sin-envios"],
@@ -2066,7 +2069,8 @@ try:
     check([r[0] for r in _lc.execute("SELECT clave FROM meta WHERE clave LIKE 'aviso_recordatorio_dia:%'")] == [f"aviso_recordatorio_dia:{_sid}"], "la marca de un dispositivo que ya no existe se va")
     check((_lc.execute("SELECT COUNT(*) FROM compras").fetchone()[0], _lc.execute("SELECT COUNT(*) FROM auditoria").fetchone()[0],
            _lc.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]) == (_compras_antes, _aud_antes, _usr_antes), "compras, auditoría y cuentas no se tocan")
-    check(avisos.limpiar(_lc, ahora=_ya) == {"tx_vigilados": 0, "tx_cache": 0, "avisos_pendientes": 0, "suscripciones": 0, "meta": 0}, "una segunda limpieza no encuentra nada")
+    check(avisos.limpiar(_lc, ahora=_ya) == {"tx_vigilados": 0, "tx_cache": 0, "avisos_pendientes": 0, "codigos_tv": 0, "suscripciones": 0, "meta": 0}, "una segunda limpieza no encuentra nada")
+    check(_lc.execute("SELECT COUNT(*) FROM codigos_tv WHERE creado > ?", (_ya - 86400,)).fetchone()[0] == 1, "un código para la tele de hace poco se conserva (los de hace más de un mes se van)")
     server._meta_poner(_lc, "limpieza_dia", ""); _lc.commit()
     check(avisos._limpieza(_lc) is not None and avisos._limpieza(_lc) is None, "la limpieza corre una vez al día")
     _lc.execute("DELETE FROM compras WHERE txid = ?", (_tx_vivo,)); _lc.execute("DELETE FROM suscripciones"); _lc.commit()
@@ -2498,5 +2502,153 @@ check("Volcán" not in _pub and "/api/montana" not in _pub and anon.get("/api/es
 check(adm.put("/api/montana", json={"nombre": ""}).get_json() == {"nombre": None} and adm.get("/api/montana").get_json() == {"nombre": None}
       and not sql("SELECT 1 FROM meta WHERE clave = 'nombre_montana'") and json.loads(audit("montana_nombre")[-1]["despues"] or "null") is None, "vacío lo quita (y queda en la auditoría)")
 check(adm.put("/api/montana", json={"nombre": None}).status_code == 200 and len(audit("montana_nombre")) == 4, "quitarlo dos veces no audita dos veces")
+
+# --- Campamento 21B (idea 43): entrar en la tele con un código. El admin lo crea para una cuenta lectora; se teclea en la tele.
+check(len(sql("SELECT name FROM sqlite_master WHERE name = 'codigos_tv'")) == 1 and server.version_esquema(server.connect()) >= 17, "la tabla de los códigos de la tele existe (migración 17)")
+_cx = server.connect(); server._m_codigos_tv(_cx); server._m_codigos_tv(_cx); _cx.commit()
+check({r[1] for r in _cx.execute("PRAGMA table_info(codigos_tv)")} == {"id", "hash", "usuario_id", "creado", "caduca", "usado_ts", "fallos", "creado_por"}, "la migración 17 es idempotente (dos veces, la misma tabla)")
+_cx.close()
+server._CODIGO_TV_INTENTOS.clear()
+def _tele():
+    c_ = server.app.test_client()
+    c_.environ_base.update({"wsgi.url_scheme": "https", "HTTP_X_LIBRO": "1", "HTTP_USER_AGENT": "Mozilla/5.0 (X11; Linux x86_64) Chrome/130.0 Safari/537.36"})
+    return c_
+def _canjear(c_, codigo):
+    return c_.post("/api/login/codigo", json={"codigo": codigo})
+def _codigo(usuario="Ana"):
+    r_ = adm.post("/api/tv/codigo", json={"usuario": usuario})
+    assert r_.status_code == 201, r_.data
+    return r_.get_json()
+# Quién puede: solo el admin crea y ve; nadie sin sesión
+check(anon.get("/api/tv/codigo").status_code == 401 and luz.get("/api/tv/codigo").status_code == 403 and luz.post("/api/tv/codigo", json={"usuario": "Ana"}).status_code == 403,
+      "solo el admin conecta una tele (lectora 403, sin sesión 401)")
+_v = adm.get("/api/tv/codigo").get_json()
+check("Ana" in _v["lectores"] and "Luz" in _v["lectores"] and "Daf3r" not in _v["lectores"] and _v["vida"] == 300, f"elige entre las cuentas lectoras activas {_v}")
+for _malo in ({}, {"usuario": ""}, {"usuario": 5}, {"usuario": "nadie-asi"}, [1]):
+    check(adm.post("/api/tv/codigo", json=_malo).status_code == 400, f"código rechazado: {str(_malo)[:30]}")
+_r = adm.post("/api/tv/codigo", json={"usuario": "Daf3r"})
+check(_r.status_code == 400 and "solo lectura" in _r.get_json()["error"], "nunca para una cuenta admin (400)")
+# Crear uno: 8 cifras, una sola vez; en la base solo su huella; la auditoría sin el código
+_c1 = _codigo("Ana")
+check(re.fullmatch(r"\d{8}", _c1["codigo"]) is not None and _c1["usuario"] == "Ana" and _c1["caduca"] - int(_tt.time()) in range(295, 302), f"el código: 8 cifras, para Ana, vive 5 minutos {_c1}")
+_fila = dict(sql("SELECT * FROM codigos_tv WHERE id = ?", (_c1["id"],))[0])
+check(_fila["hash"] == hashlib.sha256(_c1["codigo"].encode()).hexdigest() and _c1["codigo"] not in json.dumps(_fila), "en la base solo queda su SHA-256")
+_v = adm.get("/api/tv/codigo").get_json()
+check(_v["codigo"]["estado"] == "vivo" and _v["codigo"]["usuario"] == "Ana" and _c1["codigo"] not in json.dumps(_v) and _fila["hash"] not in json.dumps(_v), "el admin ve que está vivo, sin el código ni su huella")
+# CSRF como /api/login: sin X-Libro o desde otro sitio, 403; con el formato mal, 400 (sin gastar un fallo)
+_sinx = server.app.test_client(); _sinx.environ_base.update({"wsgi.url_scheme": "https"})
+check(_sinx.post("/api/login/codigo", json={"codigo": _c1["codigo"]}).status_code == 403 and _tele().post("/api/login/codigo", json={"codigo": _c1["codigo"]}, headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403,
+      "entrar con un código pide X-Libro y el mismo sitio (como /api/login)")
+for _malo in (None, 12345678, "1234", "abcdefgh", "1" * 40):
+    check(_canjear(_tele(), _malo).status_code == 400, f"formato rechazado: {str(_malo)[:20]}")
+check(sql("SELECT fallos FROM codigos_tv WHERE id = ?", (_c1["id"],))[0][0] == 0, "un formato mal escrito no gasta ningún fallo")
+server._CODIGO_TV_INTENTOS.clear()
+# Un código mal escrito: un único mensaje (no dice si existe, caducó o se usó)
+_r = _canjear(_tele(), "00000000" if _c1["codigo"] != "00000000" else "11111111")
+check(_r.status_code == 401 and _r.get_json()["error"] == server.CODIGO_TV_ERROR, "un código que no es: 401 con el mensaje de siempre")
+# El bueno (con espacio, como se dicta: «1234 5678»): sesión normal de Ana, que sale en sus sesiones como «Tele · …»
+_t1 = _tele()
+_r = _canjear(_t1, f"{_c1['codigo'][:4]} {_c1['codigo'][4:]}")
+_sc = _r.headers.get("Set-Cookie", "")
+check(_r.status_code == 200 and _r.get_json() == {"usuario": "Ana", "rol": "lector"} and _sc.startswith("__Host-sesion=") and "HttpOnly" in _sc and "Secure" in _sc and "Max-Age=7776000" in _sc,
+      f"con el código, la tele entra como Ana con una sesión normal (90 días) {_sc[:90]}")
+check(_t1.get("/api/yo").get_json()["usuario"] == "Ana" and _t1.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 1000}).status_code == 403, "y es de solo lectura (no anota)")
+_ses = [x for x in ana.get("/api/sesiones").get_json() if x["agente"].startswith("Tele · ")]
+check(len(_ses) == 1 and _ses[0]["agente"] == "Tele · Chrome · Linux" and _ses[0]["compartida"] is False, f"aparece en las sesiones abiertas de Ana como «Tele · …» {_ses}")
+check(adm.get("/api/tv/codigo").get_json()["codigo"]["estado"] == "usado", "el admin ve que la tele ya entró")
+# Un solo uso
+_r = _canjear(_tele(), _c1["codigo"])
+check(_r.status_code == 401 and _r.get_json()["error"] == server.CODIGO_TV_ERROR, "un código ya usado no vuelve a servir (mismo mensaje)")
+# La auditoría: tele_codigo (quién lo creó, para quién) y tele_entro, nunca con el código ni su huella
+_au_c, _au_e = [dict(a) for a in audit("tele_codigo")], [dict(a) for a in audit("tele_entro")]
+check(len(_au_c) >= 1 and _au_c[-1]["usuario"] == "Daf3r" and json.loads(_au_c[-1]["despues"])["usuario"] == "Ana" and len(_au_e) == 1 and _au_e[0]["usuario"] == "Ana",
+      "se audita quién creó el código, para quién, y que la tele entró")
+_todo_aud = json.dumps([dict(a) for a in audit()], ensure_ascii=False)
+check(_c1["codigo"] not in _todo_aud and _fila["hash"] not in _todo_aud, "ninguna fila de la auditoría lleva el código ni su huella")
+# Caduca a los 5 minutos (mismo mensaje)
+_c2 = _codigo("Luz")
+sql("UPDATE codigos_tv SET creado = creado - 400, caduca = caduca - 400 WHERE id = ?", (_c2["id"],))
+_r = _canjear(_tele(), _c2["codigo"])
+check(_r.status_code == 401 and _r.get_json()["error"] == server.CODIGO_TV_ERROR and adm.get("/api/tv/codigo").get_json()["codigo"]["estado"] == "caducado", "pasados 5 minutos no sirve (mismo mensaje) y el admin lo ve caducado")
+# Crear uno nuevo anula el anterior
+_c3 = _codigo("Luz"); _c4 = _codigo("Ana")
+check(json.loads(audit("tele_codigo")[-1]["despues"]).get("anulados") == 1, "la auditoría dice que anuló el anterior")
+check(_canjear(_tele(), _c3["codigo"]).status_code == 401 and _canjear(_tele(), _c4["codigo"]).status_code == 200, "crear otro anula el que estaba vivo; el nuevo sí sirve")
+# Cinco fallos anulan los códigos vivos
+server._CODIGO_TV_INTENTOS.clear()
+_c5 = _codigo("Luz")
+for _k in range(1, 6):
+    _canjear(_tele(), f"{(int(_c5['codigo']) + _k) % 10**8:08d}")
+server._CODIGO_TV_INTENTOS.clear()
+check(_canjear(_tele(), _c5["codigo"]).status_code == 401 and adm.get("/api/tv/codigo").get_json()["codigo"]["estado"] == "anulado", "5 fallos anulan el código vivo (ni el bueno sirve ya)")
+check(len(sql("SELECT id FROM codigos_tv")) <= 12, "los intentos no crean filas (solo hay los códigos que se crearon)")
+# Límite: 10 intentos por minuto y proceso (429 con Retry-After), mirado antes de hacer nada
+server._CODIGO_TV_INTENTOS.clear()
+_lim = server.CODIGO_TV_POR_MINUTO
+server.CODIGO_TV_POR_MINUTO = 3
+try:
+    _c6 = _codigo("Ana")
+    _res = [_canjear(_tele(), "99999999" if _c6["codigo"] != "99999999" else "88888888").status_code for _ in range(3)]
+    _r = _canjear(_tele(), _c6["codigo"])
+    check(_res == [401, 401, 401] and _r.status_code == 429 and int(_r.headers["Retry-After"]) >= 1 and "Demasiados" in _r.get_json()["error"], f"pasado el tope, 429 con Retry-After {_res}")
+    check(sql("SELECT fallos FROM codigos_tv WHERE id = ?", (_c6["id"],))[0][0] == 3, "un intento frenado no cuenta como fallo (el freno va antes que todo)")
+finally:
+    server.CODIGO_TV_POR_MINUTO = _lim
+    server._CODIGO_TV_INTENTOS.clear()
+# Una cuenta que se desactiva (o deja de ser lectora) después de crear el código: ya no entra
+_c7 = _codigo("Luz")
+sql("UPDATE usuarios SET activo = 0 WHERE nombre = 'Luz'")
+check(_canjear(_tele(), _c7["codigo"]).status_code == 401, "si la cuenta se desactivó, el código no sirve")
+sql("UPDATE usuarios SET activo = 1 WHERE nombre = 'Luz'")
+_c8 = _codigo("Luz")
+sql("UPDATE usuarios SET rol = 'admin' WHERE nombre = 'Luz'")
+check(_canjear(_tele(), _c8["codigo"]).status_code == 401, "si la cuenta pasó a admin, el código no sirve")
+sql("UPDATE usuarios SET rol = 'lector' WHERE nombre = 'Luz'")
+server._CODIGO_TV_INTENTOS.clear()
+# Los ceros de delante cuentan (el código es texto)
+_rb = server.secrets.randbelow
+server.secrets.randbelow = lambda n: 42
+try:
+    _c9 = _codigo("Ana")
+finally:
+    server.secrets.randbelow = _rb
+check(_c9["codigo"] == "00000042" and _canjear(_tele(), "0000 0042").status_code == 200, "un código con ceros delante: «0000 0042»")
+# Si la tele ya tenía una sesión (otra cuenta), esa cookie deja de valer
+_t2 = cliente("Luz", "clave-de-luz-2026")
+_viejo_tok = _t2.get_cookie("__Host-sesion").value
+_c10 = _codigo("Ana")
+check(_canjear(_t2, _c10["codigo"]).status_code == 200 and _t2.get("/api/yo").get_json()["usuario"] == "Ana", "la tele que ya tenía sesión pasa a la cuenta del código")
+_v2 = server.app.test_client(); _v2.set_cookie("__Host-sesion", _viejo_tok)
+check(_v2.get("/api/yo").status_code == 401, "y la cookie anterior ya no vale")
+# Tres teles con el mismo código a la vez: solo entra una
+import threading as _th2
+_c11 = _codigo("Ana")
+_resultados = []
+_barr = _th2.Barrier(3)
+def _a_la_vez():
+    c_ = _tele(); _barr.wait(); _resultados.append(_canjear(c_, _c11["codigo"]).status_code)
+_hs2 = [_th2.Thread(target=_a_la_vez) for _ in range(3)]
+for h_ in _hs2: h_.start()
+for h_ in _hs2: h_.join()
+check(sorted(_resultados) == [200, 401, 401], f"tres teles con el mismo código a la vez: solo entra una {_resultados}")
+server._CODIGO_TV_INTENTOS.clear()
+# La entrada y lo público no dicen nada (ni el nombre de la montaña, ni las cuentas, ni el código)
+adm.put("/api/montana", json={"nombre": "La Ceiba"})
+_pub = anon.get("/login").get_data(as_text=True) + anon.get("/login.js").get_data(as_text=True)
+check("La Ceiba" not in _pub and "Ana" not in _pub and "Luz" not in _pub and "/api/tv/codigo" not in _pub and anon.get("/api/estado").get_json() == {"abierto": True},
+      "la entrada (también con «Entrar con un código») no enseña ningún dato: ni la montaña ni las cuentas")
+check("/api/login/codigo" in anon.get("/login.js").get_data(as_text=True), "la entrada sabe entrar con un código")
+adm.put("/api/montana", json={"nombre": ""})
+# Modo solo lectura: entrar con un código sigue (es entrar), crear códigos no (es escribir)
+_c12 = _codigo("Ana")
+_ant_sl3 = server.SOLO_LECTURA
+try:
+    server.SOLO_LECTURA = True
+    check(_canjear(_tele(), _c12["codigo"]).status_code == 200, "con SOLO_LECTURA la tele entra con un código (es entrar)")
+    _r = adm.post("/api/tv/codigo", json={"usuario": "Ana"})
+    check(_r.status_code == 503 and _r.get_json()["mantenimiento"] is True, "pero no se crean códigos (es escribir): 503")
+finally:
+    server.SOLO_LECTURA = _ant_sl3
+server._CODIGO_TV_INTENTOS.clear()
 
 print("OK", ok, "comprobaciones")

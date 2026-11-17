@@ -50,6 +50,7 @@ DISCO_MIN_PCT = 10.0       # o menos del 10 % libre
 LIMPIEZA_TX_CERRADOS_DIAS = 30
 LIMPIEZA_TX_CACHE_DIAS = 30        # solo la caché de TXID que ya no están en ningún movimiento
 LIMPIEZA_PENDIENTES_DIAS = 7       # un aviso nocturno que lleva una semana sin salir ya no tiene sentido
+LIMPIEZA_CODIGOS_TV_DIAS = 30      # los códigos para conectar una tele (viven 5 minutos)
 LIMPIEZA_DISPOSITIVO_DIAS = 90     # sin ningún envío exitoso en tanto tiempo Y con fallos: dejó de responder
 LIMPIEZA_DISPOSITIVO_FALLOS = 3
 
@@ -283,6 +284,8 @@ def limpiar(conn: sqlite3.Connection, ahora: int | None = None) -> dict[str, int
         "DELETE FROM tx_cache WHERE ts < ? AND txid NOT IN (SELECT txid FROM compras WHERE txid IS NOT NULL) "
         "AND txid NOT IN (SELECT txid FROM traslados WHERE txid IS NOT NULL)", (ahora - LIMPIEZA_TX_CACHE_DIAS * 86400,)).rowcount
     n["avisos_pendientes"] = conn.execute("DELETE FROM avisos_pendientes WHERE creado < ?", (ahora - LIMPIEZA_PENDIENTES_DIAS * 86400,)).rowcount
+    # los códigos para conectar una tele (campamento 21B): viven 5 minutos; pasado un mes ya no le dicen nada a nadie (la auditoría se queda)
+    n["codigos_tv"] = conn.execute("DELETE FROM codigos_tv WHERE creado < ?", (ahora - LIMPIEZA_CODIGOS_TV_DIAS * 86400,)).rowcount
     n["suscripciones"] = conn.execute(
         "DELETE FROM suscripciones WHERE fallos >= ? AND COALESCE(ultimo_ok, creado) < ?",
         (LIMPIEZA_DISPOSITIVO_FALLOS, ahora - LIMPIEZA_DISPOSITIVO_DIAS * 86400)).rowcount

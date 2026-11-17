@@ -1124,4 +1124,53 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   ok(mes[0].grupo && mes[0].id === 'm-2026-01' && mes[0].nombre === 'enero de 2026' && !mes[0].extra, 'un punto por mes: se sabe que es un mes y cuál');
   eq(L.UMBRAL_POR_MES, 150, 'un punto por mes: desde más de 150 compras a la vista');
 }
+
+// ---------------------------------------------------------------- Campamento 21B · la tele de la sala
+{
+  const L = await import('../app/static/lib.js');
+  // El reloj: la hora de El Salvador (UTC−6, sin horario de verano) y cómo se dice aquí, de 12 horas
+  eq(L.horaSV(Date.UTC(2026, 10, 17, 2, 5, 9)), { h: 20, m: 5, s: 9 }, 'reloj: las 02:05 UTC son las 20:05 en El Salvador');
+  eq(L.horaSV(Date.UTC(2026, 10, 17, 6, 0, 0)), { h: 0, m: 0, s: 0 }, 'reloj: medianoche de El Salvador');
+  eq(L.horaSV(Date.UTC(2026, 6, 1, 5, 59, 59)), { h: 23, m: 59, s: 59 }, 'reloj: sin horario de verano (julio igual que noviembre)');
+  eq([L.textoReloj(0, 30), L.textoReloj(9, 5), L.textoReloj(12, 0), L.textoReloj(13, 7), L.textoReloj(23, 59)].map((t) => `${t.hora} ${t.sufijo}`),
+    ['12:30 a. m.', '9:05 a. m.', '12:00 p. m.', '1:07 p. m.', '11:59 p. m.'], 'reloj: de 12 horas, con a. m. y p. m. (el mediodía es p. m., la medianoche 12 a. m.)');
+  // La tele duerme de 23:00 a 5:00: los bordes
+  eq([22.99, 23, 23.5, 0, 4.99, 5, 12].map((h) => L.teleDuerme(h)), [false, true, true, true, true, false, false], 'duerme: de 23:00 (incluida) a 5:00 (despierta)');
+  ok(!L.teleDuerme(23.5, false) && !L.teleDuerme(2, false), 'duerme: no, si el dispositivo lo apagó');
+  // El reloj dormido se corre unos píxeles cada 5 minutos
+  const c0 = L.corrimientoReloj(23 * 60), c1 = L.corrimientoReloj(23 * 60 + 4), c2 = L.corrimientoReloj(23 * 60 + 5);
+  eq(c0, c1, 'corrimiento: dentro de los mismos 5 minutos no se mueve');
+  const paso = Math.hypot(c2.x - c0.x, c2.y - c0.y);
+  ok(paso > 0 && paso <= 10, `corrimiento: cada 5 minutos se corre unos píxeles (${paso.toFixed(1)})`);
+  const todos = Array.from({ length: 288 }, (_, k) => L.corrimientoReloj(k * 5));
+  ok(todos.every((p) => Math.abs(p.x) <= 36 && Math.abs(p.y) <= 22) && new Set(todos.map((p) => `${p.x},${p.y}`)).size > 60, 'corrimiento: recorre un rectángulo de ±36 × ±22 px sin quedarse en pocos sitios');
+  ok(todos.every((p, i) => i === 0 || Math.hypot(p.x - todos[i - 1].x, p.y - todos[i - 1].y) <= 10), 'corrimiento: nunca salta más de 10 px de una vez');
+  // El marco: cada 10 minutos (a las :05, :15…), 40 s, rota de forma determinista entre los dibujos listos
+  const lis = [{ vh: 'tronco' }, { vh: 'torre' }, { vh: 'manta' }];
+  const a = (hh, mm, ss) => Date.UTC(2026, 10, 17, hh + 6, mm, ss); // hora de El Salvador
+  ok(!L.marcoTele(a(20, 4, 59), lis).visible && L.marcoTele(a(20, 5, 0), lis).visible && L.marcoTele(a(20, 5, 39), lis).visible && !L.marcoTele(a(20, 5, 40), lis).visible, 'marco: de :05:00 a :05:40');
+  ok(L.marcoTele(a(20, 15, 10), lis).visible && !L.marcoTele(a(20, 10, 0), lis).visible && !L.marcoTele(a(18, 0, 10), lis).visible, 'marco: cada 10 minutos; nunca a las 18:00 (el atardecer)');
+  eq(L.marcoTele(a(20, 5, 1), lis).dibujo, L.marcoTele(a(20, 5, 30), lis).dibujo, 'marco: el mismo dibujo toda la vuelta');
+  eq([5, 15, 25, 35].map((mm) => L.marcoTele(a(20, mm, 1), lis).dibujo.vh).length, 4, 'marco: una vuelta por cada 10 minutos');
+  const seq = [5, 15, 25, 35].map((mm) => lis.indexOf(L.marcoTele(a(20, mm, 1), lis).dibujo));
+  ok(seq.every((x, i) => i === 0 || x === (seq[i - 1] + 1) % 3), `marco: en la vuelta siguiente, el dibujo siguiente (${seq})`);
+  eq(L.marcoTele(a(20, 5, 10), lis).faltaMs, 30_000, 'marco: cuánto le queda');
+  eq(L.marcoTele(a(20, 5, 10), []), null, 'marco: sin dibujos listos no hay marco');
+  // Lo que enseña la tele: dormir gana; una fiesta o el atardecer ganan al marco
+  const m = (o) => L.modoTele({ ahoraMs: a(20, 5, 10), hora: 20.08, listos: lis, ...o }).modo;
+  eq([m({}), m({ fiesta: true }), m({ ritual: true }), m({ hora: 23.5, ahoraMs: a(23, 30, 0) }), m({ hora: 23.5, ahoraMs: a(23, 30, 0), duerme: false }), m({ hora: 23.5, ahoraMs: a(23, 30, 0), despiertaHasta: a(23, 31, 0) })],
+    ['marco', 'escena', 'escena', 'duerme', 'escena', 'escena'], 'modo de la tele: marco, la fiesta gana, el atardecer gana, duerme, no duerme si se apagó o si alguien la despertó un rato');
+  // Dónde va una tarjeta: el primer sitio libre, dentro de la pantalla y sin pisar obstáculos con su margen
+  ok(L.chocan({ x: 0, y: 0, w: 10, h: 10 }, { x: 5, y: 5, w: 10, h: 10 }) && !L.chocan({ x: 0, y: 0, w: 10, h: 10 }, { x: 10, y: 0, w: 5, h: 5 })
+    && L.chocan({ x: 0, y: 0, w: 10, h: 10 }, { x: 12, y: 0, w: 5, h: 5 }, 3), 'sitio: chocan (tocarse en el borde no cuenta; con margen sí)');
+  const opts = { W: 200, H: 100, margen: 4, borde: 2 };
+  const obst = [{ x: 0, y: 0, w: 60, h: 40 }];
+  eq(L.sitioLibre({ w: 50, h: 20 }, [{ x: 10, y: 10 }, { x: 70, y: 10 }, { x: 10, y: 60 }], obst, opts), { x: 70, y: 10 }, 'sitio: salta lo que choca y da el primero libre');
+  eq(L.sitioLibre({ w: 50, h: 20 }, [{ x: 160, y: 10, donde: 'cielo' }, { x: 100, y: 10, donde: 'cielo' }], obst, opts), { x: 100, y: 10, donde: 'cielo' }, 'sitio: no se sale de la pantalla y conserva lo que trae el candidato');
+  eq(L.sitioLibre({ w: 50, h: 20 }, [{ x: 10, y: 10 }], obst, opts), null, 'sitio: si no cabe en ninguno, null (no se enseña: nunca tapa)');
+  eq(L.riel(0, 0, 10, 0, { x2: 30 }), [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 20, y: 0 }, { x: 30, y: 0 }], 'riel: de un punto, en pasos, hasta el límite');
+  eq(L.riel(5, 5, 0, 0), [{ x: 5, y: 5 }], 'riel: sin paso, solo el punto');
+  const rej = L.rejilla(50, 50, { x1: 0, x2: 100, y1: 0, y2: 100, paso: 25 });
+  ok(rej.length === 25 && rej[0].x === 50 && rej[0].y === 50 && rej.every((p, i) => i === 0 || p.d >= rej[i - 1].d), 'rejilla: de la más cercana al ancla a la más lejana');
+}
 console.log(`OK ${n} comprobaciones`);
