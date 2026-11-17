@@ -2030,7 +2030,7 @@ try {
         ok(c.muestras >= 20 && c.buenos === 6 && c.malos.length === 0, `guía (${tema}, contraste ${contraste}): ${c.muestras} colores, los 6 de texto con 4.5:1 o más${c.malos.length ? ` (mal: ${c.malos})` : ''}`);
       }
       const ic = await g.p.evaluate(() => ({ iconos: [...document.querySelectorAll('#guia-iconos .ico')].map((e) => { const r = e.getBoundingClientRect(); return r.width > 8 && r.height > 8; }), avatares: document.querySelectorAll('#guia-av .avatar').length, medallas: document.querySelectorAll('#guia-med .med').length, ilus: document.querySelectorAll('#guia-ilu .ilu').length }));
-      ok(ic.iconos.length === 11 && ic.iconos.every(Boolean) && ic.avatares === 8 && ic.medallas === 4 && ic.ilus === 3, 'guía: muestra los 11 iconos (con el zopilote, la bocina y el libro), los avatares, las medallas y las ilustraciones');
+      ok(ic.iconos.length === 13 && ic.iconos.every(Boolean) && ic.avatares === 8 && ic.medallas === 4 && ic.ilus === 3, 'guía: muestra los 13 iconos (con el zopilote, la bocina, el libro, reproducir y pausa), los avatares, las medallas y las ilustraciones');
       for (const w of [320, 768, 1280]) {
         await g.p.setViewportSize({ width: w, height: 800 });
         await g.p.waitForTimeout(200);
@@ -5606,6 +5606,146 @@ try {
       }
     } finally {
       sTal.parar();
+    }
+
+    // ---- 29 · La película del ascenso (y «Ver ese día», lo que quedó de las postales)
+    const peli = (p) => p.evaluate(() => {
+      const r = document.getElementById('pe-rango'), yo = document.querySelector('#pe-montana #m-yo .yo-anillo')?.getBoundingClientRect();
+      return {
+        abierta: document.getElementById('d-pelicula').open, senderos: document.querySelectorAll('#m-sendero').length, enPeli: document.querySelectorAll('#pe-montana #m-sendero').length,
+        principal: document.querySelectorAll('#montana svg *').length, valor: Number(r.value), max: Number(r.max), vt: r.getAttribute('aria-valuetext'),
+        rotulo: document.getElementById('pe-fecha').textContent, sats: document.getElementById('pe-sats').textContent, ev: document.getElementById('pe-ev').textContent,
+        play: document.getElementById('pe-play').hidden ? null : document.getElementById('pe-play-t').textContent, foco: document.activeElement?.id ?? '',
+        yoY: yo ? Math.round(yo.top + yo.height / 2) : null, yoTxt: [...document.querySelectorAll('#pe-montana .yo-txt')].map((e) => e.textContent),
+        alcanzados: document.querySelectorAll('#pe-montana .campo.alcanzado').length, etapas: document.querySelectorAll('#pe-montana .etapa.alcanzada').length,
+        pinos: [document.querySelectorAll('#pe-montana #m-bosque path:not(.pe-fuera)').length, document.querySelectorAll('#pe-montana #m-bosque path').length],
+        sr: document.getElementById('pe-sr').textContent, ancho: Math.round(document.querySelector('#pe-montana svg')?.getBoundingClientRect().width ?? 0),
+      };
+    });
+    // Nada de lo escrito ni los controles tapan el sendero, «Tú», un rótulo o un hito; nada se sale del ancho; toques de 48 px.
+    const geometria = (p) => p.evaluate(() => {
+      const camino = document.querySelector('#pe-montana #m-sendero'), m = camino.getScreenCTM(), L = camino.getTotalLength(), pts = [];
+      for (let l = 0; l <= L; l += 4) { const q = camino.getPointAtLength(l); pts.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]); }
+      const marcas = [...document.querySelectorAll('#pe-montana #m-etiquetas > *, #pe-montana .campo .campo-ico, #pe-montana #m-yo .yo-anillo')].map((e) => e.getBoundingClientRect()).filter((r) => r.width);
+      const cruza = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const fallos = [];
+      for (const id of ['pe-t', 'pe-cerrar', 'pe-fecha', 'pe-sats', 'pe-ev', 'pe-ctl']) {
+        const r = document.getElementById(id).getBoundingClientRect();
+        if (!r.width) continue;
+        if (pts.some(([x, y]) => x > r.left - 4 && x < r.right + 4 && y > r.top - 4 && y < r.bottom + 4)) fallos.push(`${id} sobre el sendero`);
+        if (marcas.some((q) => cruza(r, q))) fallos.push(`${id} sobre un rótulo, un hito o «Tú»`);
+        if (r.left < -0.5 || r.right > innerWidth + 0.5) fallos.push(`${id} fuera del ancho`);
+      }
+      const toques = ['pe-cerrar', 'pe-rango', 'pe-play'].map((id) => document.getElementById(id)).filter((e) => !e.hidden).map((e) => e.getBoundingClientRect().height);
+      const dlg = document.getElementById('d-pelicula');
+      return { fallos, toques: toques.every((h) => h >= 47.5), desborde: dlg.scrollWidth > dlg.clientWidth + 1 };
+    });
+    const sAnio = await servidor('anio');
+    try {
+      const x = await ent(sAnio, ADMIN, { pestanas: true, viewport: { width: 390, height: 844 } }, { 'libro.pestana': 'historia', 'libro.efectos': 'todos' });
+      const hoySats = await x.p.evaluate(() => document.querySelector('#s-sats .sr').textContent.trim());
+      const nodosAntes = await x.p.evaluate(() => document.querySelectorAll('#montana svg *').length);
+      ok(await x.p.isVisible('#dh-peli-ver') && (await x.p.locator('#dh-peli-ver').boundingBox()).height >= 47.5, '23·29 «Tu historia» trae la película, con su botón de 48 px');
+      eq(await x.p.textContent('#dh-peli-d'), 'Cómo subió tu libro, de la primera compra a hoy, sobre la montaña de hoy.', '23·29 la entrada dice qué es');
+      const t0 = Date.now();
+      await x.p.click('#dh-peli-ver');
+      await x.p.waitForTimeout(250);
+      let e = await peli(x.p);
+      ok(e.abierta && e.senderos === 1 && e.enPeli === 1 && e.principal === 0, `23·29 una sola escena en el documento: la de la película (${e.senderos}, ${e.principal})`);
+      ok(e.valor === 0 && e.max > 300 && /^Tu saldo el \d/.test(e.rotulo) && e.ev === 'Tu primera compra' && e.vt.endsWith('Tu primera compra.'), `23·29 empieza en la primera compra («${e.rotulo}», ${e.vt})`);
+      ok(e.foco === 'pe-play' && e.alcanzados === 0 && e.etapas === 0 && e.pinos[0] === 1 && e.pinos[1] > 40, `23·29 foco en el botón; ni campamentos ni bosque todavía (pinos ${e.pinos})`);
+      const yoInicio = e.yoY;
+      await x.p.waitForTimeout(Math.max(0, 7900 - (Date.now() - t0)));
+      e = await peli(x.p);
+      ok(e.valor > e.max * 0.3 && e.valor < e.max * 0.75 && e.play === 'Pausar la película' && !e.yoTxt.length, `23·29 a medio camino corre sola, sin el rótulo de «Tú» (${e.valor} de ${e.max})`);
+      ok(e.yoY < yoInicio - 40 && e.pinos[0] > 1 && e.pinos[0] < e.pinos[1], `23·29 «Tú» subió y el bosque crece con las compras (${yoInicio} → ${e.yoY}, pinos ${e.pinos})`);
+      // Dura 15 s: se mira cuándo llega a hoy (la película arranca a los 0.7 s de abrir).
+      let fin = null;
+      for (let k = 0; k < 60 && fin == null; k++) { await x.p.waitForTimeout(200); if ((await x.p.evaluate(() => Number(document.getElementById('pe-rango').value) >= Number(document.getElementById('pe-rango').max)))) fin = Date.now() - t0 - 700; }
+      ok(fin != null && fin > 14000 && fin < 17500, `23·29 de la primera compra a hoy en unos 15 s (${fin} ms)`);
+      e = await peli(x.p);
+      ok(e.rotulo === 'Tu saldo hoy' && e.sats === hoySats.replace(/[^\d,]/g, '') && e.ev === '' && e.yoTxt[0] === 'Tú', `23·29 acaba hoy, con el saldo de hoy (${e.sats} / ${hoySats})`);
+      ok(e.play === 'Ver la película otra vez' && /^Hoy, \d+ \w+ \d{4}: [\d,]+ sats\.$/.test(e.sr), `23·29 al acabar, «Ver otra vez» y lo dice a los lectores de pantalla («${e.sr}»)`);
+      ok(e.alcanzados >= 2 && e.etapas >= 1 && e.pinos[0] === e.pinos[1], `23·29 al acabar, campamentos y marcas encendidos y todo el bosque (${e.alcanzados}, ${e.etapas}, ${e.pinos})`);
+      // Otra vez, pausa y teclado.
+      await x.p.click('#pe-play'); await x.p.waitForTimeout(2600);
+      await x.p.click('#pe-play'); await x.p.waitForTimeout(200);
+      const a = await peli(x.p); await x.p.waitForTimeout(700); const b = await peli(x.p);
+      ok(a.valor > 0 && a.valor < a.max && a.valor === b.valor && b.play === 'Ver la película' && b.yoTxt[0] === 'Tú' && /^\d+ \w+ \d{4}: [\d,]+ sats\./.test(b.sr), `23·29 en pausa se queda quieta, con su rótulo, y lo dice (${b.valor}: «${b.sr}»)`);
+      await x.p.focus('#pe-rango');
+      await x.p.keyboard.press('End'); e = await peli(x.p);
+      ok(e.valor === e.max && e.rotulo === 'Tu saldo hoy', '23·29 deslizador: Fin lleva a hoy');
+      await x.p.keyboard.press('Home'); await x.p.keyboard.press('ArrowRight'); e = await peli(x.p);
+      ok(e.valor === 1 && /^Tu saldo el \d/.test(e.rotulo) && e.vt.startsWith(e.rotulo.replace('Tu saldo el ', '')), `23·29 deslizador: Inicio y una flecha, un día (${e.vt})`);
+      const g = await geometria(x.p);
+      ok(!g.fallos.length && g.toques && !g.desborde, `23·29 390×844: nada tapa el camino, toques de 48 px, sin desbordes (${g.fallos.join('; ')})`);
+      // Girar el teléfono con la película abierta: se redibuja a su medida y sigue habiendo una sola escena.
+      await x.p.setViewportSize({ width: 844, height: 390 }); await x.p.waitForTimeout(900);
+      e = await peli(x.p);
+      ok(e.senderos === 1 && e.enPeli === 1 && e.principal === 0 && e.ancho === 844, `23·29 acostado: redibujada a su medida, una sola escena (${e.ancho})`);
+      const ga = await geometria(x.p);
+      ok(!ga.fallos.length && ga.toques && !ga.desborde, `23·29 844×390: nada tapa el camino (${ga.fallos.join('; ')})`);
+      await x.p.setViewportSize({ width: 390, height: 844 }); await x.p.waitForTimeout(900);
+      // Con la pestaña oculta se detiene; al volver, la página no redibuja su escena debajo.
+      await x.p.click('#pe-play'); await x.p.waitForTimeout(1000);
+      await x.p.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange')); });
+      await x.p.waitForTimeout(300);
+      await x.p.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' }); document.dispatchEvent(new Event('visibilitychange')); });
+      await x.p.waitForTimeout(1600);
+      e = await peli(x.p);
+      ok(e.play === 'Ver la película' && e.senderos === 1 && e.principal === 0, `23·29 con la pestaña oculta se detiene, y al volver sigue habiendo una sola escena (${e.senderos}, ${e.principal})`);
+      // Cerrar: vuelve la escena de la página, igual que antes, y el foco a su botón.
+      await x.p.keyboard.press('Escape'); await x.p.waitForTimeout(900);
+      e = await peli(x.p);
+      ok(!e.abierta && e.senderos === 1 && e.enPeli === 0 && e.principal === nodosAntes && e.foco === 'dh-peli-ver', `23·29 al cerrar vuelve la escena de la página (${e.principal} nodos; antes ${nodosAntes}) y el foco a su botón`);
+      ok(await x.p.evaluate(() => !!document.querySelector('#montana #m-yo') && !document.querySelector('#pe-montana svg')), '23·29 la película no deja nada en la escena');
+      eq(x.consola, [], '23·29 consola limpia');
+      await x.ctx.close();
+      // Escritorio: el saldo del día y los controles, a la izquierda; nada tapa el camino.
+      {
+        const d = await ent(sAnio, ADMIN, { pestanas: true, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, { 'libro.pestana': 'historia', 'libro.efectos': 'esenciales' });
+        await d.p.click('#dh-peli-ver'); await d.p.waitForTimeout(5000);
+        const gd = await geometria(d.p);
+        ok(!gd.fallos.length && gd.toques && !gd.desborde, `23·29 1440×900: nada tapa el camino ni un rótulo (${gd.fallos.join('; ')})`);
+        ok((await peli(d.p)).play === 'Pausar la película', '23·29 con efectos «esenciales» también corre (acompaña a un toque)');
+        await d.ctx.close();
+      }
+      // Efectos «ninguno» y letra muy grande en 320 px: solo el deslizador, sin reproducción; nada se encima.
+      {
+        const n = await ent(sAnio, ADMIN, { pestanas: true, viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true }, { 'libro.pestana': 'historia', 'libro.efectos': 'ninguno', 'libro.letra': 'muy-grande' });
+        await n.p.click('#dh-peli-ver'); await n.p.waitForTimeout(1800);
+        e = await peli(n.p);
+        ok(e.play === null && e.valor === 0 && e.foco === 'pe-rango', `23·29 «ninguno»: sin botón ni reproducción, el foco en el deslizador (${e.play}, ${e.valor})`);
+        await n.p.keyboard.press('End'); e = await peli(n.p);
+        ok(e.valor === e.max && e.yoTxt[0] === 'Tú', '23·29 «ninguno»: el deslizador lleva a cualquier día');
+        const gn = await geometria(n.p);
+        const sobre = await n.p.evaluate(() => { const c = document.getElementById('pe-ev').getBoundingClientRect().bottom; return [...document.querySelectorAll('#pe-montana #m-etiquetas text')].every((t) => t.getBoundingClientRect().top >= c - 2); });
+        ok(!gn.fallos.length && gn.toques && !gn.desborde && sobre, `23·29 320×568 con letra muy grande: el saldo del día sobre la cumbre, sin encimarse (${gn.fallos.join('; ')})`);
+        await n.ctx.close();
+      }
+    } finally {
+      sAnio.parar();
+    }
+    // Quien solo mira, con «Ver ese día» (también en las etapas intermedias agrupadas de un tramo cerrado): la película se abre detenida ahí.
+    const sLargo = await servidor('largo');
+    try {
+      const l = await ent(sLargo, LECTOR, { pestanas: true, viewport: { width: 390, height: 844 } }, { 'libro.pestana': 'historia', 'libro.historia.abiertas': 'linea', 'libro.efectos': 'todos' });
+      eq(await l.p.textContent('#dh-peli-d'), 'Cómo subió el libro, de la primera compra a hoy, sobre la montaña de hoy.', '23·29 lectora: la entrada habla del libro');
+      const cuenta = await l.p.evaluate(() => ({ etapas: document.querySelectorAll('#dh-linea .h-ev:is(.h-hito, .h-etapa, .h-paso)').length, ver: document.querySelectorAll('#dh-linea .h-ev:is(.h-hito, .h-etapa, .h-paso) .h-ver').length, grupos: document.querySelectorAll('#dh-linea .h-pasos li .h-ver').length, nombre: document.querySelector('#dh-linea .h-ver')?.textContent }));
+      ok(cuenta.etapas > 3 && cuenta.ver === cuenta.etapas && cuenta.grupos > 0 && /^Ver ese día en la película del ascenso \(.+, \d+ \w+ \d{4}\)$/.test(cuenta.nombre), `23·29 «Ver ese día» en cada etapa con fecha (${cuenta.ver} de ${cuenta.etapas}, ${cuenta.grupos} en los tramos plegados; «${cuenta.nombre}»)`);
+      const primera = l.p.locator('#dh-linea .h-ev.h-hito .h-ver').first();
+      const fecha = await l.p.locator('#dh-linea .h-ev.h-hito').first().locator('time').getAttribute('datetime');
+      await primera.click(); await l.p.waitForTimeout(400);
+      const a = await peli(l.p); await l.p.waitForTimeout(1500); const b = await peli(l.p);
+      ok(a.abierta && a.valor > 0 && a.valor === b.valor && b.play === 'Ver la película' && b.foco === 'pe-play', `23·29 «Ver ese día» la abre detenida en ese día (${a.valor})`);
+      ok(/^Saldo del libro el /.test(b.rotulo) && /^El libro llegó al campamento /.test(b.ev) && b.yoTxt[0] === 'Íbamos aquí' && !/\b(tu|tus|llegaste)\b/i.test(`${b.rotulo} ${b.ev} ${b.vt}`), `23·29 lectora: sin tutear («${b.rotulo}» · «${b.ev}» · ${b.yoTxt})`);
+      ok(b.vt.startsWith(new Intl.DateTimeFormat('es-SV', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${fecha}T12:00:00`)).replace('.', '')), `23·29 el día es el de la etapa (${fecha}: ${b.vt})`);
+      await l.p.keyboard.press('Escape'); await l.p.waitForTimeout(800);
+      ok(await l.p.evaluate(() => document.activeElement?.classList.contains('h-ver')), '23·29 al cerrar, el foco vuelve a «Ver ese día»');
+      eq(l.consola, [], '23·29 lectora: consola limpia');
+      await l.ctx.close();
+    } finally {
+      sLargo.parar();
     }
   }
 

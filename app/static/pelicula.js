@@ -23,7 +23,7 @@ export const reproduciendo = () => jugando;
 /** ¿Hay película? Hace falta camino que recorrer: movimientos en dos días distintos por lo menos. */
 export function hayPelicula() {
   const P0 = R?.items?.length ? peliculaAscenso(R.items, R.camino, hoyISO()) : null;
-  return Boolean(P0 && P0.dias >= 1 && R.sats > 0);
+  return Boolean(P0 && P0.dias >= 1);
 }
 
 const rotuloDe = (x) => (vozLibro() ? (x.hoy ? 'Vamos aquí' : 'Íbamos aquí') : 'Tú');
