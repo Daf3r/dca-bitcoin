@@ -4,6 +4,7 @@ import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
 import { ico, ilustracion, medalla } from './iconos.js';
 import { $, R, S, esAdmin, reducido, vozLibro } from './estado.js';
+import { abrirPelicula, hayPelicula } from './pelicula.js';
 
 // «Tu historia» (ideas 37 y 38): en «Tu cuenta», las medallas de constancia y la línea de tiempo de cómo llegaste hasta aquí.
 // Todo sale de datos que ya existen (ver `lib.historia` y `lib.medallas`). El texto de las compras (notas) entra con `textContent`.
@@ -265,6 +266,17 @@ $('dh-hoy-ver').addEventListener('click', () => {
   $('dh-lienzo').focus({ preventScroll: true });
 });
 
+// (Campamento 23) La película del ascenso: la entrada, bajo el dibujo de hoy, y «Ver ese día» en cada etapa con fecha de la línea, que la
+// abre detenida en ese día (las postales de la idea 30 quedaron aquí dentro). El foco vuelve al botón que la abrió.
+$('dh-peli-ver').addEventListener('click', (e) => abrirPelicula({ desde: e.currentTarget }));
+function verEseDia(fecha, que) {
+  const b = nodo('button', 'enlace h-ver', 'Ver ese día');
+  b.type = 'button';
+  b.append(nodo('span', 'sr', ` en la película del ascenso (${que}, ${fechaLarga(fecha)})`));
+  b.addEventListener('click', () => abrirPelicula({ fecha, desde: b }));
+  return b;
+}
+
 export function pintarHistoria() {
   const lista = $('dh-linea'), med = $('dh-medallas');
   lista.textContent = '';
@@ -276,6 +288,9 @@ export function pintarHistoria() {
   seleccion = null;
   pintarObjeto();
   pintarHoy();
+  const peli = hayPelicula();
+  $('dh-peli').hidden = !peli;
+  $('dh-peli-d').textContent = `Cómo subió ${vozLibro() ? 'el libro' : 'tu libro'}, de la primera compra a hoy, sobre la montaña de hoy.`;
   const ms = medallas(R), ganadas = ms.filter((m) => m.ganada).length;
   cuenta('medallas', ganadas ? `${ganadas} ${ganadas === 1 ? 'ganada' : 'ganadas'}` : 'aún ninguna');
   for (const m of ms) {
@@ -313,7 +328,9 @@ export function pintarHistoria() {
         const li2 = nodo('li');
         const tm = nodo('time', null, fechaLarga(x.fecha));
         tm.dateTime = x.fecha;
-        li2.append(nodo('b', null, x.m >= 1e8 ? nombreHito(x.m) : `${nombreHito(x.m)} sats`), tm);
+        const nombre = x.m >= 1e8 ? nombreHito(x.m) : `${nombreHito(x.m)} sats`;
+        li2.append(nodo('b', null, nombre), tm);
+        if (peli) li2.append(verEseDia(x.fecha, nombre));
         ul.append(li2);
       }
       det.append(sum, ul);
@@ -338,6 +355,7 @@ export function pintarHistoria() {
       b.addEventListener('click', () => document.dispatchEvent(new CustomEvent('libro:firmas', { detail: { hito: e.m, alcanzado: R.sats >= e.m } })));
       cuerpo.append(b);
     }
+    if (peli && ['hito', 'etapa', 'paso'].includes(e.clase) && e.fecha) cuerpo.append(verEseDia(e.fecha, e.m >= 1e8 ? nombreHito(e.m) : `${nombreHito(e.m)} sats`));
     li.append(t, cuerpo);
     lista.append(li);
   }

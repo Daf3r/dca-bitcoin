@@ -5,6 +5,7 @@ import { pintarFavicon } from './favicon.js';
 import { ico } from './iconos.js';
 import { pintarInsignia } from './insignia.js';
 import { enMedir } from './medir.js';
+import { peliculaAbierta } from './pelicula.js';
 import { pintarTV } from './tv.js';
 import { dual, miniLinea, pegado } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
@@ -401,6 +402,9 @@ export const esHito = (m) => m >= 1e6 && Math.abs(Math.log10(m) - Math.round(Mat
 export const MS_SUBIDA = 1400;
 
 export function pintarMontana(animar, desde, festejo = null) {
+  // (Campamento 23) Con la película del ascenso abierta, la escena de la página está vacía (una sola escena en el documento: ver
+  // pelicula.js) y no se dibuja; al cerrarla, la película la vuelve a dibujar a la medida de ahora.
+  if (peliculaAbierta()) return;
   const host = $('montana');
   anchoMontana = host.clientWidth;
   altoMontana = host.clientHeight;
