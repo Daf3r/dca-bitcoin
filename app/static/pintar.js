@@ -1,4 +1,4 @@
-import { aFecha, acentoDe, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapaCelebrada, hayAurora, haceCuanto, hoyISO, hora, nombreHito, pct, rangoEtapa, resumen, numCorto, tramoEtapas, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { aFecha, acentoDe, aniosDelLibro, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapaCelebrada, hayAurora, haceCuanto, hoyISO, hora, mesesDelLibro, nombreHito, primeraCompra, pct, rangoEtapa, resumen, numCorto, tramoEtapas, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
@@ -26,6 +26,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   fijarR(resumen(S.compras, S.precio));
   $('sk-cards').hidden = S.cargado; // las formas grises de carga se van cuando llegan los datos
   pintarVoz();
+  revisarValle();
   pintarPrecio();
   pintarSaldo(desde);
   if (montana) pintarMontana(animar, desde, festejo);
@@ -355,6 +356,16 @@ function pintarDatosEscena() {
 
 let anchoMontana = 0, altoMontana = 0;
 let vozMontana = false; // con qué voz se dibujó la montaña («Tú» o «Vamos aquí»)
+// (Campamento 22) Con qué familia se dibujó el valle (ventanas, piscuchas, iniciales): si la cuenta llega después que las compras, se rehace.
+let familiaMontana = '';
+const firmaFamilia = () => `${S.familia?.personas ?? 0}:${S.familia?.iniciales ?? ''}`;
+let revisionValle = 0;
+function revisarValle() {
+  if (!S.cargado || !anchoMontana || familiaMontana === firmaFamilia()) return;
+  // Si «Tú» está subiendo (o hay celebración), se espera a que acabe: rehacer la escena a medias cortaría la animación.
+  clearTimeout(revisionValle);
+  revisionValle = setTimeout(() => { if (familiaMontana !== firmaFamilia()) pintarMontana(false); }, Math.max(0, ocupadaHasta - performance.now()));
+}
 /**
  * La voz de la página (campamento 17): a quien solo mira se le habla «del libro» y no de «tu» saldo. Los textos fijos de la página
  * llevan su otra forma en `data-libro` (y `data-libro-aria` para su `aria-label`); aquí se elige cuál se ve. El dueño ve lo de siempre.
@@ -400,7 +411,8 @@ export function pintarMontana(animar, desde, festejo = null) {
   // de abajo a las pestañas y el botón ya no flota sobre ella). Una lectura de estilo por dibujo.
   const pie = Number.parseFloat(getComputedStyle(host).getPropertyValue('--pie')) || 104;
   vozMontana = vozLibro();
-  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), firmas: S.firmas, cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0 });
+  familiaMontana = firmaFamilia();
+  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), firmas: S.firmas, cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0, personas: S.familia?.personas ?? 0, iniciales: S.familia?.iniciales ?? '', primera: primeraCompra(S.compras), meses: mesesDelLibro(S.compras, diaVista()), anios: aniosDelLibro(S.compras, diaVista()) });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     // La celebración va en proporción (campamento 21): una etapa intermedia sube como una compra (su marca se enciende al pasar y la

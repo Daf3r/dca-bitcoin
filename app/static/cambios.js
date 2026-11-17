@@ -7,6 +7,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-12-a', fecha: '2026-12-01',
+    items: [
+      'Al pie de la montaña hay ahora un valle: un cantón de ranchos de teja con su milpa, un camino real que llega a la salida del sendero, una quebrada que baja al lago y, en el lago, tule, una garza y el cayuco de un pescador.',
+      'De noche se encienden las luces del valle, una por cada mes del libro, y en el cantón una ventana por cada persona de la familia.',
+      'El valle sigue el año de aquí: la milpa se siembra, jilotea, se dobla y se tapisca; en la época seca el lago baja y deja ver su playa; en octubre y noviembre vuelan piscuchas.',
+      'Junto a la salida crece un conacaste sembrado el día de la primera compra: cada año del libro es un poco más grande.',
+      'Del 1 de diciembre al 6 de enero el valle celebra la Navidad: foquitos en los ranchos, un nacimiento en una ventana, un pino con luces y cohetes en Nochebuena.',
+    ],
+  },
+  {
     id: '2026-11-y', fecha: '2026-11-27',
     items: [
       'La tele de la sala tiene reloj, y el último movimiento, el sismógrafo y la fiesta de una compra se acomodan donde no tapan el camino, «Vamos aquí» ni los nombres de los campamentos.',

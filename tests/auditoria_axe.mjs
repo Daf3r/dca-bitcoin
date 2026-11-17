@@ -527,6 +527,17 @@ try {
       await auditar(p, `entrar con un código, con un error ${esquema}`);
       await ctx.close();
     }
+    { // campamento 22: el valle vivo (de noche con sus luces, Nochebuena con luna llena y su grabado, piscuchas de octubre), teléfono y escritorio
+      for (const [nombre, dia, hora, vp] of [['valle de noche', '2026-07-10', 20, null], ['Nochebuena con luna llena', '2026-12-24', 23.95, null], ['piscuchas y fogón', '2026-10-20', 18.5, null], ['valle de día en escritorio', '2026-07-10', 12, { width: 1440, height: 900 }], ['Nochebuena en escritorio', '2026-12-24', 23.95, { width: 1440, height: 900 }]]) {
+        const ctx = await navegador.newContext({ ...(vp ? { viewport: vp } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript(([h, d]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, [hora, dia]);
+        await entrar(p, anio.url, ADMIN); await cerrarOferta(p);
+        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+        await auditar(p, `${nombre} ${esquema}`);
+        await ctx.close();
+      }
+    }
     { // campamento 24: medir este aparato (antes de la prueba, durante, con el resultado) y las medidas en «Estado del sistema»
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

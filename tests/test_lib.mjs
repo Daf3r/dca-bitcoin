@@ -1217,4 +1217,69 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq([L.PALABRA_FPS.fluido, L.PALABRA_FPS.revisar, L.PALABRA_FPS.lento, L.ESTADO_FPS.lento], ['Fluido', 'Revisar', 'Lento', 'mal'], 'palabras y estados del veredicto');
   ok(/desenfoque de la sierra del fondo/.test(L.REGLA_LENTO) && !/compr/i.test(L.REGLA_LENTO), 'la regla de un «Lento» dice qué se revisaría y no recomienda comprar nada');
 }
+// ---------------------------------------------------------------- Campamento 22 · el valle vivo
+{
+  // El calendario del valle vive en cielo.js (script clásico): se carga con un `document` de mentira, como arriba.
+  const almacen = {};
+  const raiz = { dataset: {}, atributos: new Set(), toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty() {} } };
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem: (k, v) => { almacen[k] = String(v); }, removeItem: (k) => { delete almacen[k]; } }, setInterval() {}, Intl, Date, Math, Number, Object };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo;
+  eq(['2026-04-30', '2026-05-01', '2026-06-30', '2026-07-01', '2026-08-14', '2026-08-15', '2026-10-31', '2026-11-01', '2026-11-30', '2026-12-01', '2027-02-10'].map(C.milpa),
+    ['rastrojo', 'siembra', 'siembra', 'jilote', 'jilote', 'doblada', 'doblada', 'tapisca', 'tapisca', 'rastrojo', 'rastrojo'], 'valle: la milpa se siembra el 1 de mayo, jilotea en julio, se dobla el 15 de agosto, se tapisca en noviembre y queda el rastrojo');
+  eq(['2026-11-30', '2026-12-01', '2026-12-24', '2027-01-06', '2027-01-07'].map(C.navidad), [false, true, true, true, false], 'valle: Navidad del 1 de diciembre al 6 de enero');
+  eq(['2026-09-30', '2026-10-01', '2026-11-30', '2026-12-01'].map(C.piscuchas), [false, true, true, false], 'valle: piscuchas en octubre y noviembre');
+  eq([4.9, 5, 6.9, 7, 17.9, 18, 19.9, 20].map(C.fogon), [false, true, true, false, false, true, true, false], 'valle: humo del fogón a las 5–7 y 18–20');
+  eq([C.cohetes('2026-12-24', 23.8), C.cohetes('2026-12-24', 23.9), C.cohetes('2026-12-25', 0.2), C.cohetes('2026-12-25', 0.6), C.cohetes('2026-12-23', 23.9)], [false, true, true, false, false], 'valle: cohetes también en Nochebuena (24 dic 23:50 a 0:30)');
+  eq([C.lunaLlena(0.5), C.lunaLlena(0.45), C.lunaLlena(0.44), C.lunaLlena(0.25), C.lunaLlena(0)], [true, true, false, false, false], 'valle: luna llena con el 97 % iluminado o más');
+  // Con `libro.dia`, la luna es la de ese día (y la marca de luna llena la sigue): el 24 dic 2026 es luna llena; el 17 nov, cuarto creciente.
+  almacen['libro.dia'] = '2026-12-24'; almacen['libro.hora'] = '23.95'; C.aplicar();
+  ok(Math.abs(C.faseLunar() - 0.5) < 0.05 && raiz.atributos.has('data-luna-llena') && raiz.atributos.has('data-navidad') && raiz.atributos.has('data-cohetes') && raiz.dataset.milpa === 'rastrojo', `valle: Nochebuena de 2026 con luna llena (fase ${C.faseLunar().toFixed(3)}), Navidad y cohetes`);
+  almacen['libro.dia'] = '2026-11-17'; almacen['libro.hora'] = '18.5'; C.aplicar();
+  ok(Math.abs(C.faseLunar() - 0.25) < 0.04 && !raiz.atributos.has('data-luna-llena') && raiz.atributos.has('data-piscuchas') && raiz.atributos.has('data-fogon') && !raiz.atributos.has('data-navidad') && raiz.dataset.milpa === 'tapisca', 'valle: un 17 de noviembre a las 18:30, piscuchas, fogón y tapisca, sin luna llena');
+  delete almacen['libro.dia']; delete almacen['libro.hora'];
+  ok(Math.abs(C.faseLunar(new Date('2026-12-24T06:00:00Z')) - 0.5) < 0.01, 'valle: la fase de un instante dado no depende de `libro.dia`');
+
+  const L = await import('../app/static/lib.js');
+  const c = (fecha, tipo = 'compra') => ({ fecha, tipo, sats: 1000, monto: 1 });
+  eq([L.primeraCompra([]), L.primeraCompra([c('2025-11-20'), c('2025-10-01', 'venta'), c('2026-01-02')])], [null, '2025-11-20'], 'valle: la primera compra (las ventas no cuentan)');
+  eq([L.mesesDelLibro([], '2026-11-17'), L.mesesDelLibro([c('2026-11-02')], '2026-11-17'), L.mesesDelLibro([c('2025-11-20')], '2026-11-17'), L.mesesDelLibro([c('2020-01-31')], '2026-11-17')], [0, 1, 13, 83], 'valle: meses de calendario del libro, el primero y el de hoy incluidos');
+  eq([0, 1, 6, 13, 60, 83].map(L.lucesDelValle), [6, 6, 6, 13, 60, 60], 'valle: una luz por mes, mínimo seis y tope sesenta');
+  eq([L.aniosDelLibro([], '2026-11-17'), Math.round(L.aniosDelLibro([c('2021-11-17')], '2026-11-17') * 100) / 100], [0, 5], 'valle: años del libro desde la primera compra');
+  eq([0, 0.5, 1, 1.9, 2, 4.9, 5, 12].map((a) => L.arbolDelPrimerDia(a).etapa), ['retono', 'retono', 'joven', 'joven', 'arbol', 'arbol', 'grande', 'grande'], 'valle: el árbol del primer día crece con los años (retoño, joven, árbol, grande)');
+  const tams = [0, 1, 2, 3, 5, 9].map((a) => L.arbolDelPrimerDia(a).tam);
+  ok(tams.every((t, i) => t >= 0.3 && t <= 1 && (!i || t >= tams[i - 1])) && tams[5] === 1, `valle: su tamaño crece sin pasarse (${tams.map((t) => t.toFixed(2)).join(', ')})`);
+  eq([L.inicialesGrabadas('ADM'), L.inicialesGrabadas(''), L.fechaGrabada('2025-11-20'), L.fechaGrabada('2026-01-03'), L.fechaGrabada('x')], ['A · D · M', '', '20 · XI · 2025', '3 · I · 2026', ''], 'valle: lo que se graba en la roca');
+  eq([L.ventanasEncendidas(2, 4), L.ventanasEncendidas(9, 4), L.ventanasEncendidas(0, 6), L.piscuchasDelValle(3), L.piscuchasDelValle(11)], [2, 4, 0, 3, 6], 'valle: una ventana y una piscucha por persona, hasta las que caben');
+  const tv = L.textoValle({ luces: 13, arbol: { fecha: '2025-11-20', etapa: 'joven' } });
+  ok(/cantón/.test(tv) && /13 luces, una por mes del libro/.test(tv) && /conacaste joven, sembrado el 20 nov 2025/.test(tv) && !/\btu\b|\btus\b/i.test(tv), `valle: la frase del valle, sin tutear (${tv})`);
+
+  // El arte del valle: funciones puras, sin estilos en línea, con sus clases propias (prefijo v-) y pocos nodos.
+  const A = await import('../app/static/arte-valle.js');
+  eq([A.formaValle(390, 760), A.formaValle(844, 318), A.formaValle(768, 930), A.formaValle(1440, 900)], ['tel', 'acostado', 'tab', 'esc'], 'valle: el tamaño de la escena');
+  const izq = [[-23, 752], [40, 640], [95, 550], [150, 470], [200, 400], [242, 327]];
+  const cresta = [[0, 560], [60, 548], [120, 566], [200, 552], [300, 570], [400, 556]];
+  const sv = A.sitiosValle({ W: 390, H: 760, techo: 270, izq, der: [[242, 327], [300, 420], [360, 560], [420, 700]], cresta, bx: 55, by: 714, pts: [[55, 714], [232, 638], [120, 560], [242, 327]], lago: { cx: 335, cy: 665, rx: 62, ry: 12 }, personas: 3, meses: 13, anios: 1.2, primera: '2025-09-01' });
+  const xIzq = (y) => { const s = [...izq].sort((a, b) => a[1] - b[1]); for (let i = 1; i < s.length; i++) if (y <= s[i][1]) return s[i - 1][0] + ((s[i][0] - s[i - 1][0]) * (y - s[i - 1][1])) / (s[i][1] - s[i - 1][1]); return s.at(-1)[0]; };
+  ok(sv.canton.n === 2 && sv.canton.caja[2] <= xIzq(sv.canton.y) && sv.canton.caja[0] >= 0 && sv.canton.y > 270, `valle: en el teléfono, dos ranchos a la izquierda de la montaña, por debajo del saldo (${sv.canton.caja.map(Math.round)})`);
+  const xDer = (y) => { const s = [[242, 327], [300, 420], [360, 560], [420, 700]]; for (let i = 1; i < s.length; i++) if (y <= s[i][1]) return s[i - 1][0] + ((s[i][0] - s[i - 1][0]) * (y - s[i - 1][1])) / (s[i][1] - s[i - 1][1]); return s.at(-1)[0]; };
+  ok(sv.luces.length === 13 && sv.luces.every(([x, y]) => (x < xIzq(y) || x > xDer(y)) && y > 270), `valle: las 13 luces caen fuera de la montaña y por debajo del saldo (${sv.luces.length})`);
+  ok(sv.luces.filter((l) => l[2] === 1).every(([, y]) => y > sv.canton.y - 4), 'valle: las luces del valle de cerca van sobre la loma (se dibujan con ella: no quedan tapadas)');
+  ok(sv.piscuchas.length === 3 && sv.piscuchas.every(({ x, y }) => x < xIzq(y) && y > 270 + 20), 'valle: tres piscuchas a la izquierda de la montaña, por debajo del saldo');
+  ok(sv.arbol && sv.arbol.x + sv.arbol.ra * 0.62 < 55 && sv.camino.fin[0] < 55, 'valle: el árbol del primer día y el camino real quedan del lado de la salida contrario al sendero');
+  const piezas = [A.canton({ ...sv.canton, ventanas: 3, H: 760 }), A.milpa(sv.milpa), A.pinoNavidad(sv.pino), A.caminoReal(sv.camino), A.arbolPrimerDia({ ...sv.arbol, ...L.arbolDelPrimerDia(1.2) }), A.lucesValle(sv.luces), A.piscuchas(sv.piscuchas), A.tule({ cx: 335, cy: 665, rx: 62, ry: 12, k: 1 }), A.vidaLago({ cx: 335, cy: 665, rx: 62, ry: 12, k: 1 }), A.grabadoLuna({ x: 300, y: 600, k: 1, iniciales: 'A · D', fecha: '20 · XI · 2025' })];
+  const svg = piezas.join('');
+  const nodos = (svg.match(/<(?!\/)[a-zA-Z]/g) || []).length;
+  ok(!/style=|<script|on[a-z]+=/i.test(svg) && (svg.match(/class="([^"]+)"/g) || []).every((x) => /class="(efecto-ambiente |copa|v-|lago-)/.test(x)), 'valle: SVG sin estilos ni scripts en línea, con clases propias (v-…)');
+  ok(nodos <= 150, `valle: todas las piezas del teléfono caben en el presupuesto de 150 nodos (${nodos}, con tres personas)`);
+  eq((A.canton({ ...sv.canton, ventanas: 3, H: 760 }).match(/<path class="v-luz" d="([^"]*)"/)[1].match(/M/g) || []).length, 3, 'valle: tres personas, tres ventanas encendidas');
+  eq((A.canton({ ...sv.canton, ventanas: 9, H: 760 }).match(/<path class="v-luz" d="([^"]*)"/)[1].match(/M/g) || []).length, 4, 'valle: en el teléfono caben cuatro ventanas (dos ranchos)');
+  ok(['siembra', 'jilote', 'doblada', 'tapisca', 'rastrojo'].every((e) => A.milpa(sv.milpa).includes(`v-mp-${e}`)), 'valle: la milpa trae sus cinco etapas (el CSS enseña la del día)');
+  ok(/&lt;b&gt;/.test(A.grabadoLuna({ x: 1, y: 1, k: 1, iniciales: '<b>', fecha: '' })), 'valle: lo grabado se escapa');
+  eq(A.piscuchas([]).includes('v-pis-a'), false, 'valle: sin personas no hay piscuchas');
+  const lad = A.sitiosLadera({ W: 390, sx: 242, sy: 327, der: [[300, 420], [360, 560], [420, 700]], nv: 57, pts: [[55, 714], [232, 638], [120, 560], [242, 327]], lago: { cx: 335, cy: 665, rx: 62, ry: 12 }, cajas: [], grabado: true, k: 1 });
+  ok(lad.quebrada && lad.quebrada.pts.at(-1)[1] < 665 && Math.abs(lad.quebrada.pts.at(-1)[0] - 335) < 62, 'valle: la quebrada acaba en el lago');
+  ok(!A.sitiosLadera({ W: 390, sx: 242, sy: 327, der: [[300, 420]], nv: 57, pts: [], lago: { cx: 335, cy: 665, rx: 62, ry: 12 }, grabado: false }).roca, 'valle: sin pedirlo (la entrada), no hay grabado');
+}
 console.log(`OK ${n} comprobaciones`);

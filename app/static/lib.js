@@ -2011,3 +2011,63 @@ export const PALABRA_FPS = { fluido: 'Fluido', revisar: 'Revisar', lento: 'Lento
 export const ESTADO_FPS = { fluido: 'ok', revisar: 'aviso', lento: 'mal' };
 /** Lo que se revisaría con un «Lento» (la regla decidida): una línea, sin tecnicismos. */
 export const REGLA_LENTO = 'Si pasa en el iPhone, lo primero que se quitaría en el teléfono es el desenfoque de la sierra del fondo.';
+
+// ---------------------------------------------------------------- Campamento 22 · el valle vivo
+// Cuentas puras del valle. Hablan del tiempo que lleva el libro y de cuánta gente lo comparte; nada depende de si se compró hoy.
+/** La primera compra del libro (AAAA-MM-DD), o null sin compras. Las ventas no cuentan. */
+export function primeraCompra(items) {
+  let p = null;
+  for (const c of items) if (c.tipo !== 'venta' && (!p || c.fecha < p)) p = c.fecha;
+  return p;
+}
+/** Meses de calendario que lleva el libro, del mes de la primera compra al de hoy, los dos incluidos (0 sin compras). */
+export function mesesDelLibro(items, hoy = hoyISO()) {
+  const p = primeraCompra(items);
+  if (!p) return 0;
+  const n = (Number(hoy.slice(0, 4)) - Number(p.slice(0, 4))) * 12 + Number(hoy.slice(5, 7)) - Number(p.slice(5, 7)) + 1;
+  return Math.max(1, n);
+}
+export const LUCES_MIN = 6;
+export const LUCES_MAX = 60;
+/** Luces del valle de noche (idea 47): una por mes del libro, con un mínimo de seis (la noche nunca queda vacía) y un tope de sesenta. */
+export const lucesDelValle = (meses) => Math.min(LUCES_MAX, Math.max(LUCES_MIN, Math.floor(Number(meses) || 0)));
+/** Años (con decimales) desde la primera compra: lo que tiene el árbol del primer día (0 sin compras). */
+export function aniosDelLibro(items, hoy = hoyISO()) {
+  const p = primeraCompra(items);
+  if (!p) return 0;
+  return Math.max(0, (Date.parse(`${hoy}T00:00:00Z`) - Date.parse(`${p}T00:00:00Z`)) / (365.2425 * 864e5));
+}
+/**
+ * El árbol del primer día (idea 50) crece con los años del libro, no con las compras: retoño el primer año, joven hasta los dos, árbol de
+ * sombra desde los dos y grande desde los cinco. `tam` (0.3 a 1) es cuánto mide frente a su tamaño adulto.
+ * @param {number} anios
+ * @returns {{ etapa: 'retono' | 'joven' | 'arbol' | 'grande', tam: number }}
+ */
+export function arbolDelPrimerDia(anios) {
+  const a = Math.max(0, Number(anios) || 0);
+  const etapa = a < 1 ? 'retono' : a < 2 ? 'joven' : a < 5 ? 'arbol' : 'grande';
+  return { etapa, tam: Math.min(1, 0.3 + (a < 2 ? a * 0.15 : 0.3 + (a - 2) * 0.1333)) };
+}
+/** Las iniciales de la familia, como van grabadas en la roca las noches de luna llena (idea 27): «A · D · M». */
+export const inicialesGrabadas = (iniciales) => [...String(iniciales ?? '')].filter((c) => c.trim()).join(' · ');
+const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+/** La fecha de la primera compra como se graba en una piedra: «20 · XI · 2025». */
+export function fechaGrabada(f) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(f ?? ''))) return '';
+  return `${Number(f.slice(8, 10))} · ${ROMANOS[Number(f.slice(5, 7)) - 1]} · ${f.slice(0, 4)}`;
+}
+/** Las ventanas encendidas del cantón (idea 45): una por persona con cuenta, hasta las que caben en sus ranchos. */
+export const ventanasEncendidas = (personas, caben) => Math.max(0, Math.min(Number(caben) || 0, Math.floor(Number(personas) || 0)));
+/** Las piscuchas de octubre y noviembre (idea 22): una por persona con cuenta, hasta seis. */
+export const PISCUCHAS_MAX = 6;
+export const piscuchasDelValle = (personas) => Math.max(0, Math.min(PISCUCHAS_MAX, Math.floor(Number(personas) || 0)));
+/**
+ * La frase del valle para la descripción de la montaña (lectores de pantalla). Sin «tu»: el valle es el mismo para toda la familia.
+ * `arbol` = { fecha, etapa } si el libro ya tiene su árbol.
+ * @param {{ luces?: number, arbol?: { fecha: string, etapa: string } | null }} [valle]
+ */
+export function textoValle({ luces = 0, arbol = null } = {}) {
+  let t = `En el valle hay un cantón con su milpa, un camino real que llega a la salida y una quebrada que baja al lago${luces ? `; de noche se ven ${luces} luces, una por mes del libro` : ''}.`;
+  if (arbol?.fecha) t += ` Junto a la salida crece ${{ retono: 'el retoño de un conacaste', joven: 'un conacaste joven', arbol: 'un conacaste', grande: 'un conacaste grande' }[arbol.etapa] ?? 'un conacaste'}, sembrado el ${fechaLarga(arbol.fecha)}, el día de la primera compra.`;
+  return t;
+}

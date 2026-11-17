@@ -1225,7 +1225,16 @@ def logout() -> Any:
 def yo() -> Response:
     fila = db().execute("SELECT visto_ts, cambios_visto, cumple FROM usuarios WHERE id = ?", (g.usuario["id"],)).fetchone()
     return jsonify(usuario=g.usuario["nombre"], rol=g.usuario["rol"], visto=fila["visto_ts"] if fila else None,
-                   cambios=fila["cambios_visto"] if fila else None, cumple=fila["cumple"] if fila else None, mantenimiento=SOLO_LECTURA)
+                   cambios=fila["cambios_visto"] if fila else None, cumple=fila["cumple"] if fila else None, mantenimiento=SOLO_LECTURA,
+                   familia=familia_valle())
+
+
+def familia_valle() -> dict[str, Any]:
+    """Lo mínimo que necesita el valle (campamento 22): cuántas cuentas activas hay (una ventana encendida y una piscucha por persona) y
+    sus iniciales, ordenadas (van grabadas en la roca las noches de luna llena). Ni nombres ni quién entra ni cuándo: solo con sesión."""
+    nombres = [r["nombre"] for r in db().execute("SELECT nombre FROM usuarios WHERE activo = 1").fetchall()]
+    iniciales = sorted((n.strip()[:1] or "?").upper() for n in nombres)
+    return {"personas": len(nombres), "iniciales": "".join(iniciales)}
 
 
 @app.get("/api/sesiones")
