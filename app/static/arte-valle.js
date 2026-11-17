@@ -159,9 +159,10 @@ export function avesSitios({ W, H, techo, cresta, forma, k, cima: [sx, sy], astr
     peri = [W + 8 * k, Math.min(y, yMax)];
     dist = peri[0] + bandada - (xDer(peri[1] + 9) - 10 * k); // el último pájaro acaba ya detrás de la montaña
   } else {
-    const y = techo + (alta - techo) * 0.42;
+    // (Por debajo de la cumbre: en la entrada el lienzo sube y lo de arriba queda detrás de la marca.)
+    const y = Math.max(sy + 40 * k, techo + (alta - techo) * 0.42);
     aza = [Math.min(W * 0.22, (xIzq(y) || W) - 30 * k), y];
-    peri = [W + 8 * k, techo + (alta - techo) * 0.6];
+    peri = [W + 8 * k, Math.max(sy + 60 * k, techo + (alta - techo) * 0.6)];
     dist = W + 110 * k;
   }
   return { aza, peri, k, dist };
