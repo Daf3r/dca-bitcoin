@@ -3985,8 +3985,25 @@ try {
         return { campos, solALaDerecha: sol.left + sol.width / 2 > pico.left + pico.width / 2, bandera: cima.querySelector('.banderin').tagName.toLowerCase(), pliegue: cima.querySelectorAll('.banderin .banderin-pliegue').length,
           mastil: getComputedStyle(cima.querySelector('.cima-mastil')).stroke, nieve: getComputedStyle(document.querySelector('.nieve')).fill, nodos: document.querySelectorAll('.montana svg *').length,
           aros: document.querySelectorAll('#m-campos circle[stroke], #m-campos .humo:not([fill])').length,
-          terrazas: { nodos: document.querySelectorAll('#m-terrazas *').length, recorte: document.getElementById('m-terrazas').getAttribute('clip-path'), rellanos: (document.querySelector('.tz-suelo').getAttribute('d').match(/M/g) || []).length, cortes: (document.querySelector('.tz-corte').getAttribute('d').match(/M/g) || []).length, cantos: (document.querySelector('.tz-muro').getAttribute('d').match(/M/g) || []).length, pared: (document.querySelector('.tz-pared').getAttribute('d').match(/M/g) || []).length, repisas: (document.getElementById('m-repisa').getAttribute('d') || '').length > 0 },
-          espolon: document.querySelector('.espolon')?.getAttribute('fill') === 'url(#m-ladera)' && getComputedStyle(document.querySelector('.nieve-sombra')).opacity === '1',
+          terrazas: { nodos: document.querySelectorAll('#m-terrazas *').length, recorte: document.getElementById('m-terrazas').getAttribute('clip-path'), rellanos: (document.querySelector('.tz-suelo').getAttribute('d').match(/M/g) || []).length, cortes: (document.querySelector('.tz-corte').getAttribute('d').match(/M/g) || []).length, cantos: (document.querySelector('.tz-muro').getAttribute('d').match(/M/g) || []).length, repisas: (document.getElementById('m-repisa').getAttribute('d') || '').length > 0 },
+          cumbre: (() => { // (tercera ronda) la cumbre es UN pico nevado: la roca solo asoma por el filo; nada translúcido sobre la nieve
+            const svg = document.querySelector('.montana svg'), inv = svg.getScreenCTM().inverse(), g = document.querySelector('#m-terrazas .cumbre');
+            const sombra = g.querySelector('.cn-sombra'), roca = g.querySelector('.cn-roca'), monte = document.querySelector('.monte'), rellano = document.querySelector('.cn-rellano');
+            const en = (el, x, y) => el.isPointInFill(new DOMPoint(x, y));
+            // Detrás de la tela de la bandera: nieve en sombra, no roca (era la torre oscura de la segunda ronda).
+            const b = cima.querySelector('.banderin').getBoundingClientRect();
+            const tras = [[b.left + 3, b.top + b.height / 2], [b.right - 3, b.top + b.height / 2], [b.left + b.width / 2, b.top + 2], [b.left + b.width / 2, b.bottom - 2]].map(([x, y]) => new DOMPoint(x, y).matrixTransform(inv));
+            // El cuerno, de su pico al rellano: casi todo nieve (una rejilla de puntos dentro de la silueta).
+            const m = cima.transform.baseVal.consolidate().matrix, e = m.a, sx = m.e, sy = m.f - 6;
+            let dentro = 0, enRoca = 0;
+            for (let x = -8; x <= 46; x += 1.5) for (let y = -39; y <= 1; y += 1.5) { const px = sx + x * e, py = sy + y * e; if (!en(monte, px, py)) continue; dentro++; if (en(roca, px, py)) enRoca++; }
+            const labio = rellano.getAttribute('d').match(/M([\d.]+) ([\d.]+)/).slice(1).join(' ');
+            return { recorte: g.getAttribute('clip-path'), piezas: [...g.children].map((x) => x.getAttribute('class')),
+              opacas: [...g.children, document.querySelector('.nieve-sombra'), rellano].every((x) => getComputedStyle(x).opacity === '1' && getComputedStyle(x).fillOpacity === '1'),
+              viejos: document.querySelectorAll('.espolon, .espolon-luz, .nieve-s2, .tz-pared, .tz-pared-luz, .nieve-pliegue').length,
+              trasBandera: tras.every((q) => en(sombra, q.x, q.y) && !en(roca, q.x, q.y)), roca: enRoca / Math.max(1, dentro), dentro,
+              brota: monte.getAttribute('d').includes(`L${labio}`), rocaLadera: roca.getAttribute('fill') };
+          })(),
           rotulos: [...document.querySelectorAll('#m-etiquetas .campo-txt:not(.etapa-txt)')].map((t) => { const r = t.getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom]; }),
           etapas: [...document.querySelectorAll('#m-etapas .etapa')].map((g) => { const l = g.querySelector('.etapa-tick'); return [g.classList.contains('menor') && !g.classList.contains('sig'), Math.hypot(l.x2.baseVal.value - l.x1.baseVal.value, l.y2.baseVal.value - l.y1.baseVal.value), getComputedStyle(g.querySelector('.etapa-sombra')).display]; }), camino: [document.querySelectorAll('.sendero-corte path').length, document.querySelectorAll('.sendero-talud path').length, document.querySelectorAll('.sendero-tierra path').length],
           bandera2: (() => { const svg = document.querySelector('.montana svg'), inv = svg.getScreenCTM().inverse(), b = cima.querySelector('.banderin').getBoundingClientRect(), monte = document.querySelector('.monte');
@@ -4005,9 +4022,14 @@ try {
       const pegados = (m) => m.campos.map((c) => Math.min(...m.rotulos.map(([l, t, r, b]) => Math.hypot(Math.max(c.caja[0] - r, l - c.caja[2], 0), Math.max(c.caja[1] - b, t - c.caja[3], 0)))));
       ok(a.campos.every((c) => c.enRellano), `montaña asentada: el pie de cada hito pisa su rellano; en la cumbre, el escalón de nieve (${a.campos.map((c) => c.enRellano)})`);
       ok(hitos.every((c) => c.conSombra), `montaña asentada: cada hito echa su sombra en el rellano, al lado contrario del astro (${hitos.map((c) => c.conSombra)})`);
-      eq([a.terrazas.rellanos, a.terrazas.cortes, a.terrazas.cantos, a.terrazas.pared, a.terrazas.recorte], [3, 3, 3, 1, 'url(#m-silueta)'], 'montaña asentada: cada campamento tiene su repisa (plano y canto de frente) y su corte de roca; la cumbre, su pared de roca; todo recortado por la silueta');
-      ok(a.espolon, 'montaña asentada: la roca de la montaña asoma por la nieve hasta el rellano de la cumbre (el espolón)');
-      ok(a.terrazas.nodos <= 14, `montaña asentada: los rellanos son terreno de pocos nodos, un trazo por tono (${a.terrazas.nodos})`);
+      eq([a.terrazas.rellanos, a.terrazas.cortes, a.terrazas.cantos, a.terrazas.recorte], [3, 3, 3, 'url(#m-silueta)'], 'montaña asentada: cada campamento tiene su repisa (plano y canto de frente) y su corte de roca; todo recortado por la silueta');
+      ok(a.terrazas.nodos <= 18, `montaña asentada: los rellanos y la cumbre son terreno de pocos nodos, un trazo por tono (${a.terrazas.nodos})`);
+      // Tercera ronda: la cumbre es UN pico nevado, con la roca solo en el filo, sin torre ni velo.
+      eq([a.cumbre.recorte, a.cumbre.piezas.join(' '), a.cumbre.viejos], ['url(#m-nieve-c)', 'cn-sombra cn-pliegue cn-bisel nieve-faceta cn-roca cn-canto', 0], 'cumbre: su cara en sombra, sus planos, la roca del filo y el canto del rellano, recortados por la nieve (siguen a la altitud); ya no hay espolón, pared ni velo');
+      ok(a.cumbre.opacas, 'cumbre: nada translúcido sobre la nieve (la nieve en sombra, sus planos y el rellano son opacos: no dejan ver el cielo ni otra capa)');
+      ok(a.cumbre.roca > 0.02 && a.cumbre.roca < 0.15 && a.cumbre.dentro > 200, `cumbre: el cuerno es nieve y la roca solo asoma por su filo oeste (${Math.round(a.cumbre.roca * 100)} % de roca en ${a.cumbre.dentro} puntos)`);
+      ok(a.cumbre.trasBandera, 'cumbre: detrás de la bandera de la meta hay nieve en sombra (ni cielo ni una torre de roca)');
+      ok(a.cumbre.brota && a.cumbre.rocaLadera === 'url(#m-ladera)', 'cumbre: el rellano nace en la propia silueta y la roca del filo es la de la ladera (la misma roca, sin costura)');
       ok(a.rotulos.length === 4 && pegados(a).every((d) => d <= 36), `montaña asentada: cada rótulo queda pegado a la piedra de su campamento (${pegados(a).map(Math.round)} px)`);
       ok(a.terrazas.repisas, 'montaña asentada: la repisa se alarga bajo el rótulo que se apoya en ella');
       ok(a.bandera2, 'montaña asentada: la bandera de la meta tiene montaña detrás (no asoma contra el cielo)');
@@ -4032,6 +4054,26 @@ try {
       const c = await medir(t.p);
       const quieto = await t.p.evaluate(() => [...document.querySelectorAll('#m-campos .humo, #m-campos .fogata')].every((e) => getComputedStyle(e).display === 'none'));
       ok(c.campos.every((x) => x.enRellano) && c.bandera2, 'montaña asentada: en el teléfono también, cada hito en su rellano y la bandera con montaña detrás');
+      ok(c.cumbre.trasBandera && c.cumbre.opacas && c.cumbre.roca < 0.15, `cumbre: en el teléfono también, un pico nevado con nieve detrás de la bandera (${Math.round(c.cumbre.roca * 100)} % de roca)`);
+      // La nieve en sombra nunca se confunde con el cielo y el canto de la bandera se recorta contra ella, a cualquier hora.
+      const tonos = await t.p.evaluate(() => {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 1; const g = cv.getContext('2d', { willReadFrequently: true });
+        const rgb = (c) => { g.clearRect(0, 0, 1, 1); g.fillStyle = '#f0f'; g.fillStyle = c; g.fillRect(0, 0, 1, 1); return [...g.getImageData(0, 0, 1, 1).data].slice(0, 3).map((x) => x / 255); };
+        const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+        const okl = (c) => { const [r, v, b] = rgb(c).map(lin); const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * v + 0.0514459929 * b), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * v + 0.1073969566 * b), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * v + 0.6299787005 * b); return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s]; };
+        const lum = (c) => { const [r, v, b] = rgb(c).map(lin); return 0.2126 * r + 0.7152 * v + 0.0722 * b; };
+        const out = [];
+        for (const h of [6, 12, 17.5, 20]) {
+          window.libroCielo.fijarHora(h);
+          const nieve = getComputedStyle(document.querySelector('.cn-sombra')).fill, raiz = getComputedStyle(document.documentElement), A = okl(nieve);
+          const borde = getComputedStyle(document.querySelector('.es-cima .banderin')).stroke, [x, y] = [lum(borde), lum(nieve)].sort((p, q) => q - p);
+          out.push({ h, nieve: rgb(nieve).map((v) => Math.round(v * 255)).join(','), dE: Math.min(...['--c0', '--c1', '--c2', '--c3'].map((k) => { const B = okl(raiz.getPropertyValue(k).trim()); return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); })), borde: (x + 0.05) / (y + 0.05) });
+        }
+        window.libroCielo.fijarHora(null);
+        return out;
+      });
+      ok(tonos.every((x) => x.dE >= 0.045 && x.nieve !== '255,0,255'), `cumbre: la nieve en sombra se distingue del cielo a las 6, 12, 17:30 y 20 h (${tonos.map((x) => `${x.h} h ${x.dE.toFixed(3)}`).join(', ')})`);
+      ok(tonos.every((x) => x.borde >= 3), `cumbre: el canto de la bandera se recorta contra la nieve en sombra (${tonos.map((x) => x.borde.toFixed(1)).join(', ')} : 1)`);
       ok(c.nodos < 800 && quieto && c.campos.filter((x) => !x.cima).every((x) => x.halo > 0.8), `arte: en el teléfono la escena sigue ligera (${c.nodos} nodos) y, sin ambiente, los faroles quedan encendidos y quietos`);
       await t.ctx.close();
     } finally {
