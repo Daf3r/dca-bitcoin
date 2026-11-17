@@ -119,8 +119,9 @@ button, input { font: inherit; color: inherit; }
    recibe toques (debajo hay capas y la luna tiene que poder tocarse: sus tres toques giran la moneda). */
 svg.capa { position: absolute; inset: 0; z-index: -1; display: block; width: 100%; height: 100%; }
 /* La escala del parallax (parallax.js la repite con el desplazamiento) ya desde el primer fotograma: la capa se rasteriza a su tamaño
-   final y nunca vuelve a rasterizarse (si se pintara a 1 y luego se agrandara un 5 %, se vería borrosa). */
-html[data-efectos="todos"] svg.capa { will-change: transform; transform: scale(1.05); }
+   final y nunca vuelve a rasterizarse (si se pintara a 1 y luego se agrandara un 5 %, se vería borrosa). Solo en `#montana` (la escena
+   de la app y de la entrada, que son las que tienen parallax): otra escena sin parallax (la película) ve sus capas a escala 1, como antes. */
+html[data-efectos="todos"] #montana > svg.capa { will-change: transform; transform: scale(1.05); }
 .montana svg, svg.capa { pointer-events: none; }
 :is(.montana, svg.capa) .luna { pointer-events: visiblePainted; }
 /* Grano estático (un PNG de 96 px en mosaico, mezclado al 5 %): disimula las bandas de los degradados largos en pantallas
