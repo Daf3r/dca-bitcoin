@@ -442,7 +442,7 @@ export function laderaBaja({ W, sy, by, L, R, pts = [], cajas = [], k = 1, sol =
   }
   // Bosquecillos: centros al azar en la mitad de abajo; cada uno, unos pinos alrededor.
   const pinos = [];
-  for (let g = 0; g < 26; g++) {
+  for (let g = 0; g < 20; g++) {
     const v = Math.sqrt(rnd()), y = y0 + (by - y0) * v, x = xL(y) + (xR(y) - xL(y)) * (0.04 + rnd() * 0.92);
     const n = 3 + Math.floor(rnd() * 6);
     for (let j = 0; j < n; j++) {
@@ -489,7 +489,7 @@ export function primerPlano({ W, H, sitios = [], huecos = [], k = 1, forma = 'te
   const enHueco = (x, m = 0) => huecos.some(([a, b]) => x > a - m && x < b + m);
   let zacate = '', zacateL = '', mata = '', mataL = '', arbol = '', arbolL = '', maguey = '', flor = '', pascua = '', pascuaC = '';
   // El zacate: matojos a lo largo de todo el borde.
-  for (let x = -4; x < W + 6; x += (3 + rnd() * 4) * k) {
+  for (let x = -4; x < W + 6; x += (4.5 + rnd() * 5) * k) {
     const y = H + 1 - rnd() * 3 * k, h = (enHueco(x) ? 3.5 : 6) * k * (0.7 + rnd() * 0.7);
     const d = `M${f1(x - 2 * k)} ${f1(y)}L${f1(x - 1.2 * k)} ${f1(y - h * 0.7)}L${f1(x - 0.4 * k)} ${f1(y - 1.5 * k)}L${f1(x + 0.3 * k)} ${f1(y - h)}L${f1(x + 1 * k)} ${f1(y - 1.4 * k)}L${f1(x + 1.9 * k)} ${f1(y - h * 0.6)}L${f1(x + 2.3 * k)} ${f1(y)}Z`;
     if (rnd() < 0.35) zacateL += d; else zacate += d;
@@ -505,9 +505,10 @@ export function primerPlano({ W, H, sitios = [], huecos = [], k = 1, forma = 'te
       mataL += `M${f1(x - a * 0.1)} ${f1(y - b * 1.15)}Q${f1(x + a * 0.25)} ${f1(y - b * 1.85)} ${f1(x + a * 0.68)} ${f1(y - b * 1.2)}Q${f1(x + a * 0.8)} ${f1(y - b * 0.9)} ${f1(x + a * 0.45)} ${f1(y - b * 0.85)}Z`;
       if (rnd() < 0.5) flor += `M${P([x - a * 0.4, y - b * 1.1])}h0.01M${P([x + a * 0.3, y - b * 1.5])}h0.01`;
       // En Navidad las matas son flor de pascua: estrellas de brácteas rojas con su centro dorado.
-      for (const [fx, fy, fr] of [[x - a * 0.35, y - b * 1.25, 2.6], [x + a * 0.3, y - b * 1.55, 2.9], [x + a * 0.05, y - b * 0.7, 2.2]]) {
+      // (Una estrella de seis puntas por flor: un solo polígono, pocos segmentos.)
+      for (const [fx, fy, fr] of [[x - a * 0.3, y - b * 1.3, 3], [x + a * 0.32, y - b * 1.5, 3.3]]) {
         const rr = fr * k;
-        pascua += [0, 1, 2, 3, 4, 5].map((j) => { const t = (j / 6) * Math.PI * 2 + fx; return `M${P([fx, fy])}L${P([fx + Math.cos(t - 0.32) * rr * 0.45, fy + Math.sin(t - 0.32) * rr * 0.45])}L${P([fx + Math.cos(t) * rr, fy + Math.sin(t) * rr])}L${P([fx + Math.cos(t + 0.32) * rr * 0.45, fy + Math.sin(t + 0.32) * rr * 0.45])}Z`; }).join('');
+        pascua += poli(Array.from({ length: 12 }, (_, j) => { const t = (j / 12) * Math.PI * 2 + fx, q = j % 2 ? 0.42 : 1; return [fx + Math.cos(t) * rr * q, fy + Math.sin(t) * rr * q]; }));
         pascuaC += `M${P([fx, fy])}h0.01`;
       }
     } else if (r < 0.72) {
