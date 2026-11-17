@@ -3248,7 +3248,8 @@ try {
       // ---- Toda la familia ve el farol; el saludo de otra persona no cambia
       const a2 = await ent(sLargo, ADMIN);
       eq(await a2.p.locator('#montana .farol-cumple').count(), 1, '15B cumpleaños: el dueño también ve el farol de Ana');
-      ok(/^Buenas noches, Daf3r$/.test((await a2.p.textContent('#saludo')).trim()), '15B cumpleaños: y su saludo es el de siempre');
+      // (Campamento 23) Con `largo` (300 semanas) algún día del año cae «un día como hoy» de una etapa y el saludo lo recuerda: también vale.
+      ok(/^(Buenas noches, Daf3r|Daf3r, hoy hace .+|Hoy hace .+)$/.test((await a2.p.textContent('#saludo')).trim()), '15B cumpleaños: y su saludo es el de siempre (o el de un día como hoy), no el de Ana');
       await a2.ctx.close();
       const l3 = await ent(sLargo, LECTOR);
       await l3.p.click('#cuenta-btn'); await l3.p.waitForTimeout(300);
@@ -5545,6 +5546,67 @@ try {
       ok(e.mar && e.vacas && e.mueve === 'torogoz', '22B entrada: el mar de niebla y las vacas también (paisaje, sin datos de nadie)');
       await ctx.close();
     } finally { srvE.parar(); }
+  }
+
+  // ---------------------------------------------------------------- campamento 23: tu camino, otra vez (tal día como hoy y la película del ascenso)
+  {
+    const sinAvisos = (extra = {}) => [(x) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, extra];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const ent = async (srv, cuenta, opts = {}, extra = {}) => { const x = await entrar(navegador, srv, cuenta, { hora: 15, ...opts }, sinAvisos(extra)); await cerrar(x.p); return x; };
+    // El saludo: su texto, si se ve, si es de un renglón, si se corta con «…» y si pisa «Tu saldo».
+    const saludo = (p) => p.evaluate(() => {
+      const s = document.getElementById('saludo'), r = s.getBoundingClientRect(), lh = Number.parseFloat(getComputedStyle(s).lineHeight) || 20;
+      return { txt: s.textContent, oculto: s.hidden, renglon: s.hidden || r.height <= lh * 1.5, entero: s.hidden || s.scrollWidth <= s.clientWidth + 1, pisa: !s.hidden && r.bottom > document.getElementById('t-saldo').getBoundingClientRect().top + 2 };
+    });
+    const sTal = await servidor('taldia');
+    try {
+      // ---- 41 · Tal día como hoy: hace un año el libro llegó al campamento 1M (y hace dos, a 250k: gana el campamento)
+      const FORMAS = { 320: 'Hoy hace un año: 1M sats', 390: 'Hoy hace un año llegaste a 1M sats', 768: 'Daf3r, hoy hace un año llegaste a 1M sats', 1440: 'Daf3r, hoy hace un año llegaste a 1M sats' };
+      for (const [w, h] of [[320, 568], [390, 844], [768, 1024], [1440, 900]]) {
+        const x = await ent(sTal, ADMIN, { viewport: { width: w, height: h }, isMobile: w < 700, hasTouch: w < 1100 });
+        const s = await saludo(x.p);
+        ok(s.txt === FORMAS[w] && !s.oculto && s.renglon && s.entero && !s.pisa, `23·41 ${w}×${h}: el saludo recuerda el día, en la forma que cabe en su renglón («${s.txt}»)`);
+        eq(x.consola, [], `23·41 ${w}×${h}: consola limpia`);
+        await x.ctx.close();
+      }
+      // Letra muy grande en 320 px: alguna forma que quepa entera o, si ninguna, no se enseña (nunca encima de «Tu saldo» ni cortada).
+      {
+        const x = await ent(sTal, ADMIN, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true }, { 'libro.letra': 'muy-grande' });
+        const s = await saludo(x.p);
+        ok(!s.pisa && s.renglon && s.entero && (s.oculto || /^Hoy hace un año/.test(s.txt)), `23·41 letra muy grande a 320: ni pisa ni se corta (${s.oculto ? 'no se enseña' : s.txt})`);
+        await x.ctx.close();
+      }
+      // Quien solo mira: el libro llegó (sin tutear), en el saludo y en el Diario.
+      {
+        const x = await ent(sTal, LECTOR, { viewport: { width: 390, height: 844 } });
+        const s = await saludo(x.p);
+        ok(['Hoy hace un año el libro llegó a 1M sats', 'Hoy hace un año: 1M sats'].includes(s.txt) && !s.pisa && s.entero && !/\b(llegaste|tu|tus)\b/i.test(s.txt), `23·41 lectora: sin tutear, en la forma que cabe («${s.txt}»)`);
+        await x.p.setViewportSize({ width: 1440, height: 900 }); await x.p.waitForTimeout(600);
+        eq((await saludo(x.p)).txt, 'Ana, hoy hace un año el libro llegó a 1M sats', '23·41 lectora en una ventana ancha: la forma larga (se vuelve a encajar al cambiar el tamaño)');
+        await x.p.setViewportSize({ width: 390, height: 844 }); await x.p.waitForTimeout(600);
+        const d = await x.p.evaluate(() => ({ tal: document.getElementById('dia-tal').textContent, oculto: document.getElementById('dia-tal').hidden, bloque: document.getElementById('dia-hace-b').hidden, boton: document.getElementById('dia-abrir-d').textContent }));
+        ok(d.tal === 'Tal día como hoy, hace un año, el libro llegó al campamento 1M.' && !d.oculto && !d.bloque && /hace un año, /.test(d.boton), `23·41 Diario: encabeza «Hace un año» («${d.tal}», ${d.boton})`);
+        await x.p.click('#dia-abrir'); await x.p.waitForTimeout(300);
+        const r = await x.p.evaluate(() => { const t = document.getElementById('dia-tal').getBoundingClientRect(), k = document.getElementById('t-dia-hace').getBoundingClientRect(), p = document.getElementById('dia-hace').getBoundingClientRect(); return { visible: t.height > 0, orden: t.top >= k.bottom - 1 && t.bottom <= p.top + 1 }; });
+        ok(r.visible && r.orden, '23·41 Diario: al abrirlo, la línea va bajo el título «Hace un año» y antes de lo que tenía el libro');
+        // El cumpleaños gana en el saludo (uno por día); el Diario sigue contándolo.
+        const md = hoySV().slice(5);
+        await x.p.evaluate((c) => fetch('/api/yo/cumple', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ cumple: c }) }), md);
+        await x.p.reload(); await x.p.waitForTimeout(2600); await cerrar(x.p);
+        eq([(await saludo(x.p)).txt, await x.p.evaluate(() => document.getElementById('dia-tal').hidden)], ['Feliz cumpleaños, Ana', false], '23·41 el cumpleaños gana en el saludo; el Diario sigue recordando el día');
+        await x.p.evaluate(() => fetch('/api/yo/cumple', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ cumple: null }) }));
+        await x.ctx.close();
+      }
+      // Otro día (mañana, con `libro.dia`) el saludo es el de siempre.
+      {
+        const manana = new Date(Date.parse(`${hoySV()}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
+        const x = await ent(sTal, ADMIN, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, { 'libro.dia': manana });
+        eq((await saludo(x.p)).txt, 'Buenas tardes, Daf3r', '23·41 otro día, el saludo de siempre');
+        await x.ctx.close();
+      }
+    } finally {
+      sTal.parar();
+    }
   }
 
   // ---------------------------------------------------------------- sin histórico de precios

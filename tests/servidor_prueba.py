@@ -1,7 +1,7 @@
 """Servidor Flask local para las pruebas de navegador: base temporal, exchanges simulados y sin red.
 
 Uso: python tests/servidor_prueba.py PUERTO [ESCENARIO]
-Escenarios: hoy (1 compra), bonito (saldo capicúa), cero (vendió todo), aniv (hoy es el aniversario de su primera compra), eco (80 semanas), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
+Escenarios: hoy (1 compra), bonito (saldo capicúa), cero (vendió todo), aniv (hoy es el aniversario de su primera compra), taldia (hoy hace un año llegó a 1M), eco (80 semanas), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
 milbtc (como ballena, con una compra de 600 BTC: más de 1,000 BTC, para probar las cifras más largas),
 mil (1,000 compras en casi seis años, con extras, ventas y traslados), vacio (sin compras), sinprecio,
 sinhist (sin histórico de precios).
@@ -113,6 +113,21 @@ elif esc == "aniv":  # la primera compra fue hace exactamente un año (hoy es su
     comprar(ya, 25.0, 30_000)
     for k in range(40, 0, -1):
         comprar(HOY - timedelta(days=3 + k * 7), 25.0, 30_000)
+elif esc == "taldia":  # (campamento 23) un día como hoy: hace dos años llegó a 250k y hace un año, al campamento 1M (gana el campamento)
+    def hace(anios: int) -> date:
+        return HOY.replace(year=HOY.year - anios, day=28) if (HOY.month == 2 and HOY.day == 29) else HOY.replace(year=HOY.year - anios)
+
+    def con_precio(d: date, s: int) -> None:
+        comprar(d, round(PRECIOS.get(d, PRECIO) * s / 1e8, 2), s)
+
+    ya2, ya1 = hace(2), hace(1)
+    con_precio(ya2 - timedelta(days=30), 200_000)
+    con_precio(ya2, 60_000)  # 260k: cruza 250k (principal)
+    for k in range(1, 12):
+        con_precio(ya2 + timedelta(days=30 * k), 60_000)  # 920k un mes antes del año
+    con_precio(ya1, 100_000)  # 1,020,000: cruza el campamento 1M
+    for k in range(1, 12):
+        con_precio(ya1 + timedelta(days=30 * k), 25_000)
 elif esc == "dos":
     comprar(HOY - timedelta(days=10), 25.0)
     comprar(HOY - timedelta(days=3), 28.68, 36578)

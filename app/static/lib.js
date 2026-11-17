@@ -1497,7 +1497,10 @@ export function diario(R, hoy = hoyISO()) {
   const pronostico = `${PRONOSTICOS[epoca][sem % 4].replace(/^./, (ch) => ch.toUpperCase())}. Es el clima, no un consejo: la montaña no adivina nada.`;
   const esc = escalaMontana(R.sats);
   const primera = compras[0].fecha;
-  return { fecha: hoy, edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, clase, aviso: AVISO_DIARIO[clase], haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy), clasificados, pronostico,
+  // (Campamento 23) Tal día como hoy: el campamento o la etapa a la que el libro llegó un día como hoy, hace uno o más años (el más grande).
+  const tal = talDiaComoHoy(R.camino, hoy, primera);
+  return { fecha: hoy, edicion: fechaLarga(hoy), numero: Math.max(1, sem - semana(primera) + 1), titular, sub, clase, aviso: AVISO_DIARIO[clase], haceUnAnio: haceAnio, notaAnio: notaDeHaceUnAnio(R.items, hoy),
+    talDia: tal ? { ...tal, texto: textoTalDia(tal) } : null, clasificados, pronostico,
     altitud: altitud(R.sats, esc), sats: R.sats, valor: R.valor ?? null };
 }
 export const textoDiario = (d) => `El Diario del Libro, edición del ${d.edicion}. ${d.titular}. ${d.sub}`;
@@ -1539,8 +1542,9 @@ export function paraOir(t) {
 export function diarioParaOir(d, { montana = null } = {}) {
   if (!d) return [];
   const partes = [`El Diario del Libro${montana ? `, desde la montaña ${montana}` : ''}. Edición del ${fechaHablada(d.fecha)}, número ${d.numero}.`, `${d.titular}.`, d.sub];
-  if (d.haceUnAnio || d.notaAnio) {
+  if (d.haceUnAnio || d.notaAnio || d.talDia) {
     partes.push('Hace un año.');
+    if (d.talDia) partes.push(d.talDia.texto);
     if (d.haceUnAnio) partes.push(d.haceUnAnio.texto);
     if (d.notaAnio) partes.push(`El ${fechaHablada(d.notaAnio.fecha)} quedó anotado: ${d.notaAnio.nota}`);
   }
@@ -2070,4 +2074,113 @@ export function textoValle({ luces = 0, arbol = null } = {}) {
   let t = `En el valle hay un cantón con su milpa, un camino real que llega a la salida y una quebrada que baja al lago${luces ? `; de noche se ven ${luces} luces, una por mes del libro` : ''}.`;
   if (arbol?.fecha) t += ` Junto a la salida crece ${{ retono: 'el retoño de un conacaste', joven: 'un conacaste joven', arbol: 'un conacaste', grande: 'un conacaste grande' }[arbol.etapa] ?? 'un conacaste'}, sembrado el ${fechaLarga(arbol.fecha)}, el día de la primera compra.`;
   return t;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 23 · Tu camino, otra vez: «Tal día como hoy» (idea 41) y la película del ascenso (idea 29). Solo datos y textos.
+// ---------------------------------------------------------------------------------------------
+
+const esBisiesto = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+/** ¿`fecha` cae «un día como hoy» de un año anterior? El 29 de febrero se recuerda el 28 en los años sin 29 (como los cumpleaños). */
+function unDiaComoHoy(fecha, hoy) {
+  const y = Number(hoy.slice(0, 4));
+  if (Number(fecha.slice(0, 4)) >= y) return false;
+  return fecha.slice(5) === hoy.slice(5) || (fecha.slice(5) === '02-29' && hoy.slice(5) === '02-28' && !esBisiesto(y));
+}
+/**
+ * «Tal día como hoy» (idea 41): el campamento o la etapa a la que el libro llegó un día como hoy, hace uno o más años (con su fecha en
+ * `R.camino`). Uno por día, el más grande: un campamento antes que una principal y esta antes que una intermedia; a igual rango, el más
+ * alto (`etapaDestacada`). Las etapas que se cruzaron el día de la primera compra (`primera`) no cuentan: ese día es el aniversario del
+ * libro, que ya se dice aparte (el aviso del día y el farolito de la salida). Devuelve `{ m, fecha, rango, anios }` o null.
+ * @param {{ m: number, fecha: string|null, rango?: string }[]|null|undefined} camino
+ * @param {string} [hoy]
+ * @param {string|null} [primera]
+ * @returns {{ m: number, fecha: string, rango: string, anios: number } | null}
+ */
+export function talDiaComoHoy(camino, hoy = hoyISO(), primera = null) {
+  const hay = (camino ?? []).filter((h) => h.fecha && h.fecha !== primera && unDiaComoHoy(h.fecha, hoy));
+  const m = etapaDestacada(hay.map((h) => h.m));
+  const h = hay.find((x) => x.m === m);
+  if (!h?.fecha) return null;
+  return { m: h.m, fecha: h.fecha, rango: rangoEtapa(h.m), anios: Number(hoy.slice(0, 4)) - Number(h.fecha.slice(0, 4)) };
+}
+const cuantoHace = (n) => (n === 1 ? 'un año' : `${n} años`);
+/**
+ * Las formas del saludo un día como hoy, de la más larga a la más corta: se enseña la primera que cabe en su renglón (cuenta.js). Con el
+ * nombre («Daf3r, hoy hace un año llegaste a 1M sats»), sin él y la corta («Hoy hace un año: 1M sats»). A quien solo mira se le habla del
+ * libro («el libro llegó a 1M sats»), sin tutear.
+ * @param {{ m: number, anios: number }} t
+ * @param {string|null|undefined} nombre
+ * @param {boolean} [libro]
+ * @returns {string[]}
+ */
+export function saludoTalDia(t, nombre, libro = false) {
+  const llego = `${libro ? 'el libro llegó' : 'llegaste'} a ${metaTxt(t.m)}`;
+  return [...(nombre ? [`${nombre}, hoy hace ${cuantoHace(t.anios)} ${llego}`] : []), `Hoy hace ${cuantoHace(t.anios)} ${llego}`, `Hoy hace ${cuantoHace(t.anios)}: ${metaTxt(t.m)}`];
+}
+/** La línea del Diario un día como hoy (el Diario habla del libro para toda la familia): «Tal día como hoy, hace un año, el libro llegó al campamento 1M.» */
+export const textoTalDia = (t) => `Tal día como hoy, hace ${cuantoHace(t.anios)}, el libro llegó ${t.rango === 'campamento' ? `al campamento ${nombreHito(t.m)}` : `a ${metaTxt(t.m)}`}.`;
+
+/** La película dura 15 segundos de la primera compra a hoy (con efectos «ninguno» no hay reproducción: solo el deslizador). */
+export const PELICULA_MS = 15000;
+const diasDesde = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 864e5);
+/**
+ * La película del ascenso (idea 29): el saldo día por día, de la primera compra a hoy, para repetir el camino sobre la montaña de hoy.
+ * `items` son los movimientos de `resumen` (en orden y con `satsAcum`); `camino`, `R.camino` (cada etapa con la fecha en que el saldo
+ * llegó). `pasos` lleva, por cada día con movimientos, el saldo al cerrar ese día y las compras que llevaba (`d` = días desde la primera);
+ * `etapas`, cada etapa con su día. Sin movimientos, null. Las fechas se comparan como texto.
+ * @param {{ fecha: string, tipo?: string, satsAcum: number }[]|null|undefined} items
+ * @param {{ m: number, fecha: string|null }[]|null|undefined} camino
+ * @param {string} [hoy]
+ */
+export function peliculaAscenso(items, camino, hoy = hoyISO()) {
+  const its = (items ?? []).filter((c) => c.fecha <= hoy);
+  if (!its.length) return null;
+  const desde = its[0].fecha;
+  /** @type {{ d: number, fecha: string, sats: number, compras: number }[]} */
+  const pasos = [];
+  let n = 0;
+  for (const c of its) {
+    if (c.tipo !== 'venta') n++;
+    const d = diasDesde(desde, c.fecha), ult = pasos.at(-1);
+    if (ult && ult.d === d) { ult.sats = c.satsAcum; ult.compras = n; } else pasos.push({ d, fecha: c.fecha, sats: c.satsAcum, compras: n });
+  }
+  const etapas = (camino ?? []).flatMap((h) => (h.fecha && h.fecha <= hoy ? [{ d: diasDesde(desde, h.fecha), fecha: h.fecha, m: h.m, rango: rangoEtapa(h.m) }] : []));
+  return { desde, hoy, dias: Math.max(0, diasDesde(desde, hoy)), pasos, etapas };
+}
+/**
+ * Un día de la película: la fecha, el saldo al cerrar ese día, las compras que llevaba y lo que pasó hace poco (`evento`: la etapa a la
+ * que llegó en los últimos días de la película —la más reciente; si fueron varias el mismo día, la destacada— o la primera compra), para
+ * el rótulo de la película. `d` va de 0 (la primera compra) a `P.dias` (hoy).
+ * @param {{ desde: string, hoy: string, dias: number, pasos: { d: number, fecha: string, sats: number, compras: number }[], etapas: { d: number, fecha: string, m: number, rango: string }[] }} P
+ * @param {number} d
+ */
+export function diaPelicula(P, d) {
+  const k = Math.max(0, Math.min(P.dias, Math.round(d)));
+  let lo = 0, hi = P.pasos.length - 1, i = -1;
+  while (lo <= hi) { const m = (lo + hi) >> 1; if (P.pasos[m].d <= k) { i = m; lo = m + 1; } else hi = m - 1; }
+  const p = i >= 0 ? P.pasos[i] : null;
+  // Lo que pasó se queda unos días de la película a la vista (un 5 % del camino, una semana como poco): así se alcanza a leer.
+  const ventana = Math.max(7, Math.round(P.dias * 0.05));
+  const recientes = P.etapas.filter((e) => e.d <= k && k - e.d <= ventana);
+  const ultimo = recientes.length ? Math.max(...recientes.map((e) => e.d)) : null;
+  const m = ultimo == null ? undefined : etapaDestacada(recientes.filter((e) => e.d === ultimo).map((e) => e.m));
+  /** @type {{ tipo: 'etapa', m: number, rango: string } | { tipo: 'primera' } | null} */
+  const evento = m != null ? { tipo: 'etapa', m, rango: rangoEtapa(m) } : k <= ventana ? { tipo: 'primera' } : null;
+  return { d: k, fecha: sumarDias(P.desde, k), hoy: k >= P.dias, sats: p?.sats ?? 0, compras: p?.compras ?? 0, evento };
+}
+/** El día (de 0 a `P.dias`) de una fecha de la película, acotado al principio y a hoy. */
+export const diaDeFecha = (P, fecha) => Math.max(0, Math.min(P.dias, diasDesde(P.desde, fecha)));
+/**
+ * Lo que dice la película de un día: el rótulo de arriba («Tu saldo el 15 nov 2025» / «Saldo del libro hoy»), lo que pasó («Llegaste al
+ * campamento 1M», «Tu primera compra») y el texto completo para lectores de pantalla (el valor del deslizador). Sin tutear a quien solo mira.
+ * @param {{ fecha: string, hoy: boolean, sats: number, evento: { tipo: string, m?: number, rango?: string } | null }} x
+ * @param {boolean} [libro]
+ */
+export function textosPelicula(x, libro = false) {
+  const rotulo = `${libro ? 'Saldo del libro' : 'Tu saldo'} ${x.hoy ? 'hoy' : `el ${fechaLarga(x.fecha)}`}`;
+  const e = x.evento;
+  const evento = !e ? '' : e.tipo === 'primera' ? (libro ? 'La primera compra del libro' : 'Tu primera compra')
+    : `${libro ? 'El libro llegó' : 'Llegaste'} ${e.rango === 'campamento' ? `al campamento ${nombreHito(e.m ?? 0)}` : `a ${metaTxt(e.m ?? 0)}`}`;
+  return { rotulo, evento, lectura: `${x.hoy ? `Hoy, ${fechaLarga(x.fecha)}` : fechaLarga(x.fecha)}: ${entero(x.sats)} sats.${evento ? ` ${evento}.` : ''}` };
 }

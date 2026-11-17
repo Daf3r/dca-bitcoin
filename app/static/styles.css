@@ -4088,3 +4088,10 @@ html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite
   html[data-mueve="azacuanes"] .v-aza { animation-timing-function: steps(330), steps(52); }
   html[data-mueve="zompopos"] .v-zompopos { animation-timing-function: steps(56); }
 }
+
+/* ===================================================================================================================================
+   Campamento 23 · Tu camino, otra vez: «Tal día como hoy» (idea 41) y la película del ascenso (idea 29).
+   =================================================================================================================================== */
+/* Tal día como hoy en el Diario: encabeza «Hace un año», con la letra de las citas y una raya de la tinta del Diario. */
+.dia-bloque .dia-tal { margin: 0 0 8px; font: italic 500 1.0625rem/1.45 var(--serif); }
+.dia-tal[hidden] { display: none; }

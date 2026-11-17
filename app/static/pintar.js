@@ -9,7 +9,7 @@ import { pintarTV } from './tv.js';
 import { dual, miniLinea, pegado } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
 import { pintarOdometro } from './odometro.js';
-import { ofrecerAvisos } from './cuenta.js';
+import { ofrecerAvisos, pintarSaludo } from './cuenta.js';
 import { $, R, S, esAdmin, fijarR, quienAnota, reducido, vozLibro } from './estado.js';
 import { actualizarIndice } from './indice.js';
 import { pintarLista, pintarUltimaPiedrita } from './lista.js';
@@ -50,6 +50,7 @@ export function pintar({ montana = false, animar = false, desde = null, festejo 
   pintarCapsulas();
   if (historiaVisible()) refrescarHistoria();
   pintarNovedades();
+  pintarSaludo(undefined, { forzar: false }); // (campamento 23) un día como hoy, el saludo lo recuerda: solo mide si cambió
   pintarDelDia();
   ofrecerAvisos();
   pintarMinicab();
