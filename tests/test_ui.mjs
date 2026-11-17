@@ -2056,7 +2056,8 @@ try {
     eq(sm.txt, entero(satsMil), 'con mil compras el saldo es el real');
     ok(sm.w > 0 && sm.h > 0, 'con mil compras el saldo se ve');
     const nodos = await p.evaluate(() => document.getElementsByTagName('*').length);
-    ok(nodos < 3000, `el DOM no crece con las compras (${nodos} nodos)`);
+    // Tope 3100: el HTML fijo del diálogo «Medir este aparato» y su lista suman ~50 nodos (campamento 24); lo que importa es que no crezca con las compras.
+    ok(nodos < 3100, `el DOM no crece con las compras (${nodos} nodos)`);
     await p.waitForSelector('.g-linea', { timeout: 15000 });
     await verVista(p, 'valor');
     ok(await p.locator('#valor').isVisible(), 'con mil compras sale el gráfico de valor');
