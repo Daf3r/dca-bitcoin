@@ -2,7 +2,7 @@
 import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
-import { escalaValle, sitiosValle, sitiosLadera, canton, pinoNavidad, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla } from './arte-valle.js';
+import { escalaValle, sitiosValle, sitiosLadera, canton, pinoNavidad, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla, potrero } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 
 function azar(s) {
@@ -198,7 +198,7 @@ function lago(c, W, H, ventas = 0, kv = 1) {
   }
   // (Campamento 22) El lago de época: en la seca el agua baja (`.lago-nivel` encoge en el CSS) y deja ver su playa; en la lluviosa la
   // cubre. Tule en la orilla, una garza quieta y el cayuco del pescador.
-  return `<g class="lago" aria-hidden="true"><path class="lago-playa" d="${orilla.join('')}Z"/><g class="lago-nivel"><path class="lago-agua" d="${orilla.join('')}Z" fill="url(#m-lago)"/><g class="lago-luz">${sol}</g><g class="lago-luna">${reflejo}${estrellas}</g>${monedasDelLago(cx, cy, rx, ry, ventas)}<ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><path class="lago-borde" d="M${f1(cx - rx * 0.85)} ${f1(cy - ry * 0.45)}Q${f1(cx)} ${f1(cy - ry * 1.25)} ${f1(cx + rx * 0.85)} ${f1(cy - ry * 0.45)}"/>${vidaLago({ cx, cy, rx, ry, k: kv })}</g>${tule({ cx, cy, rx, ry, k: kv })}</g>`;
+  return `<g class="lago" aria-hidden="true"><path class="lago-playa" d="${orilla.join('')}Z"/><g class="lago-nivel"><path class="lago-agua" d="${orilla.join('')}Z" fill="url(#m-lago)"/><g class="lago-luz">${sol}</g><g class="lago-luna">${reflejo}${estrellas}</g>${monedasDelLago(cx, cy, rx, ry, ventas)}<ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><path class="lago-borde" d="M${f1(cx - rx * 0.85)} ${f1(cy - ry * 0.45)}Q${f1(cx)} ${f1(cy - ry * 1.25)} ${f1(cx + rx * 0.85)} ${f1(cy - ry * 0.45)}"/>${vidaLago({ cx, cy, rx, ry, k: kv })}</g>${tule({ cx, cy, rx, ry, k: kv })}<!--v-vacas--></g>`; // (22B) las vacas, en la orilla (se ponen con el valle)
 }
 
 /**
@@ -372,7 +372,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
   // (Campamento 22B) El mar de niebla del amanecer: una capa detrás de la loma y otra delante de su falda (todo detrás de la montaña).
   const mar = marDeNiebla({ W, H, canton: valle.canton, milpa: valle.milpa, k: valle.k, cresta: crestaMedia, techo });
-  s = s.replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${mar.atras}${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${lucesValle(valle.luces, valle.k, 1)}${milpa({ ...valle.milpa, sol: solV })}${pinoNavidad(valle.pino)}${mar.frente}</g>`);
+  s = s.replace('<!--v-vacas-->', potrero({ vacas: valle.vacas, k: valle.k })).replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${mar.atras}${piscuchas(valle.piscuchas.slice(0, piscuchasDelValle(personas)))}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${lucesValle(valle.luces, valle.k, 1)}${milpa({ ...valle.milpa, sol: solV })}${pinoNavidad(valle.pino)}${mar.frente}</g>`);
   // El mismo trazo, entero (para medir la altitud y el tramo recorrido) y por tramos de zigzag (para la tierra del camino,
   // que se estrecha con la altura: más ancho abajo, más fino arriba, como visto en perspectiva).
   let d = `M${f1(bx)} ${f1(by)}`;

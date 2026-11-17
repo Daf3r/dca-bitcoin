@@ -3869,8 +3869,8 @@ html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .v-halo { opacity: 0.
 .v-humos { display: none; }
 html[data-fogon][data-efectos="todos"] .v-humos { display: inline; }
 .v-hu { fill: color-mix(in oklab, #ebe5dc 62%, var(--c3)); opacity: 0; transform-box: fill-box; transform-origin: center; animation: v-humo 6.6s ease-out infinite; }
-.v-hu:nth-child(3n+2) { animation-delay: -2.2s; } .v-hu:nth-child(3n) { animation-delay: -4.4s; }
-.v-hu:nth-child(n+4) { animation-duration: 7.4s; }
+.v-hu-1 { animation-delay: -2.2s; } .v-hu-2 { animation-delay: -4.4s; }
+.v-hu-b { animation-duration: 7.4s; }
 @keyframes v-humo { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 18% { opacity: 0.5; } 100% { transform: translate(5px, -16px) scale(2.2); opacity: 0; } }
 @media (max-width: 899px) { .v-hu { animation-timing-function: steps(30); } }
 
@@ -4021,7 +4021,7 @@ html[data-cielo="noche"] .montana { --v-tin: 7%; }
 .cr-3 { stop-color: color-mix(in oklab, var(--monte) calc(100% - var(--v-tin)), var(--v-pasto)); }
 .vlo-0 { stop-color: color-mix(in oklab, color-mix(in oklab, color-mix(in oklab, var(--medio) 22%, var(--monte)) 92%, var(--luz-roca)) calc(100% - var(--v-tin) * 1.2), var(--v-pasto)); }
 .vlo-1 { stop-color: color-mix(in oklab, color-mix(in oklab, var(--medio) 16%, var(--monte)) calc(100% - var(--v-tin)), var(--v-pasto)); }
-.v-canton { --copa: color-mix(in oklab, color-mix(in oklab, #4f8f48 calc(var(--v-verde, 1) * 100%), #8f8a4c) calc(var(--v-luz) + 6%), var(--pino0)); }
+.v-canton { --copa: color-mix(in oklab, color-mix(in oklab, #4f8f48 calc(var(--v-verde, 1) * 100%), #8f8a4c) calc(var(--v-luz) + 6%), var(--pino0)); --corteza: color-mix(in oklab, var(--monte-sombra) 45%, #6f5a46); }
 .v-arbol { --copa: color-mix(in oklab, color-mix(in oklab, #5c9c4c calc(var(--v-verde, 1) * 100%), #9c9456) calc(var(--v-luz) + 4% + var(--v-verde, 1) * 4%), var(--pino0)); }
 
 /* 55 · El mar de niebla del amanecer (5:00 a 7:30): quieto, opaco, detrás de la montaña; se forma y se levanta con `--v-mar`. */
@@ -4031,3 +4031,24 @@ html[data-mar-niebla] .v-mar { display: inline; }
 .v-mar-cuerpo { fill: var(--v-niebla); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
 .v-mar-luz { fill: var(--v-niebla-luz); opacity: calc(var(--v-mar, 0) * 0.9); transition: opacity 4s linear; }
 .v-mar-sombra { fill: color-mix(in oklab, var(--v-niebla) 80%, var(--medio)); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
+
+/* 56 · Árboles de aquí: el maquilishuat del patio florece en febrero (toda la copa rosada) y el árbol de fuego en abril (la copa roja
+   sobre su follaje verde, que queda en la sombra); a su pie, las flores caídas. `data-flor` (cielo.js). Es paisaje: con cualquier nivel
+   de efectos. */
+.v-flores { display: none; }
+html[data-flor="maquilishuat"] .v-flores-maqui, html[data-flor="fuego"] .v-flores-fuego { display: inline; }
+html[data-flor="maquilishuat"] .v-maqui { --copa: color-mix(in oklab, #e899c3 calc(var(--v-luz) + 16%), var(--monte)); }
+html[data-flor="fuego"] .v-fuego { --copa: color-mix(in oklab, #e2502b calc(var(--v-luz) + 16%), var(--monte)); }
+html[data-flor="fuego"] .v-fuego.copa-sombra { fill: color-mix(in oklab, color-mix(in oklab, #3f7f3a calc(var(--v-luz) + 6%), var(--pino0)) 70%, var(--monte-sombra)); }
+.v-flores-maqui { fill: color-mix(in oklab, #f2b4d3 var(--v-luz), var(--monte)); }
+.v-flores-fuego { fill: color-mix(in oklab, #e6603c var(--v-luz), var(--monte)); }
+
+/* 58 · Vacas y garcitas en la orilla del lago, quietas: de pie de día; de noche echadas y sin garcitas. Criollas, cafés, con la luz en el
+   lomo; la garcita, blanca como la garza del lago. */
+.v-vaca-sombra { fill: #000; opacity: 0.24; }
+.v-vaca-l { fill: color-mix(in oklab, #c58a55 calc(var(--v-luz) + 8%), var(--monte)); }
+.v-vaca-s { fill: color-mix(in oklab, #5e3a24 var(--v-som), var(--monte-sombra)); }
+.v-vaca-echada { display: none; }
+html[data-cielo="noche"] .v-vaca-echada { display: inline; }
+html[data-cielo="noche"] :is(.v-vaca-pie, .v-garcita) { display: none; }
+.v-garcita { fill: color-mix(in oklab, #f7f4ee var(--v-blanco), var(--monte)); }

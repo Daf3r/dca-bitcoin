@@ -104,8 +104,35 @@ export function sitiosValle({ W, H, techo = 0, izq, der = [], cresta = [], bx, b
   const luces = lucesSitios({ W, H, techo, xIzq, xDer, cresta, n: meses, canton: canton.caja, milpa: [milpa.x - 2, milpa.y - 11 * k, milpa.x + milpa.w + 2, milpa.y + milpa.h + milpa.caida + 2], loma: crestaLoma(canton), k, forma });
   // Las piscuchas: en el cielo del valle, a la izquierda de la montaña, por debajo del saldo y de la cumbre.
   const piscuchas = piscuchasSitios({ W, H, techo, xIzq, n: personas, canton, k, sy: L[0][1] });
-  // La vida del lago se coloca con el lago.
-  return { forma, k, canton, milpa, pino, camino, arbol, luces, piscuchas, lago, ventanas: Math.max(0, Math.floor(personas) || 0) };
+  // La vida del lago se coloca con el lago. (Campamento 22B) Las vacas, en la orilla del lago con más sitio.
+  const vacas = vacasSitios({ W, lago, pts, k, forma, sx: der[0]?.[0] });
+  return { forma, k, canton, milpa, pino, camino, arbol, luces, piscuchas, lago, vacas, ventanas: Math.max(0, Math.floor(personas) || 0) };
+}
+
+/**
+ * Dónde pastan las vacas (idea 58): en la orilla del lago con más sitio, mirando al agua; una en el teléfono, dos en la tablet y tres en
+ * escritorio (las que quepan). Nunca a menos de 13 unidades del sendero (ni ellas ni la garcita de atrás) ni fuera de la escena; si
+ * la orilla queda cerca de una vuelta del sendero, la primera se corre un poco hacia abajo (más cerca de quien mira).
+ */
+export function vacasSitios({ W, lago, pts, k, forma, sx = W / 2 }) {
+  if (!lago) return [];
+  const n = forma === 'esc' ? 3 : forma === 'tab' ? 2 : 1, paso = 17 * k, s = forma === 'esc' ? 1.05 : 1;
+  const libre = (x, y) => x > 9 * k && x < W - 9 * k && distLinea(x, y - 4 * k, pts) > 13 * k;
+  let mejor = [];
+  const fuera = lago.cx >= sx ? 1 : -1; // primero la orilla de afuera (la que da al campo, no a la montaña)
+  for (const lado of [fuera, -fuera]) {
+    for (const baja of [0, 0.9, 1.6]) {
+      const x0 = lago.cx + lado * (lago.rx + 9 * k), out = [];
+      for (let i = 0; i < n; i++) {
+        const x = x0 + lado * i * paso, y = lago.cy + lago.ry * (0.2 + baja + 0.35 * (i % 2));
+        if (!libre(x - 8 * k, y) || !libre(x + 8 * k, y) || !libre(x + lado * 11 * k, y)) break; // (y la garcita de atrás)
+        out.push({ x, y, s, dir: -lado * (i === 1 ? -1 : 1) }); // miran al agua (la segunda, al otro lado)
+      }
+      if (out.length > mejor.length) mejor = out;
+      if (mejor.length === n) return mejor;
+    }
+  }
+  return mejor;
 }
 
 function lucesSitios({ W, H, techo, xIzq, xDer, cresta, n, canton, milpa, loma, k, forma }) {
@@ -215,13 +242,22 @@ export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900 }) {
   A.lomaS = poli([[xa - 44 * k, y + 20 * k], [xa - 10 * k, y + 5 * k], [x + 4 * k, y + 30 * k], [x - 22 * k, fondo], [-30, fondo], [-30, y + 46 * k]]);
   A.lomaL = poli([[xb, y + 1.5 * k], [xb + 34 * k, y + 13 * k], [xb + 96 * k, y + 44 * k], [xb + 96 * k, fondo], [xb + 6 * k, fondo], [x + span * 0.6, y + 26 * k]]);
   A.filo = `M${P([xa - 10 * k, y + 5 * k])}Q${P([x + span * 0.35, y - 1.5 * k])} ${P([xb, y + 1.5 * k])}`;
-  // Unos árboles de patio (mango, jocote) entre los ranchos y a los lados: copas facetadas como las de los árboles de honor.
-  const arboles = n > 2 ? [[x + 23 * k, y - 4.6 * k, 6], [xb + 3 * k, y + 1.5 * k, 6.6]] : [[x + 24 * k, y - 4.6 * k, 5.6], [xb + 2 * k, y + 1.5 * k, 5.4]];
-  let copas = { base: '', luz: '', media: '', sombra: '', filo: '' };
-  for (const [ax, ay, r] of arboles) {
-    const rx = r * k, ry = r * k * 0.86, cy = ay - r * k * 1.25;
-    A.tronco += poli([[ax - 0.7 * k, ay], [ax + 0.7 * k, ay], [ax + 0.5 * k, cy + ry * 0.4], [ax - 0.5 * k, cy + ry * 0.4]]);
-    copas = facetas(ax, cy, rx, ry, [1, 0.92, 1.05, 0.96, 1.02, 0.9, 1.04], sol, 0.2, copas, 0.62);
+  // Dos árboles de aquí (campamento 22B, idea 56), con copas facetadas como las de los árboles de honor: entre los ranchos, un
+  // maquilishuat (copa redonda; en febrero, toda rosada) y al final del patio un árbol de fuego (copa de sombrilla, ancha y plana; en
+  // abril, roja). Cada uno con sus propios trazos (florecen en meses distintos) y, a su pie, las flores caídas (solo cuando florece).
+  const arboles = n > 2 ? [[x + 23 * k, y - 4.6 * k, 6.4, 'maqui'], [xb + 4 * k, y + 1.5 * k, 6.6, 'fuego']] : [[x + 24 * k, y - 4.6 * k, 6, 'maqui'], [xb + 3 * k, y + 1.5 * k, 5.6, 'fuego']];
+  const copas = {}, flores = {};
+  for (const [ax, ay, r, sp] of arboles) {
+    // El árbol de fuego: tronco corto que se abre bajo una copa ancha y baja, más ancha que alta pero con cuerpo (una tabla fina en un
+    // palo se leía como una sombrilla).
+    const fuego = sp === 'fuego', rx = r * k * (fuego ? 1.3 : 1), ry = r * k * (fuego ? 0.66 : 0.86), cy = ay - r * k * (fuego ? 1.02 : 1.25);
+    const tw = (fuego ? 0.95 : 0.7) * k;
+    A.tronco += poli([[ax - tw, ay], [ax + tw, ay], [ax + tw * 0.7, cy + ry * 0.4], [ax - tw * 0.7, cy + ry * 0.4]]);
+    if (fuego) A.tronco += poli([[ax - tw * 0.5, cy + ry * 0.9], [ax - rx * 0.42, cy + ry * 0.2], [ax - rx * 0.36, cy + ry * 0.05], [ax, cy + ry * 0.62], [ax + rx * 0.4, cy + ry * 0.08], [ax + rx * 0.46, cy + ry * 0.24], [ax + tw * 0.5, cy + ry * 0.9]]); // las ramas que se abren
+    copas[sp] = facetas(ax, cy, rx, ry, fuego ? [1, 0.9, 1.06, 0.95, 1.03, 0.92, 1.05, 0.97] : [1, 0.92, 1.05, 0.96, 1.02, 0.9, 1.04], sol, fuego ? 0.1 : 0.2, undefined, fuego ? 0.5 : 0.62);
+    // Las flores caídas: una alfombra baja bajo la copa, corrida hacia el lado de la sombra.
+    const fx = ax - sol * rx * 0.12, fr = rx * 0.95;
+    flores[sp] = `M${f1(fx - fr)} ${f1(ay + 0.5 * k)}Q${f1(fx)} ${f1(ay - 1.6 * k)} ${f1(fx + fr)} ${f1(ay + 0.5 * k)}Q${f1(fx)} ${f1(ay + 1.6 * k)} ${f1(fx - fr)} ${f1(ay + 0.5 * k)}Z`;
   }
   // Cada rancho se asienta en su rellano: el plano de tierra apisonada y su canto en sombra (como los rellanos de los campamentos).
   RANCHOS.slice(0, n).forEach(([dx, dy, s]) => {
@@ -273,15 +309,53 @@ export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900 }) {
     if (vent > 0) { A.luz += poli(q); A.halo += `M${P(c)}h0.01`; vent--; } else A.ventana += poli(q);
   });
   const sw = 7.5 * k;
-  const humo = humos.map(([hx, hy]) => [0, 1, 2].map((j) => `<circle class="v-hu" cx="${f1(hx)}" cy="${f1(hy)}" r="${f1((1.6 + j * 0.5) * k)}"/>`).join('')).join('');
+  // El humo: tres bocanadas por fogón, a destiempo (`v-hu-0…2`); el segundo fogón, más lento (`v-hu-b`). Sin grupo: cada una lleva su clase.
+  const humo = humos.map(([hx, hy], i) => [0, 1, 2].map((j) => `<circle class="efecto-ambiente v-humos v-hu v-hu-${j}${i ? ' v-hu-b' : ''}" cx="${f1(hx)}" cy="${f1(hy)}" r="${f1((1.6 + j * 0.5) * k)}"/>`).join('')).join('');
   return `<g class="v-canton" aria-hidden="true"><path class="v-loma" d="${lomaBase}" fill="url(#m-v-loma)"/><path class="v-loma-s" d="${A.lomaS}"/><path class="v-loma-l" d="${A.lomaL}"/><path class="v-loma-filo" d="${A.filo}" stroke-width="${f1(0.9 * k)}"/>`
     + `<path class="v-canto" d="${A.canto}"/><path class="v-rellano" d="${A.rellano}"/><path class="v-sombra" d="${A.sombra}"/>`
-    + `<path class="v-ar-tronco" d="${A.tronco}"/><path class="copa" d="${copas.base}"/><path class="copa-media" d="${copas.media}"/><path class="copa-luz" d="${copas.luz}"/><path class="copa-sombra" d="${copas.sombra}"/>`
+    + Object.keys(flores).map((sp) => `<path class="v-flores v-flores-${sp}" d="${flores[sp]}"/>`).join('')
+    + `<path class="v-ar-tronco" d="${A.tronco}"/>${Object.entries(copas).map(([sp, c]) => `<path class="copa v-${sp}" d="${c.base}"/><path class="copa-media v-${sp}" d="${c.media}"/><path class="copa-luz v-${sp}" d="${c.luz}"/><path class="copa-sombra v-${sp}" d="${c.sombra}"/>`).join('')}`
     + `<path class="v-pared-s" d="${A.paredS}"/><path class="v-pared-l" d="${A.paredL}"/><path class="v-alero" d="${A.alero}"/>`
     + `<path class="v-puerta" d="${A.puerta}"/><path class="v-ventana" d="${A.ventana}"/><path class="v-luz" d="${A.luz}"/><path class="v-halo" d="${A.halo}" stroke-width="${f1(sw)}"/>`
     + `<path class="v-techo-s" d="${A.techoS}"/><path class="v-techo-l" d="${A.techoL}"/>`
-    + `<g class="v-navidad"><path class="v-nicho" d="${A.nicho}"/><path class="v-figuras" d="${A.figuras}"/>${A.nav.map((d, j) => `<path class="v-foco v-foco-${j}" d="${d}" stroke-width="${f1(1.25 * k)}"/>`).join('')}</g>`
-    + `<g class="efecto-ambiente v-humos">${humo}</g></g>`;
+    + `<path class="v-navidad v-nicho" d="${A.nicho}"/><path class="v-navidad v-figuras" d="${A.figuras}"/>${A.nav.map((d, j) => `<path class="v-navidad v-foco v-foco-${j}" d="${d}" stroke-width="${f1(1.25 * k)}"/>`).join('')}`
+    + `${humo}</g>`;
+}
+
+// ------------------------------------------------------------------------------------------------ vacas y garzas (campamento 22B, idea 58)
+// Una vaca criolla de perfil (mirando a la derecha), en unidades: el suelo en y = 0 y el lomo arriba, con su giba (como las cebú de aquí)
+// y la papada. De pie: el lomo y la cabeza al astro (luz) y el resto en sombra (panza, patas, cola). Echada: un bulto bajo, la cabeza alta.
+const VACA_PIE = [[-5.5, -4.6], [-5.6, -6.3], [-4.6, -6.9], [-1, -6.8], [1, -7.1], [1.9, -8.1], [3, -7.8], [3.6, -7], [4.2, -7.6], [4.9, -7.5], [5.4, -6.9], [6.9, -5.2], [6.7, -4.4], [5.8, -4.3], [4.6, -4.6], [3.8, -3.7], [2.9, -3.1], [-0.6, -2.8], [-3.6, -3], [-4.9, -3.4]];
+const VACA_PIE_LUZ = [[-5.6, -6.3], [-4.6, -6.9], [-1, -6.8], [1, -7.1], [1.9, -8.1], [3, -7.8], [3.6, -7], [4.2, -7.6], [4.9, -7.5], [5.4, -6.9], [6.3, -5.9], [4.9, -6.2], [3.4, -5.9], [1.6, -5.5], [-1.6, -5.2], [-4.4, -5.3], [-5.6, -5.6]];
+const PATAS = [[-4.3, -3.6], [-3.1, -3.4], [1.9, -3.4], [2.9, -3.3]];
+const VACA_ECHADA = [[-5.4, 0], [-5.6, -1.6], [-4.6, -3.7], [-1.2, -4.4], [1.2, -4.5], [2.1, -5.5], [3.1, -5.3], [3.7, -4.7], [4.4, -6.1], [5.2, -5.5], [6.4, -4.2], [5.6, -3.6], [4.6, -3.4], [3.8, -2.4], [4.9, -0.8], [5, 0]];
+const VACA_ECHADA_LUZ = [[-5.6, -1.6], [-4.6, -3.7], [-1.2, -4.4], [1.2, -4.5], [2.1, -5.5], [3.1, -5.3], [3.7, -4.7], [4.4, -6.1], [5.2, -5.5], [5.8, -4.9], [4.4, -4.6], [2.4, -3.6], [-1.6, -3.3], [-5.3, -2.4]];
+const GARCITA = [[-1.4, -2.5], [0.4, -3.1], [1.2, -3.6], [1.3, -4.6], [2.4, -4.5], [1.7, -4.1], [1.4, -3], [0.3, -2.1], [-1.2, -2]];
+/**
+ * Las vacas, quietas, con sus garcitas (garzas bueyeras) blancas: una en el lomo de la primera y otra a sus patas, del lado de atrás. De
+ * día están de pie; de noche, echadas y sin garcitas (duermen en los árboles). Seis trazos para todas: la sombra de contacto, la luz y la
+ * sombra de pie, la luz y la sombra echadas, y las garcitas. `vacas`: [{ x, y, s, dir }] (dir = hacia dónde miran).
+ */
+export function potrero({ vacas = [], k = 1 }) {
+  if (!vacas.length) return '';
+  const tr = (pts, { x, y, s, dir }, dx = 0, dy = 0) => poli(pts.map(([px, py]) => [x + dir * (px + dx) * s * k, y + (py + dy) * s * k]));
+  let sombra = '', pieL = '', pieS = '', echL = '', echS = '', garcitas = '';
+  vacas.forEach((v, i) => {
+    const { x, y, s } = v, a = 6.6 * s * k;
+    sombra += `M${f1(x - a)} ${f1(y + 0.2 * k)}a${f1(a)} ${f1(1.2 * s * k)} 0 1 0 ${f1(2 * a)} 0a${f1(a)} ${f1(1.2 * s * k)} 0 1 0 ${f1(-2 * a)} 0Z`;
+    pieS += tr(VACA_PIE, v);
+    for (const [px, py] of PATAS) pieS += tr([[px - 0.4, py], [px + 0.4, py], [px + 0.32, 0], [px - 0.32, 0]], v);
+    pieS += tr([[-5.2, -6], [-4.8, -5.9], [-5.5, -2.5], [-5.9, -2.6]], v); // la cola
+    pieL += tr(VACA_PIE_LUZ, v);
+    echS += tr(VACA_ECHADA, v);
+    echL += tr(VACA_ECHADA_LUZ, v);
+    if (i === 0) {
+      garcitas += tr(GARCITA, v, -1.4, -4.8) + tr(GARCITA, v, -9.6, 0);
+      pieS += tr([[-9.72, -2.1], [-9.42, -2.1], [-9.42, 0], [-9.72, 0]], v); // sus patas
+    } else if (i === 2) garcitas += tr(GARCITA, v, 9, 0);
+  });
+  return `<path class="v-vaca-sombra" d="${sombra}"/><path class="v-vaca v-vaca-pie v-vaca-s" d="${pieS}"/><path class="v-vaca v-vaca-pie v-vaca-l" d="${pieL}"/>`
+    + `<path class="v-vaca v-vaca-echada v-vaca-s" d="${echS}"/><path class="v-vaca v-vaca-echada v-vaca-l" d="${echL}"/><path class="v-garcita" d="${garcitas}"/>`;
 }
 
 /** El pino de Navidad del cantón: dos pisos en sombra y luz, foquitos de tres colores en guirnalda (parpadean suave solo con «todos»). Sin estrella. */
