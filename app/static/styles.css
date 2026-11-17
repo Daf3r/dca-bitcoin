@@ -199,6 +199,8 @@ html[data-efectos="todos"][data-cielo="noche"] .fugaz { animation: fugaz 34s lin
 @media (min-width: 900px) {
   html[data-efectos="todos"]:not([data-ligero]) .lejos { filter: url(#m-bruma); }
 }
+/* (Para medir en el aparato: /medir?sin=bruma, ver efectos.js) el desenfoque también en el teléfono, como antes. */
+html[data-sin~="bruma"][data-efectos="todos"]:not([data-ligero]) .lejos { filter: url(#m-bruma); }
 /* Nubes y niebla: el color sale del cielo de la hora (--nube). */
 .nube path { fill: url(#m-nube); }
 .niebla { opacity: 0.85; }
@@ -226,6 +228,7 @@ html[data-efectos="todos"][data-mueve="torogoz"] .ave { animation: ave 52s linea
 }
 .escena-velo { display: none; position: absolute; inset: 0; z-index: 0; background: var(--fondo); opacity: 0; pointer-events: none; }
 html[data-efectos="todos"] .escena-velo { display: block; will-change: opacity; } /* (rendimiento iPhone) su opacidad cambia en cada fotograma del desplazamiento: como capa propia de la GPU no obliga a repintar la escena que tapa */
+html[data-sin~="velo"] .escena-velo { will-change: auto; } /* (para medir en el aparato: /medir?sin=velo, ver efectos.js) */
 /* La escena despierta al abrir (entrada.js, solo con todos los efectos): `translate` es independiente de `transform`, así que no
    pisa el parallax. */
 @keyframes asienta { from { translate: 0 18px; opacity: 0.4; } to { translate: none; opacity: 1; } }

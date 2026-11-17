@@ -457,7 +457,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
   s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
   host.innerHTML = s + '</g></svg>';
-  enCapas(host, W, H); // (rendimiento iPhone) el cielo y las dos sierras del parallax, cada una en su <svg>: ver `enCapas`
+  if (!document.documentElement.dataset.sin?.includes('capas')) enCapas(host, W, H); // (rendimiento iPhone) el cielo y las dos sierras del parallax, cada una en su <svg>: ver `enCapas` (`/medir?sin=capas`: como antes, para comparar)
   colocarReloj(host);
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
 

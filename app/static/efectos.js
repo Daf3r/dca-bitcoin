@@ -12,6 +12,19 @@
   const CLAVE = 'libro.efectos';
   const NIVELES = ['todos', 'esenciales', 'ninguno'];
   const raiz = document.documentElement;
+  // (Rendimiento iPhone) Para medir en el aparato técnica por técnica: `/medir?sin=capas,velo,pausa,bruma` apaga esas técnicas
+  // (`html[data-sin]`): «capas», la escena en capas (montana.js); «velo», el velo como capa propia (CSS); «pausa», el ambiente quieto
+  // al deslizar (abajo); «bruma», devuelve el desenfoque de la sierra lejana en el teléfono (CSS). Solo en /medir y solo en esta
+  // pestaña (lo guarda sessionStorage: «Medir otra vez» lo conserva; `/medir?sin=` lo quita). «Medir este aparato» lo dice en el
+  // texto del aparato. La app normal nunca lo lee.
+  try {
+    if (location.pathname === '/medir') {
+      const q = new URLSearchParams(location.search);
+      if (q.has('sin')) sessionStorage.setItem('libro.sin', q.get('sin') || '');
+      const sin = (sessionStorage.getItem('libro.sin') || '').split(',').map((x) => x.trim()).filter((x) => ['capas', 'velo', 'pausa', 'bruma'].includes(x));
+      if (sin.length) raiz.dataset.sin = sin.join(' ');
+    }
+  } catch { /* sin almacenamiento: se mide con todo */ }
   // (Campamento 17) La app sale con `<html data-pestanas>` ya puesto (es lo normal: por pestañas) para que la escena tenga su alto
   // definitivo desde el primer pintado; quien eligió «Todo junto» lo quita aquí, antes de pintar (pestanas.js lo mantiene después).
   // `data-boton`: en este dispositivo flota el botón «Anotar» (la última cuenta que entró aquí era la de quien anota; lo guarda
@@ -91,6 +104,7 @@
     const soltar = () => { delete escena.dataset.desliza; };
     addEventListener('scroll', () => {
       if (raiz.dataset.escenaFuera && !escena.dataset.desliza) return; // fuera de la vista ya está en pausa
+      if (raiz.dataset.sin?.includes('pausa')) return; // (para medir: /medir?sin=pausa)
       if (!escena.dataset.desliza) escena.dataset.desliza = '1';
       clearTimeout(quieta);
       quieta = setTimeout(soltar, 200);
