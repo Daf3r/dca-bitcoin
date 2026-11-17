@@ -1215,7 +1215,7 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   eq([ver(30, 30, 30).estado, ver(30, 30, 30).limitada, ver(58, 58, 60).limitada], ['revisar', true, false], 'veredicto: una pantalla limitada a 30 en reposo no dice «lento» (no se puede juzgar)');
   eq([ver(120, 118, 120).estado, ver(56, 56, 120).estado], ['fluido', 'fluido'], 'veredicto: en fotogramas por segundo de verdad (a 120 Hz, 56 sigue siendo fluido para el ojo)');
   eq([L.PALABRA_FPS.fluido, L.PALABRA_FPS.revisar, L.PALABRA_FPS.lento, L.ESTADO_FPS.lento], ['Fluido', 'Revisar', 'Lento', 'mal'], 'palabras y estados del veredicto');
-  ok(/desenfoque de la sierra del fondo/.test(L.REGLA_LENTO) && !/compr/i.test(L.REGLA_LENTO), 'la regla de un «Lento» dice qué se revisaría y no recomienda comprar nada');
+  ok(/\/medir\?sin=pausa/.test(L.REGLA_LENTO) && !/compr/i.test(L.REGLA_LENTO), 'la regla de un «Lento» dice qué se revisaría y no recomienda comprar nada');
 }
 // ---------------------------------------------------------------- Campamento 22 · el valle vivo
 {

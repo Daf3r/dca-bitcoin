@@ -5274,7 +5274,7 @@ try {
       eq(filas.slice(0, 5).map((f) => f.v), ['fluido', 'fluido', 'fluido', 'revisar', 'revisar'], '24: de la más nueva a la más vieja');
       const todas = await a.p.$$eval('#sis-med .sis-fila, #sis-med-resto .sis-fila', (fs) => fs.map((f) => ({ v: f.dataset.veredicto, e: f.dataset.estado, p: f.querySelector('.sis-palabra').textContent.trim(), i: f.querySelector('.sis-ico').textContent, d: f.querySelector('small').textContent })));
       const lento = todas.find((f) => f.v === 'lento'), limitada = todas.find((f) => /ahorro de batería/.test(f.d)), revisar = todas.find((f) => f.v === 'revisar');
-      ok(lento && lento.e === 'mal' && lento.p === '· Lento' && lento.i === '✘' && /desenfoque de la sierra del fondo/.test(lento.d), '24: «Lento» con su símbolo, su palabra y qué se revisaría');
+      ok(lento && lento.e === 'mal' && lento.p === '· Lento' && lento.i === '✘' && /\/medir\?sin=pausa/.test(lento.d), '24: «Lento» con su símbolo, su palabra y qué se revisaría');
       ok(limitada && limitada.v === 'revisar' && limitada.p === '· Revisar', '24: una pantalla limitada a 30 en reposo dice «Revisar» y por qué, no «Lento»');
       ok(revisar && revisar.e === 'aviso' && revisar.i === '!', '24: «Revisar» con su símbolo');
       ok(await a.p.locator('#sis-med-mas').isVisible() && /^2 medidas anteriores$/.test((await a.p.textContent('#sis-med-mas-t')).trim()), '24: las anteriores van plegadas, con su cuenta');

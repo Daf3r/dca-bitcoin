@@ -2013,8 +2013,11 @@ export function veredictoFps({ fps, fps_escena = null, hz = null }) {
 /** Cómo se dice cada veredicto (con su símbolo, para no depender del color) y cómo lo pinta «Estado del sistema». */
 export const PALABRA_FPS = { fluido: 'Fluido', revisar: 'Revisar', lento: 'Lento' };
 export const ESTADO_FPS = { fluido: 'ok', revisar: 'aviso', lento: 'mal' };
-/** Lo que se revisaría con un «Lento» (la regla decidida): una línea, sin tecnicismos. */
-export const REGLA_LENTO = 'Si pasa en el iPhone, lo primero que se quitaría en el teléfono es el desenfoque de la sierra del fondo.';
+/**
+ * Lo que se haría con un «Lento»: una línea. (Antes decía que se quitaría el desenfoque de la sierra del fondo: ya no está en el
+ * teléfono, y la escena va en capas; ahora apunta a los interruptores de efectos.js, que dicen qué parte pesa en ese aparato.)
+ */
+export const REGLA_LENTO = 'Si pasa en el iPhone, mide también en Safari /medir?sin=pausa, /medir?sin=velo y /medir?sin=capas: cada una apaga una mejora de la escena y así se ve qué parte pesa.';
 
 // ---------------------------------------------------------------- Campamento 22 · el valle vivo
 // Cuentas puras del valle. Hablan del tiempo que lleva el libro y de cuánta gente lo comparte; nada depende de si se compró hoy.
