@@ -122,7 +122,11 @@ svg.capa { position: absolute; inset: 0; z-index: -1; display: block; width: 100
    final y nunca vuelve a rasterizarse (si se pintara a 1 y luego se agrandara un 5 %, se vería borrosa). Solo en `#montana` (la escena
    de la app y de la entrada, que son las que tienen parallax): otra escena sin parallax (la película) ve sus capas a escala 1, como antes. */
 html[data-efectos="todos"] #montana > svg.capa { will-change: transform; transform: scale(1.05); }
-.montana svg, svg.capa { pointer-events: none; }
+/* El frente (montana.js: `enCapas`): lo que cambia con el avance (el camino recorrido, «Tú», los faroles, las luminarias, la celebración),
+   encima del principal y en su propia capa siempre que haya animación: al subir o en la película solo se repinta él, no la montaña. */
+svg.frente { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+html:not([data-efectos="ninguno"]) svg.frente { will-change: transform; }
+.montana svg, svg.capa, svg.frente { pointer-events: none; }
 :is(.montana, svg.capa) .luna { pointer-events: visiblePainted; }
 /* Grano estático (un PNG de 96 px en mosaico, mezclado al 5 %): disimula las bandas de los degradados largos en pantallas
    oscuras y da textura de papel. No se anima; fuera en modo ligero. */
@@ -972,7 +976,7 @@ html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, ht
    «Tú», la celebración en #m-fx, la bandera que se iza, el pino que se planta, la moneda) no está en la lista y nunca se pausa.
    Un adorno nuevo con una animación infinita se pausa solo si lleva `efecto-ambiente` (o va dentro de uno); si no, se añade aquí. */
 .escena[data-desliza] :is(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
-  .eco-fantasma, .yo-halo, .llama, .llama-i, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
+  .eco-fantasma, .yo-halo, .yo-nav, .llama, .llama-i, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
   .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
   .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }
 

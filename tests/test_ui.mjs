@@ -886,6 +886,7 @@ try {
           primero: `${h.firstElementChild.tagName.toLowerCase()}|${h.firstElementChild.getAttribute('role')}`,
           capas: [...h.querySelectorAll(':scope > svg.capa')].map((s) => `${[...s.classList].find((c) => c.startsWith('par-'))}|${s.getAttribute('aria-hidden')}|${cs(s).zIndex}|${cs(s).willChange}|${cs(s).transform}`),
           grupos: h.querySelector('svg').querySelectorAll('.par').length,
+          frente: (() => { const f = h.querySelector(':scope > svg.frente'); return f ? `${f.previousElementSibling === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
           alba: document.getElementById('m-alba').ownerSVGElement.classList.contains('par-cielo'),
           aislada: cs(h).isolation, velo: cs(document.querySelector('.escena-velo')).willChange,
           toques: [cs(h.querySelector('svg')).pointerEvents, cs(h.querySelector('svg.capa')).pointerEvents],
@@ -895,6 +896,7 @@ try {
       const m = 'matrix(1.05, 0, 0, 1.05, 0, 0)';
       eq(e.capas, [`par-cielo|true|-1|transform|${m}`, `par-lejos|true|-1|transform|${m}`, `par-medio|true|-1|transform|${m}`], 'capas: cielo, sierra lejana y media en su propio <svg>, debajo, ocultas a los lectores y compuestas aparte (con su escala desde el principio)');
       eq(e.grupos, 0, 'capas: ningún grupo del parallax queda dentro del <svg> principal (moverlo lo repintaría entero en Safari)');
+      eq(e.frente, 'true|transform|true|false', 'capas: lo que cambia con el avance («Tú», el camino recorrido, los faroles, la celebración) va en el frente, sobre el principal y aparte');
       ok(e.alba, 'capas: el velo de las celebraciones va en la capa del cielo (tiñe solo el cielo)');
       eq([e.aislada, e.velo], ['isolate', 'opacity'], 'capas: la escena aísla su pila y el velo del cielo es una capa propia');
       eq(e.toques, ['none', 'none'], 'capas: los <svg> de la escena no reciben toques (la luna sí: bloque del campamento 12)');

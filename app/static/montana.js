@@ -227,7 +227,8 @@ function lago(c, W, H, ventas = 0, kv = 1) {
  * - `#m-alba` (el velo de las celebraciones) estaba entre el cielo y las sierras: va al final de la capa del cielo (tiñe solo el cielo).
  * - Los ids no cambian y siguen siendo únicos: las capas usan los degradados (`url(#m-…)`) definidos en el `<svg>` principal.
  * - Los `<svg>` no reciben toques (`pointer-events: none`); la luna sí (sus tres toques: la moneda), y el clic sube hasta `host`.
- * La forma, los `rnd()` y el orden de pintado no cambian: se ve igual.
+ * - El frente (`<svg class="frente">`, justo después del principal): de `#m-luzhecha` al final, lo que cambia con el avance (ver abajo).
+ * La forma, los `rnd()` y el orden de pintado no cambian: se ve igual. Orden en `host`: principal, frente, cielo, lejana, media.
  */
 function enCapas(host, W, H) {
   const svg = host.querySelector('svg');
@@ -241,6 +242,20 @@ function enCapas(host, W, H) {
   });
   const alba = svg.querySelector('#m-alba');
   if (alba && capas[0]) capas[0].append(alba);
+  // El frente (`<svg class="frente">`, encima del principal): de `#m-luzhecha` al final del dibujo va lo que cambia con el avance —la luz y
+  // el trazo del camino recorrido, las luminarias de Navidad, las marcas de etapa, los campamentos con sus faroles, «Tú» y su rótulo, la
+  // celebración (`#m-fx`), el suelo del pie y lo que va delante—. Al subir (una compra nueva) o en la película del ascenso eso cambia en
+  // cada fotograma: separado, Safari repinta solo el frente (pocas piezas) y no la montaña, el valle y el pueblo, que no se mueven.
+  // El orden de pintado es el mismo de siempre: el frente va justo después del principal y por encima.
+  const desde = svg.querySelector('#m-luzhecha');
+  if (desde) {
+    const frente = document.createElementNS(NS, 'svg');
+    for (const [k, v] of [['viewBox', `0 0 ${W} ${H}`], ['width', W], ['height', H], ['aria-hidden', 'true'], ['focusable', 'false'], ['class', 'frente']]) frente.setAttribute(k, v);
+    const mover = [];
+    for (let n = desde; n; n = n.nextSibling) mover.push(n);
+    frente.append(...mover);
+    svg.after(frente);
+  }
   host.append(...capas);
 }
 
