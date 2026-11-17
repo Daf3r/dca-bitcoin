@@ -262,7 +262,7 @@ export function sitiosLadera({ W, H = 1e4, sx, sy, izq = [], der, nv, pts = [], 
  * loma tiene su cara al astro y su cara en sombra; el patio de tierra asienta las casas. El humo del fogón es ambiente.
  * En Navidad: una guirnalda de foquitos en los aleros y el nacimiento en el nicho del rancho del medio (no cuenta como ventana).
  */
-export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900 }) {
+export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900, soloLoma = false }) {
   const A = { lomaL: '', lomaS: '', filo: '', rellano: '', canto: '', sombra: '', paredL: '', paredS: '', techoL: '', techoS: '', alero: '', puerta: '', ventana: '', luz: '', halo: '', nav: ['', '', ''], nicho: '', figuras: '', tronco: '' };
   const humos = [];
   // La loma: el lomo del valle donde vive el cantón. Sube desde la orilla de la escena, hace un rellano bajo los ranchos y baja hacia la
@@ -275,6 +275,8 @@ export function canton({ x, y, k, n, sol = 1, ventanas = 0, H = 900 }) {
   A.lomaS = poli([[xa - 44 * k, y + 20 * k], [xa - 10 * k, y + 5 * k], [x + 4 * k, y + 30 * k], [x - 22 * k, fondo], [-30, fondo], [-30, y + 46 * k]]);
   A.lomaL = poli([[xb, y + 1.5 * k], [xb + 34 * k, y + 13 * k], [xb + 96 * k, y + 44 * k], [xb + 96 * k, fondo], [xb + 6 * k, fondo], [x + span * 0.6, y + 26 * k]]);
   A.filo = `M${P([xa - 10 * k, y + 5 * k])}Q${P([x + span * 0.35, y - 1.5 * k])} ${P([xb, y + 1.5 * k])}`;
+  // (22C) El pueblo bajó al primer plano: aquí queda la loma del fondo (con sus luces lejanas y su milpa), sin casas.
+  if (soloLoma) return `<g class="v-loma-lejos" aria-hidden="true"><path class="v-loma" d="${lomaBase}" fill="url(#m-v-loma)"/><path class="v-loma-s" d="${A.lomaS}"/><path class="v-loma-l" d="${A.lomaL}"/><path class="v-loma-filo" d="${A.filo}" stroke-width="${f1(0.9 * k)}"/></g>`;
   // Dos árboles de aquí (campamento 22B, idea 56), con copas facetadas como las de los árboles de honor: entre los ranchos, un
   // maquilishuat (copa redonda; en febrero, toda rosada) y al final del patio un árbol de fuego (copa de sombrilla, ancha y plana; en
   // abril, roja). Cada uno con sus propios trazos (florecen en meses distintos) y, a su pie, las flores caídas (solo cuando florece).
