@@ -7,6 +7,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // última que vio (`usuarios.cambios_visto`); una cuenta nueva no ve nada «que haya cambiado» y se marca sin avisar.
 export const CAMBIOS = [
   {
+    id: '2026-11-y', fecha: '2026-11-27',
+    items: [
+      'La tele de la sala tiene reloj, y el último movimiento, el sismógrafo y la fiesta de una compra se acomodan donde no tapan el camino, «Vamos aquí» ni los nombres de los campamentos.',
+      'De 11 de la noche a 5 de la mañana la tele duerme: queda casi a oscuras, con la hora tenue y la luna de hoy, y despierta sola. En «Tu cuenta» se puede dejar despierta.',
+      'Cada diez minutos la tele enseña un rato uno de los dibujos de «Tu historia»: el tronco, la constelación, la torre de piedras, la manta, los estratos o la partitura.',
+      'Conectar la tele es más fácil: quien lleva el libro crea un código en su teléfono (Tu cuenta → Sesiones abiertas → Conectar una tele) y en la tele se teclean sus 8 cifras.',
+    ],
+  },
+  {
     id: '2026-11-x', fecha: '2026-11-26',
     items: [
       'Las etapas van más juntas: después de 1M hay una cada 250 mil sats hasta 2.5M, luego cada medio millón hasta 5M y cada millón hasta 10M. Las de siempre (250k, 500k, 2.5M, 5M…) siguen ahí.',

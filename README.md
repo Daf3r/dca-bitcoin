@@ -56,7 +56,7 @@ dca.tudominio.com {
 }
 ```
 
-Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)* y una regla de límite de peticiones para `/api/login` (por ejemplo, 10 por minuto por IP). En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Cloudflare. La protección de la app es su login propio (cuentas por persona, abajo); Cloudflare Access ya no se usa.
+Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)* y una regla de límite de peticiones para las rutas que **empiezan por** `/api/login` (por ejemplo, 10 por minuto por IP): así cubre también `/api/login/codigo`, la entrada de la tele con un código. En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Cloudflare. La protección de la app es su login propio (cuentas por persona, abajo); Cloudflare Access ya no se usa.
 
 ## Acceso con cuentas
 La app tiene login propio: una cuenta por persona, **admin** (anota, corrige, anula, importa, ve el historial) o **lector** (ve todo, no escribe). Toda escritura queda en un historial que no se puede modificar, y borrar una compra la **anula** (sigue en el historial).
@@ -117,6 +117,16 @@ Para un mantenimiento, o si sospechas de un problema y quieres revisarlo sin que
 
 ## Enlace de solo lectura para una hoja de cálculo
 «Tu cuenta → Enlace para tu hoja de cálculo» (solo el admin) crea un enlace que Google Sheets (`=IMPORTDATA("…")`) o Excel leen **sin iniciar sesión**: da solo las compras y los traslados en CSV, nunca escribe ni ve cuentas. El enlace se muestra **una sola vez** (en la base solo queda su huella), puedes tener hasta 5 y revocar cualquiera al instante. **Es una llave:** la dirección completa viaja en la petición, así que puede quedar en los registros de Caddy o de Cloudflare; no la pegues en chats ni en documentos que otros vean. Si Cloudflare tiene reglas de bots muy estrictas, Google Sheets puede no llegar: prueba el enlace en la hoja tras crearlo.
+
+## La tele de la sala
+El **modo pantalla grande** («Tu cuenta → Modo pantalla grande», o abrir la dirección con `#tv`) deja la montaña, el saldo, el último movimiento y un reloj a pantalla completa, sin controles. Se actualiza sola cada minuto, celebra una compra nueva, de 11 de la noche a 5 de la mañana se queda casi a oscuras (en ese aparato se puede dejar despierta: «La tele duerme de noche: no») y cada diez minutos enseña un rato un dibujo de «Tu historia».
+
+Conectar una tele, sin teclear usuario ni contraseña con el control remoto:
+1. Hace falta una cuenta **de solo lectura** para la tele (la de alguien de la familia o una propia: `docker compose exec app python usuarios.py crear Sala --rol lector --generar`). Con una cuenta que anota no se puede: desde la sala se podría escribir.
+2. En tu teléfono (el admin): «Tu cuenta → Sesiones abiertas → Conectar una tele», elige la cuenta y «Crear código». Sale un código de 8 cifras **una sola vez**.
+3. En la tele, abre `https://dca.tudominio.com/login#tv` (o «Entrar con un código» en la entrada) y escribe las 8 cifras. Entra y queda en pantalla grande.
+
+El código caduca a los 5 minutos, sirve una vez, crear otro anula el anterior y 5 intentos fallidos lo anulan (se crea otro y listo). La sesión de la tele es la normal (90 días que se renuevan con el uso) y aparece en las «Sesiones abiertas» de esa cuenta como «Tele · …», desde donde se cierra. El historial anota quién creó cada código y cuándo entró la tele, nunca el código. Con `SOLO_LECTURA=1` la tele puede entrar con un código, pero no se pueden crear códigos nuevos.
 
 ## Importar y exportar
 Están en **«Tu cuenta → Tus datos: descargar e importar»** (solo el admin). *Exportar compras (CSV)* descarga todas las compras (`fecha,monto_usd,precio_btc_usd,sats,btc`). *Importar compras (CSV)* acepta ese mismo formato o uno viejo sin `sats` (usa `precio_btc_usd`). Salta filas repetidas e inválidas y dice cuáles, así que puedes importar el mismo archivo dos veces sin duplicar.
