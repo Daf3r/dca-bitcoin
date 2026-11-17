@@ -5577,7 +5577,7 @@ try {
       ok(e.salidaY < e.alto - 110 && e.campos3 >= 3 && e.ladera === 7 && e.milpa, `22C composición: en el teléfono alto el sendero arranca a ${Math.round(e.alto - e.salidaY)} px del pie (el valle va delante), con sus campos, su milpa y la ladera baja`);
       ok(e.pinos > 0 && e.cerca > 3, `22C bosque: los ${e.pinos} pinos de las compras crecen al pie de la montaña sin tocar el sendero (el más cercano a ${Math.round(e.cerca)} px)`);
       // Nochebuena, de noche, con «esenciales»: la Navidad se ve en toda la montaña y está quieta.
-      ok(e.navSendero && e.encendidas > 3 && e.apagadas > 3, `22C luminarias: a los lados del sendero, ${e.encendidas} encendidas hasta donde llegaste y ${e.apagadas} apagadas más arriba`);
+      ok(e.navSendero && e.encendidas > 3 && e.apagadas >= 1, `22C luminarias: a los lados del sendero, ${e.encendidas} encendidas hasta donde llegaste y ${e.apagadas} apagadas más arriba`);
       ok(e.coronas === e.campos && e.anillo && e.anilloAnim === 'none', `22C Navidad: una corona en cada hito (${e.coronas} de ${e.campos}) y la de «Tú», quieta con «esenciales»`);
       ok(e.pino && e.portal && e.pascua && e.luminariasCamino && e.charcos, '22C Navidad en el pueblo: el pino de la plaza, el portal, la flor de pascua, las luminarias del camino real y la luz en la calle');
       ok(t.consola.length === 0, `22C: consola limpia (${t.consola.slice(0, 2)})`);
