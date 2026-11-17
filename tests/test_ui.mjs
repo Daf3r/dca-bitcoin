@@ -2732,9 +2732,20 @@ try {
       ok(a.length === 3 && a.every((x) => x.n <= 25 && x.luz > 0 && x.sombra > 0), `árboles de honor: facetas en luz y en sombra, 25 piezas como mucho (${a.map((x) => x.n).join(', ')})`);
       eq(a.map((x) => x.petalos), [0, 0, 3], 'árboles de honor: solo el maquilishuat suelta pétalos');
       ok(await p.locator('.moneda-canto').count() === 1 && await p.locator('.moneda-brillo').count() === 1, 'luna-moneda: con canto y brillo');
-      const pos = await p.evaluate(() => { const b = document.querySelector('.luna .astro').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; });
-      for (let i = 0; i < 3; i++) { await p.mouse.click(pos.x, pos.y); await p.waitForTimeout(100); }
-      eq(await cs(p, '.luna.moneda .moneda-gira', 'animationName'), 'moneda-gira', 'luna-moneda: gira como una moneda lanzada');
+      // Los tres toques y la lectura van en el mismo instante: con el ratón y pausas de por medio la prueba dependía de que la
+      // máquina fuera rápida (el manejador cuenta toques a menos de 1.2 s entre sí y la moneda gira 1.6 s), y en el CI fallaba
+      // de vez en cuando. Que nada tape la luna se comprueba aparte, con lo que hay justo encima de su centro.
+      const luna = await p.evaluate(async () => {
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const a = document.querySelector('.luna .astro');
+        const b = a.getBoundingClientRect();
+        const sobre = !!document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)?.closest('.luna');
+        for (let i = 0; i < 3; i++) a.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        const g = document.querySelector('.luna.moneda .moneda-gira');
+        return { sobre, anim: g ? getComputedStyle(g).animationName : null };
+      });
+      ok(luna.sobre, 'luna-moneda: nada tapa el centro de la luna');
+      eq(luna.anim, 'moneda-gira', 'luna-moneda: gira como una moneda lanzada');
       eq(consola, [], `consola limpia (campamento 12): ${consola.join(' | ')}`);
       await ctx.close();
     } finally { sMil.parar(); }
