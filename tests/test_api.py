@@ -386,6 +386,77 @@ for _ruta in ("/app.js", "/styles.css"):  # los estáticos salen comprimidos si 
     check(cl.get(_ruta, headers={"Accept-Encoding": "gzip", "If-None-Match": _zz.headers["ETag"]}).status_code == 304 and "Content-Encoding" not in cl.get(_ruta).headers, f"{_ruta}: 304 con el ETag comprimido y sin gzip sale plano")
 check("gzip" in cl.get("/", headers={"Accept-Encoding": "gzip"}).headers.get("Content-Encoding", "") and "Cookie" in cl.get("/", headers={"Accept-Encoding": "gzip"}).headers["Vary"], "la página también sale comprimida y conserva Vary: Cookie")
 check(cl.get("/../server.js").status_code == 404 and cl.get("/nada.js").status_code == 404, "solo módulos existentes")
+# --- Pulido D: los comentarios se quedan en el código y no viajan (recorte.py; tests/comprobar_recorte.mjs compara el código en el CI)
+import recorte
+import glob as _glob0
+from html.parser import HTMLParser
+def _fuente(n):
+    with open(os.path.join(server.ESTATICOS, n), encoding="utf-8") as f:
+        return f.read()
+_m = cl.get("/montana.js").get_data(as_text=True)
+check(not re.search(r"^[ \t]*(//|/\*)", _m, re.M) and f"./lib.js?v={V}'" in _m and len(_m) < len(_fuente("montana.js")) * 0.9, "un módulo servido no trae líneas de comentario y sigue versionado")
+_css = cl.get("/styles.css").get_data(as_text=True)
+check("/*" not in _css and f'url("/fonts/bricolage.woff2?v={V}")' in _css and len(_css) < len(_fuente("styles.css")) * 0.9, "el CSS servido no trae comentarios y sigue versionado")
+_idx = cl.get("/").get_data(as_text=True)
+check(re.findall(r"<!--[^>]*-->", _idx) == re.findall(r"<!-- arranque:(?:inicio|fin)[^>]*-->", _fuente("index.html")) and f"/app.js?v={V}" in _idx,
+      "la página no trae comentarios, salvo los marcadores que lee scripts/generar-arranque.mjs")
+check(re.findall(r"<!--[^>]*-->", anon.get("/login").get_data(as_text=True)) == re.findall(r"<!-- arranque:(?:inicio|fin)[^>]*-->", _fuente("login.html")), "la entrada tampoco")
+# Lo servido es exactamente el recorte más el `?v=`, para cada archivo (así lo que compara comprobar_recorte.mjs es lo que sale)
+for _f in sorted(_glob0.glob(os.path.join(server.ESTATICOS, "*.js"))):
+    _n = os.path.basename(_f)
+    check(cl.get("/" + _n).get_data(as_text=True) == server._REF_JS.sub(rf"\1?v={V}\2", recorte.sin_comentarios(_fuente(_n), _n)), f"{_n}: se sirve el recorte con su versión")
+check(_css == server._REF_CSS.sub(rf"\1?v={V}\2", recorte.sin_comentarios(_fuente("styles.css"), "styles.css")), "styles.css: se sirve el recorte con su versión")
+# La página: el mismo árbol de HTML sin sus comentarios (etiquetas, atributos y texto; los espacios seguidos cuentan como uno)
+class _Arbol(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=False); self.ev = []
+    def _txt(self, t):
+        if self.ev and self.ev[-1][0] == "t":
+            self.ev[-1] = ("t", self.ev[-1][1] + t)
+        else:
+            self.ev.append(("t", t))
+    def handle_starttag(self, tag, attrs): self.ev.append(("<", tag, attrs))
+    def handle_startendtag(self, tag, attrs): self.ev.append(("<>", tag, attrs))
+    def handle_endtag(self, tag): self.ev.append((">", tag))
+    def handle_data(self, data): self._txt(data)
+    def handle_entityref(self, name): self._txt(f"&{name};")
+    def handle_charref(self, name): self._txt(f"&#{name};")
+    def handle_decl(self, decl): self.ev.append(("!", decl))
+    def handle_comment(self, data):
+        if data.strip().startswith("arranque:"):  # los únicos que se quedan
+            self.ev.append(("c", data))
+def _html(t):
+    a = _Arbol(); a.feed(t); a.close()
+    return [("t", re.sub(r"\s+", " ", e[1])) if e[0] == "t" else e for e in a.ev]
+for _pag, _cli, _arch in (("/", cl, "index.html"), ("/login", anon, "login.html"), ("/guia", cl, "guia.html")):
+    _serv = _cli.get(_pag).get_data(as_text=True).replace(f"?v={V}", "")
+    check(_html(_serv) == _html(_fuente(_arch)), f"{_arch}: el mismo árbol de HTML sin sus comentarios")
+# Cambiar el contenido cambia la versión y el ETag (con una copia de los estáticos; los de verdad no se tocan)
+_estat, _vers = server.ESTATICOS, server.VERSION
+_copia = os.path.join(tmp, "estaticos")
+shutil.copytree(_estat, _copia)
+try:
+    server.ESTATICOS = _copia
+    _et0 = cl.get("/lib.js", headers={"Accept-Encoding": "gzip"}).headers["ETag"]
+    with open(os.path.join(_copia, "lib.js"), "a", encoding="utf-8") as _fh:
+        _fh.write("\nexport const PRUEBA_RECORTE = 1;\n")
+    server.VERSION = server._version()
+    _r1 = cl.get("/lib.js", headers={"Accept-Encoding": "gzip"})
+    check(server.VERSION != _vers and _r1.headers["ETag"] != _et0 and b"PRUEBA_RECORTE" in _gz.decompress(_r1.get_data()), "otro contenido: otra versión, otro ETag y lo nuevo, también comprimido")
+    check(cl.get("/lib.js", headers={"Accept-Encoding": "gzip", "If-None-Match": _et0}).status_code == 200 and cl.get("/lib.js", headers={"Accept-Encoding": "gzip", "If-None-Match": _r1.headers["ETag"]}).status_code == 304,
+          "con el ETag de antes manda lo nuevo; con el nuevo, 304")
+    # …y cambiar una regla del recorte también (los recursos con versión van `immutable`: nadie se queda con lo recortado de antes)
+    _rec = os.path.join(tmp, "recorte_otro.py")
+    with open(recorte.__file__, encoding="utf-8") as _fh, open(_rec, "w", encoding="utf-8") as _fo:
+        _fo.write(_fh.read() + "\n# otra regla\n")
+    _orig_rec, recorte.__file__ = recorte.__file__, _rec
+    try:
+        check(server._version() != server.VERSION, "cambiar el recorte cambia la versión de los estáticos")
+    finally:
+        recorte.__file__ = _orig_rec
+finally:
+    server.ESTATICOS, server.VERSION = _estat, _vers
+check(cl.get("/lib.js", headers={"Accept-Encoding": "gzip"}).headers["ETag"] == _et0 and b"PRUEBA_RECORTE" not in cl.get("/lib.js").get_data(), "y de vuelta, lo de siempre")
 
 # --- Fase A: cuentas, sesiones, roles y auditoría
 import time as _tt

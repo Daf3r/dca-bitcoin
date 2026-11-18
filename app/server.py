@@ -29,6 +29,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
 import push
+import recorte
 import ritmo
 import salud
 
@@ -1042,7 +1043,11 @@ def exigir_sesion() -> Any:
 # ------------------------------------------------------- estáticos versionados
 # Sin build: al servir, index.html, los módulos y el CSS llevan ?v=<hash del contenido> en sus
 # referencias. Así una caché intermedia (Cloudflare) nunca mezcla HTML nuevo con JS o CSS viejos.
+# Y salen sin sus comentarios (recorte.py): en el código se quedan, porque son su documentación.
 ESTATICOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+_REF_JS = re.compile(r"""((?:from|import)\s*['"]\./[\w-]+\.js)(['"])""")
+_REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.woff2))(")""")
+_REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
 
 
 def _version() -> str:
@@ -1053,6 +1058,12 @@ def _version() -> str:
             h.update(os.path.relpath(ruta, ESTATICOS).encode())
             with open(ruta, "rb") as f:
                 h.update(f.read())
+    # Lo que se sirve depende también de cómo se recorta y se versiona: si cambia una regla, cambia la versión (los recursos con la
+    # versión vigente van `immutable`: sin esto, un navegador o Cloudflare se quedarían un año con lo servido antes).
+    with open(recorte.__file__, "rb") as f:
+        h.update(f.read())
+    for p in (_REF_JS, _REF_HTML, _REF_CSS):
+        h.update(p.pattern.encode())
     return h.hexdigest()[:12]
 
 
@@ -1064,20 +1075,26 @@ def _leer_version_git(v: str) -> str:
 
 
 VERSION_GIT = _leer_version_git(os.environ.get("VERSION_GIT", ""))
-_REF_JS = re.compile(r"""((?:from|import)\s*['"]\./[\w-]+\.js)(['"])""")
-_REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.woff2))(")""")
-_REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
 
 
+# Lo servido de cada archivo, una vez por proceso y versión: el texto limpio (sin comentarios y con `?v=`) y, si alguien lo pidió así,
+# su gzip. Antes se leía el archivo y se pasaba la sustitución en cada petición.
+_TEXTO_CACHE: dict[tuple[str, str], str] = {}
 _GZ_CACHE: dict[tuple[str, str], bytes] = {}
 
 
+def _texto_servido(nombre: str, patron: re.Pattern[str]) -> str:
+    clave = (VERSION, nombre)
+    if clave not in _TEXTO_CACHE:
+        with open(os.path.join(ESTATICOS, nombre), encoding="utf-8") as f:
+            _TEXTO_CACHE[clave] = patron.sub(rf"\1?v={VERSION}\2", recorte.sin_comentarios(f.read(), nombre))
+    return _TEXTO_CACHE[clave]
+
+
 def _servir_versionado(nombre: str, tipo: str, patron: re.Pattern[str], cache: str) -> Any:
-    ruta = os.path.join(ESTATICOS, nombre)
-    with open(ruta, encoding="utf-8") as f:
-        texto = patron.sub(rf"\1?v={VERSION}\2", f.read())
-    resp = Response(texto, mimetype=tipo)
+    resp = Response(_texto_servido(nombre, patron), mimetype=tipo)
     resp.headers["Cache-Control"] = cache
+    # La versión ya resume el contenido servido (archivos, recorte y referencias): el ETag cambia con cualquiera de ellos.
     resp.set_etag(f"{VERSION}-{nombre}")
     # Comprimido aquí mismo (los archivos de la app no cambian sin cambiar VERSION): se hace una vez por archivo y se guarda en memoria.
     # Caddy no vuelve a comprimir lo que ya trae `Content-Encoding`.

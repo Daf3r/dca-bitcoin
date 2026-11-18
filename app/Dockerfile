@@ -6,7 +6,7 @@ RUN useradd --uid 1000 --no-create-home --shell /usr/sbin/nologin app
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY server.py auth.py usuarios.py backup.py importar.py push.py ritmo.py avisos.py salud.py ./
+COPY server.py auth.py usuarios.py backup.py importar.py push.py recorte.py ritmo.py avisos.py salud.py ./
 COPY static ./static
 # El commit desplegado (README, «Actualizar»): va al final para no invalidar las capas de pip. Vacío si no se pasa.
 ARG VERSION_GIT=

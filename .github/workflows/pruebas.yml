@@ -33,7 +33,7 @@ jobs:
       - name: Revisión del código (ruff y tipos con mypy)
         run: |
           ruff check app --select E9,F,B,UP,SIM --ignore E501,SIM108,UP007
-          mypy app/server.py app/auth.py app/usuarios.py app/backup.py app/importar.py app/push.py app/ritmo.py app/avisos.py app/salud.py --ignore-missing-imports
+          mypy app/server.py app/auth.py app/usuarios.py app/backup.py app/importar.py app/push.py app/recorte.py app/ritmo.py app/avisos.py app/salud.py --ignore-missing-imports
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -71,6 +71,9 @@ jobs:
         run: npx --prefix tests biome lint
       - name: Tipos de lib.js (JSDoc comprobado con tsc; no emite nada)
         run: npx --prefix tests tsc -p tests/tsconfig.json
+      # El servidor sirve los estáticos sin comentarios (app/recorte.py, solo biblioteca estándar: basta el python3 del sistema).
+      - name: Quitar los comentarios al servir no cambia el código (árbol de TypeScript de cada .js y símbolos del CSS)
+        run: node tests/comprobar_recorte.mjs
 
   navegador:
     name: Navegador (Playwright)
@@ -152,7 +155,7 @@ jobs:
       - name: Los módulos se importan dentro de la imagen
         run: >
           docker run --rm -e DB_PATH=/tmp/ci/libro.db libro-dca:ci
-          python -c "import server, auth, usuarios, backup, importar, push, ritmo, avisos, salud; print('módulos ok')"
+          python -c "import server, auth, usuarios, backup, importar, push, recorte, ritmo, avisos, salud; print('módulos ok')"
       - name: El servicio de avisos hace una pasada sin errores
         run: docker run --rm -e DB_PATH=/tmp/ci/libro.db libro-dca:ci python avisos.py
       - name: La app arranca con gunicorn (endurecida como en producción) y responde
