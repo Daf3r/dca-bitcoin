@@ -1,7 +1,7 @@
 """Servidor Flask local para las pruebas de navegador: base temporal, exchanges simulados y sin red.
 
 Uso: python tests/servidor_prueba.py PUERTO [ESCENARIO]
-Escenarios: hoy (1 compra), bonito (saldo capicúa), cero (vendió todo), aniv (hoy es el aniversario de su primera compra), taldia (hoy hace un año llegó a 1M), eco (80 semanas), dos, tres, nueve, anio (≈1 año de compras semanales), largo, ballena,
+Escenarios: hoy (1 compra), bonito (saldo capicúa), cero (vendió todo), aniv (hoy es el aniversario de su primera compra), taldia (hoy hace un año llegó a 1M), eco (80 semanas), dos, tres, medio (532,702 sats: cima 1M), nueve, anio (≈1 año de compras semanales), largo, ballena,
 milbtc (como ballena, con una compra de 600 BTC: más de 1,000 BTC, para probar las cifras más largas),
 mil (1,000 compras en casi seis años, con extras, ventas y traslados), vacio (sin compras), sinprecio,
 sinhist (sin histórico de precios).
@@ -135,6 +135,10 @@ elif esc == "tres":
     comprar(HOY - timedelta(days=17), 30.0)
     comprar(HOY - timedelta(days=10), 25.0)
     comprar(HOY - timedelta(days=3), 28.68, 36578)
+elif esc == "medio":  # (pulido de la tele) 532,702 sats, cima 1M: el saldo con el que el dueño vio «sats» sobre «Tú» en la tele
+    for k, s in enumerate((38_000, 41_250, 36_900, 44_100, 39_800, 42_600, 37_700, 40_300, 43_900, 38_400, 41_000, 45_852, 42_900)):
+        d = HOY - timedelta(days=3 + (12 - k) * 7)
+        comprar(d, round(PRECIOS.get(d, PRECIO) * s / 1e8, 2), s)
 elif esc == "mil":
     # 1,000 compras: una cada ~2 días durante casi seis años (el volumen que tendría la app tras mucho tiempo de uso).
     r3 = random.Random(1000)
