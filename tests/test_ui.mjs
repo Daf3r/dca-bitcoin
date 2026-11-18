@@ -1382,7 +1382,6 @@ try {
     const srv = await servidor('nueve');
     try {
       const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 12 });
-      const aviso = () => p.evaluate(() => document.getElementById('aviso-txt').textContent);
       const esperaAviso = (re) => p.waitForFunction((r) => new RegExp(r).test(document.getElementById('aviso-txt').textContent), re.source, { timeout: 8000 });
       const nCompras = async () => (await datos(p, '/api/compras')).length;
       const inicial = await nCompras();
@@ -1731,7 +1730,7 @@ try {
       ok(info.desc.includes(`un pino por compra (${nCompras})`), 'bosque: la descripción de la montaña lo menciona');
       // Abrir con el ratón y cerrar con «Cerrar» (el foco vuelve a la bandera)
       await p.click('.m-bandera >> nth=-1');
-      let t = await p.evaluate(() => { const c = document.getElementById('m-tarjeta'); return { visible: !c.hidden && getComputedStyle(c).display !== 'none', rol: c.getAttribute('role'), txt: c.innerText, exp: document.querySelector('.m-bandera:last-of-type').getAttribute('aria-expanded'), dentro: (() => { const r = c.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0; })() }; });
+      const t = await p.evaluate(() => { const c = document.getElementById('m-tarjeta'); return { visible: !c.hidden && getComputedStyle(c).display !== 'none', rol: c.getAttribute('role'), txt: c.innerText, exp: document.querySelector('.m-bandera:last-of-type').getAttribute('aria-expanded'), dentro: (() => { const r = c.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0; })() }; });
       ok(t.visible && t.rol === 'group' && /Lo alcanzaste el \d+ \w+ \d{4}/.test(t.txt) && t.exp === 'true' && t.dentro, `bandera: la tarjeta dice cuándo la alcanzaste («${t.txt.replace(/\n+/g, ' · ')}»)`);
       const x = await p.evaluate(() => { const b = document.querySelector('#m-tarjeta .m-tarjeta-x'); return [b.offsetWidth, b.offsetHeight]; }); // sin transformaciones: la tarjeta entra con un ligero zoom
       ok(x[0] >= 47.5 && x[1] >= 47.5, `bandera: «Cerrar» de 48 px (${x})`);
@@ -3164,7 +3163,6 @@ try {
     try {
       const { ctx, p, consola } = await ent(navegador, sLargo, ADMIN, {}, sinAviso);
       const todos = await datos(p, '/api/compras');
-      const compras = todos.filter((c) => c.tipo !== 'venta');
       // ---- La montaña: el petroglifo (antes de abrir «Tu cuenta»)
       await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
       const nBand = await p.locator('.m-bandera').count();
@@ -3632,29 +3630,29 @@ try {
 
   // ---------------------------------------------------------------- campamento 16: lago, reloj de sol, «Tú» fantasma y perfil de altitud
   await bloque(async () => {
-    const con = (dia, hora) => [([d, h]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, [dia, hora]];
+    const con = (dia) => [(d) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, dia];
     const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
     const sMil = await servidor('mil');
     try {
       // ---- Reloj de sol: la sombra cae a un lado de mañana y al otro de tarde; de noche no hay
       const sombra = (p) => p.evaluate(() => { const g = document.querySelector('.reloj'); const d = g.querySelector('.reloj-sombra').getAttribute('d'); const m = d.match(/M([\d.]+) .*?L([\d.-]+) /); return { d, sx: Number(g.dataset.sx), punta: m ? Number(m[2]) : null, visible: getComputedStyle(g).display !== 'none' }; });
-      const m = await entrar(navegador, sMil, ADMIN, { hora: 9 }, con('2026-08-20', 9)); await cerrar(m.p); await m.p.waitForTimeout(800);
+      const m = await entrar(navegador, sMil, ADMIN, { hora: 9 }, con('2026-08-20')); await cerrar(m.p); await m.p.waitForTimeout(800);
       const sm = await sombra(m.p);
       ok(sm.visible && sm.punta !== null && sm.punta < sm.sx, '16A reloj de sol: de mañana la sombra cae hacia la izquierda');
       ok(await m.p.locator('.reloj .reloj-piedra').count() === 11, '16A reloj de sol: once piedritas, de las 7 a las 17');
       await m.ctx.close();
-      const t = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(t.p);
+      const t = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20')); await cerrar(t.p);
       const st = await sombra(t.p);
       ok(st.visible && st.punta > st.sx, '16A reloj de sol: de tarde la sombra cae hacia la derecha');
       await t.ctx.close();
-      const n22 = await entrar(navegador, sMil, ADMIN, { hora: 22 }, con('2026-08-20', 22)); await cerrar(n22.p);
+      const n22 = await entrar(navegador, sMil, ADMIN, { hora: 22 }, con('2026-08-20')); await cerrar(n22.p);
       const sn = await sombra(n22.p);
       ok(!sn.visible && sn.d === '', '16A reloj de sol: de noche no hay sombra');
       // ---- El lago guarda lo vendido: una monedita por venta (hasta 5)
       eq(await n22.p.locator('.lago-moneda').count(), 5, '16A lago: mil tiene ventas de sobra: cinco monedas');
       await n22.ctx.close();
       // ---- «Tú» fantasma en la hoja
-      const h = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(h.p);
+      const h = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20')); await cerrar(h.p);
       await h.p.keyboard.press('a'); await h.p.waitForTimeout(600);
       ok(await h.p.locator('#h-ruta').isHidden(), '16B fantasma: sin sats escritos no hay regla');
       await h.p.fill('#h-sats', '2500000'); await h.p.waitForTimeout(600);
@@ -3667,7 +3665,7 @@ try {
       eq(h.consola.filter((c) => !/503/.test(c)), [], '16 sin errores de consola');
       await h.ctx.close();
       // ---- Perfil de altitud: la vista Sats en escala logarítmica
-      const pf = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(pf.p);
+      const pf = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20')); await cerrar(pf.p);
       await verVista(pf.p, 'sats');
       ok(await pf.p.locator('#s-lienzo .pf-farol').count() >= 1, '16B perfil: hay faroles donde cruzaste un campamento');
       ok(/^Tú$/.test((await pf.p.locator('#s-lienzo .pf-tu').textContent()).trim()), '16B perfil: «Tú» al final');
