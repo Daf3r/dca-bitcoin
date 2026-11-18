@@ -1505,6 +1505,11 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   eq(L.textoVerMas(25, 25), ['Ver los 25 que quedan'], 'ver más: justo las que trae, son las últimas');
   eq(L.textoVerMas(12, 25), ['Ver los 12 que quedan'], 'ver más: menos que el paso, nunca «Ver 25 más»');
   eq(L.textoVerMas(1, 25), ['Ver el que queda'], 'ver más: la última');
+  // La ruta de la tabla de peticiones solo se parte entre tramos, nunca dentro de «/api/compras»
+  eq(L.tramosRuta('/api/compras'), ['/api/compras'], 'ruta: «/api/compras» es un solo tramo');
+  eq(L.tramosRuta('/api/compras/<int:cid>'), ['/api/compras', '/<int:cid>'], 'ruta: lo que sigue va aparte');
+  eq(L.tramosRuta('/api/token/<token>/compras.csv'), ['/api/token', '/<token>', '/compras.csv'], 'ruta: cada trozo de más, su tramo');
+  eq([L.tramosRuta('/'), L.tramosRuta('/medir'), L.tramosRuta('/api/tx/<txid>').join('')], [['/'], ['/medir'], '/api/tx/<txid>'], 'ruta: cortas, enteras; unidas, la ruta tal cual');
   // Sobre lo que de verdad filtra la lista (filtrarMovimientos): la suma solo ve lo filtrado, también con otro filtro encima
   const items = [{ id: 1, fecha: '2026-01-05', tipo: 'compra', sats: 100_000, monto: 90, etiquetas: ['bono'] }, { id: 2, fecha: '2026-02-05', tipo: 'compra', sats: 50_000, monto: 45, etiquetas: [] },
     { id: 3, fecha: '2026-03-05', tipo: 'venta', sats: 30_000, monto: 30, etiquetas: ['bono'] }, { id: 4, fecha: '2026-04-05', tipo: 'compra', sats: 70_000, monto: 60, etiquetas: ['bono', 'regalo'] }];

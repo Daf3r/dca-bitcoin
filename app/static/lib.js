@@ -2232,6 +2232,17 @@ export function textoVerMas(faltan, paso) {
   return [faltan === 1 ? 'Ver el que queda' : `Ver los ${entero(faltan)} que quedan`];
 }
 
+/**
+ * Una ruta de la tabla de peticiones («Estado del sistema») en los tramos donde puede partirse: el primero lleva sus dos primeros trozos
+ * («/api/compras», que nunca se parte) y cada trozo siguiente va aparte («/<int:cid>»). Unidos, son la ruta tal cual.
+ * @param {string} ruta
+ * @returns {string[]}
+ */
+export function tramosRuta(ruta) {
+  const trozos = ruta.match(/\/[^/]*/g) ?? [ruta];
+  return trozos.length <= 2 ? [trozos.join('')] : [trozos.slice(0, 2).join(''), ...trozos.slice(2)];
+}
+
 /** Cada cuántos días pregunta la revisión del respaldo (la regla vive en el servidor: `server.resguardo`). */
 export const RESGUARDO_DIAS = 180;
 /**

@@ -165,7 +165,7 @@ const PESOS = [
   ['iPhone: arranque, insignia del icono e i', 11], // 34 comprobaciones
   ['teléfono acostado y pantallas muy anchas', 35], // 53 comprobaciones
   ['datos y etiquetas (campamento 8, 1/4)', 24], // 23 comprobaciones
-  ['estado del sistema (campamento 8, 2/4)', 12], // 15 comprobaciones
+  ['estado del sistema (campamento 8, 2/4)', 12], // 20 comprobaciones
   ['pulido final (cliente): Gráficos sin el', 24], // 10 comprobaciones
   ['sesiones y operación (campamento 8, 3/4)', 17], // 16 comprobaciones
   ['tu eco y tus números (campamento 11)', 70], // 26 comprobaciones
@@ -2699,14 +2699,39 @@ try {
       const errores = await a.p.$$eval('#sis-err .sis-fila', (fs) => fs.map((f) => f.textContent));
       ok(errores.some((t) => t.includes('prueba de error en el navegador') && t.includes('Safari · iPhone')), `el error del navegador aparece con su agente: ${errores[0]}`);
       ok(await a.p.locator('#sis-err-limpiar').isVisible(), 'y se puede limpiar la lista');
+      // V6 (Pulido D): «Limpiar la lista» va justo bajo los errores, no abajo junto a «Volver»; con su zona de toque
+      const lim = await a.p.evaluate(() => {
+        const b = document.getElementById('sis-err-limpiar').getBoundingClientRect(), l = document.getElementById('sis-err').getBoundingClientRect();
+        const sig = document.getElementById('sis-rg-h').getBoundingClientRect();
+        return { tras: document.getElementById('sis-err').nextElementSibling?.contains(document.getElementById('sis-err-limpiar')), gap: Math.round(b.top - l.bottom), antes: b.bottom <= sig.top, alto: Math.round(b.height) };
+      });
+      ok(lim.tras && lim.gap >= 0 && lim.gap <= 24 && lim.antes && lim.alto >= 47.5, `V6: «Limpiar la lista» va justo bajo la lista de errores (${JSON.stringify(lim)})`);
+      // V7: la ruta de la tabla de peticiones no se parte por dentro («/api/ compras»)
+      const enteras = (p) => p.$$eval('#sis-met th[scope="row"] .nw', (s) => s.length > 0 && s.every((x) => x.getClientRects().length === 1));
+      ok(await enteras(a.p), 'V7: cada tramo de cada ruta, en un solo renglón');
       await a.p.click('#sis-err-limpiar');
       await a.p.waitForTimeout(700);
       eq(await a.p.locator('#sis-err .sis-fila').count(), 0, 'limpiada la lista, no quedan errores');
       ok((await a.p.textContent('#sis-err')).includes('Sin errores'), 'y lo dice');
+      ok(await a.p.locator('#sis-err-bot').isHidden(), 'V6: sin errores, el botón (y su renglón) se van');
       // El estado nunca trae claves ni contenido de las compras
       const crudo = JSON.stringify(await datos(a.p, '/api/sistema'));
       ok(!/p256dh|endpoint|vapid|"hash"|scrypt/.test(crudo), 'el estado no incluye claves ni hashes');
       await a.ctx.close();
+      // V6/V7 a 320 px con letra muy grande: la página no se desplaza a lo ancho, las rutas no se parten y el botón sigue bajo la lista
+      const g = await entrar(navegador, srv, ADMIN, { viewport: { width: 320, height: 640 } }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.letra', 'muy-grande'); } catch { /* sin almacenamiento */ } });
+      await g.p.evaluate(() => { setTimeout(() => { throw new Error('otro error de prueba'); }, 10); });
+      await g.p.waitForTimeout(1200);
+      await g.p.click('#cuenta-btn'); await g.p.click('#dc-sistema-btn');
+      await g.p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent), null, { timeout: 5000 });
+      await g.p.locator('#sis-err-limpiar').scrollIntoViewIfNeeded();
+      const angosto = await g.p.evaluate(() => {
+        const d = document.getElementById('d-cuenta'), b = document.getElementById('sis-err-limpiar').getBoundingClientRect(), l = document.getElementById('sis-err').getBoundingClientRect();
+        return { pagina: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogo: d ? d.scrollWidth - d.clientWidth : 0, gap: Math.round(b.top - l.bottom), alto: Math.round(b.height), letra: document.documentElement.dataset.letra, tabla: (() => { const x = document.querySelector('.sis-tabla'); return x.scrollWidth - x.clientWidth; })() };
+      });
+      ok(angosto.letra === 'muy-grande' && angosto.pagina <= 0 && angosto.dialogo <= 0 && angosto.gap >= 0 && angosto.gap <= 24 && angosto.alto >= 47.5, `V6/V7 a 320 px con letra muy grande: sin desplazarse a lo ancho y el botón bajo la lista (${JSON.stringify(angosto)})`);
+      ok(await enteras(g.p), 'V7 a 320 px con letra muy grande: las rutas no se parten por dentro');
+      await g.ctx.close();
       // Una lectora: sin botón, sin acceso, y sus errores sí se reportan
       const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, sinAvisos);
       if (await l.p.locator('#d-novedades[open]').count()) await l.p.click('#nov-ok');
