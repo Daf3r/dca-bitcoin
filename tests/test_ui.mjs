@@ -394,7 +394,7 @@ try {
       await p.click('#dc-avisos-btn');
       await p.waitForTimeout(500);
     };
-    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'caida', 'piedrita', 'diario', 'wallet']], [LECTOR, 'lector', ['movimiento', 'hito', 'diario']]]) {
+    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'resguardo', 'caida', 'piedrita', 'diario', 'wallet']], [LECTOR, 'lector', ['movimiento', 'hito', 'diario']]]) {
       const { ctx, p, consola } = await entrar(navegador, avisos, cuenta, {}, conPush);
       await abrirAvisos(p);
       ok(await p.locator('#dc-avisos').isVisible() && !(await p.locator('#dc-menu').isVisible()), `${quien}: se abre la vista de avisos`);
@@ -2456,7 +2456,8 @@ try {
       eq(opciones, ['Todas', `bono (${conBono})`, `cumpleaños (${conCumple})`], 'el selector lista las etiquetas de más a menos usadas, con su cuenta');
       await r.p.selectOption('#l-etq', 'cumpleaños');
       await r.p.waitForTimeout(300);
-      eq((await r.p.textContent('#l-res')).trim(), `${conCumple} de ${compras.length + (await datos(r.p, '/api/traslados')).length} movimientos`, 'el resumen dice cuántos coinciden');
+      // (campamento 24) con una etiqueta elegida, el resumen además suma sus sats: lo comprueba su bloque
+      ok((await r.p.textContent('#l-res')).trim().startsWith(`${conCumple} de ${(compras.length + (await datos(r.p, '/api/traslados')).length).toLocaleString('en-US')} movimientos · `), 'el resumen dice cuántos coinciden');
       eq(await r.p.locator('#lista .fila').count(), Math.min(8, conCumple), 'la lista muestra solo esos movimientos');
       ok((await r.p.locator('#lista .f-et').allInnerTexts()).every((t) => t.length > 0) && await r.p.locator('#lista .f-et').count() >= conCumple, 'cada fila muestra sus etiquetas');
       await r.p.click('#l-limpiar');
@@ -5348,6 +5349,184 @@ try {
       await a.ctx.close();
     } finally {
       sl.parar();
+    }
+  }
+
+  // ---------------------------------------------------------------- campamento 24: confianza (la revisión tranquila del respaldo y la suma por etiqueta)
+  {
+    const srv = await servidor('mil'); // con etiquetas «bono» y «cumpleaños»
+    try {
+      // Push de mentira (como en el bloque de avisos) y sin la oferta de avisos al entrar
+      const conPushQuieto = () => {
+        try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ }
+        const est = { sub: false };
+        const ep = `https://fcm.googleapis.com/fcm/send/c24-${Math.random().toString(36).slice(2)}`;
+        const sub = { endpoint: ep, options: {}, unsubscribe: async () => { est.sub = false; return true; }, toJSON: () => ({ endpoint: ep, keys: { p256dh: `B${'x'.repeat(86)}`, auth: 'a'.repeat(22) } }) };
+        const reg = { pushManager: { getSubscription: async () => (est.sub ? sub : null), subscribe: async () => { est.sub = true; return sub; } }, unregister: async () => true };
+        Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: async () => reg, register: async () => reg, ready: Promise.resolve(reg) } });
+        Object.defineProperty(Notification, 'permission', { configurable: true, get: () => (est.permiso ?? 'default') });
+        Notification.requestPermission = async () => { est.permiso = 'granted'; return 'granted'; };
+      };
+      const cerrar = async (p) => {
+        if (await p.locator('#d-novedades[open]').count()) { await p.click('#nov-ok'); await p.waitForTimeout(300); }
+        if (await p.locator('#d-cambios[open]').count()) { await p.click('#cam-ok'); await p.waitForTimeout(300); }
+      };
+      const abrirSistema = async (p) => {
+        if (!(await p.locator('#d-cuenta[open]').count())) { await p.click('#cuenta-btn'); await p.waitForTimeout(250); }
+        await p.evaluate(() => document.getElementById('sis-rg').replaceChildren()); // lo de la vez anterior no cuenta como cargado
+        await p.click('#dc-sistema-btn');
+        await p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent) && document.querySelector('#sis-rg .sis-fila'), null, { timeout: 8000 });
+      };
+      const filaRg = (p) => p.$eval('#sis-rg .sis-fila', (f) => ({ e: f.dataset.estado, t: f.querySelector('b').textContent, p: f.querySelector('.sis-palabra').textContent.trim(), i: f.querySelector('.sis-ico').textContent,
+        d: f.querySelector('small').textContent, borde: `${getComputedStyle(f).outlineStyle}|${getComputedStyle(f).boxShadow}` }));
+      const resumenSiete = (p) => p.evaluate(() => {
+        const n = [...document.querySelectorAll('#sis-lista .sis-fila')].filter((x) => x.dataset.estado !== 'ok').length;
+        return [document.getElementById('sis-res').textContent.trim(), n ? `${n} ${n === 1 ? 'cosa por revisar' : 'cosas por revisar'}.` : 'Todo en orden.', document.querySelectorAll('#sis-lista .sis-fila').length];
+      });
+      const masDias = (iso, d) => new Date(Date.parse(`${iso}T00:00:00Z`) + d * 864e5).toISOString().slice(0, 10);
+
+      // --- 36 · La revisión tranquila del respaldo, en «Estado del sistema» (solo el admin)
+      const a = await entrar(navegador, srv, ADMIN, { viewport: { width: 390, height: 844 } }, conPushQuieto);
+      await cerrar(a.p);
+      await abrirSistema(a.p);
+      let f = await filaRg(a.p);
+      eq([f.t, f.p, f.e, f.i], ['Revisión del respaldo', '· Sin anotar', 'calma', '○'], '24c: nunca revisado es una fila tranquila: «Sin anotar», con su símbolo (no «Falla»)');
+      ok(f.d.startsWith('Última revisión: nunca.') && f.d.includes('«Revisado»') && f.d.includes('«Avisos en este dispositivo»'), `24c: dice que nunca y cómo pedir el recordatorio («${f.d}»)`);
+      eq(f.borde, 'none|none', '24c: sin borde de alarma (ni rojo ni a trazos)');
+      let s7 = await resumenSiete(a.p);
+      eq([s7[0], s7[2]], [s7[1], 7], '24c: las siete filas del estado no cambian y la revisión no cuenta como «cosa por revisar»');
+      const pos = await a.p.evaluate(() => { const y = (id) => document.getElementById(id).getBoundingClientRect().top; const b = document.getElementById('sis-revisado'); return { err: y('sis-err'), rev: y('sis-revisado'), previa: y('dc-previa-t'), alto: b.offsetHeight, ancho: b.offsetWidth }; });
+      ok(pos.err < pos.rev && pos.rev < pos.previa, '24c: «Revisado» va tras los errores del navegador y encima de «Probar la celebración»');
+      ok(pos.alto >= 48 && pos.ancho >= 48, `24c: «Revisado» mide 48 px (${pos.ancho} × ${pos.alto})`);
+      eq(await a.p.$eval('#sis-revisado', (b) => [b.firstChild.textContent, b.querySelector('.sr')?.textContent, b.textContent]), ['Revisado', ': hoy miré el respaldo', 'Revisado: hoy miré el respaldo'],
+        '24c: se lee «Revisado» y a los lectores de pantalla les dice qué anota');
+      ok((await a.p.textContent('#dc-sistema')).includes('la app no pide ni guarda nada de eso'), '24c: la vista dice que la app no guarda nada de la wallet');
+      await a.p.click('#sis-revisado');
+      await a.p.waitForFunction(() => /^Anotado: hoy revisaste el respaldo\./.test(document.getElementById('sis-rg-res').textContent), null, { timeout: 5000 });
+      f = await filaRg(a.p);
+      eq([f.p, f.e, f.i, f.d.split('.')[0]], ['· Al día', 'ok', '✔', 'Última revisión: hoy'], '24c: al tocar «Revisado» la fila queda al día');
+      eq(await a.p.getAttribute('#sis-rg-res', 'role'), 'status', '24c: y lo anuncia (role=status)');
+      const r1 = (await datos(a.p, '/api/sistema')).resguardo;
+      eq([r1.revisado, r1.dias, r1.al_dia, r1.encendido, r1.proximo], [hoySV(), 0, true, false, null], '24c: el servidor guarda la fecha de hoy (sin aviso encendido aún no hay próximo)');
+      await a.p.click('#sis-revisado');
+      await a.p.waitForFunction(() => /^Ya estaba anotado/.test(document.getElementById('sis-rg-res').textContent), null, { timeout: 5000 });
+      eq((await datos(a.p, '/api/auditoria')).filter((x) => x.accion === 'resguardo_revisado').length, 1, '24c: tocarlo dos veces el mismo día deja una sola fila en la auditoría');
+      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-historial');
+      await a.p.waitForSelector('#hist-lista li', { timeout: 5000 });
+      ok((await a.p.textContent('#hist-lista')).includes('Daf3r anotó que revisó el respaldo de su wallet y la nota para su familia'), '24c: el Historial lo cuenta en español');
+      await a.p.click('#dc-hist [data-cuenta="volver"]');
+      // Pasados 180 días (la API no puede volver atrás en el tiempo: se simula su respuesta) sigue siendo tranquila
+      await a.p.route('**/api/sistema', async (route) => {
+        const r = await route.fetch(); const j = await r.json();
+        j.resguardo = { revisado: '2026-01-05', dias: 320, cada: 180, al_dia: false, encendido: true, proximo: '2027-05-10', toca: false };
+        await route.fulfill({ response: r, json: j });
+      });
+      await abrirSistema(a.p);
+      f = await filaRg(a.p);
+      eq([f.p, f.e, f.borde], ['· Cuando puedas', 'calma', 'none|none'], '24c: pasados 180 días dice «Cuando puedas», sin alarma');
+      ok(f.d.includes('hace 320 días (5 ene 2026)') && f.d.includes('Próximo recordatorio: el 10 may 2027.'), `24c: con la fecha de la última revisión y la del próximo recordatorio («${f.d}»)`);
+      s7 = await resumenSiete(a.p);
+      eq(s7[0], s7[1], '24c: tampoco cuenta como «cosa por revisar» cuando toca');
+      await a.p.unroute('**/api/sistema');
+      // La vista de avisos: la categoría sale al admin, apagada, junto a «Fallo del respaldo»; al encenderla, el estado dice cuándo llega
+      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-avisos-btn'); await a.p.waitForTimeout(500);
+      await a.p.click('#av-interruptor'); await a.p.waitForTimeout(900);
+      const cats = await a.p.$$eval('#av-lista input', (xs) => xs.map((x) => x.dataset.cat));
+      eq(cats.indexOf('resguardo'), cats.indexOf('respaldo') + 1, '24c: «Revisión tranquila del respaldo» va junto a «Fallo del respaldo»');
+      const cat = await a.p.$eval('#av-lista input[data-cat="resguardo"]', (x) => ({ on: x.checked, t: x.closest('label').textContent, alto: x.closest('label').getBoundingClientRect().height }));
+      ok(!cat.on && /Revisión tranquila del respaldo/.test(cat.t) && /180 días/.test(cat.t) && /no guarda nada/.test(cat.t), `24c: apagada por defecto y explica qué hace («${cat.t.replace(/\s+/g, ' ')}»)`);
+      ok(cat.alto >= 47.5, `24c: su fila se toca bien (${cat.alto} px)`);
+      await a.p.click('#av-lista input[data-cat="resguardo"]'); await a.p.waitForTimeout(500);
+      await a.p.click('#dc-avisos [data-cuenta="volver"]');
+      await abrirSistema(a.p);
+      f = await filaRg(a.p);
+      const r2 = (await datos(a.p, '/api/sistema')).resguardo;
+      ok(r2.encendido && r2.proximo === masDias(hoySV(), 180) && /Próximo recordatorio: el \d{1,2} \S+ \d{4}\.$/.test(f.d), `24c: con el aviso encendido, el próximo es dentro de 180 días (${r2.proximo}; «${f.d}»)`);
+      eq((await a.p.textContent('#sis-rg-res')).trim(), '', '24c: al volver a la vista, el mensaje de antes se limpia');
+      await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(300);
+
+      // --- La suma por etiqueta en la lista (con una venta que lleva la etiqueta, para el neto)
+      eq(await a.p.evaluate(() => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' },
+        body: JSON.stringify({ fecha: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date()), monto: 3, sats: 4321, tipo: 'venta', etiquetas: ['bono'] }) }).then((r) => r.status)), 201, '24c: una venta con la etiqueta «bono»');
+      await a.p.reload({ waitUntil: 'networkidle' }); await a.p.waitForTimeout(2500); await cerrar(a.p);
+      const compras = await datos(a.p, '/api/compras'), traslados = await datos(a.p, '/api/traslados');
+      const total = (compras.length + traslados.length).toLocaleString('en-US');
+      const con = (et, tipo) => compras.filter((c) => c.etiquetas?.includes(et) && (!tipo || c.tipo === tipo));
+      const suma = (xs) => xs.reduce((s, c) => s + c.sats, 0);
+      const nf = (x) => x.toLocaleString('en-US');
+      const bonoC = suma(con('bono', 'compra')), bonoV = suma(con('bono', 'venta')), neto = bonoC - bonoV;
+      const esperaBono = `${con('bono').length} de ${total} movimientos · neto ${neto > 0 ? '+' : neto < 0 ? '−' : ''}${nf(Math.abs(neto))} sats (${nf(bonoC)} comprados, ${nf(bonoV)} vendidos)`;
+      ok(bonoV === 4321 && bonoC > 100_000, `24c: «bono» tiene compras y la venta (${bonoC} y ${bonoV} sats)`);
+      await a.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+      eq(await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('l-res').offsetHeight]), ['', 0], '24c: sin filtros, el renglón de resultados está vacío y no ocupa sitio');
+      await a.p.click('#l-mas summary'); await a.p.selectOption('#l-etq', 'bono'); await a.p.waitForTimeout(300);
+      eq((await a.p.textContent('#l-res')).trim(), esperaBono, '24c: con la etiqueta «bono», cuántos y su suma, con el neto y cada parte aparte');
+      const pegada = await a.p.$$eval('#l-res .nw', (xs) => xs.map((x) => ({ t: x.textContent, r: x.getClientRects().length })));
+      ok(pegada.some((x) => x.t === `+${nf(neto)} sats`) && pegada.every((x) => x.r === 1), `24c: «+${nf(neto)} sats» va pegado y no se parte (${JSON.stringify(pegada)})`);
+      const antes = await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('lista').getBoundingClientRect().top + scrollY]);
+      ok(await a.p.locator('#ver-todas').isVisible(), '24c: hay más de lo que cabe en el primer tramo');
+      await a.p.click('#ver-todas'); await a.p.waitForTimeout(300);
+      eq(await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('lista').getBoundingClientRect().top + scrollY]), antes, '24c: «Ver más» no cambia la suma (es de todo lo filtrado) ni mueve la lista');
+      await a.p.click('#l-chips button[data-f="compra"]'); await a.p.waitForTimeout(300);
+      eq((await a.p.textContent('#l-res')).trim(), `${con('bono', 'compra').length} de ${total} movimientos · ${nf(bonoC)} sats comprados`, '24c: con otro filtro encima, solo lo que se ve (solo compras: «comprados»)');
+      await a.p.click('#l-chips button[data-f="venta"]'); await a.p.waitForTimeout(300);
+      eq((await a.p.textContent('#l-res')).trim(), `1 de ${total} movimientos · ${nf(bonoV)} sats vendidos`, '24c: solo la venta: «vendidos»');
+      await a.p.click('#l-chips button[data-f="traslado"]'); await a.p.waitForTimeout(300);
+      eq((await a.p.textContent('#l-res')).trim(), `0 de ${total} movimientos`, '24c: los traslados no llevan etiquetas: nada que sumar');
+      await a.p.click('#l-chips button[data-f="todos"]');
+      await a.p.selectOption('#l-etq', 'cumpleaños'); await a.p.waitForTimeout(300);
+      eq((await a.p.textContent('#l-res')).trim(), `${con('cumpleaños').length} de ${total} movimientos · ${nf(suma(con('cumpleaños', 'compra')))} sats comprados`, '24c: otra etiqueta, otra suma');
+      await a.p.selectOption('#l-etq', ''); await a.p.fill('#l-buscar', 'caída'); await a.p.waitForTimeout(300);
+      ok(/^\d+ de [\d,]+ movimientos$/.test((await a.p.textContent('#l-res')).trim()), '24c: sin etiqueta elegida (solo una búsqueda), no hay suma');
+      await a.p.click('#l-limpiar'); await a.p.waitForTimeout(200);
+      eq(await a.p.evaluate(() => document.getElementById('l-res').offsetHeight), 0, '24c: al quitar los filtros, el renglón se va');
+      ok(!/\b(tu|tus|tienes|te)\b|saldo|quedan|meta/i.test(esperaBono), '24c: sin tutear ni hablar de saldo o metas');
+      eq(a.consola, [], `24c: consola limpia (dueño): ${a.consola.join(' | ')}`);
+      await a.ctx.close();
+
+      // Una lectora: la misma suma (no tutea), sin la categoría ni la vista, y sin poder anotar la revisión
+      const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, conPushQuieto);
+      await cerrar(l.p);
+      await l.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+      await l.p.click('#l-mas summary'); await l.p.selectOption('#l-etq', 'bono'); await l.p.waitForTimeout(300);
+      eq((await l.p.textContent('#l-res')).trim(), esperaBono, '24c: quien solo mira lee la misma suma');
+      await l.p.evaluate(() => scrollTo(0, 0));
+      await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(250);
+      ok(!(await l.p.locator('#dc-sistema-btn').isVisible()), '24c: una lectora no ve «Estado del sistema»');
+      await l.p.click('#dc-avisos-btn'); await l.p.waitForTimeout(500);
+      await l.p.click('#av-interruptor'); await l.p.waitForTimeout(900);
+      eq(await l.p.$$eval('#av-lista input', (xs) => xs.map((x) => x.dataset.cat)), ['movimiento', 'hito', 'diario'], '24c: ni la categoría de la revisión del respaldo');
+      eq(await l.p.evaluate(() => fetch('/api/resguardo', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: '{}' }).then((r) => r.status)), 403, '24c: ni puede anotarla (403)');
+      await l.ctx.close();
+
+      // 320 px con letra muy grande: la fila, el botón y la suma caben sin desbordes y con toques de 48 px
+      const ch = await entrar(navegador, srv, ADMIN, { viewport: { width: 320, height: 568 } }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.letra', 'muy-grande'); } catch { /* */ } });
+      await cerrar(ch.p);
+      await abrirSistema(ch.p);
+      await ch.p.evaluate(() => document.getElementById('sis-revisado').scrollIntoView({ block: 'center' }));
+      eq(await ch.p.evaluate(() => {
+        const d = document.getElementById('d-cuenta'), b = document.getElementById('sis-revisado').getBoundingClientRect(), fl = document.querySelector('#sis-rg .sis-fila');
+        return { dlg: d.scrollWidth <= d.clientWidth + 1, pag: document.documentElement.scrollWidth <= innerWidth, fila: fl.scrollWidth <= fl.clientWidth + 1, toque: b.height >= 47.5 && b.width >= 47.5 };
+      }), { dlg: true, pag: true, fila: true, toque: true }, '24c: a 320 px con letra muy grande, «Estado del sistema» con la revisión no se desborda');
+      await ch.p.keyboard.press('Escape'); await ch.p.waitForTimeout(300);
+      await ch.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+      await ch.p.click('#l-mas summary'); await ch.p.selectOption('#l-etq', 'bono'); await ch.p.waitForTimeout(300);
+      eq(await ch.p.evaluate(() => {
+        const r = document.getElementById('l-res');
+        return { pag: document.documentElement.scrollWidth <= innerWidth, res: r.scrollWidth <= r.clientWidth + 1, pegadas: [...r.querySelectorAll('.nw')].every((x) => x.getClientRects().length === 1), texto: r.textContent.includes(' sats (') };
+      }), { pag: true, res: true, pegadas: true, texto: true }, '24c: a 320 px con letra muy grande, la suma se parte en renglones sin separar «N sats» ni desbordar');
+      await ch.ctx.close();
+
+      // «Qué hay de nuevo» cuenta la suma por etiqueta (a quien vio la entrada anterior)
+      const q = await entrar(navegador, srv, ADMIN, { viewport: { width: 390, height: 844 } }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* */ } });
+      await cerrar(q.p);
+      await q.p.evaluate(() => fetch('/api/cambios-visto', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ id: '2026-12-c' }) }));
+      await q.p.reload({ waitUntil: 'networkidle' });
+      await q.p.waitForSelector('#d-cambios[open]', { timeout: 8000 });
+      ok(/elegir una etiqueta/.test(await q.p.textContent('#cam-lista')) && !/respaldo/i.test(await q.p.textContent('#cam-lista')), '24c: «Qué hay de nuevo» cuenta la suma por etiqueta (y nada de la revisión, que es solo del admin)');
+      await q.ctx.close();
+    } finally {
+      srv.parar();
     }
   }
 

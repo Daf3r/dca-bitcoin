@@ -1478,4 +1478,57 @@ const aFechaTest = (f) => Date.parse(`${f}T00:00:00Z`);
   for (let d2 = 0; d2 <= Pm.dias; d2++) L.diaPelicula(Pm, d2);
   ok(performance.now() - t0 < 200 && L.diaPelicula(Pm, Pm.dias).sats === mucho.sats, `película: ${Pm.dias} días con mil compras en ${Math.round(performance.now() - t0)} ms`);
 }
+
+// ---------------------------------------------------------------- Campamento 24 · Confianza
+{
+  const L = await import('../app/static/lib.js');
+  // La suma por etiqueta: solo compras y ventas (las ventas restan y se nombran aparte); nunca el «saldo» de la etiqueta.
+  const mv = (tipo, sats, etiquetas = ['bono'], fecha = '2026-03-01') => ({ tipo, sats, etiquetas, fecha, clave: `${tipo}${sats}`, creado: 0 });
+  const comprasBono = [mv('compra', 250_000), mv('compra', 60_000)];
+  eq(L.sumaEtiqueta(comprasBono), { compras: 2, ventas: 0, comprados: 310_000, vendidos: 0, neto: 310_000, texto: '310,000 sats comprados' }, 'suma por etiqueta: solo compras, «comprados»');
+  eq(L.sumaEtiqueta([mv('venta', 20_000)]).texto, '20,000 sats vendidos', 'suma por etiqueta: solo ventas (o gastos), «vendidos»');
+  eq(L.sumaEtiqueta([...comprasBono, mv('venta', 20_000)]).texto, 'neto +290,000 sats (310,000 comprados, 20,000 vendidos)', 'suma por etiqueta: con ventas, el neto con esa palabra y cada parte aparte');
+  eq(L.sumaEtiqueta([mv('compra', 5_000), mv('venta', 15_000)]).texto, 'neto −10,000 sats (5,000 comprados, 15,000 vendidos)', 'suma por etiqueta: un neto negativo lleva su signo');
+  eq(L.sumaEtiqueta([mv('compra', 7_000), mv('venta', 7_000)]).texto, 'neto 0 sats (7,000 comprados, 7,000 vendidos)', 'suma por etiqueta: neto cero, sin signo');
+  eq(L.sumaEtiqueta([{ tipo: 'traslado', sats: 999_999 }, mv('compra', 1)]).comprados, 1, 'suma por etiqueta: los traslados no cuentan (no llevan etiquetas)');
+  eq([L.sumaEtiqueta([]), L.sumaEtiqueta([{ tipo: 'traslado', sats: 5 }])], [null, null], 'suma por etiqueta: sin compras ni ventas, nada');
+  eq(L.sumaEtiqueta([mv('compra', 25_000)]).texto, '25,000 sats comprados', 'suma por etiqueta: un solo movimiento');
+  eq(L.sumaEtiqueta([mv('compra', 1_234_567_890), mv('compra', 10_000_000_000)]).texto, '11,234,567,890 sats comprados', 'suma por etiqueta: millones y más de 100 BTC, con sus comas');
+  // El renglón de la lista: «12 de 140 movimientos» y, con una etiqueta elegida, su suma.
+  eq(L.textoResultadosLista(2, 140, comprasBono), '2 de 140 movimientos · 310,000 sats comprados', 'resultados: con etiqueta, la suma');
+  eq(L.textoResultadosLista(2, 140, null), '2 de 140 movimientos', 'resultados: sin etiqueta elegida, sin suma');
+  eq(L.textoResultadosLista(0, 140, []), '0 de 140 movimientos', 'resultados: nada coincide, sin suma');
+  eq(L.textoResultadosLista(1, 1, [mv('compra', 25_000)]), '1 de 1 movimiento · 25,000 sats comprados', 'resultados: un solo movimiento');
+  eq(L.textoResultadosLista(12, 1040, comprasBono), '12 de 1,040 movimientos · 310,000 sats comprados', 'resultados: las cuentas con comas');
+  // Sobre lo que de verdad filtra la lista (filtrarMovimientos): la suma solo ve lo filtrado, también con otro filtro encima
+  const items = [{ id: 1, fecha: '2026-01-05', tipo: 'compra', sats: 100_000, monto: 90, etiquetas: ['bono'] }, { id: 2, fecha: '2026-02-05', tipo: 'compra', sats: 50_000, monto: 45, etiquetas: [] },
+    { id: 3, fecha: '2026-03-05', tipo: 'venta', sats: 30_000, monto: 30, etiquetas: ['bono'] }, { id: 4, fecha: '2026-04-05', tipo: 'compra', sats: 70_000, monto: 60, etiquetas: ['bono', 'regalo'] }];
+  const todos = movimientosLista(items, [{ id: 9, fecha: '2026-04-06', sats: 60_000, sentido: 'a_wallet' }]);
+  const bono = filtrarMovimientos(todos, { etiqueta: 'bono' });
+  eq([bono.length, L.textoResultadosLista(bono.length, todos.length, bono)], [3, '3 de 5 movimientos · neto +140,000 sats (170,000 comprados, 30,000 vendidos)'], 'resultados: sobre la lista filtrada de verdad (los traslados y lo sin etiqueta quedan fuera)');
+  const bonoCompras = filtrarMovimientos(todos, { etiqueta: 'bono', filtro: 'compra' });
+  eq(L.textoResultadosLista(bonoCompras.length, todos.length, bonoCompras), '2 de 5 movimientos · 170,000 sats comprados', 'resultados: con otro filtro encima, suma solo lo que se ve');
+  // Solo informa y no tutea: es igual para quien anota y para quien solo mira; nunca habla del «saldo» de la etiqueta ni de metas.
+  const frases = [L.sumaEtiqueta([...comprasBono, mv('venta', 20_000)]).texto, L.textoResultadosLista(2, 140, comprasBono)].join(' ');
+  ok(!/\b(tu|tus|tienes|te)\b|saldo|quedan|meta|alcanc/i.test(frases), `resultados: sin tutear ni hablar de saldo o metas («${frases}»)`);
+
+  // La fila de la revisión del respaldo (la regla está en el servidor; aquí, lo que dice). Nunca «Falla» ni rojo por no haber revisado.
+  const rg = (o) => ({ revisado: null, dias: null, al_dia: false, encendido: false, proximo: null, toca: false, cada: 180, ...o });
+  const nunca = L.textoResguardo(rg({}));
+  eq([nunca.estado, nunca.palabra], ['calma', 'Sin anotar'], 'resguardo: nunca revisado es calma («Sin anotar»), no una falla');
+  ok(nunca.detalle.startsWith('Última revisión: nunca.') && nunca.detalle.includes('enciende «Revisión tranquila del respaldo»'), `resguardo: nunca, y cómo pedir el recordatorio («${nunca.detalle}»)`);
+  const conAviso = L.textoResguardo(rg({ encendido: true, proximo: '2027-05-16' }));
+  ok(conAviso.detalle.includes('Próximo recordatorio: el 16 may 2027.') && conAviso.palabra === 'Sin anotar', `resguardo: con el aviso encendido dice cuándo llega («${conAviso.detalle}»)`);
+  const hoyR = L.textoResguardo(rg({ revisado: '2026-11-17', dias: 0, al_dia: true, encendido: true, proximo: '2027-05-16' }));
+  eq([hoyR.estado, hoyR.palabra, hoyR.detalle], ['ok', 'Al día', 'Última revisión: hoy. Próximo recordatorio: el 16 may 2027.'], 'resguardo: revisado hoy, al día');
+  eq(L.textoResguardo(rg({ revisado: '2026-11-16', dias: 1, al_dia: true })).detalle.split('.')[0], 'Última revisión: ayer', 'resguardo: ayer');
+  const al = L.textoResguardo(rg({ revisado: '2026-06-01', dias: 169, al_dia: true }));
+  ok(al.estado === 'ok' && al.detalle.startsWith('Última revisión: hace 169 días (1 jun 2026).'), `resguardo: hace N días, con su fecha («${al.detalle}»)`);
+  const vencido = L.textoResguardo(rg({ revisado: '2026-01-01', dias: 320, al_dia: false, encendido: true, toca: true, proximo: '2026-06-30' }));
+  eq([vencido.estado, vencido.palabra], ['calma', 'Cuando puedas'], 'resguardo: pasados 180 días es «Cuando puedas», tranquilo');
+  ok(vencido.detalle.includes('hace 320 días') && vencido.detalle.endsWith('El recordatorio sale hoy.'), `resguardo: el día que toca lo dice («${vencido.detalle}»)`);
+  const todas = [nunca, conAviso, hoyR, al, vencido].map((x) => `${x.palabra} ${x.detalle}`).join(' ');
+  ok(!/falla|urgente|peligro|debes|deberías|frase|semilla|\d+ sats/i.test(todas), 'resguardo: sin alarma, sin pedir la frase ni cifras de la wallet');
+  eq(L.RESGUARDO_DIAS, 180, 'resguardo: cada 180 días');
+}
 console.log(`OK ${n} comprobaciones`);
