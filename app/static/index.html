@@ -550,11 +550,16 @@
     </label>
     <p class="h-nota h-nota-ay" id="h-nota-ay">Opcional. Queda como nota de la compra: la ve toda la familia y, dentro de un año, el Diario la recuerda.</p>
     <details class="h-avanzado" id="h-avanzado">
-      <summary id="h-av-t">Más detalles: dólares, TXID y compra extra</summary>
-      <label class="h-usd" data-no-traslado><span id="h-usd-t">Pagaste (USD)</span>
-        <input id="h-usd" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00">
+      <summary id="h-av-t">Más detalles: dólares o precio, TXID y compra extra</summary>
+      <!-- Los dólares y el precio de BTC van ligados: el que escribes manda y el otro se calcula («calculado»). Vacíos, se estiman con el
+           precio de ese día, como siempre. Lo que se guarda son los sats y los dólares; el precio se deriva (ver hoja.js: datosHoja). -->
+      <label class="h-usd" data-no-traslado><span><span id="h-usd-t">Pagaste (USD)</span><span class="h-calc" id="h-usd-c" hidden> · calculado</span></span>
+        <input id="h-usd" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00" aria-describedby="h-dinero-ay">
       </label>
-      <p class="h-nota" data-no-traslado>Si no los escribes, se calculan con el precio de ese día.</p>
+      <label class="h-usd" data-no-traslado><span><span id="h-precio-t">Precio de BTC al que compraste (opcional)</span><span class="h-calc" id="h-precio-c" hidden> · calculado</span></span>
+        <input id="h-precio" type="text" inputmode="decimal" maxlength="16" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: 62,500" aria-describedby="h-dinero-ay">
+      </label>
+      <p class="h-nota" id="h-dinero-ay" data-no-traslado>Escribe los dólares o el precio: el otro se calcula. Si no escribes ninguno, se calculan con el precio de ese día.</p>
       <label class="h-usd">TXID (opcional)
         <input id="h-txid" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="64 caracteres, o pega el enlace de mempool.space">
       </label>

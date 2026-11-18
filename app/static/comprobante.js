@@ -82,7 +82,9 @@ function pintarCompra(c) {
   const dl = $('cp-datos');
   dl.textContent = '';
   fila(dl, venta ? (libro ? 'Se recibió' : 'Recibiste') : libro ? 'Se pagó' : 'Pagaste', usd(c.monto));
-  fila(dl, 'Precio de BTC ese día', usd0(c.precio));
+  // El precio con que quedó guardado (dólares ÷ sats): el que se escribió o el estimado con el del día. No se guarda cuál fue, así que el
+  // renglón no dice «ese día» (sonaba al precio de mercado) sino de qué movimiento es.
+  fila(dl, venta ? 'Precio de BTC en la venta' : 'Precio de BTC en la compra', usd0(c.precio));
   fila(dl, 'Altitud antes', `${entero(c.antes)} sats`);
   fila(dl, 'Altitud después', `${entero(c.despues)} sats`);
   if (venta && c.realizada != null) fila(dl, 'Ganancia realizada', usdSigno(c.realizada));

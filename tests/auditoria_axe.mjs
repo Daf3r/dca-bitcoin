@@ -143,6 +143,12 @@ try {
       await auditar(p, `hoja de compra ${esquema}`);
       await p.click('#h-avanzado summary'); await p.waitForTimeout(200);
       await auditar(p, `hoja de compra con detalles ${esquema}`);
+      // El precio de la compra: escrito, con los dólares calculados (y al revés); se vacía para no dejar borrador
+      await p.fill('#h-sats', '77320'); await p.fill('#h-precio', '62,500'); await p.waitForTimeout(250);
+      await auditar(p, `hoja con el precio escrito y los dólares calculados ${esquema}`);
+      await p.fill('#h-usd', '50'); await p.waitForTimeout(250);
+      await auditar(p, `hoja con los dólares escritos y el precio calculado ${esquema}`);
+      await p.fill('#h-usd', ''); await p.fill('#h-sats', ''); await p.waitForTimeout(150);
       for (const tipo of ['venta', 'traslado']) {
         await p.click(`#h-tipo button[data-tipo="${tipo}"]`); await p.waitForTimeout(200);
         await auditar(p, `hoja de ${tipo} ${esquema}`);
@@ -199,6 +205,9 @@ try {
       await p.evaluate(() => scrollTo(0, 0));
       await p.click('#anotar'); await p.waitForTimeout(500);
       await auditar(p, `alto contraste: hoja ${esquema}`);
+      await p.fill('#h-sats', '77320'); await p.click('#h-avanzado summary'); await p.fill('#h-precio', '62,500'); await p.waitForTimeout(250);
+      await auditar(p, `alto contraste: hoja con el precio escrito y los dólares calculados ${esquema}`);
+      await p.fill('#h-precio', ''); await p.fill('#h-sats', ''); await p.waitForTimeout(150);
       await p.keyboard.press('Escape'); await p.waitForTimeout(400);
       await p.click('#cuenta-btn'); await p.waitForTimeout(300);
       await auditar(p, `alto contraste: cuenta ${esquema}`);

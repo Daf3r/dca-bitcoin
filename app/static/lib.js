@@ -462,8 +462,8 @@ export function haceCuanto(ts, ahora = Date.now()) {
  *   avisan (solo 2 veces) y el precio de BTC, que cambia con los años, no provoca avisos falsos.
  *   Sin monto estimado (sin precio) no se evalúa.
  * - `duplicado`: ya hay otra compra el mismo día (solo al crear).
- * Las ventas no se avisan (ya no pueden pasar del saldo). Al editar sin tocar los sats no se avisa de
- * lo atípico, para no insistir con lo ya guardado.
+ * Las ventas no se avisan (ya no pueden pasar del saldo). Al editar sin tocar los sats ni los dólares (o el precio, que los mueve) no
+ * se avisa de lo atípico, para no insistir con lo ya guardado.
  */
 export function avisosAlAnotar(compras, { tipo, sats, monto, fecha, editando = null, extra = false }) {
   // Una compra extra (por una caída) es grande a propósito y puede coincidir con la del día: no se avisa.
@@ -471,7 +471,8 @@ export function avisosAlAnotar(compras, { tipo, sats, monto, fecha, editando = n
   const previa = editando != null ? compras.find((c) => c.id === editando) : null;
   const otras = compras.filter((c) => c.tipo === 'compra' && !c.extra && c.id !== editando); // las extra no son referencia
   const avisos = [];
-  if (monto > 0 && otras.length >= 4 && !(previa && previa.sats === sats)) {
+  const igual = previa && previa.sats === sats && Math.abs((previa.monto ?? 0) - monto) < 0.005;
+  if (monto > 0 && otras.length >= 4 && !igual) {
     const orden = otras.map((c) => c.monto).filter((m) => m > 0).sort((a, b) => a - b);
     const mid = orden.length >> 1;
     const mediana = orden.length < 4 ? 0 : orden.length % 2 ? orden[mid] : (orden[mid - 1] + orden[mid]) / 2;
@@ -783,6 +784,42 @@ export function precioDelDia(fecha, historico, vivo, hoy = hoyISO()) {
 /** Dólares de una compra de `sats` a `precio`, redondeados a centavos (mínimo un centavo). */
 export const estimarMonto = (sats, precio) => Math.max(0.01, Math.round((sats * precio) / 1e8 * 100) / 100);
 
+/**
+ * El precio de la compra, escrito por la persona: los dólares de `sats` a ese `precio` **sin redondear a centavos** (a 8 decimales, lo
+ * que guarda el servidor). El servidor deriva el precio al guardar (`monto × 10⁸ / sats`): así sale el que se escribió. Con 77,320 sats
+ * a $62,500 son $48.325 (se ven $48.33) y el comprobante dice $62,500; redondeados a centavos ($48.33) diría $62,506. Lo que se pierde
+ * es como mucho 1/sats dólares del precio (con 1 sat, ±$1).
+ * @param {number} sats
+ * @param {number} precio
+ */
+export const montoDePrecio = (sats, precio) => Math.round(sats * precio) / 1e8;
+/** El precio de BTC que sale de unos dólares y unos sats: lo mismo que deriva el servidor al guardar. */
+export const precioDeMonto = (/** @type {number} */ monto, /** @type {number} */ sats) => (sats > 0 ? (monto * 1e8) / sats : 0);
+/** El tope del servidor para el precio y para los dólares de un movimiento (`_num`: menos de mil millones). */
+export const TOPE_DINERO = 1e9;
+/**
+ * El precio de BTC tal como lo escribe una persona: «$62,500», «62500.50», «62 500» o «62500,5» (la coma decimal de un teclado en
+ * otro idioma). Se quitan «$» y los espacios; con punto, las comas son de miles; sin punto, una sola coma seguida de una o dos cifras es
+ * la decimal y si no, son de miles. Hasta 9 cifras y 2 decimales (el servidor no acepta mil millones). Devuelve el número, 0 si está
+ * vacío y NaN si no se entiende o es cero: «62.500» (tres decimales) podría ser 62,500 a la europea, así que no se adivina.
+ * @param {unknown} texto
+ * @returns {number}
+ */
+export function leerPrecio(texto) {
+  let t = String(texto ?? '').replace(/[$\s ]/g, '');
+  if (!t) return 0;
+  t = !t.includes('.') && /^\d+,\d{1,2}$/.test(t) ? t.replace(',', '.') : t.replace(/,/g, '');
+  if (!/^(\d{1,9}(\.\d{0,2})?|\.\d{1,2})$/.test(t)) return Number.NaN;
+  const p = Number(t);
+  return p > 0 ? p : Number.NaN;
+}
+const nfPrecio = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const nfCampo = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false });
+/** El precio para su campo de la hoja: con comas de miles y sin «.00» («62,500»; «62,506.47»). */
+export const precioCampo = (/** @type {number} */ p) => nfPrecio.format(p).replace(/\.00$/, '');
+/** Los dólares para su campo de la hoja: dos decimales y sin comas, que el campo de dólares no acepta («48.33»). */
+export const montoCampo = (/** @type {number} */ m) => nfCampo.format(m);
+
 /** Reduce la serie a ~2n puntos conservando el mínimo y el máximo de cada tramo. */
 export function muestrear(serie, n) {
   if (serie.length <= n * 2) return serie;
@@ -925,7 +962,7 @@ export function partirEtiquetas(texto) {
 /** Lo que se puede buscar de un movimiento: nota, fecha, nombre del mes, tipo, sats, dólares y TXID (sin acentos ni mayúsculas). */
 function pajar(m) {
   const mes = MESES[Number(m.fecha.slice(5, 7)) - 1] ?? '';
-  return sinAcentos([m.nota, m.fecha, mes, mes.slice(0, 3), PALABRA_TIPO[m.tipo], m.extra ? 'extra' : '', (m.etiquetas ?? []).join(' '), m.sats, m.monto != null ? m.monto.toFixed(2) : '', m.txid].join(' '));
+  return sinAcentos([m.nota, m.fecha, mes, mes.slice(0, 3), PALABRA_TIPO[m.tipo], m.extra ? 'extra' : '', (m.etiquetas ?? []).join(' '), m.sats, m.monto != null ? montoCampo(m.monto) : '', m.txid].join(' '));
 }
 /**
  * Filtra: `texto` (todas las palabras deben aparecer), `filtro` (todos | compra | venta | traslado | extra | txid) y un rango de
