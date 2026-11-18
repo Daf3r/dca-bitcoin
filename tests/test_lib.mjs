@@ -1541,4 +1541,74 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(!/falla|urgente|peligro|debes|deberías|frase|semilla|\d+ sats/i.test(todas), 'resguardo: sin alarma, sin pedir la frase ni cifras de la wallet');
   eq(L.RESGUARDO_DIAS, 180, 'resguardo: cada 180 días');
 }
+// ---------------------------------------------------------------------------------------------
+// Campamento 25 · Los osos polares de peluche: la regla de sitio (pura) sobre la geometría real de cuatro escenas (tests/osos_geo.json,
+// sacada de la app con su montana.js) y el dibujo.
+{
+  const O = await import('../app/static/arte-osos.js');
+  const L = await import('../app/static/lib.js');
+  const GEO = JSON.parse(fs.readFileSync(new URL('./osos_geo.json', import.meta.url), 'utf8'));
+  const enPol = (pts, x, y) => { let d = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [xi, yi] = pts[i], [xj, yj] = pts[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) d = !d; } return d; };
+  // Los vértices de cada oso salen del propio dibujo: se dibuja uno solo y se leen sus trazos.
+  const puntosDe = (svg) => [...svg.matchAll(/d="([^"]+)"/g)].flatMap((m) => [...m[1].matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map((q) => [Number(q[1]), Number(q[2])]));
+  for (const [nombre, g] of Object.entries(GEO)) {
+    for (const [aurora, cumple] of [[false, false], [true, true]]) {
+      const s = O.sitioOsos({ ...g, aurora, cumple });
+      const et = `osos ${nombre}${aurora ? ' (aurora, gorrito)' : ''}`;
+      ok(s && s.lista.length >= 1, `${et}: caben (${s?.lista.length} en ${s?.zona})`);
+      if (!s) continue;
+      eq(s.lista.map((o) => o.quien).sort(), O.OSOS.slice(0, s.lista.length).sort(), `${et}: se quedan en orden (el grande, luego el chico, luego el del mameluco)`);
+      const k = g.ec * 1.1;
+      let cielo = 0, senda = Infinity, encima = 0;
+      const cajas = [];
+      for (const o of s.lista) {
+        const pts = puntosDe(O.osos([o], { k, aurora, cumple }));
+        const sinPie = puntosDe(O.osos([o], { k, aurora, cumple }).replace(/<path class="oso-pie"[^>]*>/, ''));
+        for (const [x, y] of sinPie) if (!enPol(g.silueta, x, y - O.SALTO - 1)) cielo++;
+        const bx = [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
+        for (const [px, py] of g.sendero) senda = Math.min(senda, Math.hypot(Math.max(bx[0] - px, 0, px - bx[2]), Math.max(bx[1] - py, 0, py - bx[3])));
+        for (const c of [g.meta, ...g.textos]) if (bx[0] < c[2] && bx[2] > c[0] && bx[1] < c[3] && bx[3] > c[1]) encima++;
+        cajas.push([Math.min(...sinPie.map((p) => p[0])), Math.min(...sinPie.map((p) => p[1])), Math.max(...sinPie.map((p) => p[0])), Math.max(...sinPie.map((p) => p[1]))]);
+      }
+      eq(cielo, 0, `${et}: nada contra el cielo (todos los vértices, con el saltito, dentro de la montaña)`);
+      ok(senda >= 11.5, `${et}: a 12 px o más del sendero (${senda.toFixed(1)})`);
+      eq(encima, 0, `${et}: ni sobre la meta ni sobre el saldo o la cabecera`);
+      // Se pintan de atrás adelante (el de más arriba primero): así pueden apoyarse uno en otro sin que se cruce un tono con otro.
+      const orden = [...O.osos(s.lista, { k }).matchAll(/class="oso oso-(\w+)"/g)].map((m) => m[1]);
+      eq(orden, [...s.lista].sort((a, b) => a.y - b.y).map((o) => o.quien), `${et}: se pintan de atrás adelante`);
+      if (s.zona !== 'cumbre') ok(s.lista.every((o) => enPol(s.zona === 'nieve' ? g.nieveMin : g.nieveHoy, o.x, o.y) && enPol(g.cara, o.x, o.y)), `${et}: los pies en la nieve de la cara al sol`);
+      const c = O.cajaOsos(s.lista, k, { aurora, cumple });
+      ok(s.lista.every((o) => o.x >= c[0] && o.x <= c[2] && o.y >= c[1] && o.y <= c[3]) && c[1] < Math.min(...s.lista.map((o) => o.y)) - 15, `${et}: la caja los cubre con su saltito`);
+    }
+    eq(O.sitioOsos(g), O.sitioOsos(g), `osos ${nombre}: siempre el mismo sitio con la misma escena`);
+    ok((O.sitioOsos({ ...g, trio: false })?.lista.length ?? 0) <= 2, `osos ${nombre}: sin el trío, como mucho la pareja`);
+  }
+  // Sin sitio no sale ninguno (y nunca uno a medias): con la cumbre tapada por una caja de texto, null.
+  const g0 = GEO['anio-390x844'];
+  eq(O.sitioOsos({ ...g0, textos: [[0, 0, g0.W, g0.H]] }), null, 'osos: sin sitio no sale ninguno');
+  // Si no caben tres, la pareja; si no, el grande solo: acostado (844×390) la cumbre es chica y quedan dos, el grande y el chico.
+  const ac = O.sitioOsos(GEO['anio-844x390']);
+  eq(ac?.lista.map((o) => o.quien), ['grande', 'chico'], 'osos: acostado no caben tres y quedan el grande y el chico');
+  // Y con el sitio de la derecha de la meta tapado, el grande solo (o ninguno), nunca otro distinto del grande.
+  const poco = O.sitioOsos({ ...g0, textos: [...g0.textos, [g0.sx + 30 * g0.ec, 0, g0.W, g0.H], [0, 0, g0.sx - 4, g0.H]] });
+  ok(!poco || (poco.lista.length < 3 && poco.lista[0].quien === 'grande'), `osos: con poco sitio quedan menos, empezando por el grande (${poco?.lista.length ?? 0})`);
+  // El dibujo: sin estilos en línea ni NaN, todo con clases oso-, y pocos nodos (un grupo por oso, un trazo por tono).
+  const tres = O.sitioOsos(g0).lista, k0 = g0.ec * 1.1;
+  const nodos = (svg) => (svg.match(/<(g|path)\b/g) || []).length;
+  const svgs = { trio: O.osos(tres, { k: k0 }), aurora: O.osos(tres, { k: k0, aurora: true }), todo: O.osos(tres, { k: k0, aurora: true, cumple: true }), uno: O.osos(tres.slice(0, 1), { k: k0 }) };
+  for (const [k, svg] of Object.entries(svgs)) {
+    ok(!/style=|NaN|undefined/.test(svg) && svg.startsWith('<path class="oso-pie"'), `osos (${k}): sin estilos en línea ni NaN; primero la sombra de contacto de todos`);
+    ok([...svg.matchAll(/class="([^"]+)"/g)].every((m) => /^(oso oso-(grande|chico|mameluco)|oso-[a-z-]+( v-navidad)?)$/.test(m[1])), `osos (${k}): solo clases oso- (y v-navidad en las bufandas)`);
+  }
+  ok(nodos(svgs.trio) <= 25 && nodos(svgs.aurora) <= 31 && nodos(svgs.todo) <= 32, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 25), con aurora ${nodos(svgs.aurora)} (≤ 31), con gorrito ${nodos(svgs.todo)} (≤ 32)`);
+  ok(nodos(svgs.uno) <= 10, `osos: el grande solo, ${nodos(svgs.uno)} nodos`);
+  ok(svgs.trio.includes('oso-marino') && svgs.trio.includes('oso-cinta') && svgs.trio.includes('oso-parche') && svgs.trio.includes('oso-celeste') && svgs.trio.includes('oso-chico'), 'osos: el grande con su camiseta, su parche y su cinta; el del mameluco; el chico');
+  ok(!svgs.uno.includes('oso-celeste') && !svgs.uno.includes('oso-bufanda'), 'osos: el grande solo no lleva mameluco ni bufanda de Navidad (ya tiene su cinta)');
+  ok((svgs.trio.match(/oso-bufanda v-navidad/g) || []).length === 2 && !svgs.trio.includes('oso-gorro') && svgs.todo.includes('oso-gorro'), 'osos: dos bufandas de Navidad (las enseña el CSS) y el gorrito solo con cumpleaños');
+  ok(!svgs.trio.includes('-arriba') && (svgs.aurora.match(/oso-hocico-arriba/g) || []).length === 3, 'osos: con aurora, cada cara también mirando arriba (el CSS enseña una)');
+  ok(O.OSOS_TRIO === true && O.OSOS.join() === 'grande,chico,mameluco', 'osos: el trío está activo y el orden en que se quedan es grande, chico, mameluco');
+  eq([L.textoOsos(3).includes('tres osos polares'), L.textoOsos(2).includes('dos osos'), L.textoOsos(1).includes('un oso polar'), L.textoOsos(0)], [true, true, true, ''], 'osos: la descripción dice cuántos');
+  ok(![1, 2, 3].some((n) => /\btu\b|\btus\b|\bte\b/i.test(L.textoOsos(n))), 'osos: la descripción no tutea');
+}
+
 console.log(`OK ${n} comprobaciones`);

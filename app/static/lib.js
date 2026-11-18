@@ -2080,6 +2080,18 @@ export function textoValle({ luces = 0, arbol = null } = {}) {
   return t;
 }
 
+/**
+ * (Campamento 25) Los osos polares de peluche de la familia en la descripción de la montaña (sin tutear: es igual para quien solo mira).
+ * @param {number} n cuántos se ven (3, 2, 1 o 0)
+ * @returns {string}
+ */
+export function textoOsos(n) {
+  if (n >= 3) return 'En la nieve, bajo la cumbre, se sientan tres osos polares de peluche: el grande con su camiseta azul y su cinta roja, el chico y el del mameluco celeste.';
+  if (n === 2) return 'En la nieve, bajo la cumbre, se sientan dos osos polares de peluche: el grande con su camiseta azul y su cinta roja, y el chico.';
+  if (n === 1) return 'En la nieve, bajo la cumbre, se sienta un oso polar de peluche con su camiseta azul y su cinta roja.';
+  return '';
+}
+
 // ---------------------------------------------------------------------------------------------
 // Campamento 23 · Tu camino, otra vez: «Tal día como hoy» (idea 41) y la película del ascenso (idea 29). Solo datos y textos.
 // ---------------------------------------------------------------------------------------------

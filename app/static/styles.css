@@ -4405,3 +4405,48 @@ html:not([data-efectos="ninguno"]) .pe-montana :is(#m-bosque path, .arbol-honor)
   .pe-ctl { grid-row: 4; margin: 0 0 max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .pe-cifra { font-size: clamp(1.4rem, min(11cqi, 80cqi / (var(--n, 7) * 0.575)), 2.4rem); }
 }
+
+/* ------------------------------------------------------------ Campamento 25 · Los osos polares de peluche de la familia
+   Tres osos sentados en la nieve al sol bajo la cumbre (o los que quepan: el grande, luego el chico, luego el del mameluco). Planos sin
+   contornos que siguen a la hora: la cara al astro toma la luz de la roca, la cara en sombra la nieve en sombra, y un canto en tono medio
+   recorre el contorno del lado de la luz para que el blanco no se pierda sobre la nieve blanca. Los colores de cada uno, en variables. */
+.montana {
+  --oso-pelo: #fffdf8;      /* el grande: blanco brillante (el más claro de los tres) */
+  --oso-crema: #f6ead2;     /* el chico: crema marfil */
+  --oso-apagado: #f4f0e8;   /* el del mameluco: blanco algo más apagado (no gris) */
+  --oso-hocico: #ecd6ab;    /* el hocico: un óvalo crema que se lea sobre la cara blanca */
+  --oso-rasgo: #231a16;     /* nariz y ojos */
+  --oso-marino: #25365f;    /* la camiseta del grande */
+  --oso-parche: #e17f2e;    /* su parche */
+  --oso-cinta: #c62f2b;     /* su cinta (y las bufandas de Navidad) */
+  --oso-celeste: #9cc5dd;   /* el mameluco */
+  --oso-gorro: #e5a42b;     /* el gorrito de cumpleaños */
+}
+.oso-grande { --pelo: var(--oso-pelo); }
+.oso-chico { --pelo: var(--oso-crema); }
+.oso-mameluco { --pelo: var(--oso-apagado); }
+.oso-luz { fill: color-mix(in oklab, var(--pelo) 93%, var(--luz-roca, #fff)); }
+.oso-medio { fill: color-mix(in oklab, var(--pelo) 68%, #8f8274); }
+.oso-sombra { fill: color-mix(in oklab, var(--pelo) 70%, color-mix(in oklab, var(--nieve-sb) 60%, var(--monte-sombra))); }
+.oso-hocico, .oso-hocico-arriba { fill: color-mix(in oklab, var(--oso-hocico) 92%, var(--luz-roca, #fff)); }
+.oso-rasgos, .oso-rasgos-arriba { fill: var(--oso-rasgo); }
+.oso-marino { fill: var(--oso-marino); }
+.oso-parche { fill: var(--oso-parche); }
+.oso-cinta, .oso-bufanda { fill: var(--oso-cinta); }
+.oso-celeste { fill: var(--oso-celeste); }
+.oso-gorro { fill: var(--oso-gorro); }
+.oso-pie { fill: color-mix(in oklab, var(--nieve-sb) 55%, var(--monte-sombra)); }
+/* De noche la luna los enfría (lo hace --luz-roca), pero siguen más cálidos que la nieve. */
+html[data-cielo="noche"] .oso-luz { fill: color-mix(in oklab, var(--pelo) 80%, var(--luz-roca, #fff)); }
+html[data-cielo="noche"] .oso-medio { fill: color-mix(in oklab, var(--pelo) 50%, #6f6152); }
+html[data-cielo="noche"] .oso-sombra { fill: color-mix(in oklab, var(--pelo) 46%, color-mix(in oklab, var(--nieve-sb) 45%, var(--monte-sombra))); }
+/* Con aurora (racha de 12 o más), de noche y con todos los efectos —las mismas condiciones que la aurora—, la cara sube: miran al cielo. */
+.oso-hocico-arriba, .oso-rasgos-arriba { display: none; }
+html[data-cielo="noche"][data-efectos="todos"] .osos.con-aurora :is(.oso-hocico-arriba, .oso-rasgos-arriba) { display: inline; }
+html[data-cielo="noche"][data-efectos="todos"] .osos.con-aurora :is(.oso-hocico, .oso-rasgos) { display: none; }
+/* Mientras montana.js pone la escena un momento en su estado final para sentarlos (y la devuelve al de inicio), nada se funde. */
+.montana[data-colocando] * { transition: none !important; }
+/* Sentados en la nieve de hoy, esperan escondidos mientras la nieve no los cubre (al empezar la película, o en una subida que se la trae):
+   montana.js pone `sin-nieve`. Si llegan mientras «Tú» sube, con un fundido corto (no con «ninguno»); se esconden de golpe. */
+.osos.sin-nieve { opacity: 0; }
+html:not([data-efectos="ninguno"]) .osos[data-fundido]:not(.sin-nieve) { transition: opacity 0.5s ease-out; }
