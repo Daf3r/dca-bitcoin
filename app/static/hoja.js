@@ -132,7 +132,7 @@ function datosHoja() {
     const p = leerPrecio(H.precio);
     if (!(p > 0)) return { sats, precioMal: 'texto' };
     const monto = montoDePrecio(sats, p);
-    // Con menos de una cienmillonésima de dólar el servidor guardaría cero; con mil millones o más, no lo acepta.
+    // Con menos de una cienmillonésima de dólar el servidor lo redondea a cero y lo rechaza; con mil millones o más, tampoco lo acepta.
     if (!(monto > 0)) return { sats, precioMal: 'poco' };
     if (monto >= TOPE_DINERO) return { sats, precioMal: 'mucho' };
     return { sats, monto, precio: p, exacto: true, origen: 'precio' };
@@ -425,6 +425,7 @@ for (const id of ['h-usd', 'h-precio']) {
   inp.addEventListener('beforeinput', (e) => {
     if (!inp.dataset.derivado || !e.inputType.startsWith('insert') || !e.cancelable) return;
     const t = e.data ?? e.dataTransfer?.getData('text/plain') ?? '';
+    if (!t) return; // sin texto (algún teclado lo manda así), que el navegador haga lo suyo: no se borra lo calculado
     e.preventDefault();
     inp.value = t;
     inp.setSelectionRange(t.length, t.length);

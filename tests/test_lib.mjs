@@ -168,6 +168,9 @@ eq(estimarMonto(1, 50_000), 0.01, 'mínimo un centavo');
   const antesR = { sats: 100_000, inv: 80 };
   const costo = P.costoTrasCompra(antesR, P.montoDePrecio(50_000, 62_500), 50_000);
   ok(Math.abs(costo.despues - ((80 + 31.25) * 1e8) / 150_000) < 1e-9, 'precio: el costo promedio se mueve con los dólares del precio escrito');
+  // El buscador de la lista encuentra los dólares como se ven: 48.325 se ve $48.33 (con toFixed habría sido «48.32»).
+  const listaP = P.movimientosLista([{ id: 1, fecha: '2026-11-10', tipo: 'compra', sats: 77_320, monto: 48.325 }, { id: 2, fecha: '2026-11-11', tipo: 'compra', sats: 30_000, monto: 25 }]);
+  eq([P.filtrarMovimientos(listaP, { texto: '48.33' }).map((m) => m.id), P.filtrarMovimientos(listaP, { texto: '$25.00' }).map((m) => m.id)], [[1], [2]], 'precio: el buscador encuentra los dólares como se ven');
 }
 
 // Ritmo quincenal: la racha no se rompe entre compras separadas por dos semanas

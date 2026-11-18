@@ -962,7 +962,7 @@ export function partirEtiquetas(texto) {
 /** Lo que se puede buscar de un movimiento: nota, fecha, nombre del mes, tipo, sats, dólares y TXID (sin acentos ni mayúsculas). */
 function pajar(m) {
   const mes = MESES[Number(m.fecha.slice(5, 7)) - 1] ?? '';
-  return sinAcentos([m.nota, m.fecha, mes, mes.slice(0, 3), PALABRA_TIPO[m.tipo], m.extra ? 'extra' : '', (m.etiquetas ?? []).join(' '), m.sats, m.monto != null ? m.monto.toFixed(2) : '', m.txid].join(' '));
+  return sinAcentos([m.nota, m.fecha, mes, mes.slice(0, 3), PALABRA_TIPO[m.tipo], m.extra ? 'extra' : '', (m.etiquetas ?? []).join(' '), m.sats, m.monto != null ? montoCampo(m.monto) : '', m.txid].join(' '));
 }
 /**
  * Filtra: `texto` (todas las palabras deben aparecer), `filtro` (todos | compra | venta | traslado | extra | txid) y un rango de
