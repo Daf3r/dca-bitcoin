@@ -78,7 +78,7 @@ dca.polarzero.dev {
 	}
 }
 ```
-`header_up` sobrescribe lo que mande el visitante, y el firewall solo deja llegar a Cloudflare, así que la cabecera es de fiar. Después: `sudo systemctl reload caddy`, añade `CONFIAR_X_CLIENTE_IP=1` a `.env` y `docker compose up -d`. Sin eso, la app avisa en el log y desactiva el límite por IP (el límite por cuenta sigue).
+`header_up` sobrescribe lo que mande el visitante, y el firewall solo deja llegar a Cloudflare, así que la cabecera es de fiar. Después: `sudo systemctl reload caddy`, descomenta `CONFIAR_X_CLIENTE_IP=1` en `.env` (viene comentada en `.env.example`) y `docker compose up -d`. Sin eso, la app avisa en el log y desactiva el límite por IP (el límite por cuenta sigue).
 
 Probar: entra en el iPhone y en el PC, prueba un lector y revisa el Historial.
 
