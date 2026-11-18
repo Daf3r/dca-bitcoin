@@ -1,6 +1,6 @@
 # Libro DCA — Investigación para la pasada final de pulido visual
 
-> **Nota (11 nov 2026).** Este informe lo preparó un agente de investigación por encargo del dueño para la pasada final de pulido visual (ver `CLAUDE.md`, «Pulido visual al final»). En esta carpeta quedan el prototipo del cielo en shader (`prototipo-cielo-gl.js`, que **no está conectado a la app**) y dos capturas. Las pruebas de CSP y de librerías que cita (`csp/`, `npmtest/`) y el resto de capturas se hicieron en el espacio temporal de la sesión y **no están en el repo**: el informe dice cómo reproducirlas (Apéndice B). Cifras medidas en Chrome 153; **WebKit/iPhone y GPU real no se probaron** (§8).
+> **Nota (11 nov 2026).** Este informe lo preparó un agente de investigación por encargo del dueño para la pasada final de pulido visual (ver `CLAUDE.md`, «Pulido visual al final»; hoy [«Pulido visual: Hora dorada»](../campamentos/09-pulido-1-hora-dorada.md)). En esta carpeta quedan el prototipo del cielo en shader (`prototipo-cielo-gl.js`, que **no está conectado a la app**) y dos capturas. Las pruebas de CSP y de librerías que cita (`csp/`, `npmtest/`) y el resto de capturas se hicieron en el espacio temporal de la sesión y **no están en el repo**: el informe dice cómo reproducirlas (Apéndice B). Cifras medidas en Chrome 153; **WebKit/iPhone y GPU real no se probaron** (§8).
 
 
 Fecha: 2026-11-11. Autor: investigación de diseño/front-end (solo lectura del repo; nada del repositorio fue modificado).
