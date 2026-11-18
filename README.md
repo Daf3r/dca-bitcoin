@@ -2,12 +2,7 @@
 
 Registro de compras DCA de Bitcoin con precio en vivo. Flask + SQLite en tu servidor, detrás de Caddy y Cloudflare, con login propio por persona.
 
-Tu saldo en sats es una montaña que subes compra a compra: la cabecera es un paisaje de noche (de amanecer en modo claro) con campamentos en 100k, 1M, 10M y 1 BTC, y una celebración cuando cruzas uno. Debajo, el precio de BTC con tus compras marcadas y tu costo promedio, y reportes: campamentos con fecha, año por año, constancia semanal y tu mejor y peor precio. Anotas escribiendo solo los sats que recibiste, con el teclado numérico del teléfono (los dólares se calculan con el precio de ese día; si quieres, los escribes exactos), tocas una compra para editarla o borrarla, e importas o exportas CSV. Funciona igual de bien en el teléfono y en el PC.
-
-```
-navegador ──▶ Cloudflare (proxy) ──▶ Caddy ──▶ 127.0.0.1:18082 (login propio) ──▶ data/libro.db
-                                                       backup ──▶ data/backups/ (diario)
-```
+Tu saldo en sats es una montaña que subes compra a compra: la cabecera es un paisaje que sigue la hora de El Salvador, con un campamento en cada potencia de 10 (100k, 1M, 10M…; la cima es siempre la siguiente, y al llegar la montaña se rehace con otra) y una celebración cuando cruzas una etapa. Debajo, el precio de BTC con tus compras marcadas y tu costo promedio, y reportes: constancia semanal, año por año, tu mejor y peor precio y «Tu historia», con cada etapa y su fecha. Anotas escribiendo solo los sats que recibiste, con el teclado numérico del teléfono (los dólares se calculan con el precio de ese día; si quieres, los escribes exactos); al tocar un movimiento de la lista se abre su comprobante, y desde ahí quien anota lo edita o lo anula. Importar y exportar CSV está en «Tu cuenta → Tus datos». Funciona igual de bien en el teléfono y en el PC.
 
 ## Arquitectura
 Tres servicios con la misma imagen y la misma carpeta de datos (GitHub dibuja el diagrama solo):
@@ -21,9 +16,11 @@ flowchart LR
   BK["backup<br/>respaldo diario +<br/>prueba semanal"] --> DB
   BK --> RB[("data/backups/")]
   AV["avisos<br/>recordatorios, TXID,<br/>gran caída, vigilantes,<br/>limpieza"] <--> DB
-  AV -->|Web Push| PUSH["Servicios de push<br/>(Apple, Google, Mozilla)"]
+  AV -->|Web Push| PUSH["Servicios de push<br/>(Apple, Google, Mozilla, Windows)"]
   APP -->|solo el servidor| EX["Coinbase / Kraken<br/>(precio e histórico)"]
   APP -->|solo el servidor| MP["mempool.space<br/>(estado del TXID)"]
+  AV -->|precio, para la gran caída| EX
+  AV -->|TXID por confirmar| MP
   PUSH -.->|notificación| N
   RB -->|restic| B2[("Backblaze B2")]
 ```
@@ -31,11 +28,11 @@ flowchart LR
 - **La app** sirve la página (módulos ES sin build, con `?v=<hash>`), la API y el login. El navegador nunca habla con terceros: precio, histórico y estado de TXID los pide el servidor y los guarda en la base.
 - **`backup`** copia la base cada 24 h (verificada), conserva 30 y una vez por semana prueba restaurar el último. **`avisos`** manda lo programado por Web Push y deja su marca de «sigo vivo»; los dos tienen su `healthcheck`.
 - **Estado del sistema** (Tu cuenta, solo admin) junta lo que mira cada pieza: respaldo, avisos, integridad, disco, versión, errores, las medidas de los aparatos («Medir este aparato», abajo) y la fecha de tu última revisión del respaldo de la wallet («Revisado», ver «Avisos push»). El registro de la app sale en JSON (`docker compose logs app`).
-- Lo que no se puede probar fuera del servidor (Caddy, Cloudflare, el build de Docker, iPhone real) se valida con `scripts/verificar-despliegue.sh`.
+- Lo que no se puede probar fuera del servidor (Caddy, Cloudflare, los servicios en marcha) se valida con `scripts/verificar-despliegue.sh`; la fluidez en el iPhone, con «Medir este aparato» (abajo). El CI sí construye y arranca la imagen de Docker.
 
 ## Qué necesitas
 - Docker y Docker Compose en el servidor, y Caddy (u otro proxy) para HTTPS.
-- Un dominio en Cloudflare y Zero Trust (el plan gratis alcanza).
+- Un dominio en Cloudflare (el plan gratis alcanza).
 
 ## Despliegue (Caddy + Cloudflare)
 
@@ -56,12 +53,12 @@ dca.tudominio.com {
 }
 ```
 
-Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)* y una regla de límite de peticiones para las rutas que **empiezan por** `/api/login` (por ejemplo, 10 por minuto por IP): así cubre también `/api/login/codigo`, la entrada de la tele con un código. En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Cloudflare. La protección de la app es su login propio (cuentas por persona, abajo); Cloudflare Access ya no se usa.
+Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)* y una regla de límite de peticiones para las rutas que **empiezan por** `/api/login` (por ejemplo, 10 por minuto por IP): así cubre también `/api/login/codigo`, la entrada de la tele con un código. Añade también una regla de caché *Bypass cache* para el dominio (es obligatoria: la caché la deciden las cabeceras de la app, y sus estáticos ya van versionados) y activa HSTS (SSL/TLS → Edge Certificates → HTTP Strict Transport Security). En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Cloudflare. La protección de la app es su login propio (cuentas por persona, abajo); Cloudflare Access ya no se usa.
 
 ## Acceso con cuentas
 La app tiene login propio: una cuenta por persona, **admin** (anota, corrige, anula, importa, ve el historial) o **lector** (ve todo, no escribe). Toda escritura queda en un historial que no se puede modificar, y borrar una compra la **anula** (sigue en el historial).
 
-Despliegue la primera vez (con Cloudflare Access todavía activo):
+La primera vez, crea las cuentas:
 ```bash
 docker compose exec backup python backup.py        # respaldo antes de nada
 docker compose up -d --build                       # la app muestra «Aún no hay cuentas»
@@ -81,13 +78,13 @@ dca.polarzero.dev {
 	}
 }
 ```
-`header_up` sobrescribe lo que mande el visitante, y el firewall solo deja llegar a Cloudflare, así que la cabecera es de fiar. Después: `sudo systemctl reload caddy`, añade `CONFIAR_X_CLIENTE_IP=1` a `.env` y `docker compose up -d`. Sin eso, la app avisa en el log y desactiva el límite por IP (el límite por cuenta sigue).
+`header_up` sobrescribe lo que mande el visitante, y el firewall solo deja llegar a Cloudflare, así que la cabecera es de fiar. Después: `sudo systemctl reload caddy`, descomenta `CONFIAR_X_CLIENTE_IP=1` en `.env` (viene comentada en `.env.example`) y `docker compose up -d`. Sin eso, la app avisa en el log y desactiva el límite por IP (el límite por cuenta sigue).
 
-Probar: entra en el iPhone y en el PC, prueba un lector y revisa el Historial. Si migras desde una instalación con Cloudflare Access, mantenla activa unos días mientras pruebas el login y quítala después. La regla de *Bypass cache* para el dominio es obligatoria.
+Probar: entra en el iPhone y en el PC, prueba un lector y revisa el Historial.
 
 Otras órdenes: `usuarios.py clave NOMBRE` (cambia la contraseña y cierra sus sesiones), `desactivar`/`activar`, `cerrar-sesiones`, `desbloquear` (tras muchos intentos fallidos la cuenta espera hasta 15 min).
 
-Si algo falla: vuelve a activar Access en Cloudflare (un clic) y despliega el commit anterior (`git checkout <commit> && docker compose up -d --build`). Las tablas nuevas no estorban al código viejo, pero este verá como normales las compras anuladas; si ya anulaste alguna, restaura el respaldo de antes del despliegue (ver abajo).
+Si algo falla tras una actualización: despliega el commit anterior (`git checkout <commit> && docker compose up -d --build`). La base no estorba al código anterior (las migraciones solo añaden: ver «Migraciones de la base»), pero lo anotado con funciones nuevas puede verse distinto con él; si hace falta, restaura el respaldo de antes del despliegue (ver abajo).
 
 ## Respaldos (para no perder datos)
 - El servicio `backup` copia la base cada 24 h a `data/backups/`, verifica cada copia con `PRAGMA integrity_check` y conserva las últimas 30.
@@ -131,7 +128,7 @@ El código caduca a los 5 minutos, sirve una vez, crear otro anula el anterior y
 ## Medir este aparato (¿va fluida en el iPhone?)
 En «Tu cuenta → Estado del sistema» (solo el admin), **«Medir este aparato»** abre la app en `/medir`: dice cuánto tardó en verse el saldo y, con «Empezar la prueba», tras una cuenta atrás la página baja y sube sola durante 7 segundos mientras cuenta los fotogramas por segundo. La medida se guarda (las últimas 50, sin la cuenta ni la IP: solo números, los ajustes de la pantalla y «Safari · iPhone») y sale en esa misma vista como **Fluido** (55 o más), **Revisar** (de 50 a 55) o **Lento** (menos de 50).
 - Mídelo en el iPhone, con la app instalada y **sin el modo de ahorro de batería** (limita la pantalla a 30 fotogramas y la medida sale como «Revisar», no como «Lento»). No toques la pantalla durante la prueba: un toque la detiene.
-- Si en el iPhone sale «Lento», lo primero que se quita en el teléfono es el desenfoque de la sierra del fondo (está decidido; partir la escena en varias imágenes no se hace).
+- Si en el iPhone sale «Lento», mide también en Safari `/medir?sin=pausa`, `/medir?sin=velo` y `/medir?sin=capas`: cada una apaga una mejora de la escena y así se ve qué parte pesa (`/medir?sin=` vuelve a medir con todo). El desenfoque de la sierra del fondo ya no va en el teléfono y la escena ya se pinta en capas.
 - Con `SOLO_LECTURA=1` se puede medir, pero la medida no se guarda.
 
 ## Importar y exportar
@@ -143,7 +140,7 @@ docker compose run --rm --no-deps -v "$PWD/compras.csv:/import/compras.csv:ro" a
 ```
 
 ## Más rápido: compresión y fuentes
-La app es liviana pero el CSS pesa ~110 KB y los módulos de JavaScript más de 200 KB sin comprimir. **Caddy comprime** con una sola línea, `encode zstd gzip`, dentro del bloque del sitio (ya está en los ejemplos de arriba; tras añadirla, `sudo systemctl reload caddy`). Mide antes y después con `bash scripts/medir-carga.sh https://dca.tudominio.com`: baja lo que pide la entrada con y sin compresión y dice el ahorro (esperable: más de la mitad). `DOMINIO=dca.tudominio.com bash scripts/verificar-despliegue.sh` comprueba también que llega comprimido. Las fuentes (Fraunces y Bricolage) ya se piden por adelantado (`<link rel="preload">`) y los recursos con versión van `immutable`, así que la segunda visita casi no descarga nada. Cloudflare comprime por su cuenta lo que pasa por él; la línea de Caddy cubre el tramo hasta Cloudflare y las pruebas directas.
+Sin comprimir, el CSS pesa unos 390 KB y los 66 archivos de JavaScript unos 940 KB; comprimidos, unos 94 KB y 340 KB (medido en el repo el 18 nov 2026). **Caddy comprime** con una sola línea, `encode zstd gzip`, dentro del bloque del sitio (ya está en los ejemplos de arriba; tras añadirla, `sudo systemctl reload caddy`). Mide antes y después con `bash scripts/medir-carga.sh https://dca.tudominio.com`: baja lo que pide la entrada con y sin compresión y dice el ahorro (esperable: más de la mitad). `DOMINIO=dca.tudominio.com bash scripts/verificar-despliegue.sh` comprueba también que llega comprimido. Las fuentes (Fraunces y Bricolage) ya se piden por adelantado (`<link rel="preload">`) y los recursos con versión van `immutable`, así que la segunda visita casi no descarga nada. Cloudflare comprime por su cuenta lo que pasa por él; la línea de Caddy cubre el tramo hasta Cloudflare y las pruebas directas.
 
 ## Actualizar
 Copia los archivos nuevos y ejecuta:
@@ -157,7 +154,7 @@ Los datos viven en `./data` y no se tocan. Sin `VERSION_GIT` todo funciona igual
 - Ningún servicio publica puertos; los contenedores van en solo lectura, sin capabilities y con `no-new-privileges`.
 - La app autentica con cuentas propias (scrypt, sesiones con cookie `__Host-` `HttpOnly; Secure; SameSite=Lax`, límite de intentos, roles comprobados en el servidor) y aun así solo escucha en localhost detrás de Caddy y Cloudflare.
 - Los respaldos contienen hashes de contraseña: guárdalos cifrados (restic ya cifra). Las sesiones solo se guardan como hash del token, inservibles para entrar.
-- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. Las únicas fuentes web (Fraunces y Bricolage Grotesque, licencias OFL en `app/static/fonts/`) va dentro del repo: el navegador no llama a ningún tercero.
+- Las cabeceras CSP limitan la página a su propio origen, sin scripts ni estilos inline. Las únicas fuentes web (Fraunces y Bricolage Grotesque, licencias OFL en `app/static/fonts/`) van dentro del repo: el navegador no llama a ningún tercero.
 - Las escrituras rechazan peticiones marcadas por el navegador como de otro sitio (`Sec-Fetch-Site`), y la importación exige `text/csv`, que obliga a un preflight CORS.
 - El precio y el histórico los consulta el servidor (Coinbase, con Kraken de reserva). El precio se guarda 30 s; el histórico diario se guarda en la base (tabla `precios`) y se actualiza como mucho una vez al día, en segundo plano. El navegador nunca habla con terceros.
 
@@ -165,8 +162,8 @@ Los datos viven en `./data` y no se tocan. Sin `VERSION_GIT` todo funciona igual
 - `python tests/test_api.py` (necesita Flask; base temporal, exchanges simulados, sin red): API completa, validaciones, CSV, migración, precio e histórico, y el acceso: sesiones, roles, fuerza bruta, auditoría inmutable y acotada, anular y la CLI de cuentas.
 - `node tests/test_lib.mjs`: cálculos del frontend (hitos, racha con casos límite, proyección, «hoy» de El Salvador, borde de husos horarios, decimación).
 - `node tests/test_ui.mjs`: prueba de navegador (Playwright + Chromium) contra un servidor de pruebas con base temporal y exchanges simulados (`tests/servidor_prueba.py`). Instala una vez con `npm ci --prefix tests` y `npx --prefix tests playwright install chromium`. Comprueba el saldo (sats y BTC, de 320 a 2560 px), los gráficos, el tema, anotar una compra con sus avisos, y lo que ve un lector.
-- **CI en GitHub**: cada PR y cada cambio a `main` corren las tres pruebas anteriores (`.github/workflows/pruebas.yml`). Dependabot propone una vez al mes actualizaciones (pip, Docker, GitHub Actions y npm); revisa que el PR esté en verde antes de mezclarlo.
-- El build de Docker y la integración con Caddy y Cloudflare se validan en el servidor.
+- **CI en GitHub**: cada PR y cada cambio a `main` corren ocho trabajos (`.github/workflows/pruebas.yml`): API y cálculos (con ruff y mypy), JavaScript (Biome y los tipos de `lib.js`), navegador, accesibilidad (axe), rendimiento (Lighthouse), la imagen de Docker y, de forma informativa, dependencias y regresión visual (ver «Revisión del código»). Dependabot propone una vez al mes actualizaciones (pip, Docker, GitHub Actions y npm); revisa que el PR esté en verde antes de mezclarlo.
+- La integración con Caddy y Cloudflare se valida en el servidor (`scripts/verificar-despliegue.sh`); la imagen de Docker ya la construye y arranca el CI.
 
 ## TXID y auditoría de las compras
 Cada compra puede llevar su **TXID** (64 caracteres hexadecimales, o pega el enlace de mempool.space y se extrae solo): en «Más detalles» de la hoja de anotar. Con TXID, la lista muestra «Ver en mempool.space» (abre `https://mempool.space/tx/<txid>` en otra pestaña) para que cualquiera de la familia compruebe la transacción. Es opcional: una compra dentro del exchange o por Lightning no tiene. Si un TXID ya está en otra compra, se guarda y se avisa. El CSV de exportación incluye la columna `txid` y el importador la lee. Los cambios de TXID quedan en la auditoría como cualquier edición.
@@ -197,7 +194,7 @@ En Safari abre `https://dca.polarzero.dev`, toca **Compartir → Añadir a panta
 - La barra de estado es la opaca (`black`). Si se quiere que la montaña llegue hasta arriba, cambiar a `black-translucent` en `index.html` y añadir `env(safe-area-inset-top)` a la cabecera; probar en el iPhone antes.
 
 ## Recordatorio «te toca comprar» y hitos de constancia
-Solo el admin ve, bajo la montaña, una línea según su ritmo (semanal o quincenal, el que marcan sus últimas compras): «Al día», «Te toca comprar esta semana», «Hoy es el último día…» o «Tu racha se reinició» (sin reproche). Es solo un recordatorio dentro de la app: no hay notificaciones externas. Además, al anotar la compra 10, 25, 50, 100… o al cumplir 6 meses, 1 año… desde la primera compra, sale una tarjeta «Constancia» y el reporte de Constancia dice cuánto falta para el siguiente hito. No hay cambios de base de datos.
+Solo el admin ve, bajo la montaña, una línea según su ritmo (semanal o quincenal, el que marcan sus últimas compras): «Al día», «Te toca comprar esta semana», «Hoy es el último día…» o «Tu racha se reinició» (sin reproche). Si activas los avisos, el recordatorio llega también como notificación (ver «Avisos push»). Además, al anotar la compra 10, 25, 50, 100… o al cumplir 6 meses, 1 año… desde la primera compra, sale una tarjeta «Constancia» y el reporte de Constancia dice cuánto falta para el siguiente hito. No hay cambios de base de datos.
 
 Cuando el precio cae 15 % o más frente a su máximo de 30 días, el admin ve una tarjeta opcional con el dato y con qué haría «reponer» (una compra como las tuyas) en el costo promedio. Es solo información: no recomienda comprar, y «Ocultar hoy» la quita hasta mañana.
 
@@ -207,7 +204,7 @@ Bajo el gráfico de precio, «Lo que pusiste y lo que vale» compara, día a dí
 
 En «Tu cuenta», el botón «Tema» elige entre automático (como el teléfono), claro y oscuro; se recuerda en cada dispositivo y también se aplica en la pantalla de entrada.
 
-**Compra extra por una caída.** Al anotar una compra, en «Más detalles» puedes marcarla como *extra* y escribir una nota (por qué la hiciste). Las extra se ven aparte en la lista y no cuentan como tu ritmo habitual: no desvían la «compra como las tuyas», los avisos ni la proyección. Sí suman al saldo y al costo promedio. El CSV de exportación lleva una columna `extra` al final (`1` en las extra); un CSV antiguo sin esa columna se importa igual. La base se actualiza sola al desplegar (columna nueva en `compras`): haz antes el respaldo de siempre.
+**Compra extra por una caída.** Al anotar una compra, en «Más detalles» puedes marcarla como *extra*; la nota (por ejemplo, por qué la hiciste) va en «¿Qué pasó esta semana en casa?», a la vista en la hoja como en cualquier compra. Las extra se ven aparte en la lista y no cuentan como tu ritmo habitual: no desvían la «compra como las tuyas», los avisos ni la proyección. Sí suman al saldo y al costo promedio. El CSV de exportación lleva una columna `extra` al final (`1` en las extra); un CSV antiguo sin esa columna se importa igual. La base se actualiza sola al desplegar (columna nueva en `compras`): haz antes el respaldo de siempre.
 
 Bajo «Lo que pusiste y lo que vale», una línea compara tu costo promedio con el precio promedio de BTC desde tu primera compra. Comprar los mismos dólares cada vez compra más sats cuando el precio baja, así que el costo suele quedar por debajo del promedio: es el efecto del DCA, medido con tus datos. Sale desde 3 compras y con al menos 14 días de histórico.
 
@@ -215,12 +212,12 @@ Bajo «Lo que pusiste y lo que vale», una línea compara tu costo promedio con 
 Tu saldo cuenta cuántos sats tienes en total, sin importar dónde estén. Para ver cuánto sigue en el exchange y cuánto ya está en tu wallet, anota un **Traslado** (tercer botón de «Anotar»): los sats que **llegaron** a tu wallet, la fecha y, si quieres, el TXID. La tarjeta «Dónde están tus sats» muestra la barra y los porcentajes, y la ven también tus papás. Un traslado **no cambia tu saldo ni tu costo promedio**.
 - Si pagaste comisión de red, escríbela en «Más detalles»: se anota además como un gasto («Comisión de retiro») y baja tu saldo en esa cantidad.
 - Si algún día vendes o gastas desde la wallet, antes anota un traslado «De mi wallet al exchange».
-- Un traslado no se edita: tócalo para anularlo (queda en el historial) y vuelve a anotarlo bien.
+- Un traslado no se edita: tócalo en la lista para abrir su comprobante, anúlalo desde ahí (queda en el historial) y vuelve a anotarlo bien.
 - **Varias wallets:** al anotar un traslado, «Usar otra wallet…» (o el selector, si ya tienes más de una) crea y elige la wallet; la tarjeta las reparte con sus nombres (hasta 5 además de «Mi wallet»). Cada wallet se valida por separado: no se saca de una lo que hay en otra. En «Tu cuenta → Tus datos» puedes archivar las que ya no uses (solo si están vacías; sus traslados se conservan).
 - Los traslados van en `traslados.csv` (con una columna `wallet`; vacía = «Mi wallet») y en los respaldos de la base. Las tablas nuevas se crean solas al desplegar: haz antes el respaldo de siempre.
 
 ## Revisión del código
-El CI revisa en cada PR: Python con `ruff` y `mypy`, el JavaScript con Biome, la **accesibilidad** con axe (falla ante cualquier violación), el **rendimiento** con Lighthouse, que la **imagen de Docker** se construye y arranca, y, de forma informativa, vulnerabilidades conocidas (pip-audit, npm audit, Trivy) y cambios visuales contra una referencia de `main`. Cada lunes, `semanal.yml` corre el barrido visual completo y las revisiones de seguridad sin tolerancia: si algo falla, GitHub te avisa por correo.
+El CI revisa en cada PR: Python con `ruff` y `mypy`, el JavaScript con Biome (y los tipos de `lib.js` con `tsc`), la app en un navegador real (Playwright), la **accesibilidad** con axe (falla ante cualquier violación), el **rendimiento** con Lighthouse, que la **imagen de Docker** se construye y arranca, y, de forma informativa, vulnerabilidades conocidas (pip-audit, npm audit, Trivy) y cambios visuales contra una referencia de `main`. Cada lunes, `semanal.yml` corre el barrido visual completo y las revisiones de seguridad sin tolerancia: si algo falla, GitHub te avisa por correo.
 
 En tu computadora, antes de subir algo:
 ```bash
@@ -231,7 +228,7 @@ node tests/barrido_ui.mjs rapido
 ```
 (`pre-commit install` hace las revisiones rápidas solas en cada commit.)
 
-**Después de desplegar** (en el servidor): `bash scripts/verificar-despliegue.sh`. Comprueba en segundos que los tres servicios están en marcha, que la app responde, que la base pasa su revisión de integridad, que hay un respaldo reciente y que el servicio de avisos está vivo, y te dice qué falló si algo no está bien.
+**Después de desplegar** (en el servidor): `bash scripts/verificar-despliegue.sh`. Comprueba en segundos que los tres servicios están en marcha, que la app responde, que la base pasa su revisión de integridad, que hay un respaldo reciente y que el servicio de avisos está vivo, y te dice qué falló si algo no está bien. Con `DOMINIO=dca.tudominio.com` mira además lo que llega de verdad por Cloudflare: que se comprime, que `/login` trae la CSP de la app, que hay HSTS y que ni `/` ni `/api/estado` salen de la caché de Cloudflare (la regla *Bypass cache*); cada fallo dice qué tocar.
 
 **Restauración de prueba:** cada semana, el servicio de respaldos restaura el último respaldo en una carpeta temporal y lo compara con la base real (integridad, tablas, filas y la auditoría); si algo no cuadra, te avisa por push. Puedes pedirla cuando quieras con `docker compose exec backup python backup.py --probar`.
 
@@ -244,7 +241,7 @@ Cada persona activa los avisos **en su dispositivo**: «Tu cuenta» → «Avisos
 - **Tú (admin):** recordatorio unos días antes de que venza tu semana o quincena (viernes a domingo, una vez al día, y solo si aún no compraste), TXID confirmado, fallo del respaldo y **gran caída** (BTC 15 % o más bajo su máximo de 30 días: un aviso por caída, solo informa; se reinicia cuando BTC queda a menos de 10 % de su máximo).
 - **El Diario del domingo (todos, apagado por defecto):** el domingo a las 18:00 llega el titular del Diario del Libro, **sin cifras** (una notificación se lee en la pantalla bloqueada). Una vez por domingo; si a esa hora los avisos de ese dispositivo duermen, llega cuando despierten. Sin compras no hay Diario ni aviso.
 - **Piedritas y firmas de tu familia (tú):** cuando alguien deja una piedrita en una compra o firma por primera vez el libro de cumbre de un campamento (reescribir una firma no avisa).
-- **No suenan de noche** (solo de 8:00 a 21:00, hora de El Salvador): lo de la noche sale por la mañana.
+- **No suenan de noche** (por defecto, solo de 8:00 a 21:00, hora de El Salvador; cada dispositivo puede elegir su horario en esa misma vista): lo de la noche sale por la mañana.
 - **Aviso de prueba:** el botón «Enviarme un aviso de prueba» manda uno solo a ese dispositivo y te dice en palabras si algo falló (máximo uno cada 30 s).
 - **Botón «Anotar compra»** en el recordatorio (Android y computadora; en iPhone la notificación solo abre la app).
 - **Retirar a tu wallet (opcional, apagado):** elige un monto en sats y te recordamos una vez cuando en el exchange haya más de ese monto. Solo es un recordatorio; la app no sugiere cuánto.
