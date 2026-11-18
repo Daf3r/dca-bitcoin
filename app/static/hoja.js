@@ -531,7 +531,7 @@ $('guardar').addEventListener('click', async () => {
     if (festejo) sonarGuardado(antes.sats, R.sats); // solo si lo activaste en «Tu cuenta»
     if (festejo && !reducido()) setTimeout(() => destello(), MS_SUBIDA);
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
-    const texto = (editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : '');
+    const texto = (editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta anotada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : '');
     // Con celebración, el aviso de abajo espera a que acabe para no tapar el sendero.
     const previa = editando ? comprasAntes.find((x) => x.id === editando) : null;
     const deshacer = editando
