@@ -4975,10 +4975,14 @@ try {
     const sMil = await servidor('mil');
     const sBal = await servidor('ballena');
     try {
-      // La ballena no vende: se le anota un gasto pequeño (−$0.01 de ganancia realizada o algo así) para tener la línea.
+      // La ballena no vende: se le anota un gasto pequeño (−$0.01 de ganancia realizada). Lo realizado de centavos NO sale en la cabecera
+      // (solo confundía: es la comisión de red de un traslado); con una venta que pesa, sí.
       {
         const a = await ent(sBal, ADMIN);
         await a.p.evaluate(async () => { await fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date(Date.now() - 864e5).toISOString().slice(0, 10), monto: 0.77, sats: 1000, tipo: 'venta' }) }); });
+        await a.p.reload(); await a.p.waitForFunction(() => document.querySelector('#s-valor .sd-g'));
+        ok(await a.p.evaluate(() => !document.querySelector('#s-valor .sd-r') && !/realizaste/.test(document.getElementById('s-valor').textContent)), '20·ganancia ballena: con una realizada de centavos la cabecera no dice «ya realizaste»');
+        await a.p.evaluate(async () => { await fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date(Date.now() - 864e5).toISOString().slice(0, 10), monto: 1, sats: 5000000, tipo: 'venta' }) }); });
         await a.ctx.close();
       }
       for (const [srv, esc] of [[sMil, 'mil'], [sBal, 'ballena']]) {
