@@ -184,7 +184,7 @@ const PESOS = [
   ['campamento 17: primera impresión', 179], // 137 comprobaciones
   ['campamento 18: el ritual de anotar', 77], // 75 comprobaciones
   ['campamento 18: el comprobante de una ven', 9], // 4 comprobaciones
-  ['el precio de la compra (escribir el prec', 32], // 36 comprobaciones (medido el 18 nov 2026, de uno en uno)
+  ['el precio de la compra (escribir el prec', 33], // 38 comprobaciones (medido el 18 nov 2026, de uno en uno)
   ['campamentos (arte) y campamento 21: hito', 13], // 29 comprobaciones
   ['campamento 19: la familia (escuchar el D', 92], // 63 comprobaciones
   ['campamento 20: cada cosa en su sitio', 291], // 156 comprobaciones
@@ -4425,6 +4425,17 @@ try {
       await p.fill('#h-precio', String(Math.round((mediana * 1e8) / 30000))); await p.waitForTimeout(150);
       h = await campos(p);
       ok(h.error === '' && h.guardar === 'Guardar', 'precio: cambiar el precio quita el aviso: lo confirmado ya no es lo mismo');
+      // Con Intro el aviso sale sin salir del campo; el segundo toque guarda aunque al salir el precio se ordene («83333» → «83,333»)
+      const antesN = (await datos(p, '/api/compras')).length;
+      await p.fill('#h-precio', String(Math.round((mediana * 12 * 1e8) / 30000))); await p.press('#h-precio', 'Enter'); await p.waitForTimeout(250);
+      ok((await campos(p)).guardar === 'Sí, guardar así', 'precio: con Intro también avisa');
+      await p.click('#guardar'); await p.waitForTimeout(1500);
+      eq((await datos(p, '/api/compras')).length, antesN + 1, 'precio: y el segundo toque guarda, aunque el precio se haya ordenado al salir del campo');
+      await p.$eval('#anotar', (b) => b.click()); await p.waitForTimeout(400);
+      if (await p.locator('#h-borrador').isVisible()) { await p.click('#h-borrador-no'); await p.waitForTimeout(200); }
+      await p.fill('#h-sats', '30000');
+      if (!(await p.locator('#h-avanzado').evaluate((d) => d.open))) await p.click('#h-avanzado summary');
+      await p.fill('#h-precio', String(Math.round((mediana * 1e8) / 30000))); await p.waitForTimeout(150);
       // ---- En una venta el rótulo dice «al que vendiste»; en un traslado no hay precio
       await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
       h = await campos(p);

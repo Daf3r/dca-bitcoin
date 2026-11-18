@@ -190,7 +190,8 @@ $('h-habitual').addEventListener('click', () => {
 });
 
 /** Lo que se va a guardar, para saber si el aviso ya confirmado sigue valiendo (si cambias algo, vuelve a avisar). */
-const claveHoja = () => `${H.tipo}|${H.sats}|${$('h-fecha').value}|${H.extra}|${H.manda}|${H.manda === 'precio' ? H.precio : H.manda === 'usd' ? H.usd : ''}`;
+// El precio va leído (no como texto): al salir del campo se ordena («62500» → «62,500») y eso no es otra compra.
+const claveHoja = () => `${H.tipo}|${H.sats}|${$('h-fecha').value}|${H.extra}|${H.manda}|${H.manda === 'precio' ? leerPrecio(H.precio) : H.manda === 'usd' ? H.usd : ''}`;
 const confirmando = () => H.confirmadoPara !== '' && H.confirmadoPara === claveHoja();
 function limpiarError() {
   const e = $('hoja-error');
