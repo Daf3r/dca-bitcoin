@@ -69,6 +69,26 @@ const saldo = (p) => p.evaluate(() => {
 });
 
 /**
+ * Desde ahora, cuenta cada pieza distinta que entra en la página, por selector. El cometa vive 1.9 s y se retira solo: contarlo «en el
+ * instante», cuando ya salió la tarjeta, fallaba con la máquina cargada. Se instala antes del clic y `piezasVistas(p)` dice cuántas
+ * entraron de cada una (también sirve para exigir que una NO salió).
+ */
+const vigilarPiezas = (p, selectores) => p.evaluate((sels) => {
+  const vistos = Object.fromEntries(sels.map((s) => [s, new WeakSet()]));
+  const cuenta = Object.fromEntries(sels.map((s) => [s, 0]));
+  window.__piezas = cuenta;
+  window.__piezasVigia?.disconnect(); // una cuenta nueva reemplaza a la anterior
+  window.__piezasVigia = new MutationObserver((ms) => {
+    for (const m of ms) for (const nd of m.addedNodes) {
+      if (nd.nodeType !== 1) continue;
+      for (const s of sels) for (const el of [nd, ...nd.querySelectorAll(s)]) if (el.matches(s) && !vistos[s].has(el)) { vistos[s].add(el); cuenta[s]++; }
+    }
+  });
+  window.__piezasVigia.observe(document.documentElement, { childList: true, subtree: true });
+}, selectores);
+const piezasVistas = (p) => p.evaluate(() => window.__piezas);
+
+/**
  * Ninguna tarjeta visible de la tele tapa el sendero (muestras del trazo cada 4 px, con su medio ancho), «Tú», los rótulos, los hitos,
  * el saldo, el precio ni otra tarjeta, ni se sale de la pantalla. Se calcula aparte del código que las coloca.
  */
@@ -1680,10 +1700,13 @@ try {
       r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
       await r.p.click('#cuenta-btn');
       await r.p.click('#dc-sistema-btn'); await r.p.waitForTimeout(400); // «Probar la celebración» vive en Estado del sistema (campamento 20)
+      await vigilarPiezas(r.p, ['.cometa', '.cometa .cometa-cola']);
       await r.p.click('[data-previa="epico"]');
       await r.p.waitForSelector('.aurora-epica', { timeout: 6000 });
-      const ep = await r.p.evaluate(() => ({ bandas: document.querySelectorAll('.aurora-epica').length, gotas: document.querySelectorAll('.luz-gota').length, cometa: document.querySelectorAll('.cometa').length }));
-      ok(ep.bandas === 3 && ep.gotas === 34 && ep.cometa === 1, `1 BTC: aurora (${ep.bandas}), lluvia de luz (${ep.gotas}) y cometa (${ep.cometa})`);
+      await r.p.waitForFunction(() => window.__piezas['.cometa'] > 0, null, { timeout: 6000 }).catch(() => {});
+      const ep = await r.p.evaluate(() => ({ bandas: document.querySelectorAll('.aurora-epica').length, gotas: document.querySelectorAll('.luz-gota').length }));
+      const cm = await piezasVistas(r.p);
+      ok(ep.bandas === 3 && ep.gotas === 34 && cm['.cometa'] === 1 && cm['.cometa .cometa-cola'] === 1, `1 BTC: aurora (${ep.bandas}), lluvia de luz (${ep.gotas}) y cometa (${JSON.stringify(cm)})`);
       ok(/Llegaste a la cumbre/.test(await r.p.innerText('#hito-cel')) && /1 BTC/.test(await r.p.innerText('#hito-cel')), '1 BTC: su tarjeta propia');
       eq(await r.p.evaluate(() => document.documentElement.dataset.acento), 'naranja', '1 BTC: el acento dorado espera a que acabe la celebración');
       await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'oro', null, { timeout: 8000 });
@@ -1697,9 +1720,12 @@ try {
       r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
       await r.p.click('#cuenta-btn');
       await r.p.click('#dc-sistema-btn'); await r.p.waitForTimeout(400); // «Probar la celebración» vive en Estado del sistema (campamento 20)
+      await vigilarPiezas(r.p, ['.cometa', '.cometa .cometa-cola', '.aurora-epica']);
       await r.p.click('[data-previa="etapa"]');
-      await r.p.waitForSelector('.cometa', { timeout: 6000 });
-      ok(await r.p.evaluate(() => !!document.querySelector('.cometa .cometa-cola') && document.querySelectorAll('.aurora-epica').length === 0), 'cometa: una etapa lo lanza (y no la celebración de 1 BTC)');
+      await r.p.waitForFunction(() => window.__piezas['.cometa'] > 0, null, { timeout: 6000 });
+      await r.p.waitForFunction(() => document.getElementById('hito-cel').hidden === false, null, { timeout: 6000 }).catch(() => {});
+      const ce = await piezasVistas(r.p);
+      ok(ce['.cometa'] === 1 && ce['.cometa .cometa-cola'] === 1 && ce['.aurora-epica'] === 0, `cometa: una etapa lo lanza (y no la celebración de 1 BTC): ${JSON.stringify(ce)}`);
       await r.ctx.close();
     } finally {
       srv.parar();
@@ -4833,9 +4859,10 @@ try {
       await a.p.evaluate(() => window.scrollTo(0, 0));
       await a.p.click('#anotar'); await a.p.waitForTimeout(400);
       await a.p.fill('#h-sats', '40000');
+      await vigilarPiezas(a.p, ['.cometa', '.plantada', '#m-fx .anillo']); // lo que no debe salir, contado desde antes de guardar
       await a.p.click('#guardar');
       await a.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
-      const c = await a.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), k: document.getElementById('hc-k').textContent, txt: document.getElementById('hc-txt').textContent, lacre: document.getElementById('hc-lacre').innerHTML, cometa: document.querySelectorAll('.cometa').length, plantada: document.querySelectorAll('.plantada').length, anillos: document.querySelectorAll('#m-fx .anillo').length }));
+      const c = await a.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), k: document.getElementById('hc-k').textContent, txt: document.getElementById('hc-txt').textContent, lacre: document.getElementById('hc-lacre').innerHTML, cometa: window.__piezas['.cometa'], plantada: window.__piezas['.plantada'], anillos: window.__piezas['#m-fx .anillo'] }));
       eq(c, { ligera: true, k: 'Nueva etapa', txt: '1.25M sats', lacre: '', cometa: 0, plantada: 0, anillos: 0 }, '21·celebración: una etapa intermedia se celebra en ligero');
       const t0 = Date.now();
       await a.p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 6000 });
@@ -4852,16 +4879,19 @@ try {
       const b = await ent(sAnio, ADMIN, { hora: 22 }, conLocal([['libro.efectos', 'todos']]));
       await b.p.click('#cuenta-btn'); await b.p.click('#dc-sistema-btn'); await b.p.waitForTimeout(400);
       eq(await b.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia'], '21·probar: «Etapa» y «Etapa con sello»');
+      await vigilarPiezas(b.p, ['.cometa']);
       await b.p.click('[data-previa="etapa"]');
       await b.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
-      const g = await b.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), txt: document.getElementById('hc-txt').textContent, lacre: !!document.querySelector('#hc-lacre svg.lacre'), cometa: document.querySelectorAll('.cometa').length }));
+      await b.p.waitForFunction(() => window.__piezas['.cometa'] > 0, null, { timeout: 4000 }).catch(() => {});
+      const g = await b.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), txt: document.getElementById('hc-txt').textContent, lacre: !!document.querySelector('#hc-lacre svg.lacre'), cometa: window.__piezas['.cometa'] }));
       eq(g, { ligera: false, txt: '2.5M sats', lacre: true, cometa: 1 }, '21·celebración: una etapa con sello trae su lacre y el cometa');
       await b.p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 8000 });
       await b.p.waitForTimeout(5000);
       await b.p.click('#cuenta-btn'); await b.p.click('#dc-sistema-btn'); await b.p.waitForTimeout(400);
+      await vigilarPiezas(b.p, ['.cometa']);
       await b.p.click('[data-previa="paso"]');
       await b.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
-      ok(await b.p.evaluate(() => document.getElementById('hito-cel').classList.contains('ligera') && !document.querySelector('#hc-lacre svg') && !document.querySelector('.cometa')), '21·probar: «Etapa» enseña la celebración ligera');
+      ok(await b.p.evaluate(() => document.getElementById('hito-cel').classList.contains('ligera') && !document.querySelector('#hc-lacre svg') && window.__piezas['.cometa'] === 0), '21·probar: «Etapa» enseña la celebración ligera (sin cometa en ningún momento)');
       await b.ctx.close();
       // ---- Cartas: las dos siguientes etapas y después las de siempre (una carta puede esperar a 10M)
       const cr = await ent(sAnio, ADMIN, { hora: 15 });
