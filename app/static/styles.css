@@ -3469,11 +3469,13 @@ html[data-tv] .tv-nombre:not([hidden]) { display: block; flex-basis: 100%; margi
   .dh-hoy { grid-template-columns: minmax(0, 15rem) minmax(0, 1fr); align-items: center; padding: 20px 24px; }
   .dh-hoy-lienzo, .historia-pg .dh-hoy-lienzo { margin: 0; max-width: 15rem; }
 }
-/* Las secciones de la línea, plegadas, con su cuenta a la derecha. */
-.dh-sec { margin: 0 0 10px; border-radius: 20px; background-color: var(--s1); }
+/* Las secciones de la línea, plegadas, con su cuenta a la derecha (pulido final): un título largo se parte en dos renglones en
+   vez de mandar solo su cuenta al de abajo, y todas las filas quedan parejas. En un teléfono donde la sección es tan estrecha que
+   el título necesitaría tres renglones o más (360 px o menos, o letra grande), todas llevan la cuenta debajo del título. */
+.dh-sec { margin: 0 0 10px; border-radius: 20px; background-color: var(--s1); container-type: inline-size; }
 .dh-sec[hidden] { display: none; }
 .dh-sec > summary {
-  display: flex; align-items: center; gap: 4px 12px; flex-wrap: wrap; min-height: calc(var(--toque, 48px) + 8px); padding: 6px 48px 6px 18px; border-radius: 20px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; min-height: calc(var(--toque, 48px) + 8px); padding: 6px 48px 6px 18px; border-radius: 20px;
   position: relative; cursor: pointer; list-style: none;
 }
 .dh-sec > summary::-webkit-details-marker { display: none; }
@@ -3482,12 +3484,13 @@ html[data-tv] .tv-nombre:not([hidden]) { display: block; flex-basis: 100%; margi
 html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
 .dh-sec > summary:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
 @media (hover: hover) and (pointer: fine) { .dh-sec > summary:hover { background: color-mix(in srgb, var(--naranja) 8%, transparent); } }
-.historia-pg .dh-sec-t { margin: 0; flex: 1 1 auto; font: 500 1.0625rem/1.25 var(--serif); letter-spacing: 0; color: var(--txt); }
+.historia-pg .dh-sec-t { margin: 0; min-width: 0; overflow-wrap: break-word; font: 500 1.0625rem/1.25 var(--serif); letter-spacing: 0; color: var(--txt); }
 .dh-n { flex: none; padding: 2px 10px; border-radius: 999px; background: var(--s2); color: var(--txt2); font: 650 0.875rem var(--sans); white-space: nowrap; }
 .dh-sec[open] { padding-bottom: 14px; }
 .dh-sec > :not(summary) { margin-inline: 18px; }
 .dh-sec .historia { margin-top: 6px; }
 @media (max-width: 359px) { .dh-sec > summary { padding-left: 14px; } .dh-sec > :not(summary) { margin-inline: 12px; } }
+@media (max-width: 699px) { @container (max-width: 21rem) { .dh-sec > summary { grid-template-columns: minmax(0, 1fr); } .dh-sec > summary > .dh-n { justify-self: start; } } }
 
 /* El tronco del primer año: la vuelta que falta para cerrar el primer anillo, punteada y tenue (no se toca). */
 .ht-falta { fill: none; stroke: var(--ht-vivo, #e9d9a6); stroke-width: 1.4; stroke-dasharray: 2 5; stroke-linecap: round; opacity: 0.55; pointer-events: none; }
