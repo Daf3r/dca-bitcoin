@@ -298,7 +298,9 @@ export function pintarLinea() {
   const g = pieza('sd-g');
   g.append(sep(), grupo);
   linea.append(g);
-  if (R.nVentas) {
+  // Lo realizado solo se enseña si pesa algo: una comisión de red de unos sats (un «gasto») deja −$0.01 y eso en la cabecera solo confunde.
+  // La tarjeta «Ganancia» y el Historial siguen diciendo la cifra exacta.
+  if (R.nVentas && Math.abs(R.realizada) >= 1) {
     const real = document.createElement('span');
     real.dataset.tono = R.realizada >= 0 ? 'sube' : 'baja';
     dual(real, usdSigno(R.realizada), usdSignoCorto(R.realizada));
