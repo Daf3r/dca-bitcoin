@@ -4405,3 +4405,13 @@ html:not([data-efectos="ninguno"]) .pe-montana :is(#m-bosque path, .arbol-honor)
   .pe-ctl { grid-row: 4; margin: 0 0 max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .pe-cifra { font-size: clamp(1.4rem, min(11cqi, 80cqi / (var(--n, 7) * 0.575)), 2.4rem); }
 }
+
+/* ---------------------------------------------------------------- El precio de la compra (hoja de anotar, «Más detalles»)
+   Los dólares y el precio de BTC van ligados: el que escribes queda como lo escribiste y el otro se calcula. El calculado va en cursiva
+   y con la tinta de las ayudas, y su rótulo lo dice («· calculado»): no se confunde con lo que escribió la persona. */
+.h-usd > span:first-child { overflow-wrap: anywhere; }
+/* Un campo mide de suyo unos 20 caracteres: con letra muy grande a 320 px eso ensanchaba toda la hoja (22 px de desplazamiento de lado,
+   ya pasaba con los dólares y el TXID). Así se encoge a lo que cabe. */
+.h-usd input { min-width: 0; }
+.h-calc { font-style: italic; font-weight: 400; }
+.h-usd input[data-derivado="1"] { color: var(--txt2); font-style: italic; }

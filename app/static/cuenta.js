@@ -1,4 +1,4 @@
-import { cumpleHoy, entero, fechaLarga, nombreHito, primeraCompra, saludoTalDia, talDiaComoHoy, textoCumple, usd } from './lib.js';
+import { cumpleHoy, entero, fechaLarga, nombreHito, primeraCompra, saludoTalDia, talDiaComoHoy, textoCumple, usd, usd0 } from './lib.js';
 import { montarAvisos } from './avisos.js';
 import { cambiosPendientes, mostrarCambios } from './cambios.js';
 import { fijarSonido, sonar, sonidoActivo } from './sonido.js';
@@ -188,7 +188,9 @@ function cambiosEdicion(antes, despues) {
   if (!antes || !despues) return '';
   const c = [];
   if (antes.sats !== despues.sats) c.push(`${entero(antes.sats)} → ${entero(despues.sats)} sats`);
-  if (antes.monto !== despues.monto) c.push(`${usd(antes.monto)} → ${usd(despues.monto)}`);
+  if (antes.monto !== despues.monto && usd(antes.monto) !== usd(despues.monto)) c.push(`${usd(antes.monto)} → ${usd(despues.monto)}`);
+  // El precio de BTC del movimiento: se puede corregir solo él (la hoja lo deja escribir) y, con pocos sats, los dólares casi no se mueven.
+  if (antes.precio > 0 && despues.precio > 0 && usd0(antes.precio) !== usd0(despues.precio)) c.push(`precio ${usd0(antes.precio)} → ${usd0(despues.precio)}`);
   if (antes.fecha !== despues.fecha) c.push(`fecha ${fechaLarga(antes.fecha)} → ${fechaLarga(despues.fecha)}`);
   if ((antes.txid ?? null) !== (despues.txid ?? null)) c.push(`TXID ${txCorto(antes.txid)} → ${txCorto(despues.txid)}`);
   if (!!antes.extra !== !!despues.extra) c.push(despues.extra ? 'marcada como extra' : 'ya no es extra');
