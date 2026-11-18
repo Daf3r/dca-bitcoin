@@ -75,7 +75,8 @@ jobs:
   navegador:
     name: Navegador (Playwright)
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    # test_ui tarda 42–45 min y crece con cada campamento: margen holgado hasta que se parta en varios trabajos.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
