@@ -11,10 +11,8 @@ export const CAMBIOS = [
   {
     id: '2026-12-e',
     items: [
-      'Al pie de la montaña hay ahora un pueblo con su iglesia y su plaza, y de él sale el sendero; alrededor, campos con su milpa, un lago con vacas y un bosque que crece con cada compra.',
-      'El paisaje sigue el año de aquí: verde en las lluvias y dorado en la seca, el maquilishuat rosado en febrero y piscuchas en octubre y noviembre.',
-      'De noche se encienden las luces del valle, una por cada mes del libro, y en el pueblo una ventana por cada persona de la familia.',
-      'En Navidad se viste toda la montaña: luminarias en el camino, coronas en los campamentos, el pino de la plaza y el nacimiento.',
+      'Al pie de la montaña hay ahora un pueblo, con campos, un lago y un bosque que crece con cada compra; el paisaje cambia con las épocas del año.',
+      'De noche se encienden luces en el valle, una por cada mes del libro, y en Navidad toda la montaña se viste de fiesta.',
       'En «Tu historia» está la película del ascenso: el camino del libro, de la primera compra a hoy, en quince segundos.',
       'En «Movimientos», al elegir una etiqueta en «Fechas y orden», se ve cuántos sats suman.',
     ],
