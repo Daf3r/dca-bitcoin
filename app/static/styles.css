@@ -3724,6 +3724,12 @@ html[data-tv] .tv-reloj[data-donde="cielo"] :is(small, .tvr-f) { color: var(--ci
    la fila de arriba mide más que el hueco de siempre). */
 @media (min-width: 1100px) { html[data-tv] .escena:has(.tv-nombre:not([hidden])) .saldo { top: max(110px, calc(18px + 3.3rem)); } }
 @media (max-width: 1099px) { html[data-tv] .escena:has(.tv-nombre:not([hidden])) .saldo { top: max(84px, calc(18px + 3.3rem)); } }
+/* (Pulido final) El saldo de la tele nunca toca la montaña. La tele sube la raíz (130/165/230 %) y con ella los topes en rem de la cifra
+   (`8rem`) y de la unidad (`--u-tam`), pero la columna del saldo y la composición de la montaña van en px: con la columna de escritorio
+   (52 %) la cifra crecía hasta «Tú», la cumbre y el sendero (a 1920×1080 con 532,702 sats, «sats» quedaba sobre la placa «Tú»). Una
+   columna más estrecha deja la cifra enorme (a 1920, 129 px en vez de 159) y lejos de la montaña. Por debajo de 1100 px ya cabía. */
+@media (min-width: 1100px) { html[data-tv] .saldo { width: min(40%, var(--medio-ancho)); } }
+html[data-tv] .saldo-v[role="button"] em::after { content: none; } /* en la tele no hay controles: sin la pista «⇄» */
 /* La fiesta, cuando no cabe entera: la misma tarjeta, más baja. */
 html[data-tv] .tv-fiesta.compacta { min-width: 0; padding: 0.6em 1.1em 0.7em; border-radius: 22px; }
 html[data-tv] .tv-fiesta.compacta b { font-size: 2.2rem; }
