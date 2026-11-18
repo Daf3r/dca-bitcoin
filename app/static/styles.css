@@ -744,8 +744,7 @@ html[data-ganancia="color"] .f-var .ico { color: inherit; }
 html[data-efectos="todos"] .semanas.entra i { animation: sem-entra 0.45s ease-out backwards; animation-delay: calc(var(--i, 0) * 14ms); }
 .extremos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .extremos > p { grid-column: 1 / -1; color: var(--txt2); }
-.ext { display: grid; gap: 2px; padding: 4px 0 4px 14px; border-left: 3px solid var(--s3); }
-.ext:first-child { border-left-color: var(--sube); }
+.ext { display: grid; gap: 2px; padding: 4px 0 4px 14px; border-left: 3px solid var(--s3); } /* las dos fichas con el mismo filo: la ganancia va neutra (campamento 17) */
 .ext small { font-size: 0.8125rem; color: var(--txt2); font-weight: 600; }
 .ext b { font: 500 1.6rem/1.1 var(--sans); letter-spacing: -0.02em; }
 .ext span { font-size: 0.8125rem; color: var(--txt2); font-variant-numeric: tabular-nums; }
