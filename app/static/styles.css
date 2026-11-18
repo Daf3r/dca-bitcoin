@@ -3473,7 +3473,8 @@ html[data-tv] .tv-nombre:not([hidden]) { display: block; flex-basis: 100%; margi
 }
 /* Las secciones de la línea, plegadas, con su cuenta a la derecha (pulido final): un título largo se parte en dos renglones en
    vez de mandar solo su cuenta al de abajo, y todas las filas quedan parejas. En un teléfono donde la sección es tan estrecha que
-   el título necesitaría tres renglones o más (360 px o menos, o letra grande), todas llevan la cuenta debajo del título. */
+   el título necesitaría tres renglones o más (menos de 21rem: 375 px o menos con letra normal; con letra grande, hasta 414 px),
+   todas llevan la cuenta debajo del título. */
 .dh-sec { margin: 0 0 10px; border-radius: 20px; background-color: var(--s1); container-type: inline-size; }
 .dh-sec[hidden] { display: none; }
 .dh-sec > summary {
