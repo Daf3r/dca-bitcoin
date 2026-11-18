@@ -14,7 +14,6 @@ let actual = PESTANAS.includes(leer(CLAVE_PESTANA)) ? leer(CLAVE_PESTANA) : 'res
 let porPestanas = leer(CLAVE_MODO) !== 'todo';
 
 export const enPestanas = () => porPestanas;
-export const pestanaActual = () => actual;
 /** ¿Se ve ahora la pestaña de la historia? (en «Todo junto» siempre) */
 export const historiaVisible = () => (porPestanas ? actual === 'historia' : historiaPedida);
 // En «Todo junto» la historia no se pinta (son cientos de nodos que casi nadie mira ahí): sale, al final de la página, cuando se pide
