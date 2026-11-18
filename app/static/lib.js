@@ -2086,9 +2086,9 @@ export function textoValle({ luces = 0, arbol = null } = {}) {
  * @returns {string}
  */
 export function textoOsos(n) {
-  if (n >= 3) return 'En la nieve, bajo la cumbre, se sientan tres osos polares de peluche: el grande con su camiseta azul y su cinta roja, el chico y el del mameluco celeste.';
-  if (n === 2) return 'En la nieve, bajo la cumbre, se sientan dos osos polares de peluche: el grande con su camiseta azul y su cinta roja, y el chico.';
-  if (n === 1) return 'En la nieve, bajo la cumbre, se sienta un oso polar de peluche con su camiseta azul y su cinta roja.';
+  if (n >= 3) return 'Bajo la cumbre, junto a la meta, se sientan tres osos polares de peluche: el grande con su camiseta azul y su cinta roja, el chico y el del mameluco celeste.';
+  if (n === 2) return 'Bajo la cumbre, junto a la meta, se sientan dos osos polares de peluche: el grande con su camiseta azul y su cinta roja, y el chico.';
+  if (n === 1) return 'Bajo la cumbre, junto a la meta, se sienta un oso polar de peluche con su camiseta azul y su cinta roja.';
   return '';
 }
 
