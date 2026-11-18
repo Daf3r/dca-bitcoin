@@ -56,12 +56,12 @@ export async function api(ruta, { metodo = 'GET', cuerpo, tipo = 'application/js
       r = await fetch(ruta, opt);
       cayo = caido(r);
     } catch {
-      cayo = true; // con la sesión de Cloudflare Access vencida, fetch también falla por la redirección al login
+      cayo = true;
     }
     if (!cayo) { if (i > 0) avisarRed('ok'); break; }
     if (!leyendo || i >= ESPERAS_MS.length) {
       if (i > 0) avisarRed('fallo');
-      throw Object.assign(new Error('Sin conexión con el servidor. Si tu sesión venció, recarga la página.'), { status: 0 });
+      throw Object.assign(new Error('No hay conexión con el servidor. Revisa el internet y vuelve a intentarlo.'), { status: 0 });
     }
     if (i === 0) avisarRed('reintentando');
     await new Promise((ok) => setTimeout(ok, ESPERAS_MS[i]));

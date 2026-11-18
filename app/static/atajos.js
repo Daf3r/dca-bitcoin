@@ -11,6 +11,12 @@ export function fijarAtajos(si) {
   try { if (si) localStorage.removeItem(CLAVE); else localStorage.setItem(CLAVE, '0'); } catch { /* vale para esta visita */ }
 }
 
+// (Pulido final) En un aparato táctil el interruptor y la lista de atajos no salen en «Tu cuenta» hasta que se teclea una letra fuera
+// de un campo de texto: eso solo pasa con un teclado físico (el de la pantalla solo aparece dentro de un campo), y desde ahí los atajos
+// pueden dispararse, así que su interruptor tiene que estar a la vista.
+document.addEventListener('keydown', (e) => {
+  if (e.key?.length === 1 && !e.target.closest?.('input, textarea, select, [contenteditable="true"]')) document.documentElement.dataset.teclado = '';
+});
 document.addEventListener('keydown', (e) => {
   if (!atajosActivos() || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
   if (!hoja.hidden || document.querySelector('dialog[open]')) return;

@@ -97,11 +97,12 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   }
   s += `<path class="g-linea" d="${linea}"/>`;
   for (const { v, yy } of ticksP) s += `<text class="g-t v-eje g-eje" x="${W - m.r}" y="${f1(yy - 5)}" text-anchor="end">${usd0(v)}</text>`;
-  // Máximo de 30 días (solo con la tarjeta de gran caída): una línea punteada suave con su etiqueta.
+  // Máximo de 30 días (solo con la tarjeta de gran caída): una línea punteada suave; su etiqueta va encima de los puntos (abajo).
+  let etiquetaMax = '';
   if (maximo30) {
     const ym = y(maximo30.max);
-    const txtM = `Máx. ${maximo30.dias} días ${usd0(maximo30.max)}`;
-    s += `<line class="g-max" x1="${m.l}" x2="${W - m.r}" y1="${f1(ym)}" y2="${f1(ym)}"/><text class="g-max-t" x="${W - m.r}" y="${f1(ym - 6)}" text-anchor="end">${txtM}</text>`;
+    s += `<line class="g-max" x1="${m.l}" x2="${W - m.r}" y1="${f1(ym)}" y2="${f1(ym)}"/>`;
+    etiquetaMax = `<text class="g-max-t" x="${W - m.r}" y="${f1(ym - 6)}" text-anchor="end">Máx. ${maximo30.dias} días ${usd0(maximo30.max)}</text>`;
   }
   let etiquetaCosto = '';
   if (promedio) {
@@ -126,8 +127,9 @@ export function dibujarGrafico(host, lectura, { serie, compras, ventas = [], pro
   const rv = r + 1.5;
   const puntos = [...dibujadas.map((c, i) => ({ c, x: cxy[i][0], y: cxy[i][1] })), ...ventasRango.map((c, i) => ({ c, x: vxy[i][0], y: vxy[i][1] }))];
   if (vxy.length) s += `<path class="g-ventas" d="${vxy.map(([cx, cy]) => `M${f1(cx)} ${f1(cy - rv)}L${f1(cx + rv)} ${f1(cy)}L${f1(cx)} ${f1(cy + rv)}L${f1(cx - rv)} ${f1(cy)}Z`).join('')}"/>`;
-  // La etiqueta del costo va encima de los puntos para que siempre se lea.
+  // Las etiquetas del costo y del máximo van encima de los puntos para que siempre se lean (con su halo del color del fondo).
   if (promedio) s += etiquetaCosto;
+  s += etiquetaMax;
   if (enRango.length && enRango.length <= 2) {
     const c = enRango.at(-1), [cx, cy] = cxy.at(-1);
     const k = compras.length === 1 ? (libro ? 'La primera compra' : 'Tu primera compra') : libro ? 'La última compra' : 'Tu última compra';

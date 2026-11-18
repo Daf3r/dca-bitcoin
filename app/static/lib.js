@@ -275,7 +275,7 @@ const metaTxt = (m) => (m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`);
  * `etapasAgrupadas` dice cuántas son; las del tramo en curso son eventos `paso` sueltos (campamento 21).
  */
 export function historia(R, hoy = hoyISO(), { maxExtras = 8, libro = false } = {}) {
-  if (!R || !R.nCompras) return { eventos: [], extrasOcultas: 0, etapasAgrupadas: 0 };
+  if (!R?.nCompras) return { eventos: [], extrasOcultas: 0, etapasAgrupadas: 0 };
   const ev = [];
   const compras = R.items.filter((c) => c.tipo !== 'venta');
   const p = compras[0];
@@ -320,7 +320,7 @@ export function historia(R, hoy = hoyISO(), { maxExtras = 8, libro = false } = {
  * demás: es un reconocimiento por lo que ya hiciste, no una lista de pendientes.
  */
 export function medallas(R, hoy = hoyISO()) {
-  if (!R || !R.nCompras) return [];
+  if (!R?.nCompras) return [];
   const compras = R.items.filter((c) => c.tipo !== 'venta');
   const primera = compras[0].fecha, meses = mesesEntre(primera, hoy);
   const out = [];
@@ -1464,7 +1464,7 @@ const PRONOSTICOS = {
  * clima de la montaña (de la época del año), **nunca del precio**. `altitud` (0 a 1) es para el grabado.
  */
 export function diario(R, hoy = hoyISO()) {
-  if (!R || !R.nCompras) return null;
+  if (!R?.nCompras) return null;
   const compras = R.items.filter((c) => c.tipo !== 'venta');
   const sem = semana(hoy);
   const desde = restarDias(hoy, 7), desdeEtapa = restarDias(hoy, 14);

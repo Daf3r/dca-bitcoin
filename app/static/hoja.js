@@ -240,7 +240,7 @@ function pintarHoja() {
   // Saldo sin el movimiento que se edita (una venta editada devuelve sus sats, una compra editada los quita).
   const saldo = R.sats - (previa ? (previa.tipo === 'venta' ? -previa.sats : previa.sats) : 0);
   const sinSaldo = venta && d && d.sats > saldo;
-  $('hoja-t').textContent = venta ? (H.editando ? 'Editar venta' : 'Registrar venta o gasto') : H.editando ? 'Editar compra' : 'Anotar compra';
+  $('hoja-t').textContent = venta ? (H.editando ? 'Editar venta' : 'Anotar venta o gasto') : H.editando ? 'Editar compra' : 'Anotar compra';
   $('h-sats-l').textContent = venta ? 'Sats que salieron' : 'Sats que recibiste';
   const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
   const habitual = !venta && S.precio ? montoHabitual(R.items) : null;
@@ -531,7 +531,7 @@ $('guardar').addEventListener('click', async () => {
     if (festejo) sonarGuardado(antes.sats, R.sats); // solo si lo activaste en «Tu cuenta»
     if (festejo && !reducido()) setTimeout(() => destello(), MS_SUBIDA);
     if (S.histDesde && desdeHistorico() < S.histDesde) cargarHistorico();
-    const texto = (editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta registrada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : '');
+    const texto = (editando ? 'Movimiento corregido.' : g.tipo === 'venta' ? `Venta anotada: −${entero(g.sats)} sats` : `Anotado: +${entero(g.sats)} sats · ${Math.floor(Math.max(0, Math.min(1, progresoEtapa())) * 100)}% del camino a ${nombreMeta(R.etapa)}`) + (g.txid_repetido?.length ? ' Ojo: ese TXID ya está en otra compra.' : '');
     // Con celebración, el aviso de abajo espera a que acabe para no tapar el sendero.
     const previa = editando ? comprasAntes.find((x) => x.id === editando) : null;
     const deshacer = editando

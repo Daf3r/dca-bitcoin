@@ -23,5 +23,17 @@
 				"useMathMinMax": "off"
 			}
 		}
-	}
+	},
+	"overrides": [
+		{
+			"includes": ["tests/*.mjs"],
+			"linter": {
+				"rules": {
+					"performance": {
+						"useDomNodeTextContent": "off"
+					}
+				}
+			}
+		}
+	]
 }

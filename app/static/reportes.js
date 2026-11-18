@@ -85,10 +85,11 @@ export function pintarReportes() {
   const ext = $('extremos');
   const tarjeta = (c, titulo) => {
     const v = S.precio ? (S.precio / c.precio - 1) * 100 : null;
-    return `<div class="ext"><small>${titulo}</small><b>${usd0(c.precio)}</b><span>${fechaLarga(c.fecha)} · ${entero(c.sats)} sats</span>` +
+    // (Pulido final) El «·» va con los sats: si no caben en el renglón, bajan juntos y el punto no se queda colgando.
+    return `<div class="ext"><small>${titulo}</small><b>${usd0(c.precio)}</b><span>${fechaLarga(c.fecha)} <span class="nw">· ${entero(c.sats)} sats</span></span>` +
       (v == null ? '' : `<span data-tono="${v >= 0 ? 'sube' : 'baja'}">${pct(v)} desde entonces</span>`) + '</div>';
   };
-  ext.innerHTML = pegarHtml(tarjeta(R.mejor, 'Mejor precio') + tarjeta(R.peor, 'Precio más alto'));
+  ext.innerHTML = pegarHtml(tarjeta(R.mejor, 'Precio más bajo') + tarjeta(R.peor, 'Precio más alto'));
 }
 
 // ------------------------------------------------------- tira de semanas: detalle al tocar

@@ -9,6 +9,12 @@ import { $, R, S, esAdmin, vozLibro } from './estado.js';
 import { ilustracion } from './iconos.js';
 import { pegado } from './cifras.js';
 
+// --------------------------------------------------------------- tamaño de los lienzos
+// Los observadores de tamaño no repintan dentro de su notificación: el dibujo cambia el alto del lienzo y, si eso pasa mientras el
+// navegador reparte las notificaciones, lanza «ResizeObserver loop completed with undelivered notifications» (benigno, pero llegaba a
+// «Estado del sistema» cada vez que alguien abría Gráficos). Se repinta en el cuadro siguiente, una vez aunque lleguen varias.
+const alCuadro = (fn) => { let pendiente = 0; return () => { if (!pendiente) pendiente = requestAnimationFrame(() => { pendiente = 0; fn(); }); }; };
+
 // --------------------------------------------------------------- gráfico
 const RANGOS = [30, 182, 365, 0];
 function rangoPorDefecto() {
@@ -110,14 +116,16 @@ function textoVs(c) {
     : `${base} está un ${p}% por encima del ${prom}. Pasa según en qué momentos coincidieron ${lb ? 'las compras' : 'tus compras'} con las subidas y bajadas del precio.`;
 }
 instalarLecturaValor($('v-lienzo'));
-new ResizeObserver(() => { if ($('v-lienzo').clientWidth && $('v-lienzo').clientWidth !== anchoValor) pintarValor(); }).observe($('v-lienzo'));
+const ajustarValor = () => { if ($('v-lienzo').clientWidth && $('v-lienzo').clientWidth !== anchoValor) pintarValor(); };
+new ResizeObserver(alCuadro(ajustarValor)).observe($('v-lienzo'));
 for (const id of ['rangos', 'dg-rangos']) {
   $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button');
     if (b) { S.rango = Number(b.dataset.r); pintarMercado(); }
   });
 }
-new ResizeObserver(() => { if ($('lienzo').clientWidth !== anchoGrafico) pintarMercado(); }).observe($('lienzo'));
+const ajustarMercado = () => { if ($('lienzo').clientWidth !== anchoGrafico) pintarMercado(); };
+new ResizeObserver(alCuadro(ajustarMercado)).observe($('lienzo'));
 
 // ----------------------------------------------------- sats por dólar
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -214,5 +222,10 @@ $('vistas').addEventListener('click', (e) => {
 });
 instalarEscalera($('c-lienzo'));
 instalarEscalera($('s-lienzo'));
-new ResizeObserver(() => { if ($('c-lienzo').clientWidth && $('c-lienzo').clientWidth !== anchoCosto) pintarCosto(); }).observe($('c-lienzo'));
-new ResizeObserver(() => { if ($('s-lienzo').clientWidth && $('s-lienzo').clientWidth !== anchoSats) pintarSatsAcum(); }).observe($('s-lienzo'));
+const ajustarCosto = () => { if ($('c-lienzo').clientWidth && $('c-lienzo').clientWidth !== anchoCosto) pintarCosto(); };
+const ajustarSats = () => { if ($('s-lienzo').clientWidth && $('s-lienzo').clientWidth !== anchoSats) pintarSatsAcum(); };
+new ResizeObserver(alCuadro(ajustarCosto)).observe($('c-lienzo'));
+new ResizeObserver(alCuadro(ajustarSats)).observe($('s-lienzo'));
+// Al abrir la pestaña Gráficos los lienzos se dibujan ya, a su medida y antes del primer pintado: si esperaran al observador, se
+// pintaría un cuadro con el dibujo de cuando estaban ocultos (hecho a 280 px y estirado) y lo de abajo saltaría.
+document.addEventListener('libro:pestana', (e) => { if (e.detail?.pestana === 'graficos') { ajustarMercado(); ajustarValor(); ajustarCosto(); ajustarSats(); } });
