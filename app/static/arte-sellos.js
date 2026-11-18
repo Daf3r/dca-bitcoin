@@ -39,11 +39,21 @@ const montanita = (cx, cy, w) => {
 };
 
 /**
+ * (Campamento 25) La cabeza de un oso de peluche de frente, en relieve como la montañita: cabeza, dos orejas, el hocico hundido (va en
+ * sentido contrario: queda como un hueco con la regla de relleno de siempre) y la nariz. Solo en el sello de 1 BTC, el de los osos de la cumbre.
+ */
+const cabezaOso = (cx, cy, r) => {
+  const c = (x, y, rx, ry, giro = 0) => `M${f2(x - rx)} ${f2(y)}a${f2(rx)} ${f2(ry)} 0 1 ${giro} ${f2(2 * rx)} 0a${f2(rx)} ${f2(ry)} 0 1 ${giro} ${f2(-2 * rx)} 0Z`;
+  return c(cx, cy, r, r * 0.86) + c(cx - r * 0.84, cy - r * 0.7, r * 0.34, r * 0.34) + c(cx + r * 0.84, cy - r * 0.7, r * 0.34, r * 0.34)
+    + c(cx, cy + r * 0.36, r * 0.44, r * 0.32, 1) + c(cx, cy + r * 0.2, r * 0.17, r * 0.12);
+};
+
+/**
  * El sello: una gota de cera aplastada (borde irregular, siempre el mismo para la misma etapa), con dos lenguas que se escurrieron
  * hacia fuera; dentro, la huella del sello (un disco hundido con su aro levantado) y la cifra en relieve.
  * `llave` hace únicos los ids; `texto` es la cifra (o null: solo la montañita).
  */
-function sello(llave, texto, { clase = '' } = {}) {
+function sello(llave, texto, { clase = '', oso = false } = {}) {
   const sem = texto ? [...texto].reduce((a, c) => a + c.charCodeAt(0) * 7, 0) : 3;
   // Las lenguas de cera: dos ángulos fijos para esta etapa, mejor hacia abajo (la cera se escurre).
   const lenguas = [0.35 + fijo(sem, 1) * 1.1, 1.9 + fijo(sem, 2) * 1.3];
@@ -85,7 +95,7 @@ function sello(llave, texto, { clase = '' } = {}) {
     const btc = / BTC$/.test(texto), cifra = btc ? texto.replace(/ BTC$/, '') : texto;
     // Que la cifra quepa dentro del disco: el tamaño baja con los caracteres.
     const fs = Math.min(btc ? 22 : 20.5, 44 / (cifra.length * 0.56));
-    fig = `<path d="${montanita(50, btc ? 33 : 35.5, 13)}"/>`
+    fig = `<path d="${oso ? cabezaOso(50, 32.6, 5.6) : montanita(50, btc ? 33 : 35.5, 13)}"/>`
       + `<text class="lc-cifra" x="50" y="${f1(btc ? 55 + fs * 0.12 : 50 + fs * 0.36)}" text-anchor="middle" font-size="${f1(fs)}">${esc(cifra)}</text>`;
     if (btc) fig += '<text class="lc-unidad" x="50" y="69" text-anchor="middle">BTC</text>';
     else fig += '<path d="M43 64.5h14"/>';
@@ -99,9 +109,9 @@ function sello(llave, texto, { clase = '' } = {}) {
   return `${s}</svg>`;
 }
 
-/** El sello de lacre de una etapa (`m` en sats). */
+/** El sello de lacre de una etapa (`m` en sats). El de 1 BTC lleva en relieve la cabeza de un oso en vez de la montañita (campamento 25). */
 export function lacre(m, { grande = false } = {}) {
-  return sello(`${Math.round(m)}${grande ? 'g' : 'p'}`, nombreHito(m), { clase: grande ? ' grande' : '' });
+  return sello(`${Math.round(m)}${grande ? 'g' : 'p'}`, nombreHito(m), { clase: grande ? ' grande' : '', oso: Math.round(m) === 1e8 });
 }
 
 // ================================================================ el certificado de altitud

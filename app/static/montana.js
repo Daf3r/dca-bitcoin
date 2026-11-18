@@ -1,8 +1,9 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle } from './lib.js';
+import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { sitiosPueblo, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
+import { OSOS, osos, sitioOsos, piesOsos, dentroDe } from './arte-osos.js';
 import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 
@@ -161,6 +162,11 @@ let estado = null;
 const DIENTES = [[0.03, 0.6], [0.12, 0.98], [0.19, 0.7], [0.29, 1.18], [0.36, 0.84], [0.42, 0.95], [0.47, 0.62], [0.535, 1.02], [0.6, 0.68], [0.69, 1.24], [0.76, 0.86], [0.83, 1.05], [0.9, 0.7], [0.97, 0.9]];
 const NIEVE_MIN = 0.55; // con la altitud en cero: una capa fina
 const NIEVE_MAX = 1.5;  // llegando a la cumbre: la cumbre bien cubierta
+/** (Campamento 25) Los mismos puntos que `trazoNieve`, como polígono (la regla de los osos los usa). */
+function puntosNieve({ sx, sy, ancho, nv }, alt) {
+  const hondo = nv * (NIEVE_MIN + (NIEVE_MAX - NIEVE_MIN) * Math.min(1, Math.max(0, alt)));
+  return [[sx - ancho, sy - 120], [sx + ancho, sy - 120], ...DIENTES.map(([u, k]) => [sx + ancho - 2 * ancho * u, sy + hondo * k])];
+}
 function trazoNieve({ sx, sy, ancho, nv }, alt) {
   const hondo = nv * (NIEVE_MIN + (NIEVE_MAX - NIEVE_MIN) * Math.min(1, Math.max(0, alt)));
   let d = `M${f1(sx - ancho)} ${f1(sy - 120)}L${f1(sx + ancho)} ${f1(sy - 120)}`; // (arriba con holgura: el cuerno de la cumbre llega a 39 · 1.6 px)
@@ -489,7 +495,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 22C) Navidad en la subida: luminarias a los dos lados del camino que se encienden hasta donde llegaste (las de más
   // arriba esperan apagadas) y, en «Tú», una corona de foquitos. Solo del 1 de diciembre al 6 de enero (el CSS las enseña).
   s += '<g class="v-navidad nav-sendero" id="m-nav-sendero"><path class="ns-off"/><path class="ns-glow"/><path class="ns-on ns-0"/><path class="ns-on ns-1"/><path class="ns-on ns-2"/></g>';
-  s += `<g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="v-navidad yo-nav yo-nav-0" r="12.8"/><circle class="v-navidad yo-nav yo-nav-1" r="12.8"/><circle class="v-navidad yo-nav yo-nav-2" r="12.8"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
+  s += `<g id="m-osos"></g><g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="v-navidad yo-nav yo-nav-0" r="12.8"/><circle class="v-navidad yo-nav yo-nav-1" r="12.8"/><circle class="v-navidad yo-nav yo-nav-2" r="12.8"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   // Reloj de sol (16A): sobre los pinos de adorno, pero detrás de los árboles de honor (antes sus piedras quedaban encima de las copas).
   const suelo = W < 1100 ? by - 4 : H * 0.93;
   s += relojDeSol(c.sx, suelo, W); // 16A
@@ -587,10 +593,75 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null } : null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null } : null, osos: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
-  colocar(inicio, false);
+  // (Campamento 25) Los osos polares de peluche de la familia, en la nieve al sol bajo la cumbre (los tres, la pareja o uno: lo que quepa).
+  // Se sientan esquivando los rótulos de «Tú» donde quedará al final de la subida (por eso se pone a «Tú» un momento ahí) y en la nieve
+  // que hay al empezar una subida desde un saldo (al guardar una compra: la nieve solo crece al subir, así que no se mueven ni
+  // desaparecen mientras «Tú» sube). Al abrir la app («Tú» sube desde la salida) y en la película, en la nieve de hoy: si al empezar
+  // no los cubre, esperan escondidos y llegan con ella (`colocar`). Si un rótulo les cae encima, ceden: se esconden (`ocultarOsos`).
+  // Ese momento en el estado final no se ve, pero lo medido fija estilos: sin transiciones hasta volver a `inicio` (si no, las marcas de
+  // etapa y los faroles se apagarían con su fundido al abrir la app o al empezar una subida). El CSS las quita con `data-colocando`.
+  host.dataset.colocando = '';
+  try {
+    colocar(sats, false);
+    estado.osos = colocarOsos({ host, W, H, c, ec, esc, inicio: pelicula || inicio <= 0 ? sats : Math.min(inicio, sats), campos, nieveMedidas, camino, L, silueta: [...cimaPts, [derX + W, H], [izqX - W, H]], cara: [[c.sx, c.sy], ...cuerno.slice(N_CARA), ...der.filter((p) => p[0] > c.sx + 48 * ecC), [derX + W, H], ...[...quiebre].reverse()], aurora, cumple: cumples.length > 0 });
+    if (inicio !== sats) colocar(inicio, false);
+    host.getBoundingClientRect(); // (el estado de `inicio`, ya calculado sin transiciones)
+  } finally { delete host.dataset.colocando; }
   describir(sats, etapa);
+}
+
+/**
+ * (Campamento 25) Pone los osos de peluche en `#m-osos` (en el frente) si caben y devuelve { cajas, n, zona, nieve } (`nieve`: la
+ * altitud desde la que la nieve dibujada los cubre; 0 si se sentaron en la de siempre o en la roca), o null. La regla es pura
+ * (`arte-osos.js: sitioOsos`); aquí se le dan el sendero (cada 3 px), la meta (mojón y bandera, con 8 px de aire) y las cajas de lo que
+ * se lee encima de la escena (el saldo, la cabecera, la tarjeta de la entrada, los textos de la película).
+ */
+function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, camino, L, silueta, cara, aurora, cumple }) {
+  const cima = campos.find((x) => x.cima), g = host.querySelector('#m-osos');
+  if (!cima || !g) return null;
+  const sendero = [];
+  for (let l = 0; l <= L; l += 3) { const q = camino.getPointAtLength(l); sendero.push([q.x, q.y]); }
+  const { x, y } = cima.p;
+  const meta = [x - 7.5 * ec - 8, y - 24.6 * ec - 8, x + 15 * ec + 8, y + 1.5 * ec + 8];
+  const hr = host.getBoundingClientRect(), cont = host.closest('.escena, .pe-escena') ?? host.parentElement;
+  const textos = [...cont.querySelectorAll(':scope > .cima, :scope > .saldo, :scope > .pe-cab, :scope > .pe-cap'), ...document.querySelectorAll('.login-caja')]
+    .map((el) => el.getBoundingClientRect()).filter((r) => r.width && r.height)
+    .map((r) => [r.left - hr.left - 6, r.top - hr.top - 6, r.right - hr.left + 6, r.bottom - hr.top + 6]);
+  // Los rótulos que ya están puestos (y «Tú»): los osos los esquivan, con 3 px de aire. El ancho de un rótulo es el que le da `etiquetar`
+  // (8.2 px por letra, y algo más), no el medido: si la letra todavía no llegó, el texto mide menos y luego crecería sobre los osos.
+  for (const t of host.querySelectorAll('#m-etiquetas > text, #m-etiquetas > rect, #m-yo .yo-anillo')) {
+    const q = t.getBBox();
+    if (!q.width) continue;
+    let [a, b] = [q.x, q.x + q.width];
+    if (t.tagName === 'text') { const w = Math.max(q.width, t.textContent.length * 8.6 + 8), x = Number(t.getAttribute('x')), an = t.getAttribute('text-anchor'); [a, b] = an === 'end' ? [x - w, x] : an === 'middle' ? [x - w / 2, x + w / 2] : [x, x + w]; }
+    const [dx, dy] = t.closest('#m-yo') ? host.querySelector('#m-yo').getAttribute('transform').match(/-?[\d.]+/g).map(Number) : [0, 0]; // «Tú» va trasladado
+    textos.push([a + dx - 3, q.y + dy - 3, b + dx + 3, q.y + q.height + dy + 3]);
+  }
+  // El gorrito ocupa algo más (la cabeza que mira a la aurora va dentro de la de siempre): si con él caben menos osos, se quedan sin
+  // él. Antes los osos que el adorno: un cumpleaños no se lleva a dos de la cumbre.
+  const geo = { W, H, sx: c.sx, sy: c.sy, ec, silueta, cara, nieveMin: puntosNieve(nieveMedidas, 0), nieveHoy: puntosNieve(nieveMedidas, altitud(inicio, esc)), sendero, meta, textos, aurora };
+  let sitio = sitioOsos({ ...geo, cumple });
+  if (cumple && (sitio?.lista.length ?? 0) < OSOS.length) {
+    const sin = sitioOsos({ ...geo, cumple: false });
+    if (sin && sin.lista.length > (sitio?.lista.length ?? 0)) { sitio = sin; cumple = false; }
+  }
+  if (!sitio) return null;
+  g.setAttribute('class', `osos${aurora ? ' con-aurora' : ''}`);
+  g.setAttribute('aria-hidden', 'true');
+  g.dataset.zona = sitio.zona; // dónde se sentaron: «nieve» (la de siempre), «nieveHoy» o «cumbre» (lo leen las pruebas)
+  g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora, cumple });
+  // Si se sentaron en la nieve de hoy (no en la que hay siempre), ¿desde qué altitud los cubre? Más abajo (al empezar la película, o
+  // al principio de una subida que les trae la nieve) quedarían sobre la roca: esperan escondidos hasta que la nieve llega (`colocar`).
+  let nieve = 0;
+  if (sitio.zona === 'nieveHoy') {
+    const pies = piesOsos(sitio.lista, ec * 1.1), cubre = (a) => { const pol = puntosNieve(nieveMedidas, a); return pies.every(([px, py]) => dentroDe(pol, px, py)); };
+    let a = 0, b = altitud(inicio, esc);
+    for (let i = 0; i < 18; i++) { const m = (a + b) / 2; if (cubre(m)) b = m; else a = m; }
+    nieve = b;
+  }
+  return { cajas: sitio.cajas, n: sitio.lista.length, zona: sitio.zona, nieve };
 }
 
 /**
@@ -1156,6 +1227,7 @@ function etiquetar(yo, sats = estado.sats) {
   caja.innerHTML = s;
   host.querySelector('#m-repisa')?.setAttribute('d', repisa);
   host.querySelector('#m-repisa-m')?.setAttribute('d', repisaM);
+  ocultarOsos(yo);
   // Cada etiqueta lleva detrás una placa redondeada (se mide el texto ya dibujado: legible sobre cualquier cielo o ladera).
   for (const t of caja.querySelectorAll('text.yo-txt')) {
     const bb = t.getBBox();
@@ -1167,6 +1239,19 @@ function etiquetar(yo, sats = estado.sats) {
     r.setAttribute('rx', f1((bb.height + 3) / 2));
     caja.insertBefore(r, t);
   }
+}
+
+/**
+ * (Campamento 25) «El oso cede»: si un rótulo (o la placa de «Tú», o «Tú») cae sobre los osos, se esconden ese rato; un rótulo nunca
+ * se pierde por ellos. Se mira cada vez que se ponen los rótulos (al llegar «Tú» a su sitio), no en cada fotograma.
+ */
+function ocultarOsos(yo) {
+  const g = estado.osos && estado.host.querySelector('#m-osos');
+  if (!g) return;
+  const rotulos = [...estado.host.querySelectorAll('#m-etiquetas > text, #m-etiquetas > rect')].map((t) => t.getBBox()).filter((q) => q.width > 0);
+  rotulos.push({ x: yo.x - 10, y: yo.y - 10, width: 20, height: 20 });
+  const pisa = estado.osos.cajas.some(([a, b, c, d]) => rotulos.some((q) => q.x < c && q.x + q.width > a && q.y < d && q.y + q.height > b));
+  if (pisa) g.setAttribute('visibility', 'hidden'); else g.removeAttribute('visibility');
 }
 
 function colocar(sats, animado) {
@@ -1193,6 +1278,14 @@ function colocar(sats, animado) {
   if (dn !== estado.dNieve) {
     estado.dNieve = dn;
     host.querySelectorAll('.nieve, .nieve-sombra, .nieve-luz, .nieve-mascara, .nieve-clip').forEach((n) => n.setAttribute('d', dn));
+  }
+  // (Campamento 25) Los osos sentados en la nieve de hoy esperan escondidos mientras la nieve dibujada no los cubre.
+  // Con la altitud exacta, no la de los escalones de la nieve (si no, unos osos ya visibles parpadearían al empezar a subir), y con un
+  // fundido solo si «Tú» va subiendo (al dibujar, o al saltar con el deslizador de la película, quedan ya como deben).
+  const go = estado.osos && host.querySelector('#m-osos');
+  if (go) {
+    const sin = altN < estado.osos.nieve - 1e-9;
+    if (sin !== go.classList.contains('sin-nieve')) { go.toggleAttribute('data-fundido', Boolean(animado)); go.classList.toggle('sin-nieve', sin); }
   }
   luminarias(l);
   if (!animado) { etiquetar(p, sats); huellas(l); }
@@ -1315,6 +1408,13 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
 
   // Cada compra: brasas desde tu punto, la cifra flotando y la siguiente bandera que se agita.
   brasas(fx, p.x, p.y, nivel === 'compra' ? 9 : 14, nivel === 'compra' ? 46 : 64);
+  // (Campamento 25) Y los osos de la cumbre dan un saltito (0.9 s, solo transform; el CSS lo apaga con efectos «ninguno»).
+  const os = host.querySelector('#m-osos.osos');
+  if (os) {
+    if (os.classList.contains('salta')) { os.classList.remove('salta'); os.getBoundingClientRect(); } // otro saltito seguido: que empiece de nuevo
+    os.classList.add('salta');
+    setTimeout(() => os.classList.remove('salta'), 1200);
+  }
   // «+N sats» donde no choque con las etiquetas (banderas y «Tú»): se prueban varios sitios.
   const t = nodo('text', { class: 'flota' }, fx);
   t.textContent = `+${entero(delta)} sats`;
@@ -1398,7 +1498,8 @@ function describir(sats, meta) {
   estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima, lb) + (estado.compras ? ` Al pie crece ${lb ? 'el bosque del libro' : 'tu bosque'}: un pino por compra (${estado.compras}).` : '')
     + (arbolesDe(estado.compras).length ? ` Entre los pinos crecen ${lb ? 'los' : 'tus'} árboles de honor: ${arbolesDe(estado.compras).map((t) => ({ ceibo: 'un ceibo', amate: 'un amate', maquilishuat: 'un maquilishuat' })[t]).join(', ')}.` : '')
     + (estado.eco ? ` ${lb ? 'El eco' : 'Tu eco'}, una sombra quieta en el sendero, marca dónde ${lb ? 'estaba el libro' : 'estabas'} hace un año: ${entero(estado.eco.sats)} sats.` : '')
-    + (estado.valle ? ` ${textoValle(estado.valle)}` : '');
+    + (estado.valle ? ` ${textoValle(estado.valle)}` : '')
+    + (estado.osos ? ` ${textoOsos(estado.osos.n)}` : '');
 }
 
 // ---------------------------------------------------------------- campamento 16A

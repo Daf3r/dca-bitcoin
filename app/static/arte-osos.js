@@ -1,0 +1,252 @@
+// (Campamento 25) Los osos polares de peluche de la familia, sentados en la nieve al sol bajo la cumbre. Funciones puras que devuelven
+// SVG como texto o un sitio (sin DOM, sin el `rnd()` de la montaña). Los coloca `montana.js`; los colores van en styles.css (bloque
+// «Campamento 25»), por variables que siguen a la hora.
+// Son tres, como los de la foto de la familia: el grande (blanco, camiseta azul marino con su parche naranja y la cinta roja cruzándole
+// el pecho), el chico (crema, sin ropa) y el tercero (blanco algo más apagado, con su mameluco celeste). Si no caben los tres, se quedan
+// el grande y el chico; si tampoco, el grande solo; si ni él cabe, no sale ninguno (como el grabado y el papel picado).
+// Son peluches: cabeza muy ancha (más de la mitad del alto), cuerpo de huevo casi sin cuello, orejitas chicas a los lados, bracitos
+// cortos hacia fuera, las patas delante y un hocico claro y grande con la nariz negra. Planos sin contornos: la cara en sombra, la cara
+// al astro, un canto en tono medio que recorre el contorno del lado de la luz (así el blanco no se pierde sobre la nieve blanca), el
+// hocico y los rasgos. Cada oso es un grupo con un trazo por tono, y se pintan de atrás adelante: así pueden apoyarse uno en otro.
+
+const f1 = (n) => n.toFixed(1);
+const RAD = Math.PI / 180;
+
+/** Con `true` salen los tres osos de la familia cuando caben; con `false`, como mucho la pareja (el grande y el chico). */
+export const OSOS_TRIO = true;
+/** Cuánto mide el dibujo (unidades del oso) frente a la escala de la escena (`ec × 1.1`): el grande queda en unos 21 px en el teléfono. */
+export const K_OSO = 0.9;
+/** El orden en que se quedan: con sitio para uno, el grande; para dos, el grande y el chico; para tres, los tres. */
+export const OSOS = ['grande', 'chico', 'mameluco'];
+const ESCALA = { grande: 1, chico: 0.7, mameluco: 0.84 };
+/** El saltito al guardar sube 4 px; la regla de sitio lo cuenta (nada sale contra el cielo ni al saltar). */
+export const SALTO = 4;
+
+// ---------------------------------------------------------------------------------------------------------------- el dibujo
+// Un oso sentado, de frente, en sus unidades: el pie en (0, 0), unos 14 de ancho y 17.5 de alto (la luz llega por +x).
+const arco = (cx, cy, rx, ry, a0, a1, n) => Array.from({ length: n + 1 }, (_, i) => { const a = (a0 + ((a1 - a0) * i) / n) * RAD; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)]; });
+const elipse = (cx, cy, rx, ry, n = 10) => arco(cx, cy, rx, ry, 0, 360 - 360 / n, n - 1);
+/** Un plano en media luna: el arco de fuera (de `a0` a `a1`) y, de vuelta, el mismo arco `hondo` unidades hacia dentro. */
+const canto = (cx, cy, rx, ry, a0, a1, hondo, n = 8) => [...arco(cx, cy, rx, ry, a0, a1, n), ...arco(cx, cy, rx - hondo, ry - hondo, a1, a0, n)];
+const CAB = { x: 0, y: -12.2, rx: 7.1, ry: 5.6 }; // la cabeza, más ancha que alta
+// El cuerpo, un huevo: más ancho abajo (sentado) que arriba, donde se pierde bajo la cabeza.
+const HUEVO = { x: 0, y: -4.3, rx: 5, rxAbajo: 6.3, ry: 4.6 };
+const huevo = (a0, a1, n, hondo = 0) => Array.from({ length: n + 1 }, (_, i) => {
+  const a = (a0 + ((a1 - a0) * i) / n) * RAD, sy = Math.sin(a), rx = HUEVO.rx + ((HUEVO.rxAbajo - HUEVO.rx) * (sy + 1)) / 2 - hondo; // (`hondo` < 0: un poco por fuera)
+  return [HUEVO.x + rx * Math.cos(a), HUEVO.y + (HUEVO.ry - hondo) * sy];
+});
+// La sombra propia: una media luna a la izquierda que acaba en una arista algo curvada (el terminador); la luz, el resto.
+const terminador = (x, y, rx, ry, ancho) => [[x - rx + ancho, y - ry * 0.6], [x - rx + ancho + 0.7, y], [x - rx + ancho, y + ry * 0.6]];
+const CAB_SOMBRA = [...arco(CAB.x, CAB.y, CAB.rx, CAB.ry, 112, 250, 8), ...terminador(CAB.x, CAB.y, CAB.rx, CAB.ry, 2.7)];
+const CAB_LUZ = [...arco(CAB.x, CAB.y, CAB.rx, CAB.ry, -110, 112, 12), ...terminador(CAB.x, CAB.y, CAB.rx, CAB.ry, 2.7).reverse()];
+const CUE_SOMBRA = [...huevo(100, 255, 8), [-2.2, -8.6], [-1.5, -4.7], [-2.2, -0.9]];
+const CUE_LUZ = [...huevo(-105, 100, 12), [-2.2, -0.9], [-1.5, -4.7], [-2.2, -8.6]];
+// El borde de abajo de la cabeza (la ropa empieza ahí: nunca le pasa por encima a la barbilla).
+const BARBILLA = arco(CAB.x, CAB.y, CAB.rx + 0.05, CAB.ry + 0.05, 145, 35, 10);
+/** Una prenda que cubre el cuerpo desde la barbilla hasta `hasta` (y, más o menos), entre los dos lados del huevo. */
+const prenda = (hasta) => {
+  const izq = huevo(180, 260, 6).filter(([, y]) => y < hasta && y > -9.6), der = huevo(-80, 0, 6).filter(([, y]) => y < hasta && y > -9.6);
+  return [...BARBILLA.filter(([x]) => Math.abs(x) < 5.4), ...der, [6.2, hasta], [2, hasta + 0.5], [-2, hasta + 0.5], [-6.1, hasta], ...izq];
+};
+/** Las piezas de un oso, en el orden en que se pintan: [tono, puntos]. */
+const PIEZAS = [
+  // la sombra: la media luna del cuerpo y de la cabeza, el bracito y la orejita del lado de la sombra, y bajo la barbilla
+  ['sombra', elipse(0, -8, 4.6, 1.5, 10)],
+  ['sombra', CUE_SOMBRA],
+  ['sombra', elipse(-5.6, -15.9, 1.3, 1.2, 8)],
+  ['sombra', CAB_SOMBRA],
+  // la luz: el resto del cuerpo y de la cabeza
+  ['luz', CUE_LUZ],
+  ['luz', CAB_LUZ],
+  // el canto en tono medio por el lado de la luz, el otro bracito, la otra orejita y las dos patas delante
+  ['medio', canto(CAB.x, CAB.y, CAB.rx + 0.15, CAB.ry + 0.15, -136, 74, 1.45, 14)], // (algo más grande que la cabeza: el contorno es suyo)
+  ['medio', [...huevo(-88, 96, 14, -0.15), ...huevo(96, -88, 14, 1.35)]],
+  ['medio', elipse(5.6, -15.9, 1.3, 1.2, 8)],
+  ['medio', elipse(-3.3, -0.6, 2.5, 1.9, 10)],
+  ['medio', elipse(3.5, -0.6, 2.5, 1.9, 10)],
+];
+// La cara: un hocico crema y grande con la nariz negra ovalada encima, y los ojos, dos puntitos separados; y las manitas sobre la panza
+// (del mismo crema: van encima de la ropa). Mirando al cielo (con aurora), la cara sube: así se ve que levantan la cabeza.
+const CARA = { hocico: [elipse(0.6, -10.4, 3.8, 2.6, 14), elipse(-2.5, -4.8, 1.9, 1.6, 10), elipse(2.8, -4.8, 1.9, 1.6, 10)], rasgos: [elipse(0.7, -11.6, 1.7, 1.12, 12), elipse(-3.1, -13.2, 0.55, 0.6, 6), elipse(4.3, -13.3, 0.55, 0.6, 6)] };
+const CARA_ARRIBA = { hocico: [elipse(0.6, -12.2, 3.6, 2.3, 14), elipse(-2.5, -4.8, 1.9, 1.6, 10), elipse(2.8, -4.8, 1.9, 1.6, 10)], rasgos: [elipse(0.7, -13.3, 1.6, 1.02, 12), elipse(-3, -14.8, 0.55, 0.5, 6), elipse(4.2, -14.9, 0.55, 0.5, 6)] };
+// La ropa: la camiseta azul marino del grande (con su parche) y la cinta roja que le cruza el pecho; el mameluco celeste del tercero, con
+// sus mangas; en Navidad (1 dic – 6 ene; el CSS la enseña) el chico y el del mameluco se ponen una bufanda roja.
+const ROPA = {
+  grande: [['marino', prenda(-2.1)], ['parche', elipse(1.2, -4.4, 1.65, 0.8, 10)], ['cinta', [[-4.7, -8], [-3.7, -8.6], [5.3, -3.2], [4.6, -2.4]]]],
+  mameluco: [['celeste', prenda(-0.9)]],
+  chico: [],
+};
+const BUFANDA = [[...BARBILLA.filter(([x]) => Math.abs(x) < 5.6), ...arco(CAB.x, CAB.y, CAB.rx + 1.1, CAB.ry + 1.1, 40, 140, 8)], [[-3.2, -7.6], [-2, -7.6], [-1.7, -4.6], [-2.9, -4.4]]];
+const GORRO = [[-2.1, -16.7], [2.7, -16.9], [0.4, -22.3]]; // el gorrito de cumpleaños, en la cabeza del grande
+// La sombra de contacto en la nieve, hacia el lado contrario al astro (empieza bajo el cuerpo: el borde de abajo da a la sombra).
+const PIE = [[-6.8, -0.4], [6.6, -0.4], [5.4, 1.6], [-2.2, 2.4], [-11, 1.6]];
+
+const TONOS = ['sombra', 'luz', 'medio', 'marino', 'celeste', 'parche', 'cinta', 'bufanda', 'hocico', 'rasgos', 'hocico-arriba', 'rasgos-arriba', 'gorro'];
+const d = (pts) => `M${pts.map(([x, y]) => `${f1(x)} ${f1(y)}`).join('L')}Z`;
+
+/**
+ * Los osos en la escena. `lista`: [{ x, y, s, quien }] (el pie de cada uno, su escala y cuál es); `k`: escala de la escena (`ec × 1.1`).
+ * Un grupo por oso (`oso oso-grande|chico|mameluco`), de atrás adelante, con un trazo por tono; la sombra de contacto de todos va aparte,
+ * debajo. Con `aurora`, cada cara va también mirando arriba (el CSS enseña una u otra); con `cumple`, el grande lleva su gorrito.
+ * Devuelve el contenido del grupo de los osos (decorativo: la descripción de la montaña lo dice).
+ */
+export function osos(lista, { k = 1, aurora = false, cumple = false } = {}) {
+  let pie = '', cuerpos = '';
+  for (const { x, y, s = 1, quien = 'grande' } of [...lista].sort((a, b) => a.y - b.y)) {
+    const e = k * s * K_OSO, T = (pts) => d(pts.map(([px, py]) => [x + px * e, y + py * e]));
+    pie += T(PIE);
+    const pl = {};
+    const add = (tono, pts) => { pl[tono] = (pl[tono] || '') + T(pts); };
+    for (const [tono, pts] of PIEZAS) add(tono, pts);
+    for (const [tono, pts] of ROPA[quien] || []) add(tono, pts);
+    if (quien !== 'grande') for (const pts of BUFANDA) add('bufanda', pts);
+    for (const [tono, lista2] of Object.entries(CARA)) for (const pts of lista2) add(tono, pts);
+    if (aurora) for (const [tono, lista2] of Object.entries(CARA_ARRIBA)) for (const pts of lista2) add(`${tono}-arriba`, pts);
+    if (cumple && quien === 'grande') add('gorro', GORRO);
+    cuerpos += `<g class="oso oso-${quien}">${TONOS.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}</g>`;
+  }
+  return `<path class="oso-pie" d="${pie}"/>${cuerpos}`;
+}
+
+// ---------------------------------------------------------------------------------------------------------------- el sitio
+/** Todos los vértices de un oso (para que nada salga contra el cielo), con el gorrito si toca (el saltito lo suma la regla). */
+function vertices(quien, { cumple }) {
+  const pts = [...PIEZAS.flatMap(([, p]) => p), ...PIE];
+  if (cumple && quien === 'grande') pts.push(...GORRO);
+  return pts;
+}
+/**
+ * Las disposiciones que se prueban, en orden (en unidades del oso grande). El grande en el centro, un poco atrás; los otros dos delante y
+ * a los lados, apoyados en él (se pintan de atrás adelante, así que pueden tocarse).
+ */
+const DISPOSICION = {
+  1: [[{ quien: 'grande', dx: 0, dy: 0 }]],
+  2: [
+    [{ quien: 'grande', dx: 0, dy: 0 }, { quien: 'chico', dx: 9.4, dy: 3.4 }],
+    [{ quien: 'grande', dx: 0, dy: 0 }, { quien: 'chico', dx: -9.4, dy: 3.4 }],
+    [{ quien: 'grande', dx: 0, dy: 0 }, { quien: 'chico', dx: 6.4, dy: 6.8 }],
+    [{ quien: 'grande', dx: 0, dy: 0 }, { quien: 'chico', dx: -6.4, dy: 6.8 }],
+  ],
+  3: [
+    [{ quien: 'grande', dx: 0, dy: 0 }, { quien: 'mameluco', dx: -10.2, dy: 2.4 }, { quien: 'chico', dx: 9.4, dy: 3.4 }],
+    [{ quien: 'grande', dx: 0, dy: 0 }, { quien: 'chico', dx: -9.4, dy: 3.4 }, { quien: 'mameluco', dx: 10.2, dy: 2.4 }],
+    [{ quien: 'grande', dx: 0, dy: 0 }, { quien: 'mameluco', dx: -10.2, dy: 2.4 }, { quien: 'chico', dx: 6.4, dy: 6.8 }],
+    [{ quien: 'grande', dx: 0, dy: 0 }, { quien: 'mameluco', dx: 10.2, dy: 2.4 }, { quien: 'chico', dx: 18.6, dy: 5 }],
+  ],
+};
+/** La caja de los osos ya puestos (con la sombra, el saltito, el gorrito y la cabeza que mira arriba), en la escena. */
+export function cajaOsos(lista, k, opc = {}) {
+  const cs = lista.map(({ x, y, s, quien }) => { const e = k * s * K_OSO, v = [...vertices(quien, opc), ...PIE]; return [Math.min(...v.map((p) => x + p[0] * e)), Math.min(...v.map((p) => y + p[1] * e)) - SALTO, Math.max(...v.map((p) => x + p[0] * e)), Math.max(...v.map((p) => y + p[1] * e))]; });
+  return [Math.min(...cs.map((c) => c[0])), Math.min(...cs.map((c) => c[1])), Math.max(...cs.map((c) => c[2])), Math.max(...cs.map((c) => c[3]))];
+}
+
+/** Donde se apoya un oso (en sus unidades): los dos lados del asiento y el centro, algo más abajo. Son los que deben quedar en su zona. */
+const APOYO = [[-4.8, 0.4], [4.8, 0.4], [0, 0.8]];
+/** Los puntos de apoyo de unos osos ya puestos, en la escena. */
+export function piesOsos(lista, k) {
+  return lista.flatMap(({ x, y, s }) => { const e = k * s * K_OSO; return APOYO.map(([u, v]) => [x + u * e, y + v * e]); });
+}
+
+/** ¿El punto (x, y) está dentro del polígono `pts`? (Par e impar, como `sitioOsos`.) */
+export function dentroDe(pts, x, y) {
+  let d = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) d = !d;
+  }
+  return d;
+}
+
+/**
+ * Dónde se sientan (todo en coordenadas de la escena). Busca cerca de un punto de la nieve al sol bajo la cumbre y prueba, por este
+ * orden, la nieve que hay siempre (la de la altitud cero), la nieve de hoy y la roca de la cara al sol justo bajo la cumbre; y los tres
+ * osos, la pareja y uno solo. Cada oso: los pies en esa zona; todos sus vértices (con el saltito, el gorrito y la cabeza que mira
+ * arriba) dentro de la montaña con 2 px de aire; a 12 px o más del sendero; fuera de la meta (mojón y bandera, con su aire) y de las
+ * cajas de texto (`textos`: el saldo, la cabecera, la tarjeta de la entrada). Devuelve { lista, zona, caja, cajas } o null (`caja`:
+ * la de todos; `cajas`: la de cada uno, con su sombra, su saltito y su gorrito: con ellas se decide si un rótulo los pisa).
+ * geo: { W, H, sx, sy, ec, silueta, cara, nieveMin, nieveHoy, sendero, meta, textos, trio, aurora, cumple }
+ */
+export function sitioOsos(geo) {
+  const { W, H, sx, sy, ec, silueta, cara, nieveMin, nieveHoy, sendero = [], meta = null, textos = [], trio = OSOS_TRIO, aurora = false, cumple = false } = geo;
+  const k = ec * 1.1, opc = { aurora, cumple };
+  const nv = H * 0.075;
+  // La ventana de búsqueda. Para que sea barata (se llama en cada dibujo de la montaña): cada polígono se indexa por filas (solo las
+  // aristas que cruzan cada fila) y cada punto se resuelve una sola vez, cuando hace falta (una rejilla de 1 px que se llena sola).
+  const x0 = Math.floor(sx - 24 * ec), x1 = Math.ceil(Math.min(W - 2, sx + 110 * ec)), y0 = Math.floor(sy - 45 * ec), y1 = Math.ceil(Math.min(H - 2, sy + 1.8 * nv + 24));
+  const ancho = x1 - x0 + 1, alto = y1 - y0 + 1;
+  if (ancho <= 0 || alto <= 0) return null;
+  const zona = (pts) => {
+    const filas = Array.from({ length: alto }, () => []);
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [xi, yi] = pts[i], [xj, yj] = pts[j];
+      const a = Math.max(0, Math.ceil(Math.min(yi, yj) - y0)), b = Math.min(alto - 1, Math.floor(Math.max(yi, yj) - y0));
+      for (let r = a; r <= b; r++) filas[r].push([xi, yi, xj, yj]);
+    }
+    const g = new Int8Array(ancho * alto).fill(-1);
+    return (x, y) => {
+      const i = Math.round(x) - x0, j = Math.round(y) - y0;
+      if (i < 0 || j < 0 || i >= ancho || j >= alto) return false;
+      const n = j * ancho + i;
+      if (g[n] < 0) {
+        const px = x0 + i, py = y0 + j;
+        let dentro = false;
+        for (const [xa, ya, xb, yb] of filas[j]) if ((ya > py) !== (yb > py) && px < ((xb - xa) * (py - ya)) / (yb - ya) + xa) dentro = !dentro;
+        g[n] = dentro ? 1 : 0;
+      }
+      return g[n] === 1;
+    };
+  };
+  const enMonte = zona(silueta), enCara = zona(cara), enMin = zona(nieveMin), enHoy = zona(nieveHoy);
+  const senda = sendero.filter(([x, y]) => x > x0 - 20 && x < x1 + 20 && y > y0 - 20 && y < y1 + 20);
+  const cajas = [...(meta ? [meta] : []), ...textos];
+  const pies = {
+    nieve: (x, y) => enMin(x, y) && enCara(x, y),
+    nieveHoy: (x, y) => enHoy(x, y) && enCara(x, y),
+    cumbre: (x, y) => enCara(x, y) && enMonte(x, y) && y < sy + (H - sy) * 0.3,
+  };
+  const borde = Object.fromEntries(OSOS.map((q) => [q, contorno(vertices(q, opc))]));
+  // Lo que ocupa cada oso (en sus unidades, con su sombra): la misma caja con que después se decide si un rótulo lo pisa.
+  const ext = Object.fromEntries(OSOS.map((q) => { const v = vertices(q, opc); return [q, [Math.min(...v.map((p) => p[0])), Math.min(...v.map((p) => p[1])), Math.max(...v.map((p) => p[0])), Math.max(...v.map((p) => p[1]))]]; }));
+  /** ¿Cabe un oso (su pie en x, y) en la zona `z`? Primero lo barato (bordes, cajas, pies), después el sendero y el cielo. */
+  const cabe = (x, y, s, quien, z) => {
+    const e = k * s * K_OSO, [u0, v0, u1, v1] = ext[quien];
+    const b0 = x + u0 * e, b1 = y + v0 * e - SALTO, b2 = x + u1 * e, b3 = y + v1 * e;
+    if (b0 < 4 || b2 > W - 4 || b1 < 2 || b3 > H - 4) return false;
+    for (const c of cajas) if (b0 < c[2] && b2 > c[0] && b1 < c[3] && b3 > c[1]) return false;
+    for (const [u, v] of APOYO) if (!pies[z](x + u * e, y + v * e)) return false;
+    for (const [px, py] of senda) { const dx = Math.max(b0 - px, 0, px - b2), dy = Math.max(b1 + SALTO - py, 0, py - b3); if (dx * dx + dy * dy < 144) return false; }
+    for (const [vx, vy] of borde[quien]) if (!enMonte(x + vx * e, y + vy * e - SALTO - 2)) return false;
+    return true;
+  };
+  // Candidatos cada 2 px, del más cercano al más lejano de un punto de la nieve al sol, abajo a la derecha de la meta. El grande está en
+  // el candidato en todas las disposiciones: se prueba una vez por candidato y zona (y se recuerda), y solo después los demás.
+  const cx = sx + 34 * ec, cy = sy + 22 * ec, cand = [];
+  for (let y = y0 + 20; y <= y1; y += 2) for (let x = x0; x <= x1; x += 2) cand.push([x, y, (x - cx) ** 2 + (y - cy) ** 2]);
+  cand.sort((a, b) => a[2] - b[2]);
+  const ZONAS = ['nieve', 'nieveHoy', 'cumbre'];
+  const grande = Object.fromEntries(ZONAS.map((z) => [z, new Int8Array(cand.length).fill(-1)]));
+  for (const n of trio ? [3, 2, 1] : [2, 1]) {
+    for (const z of ZONAS) {
+      for (let ci = 0; ci < cand.length; ci++) {
+        const [x, y] = cand[ci];
+        if (grande[z][ci] < 0) grande[z][ci] = cabe(x, y, 1, 'grande', z) ? 1 : 0;
+        if (!grande[z][ci]) continue;
+        for (const disp of DISPOSICION[n]) {
+          if (!disp.every(({ quien, dx, dy }) => quien === 'grande' || cabe(x + dx * k * K_OSO, y + dy * k * K_OSO, ESCALA[quien], quien, z))) continue;
+          const lista = disp.map(({ quien, dx, dy }) => ({ x: x + dx * k * K_OSO, y: y + dy * k * K_OSO, s: ESCALA[quien], quien }));
+          return { lista, zona: z, caja: cajaOsos(lista, k, opc), cajas: lista.map((o) => cajaOsos([o], k, opc)) };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** La envolvente convexa de unos puntos, con el punto medio de cada lado (para mirar el cielo con pocos puntos y sin huecos). */
+function contorno(pts) {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const giro = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lado = (lista) => { const h = []; for (const q of lista) { while (h.length >= 2 && giro(h[h.length - 2], h[h.length - 1], q) <= 0) h.pop(); h.push(q); } h.pop(); return h; };
+  const hull = [...lado(p), ...lado([...p].reverse())];
+  return hull.flatMap((q, i) => { const r = hull[(i + 1) % hull.length]; return [q, [(q[0] + r[0]) / 2, (q[1] + r[1]) / 2]]; });
+}

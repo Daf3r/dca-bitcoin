@@ -681,6 +681,54 @@ try {
         await ctx2.close();
       }
     }
+    { // campamento 25: los osos de peluche en la cumbre (de día y de noche con la aurora, en Navidad con bufanda, el gorrito de un cumpleaños, dando su saltito, en la película, en la tele y en la entrada), el sello de 1 BTC con la cara del oso y «Qué hay de nuevo»
+      const abrir = async (srv, cuenta, extra = {}, vp = null) => {
+        const ctx = await navegador.newContext({ ...(vp ? { viewport: vp, isMobile: vp.width < 700, hasTouch: vp.width < 1100 } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
+        const p = await ctx.newPage();
+        await p.addInitScript((x) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, { 'libro.hora': esquema === 'light' ? '12' : '20', 'libro.dia': '2026-11-25', 'libro.efectos': 'todos', ...extra });
+        await entrar(p, srv.url, cuenta); await cerrarOferta(p);
+        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+        return { ctx, p };
+      };
+      let { ctx, p } = await abrir(anio, ADMIN);
+      await auditar(p, `25 los osos en la cumbre (dueño, por pestañas) ${esquema}`);
+      await p.evaluate(() => { const o = document.querySelector('#m-osos.osos'); o.classList.add('salta'); for (const e of o.querySelectorAll('.oso')) { e.style.animationPlayState = 'paused'; e.style.animationDelay = '-0.43s'; } });
+      await auditar(p, `25 los osos a medio saltito ${esquema}`);
+      await p.evaluate(() => fetch('/api/yo/cumple', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ cumple: '11-25' }) }));
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2500);
+      for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+      await auditar(p, `25 el gorrito de un cumpleaños ${esquema}`);
+      await p.evaluate(() => fetch('/api/yo/cumple', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ cumple: '' }) }));
+      await p.evaluate(() => fetch('/api/cambios-visto', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ id: '2026-12-e' }) }));
+      await p.reload({ waitUntil: 'networkidle' }); await p.waitForSelector('#d-cambios[open]', { timeout: 8000 }); await p.waitForTimeout(400);
+      await auditar(p, `25 «Qué hay de nuevo» con los osos ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, LECTOR, { 'libro.dia': '2026-12-24', 'libro.hora': esquema === 'light' ? '12' : '21' }, { width: 320, height: 568 }));
+      await auditar(p, `25 Navidad: los osos con bufanda (lectora, 320 px) ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, ADMIN, { 'libro.pestana': 'historia' }));
+      await p.click('#dh-peli-ver'); await p.waitForTimeout(9000);
+      await auditar(p, `25 la película con los osos ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(ballena, ADMIN, { 'libro.pestana': 'historia', 'libro.historia.abiertas': 'sellos' }, { width: 1440, height: 900 }));
+      await auditar(p, `25 «Tu historia» con el sello de 1 BTC (la cara del oso) ${esquema}`);
+      await p.evaluate(() => window.scrollTo(0, 0));
+      await p.click('#cuenta-btn'); await p.click('#dc-sistema-btn'); await p.waitForTimeout(500);
+      await p.click('[data-previa="epico"]');
+      await p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 }); await p.waitForTimeout(600);
+      await auditar(p, `25 la celebración de 1 BTC (los osos dan su saltito) ${esquema}`);
+      await ctx.close();
+      ({ ctx, p } = await abrir(anio, LECTOR, {}, { width: 1920, height: 1080 }));
+      await p.goto(`${anio.url}/#tv`, { waitUntil: 'networkidle' }); await p.waitForTimeout(3000);
+      await auditar(p, `25 la tele con los osos ${esquema}`);
+      await ctx.close();
+      ctx = await navegador.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: esquema });
+      p = await ctx.newPage();
+      await p.addInitScript((h) => { try { localStorage.setItem('libro.hora', h); localStorage.setItem('libro.dia', '2026-12-24'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? '12' : '20');
+      await p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' }); await p.waitForTimeout(800);
+      await auditar(p, `25 la entrada con los osos ${esquema}`);
+      await ctx.close();
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

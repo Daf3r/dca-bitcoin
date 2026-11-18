@@ -124,9 +124,9 @@ export function obstaculosTV(base = document.querySelector('.escena').getBoundin
         duros.push({ x: x - R_SENDERO, y: y - R_SENDERO, w: 2 * R_SENDERO, h: 2 * R_SENDERO });
       }
     }
-    // «Tú», los rótulos (campamentos, cumbre, etapa, «hace 1 año», la placa de «Tú»), los hitos y la bandera de la meta.
-    // (Van en el frente, otro <svg> sobre el principal: montana.js, `enCapas`; por eso se buscan en todo #montana.)
-    for (const el of $('montana').querySelectorAll('#m-etiquetas > *, #m-yo .yo-anillo, #m-eco .eco-fantasma, .campo .campo-ico, .campo .banderin')) duros.push(cajaDe(el, base));
+    // «Tú», los rótulos (campamentos, cumbre, etapa, «hace 1 año», la placa de «Tú»), los hitos, la bandera de la meta y los osos de la
+    // cumbre si se ven (campamento 25). (Van en el frente, otro <svg> sobre el principal: montana.js, `enCapas`; por eso se buscan en todo #montana.)
+    for (const el of $('montana').querySelectorAll('#m-etiquetas > *, #m-yo .yo-anillo, #m-eco .eco-fantasma, .campo .campo-ico, .campo .banderin, #m-osos.osos:not([visibility="hidden"], .sin-nieve) > .oso')) duros.push(cajaDe(el, base));
     // (El sol y la luna van en la capa del cielo, un <svg> aparte del principal: montana.js, `enCapas`.)
     for (const el of $('montana').querySelectorAll('.sol .sol-disco, .luna .luna-sombra')) suaves.push(cajaDe(el, base)); // el disco, no su halo
   }

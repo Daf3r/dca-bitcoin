@@ -20,9 +20,11 @@ export function avatar(nombre, { neutro = false, grande = false } = {}) {
   return `<span class="${cls}" aria-hidden="true">${neutro ? '·' : inicialPersona(nombre).replace(/[<>&"]/g, '')}</span>`;
 }
 
-// Ilustraciones de los estados vacíos (idea 34): dibujos pequeños en el estilo de la montaña, con el mismo trazo.
+// Ilustraciones de los estados vacíos (idea 34): dibujos pequeños en el estilo de la montaña, con el mismo trazo. En la de la montaña,
+// al pie y a la derecha, un osito sentado (campamento 25: los de la cumbre), en el mismo trazo.
 const ILU = {
-  montana: '<path d="M6 48 22 22l9 13 7-9 20 22z"/><path d="M22 22v-9l10 4-10 4" /><path d="M4 52h56"/>',
+  montana: '<path d="M4 48 19 23l8 12 6-8 15 21z"/><path d="M19 23v-9l10 4-10 4"/><path d="M2 52h60"/>'
+    + '<circle cx="54" cy="40.5" r="4.4"/><path d="M50.6 37.4a1.5 1.5 0 1 1 1.6-1.9M57.4 37.4a1.5 1.5 0 1 0-1.6-1.9"/><path d="M49.2 52c-.6-4.4 1.4-7.4 4.8-7.4s5.4 3 4.8 7.4"/><path d="M53.2 41.6h1.6"/>',
   grafico: '<path d="M8 8v44h48"/><path d="M14 40l12-12 9 7 17-19" stroke-dasharray="3 4"/><circle cx="52" cy="16" r="2.5"/>',
   traslado: '<rect x="5" y="22" width="20" height="20" rx="4"/><rect x="39" y="22" width="20" height="20" rx="4"/><path d="M28 28h8m-3-3 3 3-3 3M36 38h-8m3-3-3 3 3 3"/>',
 };

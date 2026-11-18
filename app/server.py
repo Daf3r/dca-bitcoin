@@ -1517,6 +1517,7 @@ FRASES_PAISAJE = (
     "Un farol más cerca en el camino.",
     "La montaña guarda otro paso.",
     "El campamento queda un poco más cerca.",
+    "Los osos de la cumbre dan un saltito.",
 )
 
 
