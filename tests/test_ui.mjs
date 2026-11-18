@@ -6625,6 +6625,20 @@ try {
       ok(pe.consola.length === 0, `25·película: consola limpia (${pe.consola.slice(0, 2)})`);
       await pe.ctx.close();
 
+      // ---- La tele: las tarjetas (último movimiento, reloj, sismógrafo) nunca tapan a los osos.
+      for (const [w, h] of [[1920, 1080], [1366, 768], [1080, 1920], [3840, 2160]]) {
+        const tv = await entrar(navegador, srv, LECTOR, { hora: 12, viewport: { width: w, height: h }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, conLs({ 'libro.efectos': 'esenciales' }));
+        await tv.p.evaluate(() => { location.hash = '#tv'; });
+        await tv.p.reload({ waitUntil: 'networkidle' }); await tv.p.waitForTimeout(2500); await cerrar(tv.p);
+        const r = await tv.p.evaluate(() => {
+          const osos = [...document.querySelectorAll('#montana #m-osos.osos:not([visibility="hidden"], .sin-nieve) > .oso')].map((o) => o.getBoundingClientRect());
+          const tarjetas = [...document.querySelectorAll('.tv-tarjeta')].filter((e) => !e.hidden && e.dataset.sitio !== '0' && e.getClientRects().length).map((e) => ({ id: e.id, r: e.getBoundingClientRect() }));
+          const pisan = tarjetas.filter((t) => osos.some((o) => t.r.left < o.right && t.r.right > o.left && t.r.top < o.bottom && t.r.bottom > o.top)).map((t) => t.id);
+          return { tv: document.documentElement.dataset.tv, osos: osos.length, tarjetas: tarjetas.map((t) => t.id), pisan };
+        });
+        ok(r.tv === '1' && r.osos >= 1 && r.tarjetas.length >= 1 && r.pisan.length === 0, `25·tele ${w}×${h}: ${r.osos} osos y ninguna tarjeta encima (${JSON.stringify(r)})`);
+        await tv.ctx.close();
+      }
     } finally { srv.parar(); }
 
     // ---- La entrada: los mismos osos (paisaje, sin nada de nadie: ni aurora ni gorrito), y nada tocado.
