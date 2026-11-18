@@ -1,0 +1,24 @@
+# La escena: por dónde leer antes de tocarla
+
+La escena es la cabecera ilustrada: la montaña (el saldo es la altitud), el cielo según la hora de El Salvador, el valle con el pueblo, el lago y lo que pasa en ellos, la celebración al anotar y la tele. Este archivo **no repite** el detalle: dice qué leer y en qué orden. Las reglas que valen siempre están resumidas en [CLAUDE.md](../CLAUDE.md), «Reglas permanentes» → «Escena y arte»; aquí, dónde está cada una entera. Lo más reciente manda: un campamento posterior suele dejar en el anterior una nota *(Campamento N: …)*.
+
+## Antes de cualquier cambio en la escena
+1. [rendimiento.md](rendimiento.md), «Rendimiento en iPhone (medida real y escena por capas)»: **«Cómo está organizada la escena»** (las capas de `enCapas`, el frente desde `#m-luzhecha`, qué no puede ir en una capa, «Para portar arte»), la **pausa del ambiente al deslizar** (la lista de lo que se pausa y la regla nueva para toda animación infinita) y «Cómo debe medir el dueño». En el iPhone del dueño la escena iba a 24 fps: cualquier cosa nueva se mide.
+2. [campamentos/09-pulido-1-hora-dorada.md](campamentos/09-pulido-1-hora-dorada.md): la dirección de arte, los colores por variables y **«Campamentos en la escena»** (estaciones de luz, nada sobresale contra el cielo, lo que se descartó con capturas). Investigación y maquetas en [pulido-visual/](pulido-visual/).
+3. [campamentos/21-montana-asentada.md](campamentos/21-montana-asentada.md): **todo está tallado**; rellanos, rótulos atados, la cumbre como pico nevado y sus tres rondas de «Decidido». Antes de tocar la montaña, la cumbre, la bandera o la nieve.
+4. [campamentos/21-etapas-mas-cercanas.md](campamentos/21-etapas-mas-cercanas.md): la escalera de etapas y **«Para el arte de la montaña»** (las marcas de etapa: `lib.marcasDeEtapa`, la caja `fina`, los topes).
+5. Si toca el valle: [22](campamentos/22-valle-vivo.md), [22B](campamentos/22b-valle-vivo-parte-2.md) (`data-mueve`: uno a la vez) y [22C](campamentos/22c-valle-de-verdad.md) (el pueblo delante, la Navidad en toda la montaña, los topes vigentes de nodos y «Fuera de los bloques propios», para integrar).
+
+## Dónde está cada pieza
+- **Niveles de efectos, cielo por hora, sol y luna con su fase, parallax, nubes, niebla, aves**: [campamentos/01-efectos-cielo-atmosfera.md](campamentos/01-efectos-cielo-atmosfera.md). Para probar a otra hora: `localStorage` `libro.hora`.
+- **Composición, cimas progresivas, etiquetas sin choques, redibujar al cambiar la caja**: [interfaz.md](interfaz.md) (montaña) y la celebración al anotar (mismo archivo, «Anotar»).
+- **Humo, fogata, huellas, linterna, nieve que crece; banderas tocables, bosque; aurora, lago, cometa, 1 BTC y acento dorado**: [campamentos/05-montana-viva-banderas-aurora.md](campamentos/05-montana-viva-banderas-aurora.md).
+- **Eco, árboles de honor, lo del día (efemérides, lluvias de estrellas), luna-moneda, modo madrugada**: [campamentos/11-tu-eco-y-tus-numeros.md](campamentos/11-tu-eco-y-tus-numeros.md). Para probar otro día: `libro.dia`.
+- **Volcanes, torogoz, papel picado, cohetes, clima, `arte.js`** y los atributos de temporada (`data-fiesta`, `data-epoca`, `data-cohetes`): [campamentos/12-el-salvador-en-la-escena.md](campamentos/12-el-salvador-en-la-escena.md).
+- **Monedas del lago, reloj de sol, perfil de altitud**: [campamentos/16-lago-reloj-fantasma-perfil.md](campamentos/16-lago-reloj-fantasma-perfil.md) y sus retoques en [campamentos/16-pulido-1-general.md](campamentos/16-pulido-1-general.md).
+- **Relieve, luz de luna, Vía Láctea y rayos; el medidor del sendero (`tramos`)**: [campamentos/16-pulido-2-rediseno-fable.md](campamentos/16-pulido-2-rediseno-fable.md).
+- **Hitos tallados y faroles**: [campamentos/18-pulido-arte-hitos-tallados.md](campamentos/18-pulido-arte-hitos-tallados.md); el farol y el rellano de hoy, en el 21.
+- **La tele** (tarjetas que miden lo dibujado, duerme de noche, marco de tu historia): [campamentos/21b-tele-de-la-sala.md](campamentos/21b-tele-de-la-sala.md); **el saldo de la tele nunca toca la montaña**: [campamentos/24-pulido-final-a-tele.md](campamentos/24-pulido-final-a-tele.md) (y su «Hallazgo» en la app de escritorio estrecha).
+- **La película del ascenso** (una sola escena en el documento: la de la página se vacía): [campamentos/23-tu-camino-otra-vez.md](campamentos/23-tu-camino-otra-vez.md).
+- **Medir en el aparato** (`/medir` y sus interruptores `/medir?sin=…`): [campamentos/24-medir-este-aparato.md](campamentos/24-medir-este-aparato.md) y [rendimiento.md](rendimiento.md).
+- **La entrada** (la escena sin datos de nadie): [interfaz.md](interfaz.md), «Entrada», y la entrada que reacciona en [campamentos/06-identidad-historia-pantalla-grande.md](campamentos/06-identidad-historia-pantalla-grande.md).

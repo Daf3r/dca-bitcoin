@@ -1,5 +1,7 @@
 # Campamento 24 · Confianza
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## Campamento 24 · Confianza (idea 36 y la suma por etiqueta de la ronda «mejoras»)
 Lo que quedaba del roadmap 18–24 (la idea 44, «Medir este aparato», ya estaba hecha): una pregunta tranquila cada 180 días sobre el respaldo de la wallet (solo para quien lleva el libro) y la suma de sats de una etiqueta en la lista. Commits «Campamento 24 (n/4)»: servidor y vista de la revisión, suma por etiqueta, pruebas y documentación; y un quinto («5/5») que ajusta la regla: con una revisión anotada, encender el aviso no reinicia la cuenta. **No se tocaron la escena ni `montana.js`/`parallax.js`.** Capturas en el scratchpad de la sesión (`c24b/capturas/antes`, `c24b/capturas/despues`).
 - **36 · Revisión tranquila del respaldo** (categoría push `resguardo`, admin, **apagada**; la regla en `server.resguardo`, el aviso en `avisos._resguardo`, «Revisado» en `POST /api/resguardo`, la fila en `lib.textoResguardo` y `sistema.js: pintarResguardo`):

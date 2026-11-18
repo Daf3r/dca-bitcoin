@@ -1,5 +1,7 @@
 # Rediseño y pulido (Fable)
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## Rediseño y pulido (Fable)
 Pasada de dirección de arte sobre todo lo visual (solo presentación: sin tocar lógica, API ni base). Cada cambio grande va en su commit («Rediseño (Fable) n/n») para poder revertirlo por separado. Capturas antes y después en el scratchpad de la sesión (`fable/antes`, `fable/despues`).
 - **Un solo lenguaje para los controles** (la regla que ordena todo lo demás): el **naranja relleno es solo para la acción** («Anotar compra», «Guardar») y para lo tuyo en los dibujos; la **navegación** (pestañas) es una píldora tintada con rayita; los **selectores** (rangos, vistas del gráfico, tipo de la hoja `.h-tipo`, vistas de «Tu historia» `.dh-vistas`, chips de la lista) marcan la opción elegida con una **píldora de tinta** (`background: var(--txt); color: var(--fondo)`). Antes había cuatro estilos de «elegido» distintos. Un selector nuevo sigue esta regla.

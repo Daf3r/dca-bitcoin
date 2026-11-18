@@ -1,5 +1,7 @@
 # Campamento 3 · El gráfico
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## El gráfico del precio (campamento 3, ideas 12, 13, 14, 18, 66, 125)
 - **Anillo en las compras extra** (`.g-extras`): un trazo naranja alrededor del punto de cada compra con `extra`, del tamaño de los puntos (se reduce con muchas) y con su entrada en la leyenda («Compra extra»).
 - **Zona entre el precio y tu costo promedio** (`.g-zona-g` / `.g-zona-p`, solo si el costo cae dentro del gráfico): el área entre la línea del precio y la del costo se recorta con dos `clipPath` en el nivel del costo; **lisa y naranja suave por encima** (vas ganando) y **a rayas por debajo** (vas perdiendo), para no depender del color y sin rojo ni verde. Leyenda: «Por encima / Por debajo de tu costo».

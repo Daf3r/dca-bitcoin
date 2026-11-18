@@ -1,5 +1,7 @@
 # Pulido general (pasada final)
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## Pulido general (pasada final)
 Retoques pequeños y seguros, sin quitar nada ni tocar lógica, API ni base:
 - **Perfil de altitud** (`escalera.js`): las cifras del eje van en un margen propio a la izquierda (`m.l = 46`, alineadas a la derecha con su línea; antes se encimaban con los primeros puntos y faroles). **Puntos espaciados**: solo se dibuja un punto si queda a más de un diámetro del anterior; con mil compras los cantos oscuros de puntos encimados formaban una banda que **tapaba la línea entera** (también en la vista Costo). El degradado del área tiene id propio por gráfico (`s-grad-<id del lienzo>`, en atributo `fill`): costo y sats repetían `#s-grad`. Anillos de las extra más finos, para no confundirse con «Tú».

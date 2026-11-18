@@ -1,5 +1,7 @@
 # Campamento 22B · El valle vivo, parte 2
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## Campamento 22B · El valle vivo, parte 2 (ideas 54, 55, 56, 58, 57, 61 y 60 de la ronda «mejoras»)
 El valle sigue el año y la hora de aquí: verde en la lluviosa y dorado en la seca, un mar de niebla al amanecer, dos árboles de aquí que florecen en su mes, vacas con sus garcitas junto al lago y, de paso, azacuanes, pericos, zompopos y relámpagos lejanos, **siempre uno a la vez**. Nada depende de si se compró. Commits «Campamento 22B (n/7)» y «(n/8)» (la numeración creció a medio camino), más dos de revisión: el calendario, dos de margen (sin grupos que no dibujaban nada), el color y la niebla, los árboles y las vacas, lo que se mueve, pruebas y documentación. Capturas en el scratchpad de la sesión (`c22b/antes`, `c22b/despues`, iteraciones `c22b/it/1…10`, mosaicos `c22b/m*.png`, `c22b/d-*.png`).
 - **El calendario** (`cielo.js`, como siempre: la escena lo dibuja todo y el CSS enseña lo que toca): `--v-verde` (1 = verde de la lluviosa, 0 = dorado de la seca; del 1 al 14 de mayo y de noviembre, la mezcla día a día: `verdor`), `--v-mar` y `data-mar-niebla` (`marNiebla`: solo de 5:00 a 7:30; se forma de 5:00 a 5:30, lleno hasta las 7:00 y se levanta antes de las 7:30), `data-flor` (`flor`: `maquilishuat` en febrero, `fuego` en abril) y **`data-mueve`** (`mueve(día, hora)`: lo único que se mueve). En `libroCielo` también `azacuanes(f)` y `zompopos(f)`.

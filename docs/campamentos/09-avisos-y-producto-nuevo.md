@@ -1,5 +1,7 @@
 # Campamento 9 · Avisos y producto nuevo
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## Avisos y producto nuevo (campamento 9: ideas 143, 144, 146, 159, 156)
 - **Aviso de prueba** (idea 143; `push.probar`, `POST /api/push/prueba {endpoint}`; botón «Enviarme un aviso de prueba» en «Avisos en este dispositivo», también para lectores): manda ya, y **solo a ese dispositivo**, un aviso con etiqueta `prueba` y devuelve `{ok, mensaje}` en español: enviado; 404/410 → el servicio ya no lo reconoce, **se quita el dispositivo** y dice «vuelve a activar los avisos»; otro código → «rechazó el mensaje (código N)»; sin red → mensaje de conexión. **30 s mínimo entre pruebas por dispositivo** (`meta.prueba_aviso:<id>`, 429 con `Retry-After`); otra cuenta no puede probar un dispositivo ajeno (404). La limpieza diaria quita las marcas de dispositivos que ya no existen.
 - **Botón en el recordatorio** (idea 144): `push.enviar_ahora` añade `acciones: ["anotar"]` **solo al recordatorio**; `sw.js` muestra «Anotar compra» y, al tocarlo, abre `/#anotar` (o, si la app ya está abierta, le manda `postMessage({tipo: 'anotar'})`). `anotar.js` abre la hoja **solo si eres admin**, espera a que haya rol y datos y a que no haya otro diálogo abierto (hasta 20 s) y quita `#anotar` de la dirección. iPhone no muestra botones en las notificaciones: ahí solo abre la app. Un toque normal sigue abriendo `/`.

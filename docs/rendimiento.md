@@ -1,5 +1,13 @@
 # Rendimiento
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../CLAUDE.md).
+
+Aquí: «Rendimiento en teléfono» (parallax sin variables CSS, grano sin mezcla, `steps()`, `modulepreload`) y «Rendimiento en iPhone (medida real y escena por capas)» (la medida real, WebKit en el sandbox, el diagnóstico, la escena en capas y el frente, la pausa al deslizar, **«Cómo está organizada la escena»**, las tablas, «El techo», el «Hallazgo» de las dos geometrías, sus «Decidido» y **«Cómo debe medir el dueño»**). Otras medidas, en su campamento:
+- «Medir este aparato» (`/medir`, la regla 55/50 y la primera medida real): [campamentos/24-medir-este-aparato.md](campamentos/24-medir-este-aparato.md).
+- El perfil de la carga (`getPointAtLength`, lecturas en paralelo, sin desenfoque al desplazar) y el Lighthouse del rediseño: [campamentos/16-pulido-2-rediseno-fable.md](campamentos/16-pulido-2-rediseno-fable.md).
+- Lighthouse y fotogramas con el valle: [campamentos/22-valle-vivo.md](campamentos/22-valle-vivo.md), [22B](campamentos/22b-valle-vivo-parte-2.md) y [22C](campamentos/22c-valle-de-verdad.md); la película: [campamentos/23-tu-camino-otra-vez.md](campamentos/23-tu-camino-otra-vez.md).
+- Lo que viaja (comentarios fuera, imágenes del CSS con versión, LCP): [campamentos/24-pulido-final-d-servir-y-pruebas.md](campamentos/24-pulido-final-d-servir-y-pruebas.md); compresión en Caddy: [campamentos/08-datos-sistema-sesiones-herramientas.md](campamentos/08-datos-sistema-sesiones-herramientas.md) («Herramientas y docs»).
+
 ## Rendimiento en teléfono (sin quitar nada visual)
 El dueño notó la app algo lenta **en iPhone** (en PC va bien). Se optimizó sin quitar ningún efecto; se midió en Chromium con la CPU 4× más lenta (`scratchpad/medir.mjs`: trazas de pintado, estilo/layout y script en reposo y al desplazar; `carga.mjs`: tiempo hasta ver el saldo). ~~No hay WebKit en el sandbox~~: **ya sí** (faltaban librerías del sistema: ver «Rendimiento en iPhone», que dice cómo instalarlas y cómo medir con él).
 - **Parallax sin variables CSS** (`parallax.js`): antes escribía `--par-y`/`--scroll-p` en `#montana` y `.escena`; una variable heredada obliga a recalcular el estilo de **todos los nodos de la escena (~435)** en cada fotograma del scroll. Ahora cada capa `.par-*` recibe su `transform` directo (JS, CSSOM: la CSP lo permite), el velo del cielo es un `div.escena-velo` real (antes `.escena::after`; `test_ui` lee su opacidad) con `opacity` directo, todo en un solo `requestAnimationFrame` y reaplicado tras cada redibujo (`MutationObserver`). Sin `transition` en el scroll. Resultado medido: estilo+layout al desplazar 187–243 ms → ~100 ms, raster 118 → ~70 ms.

@@ -1,5 +1,7 @@
 # Campamento 16 · Lago, reloj de sol, «Tú» fantasma y perfil
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## Campamento 16 · Lago, reloj de sol, «Tú» fantasma y perfil de altitud
 Lo hizo Sonnet de punta a punta (sin subagente de arte), con ideas de la ronda visual: 40, 35, 59, 2 y 4. **Las bolas de fuego de Nejapa (26) se hicieron y se quitaron: el dueño ya había dicho que no** (igual que las alfombras: no volver a proponerlas). **No se hicieron** (quedan para otra ronda): Bitácora (1), linterna en la roca (44), recibo térmico (36), hoja como balanza (58) y sierra de precios (56).
 - **El lago guarda lo vendido** (40; `arte.js: monedasDelLago`, `montana.js: lago(c, W, H, ventas)`, `hundirMoneda`): una monedita brillando en el fondo por cada venta (`R.nVentas`, hasta 5; paisaje: se ve con cualquier nivel de efectos). Al guardar una venta o gasto nuevo (no la «Comisión de retiro», ni editar) `hoja.js` llama a `hundirMoneda()` y la última cae desde arriba (`moneda-hunde`; sin movimiento «ninguno» queda quieta).

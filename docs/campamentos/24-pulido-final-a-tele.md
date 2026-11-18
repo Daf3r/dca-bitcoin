@@ -1,5 +1,7 @@
 # Pulido final · la tele
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## Pulido final · la tele (el saldo nunca toca la montaña)
 El dueño vio en su PC el modo pantalla grande a 1920×1080 con 532,702 sats: «sats⇄» quedaba encima de la placa «Tú» y entraba en la cumbre. La auditoría final lo reprodujo (T1) y señaló que ninguna prueba lo miraba (T2). Commits «Pulido A (tele n/3)». Solo CSS y pruebas: **`montana.js`, `parallax.js`, la forma de la montaña, `rnd()` y las capas no se tocaron.** Capturas y medidas en el scratchpad de la sesión (`pulidoA/`).
 - **Por qué pasaba**: la tele sube la raíz a 130/165/230 % y con ella los topes en `rem` de la cifra (`clamp(…, 8rem)`) y de la unidad (`--u-tam`), pero la columna del saldo (`width: min(52%, var(--medio-ancho) * 1.2)`, en px) y la composición de escritorio (`montana.js: composicion`: la cumbre en px y sin mirar el saldo en horizontal) no crecen. En la app el tope de 8rem (128 px) frena la cifra; en la tele (211 px a 1920) ya no, y la cifra llenaba la columna hasta la cumbre. Los saldos de 5 a 8 cifras eran los peores.

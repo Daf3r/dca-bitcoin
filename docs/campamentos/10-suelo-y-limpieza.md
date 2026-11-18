@@ -1,5 +1,7 @@
 # Campamento 10 · Suelo y limpieza
 
+Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
+
 ## Campamento 10 · Suelo y limpieza (ideas visuales, primera entrega)
 Vienen de la ronda de ideas con Opus (`scratchpad/ideas-visuales.md` y el artifact «Ideas visuales Libro DCA»; fases 10–15). Hecho:
 - **Suelo bajo «Anotar»** (`body[data-rol="admin"]::after`, solo < 1100 px, sin `data-tv` ni `data-mant`): degradado fijo del color del fondo, `z-index: 5` (bajo el botón, que es 6).
