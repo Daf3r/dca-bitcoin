@@ -4468,3 +4468,47 @@ html:not([data-efectos="ninguno"]) .osos.salta .oso-pie { animation: oso-pie 0.9
 .h-usd input { min-width: 0; }
 .h-calc { font-style: italic; font-weight: 400; }
 .h-usd input[data-derivado="1"] { color: var(--txt2); font-style: italic; }
+
+/* ---------------------------------------------------------------- Campamento 26 · Los osos en la interfaz
+   Los mismos osos de la cumbre en otras poses (arte-osos-poses.js), como pequeñas ilustraciones en los huecos de la app: la lista y
+   «Tu historia» sin compras, la bienvenida de quien solo mira y la invitación a escribir una carta. Sobre una tarjeta, la luz y la sombra
+   siguen al tema (no al cielo de la escena) y la noche las enfría un poco; el canto en tono medio del lado de la luz los separa de una
+   tarjeta clara y el alto contraste lo oscurece. Son decorativos: no hablan, no se tocan y no llevan texto. */
+.oso-ilu {
+  --oso-pelo: #fffdf8; --oso-crema: #f6ead2; --oso-apagado: #f4f0e8; --oso-hocico: #ecd6ab; --oso-rasgo: #231a16;
+  --oso-marino: #25365f; --oso-parche: #e17f2e; --oso-cinta: #c62f2b; --oso-celeste: #9cc5dd;
+  --ilu-luz: #fff4e0; --ilu-sombra: #6f6a88; --ilu-medio: #8f8274;
+  display: block; overflow: visible; flex: none;
+}
+:root[data-tema="claro"] .oso-ilu { --ilu-sombra: #8a7d6c; --ilu-medio: #8a7b69; }
+html[data-cielo="noche"] .oso-ilu { --ilu-luz: #e7edff; }
+html .oso-ilu .oso-luz { fill: color-mix(in oklab, var(--pelo) 94%, var(--ilu-luz)); }
+html .oso-ilu .oso-medio { fill: color-mix(in oklab, var(--pelo) 64%, var(--ilu-medio)); }
+html .oso-ilu .oso-sombra { fill: color-mix(in oklab, var(--pelo) 70%, var(--ilu-sombra)); }
+html[data-contraste="alto"] .oso-ilu .oso-medio { fill: color-mix(in oklab, var(--pelo) 48%, #5f5246); }
+html .oso-ilu .oso-hocico { fill: var(--oso-hocico); }
+.oso-ilu :is(.oso-rasgos, .oso-ojos, .oso-ojos-cerrados) { fill: var(--oso-rasgo); }
+.oso-ilu .oso-mochila { fill: color-mix(in oklab, var(--oso-parche) 78%, #5a2a08); }
+.oso-ilu .oso-tapa { fill: var(--oso-cinta); }
+.oso-ilu .oso-papel { fill: #f5e6c6; }
+.oso-ilu .oso-pliegue { fill: color-mix(in oklab, #f5e6c6 62%, var(--ilu-medio)); }
+.oso-ilu .oso-palo { fill: #8a5a34; }
+.oso-ilu .oso-chispa { fill: var(--oso-parche); }
+.oso-ilu .oso-signo { fill: var(--txt3); }
+.oso-ilu .oso-suelo { fill: color-mix(in oklab, var(--s3) 80%, transparent); }
+.oso-ilu .oso-huella-p { fill: var(--txt3); }
+/* Dónde van: en el sitio del dibujo de línea de los estados vacíos, arriba del título de la bienvenida y al lado de la invitación. */
+.vacio.con-ilu > .oso-ilu { margin: 0 auto 10px; }
+.nov-osos:not([hidden]) { display: flex; justify-content: center; margin: -4px 0 4px; }
+.cap-pista:not([hidden]) { display: flex; gap: 14px; align-items: center; }
+@media (max-width: 359px) { .cap-pista:not([hidden]) { flex-direction: column; align-items: flex-start; gap: 6px; } }
+/* El saludo de la bienvenida: el brazo del grande saluda dos veces al abrir y se queda arriba. Solo con «todos» (con «esenciales» o
+   «ninguno», el mismo dibujo, quieto); solo transform. El eje es su hombro: 19.7 % y 85.2 % de la caja del brazo (lo comprueba test_lib
+   con la geometría de SALUDO). */
+.oso-saluda { transform-box: fill-box; transform-origin: 19.7% 85.2%; }
+html[data-efectos="todos"] .nov-osos .oso-saluda { animation: oso-saluda 1.2s ease-in-out 0.35s both; }
+@keyframes oso-saluda { 0%, 100% { transform: none; } 20%, 60% { transform: rotate(-16deg); } 40%, 80% { transform: rotate(9deg); } }
+/* La guía de estilo: cada pose en una tarjeta, con su nombre. */
+.guia-osos { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px; margin: 10px 0; padding: 0; list-style: none; }
+.guia-osos li { display: grid; justify-items: center; align-content: end; gap: 6px; padding: 12px 8px 10px; border-radius: 12px; background: var(--s1); }
+.guia-osos small { font-size: 0.8125rem; color: var(--txt2); }

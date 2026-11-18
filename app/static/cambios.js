@@ -9,6 +9,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    id: '2026-12-g',
+    items: [
+      'Los osos de la cumbre también acompañan ahora en otros rincones del libro.',
+      'Mientras no hay compras, el grande lee en la lista y espera con su mochila al pie de «Tu historia».',
+      'La primera vez que alguien de la familia entra, los tres la saludan en la bienvenida.',
+      'Y la invitación a escribir una carta para el futuro lleva al grande con su sobre lacrado.',
+    ],
+  },
+  {
     id: '2026-12-f',
     items: [
       'En la nieve, bajo la cumbre, se sentaron tres osos polares de peluche: el grande con su camiseta azul y su cinta roja, el chico y el del mameluco celeste.',

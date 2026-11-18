@@ -11,7 +11,8 @@ import { enMedir } from './medir.js';
 import { etiquetaModo, fijarModoPestanas, enPestanas, verHistoria } from './pestanas.js';
 import { abrirCumple, etiquetaCumple } from './cumple.js';
 import { abrirMontana, etiquetaMontana } from './bautizo.js';
-import { avatar, ilustracion } from './iconos.js';
+import { avatar } from './iconos.js';
+import { pose } from './arte-osos-poses.js';
 import { avisar } from './avisar.js';
 import { $, R, S, api, vozLibro } from './estado.js';
 import { conTransicion, sinMovimiento } from './movimiento.js';
@@ -255,7 +256,7 @@ async function cargarHistorial(mas = false) {
     }
     histUltimo = filas.at(-1)?.id ?? histUltimo;
     $('hist-mas').hidden = filas.length < 100;
-    if (!lista.children.length) lista.innerHTML = `<li class="vacio con-ilu">${ilustracion('montana')}Aún no hay nada en el historial.</li>`;
+    if (!lista.children.length) lista.innerHTML = `<li class="vacio con-ilu">${pose('lee')}Aún no hay nada en el historial.</li>`;
   } catch (e) {
     lista.innerHTML = '';
     const li = document.createElement('li'); li.className = 'vacio'; li.textContent = e.message; lista.append(li);

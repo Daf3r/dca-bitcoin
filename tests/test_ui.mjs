@@ -198,6 +198,7 @@ const PESOS = [
   ['campamento 22C: el valle, de verdad (el', 28], // 21 comprobaciones
   ['campamento 23: tu camino, otra vez (tal', 87], // 52 comprobaciones
   ['campamento 25: los osos polares de pel', 167], // 98 comprobaciones (medido en su parte, el 18 nov 2026)
+  ['campamento 26: los osos en la interfaz', 46], // 22 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -1980,8 +1981,8 @@ try {
     const vac = await servidor('vacio');
     try {
       const { ctx, p } = await entrar(navegador, vac, ADMIN, { hora: 22 });
-      const r = await p.evaluate(() => { const i = document.querySelector('#lista .vacio.con-ilu .ilu'); const b = i?.getBoundingClientRect(); return { hay: !!i, w: b && Math.round(b.width), txt: document.querySelector('#lista .vacio')?.innerText }; });
-      ok(r.hay && r.w === 64 && /Aún no hay compras/.test(r.txt), `estado vacío: la lista sin compras lleva su dibujo (${r.w}px)`);
+      const r = await p.evaluate(() => { const i = document.querySelector('#lista .vacio.con-ilu .oso-ilu'); const b = i?.getBoundingClientRect(); return { hay: !!i, h: b && Math.round(b.height), txt: document.querySelector('#lista .vacio')?.innerText }; });
+      ok(r.hay && r.h === 96 && /Aún no hay compras/.test(r.txt), `estado vacío: la lista sin compras lleva su dibujo, el grande leyendo (campamento 26; ${r.h}px)`);
       await ctx.close();
     } finally {
       vac.parar();
@@ -2160,7 +2161,7 @@ try {
       await p.click('#cuenta-btn');
       await p.click('#dc-historia-btn');
       await p.waitForSelector('#dh-cuerpo:not([hidden]), #dh-vacio:not([hidden])', { timeout: 4000 }); await p.waitForTimeout(500); // «Tu historia» ahora es una sección de la página (el botón de «Tu cuenta» lleva hasta ella)
-      const v = await p.evaluate(() => ({ vacio: !document.getElementById('dh-vacio').hidden && !!document.querySelector('#dh-vacio .ilu'), cuerpo: document.getElementById('dh-cuerpo').hidden, txt: document.getElementById('dh-vacio').innerText }));
+      const v = await p.evaluate(() => ({ vacio: !document.getElementById('dh-vacio').hidden && !!document.querySelector('#dh-vacio .oso-ilu'), cuerpo: document.getElementById('dh-cuerpo').hidden, txt: document.getElementById('dh-vacio').innerText }));
       ok(v.vacio && v.cuerpo && /primera compra/.test(v.txt), 'historia: sin compras dice que empieza con la primera, con su dibujo');
       await ctx.close();
     } finally {
@@ -6843,6 +6844,87 @@ try {
         await ctx.close();
       }
     } finally { sE.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamento 26: los osos en la interfaz (la lista y «Tu historia» sin compras, la bienvenida, las cartas y la guía)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const decorativo = (s) => Boolean(s) && s.getAttribute('aria-hidden') === 'true' && s.getAttribute('focusable') === 'false' && !s.closest('[role="img"]');
+    // Sin compras: el grande lee en la lista y lleva su mochila en «Tu historia»; quien solo mira no recibe «Anota la primera».
+    const vac = await servidor('vacio');
+    try {
+      for (const [cuenta, quien] of [[ADMIN, 'el dueño'], [LECTOR, 'quien solo mira']]) {
+        const t = await entrar(navegador, vac, cuenta, { hora: 12, viewport: { width: 320, height: 640 } }, conLs());
+        await cerrar(t.p);
+        await t.p.click('#cuenta-btn'); await t.p.click('#dc-historia-btn');
+        await t.p.waitForSelector('#dh-vacio:not([hidden])', { timeout: 4000 }); await t.p.waitForTimeout(400);
+        const r = await t.p.evaluate((decorativoTxt) => {
+          const decorativo = new Function(`return ${decorativoTxt}`)();
+          const li = document.querySelector('#lista .vacio'), s = li?.querySelector(':scope > svg.oso-ilu'), h = document.querySelector('#dh-vacio > svg.oso-ilu');
+          return { lee: Boolean(s?.classList.contains('oso-pose-lee')) && decorativo(s), alto: Math.round(s?.getBoundingClientRect().height ?? 0), linea: Boolean(li?.querySelector('.ilu')), txt: li?.innerText ?? '',
+            mochila: Boolean(h?.classList.contains('oso-pose-mochila')) && decorativo(h), htxt: document.getElementById('dh-vacio').innerText, ancho: document.documentElement.scrollWidth <= innerWidth };
+        }, decorativo.toString());
+        ok(r.lee && r.alto === 96 && !r.linea, `26 lista sin compras (${quien}): el grande leyendo, decorativo y en el sitio del dibujo de línea (${r.alto} px)`);
+        ok(quien === 'el dueño' ? /Anota la primera o importa un CSV/.test(r.txt) : r.txt.trim() === 'Aún no hay compras en el libro.', `26 lista sin compras (${quien}): «${r.txt.trim()}»`);
+        ok(r.mochila && /primera compra/.test(r.htxt), `26 «Tu historia» sin compras (${quien}): el grande con su mochila, sobre «${r.htxt.trim()}»`);
+        ok(r.ancho && t.consola.length === 0, `26 sin compras a 320 px (${quien}): sin desplazamiento de lado y consola limpia (${t.consola.slice(0, 2)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      vac.parar();
+    }
+    // La bienvenida de quien solo mira: los tres saludan arriba del título, solo si cabe; el brazo saluda solo con «todos».
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h, ef, letra] of [[390, 844, 'todos', ''], [360, 640, 'ninguno', ''], [320, 568, 'todos', ''], [390, 844, 'todos', 'muy-grande']]) {
+        const t = await entrar(navegador, anio, LECTOR, { hora: 12, viewport: { width: w, height: h } }, conLs({ 'libro.efectos': ef, ...(letra ? { 'libro.letra': letra } : {}) }));
+        await t.p.waitForSelector('#d-novedades[open]', { timeout: 8000 });
+        await t.p.waitForTimeout(1700);
+        const r = await t.p.evaluate(() => {
+          const d = document.getElementById('d-novedades'), o = document.getElementById('nov-osos'), s = o.querySelector('svg.oso-pose-saludan'), b = document.getElementById('nov-ok').getBoundingClientRect();
+          const brazo = s?.querySelector('.oso-saluda');
+          return { ve: !o.hidden && Boolean(s), aria: s?.getAttribute('aria-hidden'), cabe: d.scrollHeight <= d.clientHeight + 1, boton: b.bottom <= innerHeight && b.top >= 0, anim: brazo ? getComputedStyle(brazo).animationName : null, titulo: document.getElementById('nov-titulo').textContent, antes: o.nextElementSibling?.id };
+        });
+        const caso = `${w}×${h}, efectos ${ef}${letra ? `, letra ${letra}` : ''}`;
+        ok(r.titulo === 'Así va el libro' && r.boton && (!r.ve || r.cabe), `26 bienvenida (${caso}): «Entendido» a la vista y, con los osos, cabe sin desplazarse (osos ${r.ve}, cabe ${r.cabe})`);
+        if (w >= 360 && !letra) ok(r.ve && r.aria === 'true' && r.antes === 'nov-titulo', `26 bienvenida (${caso}): los tres saludan arriba del título, decorativos`);
+        if (w === 320) ok(!r.ve, `26 bienvenida (${caso}): no caben, así que no salen`);
+        if (r.ve) ok(r.anim === (ef === 'todos' ? 'oso-saluda' : 'none'), `26 bienvenida (${caso}): el brazo ${ef === 'todos' ? 'saluda' : 'se queda quieto'} (${r.anim})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+    // Cartas para el futuro: mientras no hay cartas, el dueño ve la invitación con el grande y su sobre (en 320 px, encima del texto).
+    const hoy = await servidor('hoy');
+    try {
+      for (const w of [390, 320]) {
+        const t = await entrar(navegador, hoy, ADMIN, { hora: 12, viewport: { width: w, height: 800 } }, conLs());
+        await cerrar(t.p);
+        const r = await t.p.evaluate(() => {
+          const c = document.getElementById('cap-pista'), s = c.querySelector(':scope > svg.oso-pose-sobre'), txt = c.querySelector(':scope > span');
+          const a = s?.getBoundingClientRect(), b = txt?.getBoundingClientRect();
+          return { ve: !c.hidden && Boolean(s) && s.getAttribute('aria-hidden') === 'true', uno: c.querySelectorAll('svg').length, lado: a && b ? (b.left >= a.right - 1 ? 'al lado' : b.top >= a.bottom - 1 ? 'encima' : 'encima a medias') : '', txt: txt?.textContent ?? '' };
+        });
+        ok(r.ve && r.uno === 1 && /Escribe una carta/.test(r.txt) && r.lado === (w >= 360 ? 'al lado' : 'encima'), `26 cartas a ${w} px: el sobre ${r.lado} de la invitación, una sola vez`);
+        await t.ctx.close();
+      }
+    } finally {
+      hoy.parar();
+    }
+    // La guía de estilo: las ocho poses y la huella, cada una con su nombre.
+    const g = await servidor('anio');
+    try {
+      const t = await entrar(navegador, g, ADMIN, { hora: 12 }, conLs());
+      await t.p.goto(`${g.url}/guia`, { waitUntil: 'networkidle' });
+      const r = await t.p.evaluate(() => [...document.querySelectorAll('#guia-osos li')].map((li) => [li.querySelector('svg.oso-ilu')?.getAttribute('aria-hidden'), li.innerText.trim()]));
+      ok(r.length === 9 && r.every(([a, n]) => a === 'true' && n.length > 2) && r.at(-1)[1] === 'La huella', `26 guía: las poses y la huella con su nombre (${r.map((x) => x[1]).join(', ')})`);
+      ok(t.consola.length === 0, `26 guía: consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+    } finally {
+      g.parar();
+    }
   });
 
   // ---------------------------------------------------------------- sin histórico de precios

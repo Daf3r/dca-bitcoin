@@ -1,4 +1,5 @@
 import { ICONOS, avatar, ico, ilustracion, medalla } from './iconos.js';
+import { NOMBRES_POSES, huella, pose } from './arte-osos-poses.js';
 
 // Guía de estilo viva (idea 90; ver guia.html). Arma los ejemplos con los mismos módulos y estilos de la app.
 const $ = (id) => document.getElementById(id);
@@ -94,9 +95,24 @@ function pintarIconos() {
     { tipo: 'tiempo', valor: 6, ganada: true, titulo: '6 meses' }, { tipo: 'tiempo', valor: 12, ganada: false, titulo: '1 año' },
   ].map((m) => `<li class="medalla ${m.ganada ? 'ganada' : 'bloq'}">${medalla(m)}<b>${m.titulo}</b><small>${m.ganada ? 'ganada' : 'próxima'}</small></li>`).join('');
   $('guia-ilu').innerHTML = ['montana', 'grafico', 'traslado'].map((n) => ilustracion(n)).join('');
-  $('guia-vacio').innerHTML = `${ilustracion('montana')}Un estado vacío, con su dibujo y una frase amable.`;
+  $('guia-vacio').innerHTML = `${pose('lee')}Un estado vacío, con su dibujo y una frase amable.`;
+}
+
+// --- Los osos de la interfaz (campamento 26): cada pose en su tarjeta, con su nombre, y la huella
+const NOMBRE_POSE = { lee: 'Lee', mochila: 'Con su mochila', saludan: 'Los tres saludan', sobre: 'Con un sobre', confundido: 'Confundido', duerme: 'Duerme', duermen: 'Los tres duermen', celebra: 'Celebra' };
+function pintarOsos() {
+  const ul = $('guia-osos');
+  for (const [svg, nombre] of [...NOMBRES_POSES.map((n) => [pose(n, { tam: 88 }), NOMBRE_POSE[n] ?? n]), [huella({ tam: 40 }), 'La huella']]) {
+    const li = document.createElement('li');
+    li.innerHTML = svg;
+    const t = document.createElement('small');
+    t.textContent = nombre;
+    li.append(t);
+    ul.append(li);
+  }
 }
 
 pintarControles();
 pintarColores();
 pintarIconos();
+pintarOsos();

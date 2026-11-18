@@ -2,7 +2,8 @@ import { aniosTronco, datosCertificado, entero, nombreHito, estratosMes, firmasD
 import { constelacion, estratos, manta, mantaPrimer, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
-import { ico, ilustracion, medalla } from './iconos.js';
+import { ico, medalla } from './iconos.js';
+import { pose } from './arte-osos-poses.js';
 import { $, R, S, esAdmin, reducido, vozLibro } from './estado.js';
 import { abrirPelicula, hayPelicula } from './pelicula.js';
 
@@ -283,7 +284,7 @@ export function pintarHistoria() {
   lista.textContent = '';
   med.textContent = '';
   $('dh-vacio').hidden = R.nCompras > 0;
-  if (!R.nCompras) $('dh-vacio').innerHTML = `${ilustracion('montana')}${vozLibro() ? 'La historia del libro empieza con su primera compra.' : 'Tu historia empieza con tu primera compra.'}`;
+  if (!R.nCompras) $('dh-vacio').innerHTML = `${pose('mochila')}${vozLibro() ? 'La historia del libro empieza con su primera compra.' : 'Tu historia empieza con tu primera compra.'}`;
   $('dh-cuerpo').hidden = !R.nCompras;
   if (!R.nCompras) return;
   seleccion = null;

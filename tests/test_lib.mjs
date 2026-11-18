@@ -1669,4 +1669,36 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(!/NaN|undefined/.test(lacre(1e8)) && lacre(1e8).match(/<[a-z]/g).length === lacre(1e9).match(/<[a-z]/g).length, 'osos: el lacre de 1 BTC tiene los mismos nodos que los demás y sin NaN');
 }
 
+// Campamento 26 · Los osos en la interfaz: las poses son SVG decorativos y puros, sin estilos en línea, con las piezas de la cumbre.
+{
+  const P = await import('../app/static/arte-osos-poses.js');
+  const { PARTES } = await import('../app/static/arte-osos.js');
+  const nodos = (s) => (s.match(/<(svg|g|path)\b/g) || []).length;
+  ok(P.NOMBRES_POSES.join() === 'lee,mochila,saludan,sobre,confundido,duerme,duermen,celebra', `poses: las ocho, en el orden de la guía (${P.NOMBRES_POSES})`);
+  for (const nombre of P.NOMBRES_POSES) {
+    const s = P.pose(nombre, { tam: 84 });
+    const vb = s.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
+    const clases = [...s.matchAll(/<path class="([^"]+)"/g)].map((m) => m[1]);
+    ok(s.startsWith(`<svg class="oso-ilu oso-pose-${nombre}" `) && s.includes('aria-hidden="true"') && s.includes('focusable="false"') && s.includes('height="84"'), `poses: ${nombre} es un <svg> decorativo con su clase y su alto`);
+    ok(!/style=|fill=|NaN|undefined/.test(s) && vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0, `poses: ${nombre} sin estilos en línea, sin NaN y con su viewBox`);
+    ok(clases.length > 0 && clases.every((c) => /^oso-[a-z-]+$/.test(c)) && clases.includes('oso-luz') && clases.includes('oso-hocico') && clases.includes('oso-suelo'), `poses: ${nombre} pinta con las clases oso-… (${new Set(clases).size} tonos)`);
+    ok(nodos(s) <= 32, `poses: ${nombre}, ${nodos(s)} nodos (≤ 32)`);
+  }
+  ok(P.pose('no-existe') === '', 'poses: un nombre que no existe no dibuja nada');
+  const saludan = P.pose('saludan'), brazo = saludan.match(/<g class="oso-saluda">(.*?)<\/g>/);
+  ok(brazo && (saludan.match(/oso-saluda/g) || []).length === 1 && ['oso-luz', 'oso-medio', 'oso-hocico'].every((c) => brazo[1].includes(`class="${c}"`)), 'poses: en «saludan», el brazo del grande va aparte (el que se mueve), con su luz, su canto y su manita');
+  ok(P.NOMBRES_POSES.filter((n) => n !== 'saludan').every((n) => !P.pose(n).includes('oso-saluda')), 'poses: solo «saludan» lleva el brazo aparte');
+  // El eje del saludo en styles.css es el hombro, medido sobre la caja del brazo dibujado.
+  const pts = [...brazo[1].matchAll(/(-?\d+\.\d) (-?\d+\.\d)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+  const ox = ((P.SALUDO.de[0] - Math.min(...xs)) / (Math.max(...xs) - Math.min(...xs))) * 100, oy = ((P.SALUDO.de[1] - Math.min(...ys)) / (Math.max(...ys) - Math.min(...ys))) * 100;
+  const css = fs.readFileSync(new URL('../app/static/styles.css', import.meta.url), 'utf8').match(/\.oso-saluda \{[^}]*transform-origin: ([\d.]+)% ([\d.]+)%/);
+  ok(css && Math.abs(Number(css[1]) - ox) < 1.5 && Math.abs(Number(css[2]) - oy) < 1.5, `poses: el saludo gira desde el hombro (CSS ${css?.[1]}% ${css?.[2]}%, dibujo ${ox.toFixed(1)}% ${oy.toFixed(1)}%)`);
+  const h = P.huella({ tam: 30 });
+  ok(nodos(h) === 2 && h.includes('class="oso-ilu oso-huella"') && h.includes('aria-hidden="true"') && !/style=|NaN/.test(h), 'poses: la huella es un solo trazo, decorativa');
+  ok(['arco', 'elipse', 'canto', 'CAB', 'PIEZAS', 'CARA', 'ROPA'].every((k) => k in PARTES) && PARTES.PIEZAS.length > 8, 'poses: salen de las mismas piezas que los osos de la cumbre (PARTES)');
+  const fuente = fs.readFileSync(new URL('../app/static/arte-osos-poses.js', import.meta.url), 'utf8');
+  ok(!/\b(document|window|localStorage)\b/.test(fuente.replace(/\/\/.*$/gm, '')), 'poses: el módulo es puro (sin DOM)');
+}
+
 console.log(`OK ${n} comprobaciones`);

@@ -1,6 +1,7 @@
 import { avisar } from './avisar.js';
 import { etapasFuturas, fechaLarga, mananaISO, nombreHito, textoApertura } from './lib.js';
 import { cartaAbierta, cartaSellada } from './arte-sellos.js';
+import { pose } from './arte-osos-poses.js';
 import { $, R, S, api, esAdmin, reducido } from './estado.js';
 
 // Cartas para el futuro (campamento 15A, idea 33): el dueño escribe una carta con lacre que se abre sola en una fecha o al llegar a una
@@ -17,6 +18,8 @@ export function pintarCapsulas() {
   caja.hidden = !S.cargado || (!hay && !admin) || !R?.nCompras;
   $('cap-nueva').hidden = !admin;
   $('cap-pista').hidden = !admin || hay;
+  // (Campamento 26) La invitación lleva al grande con su sobre lacrado (una vez: el dibujo no cambia).
+  if (!$('cap-pista').hidden && !$('cap-pista').querySelector('.oso-ilu')) $('cap-pista').insertAdjacentHTML('afterbegin', pose('sobre', { tam: 72 }));
   lista.textContent = '';
   const vistas = leidas();
   for (const c of S.capsulas) {

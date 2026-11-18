@@ -3,7 +3,8 @@ import { avisar } from './avisar.js';
 import { pegado, pegarHtml } from './cifras.js';
 import { apacheta, piedrita } from './arte.js';
 import { copiarTexto } from './copiar.js';
-import { ico, ilustracion } from './iconos.js';
+import { ico } from './iconos.js';
+import { pose } from './arte-osos-poses.js';
 import { $, R, S, api, esAdmin, normalizar, reducido, vozLibro } from './estado.js';
 import { abrirComprobante } from './comprobante.js';
 import { abrirHoja, esc } from './hoja.js';
@@ -176,7 +177,7 @@ export function pintarLista() {
   if (host.querySelector('.f-notaed')) return; // se está editando una nota: no se la quitamos de debajo del dedo
   if (!R.n) {
     const sinCompras = S.cargado && !S.errorCarga; // solo el estado vacío de verdad lleva dibujo
-    host.innerHTML = `<li class="vacio${sinCompras ? ' con-ilu' : ''}">${sinCompras ? ilustracion('montana') : ''}${!S.cargado ? 'Cargando compras…' : S.errorCarga ? (vozLibro() ? 'No se pudieron cargar las compras.' : 'No se pudieron cargar tus compras.') : 'Aún no hay compras. Anota la primera o importa un CSV.'}</li>`;
+    host.innerHTML = `<li class="vacio${sinCompras ? ' con-ilu' : ''}">${sinCompras ? pose('lee') : ''}${!S.cargado ? 'Cargando compras…' : S.errorCarga ? (vozLibro() ? 'No se pudieron cargar las compras.' : 'No se pudieron cargar tus compras.') : vozLibro() ? 'Aún no hay compras en el libro.' : 'Aún no hay compras. Anota la primera o importa un CSV.'}</li>`;
     $('ver-todas').hidden = true;
     $('l-ctl').hidden = true;
     $('l-col').hidden = true;

@@ -83,6 +83,8 @@ const PIE = [[-6.8, -0.4], [6.6, -0.4], [5.4, 1.6], [-2.2, 2.4], [-11, 1.6]];
 
 const TONOS = ['sombra', 'luz', 'medio', 'marino', 'celeste', 'parche', 'cinta', 'bufanda', 'hocico', 'rasgos', 'hocico-arriba', 'rasgos-arriba', 'gorro'];
 const d = (pts) => `M${pts.map(([x, y]) => `${f1(x)} ${f1(y)}`).join('L')}Z`;
+/** (Campamento 26) Las piezas de siempre, para dibujar a los mismos osos en otras poses en la interfaz (`arte-osos-poses.js`). */
+export const PARTES = { arco, elipse, canto, CAB, PIEZAS, CARA, ROPA, BUFANDA, GORRO, PIE };
 
 /**
  * Los osos en la escena. `lista`: [{ x, y, s, quien }] (el pie de cada uno, su escala y cuál es); `k`: escala de la escena (`ec × 1.1`).

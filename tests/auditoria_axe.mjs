@@ -87,6 +87,21 @@ try {
       await auditar(p, `entrada ${esquema}`);
       await ctx.close();
     }
+    { // (Campamento 26) Los osos en la interfaz: la bienvenida de la lectora con los tres saludando y la lista sin compras con el grande
+      const l = await nuevo(anio, LECTOR);
+      await l.p.waitForSelector('#d-novedades[open]', { timeout: 8000 }).catch(() => {});
+      await auditar(l.p, `bienvenida con los osos (lectora) ${esquema}`);
+      await l.ctx.close();
+      const vac = await servidor('vacio');
+      try {
+        const a = await nuevo(vac, ADMIN);
+        for (let k = 0; k < 3 && await a.p.locator('dialog[open]').count(); k++) { await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(300); }
+        await auditar(a.p, `sin compras, con el grande leyendo ${esquema}`);
+        await a.ctx.close();
+      } finally {
+        vac.parar();
+      }
+    }
     // El cielo cambia con la hora: la entrada y la app se revisan en cada franja y a mitad de las dos mezclas de claro a oscuro.
     for (const hora of [2, 5, 6, 12, 16.5, 17.5]) {
       let r = await nuevo(anio, null, null, hora);
