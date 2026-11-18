@@ -1703,7 +1703,8 @@ def borrar_medidas() -> Any:
 # Cada 180 días, una pregunta al admin (categoría push `resguardo`, apagada): ¿el respaldo de la wallet y la nota para la familia siguen
 # donde los dejó? Revisar es mirarlo él mismo: la app NUNCA pide ni guarda la frase ni nada de la wallet, solo la fecha en que tocó
 # «Revisado». Todo vive en `meta` (sin migración): `resguardo_revisado` (la última revisión), `resguardo_inicio` (cuándo se encendió el
-# aviso en algún dispositivo; lo pone y lo quita `avisos._resguardo`) y `aviso_resguardo` (el último aviso). Las fechas salen de
+# aviso en algún dispositivo; lo pone y lo quita `avisos._resguardo`; solo cuenta si nunca se revisó) y `aviso_resguardo` (el último
+# aviso). Las fechas salen de
 # `push.ahora()` (hora de El Salvador), así las pruebas pueden mover el reloj.
 RESGUARDO_DIAS = 180
 TEXTO_RESGUARDO = ("¿Tu respaldo de la wallet y la nota para tu familia siguen donde los dejaste? Cuando puedas, míralo tú y marca "
@@ -1724,15 +1725,16 @@ def _dia_sv(ts: int) -> date:
 
 def resguardo(conn: sqlite3.Connection) -> dict[str, Any]:
     """La regla de la revisión del respaldo, la misma para «Estado del sistema» y para el aviso (así la fecha que se ve es la que suena).
-    El próximo aviso llega 180 días después de lo más reciente de: la última revisión («Revisado»), el último aviso y el día en que se
-    encendió el aviso. Así nunca suena el día en que se enciende (ni el del despliegue: viene apagado) ni más de una vez cada 180 días.
-    Sin ningún dispositivo con la categoría encendida no hay próximo aviso (`proximo` None)."""
+    El próximo aviso llega 180 días después del último «Revisado» (o del último aviso, si es más reciente: nunca más de uno cada 180 días).
+    Si nunca se tocó «Revisado», en lugar de la revisión cuenta el día en que se encendió el aviso: así no suena el día del despliegue (viene
+    apagado) ni el día en que se enciende. Sin ningún dispositivo con la categoría encendida no hay próximo aviso (`proximo` None)."""
     ahora = push.ahora()
     hoy = ritmo.hoy_sv(ahora)
     revisado = _ts_meta(conn, "resguardo_revisado")
     encendido = bool(push.destinatarios(conn, "resguardo"))
-    # Antes de la primera pasada de `avisos` (cada 2 minutos) aún no hay inicio: se cuenta desde ahora, que es lo que va a anotar.
-    inicio = (_ts_meta(conn, "resguardo_inicio") or int(ahora.timestamp())) if encendido else None
+    # Solo sin ninguna revisión cuenta el día en que se encendió. Antes de la primera pasada de `avisos` (cada 2 minutos) aún no está
+    # anotado: se cuenta desde ahora, que es lo que va a anotar.
+    inicio = (_ts_meta(conn, "resguardo_inicio") or int(ahora.timestamp())) if encendido and not revisado else None
     base = max((t for t in (revisado, inicio, _ts_meta(conn, "aviso_resguardo")) if t), default=None)
     proximo = _dia_sv(base) + timedelta(days=RESGUARDO_DIAS) if encendido and base else None
     dias = (hoy - _dia_sv(revisado)).days if revisado else None

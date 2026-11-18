@@ -76,7 +76,7 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
                  "ayuda": "Si el respaldo diario falla."},
     # Revisión tranquila del respaldo (campamento 24, idea 36): apagada hasta que el admin la pida. La app no guarda nada de la wallet.
     "resguardo": {"rol": "admin", "defecto": False, "nombre": "Revisión tranquila del respaldo",
-                  "ayuda": "Cada 180 días desde tu última revisión, una pregunta: ¿el respaldo de tu wallet y la nota para tu familia siguen donde "
+                  "ayuda": "Cada 180 días desde tu última revisión (o desde que lo enciendas, si nunca la anotaste), una pregunta: ¿el respaldo de tu wallet y la nota para tu familia siguen donde "
                            "los dejaste? Revisar es mirarlo tú; la app no guarda nada de eso. Marca «Revisado» en «Estado del sistema»."},
     "caida": {"rol": "admin", "defecto": True, "nombre": "Gran caída",
               "ayuda": "Una vez por caída, cuando BTC baja 15 % o más de su máximo de 30 días. Solo informa, no recomienda."},

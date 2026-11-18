@@ -2844,7 +2844,8 @@ for _d in (392, 422, 452, 541):  # 30, 60, 90 y 179 días después: no insiste
     check(avisos._resguardo(_cx) is False and not enviados, f"no insiste ({_d - 362} días después del aviso)")
 push.ahora = _en(542, 12)
 check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R1], "a los 180 días del aviso, el siguiente")
-# Apagarla en todos olvida el inicio; volver a encenderla cuenta desde ese día (no suena al encenderla aunque haga mucho de todo)
+# Apagarla en todos olvida el inicio. Con una revisión anotada, volver a encenderla NO reinicia la cuenta: sigue siendo 180 días desde el
+# último «Revisado» (o el último aviso, si es más reciente). Solo sin ninguna revisión cuenta el día en que se enciende.
 adm.put("/api/push/prefs", json={"endpoint": EP_R1, "prefs": {"resguardo": False}})
 adm.put("/api/push/prefs", json={"endpoint": EP_R2, "prefs": {"resguardo": False}})
 sql("DELETE FROM avisos_pendientes")
@@ -2853,17 +2854,41 @@ enviados.clear()
 check(avisos._resguardo(_cx) is False and server._meta(_cx, "resguardo_inicio") is None and adm.get("/api/sistema").get_json()["resguardo"]["proximo"] is None,
       "apagada en todos: se olvida el inicio y no hay próximo")
 adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": True}})
-check(adm.get("/api/sistema").get_json()["resguardo"]["proximo"] == _dia(880), "encenderla de nuevo (aunque la última revisión sea vieja) cuenta 180 días desde ese día")
-check(avisos._resguardo(_cx) is False and not enviados, "y ese día no suena")
-push.ahora = _en(880, 22)
-check(avisos._resguardo(_cx) is False and not enviados, "de noche (a las 22:00, todos con el horario de siempre) espera")
-push.ahora = _en(881, 8, 5)
+check(adm.get("/api/sistema").get_json()["resguardo"]["proximo"] == _dia(722), "volver a encenderla con una revisión anotada no reinicia la cuenta: 180 días desde el último aviso (más reciente que la revisión)")
+check(avisos._resguardo(_cx) is False and not enviados and server._meta(_cx, "resguardo_inicio") is not None, "antes de esa fecha no suena (y queda anotado el inicio)")
+push.ahora = _en(722, 22)
+check(avisos._resguardo(_cx) is False and not enviados, "el día que toca, de noche (a las 22:00, todos con el horario de siempre), espera")
+push.ahora = _en(723, 8, 5)
 check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R3], "y sale a la mañana siguiente")
+# Una revisión de hace 300 días y el aviso apagado mucho tiempo: al encenderlo ya toca (la regla es desde el último «Revisado»)
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": False}})
+push.ahora = _en(1000, 12)
+avisos._resguardo(_cx)
+sql("DELETE FROM meta WHERE clave = 'aviso_resguardo'"); sql("UPDATE meta SET valor = ? WHERE clave = 'resguardo_revisado'", (str(int(_en(700, 12)().timestamp())),))
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": True}})
+_rs = adm.get("/api/sistema").get_json()["resguardo"]
+check(_rs["revisado"] == _dia(700) and _rs["dias"] == 300 and _rs["proximo"] == _dia(880) and _rs["toca"] is True, f"con la última revisión de hace 300 días, ya toca {_rs}")
+enviados.clear()
+check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R3], "y sale en la pasada siguiente, aunque se acabe de encender")
+# Nunca revisado: encenderla cuenta desde ese día (nunca suena el día que se enciende)
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": False}})
+push.ahora = _en(1100, 12)
+avisos._resguardo(_cx)
+sql("DELETE FROM meta WHERE clave IN ('aviso_resguardo', 'resguardo_revisado')")
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": True}})
+enviados.clear()
+_rs = adm.get("/api/sistema").get_json()["resguardo"]
+check(_rs["revisado"] is None and _rs["proximo"] == _dia(1280) and _rs["toca"] is False, f"nunca revisado: 180 días desde que se enciende {_rs}")
+check(avisos._resguardo(_cx) is False and not enviados and server._meta(_cx, "resguardo_inicio") == str(int(_en(1100, 12)().timestamp())), "ese día no suena y se anota el inicio")
+push.ahora = _en(1279, 12)
+check(avisos._resguardo(_cx) is False and not enviados, "a los 179 días, nada")
+push.ahora = _en(1280, 12)
+check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R3], "a los 180 días de encenderla, la pregunta")
 # Una pasada completa la incluye; la limpieza diaria no toca sus marcas
 check("resguardo" in avisos.una_pasada(), "la pasada de avisos incluye la revisión del respaldo")
+_marcas = [server._meta(_cx, k) for k in ("resguardo_inicio", "aviso_resguardo")]
 avisos.limpiar(_cx)
-check(server._meta(_cx, "resguardo_revisado") is not None and server._meta(_cx, "aviso_resguardo") is not None and server._meta(_cx, "resguardo_inicio") is not None,
-      "la limpieza diaria no toca las marcas de la revisión")
+check(all(_marcas) and [server._meta(_cx, k) for k in ("resguardo_inicio", "aviso_resguardo")] == _marcas, "la limpieza diaria no toca las marcas de la revisión")
 _cx.close()
 # Permisos: solo el admin anota; sin sesión 401; sin la cabecera X-Libro 403; con SOLO_LECTURA 503; cuenta para el límite de escrituras
 check(luz.post("/api/resguardo", json={}).status_code == 403, "una lectora no anota la revisión (403)")
@@ -2875,7 +2900,7 @@ try:
     server.SOLO_LECTURA = True
     r = adm.post("/api/resguardo", json={})
     check(r.status_code == 503 and r.get_json()["mantenimiento"] is True, "con SOLO_LECTURA no se anota (503)")
-    check(adm.get("/api/sistema").get_json()["resguardo"]["revisado"] == _dia(182), "pero se sigue viendo")
+    check(adm.get("/api/sistema").get_json()["resguardo"]["revisado"] is None, "y no queda anotado (se sigue viendo el estado)")
 finally:
     server.SOLO_LECTURA = _ant_sl5
 _lim5 = server.LIMITE_ESCRITURAS
