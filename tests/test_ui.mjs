@@ -2567,6 +2567,39 @@ try {
     }
   }
 
+  // ---------------------------------------------------------------- pulido final: abrir Gráficos no ensucia «Estado del sistema» (R1)
+  {
+    const srv = await servidor('anio');
+    try {
+      // Cuenta los «ResizeObserver loop…» que lanza el navegador y los reportes que salen hacia /api/errores.
+      const vigia = () => { window.__ro = 0; addEventListener('error', (e) => { if (/ResizeObserver loop/.test(e.message)) window.__ro++; }); try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      const reportes = (p) => { const r = []; p.on('request', (q) => { if (q.url().endsWith('/api/errores')) r.push(q.postData() ?? ''); }); return r; };
+      const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+      for (const [quien, cuenta] of [['el dueño', ADMIN], ['una lectora', LECTOR]]) {
+        const s = await entrar(navegador, srv, cuenta, { pestanas: true }, vigia);
+        const r = reportes(s.p);
+        await cerrar(s.p);
+        for (const t of ['graficos', 'resumen', 'graficos']) { await s.p.click(`#pestanas [data-pestana="${t}"]`); await s.p.waitForTimeout(700); }
+        eq(await s.p.evaluate(() => window.__ro), 0, `R1: ${quien} abre Gráficos sin el bucle de ResizeObserver`);
+        ok(await s.p.evaluate(() => document.querySelector('#lienzo svg')?.getAttribute('width') === String(document.getElementById('lienzo').clientWidth)), `R1: ${quien} ve el gráfico dibujado a su medida`);
+        eq(r.length, 0, `R1: ${quien} no manda ningún error del navegador`);
+        await s.ctx.close();
+      }
+      // errores.js ignora ese aviso benigno (sin gastar uno de los 5 por carga) y sigue reportando un error de verdad.
+      const a = await entrar(navegador, srv, ADMIN, {}, vigia);
+      const r = reportes(a.p);
+      await a.p.evaluate(() => {
+        for (let k = 0; k < 6; k++) dispatchEvent(new ErrorEvent('error', { message: 'ResizeObserver loop completed with undelivered notifications.' }));
+        setTimeout(() => { throw new Error('un error de verdad tras el aviso benigno'); }, 10);
+      });
+      await a.p.waitForTimeout(800);
+      ok(r.length === 1 && r[0].includes('un error de verdad tras el aviso benigno'), `R1: el aviso benigno no se reporta y un error de verdad sí (${r.length}: ${r.join(' | ').slice(0, 160)})`);
+      await a.ctx.close();
+    } finally {
+      srv.parar();
+    }
+  }
+
   // ---------------------------------------------------------------- sesiones y operación (campamento 8, 3/4)
   {
     const srv = await servidor('anio');
