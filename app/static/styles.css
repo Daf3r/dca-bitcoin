@@ -4450,3 +4450,11 @@ html[data-cielo="noche"][data-efectos="todos"] .osos.con-aurora :is(.oso-hocico,
    montana.js pone `sin-nieve`. Si llegan mientras «Tú» sube, con un fundido corto (no con «ninguno»); se esconden de golpe. */
 .osos.sin-nieve { opacity: 0; }
 html:not([data-efectos="ninguno"]) .osos[data-fundido]:not(.sin-nieve) { transition: opacity 0.5s ease-out; }
+/* El saltito al guardar una compra nueva: acompaña a una acción (sale con «esenciales», nunca con «ninguno»); solo transform. */
+.osos .oso, .oso-pie { transform-box: fill-box; transform-origin: 50% 100%; }
+html:not([data-efectos="ninguno"]) .osos.salta .oso { animation: oso-salta 0.9s cubic-bezier(0.3, 0, 0.3, 1) both; }
+html:not([data-efectos="ninguno"]) .osos.salta .oso:nth-of-type(2) { animation-delay: 0.08s; }
+html:not([data-efectos="ninguno"]) .osos.salta .oso:nth-of-type(3) { animation-delay: 0.16s; }
+html:not([data-efectos="ninguno"]) .osos.salta .oso-pie { animation: oso-pie 0.9s cubic-bezier(0.3, 0, 0.3, 1) both; }
+@keyframes oso-salta { 0% { transform: none; } 18% { transform: scale(1.05, 0.92); } 48% { transform: translateY(-4px) scale(0.97, 1.03); } 80% { transform: scale(1.03, 0.96); } 100% { transform: none; } }
+@keyframes oso-pie { 0%, 100% { transform: none; } 48% { transform: scale(0.72, 0.8); } }

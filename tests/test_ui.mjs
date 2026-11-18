@@ -6545,6 +6545,40 @@ try {
       ok(t.consola.length === 0, `25·bufanda, aurora y gorrito: consola limpia (${t.consola.slice(0, 2)})`);
       await t.ctx.close();
 
+      // ---- El saltito al guardar una compra nueva: acompaña a una acción, así que sale con «esenciales» (no con «ninguno»), una vez, y los
+      // osos no desaparecen ni se mueven mientras «Tú» sube.
+      for (const ef of ['esenciales', 'ninguno']) {
+        const a = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': ef }));
+        await cerrar(a.p);
+        const antes = await a.p.evaluate(() => document.querySelector('#montana #m-osos .oso').getBoundingClientRect().toJSON());
+        await a.p.evaluate(() => {
+          const r = { salta: 0, anim: 0, sinNieve: 0 };
+          window.__osos = r;
+          const vigia = () => {
+            const g = document.querySelector('#montana #m-osos');
+            if (g?.classList.contains('sin-nieve')) r.sinNieve++;
+            if (document.getAnimations().some((x) => x.animationName === 'oso-salta')) r.anim++;
+            requestAnimationFrame(vigia);
+          };
+          new MutationObserver((ms) => { for (const m of ms) if (m.target.id === 'm-osos' && m.target.classList.contains('salta') && !(m.oldValue || '').includes('salta')) r.salta++; })
+            .observe(document.getElementById('montana'), { attributes: true, attributeFilter: ['class'], attributeOldValue: true, subtree: true });
+          vigia();
+        });
+        await a.p.evaluate(() => window.scrollTo(0, 0));
+        await a.p.click('#anotar'); await a.p.waitForTimeout(400);
+        await a.p.fill('#h-sats', '40000');
+        await a.p.click('#guardar'); await a.p.waitForTimeout(500);
+        if (/Sí/.test((await a.p.textContent('#guardar').catch(() => '')) || '')) await a.p.click('#guardar');
+        await a.p.waitForTimeout(5200);
+        const r = await a.p.evaluate(() => window.__osos);
+        const despues = await a.p.evaluate(() => document.querySelector('#montana #m-osos .oso')?.getBoundingClientRect().toJSON());
+        if (ef === 'esenciales') ok(r.salta === 1 && r.anim > 0 && r.sinNieve === 0, `25·saltito con «esenciales»: saltan una vez al guardar y no desaparecen mientras «Tú» sube (${JSON.stringify(r)})`);
+        else ok(r.anim === 0 && r.sinNieve === 0, `25·saltito con «ninguno»: no saltan (${JSON.stringify(r)})`);
+        ok(despues && Math.abs(despues.x - antes.x) < 6 && Math.abs(despues.y - antes.y) < 6, `25·saltito ${ef}: tras la compra siguen en su sitio (de ${Math.round(antes.x)},${Math.round(antes.y)} a ${Math.round(despues?.x)},${Math.round(despues?.y)})`);
+        ok(a.consola.length === 0, `25·saltito ${ef}: consola limpia (${a.consola.slice(0, 2)})`);
+        await a.ctx.close();
+      }
+
       // ---- Nodos: con mil compras, en Nochebuena (la noche más cargada), la escena del teléfono no pasa de 1100 y los osos son pocos.
       const sMil = await servidor('mil');
       try {

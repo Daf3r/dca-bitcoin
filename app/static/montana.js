@@ -1408,6 +1408,13 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
 
   // Cada compra: brasas desde tu punto, la cifra flotando y la siguiente bandera que se agita.
   brasas(fx, p.x, p.y, nivel === 'compra' ? 9 : 14, nivel === 'compra' ? 46 : 64);
+  // (Campamento 25) Y los osos de la cumbre dan un saltito (0.9 s, solo transform; el CSS lo apaga con efectos «ninguno»).
+  const os = host.querySelector('#m-osos.osos');
+  if (os) {
+    if (os.classList.contains('salta')) { os.classList.remove('salta'); os.getBoundingClientRect(); } // otro saltito seguido: que empiece de nuevo
+    os.classList.add('salta');
+    setTimeout(() => os.classList.remove('salta'), 1200);
+  }
   // «+N sats» donde no choque con las etiquetas (banderas y «Tú»): se prueban varios sitios.
   const t = nodo('text', { class: 'flota' }, fx);
   t.textContent = `+${entero(delta)} sats`;
