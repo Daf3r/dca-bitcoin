@@ -10,7 +10,7 @@ import {
 import { comprobante, diaDe, fechaEscrita, notaDeHaceUnAnio, sumarDias } from '../app/static/lib.js';
 import { caminoParaLeer, etapaCelebrada, etapaConSelloAnterior, etapaDestacada, marcasDeEtapa, rangoEtapa, tramoEtapas } from '../app/static/lib.js';
 import { AVISO_DIARIO, accionFirmas, diarioParaOir, fechaHablada, firmasDe, paraOir, textoFirmantes } from '../app/static/lib.js';
-import { certificado } from '../app/static/arte-sellos.js';
+import { certificado, lacre } from '../app/static/arte-sellos.js';
 
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
@@ -1609,6 +1609,11 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(O.OSOS_TRIO === true && O.OSOS.join() === 'grande,chico,mameluco', 'osos: el trío está activo y el orden en que se quedan es grande, chico, mameluco');
   eq([L.textoOsos(3).includes('tres osos polares'), L.textoOsos(2).includes('dos osos'), L.textoOsos(1).includes('un oso polar'), L.textoOsos(0)], [true, true, true, ''], 'osos: la descripción dice cuántos');
   ok(![1, 2, 3].some((n) => /\btu\b|\btus\b|\bte\b/i.test(L.textoOsos(n))), 'osos: la descripción no tutea');
+  // El sello de 1 BTC lleva la cabeza del oso en vez de la montañita (las tres copias del relieve); los demás, la montañita de siempre.
+  const montanitaDe = (svg) => (svg.match(/<path d="M[\d.]+ [\d.]+L/g) || []).length, osoDe = (svg) => (svg.match(/<path d="M[\d.]+ [\d.]+a/g) || []).length;
+  ok(osoDe(lacre(1e8)) === 3 && montanitaDe(lacre(1e8)) === 0 && osoDe(lacre(1e8, { grande: true })) === 3, 'osos: el lacre de 1 BTC lleva la cabeza del oso en relieve');
+  ok([1e5, 2.5e6, 1e7, 2.5e8, 1e9].every((m) => osoDe(lacre(m)) === 0 && montanitaDe(lacre(m)) === 3), 'osos: los demás lacres siguen con su montañita (también 2.5 y 10 BTC)');
+  ok(!/NaN|undefined/.test(lacre(1e8)) && lacre(1e8).match(/<[a-z]/g).length === lacre(1e9).match(/<[a-z]/g).length, 'osos: el lacre de 1 BTC tiene los mismos nodos que los demás y sin NaN');
 }
 
 console.log(`OK ${n} comprobaciones`);
