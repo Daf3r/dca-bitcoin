@@ -1609,6 +1609,10 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(O.OSOS_TRIO === true && O.OSOS.join() === 'grande,chico,mameluco', 'osos: el trío está activo y el orden en que se quedan es grande, chico, mameluco');
   eq([L.textoOsos(3).includes('tres osos polares'), L.textoOsos(2).includes('dos osos'), L.textoOsos(1).includes('un oso polar'), L.textoOsos(0)], [true, true, true, ''], 'osos: la descripción dice cuántos');
   ok(![1, 2, 3].some((n) => /\btu\b|\btus\b|\bte\b/i.test(L.textoOsos(n))), 'osos: la descripción no tutea');
+  // (Fase 2) La ilustración de la montaña de los estados vacíos lleva un osito al pie, en el mismo trazo (sin rellenos ni estilos en línea).
+  const { ilustracion } = await import('../app/static/iconos.js');
+  const ilu = ilustracion('montana');
+  ok(/<circle cx="54"/.test(ilu) && !/style=|fill=|NaN/.test(ilu) && ilu.includes('aria-hidden="true"'), 'osos: la ilustración de la montaña lleva su osito, decorativo y en el mismo trazo');
   // El sello de 1 BTC lleva la cabeza del oso en vez de la montañita (las tres copias del relieve); los demás, la montañita de siempre.
   const montanitaDe = (svg) => (svg.match(/<path d="M[\d.]+ [\d.]+L/g) || []).length, osoDe = (svg) => (svg.match(/<path d="M[\d.]+ [\d.]+a/g) || []).length;
   ok(osoDe(lacre(1e8)) === 3 && montanitaDe(lacre(1e8)) === 0 && osoDe(lacre(1e8, { grande: true })) === 3, 'osos: el lacre de 1 BTC lleva la cabeza del oso en relieve');
