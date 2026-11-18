@@ -53,7 +53,7 @@ dca.tudominio.com {
 }
 ```
 
-Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)* y una regla de límite de peticiones para las rutas que **empiezan por** `/api/login` (por ejemplo, 10 por minuto por IP): así cubre también `/api/login/codigo`, la entrada de la tele con un código. Añade también una regla de caché *Bypass cache* para el dominio (es obligatoria: la caché la deciden las cabeceras de la app, y sus estáticos ya van versionados). En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Cloudflare. La protección de la app es su login propio (cuentas por persona, abajo); Cloudflare Access ya no se usa.
+Después, en Cloudflare: registro DNS con proxy (nube naranja), SSL/TLS en *Full (strict)* y una regla de límite de peticiones para las rutas que **empiezan por** `/api/login` (por ejemplo, 10 por minuto por IP): así cubre también `/api/login/codigo`, la entrada de la tele con un código. Añade también una regla de caché *Bypass cache* para el dominio (es obligatoria: la caché la deciden las cabeceras de la app, y sus estáticos ya van versionados) y activa HSTS (SSL/TLS → Edge Certificates → HTTP Strict Transport Security). En el firewall del servidor, el 443 solo para las IPs de Cloudflare: sin eso, entrar por la IP se salta Cloudflare. La protección de la app es su login propio (cuentas por persona, abajo); Cloudflare Access ya no se usa.
 
 ## Acceso con cuentas
 La app tiene login propio: una cuenta por persona, **admin** (anota, corrige, anula, importa, ve el historial) o **lector** (ve todo, no escribe). Toda escritura queda en un historial que no se puede modificar, y borrar una compra la **anula** (sigue en el historial).
