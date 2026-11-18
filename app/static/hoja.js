@@ -240,7 +240,7 @@ function pintarHoja() {
   // Saldo sin el movimiento que se edita (una venta editada devuelve sus sats, una compra editada los quita).
   const saldo = R.sats - (previa ? (previa.tipo === 'venta' ? -previa.sats : previa.sats) : 0);
   const sinSaldo = venta && d && d.sats > saldo;
-  $('hoja-t').textContent = venta ? (H.editando ? 'Editar venta' : 'Registrar venta o gasto') : H.editando ? 'Editar compra' : 'Anotar compra';
+  $('hoja-t').textContent = venta ? (H.editando ? 'Editar venta' : 'Anotar venta o gasto') : H.editando ? 'Editar compra' : 'Anotar compra';
   $('h-sats-l').textContent = venta ? 'Sats que salieron' : 'Sats que recibiste';
   const resto = d && !d.sinPrecio ? saldo + (venta ? -d.sats : d.sats) : 0;
   const habitual = !venta && S.precio ? montoHabitual(R.items) : null;
