@@ -5822,7 +5822,9 @@ try {
       await q.p.evaluate(() => fetch('/api/cambios-visto', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ id: '2026-12-c' }) }));
       await q.p.reload({ waitUntil: 'networkidle' });
       await q.p.waitForSelector('#d-cambios[open]', { timeout: 8000 });
-      ok(/elegir una etiqueta/.test(await q.p.textContent('#cam-lista')) && !/respaldo/i.test(await q.p.textContent('#cam-lista')), '24c: «Qué hay de nuevo» cuenta la suma por etiqueta (y nada de la revisión, que es solo del admin)');
+      // (Desde el campamento 25 la tarjeta enseña la entrada de los osos, `2026-12-f`; la suma por etiqueta sigue contada en la `2026-12-e`.)
+      const ent24 = await q.p.evaluate(async () => (await import(document.querySelector('link[rel=modulepreload][href*="cambios.js"]').href)).CAMBIOS.find((c) => c.id === '2026-12-e')?.items.join(' ') ?? '');
+      ok(/elegir una etiqueta/.test(ent24) && !/respaldo/i.test(ent24) && !/respaldo/i.test(await q.p.textContent('#cam-lista')), '24c: «Qué hay de nuevo» cuenta la suma por etiqueta (y nada de la revisión, que es solo del admin)');
       await q.ctx.close();
     } finally {
       srv.parar();

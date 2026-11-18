@@ -9,6 +9,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    id: '2026-12-f',
+    items: [
+      'En la nieve, bajo la cumbre, se sentaron tres osos polares de peluche: el grande con su camiseta azul y su cinta roja, el chico y el del mameluco celeste.',
+      'Si un rótulo o «Tú» les cae encima, se esconden un rato; en una pantalla pequeña a veces cabe uno solo, o ninguno.',
+      'Dan un saltito cuando se anota una compra y, con la aurora, miran al cielo. En Navidad llevan bufanda y, el día de un cumpleaños de la familia, el grande estrena gorrito.',
+      'Y el sello de 1 BTC lleva ahora la cara de un oso.',
+    ],
+  },
+  {
     id: '2026-12-e',
     items: [
       'Al pie de la montaña hay ahora un pueblo, con campos, un lago y un bosque que crece con cada compra; el paisaje cambia con las épocas del año.',
@@ -32,16 +41,6 @@ export const CAMBIOS = [
       'En «Tu historia» está la película del ascenso: en quince segundos, el camino del libro desde la primera compra hasta hoy, sobre la montaña de hoy.',
       'Mientras corre, arriba se ve el saldo de cada día; los faroles de los campamentos se encienden al pasarlos y el bosque crece con las compras.',
       'Con el deslizador se va a cualquier día. Y en la línea de «Tu historia», cada etapa con fecha tiene «Ver ese día», que abre la película detenida ahí.',
-    ],
-  },
-  {
-    id: '2026-12-b2',
-    items: [
-      'Al pie de la montaña ahora hay un pueblo de verdad: su iglesia, su plaza, casas de colores, gente y animales; el sendero empieza en él.',
-      'Alrededor del pueblo hay campos con su milpa, un bosque que crece con cada compra y un lago; la montaña tiene bosquecillos y peñas.',
-      'En Navidad toda la montaña se viste: luminarias a los lados del camino que se encienden hasta donde llegaste, una corona en cada campamento y una de luces en «Tú».',
-      'En el pueblo, el pino de la plaza con sus luces, el nacimiento en su portal, flores de pascua y farolitos por el camino real.',
-      'Las fiestas también se ven en la plaza: banderitas en agosto y la bandera en las fiestas patrias.',
     ],
   },
 ];
