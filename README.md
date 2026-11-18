@@ -228,7 +228,7 @@ node tests/barrido_ui.mjs rapido
 ```
 (`pre-commit install` hace las revisiones rápidas solas en cada commit.)
 
-**Después de desplegar** (en el servidor): `bash scripts/verificar-despliegue.sh`. Comprueba en segundos que los tres servicios están en marcha, que la app responde, que la base pasa su revisión de integridad, que hay un respaldo reciente y que el servicio de avisos está vivo, y te dice qué falló si algo no está bien.
+**Después de desplegar** (en el servidor): `bash scripts/verificar-despliegue.sh`. Comprueba en segundos que los tres servicios están en marcha, que la app responde, que la base pasa su revisión de integridad, que hay un respaldo reciente y que el servicio de avisos está vivo, y te dice qué falló si algo no está bien. Con `DOMINIO=dca.tudominio.com` mira además lo que llega de verdad por Cloudflare: que se comprime, que `/login` trae la CSP de la app, que hay HSTS y que ni `/` ni `/api/estado` salen de la caché de Cloudflare (la regla *Bypass cache*); cada fallo dice qué tocar.
 
 **Restauración de prueba:** cada semana, el servicio de respaldos restaura el último respaldo en una carpeta temporal y lo compara con la base real (integridad, tablas, filas y la auditoría); si algo no cuadra, te avisa por push. Puedes pedirla cuando quieras con `docker compose exec backup python backup.py --probar`.
 
