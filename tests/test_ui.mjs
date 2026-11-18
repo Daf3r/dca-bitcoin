@@ -2567,7 +2567,7 @@ try {
     }
   }
 
-  // ---------------------------------------------------------------- pulido final: abrir Gráficos no ensucia «Estado del sistema» (R1)
+  // ---------------------------------------------------------------- pulido final (cliente): Gráficos sin el bucle de ResizeObserver (R1) y el interruptor de atajos (V5)
   {
     const srv = await servidor('anio');
     try {
@@ -2585,8 +2585,19 @@ try {
         eq(r.length, 0, `R1: ${quien} no manda ningún error del navegador`);
         await s.ctx.close();
       }
-      // errores.js ignora ese aviso benigno (sin gastar uno de los 5 por carga) y sigue reportando un error de verdad.
+      // V5: en el teléfono táctil el interruptor de atajos no sale en «Tu cuenta» hasta que se teclea fuera de un campo (un teclado
+      // físico); en la computadora sale siempre.
       const a = await entrar(navegador, srv, ADMIN, {}, vigia);
+      await cerrar(a.p);
+      const atajos = async (p) => { await p.click('#cuenta-btn'); await p.waitForTimeout(300); const v = await p.evaluate(() => [!!document.getElementById('dc-atajos').getClientRects().length, !!document.getElementById('dc-atajos-lista').getClientRects().length]); await cerrar(p); return v; };
+      eq(await atajos(a.p), [false, false], 'V5: en el teléfono táctil «Atajos de teclado» y su lista no salen en «Tu cuenta»');
+      await a.p.keyboard.press('u'); await a.p.keyboard.press('u'); await a.p.keyboard.press('u'); // con un teclado físico (U cambia la unidad y vuelve)
+      eq(await atajos(a.p), [true, true], 'V5: tras teclear una letra fuera de un campo (un teclado físico), salen para poder apagarlos');
+      const pc = await entrar(navegador, srv, ADMIN, { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, vigia);
+      await cerrar(pc.p);
+      eq(await atajos(pc.p), [true, true], 'V5: en la computadora salen desde el principio');
+      await pc.ctx.close();
+      // errores.js ignora ese aviso benigno (sin gastar uno de los 5 por carga) y sigue reportando un error de verdad.
       const r = reportes(a.p);
       await a.p.evaluate(() => {
         for (let k = 0; k < 6; k++) dispatchEvent(new ErrorEvent('error', { message: 'ResizeObserver loop completed with undelivered notifications.' }));
@@ -4527,7 +4538,7 @@ try {
         const m = await menu();
         eq(m.map((g) => g.grupo), ['El libro', 'Este dispositivo', 'Administrar'], '20·cuenta: tres grupos, en orden');
         eq(m[0].items, ['historia', 'montana', 'cumple'], '20·cuenta: «El libro» (historia y medallas, nombre de la montaña, cumpleaños)');
-        ok(m[1].items[0] === 'avisos' && ['tema', 'letra', 'contraste', 'ganancia', 'efectos', 'madrugada', 'pestanas', 'tv', 'titulo', 'sonido', 'atajos'].every((x) => m[1].items.includes(x)), `20·cuenta: «Este dispositivo» (${m[1].items.join(', ')})`);
+        ok(m[1].items[0] === 'avisos' && ['tema', 'letra', 'contraste', 'ganancia', 'efectos', 'madrugada', 'pestanas', 'tv', 'titulo', 'sonido'].every((x) => m[1].items.includes(x)), `20·cuenta: «Este dispositivo» (${m[1].items.join(', ')})`);
         eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas', 'cerrar'], '20·cuenta: «Administrar» y, al final, salir');
         ok(await a.p.locator('#dc-menu [data-previa]').count() === 0, '20·cuenta: la vista previa ya no está en el menú');
         await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(600);
