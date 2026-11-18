@@ -124,6 +124,52 @@ eq(estimarMonto(32_500, 76_923), 25, '32,500 sats a 76,923 son $25.00');
 eq(estimarMonto(36_578, 77_598), 28.38, 'redondeo a centavos');
 eq(estimarMonto(1, 50_000), 0.01, 'mínimo un centavo');
 
+// El precio de la compra (escrito por la persona): los dólares van sin redondear a centavos para que el precio que deriva el servidor
+// al guardar (monto × 10⁸ / sats, con el monto a 8 decimales) sea el que se escribió. A centavos, $62,500 se vería $62,506.
+{
+  const P = await import('../app/static/lib.js');
+  const fmt0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  const fmt2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+  const servidor = (monto, sats) => (Math.round(monto * 1e8) / 1e8) * 1e8 / sats; // round(monto, 8) y precio = monto × 10⁸ / sats
+  eq(P.montoDePrecio(77_320, 62_500), 48.325, 'precio: 77,320 sats a $62,500 son $48.325, sin redondear');
+  eq(fmt2.format(P.montoDePrecio(77_320, 62_500)), '$48.33', 'precio: y se ven $48.33');
+  eq(fmt0.format(servidor(P.montoDePrecio(77_320, 62_500), 77_320)), '$62,500', 'precio: el servidor deriva $62,500 (no $62,499 ni $62,506)');
+  eq(fmt0.format(servidor(P.estimarMonto(77_320, 62_500), 77_320)), '$62,506', 'precio: redondeado a centavos se apartaría $6 (por eso no se redondea)');
+  // Muchos pares, incluidos sats pequeños, precios altos y productos que no son enteros: el precio derivado se aparta como mucho 1/sats
+  // dólares y, con un precio entero y 2 o más sats, se ve igual al escrito.
+  let peor = 0, distintos = 0;
+  for (const sats of [1, 2, 3, 7, 99, 1_000, 12_345, 77_320, 333_333, 1_000_000, 123_456_789, 2_100_000_000_000]) {
+    for (const precio of [0.01, 1, 63_123.45, 62_500, 77_598, 99_999.99, 1_000_000, 987_654_321.98]) {
+      const monto = P.montoDePrecio(sats, precio);
+      if (!(monto > 0) || monto >= P.TOPE_DINERO) continue;
+      const deriv = servidor(monto, sats);
+      peor = Math.max(peor, Math.abs(deriv - precio) * sats);
+      if (sats >= 2 && Number.isInteger(precio) && fmt0.format(deriv) !== fmt0.format(precio)) distintos++;
+    }
+  }
+  ok(peor <= 0.5 + 1e-6, `precio: el derivado se aparta como mucho medio dólar por sat de lo escrito (peor ${peor.toFixed(3)}/sats)`);
+  eq(distintos, 0, 'precio: con un precio entero (y 2 sats o más) el comprobante lo enseña igual');
+  ok(P.precioDeMonto(48.325, 77_320) === 62_500 && P.precioDeMonto(25, 0) === 0, 'precio: el precio de unos dólares y unos sats (sin sats, 0)');
+  // Lo que escribe la persona: «$», comas de miles y espacios fuera; la coma decimal de un teclado en otro idioma se entiende.
+  const leer = (t) => P.leerPrecio(t);
+  eq(['$62,500', '62500', '62 500', ' 62,500.50 ', '62500,5', '1,234,567', '.5', '62,500.', '$ 77,598.12'].map(leer), [62500, 62500, 62500, 62500.5, 62500.5, 1234567, 0.5, 62500, 77598.12], 'precio: se limpia como el dinero');
+  eq(['', '   ', '$', null, undefined].map(leer), [0, 0, 0, 0, 0], 'precio: vacío es 0 (como si no se hubiera escrito)');
+  ok(['abc', '0', '0.00', '62.500', '1.2.3', '-5', '1234567890', '62500.505', '6e4'].map(leer).every(Number.isNaN), 'precio: lo que no se entiende (letras, cero, tres decimales, más de 9 cifras) no vale');
+  eq(['62', '62,', '62,5', '62,50', '62,500'].map(leer), [62, 62, 62.5, 62.5, 62500], 'precio: escribiendo «62,500» cifra por cifra acaba en 62,500');
+  eq([P.precioCampo(62_500), P.precioCampo(62_506.465), P.precioCampo(62_500.5), P.precioCampo(1_234_567), P.precioCampo(62_499.999_999_9)], ['62,500', '62,506.47', '62,500.50', '1,234,567', '62,500'], 'precio: en su campo con comas de miles y sin «.00»');
+  eq([P.montoCampo(48.325), P.montoCampo(1234.5), P.montoCampo(0.000625), P.montoCampo(25)], ['48.33', '1234.50', '0.00', '25.00'], 'precio: los dólares calculados en su campo, a dos decimales y sin comas');
+  eq(P.leerPrecio(P.precioCampo(62_506.465)), 62_506.47, 'precio: lo que se pinta en el campo se vuelve a leer igual');
+  // El aviso de cifra rara y el costo promedio usan los dólares que salen del precio escrito.
+  const habP = [20, 24, 25, 26, 30].map((m, i) => ({ id: i + 1, tipo: 'compra', monto: m, sats: m * 1000, fecha: `2026-10-0${i + 1}` }));
+  eq(P.avisosAlAnotar(habP, { tipo: 'compra', sats: 25_000, monto: P.montoDePrecio(25_000, 100_000), fecha: '2026-10-20' }), [], 'precio: un precio normal no avisa');
+  eq(P.avisosAlAnotar(habP, { tipo: 'compra', sats: 25_000, monto: P.montoDePrecio(25_000, 1_000_000), fecha: '2026-10-20' }).map((a) => a.tipo), ['atipico'], 'precio: un cero de más en el precio avisa como cifra rara');
+  eq(P.avisosAlAnotar(habP, { tipo: 'compra', sats: 25_000, monto: 2.5, fecha: '2026-10-02', editando: 2 }).map((a) => a.tipo), ['atipico'], 'precio: editar solo el precio (los sats igual) a una cifra rara también avisa');
+  eq(P.avisosAlAnotar(habP, { tipo: 'compra', sats: 24_000, monto: 24.004, fecha: '2026-10-02', editando: 2 }), [], 'precio: editar sin cambiar los dólares (a menos de medio centavo) no avisa');
+  const antesR = { sats: 100_000, inv: 80 };
+  const costo = P.costoTrasCompra(antesR, P.montoDePrecio(50_000, 62_500), 50_000);
+  ok(Math.abs(costo.despues - ((80 + 31.25) * 1e8) / 150_000) < 1e-9, 'precio: el costo promedio se mueve con los dólares del precio escrito');
+}
+
 // Ritmo quincenal: la racha no se rompe entre compras separadas por dos semanas
 const cada = (inicio, dias, veces) => Array.from({ length: veces }, (_, k) => ({
   id: k + 1, fecha: new Date(Date.UTC(...inicio) + k * dias * 864e5).toISOString().slice(0, 10), monto: 25, sats: 32500, precio: 76923,

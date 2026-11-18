@@ -184,6 +184,7 @@ const PESOS = [
   ['campamento 17: primera impresión', 179], // 137 comprobaciones
   ['campamento 18: el ritual de anotar', 77], // 75 comprobaciones
   ['campamento 18: el comprobante de una ven', 9], // 4 comprobaciones
+  ['el precio de la compra (escribir el prec', 32], // 36 comprobaciones (medido el 18 nov 2026, de uno en uno)
   ['campamentos (arte) y campamento 21: hito', 13], // 29 comprobaciones
   ['campamento 19: la familia (escuchar el D', 92], // 63 comprobaciones
   ['campamento 20: cada cosa en su sitio', 291], // 156 comprobaciones
@@ -4232,7 +4233,7 @@ try {
         ok(/^(lunes|martes|miércoles|jueves|viernes|sábado|domingo) \d{1,2} de [a-záéíóú]+ de \d{4}$/.test(c.fecha), `18·comprobante: con la fecha escrita y su año («${c.fecha}»)`);
         const num = (t) => Number(String(t).replace(/[^\d.]/g, ''));
         eq([num(c.datos['Altitud después']), num(c.datos['Altitud después']) - num(c.datos['Altitud antes'])], [saldoHoy, ultima.sats], '18·comprobante: la altitud de antes y de después cuadran con el saldo');
-        ok(/^\$[\d,]+\.\d\d$/.test(c.datos.Pagaste) && /^\$[\d,]+$/.test(c.datos['Precio de BTC ese día']) && /^\$[\d,]+\.\d\d ((sube|baja) )?[+−]?\d+\.\d%$/.test(c.datos['Hoy valen']), `18·comprobante: lo que pagaste, el precio de ese día y lo que valen hoy (${c.datos.Pagaste} · ${c.datos['Hoy valen']})`);
+        ok(/^\$[\d,]+\.\d\d$/.test(c.datos.Pagaste) && /^\$[\d,]+$/.test(c.datos['Precio de BTC en la compra']) && /^\$[\d,]+\.\d\d ((sube|baja) )?[+−]?\d+\.\d%$/.test(c.datos['Hoy valen']), `18·comprobante: lo que pagaste, el precio de la compra y lo que valen hoy (${c.datos.Pagaste} · ${c.datos['Hoy valen']})`);
         ok(/^(De \d+ % a \d+ % del camino a |Con esta compra llegaste a )/.test(c.alt ?? ''), `18·comprobante: dónde quedó en la etapa («${c.alt}»)`);
         ok(/^Sello de la semana n\.º \d+ · \d/.test(c.sello ?? '') && await p.locator('#cp-sello-ico svg').count() === 1, `18·comprobante: el sello de su semana («${c.sello}»)`);
         eq([c.editar, c.foco], ['Editar', 'cp-cerrar'], '18·comprobante: quien anota ve «Editar» y el foco empieza en «Cerrar»');
@@ -4290,7 +4291,7 @@ try {
       await p.click('#l-chips button[data-f="venta"]'); await p.waitForTimeout(400);
       await p.locator('#lista .fila[data-tipo="venta"]').first().click(); await p.waitForTimeout(500);
       const v = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, sats: document.getElementById('cp-sats').textContent, dts: [...document.querySelectorAll('#cp-datos dt')].map((x) => x.textContent), sello: document.getElementById('cp-sello').hidden, alt: document.getElementById('cp-alt').hidden, nota: document.getElementById('cp-nota').textContent }));
-      ok(/^Venta o gasto n\.º \d+$/.test(v.t) && /^−[\d,]+ sats$/.test(v.sats) && v.dts.join('|') === 'Recibiste|Precio de BTC ese día|Altitud antes|Altitud después|Ganancia realizada' && v.sello && v.alt && v.nota === '«Gasto»', `18·comprobante: una venta dice lo que salió y su ganancia realizada, sin sello («${v.t}»)`);
+      ok(/^Venta o gasto n\.º \d+$/.test(v.t) && /^−[\d,]+ sats$/.test(v.sats) && v.dts.join('|') === 'Recibiste|Precio de BTC en la venta|Altitud antes|Altitud después|Ganancia realizada' && v.sello && v.alt && v.nota === '«Gasto»', `18·comprobante: una venta dice lo que salió y su ganancia realizada, sin sello («${v.t}»)`);
       await p.click('#cp-cerrar'); await p.waitForTimeout(200);
       await p.click('#l-chips button[data-f="traslado"]'); await p.waitForTimeout(400);
       await p.locator('#lista .fila[data-tipo="traslado"]').first().click(); await p.waitForTimeout(500);
@@ -4303,6 +4304,175 @@ try {
       await ctx.close();
     } finally {
       mil18.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- el precio de la compra (escribir el precio o los dólares en «Más detalles», guardarlo tal cual y verlo en el comprobante)
+  await bloque(async () => {
+    const srv = await servidor('anio');
+    try {
+      const quieto = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+      const cerrar = async (p) => {
+        for (const [d, b] of [['d-novedades', '#nov-ok'], ['d-cambios', '#cam-ok'], ['d-avisos', '#da-no']]) if (await p.locator(`#${d}[open]`).count()) { await p.click(b); await p.waitForTimeout(300); }
+      };
+      const campos = (p) => p.evaluate(() => {
+        const v = (id) => document.getElementById(id);
+        return { usd: v('h-usd').value, precio: v('h-precio').value, dUsd: v('h-usd').dataset.derivado, dPrecio: v('h-precio').dataset.derivado, cUsd: !v('h-usd-c').hidden, cPrecio: !v('h-precio-c').hidden,
+          ay: v('h-dinero-ay').textContent, uno: v('hc-uno').textContent, pie: v('hc-pie').hidden ? null : v('hc-pie').textContent, lineas: [...document.querySelectorAll('#hc-lineas > span')].map((x) => x.textContent),
+          guardar: v('guardar').textContent.trim(), deshab: v('guardar').disabled, error: v('hoja-error').textContent, tPrecio: v('h-precio-t').textContent, resumen: v('h-av-t').textContent };
+      });
+      const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, {}, quieto);
+      await cerrar(p);
+      const todas = await datos(p, '/api/compras');
+      const usadas = new Set(todas.map((c) => c.fecha));
+      const libre = (n) => { const out = []; for (let d = new Date(`${hoySV()}T12:00:00Z`); out.length < n; d.setUTCDate(d.getUTCDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f)) out.push(f); } return out; };
+      const [dia1, dia2] = libre(2);
+      // ---- El campo: en «Más detalles», con su rótulo, teclado decimal y 48 px
+      await p.click('#anotar'); await p.waitForTimeout(400);
+      await p.fill('#h-sats', '77320'); await p.waitForTimeout(150);
+      await p.click('#h-avanzado summary'); await p.waitForTimeout(200);
+      const campo = await p.evaluate(() => { const i = document.getElementById('h-precio'); const r = i.getBoundingClientRect(); return { modo: i.inputMode, alto: Math.round(r.height), etiqueta: i.labels[0]?.innerText.replace(/\s+/g, ' ').trim(), ayuda: i.getAttribute('aria-describedby') }; });
+      ok(await p.locator('#h-precio').isVisible() && campo.modo === 'decimal' && campo.alto >= 47.5 && campo.etiqueta === 'Precio de BTC al que compraste (opcional)' && campo.ayuda === 'h-dinero-ay', `precio: el campo está en «Más detalles», con su rótulo, teclado decimal y 48 px (${JSON.stringify(campo)})`);
+      let h = await campos(p);
+      ok(h.resumen === 'Más detalles: dólares o precio, TXID y compra extra' && /^Escribe los dólares o el precio: el otro se calcula/.test(h.ay) && h.usd === '' && h.precio === '' && /^≈ \$/.test(h.uno), `precio: vacíos, como siempre: se estima con el precio del día («${h.uno}»)`);
+      // ---- Escribir el precio (con «$» y coma de miles, tecla por tecla) calcula los dólares
+      await p.click('#h-precio'); await p.keyboard.type('$62,500'); await p.waitForTimeout(200);
+      h = await campos(p);
+      eq([h.usd, h.dUsd, h.cUsd, h.dPrecio, h.cPrecio], ['48.33', '1', true, '', false], 'precio: escribir el precio calcula los dólares y los marca «calculado»');
+      ok(/^\$48\.33 · quedas en [\d,]+ sats$/.test(h.uno) && h.ay === 'Los dólares salen del precio que escribiste.', `precio: la respuesta va sin «≈» y la ayuda dice de dónde salen («${h.uno}»)`);
+      eq(await p.evaluate(() => document.getElementById('h-usd').labels[0].innerText.replace(/\s+/g, ' ').trim()), 'Pagaste (USD) · calculado', 'precio: el rótulo de los dólares (y su nombre accesible) dice «calculado»');
+      await p.keyboard.press('Tab'); await p.waitForTimeout(150);
+      eq((await campos(p)).precio, '62,500', 'precio: al salir del campo queda ordenado («62,500»)');
+      await p.click('#h-cambia summary'); await p.waitForTimeout(200);
+      h = await campos(p);
+      ok(h.lineas.includes('Precio que escribiste: 1 BTC a $62,500.') && h.lineas.some((x) => /^Tu costo promedio/.test(x)), `precio: lo plegado dice el precio que escribiste y el costo promedio con esos dólares (${h.lineas.join(' | ')})`);
+      // ---- Escribir sobre los dólares calculados: lo escrito los reemplaza y ahora el precio se calcula
+      await p.click('#h-usd'); await p.keyboard.type('50'); await p.waitForTimeout(200);
+      h = await campos(p);
+      eq([h.usd, h.precio, h.dUsd, h.dPrecio, h.cPrecio, h.cUsd], ['50', '64,666.32', '', '1', true, false], 'precio: escribir encima de los dólares calculados los reemplaza y calcula el precio');
+      ok(h.ay === 'El precio sale de los dólares que escribiste.' && h.lineas.includes('Precio que pagaste: 1 BTC a $64,666.'), `precio: y lo dice («${h.ay}»)`);
+      // ---- Vaciar cualquiera de los dos vuelve a la estimación
+      await p.fill('#h-usd', ''); await p.waitForTimeout(150);
+      h = await campos(p);
+      ok(h.usd === '' && h.precio === '' && !h.cUsd && !h.cPrecio && /^≈ \$/.test(h.uno) && h.lineas.some((x) => /^Precio de ahora: 1 BTC a \$[\d,]+\.$/.test(x)), `precio: vaciar uno vacía los dos y vuelve a estimar («${h.uno}»)`);
+      // ---- Coma decimal de un teclado en otro idioma, y lo que no se entiende
+      await p.fill('#h-precio', '62500,5'); await p.waitForTimeout(150);
+      eq((await campos(p)).usd, '48.33', 'precio: «62500,5» se lee como 62,500.50');
+      for (const malo of ['62.500', 'abc']) {
+        await p.fill('#h-precio', malo); await p.waitForTimeout(150);
+        h = await campos(p);
+        ok(h.deshab && /^Revisa el precio de BTC/.test(h.uno) && h.usd === '', `precio: «${malo}» no se adivina: lo dice y no deja guardar («${h.uno}»)`);
+      }
+      // ---- Cambiar los sats con el precio escrito recalcula los dólares con ese precio
+      await p.fill('#h-precio', '62500'); await p.fill('#h-sats', '100000'); await p.waitForTimeout(150);
+      eq((await campos(p)).usd, '62.50', 'precio: con otros sats, los dólares salen del mismo precio');
+      // ---- Guardar: el servidor deriva el mismo precio y el comprobante lo enseña
+      await p.fill('#h-sats', '77320'); await p.fill('#h-precio', '62,500');
+      await ponerFecha(p, dia1);
+      const enviado = p.waitForRequest((r) => r.url().endsWith('/api/compras') && r.method() === 'POST');
+      await p.click('#guardar');
+      const cuerpo = JSON.parse((await enviado).postData());
+      await p.waitForTimeout(1500);
+      eq([cuerpo.sats, cuerpo.monto], [77320, 48.325], 'precio: se mandan los sats y los dólares sin redondear a centavos');
+      const nueva = (await datos(p, '/api/compras')).find((c) => c.fecha === dia1 && c.sats === 77320);
+      ok(nueva && nueva.monto === 48.325 && Math.abs(nueva.precio - 62500) < 1e-6, `precio: el servidor guarda $48.325 y deriva $62,500 (${nueva?.monto}, ${nueva?.precio})`);
+      // El aviso con «Deshacer» puede quedar sobre la fila: se toca la fila directamente (como en axe).
+      const comp = async (id) => {
+        await p.evaluate(() => { const d = document.getElementById('d-comp'); if (d.open) d.close(); });
+        await p.$eval(`#lista .fila[data-id="${id}"]`, (b) => b.click()); await p.waitForTimeout(500);
+        return p.evaluate(() => Object.fromEntries([...document.querySelectorAll('#cp-datos .cp-fila')].map((f) => [f.querySelector('dt').textContent, f.querySelector('dd').textContent.replace(/\s+/g, ' ').trim()])));
+      };
+      let cp = await comp(nueva.id);
+      eq([cp.Pagaste, cp['Precio de BTC en la compra']], ['$48.33', '$62,500'], 'precio: el comprobante dice lo pagado y «Precio de BTC en la compra» $62,500');
+      // ---- Editar: el precio sale con el de la compra; sin tocarlo se guarda el monto tal cual
+      await p.click('#cp-editar'); await p.waitForTimeout(500);
+      h = await campos(p);
+      ok(await p.locator('#h-precio').isVisible() && h.precio === '62,500' && h.dPrecio === '1' && h.cPrecio && h.usd === '48.33' && h.dUsd === '' && /^Son los de esta compra/.test(h.ay), `precio: al editar, el precio de la compra sale rellenado («${h.precio}», ${h.usd})`);
+      ok(h.pie === '1 BTC a $62,500 (el de esta compra)', `precio: y la respuesta dice de dónde sale («${h.pie}»)`);
+      const intacto = p.waitForRequest((r) => r.url().endsWith(`/api/compras/${nueva.id}`) && r.method() === 'PUT');
+      await p.click('#guardar');
+      eq(JSON.parse((await intacto).postData()).monto, 48.325, 'precio: guardar sin tocarlo manda el monto de siempre (no se pierde nada)');
+      await p.waitForTimeout(1500);
+      // ---- Corregir el precio: escribir encima del calculado lo reemplaza y recalcula los dólares
+      await comp(nueva.id); await p.click('#cp-editar'); await p.waitForTimeout(500);
+      await p.click('#h-precio'); await p.keyboard.type('61000'); await p.waitForTimeout(200);
+      h = await campos(p);
+      eq([h.precio, h.usd, h.dUsd, h.ay], ['61000', '47.17', '1', 'Los dólares salen del precio que escribiste.'], 'precio: corregir el precio de una compra recalcula sus dólares');
+      await p.click('#guardar'); await p.waitForTimeout(1500);
+      const corregida = (await datos(p, '/api/compras')).find((c) => c.id === nueva.id);
+      ok(Math.abs(corregida.precio - 61000) < 1e-6 && corregida.monto === 47.1652, `precio: la compra queda con $61,000 (${corregida.precio}, ${corregida.monto})`);
+      cp = await comp(nueva.id);
+      eq([cp.Pagaste, cp['Precio de BTC en la compra']], ['$47.17', '$61,000'], 'precio: y su comprobante lo enseña');
+      await p.click('#cp-cerrar'); await p.waitForTimeout(300);
+      // El Historial dice que cambió el precio (y los dólares)
+      await p.$eval('#cuenta-btn', (b) => b.click()); await p.waitForTimeout(300); await p.click('#dc-historial');
+      await p.waitForSelector('#hist-lista li', { timeout: 5000 }); await p.waitForTimeout(300);
+      const hist = (await p.innerText('#hist-lista')).replace(/\s+/g, ' ');
+      ok(hist.includes('$48.33 → $47.17 · precio $62,500 → $61,000'), `precio: el Historial dice los dólares y el precio de antes y de ahora (${hist.slice(0, 160)}…)`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      // ---- El aviso de cifra rara usa los dólares del precio escrito; cambiar el precio lo reinicia
+      const montos = todas.filter((c) => c.tipo === 'compra' && !c.extra).map((c) => c.monto).sort((a, b) => a - b);
+      const mediana = montos[Math.floor(montos.length / 2)];
+      await p.$eval('#anotar', (b) => b.click()); await p.waitForTimeout(400);
+      if (await p.locator('#h-borrador').isVisible()) { await p.click('#h-borrador-no'); await p.waitForTimeout(200); }
+      await p.fill('#h-sats', '30000');
+      if (!(await p.locator('#h-avanzado').evaluate((d) => d.open))) await p.click('#h-avanzado summary');
+      await p.fill('#h-precio', String(Math.round((mediana * 12 * 1e8) / 30000)));
+      await ponerFecha(p, dia2);
+      await p.click('#guardar'); await p.waitForTimeout(250);
+      h = await campos(p);
+      ok(/veces más que tu compra habitual/.test(h.error) && h.guardar === 'Sí, guardar así', `precio: un precio diez veces más alto avisa de la cifra rara («${h.error.slice(0, 60)}…»)`);
+      await p.fill('#h-precio', String(Math.round((mediana * 1e8) / 30000))); await p.waitForTimeout(150);
+      h = await campos(p);
+      ok(h.error === '' && h.guardar === 'Guardar', 'precio: cambiar el precio quita el aviso: lo confirmado ya no es lo mismo');
+      // ---- En una venta el rótulo dice «al que vendiste»; en un traslado no hay precio
+      await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
+      h = await campos(p);
+      ok(h.tPrecio === 'Precio de BTC al que vendiste (opcional)' && h.resumen === 'Más detalles: dólares o precio y TXID' && /por la venta/.test(h.uno), `precio: en una venta, «al que vendiste» («${h.uno}»)`);
+      await p.click('#h-tipo button[data-tipo="traslado"]'); await p.waitForTimeout(200);
+      ok(!(await p.locator('#h-precio').isVisible()) && !(await p.locator('#h-usd').isVisible()), 'precio: un traslado no lleva dólares ni precio');
+      await p.click('#h-tipo button[data-tipo="compra"]'); await p.waitForTimeout(200);
+      // ---- El borrador recuerda el precio (y que lo escribiste tú)
+      await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+      await p.$eval('#anotar', (b) => b.click()); await p.waitForTimeout(400);
+      h = await campos(p);
+      ok(await p.locator('#h-borrador').isVisible() && h.precio.replace(/,/g, '') === String(Math.round((mediana * 1e8) / 30000)) && h.dUsd === '1' && h.usd !== '', `precio: el borrador vuelve con el precio escrito y los dólares calculados (${h.precio}, ${h.usd})`);
+      await p.click('#h-borrador-no'); await p.waitForTimeout(200);
+      ok((await campos(p)).precio === '', 'precio: «Empezar de cero» lo quita');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+      eq(consola, [], `precio: consola limpia: ${consola.join(' | ')}`);
+      await ctx.close();
+      // ---- 320 × 568 con letra muy grande: nada se sale, 48 px y el campo enfocado no queda bajo «Guardar»
+      {
+        const r = await entrar(navegador, srv, ADMIN, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true }, () => { try { localStorage.setItem('libro.letra', 'muy-grande'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+        await cerrar(r.p);
+        await r.p.click('#anotar'); await r.p.waitForTimeout(400);
+        await r.p.fill('#h-sats', '77320');
+        await r.p.click('#h-avanzado summary'); await r.p.waitForTimeout(200);
+        await r.p.click('#h-precio'); await r.p.keyboard.type('62,500'); await r.p.waitForTimeout(300);
+        const m = await r.p.evaluate(() => {
+          const panel = document.querySelector('.hoja-panel'), i = document.getElementById('h-precio').getBoundingClientRect(), u = document.getElementById('h-usd').getBoundingClientRect(), bot = document.querySelector('.hoja-bot').getBoundingClientRect();
+          return { sw: panel.scrollWidth, cw: panel.clientWidth, docW: document.documentElement.scrollWidth, docC: document.documentElement.clientWidth, altoP: Math.round(i.height), altoU: Math.round(u.height), abajo: Math.round(i.bottom), bot: Math.round(bot.top), usd: document.getElementById('h-usd').value };
+        });
+        ok(m.sw <= m.cw && m.docW <= m.docC, `precio: a 320 px con letra muy grande nada se sale (${m.sw}/${m.cw})`);
+        ok(m.altoP >= 47.5 && m.altoU >= 47.5 && m.usd === '48.33', `precio: los dos campos miden 48 px o más (${m.altoP}, ${m.altoU})`);
+        ok(m.abajo <= m.bot + 1, `precio: el campo enfocado no queda bajo «Guardar» (${m.abajo} ≤ ${m.bot})`);
+        await r.p.fill('#h-precio', ''); await r.p.fill('#h-sats', '');
+        await r.ctx.close();
+      }
+      // ---- Quien solo mira: no anota (sin hoja ni campo) y su comprobante dice el precio sin tutear
+      {
+        const r = await entrar(navegador, srv, LECTOR, {}, quieto);
+        await cerrar(r.p);
+        ok(!(await r.p.locator('#anotar').isVisible()) && !(await r.p.locator('#h-precio').isVisible()), 'precio: quien solo mira no ve «Anotar» ni el campo del precio');
+        await r.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' })); await r.p.waitForTimeout(300);
+        await r.p.$eval(`#lista .fila[data-id="${nueva.id}"]`, (b) => b.click()); await r.p.waitForTimeout(500);
+        const dl = await r.p.evaluate(() => [...document.querySelectorAll('#cp-datos .cp-fila')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent.trim()}`));
+        ok(dl.includes('Se pagó: $47.17') && dl.includes('Precio de BTC en la compra: $61,000'), `precio: su comprobante dice «Precio de BTC en la compra» (${dl.slice(0, 2).join(' · ')})`);
+        await r.ctx.close();
+      }
+    } finally {
+      srv.parar();
     }
   });
 
