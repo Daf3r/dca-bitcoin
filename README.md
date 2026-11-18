@@ -30,7 +30,7 @@ flowchart LR
 
 - **La app** sirve la página (módulos ES sin build, con `?v=<hash>`), la API y el login. El navegador nunca habla con terceros: precio, histórico y estado de TXID los pide el servidor y los guarda en la base.
 - **`backup`** copia la base cada 24 h (verificada), conserva 30 y una vez por semana prueba restaurar el último. **`avisos`** manda lo programado por Web Push y deja su marca de «sigo vivo»; los dos tienen su `healthcheck`.
-- **Estado del sistema** (Tu cuenta, solo admin) junta lo que mira cada pieza: respaldo, avisos, integridad, disco, versión, errores y las medidas de los aparatos («Medir este aparato», abajo). El registro de la app sale en JSON (`docker compose logs app`).
+- **Estado del sistema** (Tu cuenta, solo admin) junta lo que mira cada pieza: respaldo, avisos, integridad, disco, versión, errores, las medidas de los aparatos («Medir este aparato», abajo) y la fecha de tu última revisión del respaldo de la wallet («Revisado», ver «Avisos push»). El registro de la app sale en JSON (`docker compose logs app`).
 - Lo que no se puede probar fuera del servidor (Caddy, Cloudflare, el build de Docker, iPhone real) se valida con `scripts/verificar-despliegue.sh`.
 
 ## Qué necesitas
@@ -248,6 +248,7 @@ Cada persona activa los avisos **en su dispositivo**: «Tu cuenta» → «Avisos
 - **Aviso de prueba:** el botón «Enviarme un aviso de prueba» manda uno solo a ese dispositivo y te dice en palabras si algo falló (máximo uno cada 30 s).
 - **Botón «Anotar compra»** en el recordatorio (Android y computadora; en iPhone la notificación solo abre la app).
 - **Retirar a tu wallet (opcional, apagado):** elige un monto en sats y te recordamos una vez cuando en el exchange haya más de ese monto. Solo es un recordatorio; la app no sugiere cuánto.
+- **Revisión tranquila del respaldo (tú, apagado por defecto):** cada 180 días, una pregunta: «¿Tu respaldo de la wallet y la nota para tu familia siguen donde los dejaste?». Cuando lo mires, toca **«Revisado»** en «Tu cuenta → Estado del sistema» (ahí se ve también la fecha de tu última revisión y la del próximo recordatorio). Cuenta desde tu última revisión (o desde el último aviso, si es más reciente: nunca más de uno cada 180 días); si nunca has tocado «Revisado», desde el día en que lo encendiste, así que no suena ni el día del despliegue ni el que lo enciendes. **La app no pide ni guarda la frase ni nada de la wallet**: solo la fecha en que tocaste «Revisado».
 - **iPhone:** los avisos solo funcionan con la app instalada en la pantalla de inicio (iOS 16.4 o más). Ábrela desde ahí y actívalos.
 - **Al desplegar:** `docker compose up -d --build` crea el servicio nuevo `avisos` y la clave `data/vapid_private.pem`. **No borres esa clave**: si se pierde, cada dispositivo tiene que activar los avisos otra vez. Inclúyela en el respaldo de la carpeta `data`.
 - **Brave:** trae los avisos apagados. En `brave://settings/privacy` activa «Usar servicios de Google para mensajes push» (en inglés, «Use Google services for push messaging»), reinicia Brave y vuelve a activar los avisos. En Chrome, Edge, Firefox y Safari no hace falta.

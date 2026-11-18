@@ -10,6 +10,7 @@ Categorías (cada dispositivo elige las suyas; `rol` dice quién puede recibirla
   recordatorio  admin   se acaba la semana o quincena y aún no compraste       (encendida)
   txid          admin   un TXID que estaba pendiente ya se confirmó            (encendida)
   respaldo      admin   el respaldo diario falló                               (encendida)
+  resguardo     admin   cada 180 días: ¿el respaldo de la wallet sigue ahí?    (apagada)
   caida         admin   BTC cayó 15 % o más de su máximo de 30 días (una vez)  (encendida)
   piedrita      admin   alguien de la familia dejó una piedrita o firmó        (encendida)
   diario        todos   el domingo a las 18:00, el titular del Diario sin cifras (apagada)
@@ -73,6 +74,10 @@ CATEGORIAS: dict[str, dict[str, Any]] = {
              "ayuda": "Cuando una transacción que estaba pendiente se confirma en la red."},
     "respaldo": {"rol": "admin", "defecto": True, "nombre": "Fallo del respaldo",
                  "ayuda": "Si el respaldo diario falla."},
+    # Revisión tranquila del respaldo (campamento 24, idea 36): apagada hasta que el admin la pida. La app no guarda nada de la wallet.
+    "resguardo": {"rol": "admin", "defecto": False, "nombre": "Revisión tranquila del respaldo",
+                  "ayuda": "Cada 180 días desde tu última revisión (o desde que lo enciendas, si nunca la anotaste), una pregunta: ¿el respaldo de tu wallet y la nota para tu familia siguen donde "
+                           "los dejaste? Revisar es mirarlo tú; la app no guarda nada de eso. Marca «Revisado» en «Estado del sistema»."},
     "caida": {"rol": "admin", "defecto": True, "nombre": "Gran caída",
               "ayuda": "Una vez por caída, cuando BTC baja 15 % o más de su máximo de 30 días. Solo informa, no recomienda."},
     "piedrita": {"rol": "admin", "defecto": True, "nombre": "Piedritas y firmas de tu familia",

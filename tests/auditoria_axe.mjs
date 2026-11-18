@@ -629,6 +629,51 @@ try {
       await auditar(p, `medidas de los aparatos, vacía ${esquema}`);
       await ctx.close();
     }
+    { // campamento 24 · confianza: la revisión del respaldo (sin anotar, al día, pasados 180 días), su categoría de avisos y la suma por etiqueta
+      const { ctx, p } = await nuevo(mil, ADMIN, conPush);
+      await cerrarOferta(p);
+      const sistema = async () => {
+        await p.evaluate(() => document.getElementById('sis-rg').replaceChildren());
+        await p.click('#dc-sistema-btn');
+        await p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent) && document.querySelector('#sis-rg .sis-fila'), null, { timeout: 8000 });
+        await p.evaluate(() => document.getElementById('sis-revisado').scrollIntoView({ block: 'center' })); await p.waitForTimeout(300);
+      };
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await sistema();
+      await auditar(p, `24 revisión del respaldo sin anotar ${esquema}`);
+      await p.click('#sis-revisado'); await p.waitForFunction(() => /notado/.test(document.getElementById('sis-rg-res').textContent), null, { timeout: 5000 });
+      await auditar(p, `24 revisión del respaldo al día, recién anotada ${esquema}`);
+      await p.route('**/api/sistema', async (route) => {
+        const r = await route.fetch(); const j = await r.json();
+        j.resguardo = { revisado: '2026-01-05', dias: 320, cada: 180, al_dia: false, encendido: true, proximo: '2027-05-10', toca: false };
+        await route.fulfill({ response: r, json: j });
+      });
+      await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(300);
+      await sistema();
+      await auditar(p, `24 revisión del respaldo pasados 180 días ${esquema}`);
+      await p.unroute('**/api/sistema');
+      await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(300);
+      await p.click('#dc-avisos-btn'); await p.waitForTimeout(500);
+      await p.click('#av-interruptor'); await p.waitForTimeout(900);
+      await p.click('#av-lista input[data-cat="resguardo"]'); await p.waitForTimeout(400);
+      await auditar(p, `24 avisos con la revisión del respaldo encendida ${esquema}`);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+      await p.evaluate(() => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' },
+        body: JSON.stringify({ fecha: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date()), monto: 3, sats: 4321, tipo: 'venta', etiquetas: ['bono'] }) }));
+      await ctx.close();
+      // La suma por etiqueta con su neto, a 320 px con letra muy grande (dueño) y a 390 (quien solo mira)
+      for (const [cuenta, vp, letra] of [[ADMIN, { width: 320, height: 568 }, 'muy-grande'], [LECTOR, null, null]]) {
+        const ctx2 = await navegador.newContext({ ...devices['iPhone 13'], ...(vp ? { viewport: vp } : {}), colorScheme: esquema, bypassCSP: true });
+        const q = await ctx2.newPage();
+        await q.addInitScript(([h, l]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); if (l) localStorage.setItem('libro.letra', l); } catch { /* */ } }, [esquema === 'light' ? 12 : 22, letra]);
+        await entrar(q, mil.url, cuenta);
+        for (let k = 0; k < 3 && await q.locator('dialog[open]').count(); k++) { await q.keyboard.press('Escape'); await q.waitForTimeout(300); }
+        await q.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
+        await q.click('#l-mas summary'); await q.selectOption('#l-etq', 'bono'); await q.waitForTimeout(400);
+        await auditar(q, `24 lista con la suma de una etiqueta (${cuenta === ADMIN ? 'dueño, 320 px, letra muy grande' : 'quien solo mira'}) ${esquema}`);
+        await ctx2.close();
+      }
+    }
     { // la guía de estilo (solo admin) y el modo pantalla grande
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);

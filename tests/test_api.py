@@ -967,7 +967,7 @@ cats = r.get_json()["categorias"]
 check([(c["id"], c["activo"]) for c in cats] == [("movimiento", True), ("hito", False), ("diario", False)], f"categorías del lector y sus valores por defecto {cats}")
 check(all(c["nombre"] and c["ayuda"] for c in cats), "cada categoría trae nombre y ayuda")
 r = adm.post("/api/push/suscribir", json=_sus(EP_ADM))
-check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("caida", True), ("piedrita", True), ("diario", False), ("wallet", False)], "categorías del admin")
+check([(c["id"], c["activo"]) for c in r.get_json()["categorias"]] == [("recordatorio", True), ("txid", True), ("respaldo", True), ("resguardo", False), ("caida", True), ("piedrita", True), ("diario", False), ("wallet", False)], "categorías del admin")
 check(luz.post("/api/compras", json={"fecha": today, "monto": 1, "sats": 100}).status_code == 403, "suscribirse no da permiso de escribir")
 
 # Estado por dispositivo: solo el dueño ve el suyo
@@ -1246,7 +1246,7 @@ check(r["horario"] == _HDEF and r["horario_defecto"] == _HDEF, f"el horario por 
 check(luz.post("/api/push/estado", json={"endpoint": "https://fcm.googleapis.com/otro"}).get_json() == {"suscrito": False, "categorias": []}, "sin suscribir no hay horario")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "horario": {"desde": 6, "hasta": 23, "recordatorio": 7}})
 check(r.status_code == 200 and r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, f"se guarda el horario del dispositivo {r.data}")
-check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "caida", "piedrita", "diario", "wallet"], "guardar el horario no cambia las categorías")
+check([c["id"] for c in r.get_json()["categorias"]] == ["recordatorio", "txid", "respaldo", "resguardo", "caida", "piedrita", "diario", "wallet"], "guardar el horario no cambia las categorías")
 r = adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": False}})
 check(r.get_json()["horario"] == {"desde": 6, "hasta": 23, "recordatorio": 7}, "elegir categorías no borra el horario")
 adm.put("/api/push/prefs", json={"endpoint": EP_ADM, "prefs": {"caida": True}})
@@ -2744,5 +2744,177 @@ check(r.status_code == 200 and r.get_json()["quitados"] == 50 and adm.get("/api/
 # Nada de esto sale fuera de la sesión del admin
 _pub = anon.get("/login").get_data(as_text=True) + anon.get("/login.js").get_data(as_text=True)
 check("medid" not in _pub.lower() and "/medir" not in _pub and anon.get("/api/estado").get_json() == {"abierto": True}, "la entrada y /api/estado no dicen nada de las medidas")
+
+# --- Campamento 24 · Confianza (idea 36): la revisión tranquila del respaldo. Categoría `resguardo` (admin, apagada); cada 180 días desde lo
+# más reciente de «Revisado», el último aviso o el día en que se encendió; una vez por ciclo; con el horario de cada dispositivo. Solo `meta`.
+check(push.CATEGORIAS["resguardo"]["rol"] == "admin" and push.CATEGORIAS["resguardo"]["defecto"] is False and "resguardo" in push.categorias_de("admin")
+      and "resguardo" not in push.categorias_de("lector"), "«Revisión tranquila del respaldo» es solo del admin y nace apagada")
+check("no guarda" in push.CATEGORIAS["resguardo"]["ayuda"] and "180" in push.CATEGORIAS["resguardo"]["ayuda"], "su ayuda dice cada cuánto y que la app no guarda nada de la wallet")
+check(server.version_esquema(server.connect()) == server.VERSION_ESQUEMA == 18, "sin migración nueva: todo vive en `meta`")
+_T = server.TEXTO_RESGUARDO
+check(not re.search(r"\d", _T) and "sats" not in _T.lower() and "frase" not in _T.lower() and "«Revisado»" in _T and "no guarda" in _T and _T.startswith("¿"),
+      f"el aviso pregunta con calma, sin cifras ni datos de la wallet, y dice dónde marcar «Revisado» ({_T})")
+# Pizarra limpia: solo los dispositivos de este bloque (es el último de las pruebas)
+sql("DELETE FROM suscripciones"); sql("DELETE FROM avisos_pendientes"); sql("DELETE FROM meta WHERE clave LIKE 'resguardo_%' OR clave = 'aviso_resguardo'")
+EP_R1 = "https://updates.push.services.mozilla.com/wpush/v2/resguardo-pc"    # el dueño, con la revisión, horario de siempre (8–21)
+EP_R2 = "https://web.push.apple.com/resguardo-iphone"                         # el dueño, con la revisión, avisos de 14:00 a 20:00
+EP_R3 = "https://fcm.googleapis.com/fcm/send/resguardo-apagado"               # el dueño, sin la revisión
+EP_RL = "https://fcm.googleapis.com/fcm/send/resguardo-lectora"               # una lectora
+for _c, _ep in ((adm, EP_R1), (adm, EP_R2), (adm, EP_R3), (luz, EP_RL)):
+    _r = _c.post("/api/push/suscribir", json=_sus(_ep))
+    check(_r.status_code == 200, f"se suscribe {_ep[-18:]}")
+_cats_adm = [(x["id"], x["activo"]) for x in adm.post("/api/push/estado", json={"endpoint": EP_R3}).get_json()["categorias"]]
+check(("resguardo", False) in _cats_adm and [c_ for c_, _ in _cats_adm].index("resguardo") == [c_ for c_, _ in _cats_adm].index("respaldo") + 1, f"el admin la ve apagada, junto a «Fallo del respaldo» {_cats_adm}")
+check("resguardo" not in [x["id"] for x in luz.post("/api/push/estado", json={"endpoint": EP_RL}).get_json()["categorias"]], "una lectora no la ve")
+check(luz.put("/api/push/prefs", json={"endpoint": EP_RL, "prefs": {"resguardo": True}}).status_code == 400, "una lectora no la puede encender (400)")
+_cx = server.connect()
+_D0 = _dtm(2026, 11, 17, 10, 0, tzinfo=ritmo.ZONA)
+_en = lambda dias, h=10, m=0: (lambda: (_D0 + _td(days=dias)).replace(hour=h, minute=m))
+_dia = lambda dias: (_D0 + _td(days=dias)).date().isoformat()
+push.ahora = _en(0)
+enviados.clear()
+check(avisos._resguardo(_cx) is False and server._meta(_cx, "resguardo_inicio") is None and not enviados, "con la categoría apagada en todos, no hay ciclo ni aviso")
+_rs = adm.get("/api/sistema").get_json()["resguardo"]
+check(_rs == {"revisado": None, "dias": None, "cada": 180, "al_dia": False, "encendido": False, "proximo": None, "toca": False}, f"«Estado del sistema»: nunca revisado y sin recordatorio {_rs}")
+# Se enciende (el día del despliegue o cuando sea): no suena ese día; el ciclo empieza ahí
+check(adm.put("/api/push/prefs", json={"endpoint": EP_R1, "prefs": {"resguardo": True}}).status_code == 200, "el dueño la enciende en un dispositivo")
+check(adm.put("/api/push/prefs", json={"endpoint": EP_R2, "horario": {"desde": 14, "hasta": 20}, "prefs": {"resguardo": True}}).status_code == 200, "y en otro, con avisos de 14:00 a 20:00")
+_rs = adm.get("/api/sistema").get_json()["resguardo"]
+check(_rs["encendido"] is True and _rs["proximo"] == _dia(180) and _rs["toca"] is False, f"antes de la primera pasada de avisos ya dice el próximo: 180 días desde hoy {_rs}")
+check(avisos._resguardo(_cx) is False and server._meta(_cx, "resguardo_inicio") == str(int(_D0.timestamp())) and not enviados, "la primera pasada anota el inicio y no avisa (nunca el día en que se enciende)")
+check(avisos._resguardo(_cx) is False and not enviados, "ni en la pasada siguiente")
+check(adm.get("/api/sistema").get_json()["resguardo"]["proximo"] == _dia(180), "y el próximo sigue siendo el mismo")
+push.ahora = _en(179, 20)
+check(avisos._resguardo(_cx) is False and not enviados, "a los 179 días, nada")
+push.ahora = _en(180, 3)
+check(avisos._resguardo(_cx) is False and not enviados and not sql("SELECT 1 FROM avisos_pendientes"), "a los 180 días de madrugada, nada (todos duermen): espera a la mañana")
+push.ahora = _en(180, 9, 30)
+check(adm.get("/api/sistema").get_json()["resguardo"]["toca"] is True, "«Estado del sistema» dice que toca hoy")
+check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R1], f"a los 180 días, por la mañana, avisa al dispositivo despierto {_a_quien()}")
+_pr = enviados[0][1]
+check(_pr == {"titulo": "Libro DCA", "cuerpo": _T, "etiqueta": "resguardo", "url": "/"}, f"el aviso es la pregunta, sin botones ni nada más {_pr}")
+_sidR2 = sql("SELECT id FROM suscripciones WHERE endpoint = ?", (EP_R2,))[0][0]
+check([tuple(r_) for r_ in sql("SELECT categoria, sus_id FROM avisos_pendientes")] == [("resguardo", _sidR2)], "al que duerme (de 14:00 a 20:00) se le guarda, a su nombre")
+check(server._meta(_cx, "aviso_resguardo") == str(int(_en(180, 9, 30)().timestamp())), "queda anotado el aviso")
+enviados.clear()
+check(avisos._resguardo(_cx) is False and not enviados, "una sola vez por ciclo")
+push.ahora = _en(181, 12)
+check(avisos._resguardo(_cx) is False and not enviados, "tampoco al día siguiente")
+# «Revisado» antes de que despierte el otro: lo guardado de este aviso se descarta
+push.ahora = _en(181, 13)
+_aud0 = sql("SELECT COUNT(*) FROM auditoria WHERE accion = 'resguardo_revisado'")[0][0]
+r = adm.post("/api/resguardo", json={})
+_rv = r.get_json()
+check(r.status_code == 200 and _rv["revisado"] == _dia(181) and _rv["dias"] == 0 and _rv["al_dia"] is True and _rv["ya"] is False and _rv["proximo"] == _dia(361),
+      f"«Revisado» anota la fecha de hoy y el próximo, a 180 días de hoy {_rv}")
+check(not sql("SELECT 1 FROM avisos_pendientes WHERE categoria = 'resguardo'"), "y descarta el aviso guardado para quien dormía: no llega después de revisar")
+push.ahora = _en(181, 15)
+push.vaciar_pendientes(_cx)
+check(not enviados, "el que dormía ya no lo recibe")
+_au = adm.get("/api/auditoria").get_json()
+_ar = [a for a in _au if a["accion"] == "resguardo_revisado"]
+check(len(_ar) == _aud0 + 1 and _ar[0]["usuario"] == "Daf3r" and _ar[0]["entidad"] == "libro" and _ar[0]["antes"] is None and _ar[0]["despues"] == {"fecha": _dia(181)},
+      f"se audita «resguardo_revisado» con la fecha (y nada de la wallet) {_ar[:1]}")
+r = adm.post("/api/resguardo", json={})
+check(r.status_code == 200 and r.get_json()["ya"] is True and sql("SELECT COUNT(*) FROM auditoria WHERE accion = 'resguardo_revisado'")[0][0] == _aud0 + 1,
+      "tocarlo otra vez el mismo día no cambia nada ni se audita dos veces")
+push.ahora = _en(182, 11)
+r = adm.post("/api/resguardo", json={})
+_ar = [a for a in adm.get("/api/auditoria").get_json() if a["accion"] == "resguardo_revisado"]
+check(r.get_json()["ya"] is False and _ar[0]["antes"] == {"fecha": _dia(181)} and _ar[0]["despues"] == {"fecha": _dia(182)} and r.get_json()["proximo"] == _dia(362),
+      "al día siguiente sí: guarda la de antes y la nueva")
+_rs = adm.get("/api/sistema").get_json()["resguardo"]
+check(_rs["revisado"] == _dia(182) and _rs["dias"] == 0 and _rs["al_dia"] is True, "«Estado del sistema» lo ve al día")
+push.ahora = _en(361, 12)
+check(adm.get("/api/sistema").get_json()["resguardo"] == {"revisado": _dia(182), "dias": 179, "cada": 180, "al_dia": True, "encendido": True, "proximo": _dia(362), "toca": False},
+      "a los 179 días de la revisión sigue al día")
+check(avisos._resguardo(_cx) is False and not enviados, "y no avisa")
+push.ahora = _en(362, 12)
+check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R1] and sql("SELECT COUNT(*) FROM avisos_pendientes WHERE categoria = 'resguardo'")[0][0] == 1,
+      "a los 180 días de la última revisión, otra vez (el despierto ahora; el otro, a su hora)")
+_rs = adm.get("/api/sistema").get_json()["resguardo"]
+check(_rs["al_dia"] is False and _rs["dias"] == 180 and _rs["proximo"] == _dia(542) and _rs["toca"] is False, f"sin tocar «Revisado», el siguiente llega 180 días después de este aviso, nunca antes {_rs}")
+push.ahora = _en(362, 14, 5)
+enviados.clear()
+push.vaciar_pendientes(_cx)
+check(_a_quien() == [EP_R2] and enviados[0][1]["cuerpo"] == _T, "el que dormía lo recibe al despertar")
+enviados.clear()
+for _d in (392, 422, 452, 541):  # 30, 60, 90 y 179 días después: no insiste
+    push.ahora = _en(_d, 12)
+    check(avisos._resguardo(_cx) is False and not enviados, f"no insiste ({_d - 362} días después del aviso)")
+push.ahora = _en(542, 12)
+check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R1], "a los 180 días del aviso, el siguiente")
+# Apagarla en todos olvida el inicio. Con una revisión anotada, volver a encenderla NO reinicia la cuenta: sigue siendo 180 días desde el
+# último «Revisado» (o el último aviso, si es más reciente). Solo sin ninguna revisión cuenta el día en que se enciende.
+adm.put("/api/push/prefs", json={"endpoint": EP_R1, "prefs": {"resguardo": False}})
+adm.put("/api/push/prefs", json={"endpoint": EP_R2, "prefs": {"resguardo": False}})
+sql("DELETE FROM avisos_pendientes")
+push.ahora = _en(700, 12)
+enviados.clear()
+check(avisos._resguardo(_cx) is False and server._meta(_cx, "resguardo_inicio") is None and adm.get("/api/sistema").get_json()["resguardo"]["proximo"] is None,
+      "apagada en todos: se olvida el inicio y no hay próximo")
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": True}})
+check(adm.get("/api/sistema").get_json()["resguardo"]["proximo"] == _dia(722), "volver a encenderla con una revisión anotada no reinicia la cuenta: 180 días desde el último aviso (más reciente que la revisión)")
+check(avisos._resguardo(_cx) is False and not enviados and server._meta(_cx, "resguardo_inicio") is not None, "antes de esa fecha no suena (y queda anotado el inicio)")
+push.ahora = _en(722, 22)
+check(avisos._resguardo(_cx) is False and not enviados, "el día que toca, de noche (a las 22:00, todos con el horario de siempre), espera")
+push.ahora = _en(723, 8, 5)
+check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R3], "y sale a la mañana siguiente")
+# Una revisión de hace 300 días y el aviso apagado mucho tiempo: al encenderlo ya toca (la regla es desde el último «Revisado»)
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": False}})
+push.ahora = _en(1000, 12)
+avisos._resguardo(_cx)
+sql("DELETE FROM meta WHERE clave = 'aviso_resguardo'"); sql("UPDATE meta SET valor = ? WHERE clave = 'resguardo_revisado'", (str(int(_en(700, 12)().timestamp())),))
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": True}})
+_rs = adm.get("/api/sistema").get_json()["resguardo"]
+check(_rs["revisado"] == _dia(700) and _rs["dias"] == 300 and _rs["proximo"] == _dia(880) and _rs["toca"] is True, f"con la última revisión de hace 300 días, ya toca {_rs}")
+enviados.clear()
+check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R3], "y sale en la pasada siguiente, aunque se acabe de encender")
+# Nunca revisado: encenderla cuenta desde ese día (nunca suena el día que se enciende)
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": False}})
+push.ahora = _en(1100, 12)
+avisos._resguardo(_cx)
+sql("DELETE FROM meta WHERE clave IN ('aviso_resguardo', 'resguardo_revisado')")
+adm.put("/api/push/prefs", json={"endpoint": EP_R3, "prefs": {"resguardo": True}})
+enviados.clear()
+_rs = adm.get("/api/sistema").get_json()["resguardo"]
+check(_rs["revisado"] is None and _rs["proximo"] == _dia(1280) and _rs["toca"] is False, f"nunca revisado: 180 días desde que se enciende {_rs}")
+check(avisos._resguardo(_cx) is False and not enviados and server._meta(_cx, "resguardo_inicio") == str(int(_en(1100, 12)().timestamp())), "ese día no suena y se anota el inicio")
+push.ahora = _en(1279, 12)
+check(avisos._resguardo(_cx) is False and not enviados, "a los 179 días, nada")
+push.ahora = _en(1280, 12)
+check(avisos._resguardo(_cx) is True and _a_quien() == [EP_R3], "a los 180 días de encenderla, la pregunta")
+# Una pasada completa la incluye; la limpieza diaria no toca sus marcas
+check("resguardo" in avisos.una_pasada(), "la pasada de avisos incluye la revisión del respaldo")
+_marcas = [server._meta(_cx, k) for k in ("resguardo_inicio", "aviso_resguardo")]
+avisos.limpiar(_cx)
+check(all(_marcas) and [server._meta(_cx, k) for k in ("resguardo_inicio", "aviso_resguardo")] == _marcas, "la limpieza diaria no toca las marcas de la revisión")
+_cx.close()
+# Permisos: solo el admin anota; sin sesión 401; sin la cabecera X-Libro 403; con SOLO_LECTURA 503; cuenta para el límite de escrituras
+check(luz.post("/api/resguardo", json={}).status_code == 403, "una lectora no anota la revisión (403)")
+check(luz.get("/api/sistema").status_code == 403, "ni ve el estado del sistema")
+check(_sin.post("/api/resguardo", json={}).status_code == 401, "sin sesión: 401")
+check(server.app.test_client().post("/api/resguardo", json={}, environ_base={"wsgi.url_scheme": "https"}).status_code == 403, "sin la cabecera X-Libro: 403 (CSRF)")
+_ant_sl5 = server.SOLO_LECTURA
+try:
+    server.SOLO_LECTURA = True
+    r = adm.post("/api/resguardo", json={})
+    check(r.status_code == 503 and r.get_json()["mantenimiento"] is True, "con SOLO_LECTURA no se anota (503)")
+    check(adm.get("/api/sistema").get_json()["resguardo"]["revisado"] is None, "y no queda anotado (se sigue viendo el estado)")
+finally:
+    server.SOLO_LECTURA = _ant_sl5
+_lim5 = server.LIMITE_ESCRITURAS
+try:
+    server.LIMITE_ESCRITURAS = 3; server._ESCRITURAS.clear()
+    _cod = [adm.post("/api/resguardo", json={}).status_code for _ in range(5)]
+    check(_cod == [200] * 3 + [429] * 2, f"«Revisado» cuenta para el límite de escrituras {_cod}")
+finally:
+    server.LIMITE_ESCRITURAS = _lim5; server._ESCRITURAS.clear()
+# Nada de esto sale fuera de la sesión del admin
+_pub = anon.get("/login").get_data(as_text=True) + anon.get("/login.js").get_data(as_text=True)
+check("resguardo" not in _pub.lower() and "Revisado" not in _pub and anon.get("/api/estado").get_json() == {"abierto": True}, "la entrada y /api/estado no dicen nada de la revisión")
+_idx = adm.get("/").get_data(as_text=True)
+check('id="sis-revisado"' in _idx and _idx.index('id="sis-revisado"') < _idx.index('id="dc-previa-t"') and "no pide ni guarda" in _idx, "«Revisado» va en «Estado del sistema», encima de «Probar la celebración», y dice que la app no guarda nada")
+push.ahora = _de_dia
 
 print("OK", ok, "comprobaciones")

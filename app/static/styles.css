@@ -1044,6 +1044,10 @@ div.fila:hover { background: none; }
 .sis-fila[data-estado="aviso"] { outline: 2px dashed var(--naranja); outline-offset: -2px; }
 .sis-fila[data-estado="aviso"] .sis-ico { background: var(--naranja); color: var(--naranja-osc); }
 .sis-palabra { color: var(--txt2); font-weight: 600; font-size: 0.8125rem; }
+/* Campamento 24 · la revisión del respaldo cuando toca o nunca se hizo: un círculo hueco y su palabra, sin borde ni color de alarma. */
+.sis-fila[data-estado="calma"] .sis-ico { color: var(--txt2); }
+.sis-rg-res { margin: 8px 0 0; }
+.sis-rg-res:empty { display: none; }
 .sis-tabla { overflow-x: auto; }
 .sis-tabla table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
 .sis-tabla th, .sis-tabla td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--s3); white-space: nowrap; }
