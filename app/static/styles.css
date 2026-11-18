@@ -131,8 +131,9 @@ html:not([data-efectos="ninguno"]) svg.frente { will-change: transform; }
 /* Grano estático (un PNG de 96 px en mosaico, mezclado al 5 %): disimula las bandas de los degradados largos en pantallas
    oscuras y da textura de papel. No se anima; fuera en modo ligero. */
 .montana::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: url("/grano.png") repeat; background-size: 96px 96px; opacity: 0.028; } /* motas claras y oscuras con transparencia (sin mix-blend-mode, que en iPhone obliga a recomponer toda la escena) */
-html[data-ligero] .montana::after { content: none; }
-@media (max-width: 699px) { .montana::after { content: none; } } /* (rendimiento) en el teléfono el grano, al 2.8 %, no se distingue en una pantalla densa y era una capa más del tamaño de la escena (y una descarga) */
+html[data-ligero] .montana::after { content: none; background: none; }
+@media (max-width: 699px) { .montana::after { content: none; background: none; } } /* (rendimiento) en el teléfono el grano, al 2.8 %, no se distingue en una pantalla densa y era una capa más del tamaño de la escena (y una descarga) */
+/* (Pulido final) `background: none` también: sin él, Chromium pide `grano.png` aunque `content: none` no genere la capa. */
 /* Hora dorada: el cielo es un degradado continuo de las cinco capas de cielo.js (antes, cinco franjas de borde duro) y la
    luz del astro se difumina (halo radial y resplandor sobre el horizonte). Todo sale de las variables de la hora. */
 .g-c0 { stop-color: var(--c0); } .g-c1 { stop-color: var(--c1); } .g-c2 { stop-color: var(--c2); } .g-c3 { stop-color: var(--c3); } .g-c4 { stop-color: var(--c4); }
