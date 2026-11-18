@@ -76,10 +76,15 @@ jobs:
         run: node tests/comprobar_recorte.mjs
 
   navegador:
-    name: Navegador (Playwright)
+    # test_ui entero tarda ~50 min: va en tres trabajos a la vez (PARTE=1/3…3/3, ~17 min de pruebas cada uno). El reparto lo hace el
+    # propio test_ui con lo que tarda cada bloque, y cada parte comprueba que todos los bloques tienen la suya (PARTE=reparto lo enseña).
+    name: Navegador (Playwright) ${{ matrix.parte }}
     runs-on: ubuntu-24.04
-    # test_ui tarda 42–45 min y crece con cada campamento: margen holgado hasta que se parta en varios trabajos.
-    timeout-minutes: 75
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: ["1/3", "2/3", "3/3"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -95,8 +100,10 @@ jobs:
           cache-dependency-path: tests/package-lock.json
       - run: npm ci --prefix tests
       - run: npx --prefix tests playwright install --with-deps chromium
-      - name: Pruebas de navegador contra el servidor de pruebas
+      - name: Pruebas de navegador contra el servidor de pruebas (parte ${{ matrix.parte }})
         run: node tests/test_ui.mjs
+        env:
+          PARTE: ${{ matrix.parte }}
 
   accesibilidad:
     name: Accesibilidad (axe)
