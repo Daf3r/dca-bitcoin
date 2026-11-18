@@ -1,6 +1,7 @@
 // Prueba de navegador (Playwright + Chromium) contra el servidor de pruebas, sin red.
 // Uso: node tests/test_ui.mjs   (necesita `playwright` con Chromium instalado y Flask: PYTHON=ruta/python si no es python3)
 //      PARTE=1/3 node tests/test_ui.mjs   (solo una parte, como en el CI; PARTE=reparto dice qué bloque va en cuál)
+//      BLOQUE=texto node tests/test_ui.mjs   (solo los bloques cuyo título lleva ese texto; para probar uno a mano)
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -103,9 +104,12 @@ const sinTapar = (p) => p.evaluate(() => {
   for (let l = 0; l <= largo; l += 4) { const q = camino.getPointAtLength(l); pts.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]); }
   const marcas = [...document.querySelectorAll('#montana #m-etiquetas > *, #montana #m-yo .yo-anillo, #montana .campo .campo-ico, #montana .campo .banderin')].map((e) => e.getBoundingClientRect()).filter((r) => r.width);
   const textos = ['#t-saldo', '#s-saldo-v', '#s-valor', '#cotizacion', '.escena .marca', '#tv-nombre'].map((s) => document.querySelector(s)).filter(vis).map((e) => e.getBoundingClientRect());
+  // «Salir de pantalla grande» solo se ve tras mover el ratón (opacidad 0 en reposo), pero su sitio es fijo: no cuenta `vis`.
+  const salir = document.getElementById('tv-salir').getBoundingClientRect();
   const cruza = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   const fallos = [];
   for (const [i, t] of tarjetas.entries()) {
+    if (cruza(t.r, salir)) fallos.push(`${t.id} sobre «Salir de pantalla grande»`);
     if (pts.some(([x, y]) => x > t.r.left - 6 && x < t.r.right + 6 && y > t.r.top - 6 && y < t.r.bottom + 6)) fallos.push(`${t.id} sobre el sendero`);
     if (marcas.some((r) => cruza(t.r, r))) fallos.push(`${t.id} sobre «Tú», un rótulo o un hito`);
     if (textos.some((r) => cruza(t.r, r))) fallos.push(`${t.id} sobre el saldo, el precio o la marca`);
@@ -226,6 +230,7 @@ let recorridos = 0, corridos = 0;
 async function bloque(fn) {
   const i = recorridos++;
   if (REPARTO && REPARTO.parte[i] !== PARTE.k) return;
+  if (process.env.BLOQUE && !TITULOS[i].includes(process.env.BLOQUE)) return; // para probar un solo bloque a mano: BLOQUE=«campamento 21B»
   const t0 = Date.now(), n0 = n;
   await fn();
   corridos++;

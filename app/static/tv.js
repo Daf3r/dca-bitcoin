@@ -131,7 +131,8 @@ export function obstaculosTV(base = document.querySelector('.escena').getBoundin
     for (const el of $('montana').querySelectorAll('.sol .sol-disco, .luna .luna-sombra')) suaves.push(cajaDe(el, base)); // el disco, no su halo
   }
   // Lo que se lee arriba: la marca, el nombre de la montaña, el precio y el saldo.
-  for (const el of document.querySelectorAll('.escena .marca, #tv-nombre:not([hidden]), #cotizacion, #t-saldo, #s-saldo-v, #s-valor')) duros.push(cajaDe(el, base));
+  // «Salir de pantalla grande» solo se ve unos segundos tras mover el ratón, pero su sitio es siempre el mismo: ninguna tarjeta se pone debajo.
+  for (const el of document.querySelectorAll('.escena .marca, #tv-nombre:not([hidden]), #cotizacion, #t-saldo, #s-saldo-v, #s-valor, #tv-salir')) duros.push(cajaDe(el, base));
   const vale = (o) => o.w > 0 && o.h > 0;
   return { duros: duros.filter(vale), suaves: suaves.filter(vale) };
 }
