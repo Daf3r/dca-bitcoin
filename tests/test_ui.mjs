@@ -1,7 +1,9 @@
 // Prueba de navegador (Playwright + Chromium) contra el servidor de pruebas, sin red.
 // Uso: node tests/test_ui.mjs   (necesita `playwright` con Chromium instalado y Flask: PYTHON=ruta/python si no es python3)
+//      PARTE=1/3 node tests/test_ui.mjs   (solo una parte, como en el CI; PARTE=reparto dice qué bloque va en cuál)
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
 import path from 'node:path';
@@ -69,6 +71,26 @@ const saldo = (p) => p.evaluate(() => {
 });
 
 /**
+ * Desde ahora, cuenta cada pieza distinta que entra en la página, por selector. El cometa vive 1.9 s y se retira solo: contarlo «en el
+ * instante», cuando ya salió la tarjeta, fallaba con la máquina cargada. Se instala antes del clic y `piezasVistas(p)` dice cuántas
+ * entraron de cada una (también sirve para exigir que una NO salió).
+ */
+const vigilarPiezas = (p, selectores) => p.evaluate((sels) => {
+  const vistos = Object.fromEntries(sels.map((s) => [s, new WeakSet()]));
+  const cuenta = Object.fromEntries(sels.map((s) => [s, 0]));
+  window.__piezas = cuenta;
+  window.__piezasVigia?.disconnect(); // una cuenta nueva reemplaza a la anterior
+  window.__piezasVigia = new MutationObserver((ms) => {
+    for (const m of ms) for (const nd of m.addedNodes) {
+      if (nd.nodeType !== 1) continue;
+      for (const s of sels) for (const el of [nd, ...nd.querySelectorAll(s)]) if (el.matches(s) && !vistos[s].has(el)) { vistos[s].add(el); cuenta[s]++; }
+    }
+  });
+  window.__piezasVigia.observe(document.documentElement, { childList: true, subtree: true });
+}, selectores);
+const piezasVistas = (p) => p.evaluate(() => window.__piezas);
+
+/**
  * Ninguna tarjeta visible de la tele tapa el sendero (muestras del trazo cada 4 px, con su medio ancho), «Tú», los rótulos, los hitos,
  * el saldo, el precio ni otra tarjeta, ni se sale de la pantalla. Se calcula aparte del código que las coloca.
  */
@@ -97,601 +119,719 @@ const sinTapar = (p) => p.evaluate(() => {
   return { fallos, ocultas, vistas: tarjetas.map((t) => t.id), etiquetas: marcas.length, txt: `${tarjetas.map((t) => t.id).join(', ')}${fallos.length || ocultas.length ? `: ${[...fallos, ...ocultas].join('; ')}` : ''}` };
 });
 
+// ---- Por partes (CI). `PARTE=1/3` corre solo los bloques de esa parte; sin `PARTE`, todos, como siempre. `PARTE=reparto` (o
+// `reparto/2`…) enseña a qué parte va cada bloque, sin abrir el navegador. Un bloque es un título («  // ------ título») y, justo
+// debajo, `await bloque(async () => { … });`. El reparto es una cuenta pura de los títulos: el más largo primero, a la parte que lleva
+// menos tiempo (PESOS, segundos medidos en una corrida entera; un bloque nuevo cuenta PESO_NUEVO hasta que se le mida). Como las
+// tres partes corren el mismo código, cada bloque cae en exactamente una; antes de abrir el navegador se comprueba que cada título
+// lleva su `bloque(…)`, y al final, que se recorrieron todos.
+const TITULO = /^ {2}\/\/ -{10,} (.+)$/;
+const FUENTE = readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n');
+const TITULOS = FUENTE.map((l) => TITULO.exec(l)?.[1].trim()).filter(Boolean);
+{
+  const sin = [];
+  FUENTE.forEach((l, i) => {
+    if (!TITULO.test(l)) return;
+    let j = i + 1;
+    while (j < FUENTE.length && (!FUENTE[j].trim() || (FUENTE[j].startsWith('  //') && !TITULO.test(FUENTE[j])))) j++;
+    if (FUENTE[j] !== '  await bloque(async () => {') sin.push(`«${TITULO.exec(l)[1].trim().slice(0, 70)}»`);
+  });
+  const envoltorios = FUENTE.filter((l) => l === '  await bloque(async () => {').length;
+  if (sin.length || envoltorios !== TITULOS.length) throw new Error(`Cada título lleva debajo su \`await bloque(async () => {\` (${TITULOS.length} títulos, ${envoltorios} envoltorios): ${sin.join(' · ')}`);
+}
+/** Segundos que tarda cada bloque (por el principio de su título): una corrida entera, de uno en uno, el 18 nov 2026 (4 núcleos;
+ * 2,987 s y 2,106 comprobaciones). Basta con que sean proporcionales; si un bloque crece mucho, se vuelve a medir: cada bloque dice
+ * cuánto tardó al final de su línea en el registro del CI. */
+const PESOS = [
+  ['un año de compras', 93], // 146 comprobaciones
+  ['avisos push (el envío real a Apple o Goo', 155], // 108 comprobaciones
+  ['efectos: sistema, modo ligero y pausa', 17], // 14 comprobaciones
+  ['el cielo según la hora', 22], // 37 comprobaciones
+  ['atmósfera: parallax, nubes, niebla, aves', 20], // 15 comprobaciones
+  ['rendimiento iPhone: la escena en capas,', 9], // 16 comprobaciones
+  ['se siente como app: recargar al arrastra', 33], // 23 comprobaciones
+  ['la lista: meses, «Ver más», buscar, filt', 47], // 48 comprobaciones
+  ['anotar y datos vivos: compra de siempre,', 62], // 24 comprobaciones
+  ['accesibilidad y teclado: saltar al conte', 20], // 39 comprobaciones
+  ['la montaña viva: humo, fogata, huellas,', 30], // 13 comprobaciones
+  ['banderas con historia, iconos por etapa', 18], // 18 comprobaciones
+  ['aurora, lago, acento dorado, cometa y 1', 49], // 20 comprobaciones
+  ['suelo, leyenda plegable, altímetro, favi', 9], // 9 comprobaciones
+  ['identidad: iconos, avatares, estados vac', 22], // 15 comprobaciones
+  ['la montaña sigue a la caja (también en a', 7], // 6 comprobaciones
+  ['Tu historia, medallas y qué hay de nuevo', 28], // 16 comprobaciones
+  ['modo pantalla grande, sonido al guardar', 42], // 24 comprobaciones
+  ['mil compras (la app después de mucho uso', 24], // 49 comprobaciones
+  ['iPhone: arranque, insignia del icono e i', 11], // 34 comprobaciones
+  ['teléfono acostado y pantallas muy anchas', 35], // 53 comprobaciones
+  ['datos y etiquetas (campamento 8, 1/4)', 24], // 23 comprobaciones
+  ['estado del sistema (campamento 8, 2/4)', 12], // 20 comprobaciones
+  ['pulido final (cliente): Gráficos sin el', 24], // 10 comprobaciones
+  ['sesiones y operación (campamento 8, 3/4)', 17], // 16 comprobaciones
+  ['tu eco y tus números (campamento 11)', 70], // 26 comprobaciones
+  ['campamento 12: El Salvador en la escena', 47], // 24 comprobaciones
+  ['Tu historia en objetos: tronco, constela', 35], // 25 comprobaciones
+  ['campamento 13C: estratos, partitura, pas', 48], // 42 comprobaciones
+  ['campamento 14: pestañas (Resumen · Gráfi', 40], // 79 comprobaciones
+  ['campamento 15A: Diario, cartas selladas', 43], // 43 comprobaciones
+  ['campamento 15B: piedritas, cumpleaños y', 135], // 29 comprobaciones
+  ['una sola compra', 5], // 4 comprobaciones
+  ['campamento 16: lago, reloj de sol, «Tú»', 24], // 13 comprobaciones
+  ['campamento 17: primera impresión', 179], // 137 comprobaciones
+  ['campamento 18: el ritual de anotar', 77], // 75 comprobaciones
+  ['campamento 18: el comprobante de una ven', 9], // 4 comprobaciones
+  ['campamentos (arte) y campamento 21: hito', 13], // 29 comprobaciones
+  ['campamento 19: la familia (escuchar el D', 92], // 63 comprobaciones
+  ['campamento 20: cada cosa en su sitio', 291], // 156 comprobaciones
+  ['campamento 21: etapas más cercanas', 142], // 129 comprobaciones
+  ['campamento 21B: la tele de la sala (tarj', 332], // 113 comprobaciones
+  ['tele: el saldo contra la montaña (pulido', 222], // 87 comprobaciones
+  ['campamento 24: medir este aparato (idea', 60], // 58 comprobaciones
+  ['campamento 24: confianza (la revisión tr', 42], // 43 comprobaciones
+  ['campamento 22: el valle vivo', 58], // 27 comprobaciones
+  ['campamento 22B: el valle vivo, parte 2', 73], // 36 comprobaciones
+  ['campamento 22C: el valle, de verdad (el', 28], // 21 comprobaciones
+  ['campamento 23: tu camino, otra vez (tal', 87], // 52 comprobaciones
+  ['sin histórico de precios', 5], // 3 comprobaciones
+];
+const PESO_NUEVO = 60;
+/** Reparte los bloques en `partes`: el más largo primero, a la parte que va más ligera (empates: la de número menor). */
+const repartir = (titulos, partes) => {
+  const peso = titulos.map((t) => PESOS.find(([p]) => t.startsWith(p))?.[1] ?? PESO_NUEVO);
+  const carga = Array(partes).fill(0), parte = [];
+  for (const i of titulos.map((_, i) => i).sort((a, b) => peso[b] - peso[a] || a - b)) {
+    const k = carga.indexOf(Math.min(...carga));
+    parte[i] = k + 1; carga[k] += peso[i];
+  }
+  return { parte, peso, carga };
+};
+const PARTE = (() => {
+  const v = process.env.PARTE;
+  if (!v) return null;
+  const r = /^reparto(?:\/(\d+))?$/.exec(v);
+  if (r) {
+    const de = Number(r[1] ?? 3), { parte, peso, carga } = repartir(TITULOS, de);
+    TITULOS.forEach((t, i) => console.log(`${parte[i]}/${de}  ${String(peso[i]).padStart(4)} s  ${PESOS.some(([p]) => t.startsWith(p)) ? ' ' : '*'} ${t.slice(0, 100)}`));
+    carga.forEach((c, k) => console.log(`parte ${k + 1}/${de}: ${parte.filter((x) => x === k + 1).length} bloques, ~${Math.round(c / 60)} min`));
+    console.log('(* = sin peso medido: cuenta', PESO_NUEVO, 's)');
+    process.exit(0);
+  }
+  const m = /^(\d+)\/(\d+)$/.exec(v);
+  if (!m || +m[1] < 1 || +m[1] > +m[2]) throw new Error(`PARTE=${v}: se espera algo como 1/3`);
+  return { k: +m[1], de: +m[2] };
+})();
+const REPARTO = PARTE && repartir(TITULOS, PARTE.de);
+let recorridos = 0, corridos = 0;
+/** Un bloque de pruebas: corre si es de esta parte (o si no hay partes) y dice cuánto tardó. */
+async function bloque(fn) {
+  const i = recorridos++;
+  if (REPARTO && REPARTO.parte[i] !== PARTE.k) return;
+  const t0 = Date.now(), n0 = n;
+  await fn();
+  corridos++;
+  console.log(`· ${TITULOS[i].slice(0, 90)} — ${n - n0} comprobaciones, ${Math.round((Date.now() - t0) / 1000)} s`);
+}
+if (PARTE) console.log(`Parte ${PARTE.k}/${PARTE.de}: ${REPARTO.parte.filter((x) => x === PARTE.k).length} de ${TITULOS.length} bloques (~${Math.round(REPARTO.carga[PARTE.k - 1] / 60)} min según PESOS)`);
+
 const navegador = await chromium.launch();
 try {
   // ---------------------------------------------------------------- un año de compras
-  const anio = await servidor('anio');
-  try {
-    // El saldo se ve, con la cifra real, en sats y en BTC, sin scroll horizontal, en varios anchos.
-    for (const [w, h] of [[320, 568], [320, 640], [390, 560], [375, 812], [768, 1024], [1280, 800], [2560, 1300]]) {
-      const { ctx, p, consola } = await entrar(navegador, anio, ADMIN, { viewport: { width: w, height: h }, isMobile: false, hasTouch: false });
-      const sats = (await datos(p, '/api/compras')).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
-      let s = await saldo(p);
-      eq(s.txt, entero(sats), `saldo real a ${w} px`);
-      ok(s.w > 0 && s.h > 0, `saldo visible a ${w} px`);
-      // El saludo y «Tu saldo» no se pisan (en pantallas bajas el saldo sube y es fácil que choquen).
-      const cajas = await p.evaluate(() => ({ saludoAbajo: document.getElementById('saludo').getBoundingClientRect().bottom, saldoArriba: document.getElementById('t-saldo').getBoundingClientRect().top }));
-      ok(cajas.saludoAbajo <= cajas.saldoArriba + 1, `el saludo no pisa «Tu saldo» a ${w}×${h} (${cajas.saludoAbajo.toFixed(0)} ≤ ${cajas.saldoArriba.toFixed(0)})`);
-      await p.click('#s-saldo-v');
-      await p.waitForTimeout(150);
-      s = await saldo(p);
-      eq([s.txt, s.unidad], [(sats / 1e8).toFixed(8), 'BTC'], `saldo en BTC a ${w} px`);
-      ok(s.sw <= s.cw, `sin scroll horizontal a ${w} px`);
-      // Tercera vista: dólares, al precio en vivo (el valor que ya dice la línea de abajo).
-      const valorDeAbajo = (await p.innerText('#s-valor')).match(/valen\s+(\$[\d,]+\.\d\d)/)?.[1];
-      await p.click('#s-saldo-v');
-      await p.waitForTimeout(150);
-      s = await saldo(p);
-      eq([s.txt, s.unidad.trim()], [valorDeAbajo, 'USD'], `saldo en dólares a ${w} px`);
-      ok(s.w > 0 && s.h > 0 && s.sw <= s.cw, `saldo en dólares visible y sin scroll horizontal a ${w} px`);
-      ok(/ sats/.test(await p.innerText('#s-valor')) && !/valen/.test(await p.innerText('#s-valor')), `en dólares, la línea de abajo dice los sats a ${w} px`);
-      await p.click('#s-saldo-v');
-      await p.waitForTimeout(150);
-      eq((await saldo(p)).txt, entero(sats), `el ciclo vuelve a sats a ${w} px`);
-      // Cifras secundarias: a 320 px salen en forma corta; desde 360 px, enteras.
-      const falta = (await p.innerText('#t-falta')).trim();
-      ok(w < 360 ? /^faltan [\d.]+[KM]?$/.test(falta) && !falta.includes(',') : /^faltan [\d,]+$/.test(falta), `«${falta}» a ${w} px`);
-      eq(consola, [], `consola limpia a ${w} px: ${consola.join(' | ')}`);
-      await ctx.close();
-    }
-
-    // Admin en móvil: lo que debe verse con un año de compras.
-    {
-      const { ctx, p, consola } = await entrar(navegador, anio, ADMIN);
-      await verVista(p, 'valor');
-      ok(await p.locator('#valor').isVisible() && !(await p.locator('#mercado').isVisible()), 'la vista «Valor» enseña «Lo que pusiste y lo que vale» y esconde el precio');
-      await verVista(p, 'precio');
-      ok(await p.locator('#mercado').isVisible() && !(await p.locator('#valor').isVisible()), 'la vista «Precio» es la de siempre');
-      ok(await p.locator('#toca').isVisible(), 'sale «te toca comprar»');
-      ok(/^Para estar en cero, BTC debe subir/.test((await p.textContent('#g-equilibrio')).trim()), 'línea del equilibrio');
-      ok(/^Coinbase · (ahora|hace \d+ s)$/.test((await p.textContent('#precio-meta')).trim()), 'precio con «hace X s»');
-      // Tarjetas: anillo de la etapa, indicador del costo, mini línea, cifras curiosas, línea de próxima compra y anillo de constancia.
-      {
-        const compras = await datos(p, '/api/compras');
-        const pcTramo = await p.evaluate(() => ({ txt: document.getElementById('t-pct').textContent, label: document.getElementById('t-anillo').getAttribute('aria-label'),
-          arco: getComputedStyle(document.querySelector('#t-anillo-svg .an-arco')).strokeDasharray, barra: !!document.querySelector('.tr-barra') }));
-        ok(/^\d+%$|^<1%$/.test(pcTramo.txt) && /^Vas en \d+\.\d% del camino a /.test(pcTramo.label) && !pcTramo.barra, `anillo de la etapa: ${pcTramo.txt} · «${pcTramo.label}»`);
-        const ind = await p.evaluate(() => ({ vis: !document.getElementById('g-indicador').hidden, left: document.getElementById('ind-hoy').style.left, label: document.getElementById('g-indicador').getAttribute('aria-label'),
-          t1: document.getElementById('ind-costo-t').textContent, t2: document.getElementById('ind-hoy-t').textContent }));
-        ok(ind.vis && /^\d+(\.\d)?%$/.test(ind.left) && /por (debajo de|encima de) tu costo promedio/.test(ind.label) && /^Tu costo promedio · \$/.test(ind.t1) && /^Hoy · \$/.test(ind.t2), `indicador del costo: ${ind.left} · ${ind.t2}`);
-        ok(await p.locator('#s-valor svg.mini polyline').count() === 1 && (await p.getAttribute('#s-valor svg.mini', 'aria-label')).startsWith('Valor de tu saldo en los últimos'), 'mini línea del valor junto a la ganancia');
-        const dias = Math.round((Date.parse(`${hoySV()}T00:00:00Z`) - Date.parse(`${compras[0].fecha}T00:00:00Z`)) / 864e5);
-        const cur = (await p.innerText('#curiosas')).replace(/\s+/g, ' ');
-        ok(cur.includes(`${dias.toLocaleString('en-US')} días desde tu primera compra`) && /Tu saldo suma en promedio [\d,]+ sats por día/.test(cur), `cifras curiosas: «${cur.slice(0, 80)}»`);
-        const prox = (await p.textContent('#prox')).trim();
-        ok(/^Última compra: (hoy|ayer|hace \d+ días)( · próxima(, en \d+ días|: (hoy|mañana) es el último día))?$/.test(prox), `línea de próxima compra: «${prox}»`);
-        const altoProx = await p.evaluate(() => document.getElementById('prox').getBoundingClientRect().height);
-        ok(altoProx < 26, `la línea de próxima compra cabe en una línea (${altoProx.toFixed(0)} px)`);
-        const an = await p.evaluate(() => ({ n: document.getElementById('const-n').textContent, de: document.getElementById('const-de').textContent, label: document.getElementById('const-anillo').getAttribute('aria-label') }));
-        ok(/^\d+$/.test(an.n) && /^de \d+$/.test(an.de) && /^Compraste en \d+ de (las últimas 52 semanas|tus \d+ semanas)$/.test(an.label), `anillo de constancia: ${an.n} ${an.de}`);
-      }
-      // Variación desde ayer junto al precio, y la tarjeta de sats por dólar con su línea del mes.
-      const var24 = (await p.innerText('#precio-24')).trim(); // la flecha es un icono SVG (sin texto): queda «−0.2% vs ayer» o «• +0.0% vs ayer»
-      ok(await p.locator('#precio-24').isVisible() && /^(• |(sube|baja)\s*)?[+−]?\d+\.\d% vs ayer$/.test(var24) && (var24.startsWith('•') || await p.locator('#precio-24 .ico').count() === 1), `variación desde ayer: «${var24}»`);
-      const precioVivo = (await datos(p, '/api/precio')).precio;
-      ok(await p.locator('#spd').isVisible(), 'sale la tarjeta de sats por dólar');
-      eq((await p.textContent('#spd-v')).trim(), entero(1e8 / precioVivo), 'sats por dólar = 100,000,000 ÷ precio');
-      ok(/^Hace \d+ días eran [\d,]+ sats: hoy son un \d+\.\d% (más|menos)\.$|^Casi igual/.test((await p.textContent('#spd-t')).trim()), 'sats por dólar: texto del mes, sin recomendar nada');
-      ok((await p.getAttribute('#spd-l', 'aria-label')).startsWith('Sats por dólar en los últimos') && (await p.locator('#spd-l polyline').count()) === 1, 'sats por dólar: línea con su descripción');
-      const compras = await datos(p, '/api/compras');
-      const inv = compras.reduce((a, c) => a + c.monto, 0);
-      ok((await p.textContent('#v-lectura')).includes(`pusiste $${entero(inv)}`), 'el gráfico de valor coincide con el cálculo');
-
-      // Tira de 52 semanas: entra escalonada (con todos los efectos) y al tocar una semana dice sus compras.
-      {
-        await p.evaluate(() => document.getElementById('semanas').scrollIntoView({ block: 'center' }));
-        await p.waitForTimeout(600);
-        const entra = await p.evaluate(() => { const i = document.querySelectorAll('#semanas i')[5]; return { clase: document.getElementById('semanas').classList.contains('entra'), anim: getComputedStyle(i).animationName, retraso: getComputedStyle(i).animationDelay, n: document.querySelectorAll('#semanas i').length }; });
-        ok(entra.clase && entra.anim === 'sem-entra' && entra.retraso !== '0s' && entra.n >= 40, `la tira de semanas entra escalonada (${entra.anim}, retraso ${entra.retraso})`);
-        const conCompra = await p.locator('#semanas i.con').first().boundingBox();
-        await p.mouse.click(conCompra.x + conCompra.width / 2, conCompra.y + conCompra.height / 2);
+  await bloque(async () => {
+    const anio = await servidor('anio');
+    try {
+      // El saldo se ve, con la cifra real, en sats y en BTC, sin scroll horizontal, en varios anchos.
+      for (const [w, h] of [[320, 568], [320, 640], [390, 560], [375, 812], [768, 1024], [1280, 800], [2560, 1300]]) {
+        const { ctx, p, consola } = await entrar(navegador, anio, ADMIN, { viewport: { width: w, height: h }, isMobile: false, hasTouch: false });
+        const sats = (await datos(p, '/api/compras')).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+        let s = await saldo(p);
+        eq(s.txt, entero(sats), `saldo real a ${w} px`);
+        ok(s.w > 0 && s.h > 0, `saldo visible a ${w} px`);
+        // El saludo y «Tu saldo» no se pisan (en pantallas bajas el saldo sube y es fácil que choquen).
+        const cajas = await p.evaluate(() => ({ saludoAbajo: document.getElementById('saludo').getBoundingClientRect().bottom, saldoArriba: document.getElementById('t-saldo').getBoundingClientRect().top }));
+        ok(cajas.saludoAbajo <= cajas.saldoArriba + 1, `el saludo no pisa «Tu saldo» a ${w}×${h} (${cajas.saludoAbajo.toFixed(0)} ≤ ${cajas.saldoArriba.toFixed(0)})`);
+        await p.click('#s-saldo-v');
         await p.waitForTimeout(150);
-        const det = (await p.textContent('#sem-det')).trim();
-        ok(/^Semana del \d+ \w+ al \d+ \w+: \d+ compras?, \+[\d,]+ sats \(\$[\d,]+\)\.$/.test(det) && await p.locator('#semanas i.sel').count() === 1, `tocar una semana con compra dice sus compras: «${det}»`);
-        const sinCompra = await p.locator('#semanas i:not(.con)').count() ? await p.locator('#semanas i:not(.con)').first().boundingBox() : null; // (con compras todas las semanas no hay ninguna vacía)
-        if (sinCompra) {
-          await p.mouse.click(sinCompra.x + sinCompra.width / 2, sinCompra.y + sinCompra.height / 2);
-          await p.waitForTimeout(150);
-          ok(/: sin compras\.$/.test((await p.textContent('#sem-det')).trim()), 'una semana sin compras lo dice');
-        }
-        await p.focus('#semanas');
-        await p.keyboard.press('End');
-        await p.keyboard.press('ArrowLeft');
-        ok(await p.getAttribute('#sem-det', 'aria-live') === 'polite' && /^Semana del /.test(await p.textContent('#sem-det')), 'con el teclado se recorren las semanas y se anuncian');
-        await p.mouse.move(5, 5);
+        s = await saldo(p);
+        eq([s.txt, s.unidad], [(sats / 1e8).toFixed(8), 'BTC'], `saldo en BTC a ${w} px`);
+        ok(s.sw <= s.cw, `sin scroll horizontal a ${w} px`);
+        // Tercera vista: dólares, al precio en vivo (el valor que ya dice la línea de abajo).
+        const valorDeAbajo = (await p.innerText('#s-valor')).match(/valen\s+(\$[\d,]+\.\d\d)/)?.[1];
+        await p.click('#s-saldo-v');
+        await p.waitForTimeout(150);
+        s = await saldo(p);
+        eq([s.txt, s.unidad.trim()], [valorDeAbajo, 'USD'], `saldo en dólares a ${w} px`);
+        ok(s.w > 0 && s.h > 0 && s.sw <= s.cw, `saldo en dólares visible y sin scroll horizontal a ${w} px`);
+        ok(/ sats/.test(await p.innerText('#s-valor')) && !/valen/.test(await p.innerText('#s-valor')), `en dólares, la línea de abajo dice los sats a ${w} px`);
+        await p.click('#s-saldo-v');
+        await p.waitForTimeout(150);
+        eq((await saldo(p)).txt, entero(sats), `el ciclo vuelve a sats a ${w} px`);
+        // Cifras secundarias: a 320 px salen en forma corta; desde 360 px, enteras.
+        const falta = (await p.innerText('#t-falta')).trim();
+        ok(w < 360 ? /^faltan [\d.]+[KM]?$/.test(falta) && !falta.includes(',') : /^faltan [\d,]+$/.test(falta), `«${falta}» a ${w} px`);
+        eq(consola, [], `consola limpia a ${w} px: ${consola.join(' | ')}`);
+        await ctx.close();
       }
-      // Tu costo contra el precio promedio del período: la cifra sale del histórico y del precio vivo.
+
+      // Admin en móvil: lo que debe verse con un año de compras.
       {
-        const vivo = (await datos(p, '/api/precio')).precio;
-        const desde = compras[0].fecha;
-        const hist = (await datos(p, `/api/historico?desde=${desde}`)).precios.filter(([f]) => f >= desde).map(([f, c]) => [f, c]);
-        const hoyIso = hoySV();
-        if (hist.at(-1)[0] >= hoyIso) hist[hist.length - 1] = [hist.at(-1)[0], vivo];
-        else hist.push([hoyIso, vivo]);
-        const media = hist.reduce((a, [, c]) => a + c, 0) / hist.length;
-        const costo = (compras.reduce((a, c) => a + c.monto, 0) * 1e8) / compras.reduce((a, c) => a + c.sats, 0);
-        const esperado = (costo / media - 1) * 100;
-        const txt = (await p.textContent('#v-vs')).trim();
-        const m = /un ([\d.]+)% por (debajo|encima)/.exec(txt);
-        ok(!!m && Math.abs((m[2] === 'debajo' ? -1 : 1) * Number(m[1]) - esperado) < 0.15, `costo contra promedio del período: «${txt.slice(0, 90)}…» (esperado ${esperado.toFixed(1)} %)`);
-      }
+        const { ctx, p, consola } = await entrar(navegador, anio, ADMIN);
+        await verVista(p, 'valor');
+        ok(await p.locator('#valor').isVisible() && !(await p.locator('#mercado').isVisible()), 'la vista «Valor» enseña «Lo que pusiste y lo que vale» y esconde el precio');
+        await verVista(p, 'precio');
+        ok(await p.locator('#mercado').isVisible() && !(await p.locator('#valor').isVisible()), 'la vista «Precio» es la de siempre');
+        ok(await p.locator('#toca').isVisible(), 'sale «te toca comprar»');
+        ok(/^Para estar en cero, BTC debe subir/.test((await p.textContent('#g-equilibrio')).trim()), 'línea del equilibrio');
+        ok(/^Coinbase · (ahora|hace \d+ s)$/.test((await p.textContent('#precio-meta')).trim()), 'precio con «hace X s»');
+        // Tarjetas: anillo de la etapa, indicador del costo, mini línea, cifras curiosas, línea de próxima compra y anillo de constancia.
+        {
+          const compras = await datos(p, '/api/compras');
+          const pcTramo = await p.evaluate(() => ({ txt: document.getElementById('t-pct').textContent, label: document.getElementById('t-anillo').getAttribute('aria-label'),
+            arco: getComputedStyle(document.querySelector('#t-anillo-svg .an-arco')).strokeDasharray, barra: !!document.querySelector('.tr-barra') }));
+          ok(/^\d+%$|^<1%$/.test(pcTramo.txt) && /^Vas en \d+\.\d% del camino a /.test(pcTramo.label) && !pcTramo.barra, `anillo de la etapa: ${pcTramo.txt} · «${pcTramo.label}»`);
+          const ind = await p.evaluate(() => ({ vis: !document.getElementById('g-indicador').hidden, left: document.getElementById('ind-hoy').style.left, label: document.getElementById('g-indicador').getAttribute('aria-label'),
+            t1: document.getElementById('ind-costo-t').textContent, t2: document.getElementById('ind-hoy-t').textContent }));
+          ok(ind.vis && /^\d+(\.\d)?%$/.test(ind.left) && /por (debajo de|encima de) tu costo promedio/.test(ind.label) && /^Tu costo promedio · \$/.test(ind.t1) && /^Hoy · \$/.test(ind.t2), `indicador del costo: ${ind.left} · ${ind.t2}`);
+          ok(await p.locator('#s-valor svg.mini polyline').count() === 1 && (await p.getAttribute('#s-valor svg.mini', 'aria-label')).startsWith('Valor de tu saldo en los últimos'), 'mini línea del valor junto a la ganancia');
+          const dias = Math.round((Date.parse(`${hoySV()}T00:00:00Z`) - Date.parse(`${compras[0].fecha}T00:00:00Z`)) / 864e5);
+          const cur = (await p.innerText('#curiosas')).replace(/\s+/g, ' ');
+          ok(cur.includes(`${dias.toLocaleString('en-US')} días desde tu primera compra`) && /Tu saldo suma en promedio [\d,]+ sats por día/.test(cur), `cifras curiosas: «${cur.slice(0, 80)}»`);
+          const prox = (await p.textContent('#prox')).trim();
+          ok(/^Última compra: (hoy|ayer|hace \d+ días)( · próxima(, en \d+ días|: (hoy|mañana) es el último día))?$/.test(prox), `línea de próxima compra: «${prox}»`);
+          const altoProx = await p.evaluate(() => document.getElementById('prox').getBoundingClientRect().height);
+          ok(altoProx < 26, `la línea de próxima compra cabe en una línea (${altoProx.toFixed(0)} px)`);
+          const an = await p.evaluate(() => ({ n: document.getElementById('const-n').textContent, de: document.getElementById('const-de').textContent, label: document.getElementById('const-anillo').getAttribute('aria-label') }));
+          ok(/^\d+$/.test(an.n) && /^de \d+$/.test(an.de) && /^Compraste en \d+ de (las últimas 52 semanas|tus \d+ semanas)$/.test(an.label), `anillo de constancia: ${an.n} ${an.de}`);
+        }
+        // Variación desde ayer junto al precio, y la tarjeta de sats por dólar con su línea del mes.
+        const var24 = (await p.innerText('#precio-24')).trim(); // la flecha es un icono SVG (sin texto): queda «−0.2% vs ayer» o «• +0.0% vs ayer»
+        ok(await p.locator('#precio-24').isVisible() && /^(• |(sube|baja)\s*)?[+−]?\d+\.\d% vs ayer$/.test(var24) && (var24.startsWith('•') || await p.locator('#precio-24 .ico').count() === 1), `variación desde ayer: «${var24}»`);
+        const precioVivo = (await datos(p, '/api/precio')).precio;
+        ok(await p.locator('#spd').isVisible(), 'sale la tarjeta de sats por dólar');
+        eq((await p.textContent('#spd-v')).trim(), entero(1e8 / precioVivo), 'sats por dólar = 100,000,000 ÷ precio');
+        ok(/^Hace \d+ días eran [\d,]+ sats: hoy son un \d+\.\d% (más|menos)\.$|^Casi igual/.test((await p.textContent('#spd-t')).trim()), 'sats por dólar: texto del mes, sin recomendar nada');
+        ok((await p.getAttribute('#spd-l', 'aria-label')).startsWith('Sats por dólar en los últimos') && (await p.locator('#spd-l polyline').count()) === 1, 'sats por dólar: línea con su descripción');
+        const compras = await datos(p, '/api/compras');
+        const inv = compras.reduce((a, c) => a + c.monto, 0);
+        ok((await p.textContent('#v-lectura')).includes(`pusiste $${entero(inv)}`), 'el gráfico de valor coincide con el cálculo');
 
-      // Tema: automático → claro → oscuro → automático.
-      await p.click('#cuenta-btn');
-      await p.waitForTimeout(250);
-      const tema = () => p.evaluate(() => document.documentElement.dataset.tema);
-      const inicial = await tema();
-      await p.click('#dc-tema');
-      eq([await tema(), (await p.textContent('#dc-tema')).trim()], ['claro', 'Tema: claro'], 'tema claro a mano');
-      await p.click('#dc-tema');
-      eq(await tema(), 'oscuro', 'tema oscuro a mano');
-      await p.click('#dc-tema');
-      eq([await tema(), (await p.textContent('#dc-tema')).trim()], [inicial, 'Tema: automático'], 'vuelve a automático');
-      // Efectos: automático → todos → esenciales → ninguno → automático, y el estado queda en `html[data-efectos]`.
-      // (el diálogo de «Tu cuenta» sigue abierto del bloque del tema)
-      const efectos = () => p.evaluate(() => document.documentElement.dataset.efectos);
-      const autoEsperado = await p.evaluate(() => (window.libroEfectos.ligero() ? 'esenciales' : 'todos'));
-      eq(await efectos(), autoEsperado, 'efectos en automático según el teléfono');
-      for (const [nivel, etiqueta] of [['todos', 'Efectos: todos'], ['esenciales', 'Efectos: esenciales'], ['ninguno', 'Efectos: ninguno']]) {
+        // Tira de 52 semanas: entra escalonada (con todos los efectos) y al tocar una semana dice sus compras.
+        {
+          await p.evaluate(() => document.getElementById('semanas').scrollIntoView({ block: 'center' }));
+          await p.waitForTimeout(600);
+          const entra = await p.evaluate(() => { const i = document.querySelectorAll('#semanas i')[5]; return { clase: document.getElementById('semanas').classList.contains('entra'), anim: getComputedStyle(i).animationName, retraso: getComputedStyle(i).animationDelay, n: document.querySelectorAll('#semanas i').length }; });
+          ok(entra.clase && entra.anim === 'sem-entra' && entra.retraso !== '0s' && entra.n >= 40, `la tira de semanas entra escalonada (${entra.anim}, retraso ${entra.retraso})`);
+          const conCompra = await p.locator('#semanas i.con').first().boundingBox();
+          await p.mouse.click(conCompra.x + conCompra.width / 2, conCompra.y + conCompra.height / 2);
+          await p.waitForTimeout(150);
+          const det = (await p.textContent('#sem-det')).trim();
+          ok(/^Semana del \d+ \w+ al \d+ \w+: \d+ compras?, \+[\d,]+ sats \(\$[\d,]+\)\.$/.test(det) && await p.locator('#semanas i.sel').count() === 1, `tocar una semana con compra dice sus compras: «${det}»`);
+          const sinCompra = await p.locator('#semanas i:not(.con)').count() ? await p.locator('#semanas i:not(.con)').first().boundingBox() : null; // (con compras todas las semanas no hay ninguna vacía)
+          if (sinCompra) {
+            await p.mouse.click(sinCompra.x + sinCompra.width / 2, sinCompra.y + sinCompra.height / 2);
+            await p.waitForTimeout(150);
+            ok(/: sin compras\.$/.test((await p.textContent('#sem-det')).trim()), 'una semana sin compras lo dice');
+          }
+          await p.focus('#semanas');
+          await p.keyboard.press('End');
+          await p.keyboard.press('ArrowLeft');
+          ok(await p.getAttribute('#sem-det', 'aria-live') === 'polite' && /^Semana del /.test(await p.textContent('#sem-det')), 'con el teclado se recorren las semanas y se anuncian');
+          await p.mouse.move(5, 5);
+        }
+        // Tu costo contra el precio promedio del período: la cifra sale del histórico y del precio vivo.
+        {
+          const vivo = (await datos(p, '/api/precio')).precio;
+          const desde = compras[0].fecha;
+          const hist = (await datos(p, `/api/historico?desde=${desde}`)).precios.filter(([f]) => f >= desde).map(([f, c]) => [f, c]);
+          const hoyIso = hoySV();
+          if (hist.at(-1)[0] >= hoyIso) hist[hist.length - 1] = [hist.at(-1)[0], vivo];
+          else hist.push([hoyIso, vivo]);
+          const media = hist.reduce((a, [, c]) => a + c, 0) / hist.length;
+          const costo = (compras.reduce((a, c) => a + c.monto, 0) * 1e8) / compras.reduce((a, c) => a + c.sats, 0);
+          const esperado = (costo / media - 1) * 100;
+          const txt = (await p.textContent('#v-vs')).trim();
+          const m = /un ([\d.]+)% por (debajo|encima)/.exec(txt);
+          ok(!!m && Math.abs((m[2] === 'debajo' ? -1 : 1) * Number(m[1]) - esperado) < 0.15, `costo contra promedio del período: «${txt.slice(0, 90)}…» (esperado ${esperado.toFixed(1)} %)`);
+        }
+
+        // Tema: automático → claro → oscuro → automático.
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        const tema = () => p.evaluate(() => document.documentElement.dataset.tema);
+        const inicial = await tema();
+        await p.click('#dc-tema');
+        eq([await tema(), (await p.textContent('#dc-tema')).trim()], ['claro', 'Tema: claro'], 'tema claro a mano');
+        await p.click('#dc-tema');
+        eq(await tema(), 'oscuro', 'tema oscuro a mano');
+        await p.click('#dc-tema');
+        eq([await tema(), (await p.textContent('#dc-tema')).trim()], [inicial, 'Tema: automático'], 'vuelve a automático');
+        // Efectos: automático → todos → esenciales → ninguno → automático, y el estado queda en `html[data-efectos]`.
+        // (el diálogo de «Tu cuenta» sigue abierto del bloque del tema)
+        const efectos = () => p.evaluate(() => document.documentElement.dataset.efectos);
+        const autoEsperado = await p.evaluate(() => (window.libroEfectos.ligero() ? 'esenciales' : 'todos'));
+        eq(await efectos(), autoEsperado, 'efectos en automático según el teléfono');
+        for (const [nivel, etiqueta] of [['todos', 'Efectos: todos'], ['esenciales', 'Efectos: esenciales'], ['ninguno', 'Efectos: ninguno']]) {
+          await p.click('#dc-efectos');
+          eq([await efectos(), (await p.textContent('#dc-efectos')).trim()], [nivel, etiqueta], `efectos a mano: ${nivel}`);
+        }
+        eq(await p.evaluate(() => localStorage.getItem('libro.efectos')), 'ninguno', 'efectos: se recuerda en el dispositivo');
         await p.click('#dc-efectos');
-        eq([await efectos(), (await p.textContent('#dc-efectos')).trim()], [nivel, etiqueta], `efectos a mano: ${nivel}`);
+        eq(await efectos(), autoEsperado, 'efectos: vuelve a automático');
+        ok(await p.evaluate(() => localStorage.getItem('libro.efectos')) === null, 'efectos: automático borra la preferencia');
+        await p.keyboard.press('Escape');
+        await p.waitForTimeout(250);
+
+        // Una compra normal se guarda al primer toque y celebra sin romper nada.
+        const precio = (await datos(p, '/api/precio')).precio;
+        const mediana = [...compras.map((c) => c.monto)].sort((a, b) => a - b)[Math.floor(compras.length / 2)];
+        const satsDe = (d) => Math.round((d / precio) * 1e8);
+        const hoy = hoySV();
+        const usadas = new Set(compras.map((c) => c.fecha));
+        const libre = (() => { for (let d = new Date(`${hoySV()}T12:00:00Z`); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f)) return f; } })();
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.fill('#h-sats', String(satsDe(mediana)));
+        await ponerFecha(p, libre);
+        ok(await p.locator('#hoja-calc .costo').count() === 1, 'la hoja dice cómo mueve el costo promedio');
+        await p.click('#guardar');
+        await p.waitForTimeout(1500);
+        eq((await datos(p, '/api/compras')).length, compras.length + 1, 'compra normal: se guarda al primer toque');
+
+        // Una cifra 12 veces mayor avisa y exige el segundo toque.
+        await p.waitForTimeout(6000);
+        const libre2 = (() => { for (let d = new Date(libre); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f) && f !== libre) return f; } })();
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.fill('#h-sats', String(satsDe(mediana * 12)));
+        await ponerFecha(p, libre2);
+        await p.click('#guardar');
+        await p.waitForTimeout(250);
+        ok(/veces más que tu compra habitual/.test(await p.textContent('#hoja-error')), 'avisa de la cifra rara');
+        eq((await p.textContent('#guardar')).trim(), 'Sí, guardar así', 'el botón pide confirmar');
+        eq((await datos(p, '/api/compras')).length, compras.length + 1, 'el primer toque no guarda');
+        await p.click('#guardar');
+        await p.waitForTimeout(1500);
+        eq((await datos(p, '/api/compras')).length, compras.length + 2, 'el segundo toque guarda');
+        // Compra extra con nota: no avisa de la cifra rara, se guarda marcada y se ve aparte en la lista.
+        await p.waitForTimeout(6000);
+        const libre3 = (() => { for (let d = new Date(libre2); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f) && f !== libre && f !== libre2) return f; } })();
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.fill('#h-sats', String(satsDe(mediana * 12)));
+        await ponerFecha(p, libre3);
+        await p.click('#h-avanzado summary');
+        await p.check('#h-extra');
+        await p.fill('#h-nota', 'cayó 20 %');
+        await p.click('#guardar');
+        await p.waitForTimeout(1500);
+        const tras = await datos(p, '/api/compras');
+        eq(tras.length, compras.length + 3, 'la extra se guarda al primer toque, sin aviso de cifra rara');
+        const guardada = tras.find((c) => c.fecha === libre3);
+        eq([guardada.extra, guardada.nota], [true, 'cayó 20 %'], 'se guarda marcada como extra y con su nota');
+        ok((await p.locator('#lista .fila .f-extra').count()) >= 1, 'la lista muestra la etiqueta «Extra»');
+        // Dónde están tus sats: un traslado sin comisión y otro con comisión (que se anota también como gasto).
+        await p.waitForTimeout(6000);
+        ok(await p.locator('#ub-pista').isVisible() && await p.locator('#ub-anotar').isVisible(), 'sin traslados, el admin ve la pista para anotar el primero');
+        ok(!(await p.locator('#ub-datos').isVisible()), 'sin traslados no hay barra');
+        const antesT = await datos(p, '/api/compras');
+        await p.click('#ub-anotar');
+        await p.waitForTimeout(500);
+        eq((await p.getAttribute('#h-tipo button[data-tipo="traslado"]', 'aria-pressed')), 'true', 'el botón de la pista abre la hoja en «Traslado»');
+        eq(await p.locator('#h-avanzado [data-no-traslado]').evaluateAll((els) => els.every((el) => el.hidden)), true, 'los dólares no aplican a un traslado: se ocultan');
+        await p.fill('#h-sats', '300000');
+        ok(/Quedarán 300,000 sats en tu wallet/.test(await p.textContent('#hoja-calc')), 'la hoja dice cuántos sats quedarán en la wallet');
+        await p.click('#guardar');
+        await p.waitForTimeout(1500);
+        eq((await datos(p, '/api/traslados')).length, 1, 'el traslado se guarda');
+        eq((await datos(p, '/api/compras')).length, antesT.length, 'un traslado sin comisión no crea ningún gasto');
+        ok(await p.locator('#ub-datos').isVisible(), 'con un traslado sale la dona');
+        eq(await p.evaluate(() => [/^\d+%$/.test(document.getElementById('ub-pct').textContent), /de tus sats en tu wallet y \d+% en el exchange/.test(document.getElementById('ub-dona').getAttribute('aria-label')), document.querySelectorAll('#ub-dona-svg circle').length]), [true, true, 2], 'dona de wallet y exchange con su texto accesible');
+        ok(/300,000 sats · \d+%/.test(await p.innerText('#ub-w')), 'la tarjeta dice cuánto hay en la wallet');
+        ok((await p.locator('#lista .fila[data-tras]').count()) === 1, 'la lista muestra el traslado');
+        // Sobrepasar lo que tienes en total se rechaza en la hoja
+        await p.waitForTimeout(6000);
+        await p.click('#anotar');
+        await p.waitForTimeout(400);
+        await p.click('#h-tipo button[data-tipo="traslado"]');
+        await p.fill('#h-sats', '999999999');
+        ok(/No tienes tantos sats/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'no deja trasladar más de lo que tienes');
+        // Con comisión: se guarda el traslado y, además, un gasto «Comisión de retiro»
+        await p.fill('#h-sats', '100000');
+        await p.click('#h-avanzado summary');
+        await p.fill('#h-comision', '300');
+        await p.click('#guardar');
+        await p.waitForTimeout(2000);
+        const trasAhora = await datos(p, '/api/traslados');
+        const comprasAhora = await datos(p, '/api/compras');
+        eq(trasAhora.length, 2, 'el segundo traslado se guarda');
+        const gasto = comprasAhora.find((c) => c.tipo === 'venta' && c.nota === 'Comisión de retiro');
+        ok(!!gasto && gasto.sats === 300, 'la comisión se anotó como gasto de 300 sats');
+        eq(comprasAhora.length, antesT.length + 1, 'solo se creó ese gasto');
+        // Anular un traslado desde la lista
+        await p.waitForTimeout(6000);
+        await editarFila(p, p.locator('#lista .fila[data-tras]').first());
+        await p.waitForTimeout(400);
+        ok(/¿Anular este traslado\?/.test(await p.textContent('#d-titulo')), 'tocar un traslado ofrece anularlo');
+        await p.click('#d-borrar button[value="si"]');
+        await p.waitForTimeout(1500);
+        eq((await datos(p, '/api/traslados')).length, 1, 'el traslado anulado desaparece');
+        eq(consola, [], `consola limpia (admin): ${consola.join(' | ')}`);
+        void hoy;
+        await ctx.close();
       }
-      eq(await p.evaluate(() => localStorage.getItem('libro.efectos')), 'ninguno', 'efectos: se recuerda en el dispositivo');
-      await p.click('#dc-efectos');
-      eq(await efectos(), autoEsperado, 'efectos: vuelve a automático');
-      ok(await p.evaluate(() => localStorage.getItem('libro.efectos')) === null, 'efectos: automático borra la preferencia');
-      await p.keyboard.press('Escape');
-      await p.waitForTimeout(250);
 
-      // Una compra normal se guarda al primer toque y celebra sin romper nada.
-      const precio = (await datos(p, '/api/precio')).precio;
-      const mediana = [...compras.map((c) => c.monto)].sort((a, b) => a - b)[Math.floor(compras.length / 2)];
-      const satsDe = (d) => Math.round((d / precio) * 1e8);
-      const hoy = hoySV();
-      const usadas = new Set(compras.map((c) => c.fecha));
-      const libre = (() => { for (let d = new Date(`${hoySV()}T12:00:00Z`); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f)) return f; } })();
-      await p.click('#anotar');
-      await p.waitForTimeout(400);
-      await p.fill('#h-sats', String(satsDe(mediana)));
-      await ponerFecha(p, libre);
-      ok(await p.locator('#hoja-calc .costo').count() === 1, 'la hoja dice cómo mueve el costo promedio');
-      await p.click('#guardar');
-      await p.waitForTimeout(1500);
-      eq((await datos(p, '/api/compras')).length, compras.length + 1, 'compra normal: se guarda al primer toque');
-
-      // Una cifra 12 veces mayor avisa y exige el segundo toque.
-      await p.waitForTimeout(6000);
-      const libre2 = (() => { for (let d = new Date(libre); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f) && f !== libre) return f; } })();
-      await p.click('#anotar');
-      await p.waitForTimeout(400);
-      await p.fill('#h-sats', String(satsDe(mediana * 12)));
-      await ponerFecha(p, libre2);
-      await p.click('#guardar');
-      await p.waitForTimeout(250);
-      ok(/veces más que tu compra habitual/.test(await p.textContent('#hoja-error')), 'avisa de la cifra rara');
-      eq((await p.textContent('#guardar')).trim(), 'Sí, guardar así', 'el botón pide confirmar');
-      eq((await datos(p, '/api/compras')).length, compras.length + 1, 'el primer toque no guarda');
-      await p.click('#guardar');
-      await p.waitForTimeout(1500);
-      eq((await datos(p, '/api/compras')).length, compras.length + 2, 'el segundo toque guarda');
-      // Compra extra con nota: no avisa de la cifra rara, se guarda marcada y se ve aparte en la lista.
-      await p.waitForTimeout(6000);
-      const libre3 = (() => { for (let d = new Date(libre2); ; d.setDate(d.getDate() - 1)) { const f = d.toISOString().slice(0, 10); if (!usadas.has(f) && f !== libre && f !== libre2) return f; } })();
-      await p.click('#anotar');
-      await p.waitForTimeout(400);
-      await p.fill('#h-sats', String(satsDe(mediana * 12)));
-      await ponerFecha(p, libre3);
-      await p.click('#h-avanzado summary');
-      await p.check('#h-extra');
-      await p.fill('#h-nota', 'cayó 20 %');
-      await p.click('#guardar');
-      await p.waitForTimeout(1500);
-      const tras = await datos(p, '/api/compras');
-      eq(tras.length, compras.length + 3, 'la extra se guarda al primer toque, sin aviso de cifra rara');
-      const guardada = tras.find((c) => c.fecha === libre3);
-      eq([guardada.extra, guardada.nota], [true, 'cayó 20 %'], 'se guarda marcada como extra y con su nota');
-      ok((await p.locator('#lista .fila .f-extra').count()) >= 1, 'la lista muestra la etiqueta «Extra»');
-      // Dónde están tus sats: un traslado sin comisión y otro con comisión (que se anota también como gasto).
-      await p.waitForTimeout(6000);
-      ok(await p.locator('#ub-pista').isVisible() && await p.locator('#ub-anotar').isVisible(), 'sin traslados, el admin ve la pista para anotar el primero');
-      ok(!(await p.locator('#ub-datos').isVisible()), 'sin traslados no hay barra');
-      const antesT = await datos(p, '/api/compras');
-      await p.click('#ub-anotar');
-      await p.waitForTimeout(500);
-      eq((await p.getAttribute('#h-tipo button[data-tipo="traslado"]', 'aria-pressed')), 'true', 'el botón de la pista abre la hoja en «Traslado»');
-      eq(await p.locator('#h-avanzado [data-no-traslado]').evaluateAll((els) => els.every((el) => el.hidden)), true, 'los dólares no aplican a un traslado: se ocultan');
-      await p.fill('#h-sats', '300000');
-      ok(/Quedarán 300,000 sats en tu wallet/.test(await p.textContent('#hoja-calc')), 'la hoja dice cuántos sats quedarán en la wallet');
-      await p.click('#guardar');
-      await p.waitForTimeout(1500);
-      eq((await datos(p, '/api/traslados')).length, 1, 'el traslado se guarda');
-      eq((await datos(p, '/api/compras')).length, antesT.length, 'un traslado sin comisión no crea ningún gasto');
-      ok(await p.locator('#ub-datos').isVisible(), 'con un traslado sale la dona');
-      eq(await p.evaluate(() => [/^\d+%$/.test(document.getElementById('ub-pct').textContent), /de tus sats en tu wallet y \d+% en el exchange/.test(document.getElementById('ub-dona').getAttribute('aria-label')), document.querySelectorAll('#ub-dona-svg circle').length]), [true, true, 2], 'dona de wallet y exchange con su texto accesible');
-      ok(/300,000 sats · \d+%/.test(await p.innerText('#ub-w')), 'la tarjeta dice cuánto hay en la wallet');
-      ok((await p.locator('#lista .fila[data-tras]').count()) === 1, 'la lista muestra el traslado');
-      // Sobrepasar lo que tienes en total se rechaza en la hoja
-      await p.waitForTimeout(6000);
-      await p.click('#anotar');
-      await p.waitForTimeout(400);
-      await p.click('#h-tipo button[data-tipo="traslado"]');
-      await p.fill('#h-sats', '999999999');
-      ok(/No tienes tantos sats/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'no deja trasladar más de lo que tienes');
-      // Con comisión: se guarda el traslado y, además, un gasto «Comisión de retiro»
-      await p.fill('#h-sats', '100000');
-      await p.click('#h-avanzado summary');
-      await p.fill('#h-comision', '300');
-      await p.click('#guardar');
-      await p.waitForTimeout(2000);
-      const trasAhora = await datos(p, '/api/traslados');
-      const comprasAhora = await datos(p, '/api/compras');
-      eq(trasAhora.length, 2, 'el segundo traslado se guarda');
-      const gasto = comprasAhora.find((c) => c.tipo === 'venta' && c.nota === 'Comisión de retiro');
-      ok(!!gasto && gasto.sats === 300, 'la comisión se anotó como gasto de 300 sats');
-      eq(comprasAhora.length, antesT.length + 1, 'solo se creó ese gasto');
-      // Anular un traslado desde la lista
-      await p.waitForTimeout(6000);
-      await editarFila(p, p.locator('#lista .fila[data-tras]').first());
-      await p.waitForTimeout(400);
-      ok(/¿Anular este traslado\?/.test(await p.textContent('#d-titulo')), 'tocar un traslado ofrece anularlo');
-      await p.click('#d-borrar button[value="si"]');
-      await p.waitForTimeout(1500);
-      eq((await datos(p, '/api/traslados')).length, 1, 'el traslado anulado desaparece');
-      eq(consola, [], `consola limpia (admin): ${consola.join(' | ')}`);
-      void hoy;
-      await ctx.close();
+      // Lector: ve el libro pero no puede escribir; la primera vez recibe «Así va el libro».
+      {
+        const { ctx, p, consola } = await entrar(navegador, anio, LECTOR);
+        ok(await p.locator('#d-novedades[open]').count() === 1, 'el lector ve la bienvenida');
+        await p.click('#nov-ok');
+        await p.waitForTimeout(400);
+        ok(!(await p.locator('#anotar').isVisible()), 'el lector no ve «Anotar compra»');
+        ok(!(await p.locator('#toca').isVisible()), 'el lector no ve «te toca comprar»');
+        eq((await p.textContent('#prox')).trim(), 'Lo anota Daf3r', 'el lector no ve la línea de última y próxima compra: en su sitio se dice quién lleva el libro (campamento 17)');
+        ok(await p.locator('#t-anillo').isVisible() && await p.locator('#g-indicador').isVisible() && await p.locator('#rep-curiosas').isVisible(), 'el lector sí ve el anillo, el indicador del costo y las cifras curiosas');
+        await verVista(p, 'valor');
+        ok(await p.locator('#valor').isVisible(), 'el lector sí ve el gráfico de valor');
+        await verVista(p, 'precio');
+        ok(await p.locator('#ub-datos').isVisible() && !(await p.locator('#ub-anotar').isVisible()), 'el lector ve dónde están los sats pero no el botón de anotar');
+        // La fila abre su comprobante también para el lector (campamento 18), pero sin «Anular» ni «Editar».
+        await p.locator('#lista .fila[data-tras]').click(); await p.waitForTimeout(400);
+        ok(await p.locator('#d-comp').evaluate((d) => d.open) && await p.locator('#cp-editar').isHidden(), 'el traslado es solo lectura para el lector: su comprobante no ofrece anularlo');
+        await p.click('#cp-cerrar'); await p.waitForTimeout(200);
+        const r = await p.evaluate(() => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: '{}' }).then((x) => x.status));
+        eq(r, 403, 'el servidor rechaza escribir a un lector');
+        // El 403 de arriba es la prueba de que el servidor rechaza al lector: es lo esperado; nada más debe salir.
+        eq(consola.filter((c) => !/403/.test(c)), [], `consola limpia (lector): ${consola.join(' | ')}`);
+        await ctx.close();
+      }
+    } finally {
+      anio.parar();
     }
-
-    // Lector: ve el libro pero no puede escribir; la primera vez recibe «Así va el libro».
-    {
-      const { ctx, p, consola } = await entrar(navegador, anio, LECTOR);
-      ok(await p.locator('#d-novedades[open]').count() === 1, 'el lector ve la bienvenida');
-      await p.click('#nov-ok');
-      await p.waitForTimeout(400);
-      ok(!(await p.locator('#anotar').isVisible()), 'el lector no ve «Anotar compra»');
-      ok(!(await p.locator('#toca').isVisible()), 'el lector no ve «te toca comprar»');
-      eq((await p.textContent('#prox')).trim(), 'Lo anota Daf3r', 'el lector no ve la línea de última y próxima compra: en su sitio se dice quién lleva el libro (campamento 17)');
-      ok(await p.locator('#t-anillo').isVisible() && await p.locator('#g-indicador').isVisible() && await p.locator('#rep-curiosas').isVisible(), 'el lector sí ve el anillo, el indicador del costo y las cifras curiosas');
-      await verVista(p, 'valor');
-      ok(await p.locator('#valor').isVisible(), 'el lector sí ve el gráfico de valor');
-      await verVista(p, 'precio');
-      ok(await p.locator('#ub-datos').isVisible() && !(await p.locator('#ub-anotar').isVisible()), 'el lector ve dónde están los sats pero no el botón de anotar');
-      // La fila abre su comprobante también para el lector (campamento 18), pero sin «Anular» ni «Editar».
-      await p.locator('#lista .fila[data-tras]').click(); await p.waitForTimeout(400);
-      ok(await p.locator('#d-comp').evaluate((d) => d.open) && await p.locator('#cp-editar').isHidden(), 'el traslado es solo lectura para el lector: su comprobante no ofrece anularlo');
-      await p.click('#cp-cerrar'); await p.waitForTimeout(200);
-      const r = await p.evaluate(() => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: '{}' }).then((x) => x.status));
-      eq(r, 403, 'el servidor rechaza escribir a un lector');
-      // El 403 de arriba es la prueba de que el servidor rechaza al lector: es lo esperado; nada más debe salir.
-      eq(consola.filter((c) => !/403/.test(c)), [], `consola limpia (lector): ${consola.join(' | ')}`);
-      await ctx.close();
-    }
-  } finally {
-    anio.parar();
-  }
+  });
 
   // ---------------------------------------------------------------- avisos push (el envío real a Apple o Google no se prueba aquí)
-  const avisos = await servidor('hoy');
-  try {
-    // Un navegador de mentira con push: suscribirse devuelve un dispositivo propio; lo demás (clave, suscripción, categorías) es real.
-    const conPush = (cfg) => {
-      const est = { sub: false };
-      if (cfg?.brave) navigator.brave = { isBrave: async () => true };
-      const ep = `https://fcm.googleapis.com/fcm/send/ui-${Math.random().toString(36).slice(2)}`;
-      const sub = { endpoint: ep, options: {}, unsubscribe: async () => { est.sub = false; return true; },
-        toJSON: () => ({ endpoint: ep, keys: { p256dh: `B${'x'.repeat(86)}`, auth: 'a'.repeat(22) } }) };
-      const reg = { pushManager: { getSubscription: async () => (est.sub ? sub : null), subscribe: async () => { if (cfg?.falla) { const e = new Error('Registration failed - push service error'); e.name = 'AbortError'; throw e; } est.sub = true; return sub; } }, unregister: async () => true };
-      Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: async () => reg, register: async () => reg, ready: Promise.resolve(reg) } });
-      Object.defineProperty(Notification, 'permission', { configurable: true, get: () => (est.permiso ?? 'default') });
-      Notification.requestPermission = async () => { est.permiso = 'granted'; return 'granted'; };
-    };
-    const abrirAvisos = async (p) => {
-      if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); } // la bienvenida del lector
-      await p.waitForTimeout(700);
-      if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); } // la oferta de avisos de esta visita
-      await p.click('#cuenta-btn');
-      await p.waitForTimeout(250);
-      await p.click('#dc-avisos-btn');
-      await p.waitForTimeout(500);
-    };
-    for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'resguardo', 'caida', 'piedrita', 'diario', 'wallet']], [LECTOR, 'lector', ['movimiento', 'hito', 'diario']]]) {
-      const { ctx, p, consola } = await entrar(navegador, avisos, cuenta, {}, conPush);
-      await abrirAvisos(p);
-      ok(await p.locator('#dc-avisos').isVisible() && !(await p.locator('#dc-menu').isVisible()), `${quien}: se abre la vista de avisos`);
-      eq((await p.textContent('#av-estado')).trim(), 'Los avisos están apagados en este dispositivo.', `${quien}: empieza apagado`);
-      ok((await p.textContent('#av-interruptor')).includes('Activar') && !(await p.locator('#av-lista').isVisible()), `${quien}: ofrece activar y no muestra casillas`);
-      await p.click('#av-interruptor');
-      await p.waitForTimeout(900);
-      eq((await p.textContent('#av-estado')).trim(), 'Los avisos están activados en este dispositivo.', `${quien}: se activa`);
-      eq(await p.$$eval('#av-lista input', (xs) => xs.map((x) => x.dataset.cat)), esperadas, `${quien}: solo ve sus categorías`);
-      ok((await p.$$eval('#av-lista input', (xs) => xs.map((x) => x.checked))).length === esperadas.length, `${quien}: casillas`);
-      ok((await p.textContent('#av-interruptor')).includes('Desactivar'), `${quien}: ahora ofrece desactivar`);
-      // Cambiar una categoría se guarda en el servidor y sobrevive a cerrar y abrir la vista.
-      const cat = esperadas[esperadas.length - 1];
-      const antes = await p.isChecked(`#av-lista input[data-cat="${cat}"]`);
-      await p.click(`#av-lista input[data-cat="${cat}"]`);
-      await p.waitForTimeout(400);
-      await p.click('#dc-avisos [data-cuenta="volver"]');
-      await p.click('#dc-avisos-btn');
-      await p.waitForTimeout(500);
-      eq(await p.isChecked(`#av-lista input[data-cat="${cat}"]`), !antes, `${quien}: la preferencia se guardó`);
-      // Horario propio: se muestra el de siempre, se cambia, se valida en el servidor (vuelve a lo guardado) y se recuerda.
-      ok(await p.locator('#av-horario').isVisible(), `${quien}: con los avisos activados sale el horario`);
-      eq(await p.$$eval('#av-desde, #av-hasta, #av-rec', (xs) => xs.map((x) => x.value)), ['8', '21', '9'], `${quien}: empieza con el horario de siempre`);
-      eq(await p.locator('#av-rec-l').isVisible(), quien === 'admin', `${quien}: el recordatorio de compra solo lo ve el admin`);
-      await p.selectOption('#av-desde', '6');
-      await p.waitForTimeout(400);
-      await p.click('#dc-avisos [data-cuenta="volver"]');
-      await p.click('#dc-avisos-btn');
-      await p.waitForTimeout(500);
-      eq(await p.inputValue('#av-desde'), '6', `${quien}: el horario se guardó y se recuerda`);
-      await p.selectOption('#av-hasta', '7');
-      await p.waitForTimeout(500);
-      ok((await p.textContent('#av-error')).includes('al menos 2 horas'), `${quien}: una ventana de menos de 2 horas se rechaza con su motivo («${(await p.textContent('#av-error')).trim()}»)`);
-      eq(await p.inputValue('#av-hasta'), '21', `${quien}: y el campo vuelve a lo guardado`);
-      if (quien === 'admin') {
-        await p.selectOption('#av-desde', '12');
-        await p.waitForTimeout(400);
-        eq(await p.inputValue('#av-rec'), '12', `${quien}: si el recordatorio queda antes de la ventana, se acomoda solo`);
-      }
-      await p.selectOption('#av-desde', '8');
-      await p.waitForTimeout(300);
-      // Campamento 9: aviso de prueba (los dos) y monto de «retirar a tu wallet» (solo admin)
-      ok(await p.locator('#av-prueba-btn').isVisible(), `${quien}: con los avisos activados sale «Enviarme un aviso de prueba»`);
-      await p.click('#av-prueba-btn');
-      await p.waitForFunction(() => { const t = document.getElementById('av-prueba-res').textContent; return t && t !== 'Enviando…'; }, null, { timeout: 20000 });
-      const res1 = (await p.textContent('#av-prueba-res')).trim();
-      ok(res1.length > 20 && !(await p.locator('#av-prueba-btn').isDisabled()), `${quien}: la prueba dice qué pasó («${res1.slice(0, 60)}…») y el botón vuelve`);
-      await p.click('#av-prueba-btn');
-      await p.waitForFunction(() => document.getElementById('av-prueba-res').textContent.includes('Espera'), null, { timeout: 5000 });
-      ok((await p.textContent('#av-prueba-res')).includes('segundos'), `${quien}: pedir otra enseguida dice cuánto esperar`);
-      eq(await p.locator('#av-wallet').isVisible(), quien === 'admin', `${quien}: el monto de «retirar a tu wallet» solo lo ve el admin (con la categoría encendida)`);
-      if (quien === 'admin') {
-        ok((await p.textContent('#av-w-ayuda')).includes('Elige un monto'), 'admin: sin monto, la ayuda pide elegir uno');
-        await p.fill('#av-w-monto', '1500000');
-        await p.press('#av-w-monto', 'Tab');
+  await bloque(async () => {
+    const avisos = await servidor('hoy');
+    try {
+      // Un navegador de mentira con push: suscribirse devuelve un dispositivo propio; lo demás (clave, suscripción, categorías) es real.
+      const conPush = (cfg) => {
+        const est = { sub: false };
+        if (cfg?.brave) navigator.brave = { isBrave: async () => true };
+        const ep = `https://fcm.googleapis.com/fcm/send/ui-${Math.random().toString(36).slice(2)}`;
+        const sub = { endpoint: ep, options: {}, unsubscribe: async () => { est.sub = false; return true; },
+          toJSON: () => ({ endpoint: ep, keys: { p256dh: `B${'x'.repeat(86)}`, auth: 'a'.repeat(22) } }) };
+        const reg = { pushManager: { getSubscription: async () => (est.sub ? sub : null), subscribe: async () => { if (cfg?.falla) { const e = new Error('Registration failed - push service error'); e.name = 'AbortError'; throw e; } est.sub = true; return sub; } }, unregister: async () => true };
+        Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: async () => reg, register: async () => reg, ready: Promise.resolve(reg) } });
+        Object.defineProperty(Notification, 'permission', { configurable: true, get: () => (est.permiso ?? 'default') });
+        Notification.requestPermission = async () => { est.permiso = 'granted'; return 'granted'; };
+      };
+      const abrirAvisos = async (p) => {
+        if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); } // la bienvenida del lector
+        await p.waitForTimeout(700);
+        if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); } // la oferta de avisos de esta visita
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        await p.click('#dc-avisos-btn');
         await p.waitForTimeout(500);
-        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se guarda y se ve con comas');
-        ok((await p.textContent('#av-w-ayuda')).includes('1,500,000'), 'admin: la ayuda repite el monto');
-        await p.fill('#av-w-monto', 'mucho');
-        await p.press('#av-w-monto', 'Tab');
-        await p.waitForTimeout(300);
-        ok((await p.textContent('#av-error')).includes('solo números') && (await p.inputValue('#av-w-monto')) === '1,500,000', 'admin: un monto que no es número se rechaza y vuelve a lo guardado');
+      };
+      for (const [cuenta, quien, esperadas] of [[ADMIN, 'admin', ['recordatorio', 'txid', 'respaldo', 'resguardo', 'caida', 'piedrita', 'diario', 'wallet']], [LECTOR, 'lector', ['movimiento', 'hito', 'diario']]]) {
+        const { ctx, p, consola } = await entrar(navegador, avisos, cuenta, {}, conPush);
+        await abrirAvisos(p);
+        ok(await p.locator('#dc-avisos').isVisible() && !(await p.locator('#dc-menu').isVisible()), `${quien}: se abre la vista de avisos`);
+        eq((await p.textContent('#av-estado')).trim(), 'Los avisos están apagados en este dispositivo.', `${quien}: empieza apagado`);
+        ok((await p.textContent('#av-interruptor')).includes('Activar') && !(await p.locator('#av-lista').isVisible()), `${quien}: ofrece activar y no muestra casillas`);
+        await p.click('#av-interruptor');
+        await p.waitForTimeout(900);
+        eq((await p.textContent('#av-estado')).trim(), 'Los avisos están activados en este dispositivo.', `${quien}: se activa`);
+        eq(await p.$$eval('#av-lista input', (xs) => xs.map((x) => x.dataset.cat)), esperadas, `${quien}: solo ve sus categorías`);
+        ok((await p.$$eval('#av-lista input', (xs) => xs.map((x) => x.checked))).length === esperadas.length, `${quien}: casillas`);
+        ok((await p.textContent('#av-interruptor')).includes('Desactivar'), `${quien}: ahora ofrece desactivar`);
+        // Cambiar una categoría se guarda en el servidor y sobrevive a cerrar y abrir la vista.
+        const cat = esperadas[esperadas.length - 1];
+        const antes = await p.isChecked(`#av-lista input[data-cat="${cat}"]`);
+        await p.click(`#av-lista input[data-cat="${cat}"]`);
+        await p.waitForTimeout(400);
         await p.click('#dc-avisos [data-cuenta="volver"]');
         await p.click('#dc-avisos-btn');
         await p.waitForTimeout(500);
-        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se recuerda');
-        ok(await p.locator('#av-w-monto').evaluate((el) => el.getBoundingClientRect().height >= 47.5), 'admin: el campo del monto mide 48 px');
-        await p.click('#av-lista input[data-cat="wallet"]');
+        eq(await p.isChecked(`#av-lista input[data-cat="${cat}"]`), !antes, `${quien}: la preferencia se guardó`);
+        // Horario propio: se muestra el de siempre, se cambia, se valida en el servidor (vuelve a lo guardado) y se recuerda.
+        ok(await p.locator('#av-horario').isVisible(), `${quien}: con los avisos activados sale el horario`);
+        eq(await p.$$eval('#av-desde, #av-hasta, #av-rec', (xs) => xs.map((x) => x.value)), ['8', '21', '9'], `${quien}: empieza con el horario de siempre`);
+        eq(await p.locator('#av-rec-l').isVisible(), quien === 'admin', `${quien}: el recordatorio de compra solo lo ve el admin`);
+        await p.selectOption('#av-desde', '6');
         await p.waitForTimeout(400);
-        ok(!(await p.locator('#av-wallet').isVisible()), 'admin: apagar la categoría esconde el monto');
-        await p.click('#av-lista input[data-cat="wallet"]');
-        await p.waitForTimeout(400);
-        eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: y al volver a encenderla el monto sigue ahí');
-      }
-      // Desactivar borra el dispositivo del servidor.
-      await p.click('#av-interruptor');
-      await p.waitForTimeout(700);
-      eq((await p.textContent('#av-estado')).trim(), 'Los avisos están apagados en este dispositivo.', `${quien}: se desactiva`);
-      ok(!(await p.locator('#av-lista').isVisible()), `${quien}: sin casillas al apagar`);
-      eq((await p.textContent('#av-error')).trim(), '', `${quien}: sin errores`);
-      // El 400 es el horario inválido que se probó a propósito (una ventana de una hora).
-      eq(consola.filter((c) => !/400 \(BAD REQUEST\)|429/.test(c)), [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
-      await ctx.close();
-    }
-    // El botón «Anotar compra» del recordatorio abre la app en #anotar (o le manda un mensaje si ya estaba abierta): solo el admin llega a la hoja.
-    for (const [cuenta, quien] of [[ADMIN, 'admin'], [LECTOR, 'lector']]) {
-      const { ctx, p } = await entrar(navegador, avisos, cuenta);
-      if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
-      await p.waitForTimeout(500);
-      if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
-      await p.evaluate(() => { location.hash = '#anotar'; });
-      await p.waitForTimeout(1200);
-      eq(await p.evaluate(() => !document.getElementById('hoja').hidden), quien === 'admin', `${quien}: #anotar ${quien === 'admin' ? 'abre' : 'no abre'} la hoja de anotar`);
-      eq(await p.evaluate(() => location.hash), '', `${quien}: y quita #anotar de la dirección`);
-      if (quien === 'admin') {
-        await p.keyboard.press('Escape');
-        await p.waitForTimeout(400);
-        await p.evaluate(() => navigator.serviceWorker?.dispatchEvent?.(new MessageEvent('message', { data: { tipo: 'anotar' } })));
-        await p.waitForTimeout(800);
-        ok(await p.evaluate(() => !document.getElementById('hoja').hidden), 'admin: el mensaje del service worker también abre la hoja');
-      }
-      await ctx.close();
-    }
-    // Varias wallets (idea 156): crear una al anotar un traslado, elegir entre ellas, validar por wallet, ver el reparto y archivarla
-    {
-      const wal = await servidor('hoy');
-      try {
-        const { ctx, p, consola } = await entrar(navegador, wal, ADMIN);
-        if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
-        const saldoT = (await datos(p, '/api/compras')).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
-        const parte = Math.floor(saldoT / 4);
-        await p.waitForTimeout(6000);
-        await p.click('#anotar');
-        await p.waitForTimeout(400);
-        await p.click('#h-tipo button[data-tipo="traslado"]');
-        ok(await p.locator('#h-wallet-mas').isVisible() && !(await p.locator('#h-wallet').isVisible()), 'sin más wallets, la hoja ofrece «Usar otra wallet…» y no un selector');
-        await p.click('#h-wallet-mas');
-        ok(await p.locator('#h-wallet-nueva').isVisible(), 'al pedirla sale el campo del nombre');
-        await p.fill('#h-sats', String(parte));
-        ok(await p.locator('#guardar').isDisabled(), 'sin nombre no se puede guardar el traslado a la wallet nueva');
-        await p.fill('#h-wallet-nueva', 'Ledger');
-        ok(/Ledger/.test(await p.textContent('#hoja-calc')) && !(await p.locator('#guardar').isDisabled()), 'con el nombre, la hoja habla de «Ledger»');
-        ok(await p.locator('#h-wallet-nueva').evaluate((el) => el.getBoundingClientRect().height >= 47.5), 'el campo del nombre mide 48 px');
-        await p.click('#guardar');
-        await p.waitForTimeout(1800);
-        const ws = await datos(p, '/api/wallets');
-        const tl = await datos(p, '/api/traslados');
-        eq([ws.length, ws[0]?.nombre, tl.length, tl[0]?.wallet_id === ws[0]?.id], [1, 'Ledger', 1, true], 'se creó la wallet y el traslado va a ella');
-        ok(/Ledger/.test(await p.innerText('#ub-dona-text, #ub-lista').catch(() => '')) || /Ledger/.test(await p.innerText('#ubicacion')), 'la tarjeta de dónde están tus sats nombra la wallet');
-        ok(/en Ledger/.test(await p.getAttribute('#ub-dona', 'aria-label')), 'y su texto accesible también');
-        ok(/«Ledger»/.test(await p.innerText('#lista .fila[data-tras]')), 'la lista dice a qué wallet fue el traslado');
-        // Con una wallet extra aparece el selector; cada wallet se valida por separado
-        await p.waitForTimeout(6000);
-        await p.click('#anotar');
-        await p.waitForTimeout(400);
-        await p.click('#h-tipo button[data-tipo="traslado"]');
-        eq(await p.$$eval('#h-wallet option', (os) => os.map((o) => o.textContent)), ['Mi wallet', 'Ledger', 'Otra wallet nueva…'], 'el selector ofrece la principal, Ledger y «Otra wallet nueva…»');
-        await p.click('#h-sentido button[data-sentido="a_exchange"]');
-        await p.fill('#h-sats', '1');
-        ok(/No tienes tantos sats en tu wallet/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'de «Mi wallet» no se puede sacar lo que no tiene, aunque Ledger sí tenga');
-        await p.selectOption('#h-wallet', { label: 'Ledger' });
-        await p.fill('#h-sats', String(parte + 1));
-        ok(/No tienes tantos sats en «Ledger»/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'ni de Ledger más de lo que tiene, con su nombre');
-        await p.fill('#h-sats', String(Math.floor(parte / 2)));
-        ok(!(await p.locator('#guardar').isDisabled()), 'lo que sí tiene se puede sacar');
-        await p.keyboard.press('Escape');
-        await p.waitForTimeout(400);
-        // Un traslado a la principal: la dona reparte entre las dos
-        await p.waitForTimeout(6000);
-        await p.click('#anotar');
-        await p.waitForTimeout(400);
-        await p.click('#h-tipo button[data-tipo="traslado"]');
-        await p.click('#h-sentido button[data-sentido="a_wallet"]'); // el borrador de la hoja puede traer el sentido de antes
-        await p.fill('#h-sats', String(parte));
-        await p.click('#guardar');
-        await p.waitForTimeout(1800);
-        eq(await p.$$eval('#ubicacion .ub-lista > div', (ds) => ds.map((d) => d.querySelector('dt').textContent.trim())), ['Mi wallet', 'Ledger', 'En el exchange'], 'la leyenda tiene una fila por wallet y una del exchange');
-        eq(await p.locator('#ub-dona-svg circle').count(), 3, 'la dona tiene un arco por wallet (más la pista)');
-        // «Tus datos»: archivar solo si está vacía
-        await p.click('#cuenta-btn');
-        await p.waitForTimeout(250);
-        await p.click('#dc-datos-btn');
+        await p.click('#dc-avisos [data-cuenta="volver"]');
+        await p.click('#dc-avisos-btn');
         await p.waitForTimeout(500);
-        ok(await p.locator('#dd-wallets').isVisible() && (await p.textContent('#dd-wallets-lista')).includes('Ledger'), 'en «Tus datos» salen las wallets');
-        ok(await p.locator('#dd-wallets-lista .ses-cerrar').isDisabled(), 'con sats no se puede archivar');
-        await p.evaluate(async ({ sats, id }) => {
-          await fetch('/api/traslados', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), sats, sentido: 'a_exchange', wallet_id: id }) });
-        }, { sats: parte, id: ws[0].id });
-        await p.click('#dc-datos [data-cuenta="volver"]');
-        await p.click('#dc-datos-btn').catch(() => {});
-        await p.reload({ waitUntil: 'networkidle' });
-        await p.waitForTimeout(3200);
-        await p.click('#cuenta-btn');
-        await p.waitForTimeout(250);
-        await p.click('#dc-datos-btn');
+        eq(await p.inputValue('#av-desde'), '6', `${quien}: el horario se guardó y se recuerda`);
+        await p.selectOption('#av-hasta', '7');
         await p.waitForTimeout(500);
-        ok(!(await p.locator('#dd-wallets-lista .ses-cerrar').isDisabled()), 'vacía, sí se puede archivar');
-        await p.click('#dd-wallets-lista .ses-cerrar');
+        ok((await p.textContent('#av-error')).includes('al menos 2 horas'), `${quien}: una ventana de menos de 2 horas se rechaza con su motivo («${(await p.textContent('#av-error')).trim()}»)`);
+        eq(await p.inputValue('#av-hasta'), '21', `${quien}: y el campo vuelve a lo guardado`);
+        if (quien === 'admin') {
+          await p.selectOption('#av-desde', '12');
+          await p.waitForTimeout(400);
+          eq(await p.inputValue('#av-rec'), '12', `${quien}: si el recordatorio queda antes de la ventana, se acomoda solo`);
+        }
+        await p.selectOption('#av-desde', '8');
+        await p.waitForTimeout(300);
+        // Campamento 9: aviso de prueba (los dos) y monto de «retirar a tu wallet» (solo admin)
+        ok(await p.locator('#av-prueba-btn').isVisible(), `${quien}: con los avisos activados sale «Enviarme un aviso de prueba»`);
+        await p.click('#av-prueba-btn');
+        await p.waitForFunction(() => { const t = document.getElementById('av-prueba-res').textContent; return t && t !== 'Enviando…'; }, null, { timeout: 20000 });
+        const res1 = (await p.textContent('#av-prueba-res')).trim();
+        ok(res1.length > 20 && !(await p.locator('#av-prueba-btn').isDisabled()), `${quien}: la prueba dice qué pasó («${res1.slice(0, 60)}…») y el botón vuelve`);
+        await p.click('#av-prueba-btn');
+        await p.waitForFunction(() => document.getElementById('av-prueba-res').textContent.includes('Espera'), null, { timeout: 5000 });
+        ok((await p.textContent('#av-prueba-res')).includes('segundos'), `${quien}: pedir otra enseguida dice cuánto esperar`);
+        eq(await p.locator('#av-wallet').isVisible(), quien === 'admin', `${quien}: el monto de «retirar a tu wallet» solo lo ve el admin (con la categoría encendida)`);
+        if (quien === 'admin') {
+          ok((await p.textContent('#av-w-ayuda')).includes('Elige un monto'), 'admin: sin monto, la ayuda pide elegir uno');
+          await p.fill('#av-w-monto', '1500000');
+          await p.press('#av-w-monto', 'Tab');
+          await p.waitForTimeout(500);
+          eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se guarda y se ve con comas');
+          ok((await p.textContent('#av-w-ayuda')).includes('1,500,000'), 'admin: la ayuda repite el monto');
+          await p.fill('#av-w-monto', 'mucho');
+          await p.press('#av-w-monto', 'Tab');
+          await p.waitForTimeout(300);
+          ok((await p.textContent('#av-error')).includes('solo números') && (await p.inputValue('#av-w-monto')) === '1,500,000', 'admin: un monto que no es número se rechaza y vuelve a lo guardado');
+          await p.click('#dc-avisos [data-cuenta="volver"]');
+          await p.click('#dc-avisos-btn');
+          await p.waitForTimeout(500);
+          eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se recuerda');
+          ok(await p.locator('#av-w-monto').evaluate((el) => el.getBoundingClientRect().height >= 47.5), 'admin: el campo del monto mide 48 px');
+          await p.click('#av-lista input[data-cat="wallet"]');
+          await p.waitForTimeout(400);
+          ok(!(await p.locator('#av-wallet').isVisible()), 'admin: apagar la categoría esconde el monto');
+          await p.click('#av-lista input[data-cat="wallet"]');
+          await p.waitForTimeout(400);
+          eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: y al volver a encenderla el monto sigue ahí');
+        }
+        // Desactivar borra el dispositivo del servidor.
+        await p.click('#av-interruptor');
         await p.waitForTimeout(700);
-        ok((await p.textContent('#dd-wallets-lista')).includes('archivadas') && (await datos(p, '/api/wallets'))[0].archivada === true, 'se archiva y el servidor lo confirma');
-        eq(consola.filter((c) => !/400|409/.test(c)), [], `consola limpia con varias wallets: ${consola.join(' | ')}`);
+        eq((await p.textContent('#av-estado')).trim(), 'Los avisos están apagados en este dispositivo.', `${quien}: se desactiva`);
+        ok(!(await p.locator('#av-lista').isVisible()), `${quien}: sin casillas al apagar`);
+        eq((await p.textContent('#av-error')).trim(), '', `${quien}: sin errores`);
+        // El 400 es el horario inválido que se probó a propósito (una ventana de una hora).
+        eq(consola.filter((c) => !/400 \(BAD REQUEST\)|429/.test(c)), [], `${quien}: consola limpia con los avisos: ${consola.join(' | ')}`);
+        await ctx.close();
+      }
+      // El botón «Anotar compra» del recordatorio abre la app en #anotar (o le manda un mensaje si ya estaba abierta): solo el admin llega a la hoja.
+      for (const [cuenta, quien] of [[ADMIN, 'admin'], [LECTOR, 'lector']]) {
+        const { ctx, p } = await entrar(navegador, avisos, cuenta);
+        if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
+        await p.waitForTimeout(500);
+        if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+        await p.evaluate(() => { location.hash = '#anotar'; });
+        await p.waitForTimeout(1200);
+        eq(await p.evaluate(() => !document.getElementById('hoja').hidden), quien === 'admin', `${quien}: #anotar ${quien === 'admin' ? 'abre' : 'no abre'} la hoja de anotar`);
+        eq(await p.evaluate(() => location.hash), '', `${quien}: y quita #anotar de la dirección`);
+        if (quien === 'admin') {
+          await p.keyboard.press('Escape');
+          await p.waitForTimeout(400);
+          await p.evaluate(() => navigator.serviceWorker?.dispatchEvent?.(new MessageEvent('message', { data: { tipo: 'anotar' } })));
+          await p.waitForTimeout(800);
+          ok(await p.evaluate(() => !document.getElementById('hoja').hidden), 'admin: el mensaje del service worker también abre la hoja');
+        }
+        await ctx.close();
+      }
+      // Varias wallets (idea 156): crear una al anotar un traslado, elegir entre ellas, validar por wallet, ver el reparto y archivarla
+      {
+        const wal = await servidor('hoy');
+        try {
+          const { ctx, p, consola } = await entrar(navegador, wal, ADMIN);
+          if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+          const saldoT = (await datos(p, '/api/compras')).reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+          const parte = Math.floor(saldoT / 4);
+          await p.waitForTimeout(6000);
+          await p.click('#anotar');
+          await p.waitForTimeout(400);
+          await p.click('#h-tipo button[data-tipo="traslado"]');
+          ok(await p.locator('#h-wallet-mas').isVisible() && !(await p.locator('#h-wallet').isVisible()), 'sin más wallets, la hoja ofrece «Usar otra wallet…» y no un selector');
+          await p.click('#h-wallet-mas');
+          ok(await p.locator('#h-wallet-nueva').isVisible(), 'al pedirla sale el campo del nombre');
+          await p.fill('#h-sats', String(parte));
+          ok(await p.locator('#guardar').isDisabled(), 'sin nombre no se puede guardar el traslado a la wallet nueva');
+          await p.fill('#h-wallet-nueva', 'Ledger');
+          ok(/Ledger/.test(await p.textContent('#hoja-calc')) && !(await p.locator('#guardar').isDisabled()), 'con el nombre, la hoja habla de «Ledger»');
+          ok(await p.locator('#h-wallet-nueva').evaluate((el) => el.getBoundingClientRect().height >= 47.5), 'el campo del nombre mide 48 px');
+          await p.click('#guardar');
+          await p.waitForTimeout(1800);
+          const ws = await datos(p, '/api/wallets');
+          const tl = await datos(p, '/api/traslados');
+          eq([ws.length, ws[0]?.nombre, tl.length, tl[0]?.wallet_id === ws[0]?.id], [1, 'Ledger', 1, true], 'se creó la wallet y el traslado va a ella');
+          ok(/Ledger/.test(await p.innerText('#ub-dona-text, #ub-lista').catch(() => '')) || /Ledger/.test(await p.innerText('#ubicacion')), 'la tarjeta de dónde están tus sats nombra la wallet');
+          ok(/en Ledger/.test(await p.getAttribute('#ub-dona', 'aria-label')), 'y su texto accesible también');
+          ok(/«Ledger»/.test(await p.innerText('#lista .fila[data-tras]')), 'la lista dice a qué wallet fue el traslado');
+          // Con una wallet extra aparece el selector; cada wallet se valida por separado
+          await p.waitForTimeout(6000);
+          await p.click('#anotar');
+          await p.waitForTimeout(400);
+          await p.click('#h-tipo button[data-tipo="traslado"]');
+          eq(await p.$$eval('#h-wallet option', (os) => os.map((o) => o.textContent)), ['Mi wallet', 'Ledger', 'Otra wallet nueva…'], 'el selector ofrece la principal, Ledger y «Otra wallet nueva…»');
+          await p.click('#h-sentido button[data-sentido="a_exchange"]');
+          await p.fill('#h-sats', '1');
+          ok(/No tienes tantos sats en tu wallet/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'de «Mi wallet» no se puede sacar lo que no tiene, aunque Ledger sí tenga');
+          await p.selectOption('#h-wallet', { label: 'Ledger' });
+          await p.fill('#h-sats', String(parte + 1));
+          ok(/No tienes tantos sats en «Ledger»/.test(await p.textContent('#hoja-calc')) && await p.locator('#guardar').isDisabled(), 'ni de Ledger más de lo que tiene, con su nombre');
+          await p.fill('#h-sats', String(Math.floor(parte / 2)));
+          ok(!(await p.locator('#guardar').isDisabled()), 'lo que sí tiene se puede sacar');
+          await p.keyboard.press('Escape');
+          await p.waitForTimeout(400);
+          // Un traslado a la principal: la dona reparte entre las dos
+          await p.waitForTimeout(6000);
+          await p.click('#anotar');
+          await p.waitForTimeout(400);
+          await p.click('#h-tipo button[data-tipo="traslado"]');
+          await p.click('#h-sentido button[data-sentido="a_wallet"]'); // el borrador de la hoja puede traer el sentido de antes
+          await p.fill('#h-sats', String(parte));
+          await p.click('#guardar');
+          await p.waitForTimeout(1800);
+          eq(await p.$$eval('#ubicacion .ub-lista > div', (ds) => ds.map((d) => d.querySelector('dt').textContent.trim())), ['Mi wallet', 'Ledger', 'En el exchange'], 'la leyenda tiene una fila por wallet y una del exchange');
+          eq(await p.locator('#ub-dona-svg circle').count(), 3, 'la dona tiene un arco por wallet (más la pista)');
+          // «Tus datos»: archivar solo si está vacía
+          await p.click('#cuenta-btn');
+          await p.waitForTimeout(250);
+          await p.click('#dc-datos-btn');
+          await p.waitForTimeout(500);
+          ok(await p.locator('#dd-wallets').isVisible() && (await p.textContent('#dd-wallets-lista')).includes('Ledger'), 'en «Tus datos» salen las wallets');
+          ok(await p.locator('#dd-wallets-lista .ses-cerrar').isDisabled(), 'con sats no se puede archivar');
+          await p.evaluate(async ({ sats, id }) => {
+            await fetch('/api/traslados', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), sats, sentido: 'a_exchange', wallet_id: id }) });
+          }, { sats: parte, id: ws[0].id });
+          await p.click('#dc-datos [data-cuenta="volver"]');
+          await p.click('#dc-datos-btn').catch(() => {});
+          await p.reload({ waitUntil: 'networkidle' });
+          await p.waitForTimeout(3200);
+          await p.click('#cuenta-btn');
+          await p.waitForTimeout(250);
+          await p.click('#dc-datos-btn');
+          await p.waitForTimeout(500);
+          ok(!(await p.locator('#dd-wallets-lista .ses-cerrar').isDisabled()), 'vacía, sí se puede archivar');
+          await p.click('#dd-wallets-lista .ses-cerrar');
+          await p.waitForTimeout(700);
+          ok((await p.textContent('#dd-wallets-lista')).includes('archivadas') && (await datos(p, '/api/wallets'))[0].archivada === true, 'se archiva y el servidor lo confirma');
+          eq(consola.filter((c) => !/400|409/.test(c)), [], `consola limpia con varias wallets: ${consola.join(' | ')}`);
+          await ctx.close();
+        } finally {
+          wal.parar();
+        }
+      }
+      // Enlace de solo lectura para hojas de cálculo (idea 159): solo el admin; el token se ve una vez; revocar lo apaga.
+      {
+        const { ctx, p, consola } = await entrar(navegador, avisos, ADMIN, { permissions: ['clipboard-read', 'clipboard-write'] });
+        if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        ok(await p.locator('#dc-enlaces-btn').isVisible(), 'admin: «Tu cuenta» ofrece el enlace para la hoja de cálculo');
+        await p.click('#dc-enlaces-btn');
+        await p.waitForTimeout(500);
+        ok(await p.locator('#dc-enlaces').isVisible() && (await p.textContent('#en-cupo')).includes('0 de 5'), 'admin: se abre la vista y dice 0 de 5');
+        ok((await p.textContent('#dc-enlaces')).includes('Es como una llave'), 'admin: la advertencia de la llave está a la vista');
+        await p.click('#en-crear');
+        await p.waitForTimeout(300);
+        ok((await p.textContent('#en-error')).includes('nombre'), 'admin: sin nombre no crea y lo dice');
+        await p.fill('#en-nombre', 'Mi hoja');
+        await p.click('#en-crear');
+        await p.waitForSelector('#en-nuevo:not([hidden])', { timeout: 5000 });
+        const url = await p.inputValue('#en-nuevo input[aria-label="Enlace de compras"]');
+        ok(/\/api\/token\/[\w-]{40,}\/compras\.csv$/.test(url), `admin: se muestra el enlace completo («${url.slice(0, 50)}…»)`);
+        ok((await p.textContent('#en-nuevo')).includes('no se vuelve a mostrar') && (await p.textContent('#en-lista')).includes('Mi hoja') && (await p.textContent('#en-cupo')).includes('1 de 5'), 'admin: avisa que es la única vez y aparece en la lista');
+        ok(await p.locator('#en-nuevo .ses-cerrar').first().evaluate((b) => b.getBoundingClientRect().height >= 47.5), 'admin: «Copiar» mide 48 px');
+        await p.click('#en-nuevo .ses-cerrar >> nth=0');
+        await p.waitForTimeout(400);
+        eq(await p.evaluate(() => navigator.clipboard.readText()), url, 'admin: «Copiar» deja el enlace en el portapapeles');
+        // Quien tenga el enlace lee el CSV sin sesión (otra pestaña sin cookies)
+        const ctx2 = await navegador.newContext();
+        const r2 = await ctx2.request.get(url);
+        ok(r2.status() === 200 && (await r2.text()).startsWith('fecha,monto_usd'), 'el enlace da el CSV sin iniciar sesión');
+        await p.click('#en-lista .ses-cerrar');
+        await p.waitForTimeout(600);
+        ok((await p.textContent('#en-lista')).includes('Revocado') && (await p.textContent('#en-cupo')).includes('0 de 5'), 'admin: revocar lo marca como revocado');
+        eq((await ctx2.request.get(url)).status(), 404, 'el enlace revocado ya no funciona');
+        await ctx2.close();
+        eq(consola.filter((c) => !/404/.test(c)), [], `consola limpia con los enlaces: ${consola.join(' | ')}`);
+        await ctx.close();
+      }
+      {
+        const { ctx, p } = await entrar(navegador, avisos, LECTOR);
+        if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        ok(!(await p.locator('#dc-enlaces-btn').isVisible()), 'lector: no ve el enlace para la hoja de cálculo');
+        await ctx.close();
+      }
+      // Al entrar se ofrece activar los avisos, una sola vez por dispositivo; el permiso se pide en el toque del botón.
+      {
+        const { ctx, p } = await entrar(navegador, avisos, ADMIN, {}, conPush);
+        await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });
+        ok((await p.textContent('#da-texto')).includes('recordamos comprar'), 'admin: la oferta habla de recordatorios');
+        ok(await p.evaluate(() => Notification.permission) === 'default', 'no se pidió el permiso por su cuenta: espera al toque');
+        await p.click('#da-no');
+        await p.waitForTimeout(300);
+        ok(!(await p.locator('#d-avisos').isVisible()), 'admin: «Ahora no» cierra la oferta');
+        await p.reload({ waitUntil: 'networkidle' });
+        await p.waitForTimeout(3500);
+        ok(!(await p.locator('#d-avisos').isVisible()), 'admin: después de decir que no, no se vuelve a ofrecer en ese dispositivo');
+        await ctx.close();
+      }
+      const fresco = await servidor('hoy'); // un lector que entra por primera vez (el servidor anterior ya le marcó su bienvenida)
+      try {
+        const { ctx, p, consola } = await entrar(navegador, fresco, LECTOR, {}, conPush);
+        ok(await p.locator('#d-novedades').isVisible() && !(await p.locator('#d-avisos').isVisible()), 'lector: primero su bienvenida, no la oferta');
+        await p.click('#nov-ok');
+        await p.waitForSelector('#d-avisos[open]', { timeout: 6000 });
+        ok((await p.textContent('#da-texto')).includes('una compra, una venta o un gasto'), 'lector: la oferta habla de movimientos');
+        await p.click('#da-si');
+        await p.waitForTimeout(1200);
+        ok(!(await p.locator('#d-avisos').isVisible()), 'lector: al activar se cierra la oferta');
+        ok((await p.textContent('#aviso-txt')).includes('Avisos activados'), 'lector: confirma que quedaron activados');
+        await p.click('#cuenta-btn');
+        await p.waitForTimeout(250);
+        await p.click('#dc-avisos-btn');
+        await p.waitForTimeout(600);
+        eq((await p.textContent('#av-estado')).trim(), 'Los avisos están activados en este dispositivo.', 'lector: «Tu cuenta» los muestra activados');
+        eq(consola, [], `lector: consola limpia con la oferta: ${consola.join(' | ')}`);
         await ctx.close();
       } finally {
-        wal.parar();
+        fresco.parar();
       }
-    }
-    // Enlace de solo lectura para hojas de cálculo (idea 159): solo el admin; el token se ve una vez; revocar lo apaga.
-    {
-      const { ctx, p, consola } = await entrar(navegador, avisos, ADMIN, { permissions: ['clipboard-read', 'clipboard-write'] });
-      if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); }
-      await p.click('#cuenta-btn');
-      await p.waitForTimeout(250);
-      ok(await p.locator('#dc-enlaces-btn').isVisible(), 'admin: «Tu cuenta» ofrece el enlace para la hoja de cálculo');
-      await p.click('#dc-enlaces-btn');
-      await p.waitForTimeout(500);
-      ok(await p.locator('#dc-enlaces').isVisible() && (await p.textContent('#en-cupo')).includes('0 de 5'), 'admin: se abre la vista y dice 0 de 5');
-      ok((await p.textContent('#dc-enlaces')).includes('Es como una llave'), 'admin: la advertencia de la llave está a la vista');
-      await p.click('#en-crear');
-      await p.waitForTimeout(300);
-      ok((await p.textContent('#en-error')).includes('nombre'), 'admin: sin nombre no crea y lo dice');
-      await p.fill('#en-nombre', 'Mi hoja');
-      await p.click('#en-crear');
-      await p.waitForSelector('#en-nuevo:not([hidden])', { timeout: 5000 });
-      const url = await p.inputValue('#en-nuevo input[aria-label="Enlace de compras"]');
-      ok(/\/api\/token\/[\w-]{40,}\/compras\.csv$/.test(url), `admin: se muestra el enlace completo («${url.slice(0, 50)}…»)`);
-      ok((await p.textContent('#en-nuevo')).includes('no se vuelve a mostrar') && (await p.textContent('#en-lista')).includes('Mi hoja') && (await p.textContent('#en-cupo')).includes('1 de 5'), 'admin: avisa que es la única vez y aparece en la lista');
-      ok(await p.locator('#en-nuevo .ses-cerrar').first().evaluate((b) => b.getBoundingClientRect().height >= 47.5), 'admin: «Copiar» mide 48 px');
-      await p.click('#en-nuevo .ses-cerrar >> nth=0');
-      await p.waitForTimeout(400);
-      eq(await p.evaluate(() => navigator.clipboard.readText()), url, 'admin: «Copiar» deja el enlace en el portapapeles');
-      // Quien tenga el enlace lee el CSV sin sesión (otra pestaña sin cookies)
-      const ctx2 = await navegador.newContext();
-      const r2 = await ctx2.request.get(url);
-      ok(r2.status() === 200 && (await r2.text()).startsWith('fecha,monto_usd'), 'el enlace da el CSV sin iniciar sesión');
-      await p.click('#en-lista .ses-cerrar');
-      await p.waitForTimeout(600);
-      ok((await p.textContent('#en-lista')).includes('Revocado') && (await p.textContent('#en-cupo')).includes('0 de 5'), 'admin: revocar lo marca como revocado');
-      eq((await ctx2.request.get(url)).status(), 404, 'el enlace revocado ya no funciona');
-      await ctx2.close();
-      eq(consola.filter((c) => !/404/.test(c)), [], `consola limpia con los enlaces: ${consola.join(' | ')}`);
-      await ctx.close();
-    }
-    {
-      const { ctx, p } = await entrar(navegador, avisos, LECTOR);
-      if (await p.locator('#nov-ok').isVisible()) { await p.click('#nov-ok'); await p.waitForTimeout(400); }
-      await p.click('#cuenta-btn');
-      await p.waitForTimeout(250);
-      ok(!(await p.locator('#dc-enlaces-btn').isVisible()), 'lector: no ve el enlace para la hoja de cálculo');
-      await ctx.close();
-    }
-    // Al entrar se ofrece activar los avisos, una sola vez por dispositivo; el permiso se pide en el toque del botón.
-    {
-      const { ctx, p } = await entrar(navegador, avisos, ADMIN, {}, conPush);
-      await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });
-      ok((await p.textContent('#da-texto')).includes('recordamos comprar'), 'admin: la oferta habla de recordatorios');
-      ok(await p.evaluate(() => Notification.permission) === 'default', 'no se pidió el permiso por su cuenta: espera al toque');
-      await p.click('#da-no');
-      await p.waitForTimeout(300);
-      ok(!(await p.locator('#d-avisos').isVisible()), 'admin: «Ahora no» cierra la oferta');
-      await p.reload({ waitUntil: 'networkidle' });
-      await p.waitForTimeout(3500);
-      ok(!(await p.locator('#d-avisos').isVisible()), 'admin: después de decir que no, no se vuelve a ofrecer en ese dispositivo');
-      await ctx.close();
-    }
-    const fresco = await servidor('hoy'); // un lector que entra por primera vez (el servidor anterior ya le marcó su bienvenida)
-    try {
-      const { ctx, p, consola } = await entrar(navegador, fresco, LECTOR, {}, conPush);
-      ok(await p.locator('#d-novedades').isVisible() && !(await p.locator('#d-avisos').isVisible()), 'lector: primero su bienvenida, no la oferta');
-      await p.click('#nov-ok');
-      await p.waitForSelector('#d-avisos[open]', { timeout: 6000 });
-      ok((await p.textContent('#da-texto')).includes('una compra, una venta o un gasto'), 'lector: la oferta habla de movimientos');
-      await p.click('#da-si');
-      await p.waitForTimeout(1200);
-      ok(!(await p.locator('#d-avisos').isVisible()), 'lector: al activar se cierra la oferta');
-      ok((await p.textContent('#aviso-txt')).includes('Avisos activados'), 'lector: confirma que quedaron activados');
-      await p.click('#cuenta-btn');
-      await p.waitForTimeout(250);
-      await p.click('#dc-avisos-btn');
-      await p.waitForTimeout(600);
-      eq((await p.textContent('#av-estado')).trim(), 'Los avisos están activados en este dispositivo.', 'lector: «Tu cuenta» los muestra activados');
-      eq(consola, [], `lector: consola limpia con la oferta: ${consola.join(' | ')}`);
-      await ctx.close();
-    } finally {
-      fresco.parar();
-    }
-    // Si el navegador no puede suscribirse (Brave lo trae apagado), se explica en español y qué hacer.
-    for (const [cfg, esperado, nombre] of [[{ falla: true, brave: true }, 'brave://settings/privacy', 'Brave'], [{ falla: true }, 'no pudo conectarse con su servicio de avisos', 'otro navegador']]) {
-      const { ctx, p } = await entrar(navegador, avisos, ADMIN, {}, [conPush, cfg]);
-      await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });
-      await p.click('#da-si');
-      await p.waitForTimeout(900);
-      const txt = (await p.textContent('#da-error')).trim();
-      ok(txt.includes(esperado) && !/Registration failed/.test(txt), `${nombre}: explica el fallo en español: «${txt.slice(0, 70)}…»`);
-      ok(await p.locator('#d-avisos').isVisible() && await p.locator('#da-si').isEnabled(), `${nombre}: la tarjeta sigue abierta para reintentar`);
-      await ctx.close();
-    }
-    // Sin soporte o con el permiso bloqueado (como en este Chromium sin interfaz) no se ofrece nada que no va a funcionar.
-    {
-      const { ctx, p } = await entrar(navegador, avisos, ADMIN, {});
-      await p.waitForTimeout(1500);
-      ok(!(await p.locator('#d-avisos').isVisible()), 'con el permiso bloqueado no se ofrece');
-      await ctx.close();
-    }
-    // Un navegador sin push (o iPhone sin instalar) lo explica y no ofrece nada que no va a funcionar.
+      // Si el navegador no puede suscribirse (Brave lo trae apagado), se explica en español y qué hacer.
+      for (const [cfg, esperado, nombre] of [[{ falla: true, brave: true }, 'brave://settings/privacy', 'Brave'], [{ falla: true }, 'no pudo conectarse con su servicio de avisos', 'otro navegador']]) {
+        const { ctx, p } = await entrar(navegador, avisos, ADMIN, {}, [conPush, cfg]);
+        await p.waitForSelector('#d-avisos[open]', { timeout: 8000 });
+        await p.click('#da-si');
+        await p.waitForTimeout(900);
+        const txt = (await p.textContent('#da-error')).trim();
+        ok(txt.includes(esperado) && !/Registration failed/.test(txt), `${nombre}: explica el fallo en español: «${txt.slice(0, 70)}…»`);
+        ok(await p.locator('#d-avisos').isVisible() && await p.locator('#da-si').isEnabled(), `${nombre}: la tarjeta sigue abierta para reintentar`);
+        await ctx.close();
+      }
+      // Sin soporte o con el permiso bloqueado (como en este Chromium sin interfaz) no se ofrece nada que no va a funcionar.
+      {
+        const { ctx, p } = await entrar(navegador, avisos, ADMIN, {});
+        await p.waitForTimeout(1500);
+        ok(!(await p.locator('#d-avisos').isVisible()), 'con el permiso bloqueado no se ofrece');
+        await ctx.close();
+      }
+      // Un navegador sin push (o iPhone sin instalar) lo explica y no ofrece nada que no va a funcionar.
 
-    const sin = await entrar(navegador, avisos, ADMIN, {}, () => { delete window.PushManager; });
-    await abrirAvisos(sin.p);
-    ok((await sin.p.textContent('#av-motivo')).includes('Añadir a pantalla de inicio') && !(await sin.p.locator('#av-interruptor').isVisible()),
-      'iPhone sin instalar: explica cómo instalar y no ofrece el botón');
-    eq(sin.consola, [], 'sin push: consola limpia');
-    await sin.ctx.close();
-  } finally {
-    avisos.parar();
-  }
+      const sin = await entrar(navegador, avisos, ADMIN, {}, () => { delete window.PushManager; });
+      await abrirAvisos(sin.p);
+      ok((await sin.p.textContent('#av-motivo')).includes('Añadir a pantalla de inicio') && !(await sin.p.locator('#av-interruptor').isVisible()),
+        'iPhone sin instalar: explica cómo instalar y no ofrece el botón');
+      eq(sin.consola, [], 'sin push: consola limpia');
+      await sin.ctx.close();
+    } finally {
+      avisos.parar();
+    }
+  });
 
   // ---------------------------------------------------------------- efectos: sistema, modo ligero y pausa
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const fuerte = () => { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 }); };
@@ -753,10 +893,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- el cielo según la hora
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const FRANJAS = [[2, 'noche', 'Buenas noches', 'clara'], [6, 'amanecer', 'Buenos días', 'oscura'], [12, 'dia', 'Buenas tardes', 'oscura'], [17.5, 'atardecer', 'Buenas tardes', 'clara']];
@@ -804,10 +944,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- atmósfera: parallax, nubes, niebla, aves, desenfoque, velo y logo
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const fuerte = () => { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 }); };
@@ -870,10 +1010,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- rendimiento iPhone: la escena en capas, el velo como capa propia y el ambiente quieto al deslizar
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const init = [([d]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, ['2026-11-17']];
@@ -945,10 +1085,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- se siente como app: recargar al arrastrar, hoja arrastrable, carga, avisos, tema
-  {
+  await bloque(async () => {
     const srv = await servidor('nueve');
     try {
       const toque = (p, tipo, y, sel = 'body') => p.evaluate(([t, yy, q]) => {
@@ -1052,10 +1192,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- la lista: meses, «Ver más», buscar, filtrar, ordenar, tabla, nota, borrador, copiar
-  {
+  await bloque(async () => {
     const srv = await servidor('mil');
     try {
       const permisos = ['clipboard-read', 'clipboard-write'];
@@ -1073,9 +1213,13 @@ try {
       const cab = await p.locator('#lista .mes-cab h3').first().innerText();
       ok(/^[A-ZÁÉÍÓÚ][a-záéíóú]+ \d{4} · \d+ (compra|compras)/.test(cab.replace(/\s+/g, ' ')), `lista: encabezado por mes con su resumen («${cab}»)`);
       eq(await filas(), 8, 'lista: arranca con las 8 más recientes');
-      eq((await p.textContent('#ver-todas')).trim(), `Ver más (${(total - 8).toLocaleString('en-US')} más)`, 'lista: «Ver más» dice cuántas faltan');
+      // «Ver 25 más · quedan 1,032»; con las últimas, «Ver los 12 que quedan» (nunca «Ver 25 más» si quedan menos)
+      const verMas = (f) => (f > 25 ? `Ver 25 más · quedan ${f.toLocaleString('en-US')}` : f === 1 ? 'Ver el que queda' : `Ver los ${f} que quedan`);
+      eq((await p.textContent('#ver-todas')).trim(), verMas(total - 8), 'lista: «Ver más» dice cuántas trae y cuántas quedan');
       await p.click('#ver-todas');
       eq(await filas(), 33, 'lista: «Ver más» trae 25 más');
+      eq((await p.textContent('#ver-todas')).trim(), verMas(total - 33), 'lista: y después, las que quedan');
+      ok(await p.$$eval('#ver-todas .nw', (s) => s.length === 2 && s.every((x) => x.getClientRects().length === 1)), 'lista: cada pieza de «Ver más» en un renglón, sin partirse');
       ok(await p.evaluate(() => document.activeElement?.classList.contains('fila')), 'lista: el foco pasa a la primera fila nueva');
       ok(await p.locator('#l-ctl').isVisible(), 'lista: con muchos movimientos salen el buscador y los filtros');
 
@@ -1103,8 +1247,10 @@ try {
       await p.fill('#l-desde', desde);
       await p.waitForTimeout(150);
       const esperadas = compras.filter((c) => c.fecha >= desde).length + traslados.filter((t) => t.fecha >= desde).length;
-      while (await p.locator('#ver-todas').isVisible()) await p.click('#ver-todas');
+      const textosVer = [];
+      while (await p.locator('#ver-todas').isVisible()) { textosVer.push((await p.textContent('#ver-todas')).trim()); await p.click('#ver-todas'); }
       eq(await filas(), esperadas, `rango: desde ${desde} deja ${esperadas} movimientos`);
+      ok(esperadas > 8 && textosVer.at(-1) === verMas(esperadas - 8 - 25 * (textosVer.length - 1)) && /que queda/.test(textosVer.at(-1)), `«Ver más»: el último toque dice que trae las que quedan (${textosVer.join(' | ')})`);
       const saldoAntes = await p.evaluate(() => document.querySelector('#s-sats .sr').textContent);
       eq(saldoAntes, entero(compras.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0)), 'rango: el saldo de arriba sigue siendo el de todo');
       await p.fill('#l-hasta', desde);
@@ -1229,14 +1375,13 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- anotar y datos vivos: compra de siempre, deshacer, mini-cabecera, título, reconexión, actualización, ETag
-  {
+  await bloque(async () => {
     const srv = await servidor('nueve');
     try {
       const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 12 });
-      const aviso = () => p.evaluate(() => document.getElementById('aviso-txt').textContent);
       const esperaAviso = (re) => p.waitForFunction((r) => new RegExp(r).test(document.getElementById('aviso-txt').textContent), re.source, { timeout: 8000 });
       const nCompras = async () => (await datos(p, '/api/compras')).length;
       const inicial = await nCompras();
@@ -1357,10 +1502,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- accesibilidad y teclado: saltar al contenido, índice, atajos, letra grande, alto contraste, foco
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: 1600, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 });
@@ -1491,10 +1636,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- la montaña viva: humo, fogata, huellas, linterna y nieve que crece
-  {
+  await bloque(async () => {
     const medir = (p) => p.evaluate(() => {
       const vis = (el) => getComputedStyle(el).display;
       const camp = [...document.querySelectorAll('.campo')];
@@ -1555,10 +1700,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- banderas con historia, iconos por etapa y bosque (campamento 5, 2/3)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
@@ -1585,7 +1730,7 @@ try {
       ok(info.desc.includes(`un pino por compra (${nCompras})`), 'bosque: la descripción de la montaña lo menciona');
       // Abrir con el ratón y cerrar con «Cerrar» (el foco vuelve a la bandera)
       await p.click('.m-bandera >> nth=-1');
-      let t = await p.evaluate(() => { const c = document.getElementById('m-tarjeta'); return { visible: !c.hidden && getComputedStyle(c).display !== 'none', rol: c.getAttribute('role'), txt: c.innerText, exp: document.querySelector('.m-bandera:last-of-type').getAttribute('aria-expanded'), dentro: (() => { const r = c.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0; })() }; });
+      const t = await p.evaluate(() => { const c = document.getElementById('m-tarjeta'); return { visible: !c.hidden && getComputedStyle(c).display !== 'none', rol: c.getAttribute('role'), txt: c.innerText, exp: document.querySelector('.m-bandera:last-of-type').getAttribute('aria-expanded'), dentro: (() => { const r = c.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0; })() }; });
       ok(t.visible && t.rol === 'group' && /Lo alcanzaste el \d+ \w+ \d{4}/.test(t.txt) && t.exp === 'true' && t.dentro, `bandera: la tarjeta dice cuándo la alcanzaste («${t.txt.replace(/\n+/g, ' · ')}»)`);
       const x = await p.evaluate(() => { const b = document.querySelector('#m-tarjeta .m-tarjeta-x'); return [b.offsetWidth, b.offsetHeight]; }); // sin transformaciones: la tarjeta entra con un ligero zoom
       ok(x[0] >= 47.5 && x[1] >= 47.5, `bandera: «Cerrar» de 48 px (${x})`);
@@ -1633,10 +1778,10 @@ try {
     } finally {
       entrada.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- aurora, lago, acento dorado, cometa y 1 BTC (campamento 5, 3/3)
-  {
+  await bloque(async () => {
     const todos = () => { try { localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } };
     const medir = (p) => p.evaluate(() => {
       const vis = (el) => !!el && getComputedStyle(el).display !== 'none';
@@ -1680,10 +1825,13 @@ try {
       r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
       await r.p.click('#cuenta-btn');
       await r.p.click('#dc-sistema-btn'); await r.p.waitForTimeout(400); // «Probar la celebración» vive en Estado del sistema (campamento 20)
+      await vigilarPiezas(r.p, ['.cometa', '.cometa .cometa-cola']);
       await r.p.click('[data-previa="epico"]');
       await r.p.waitForSelector('.aurora-epica', { timeout: 6000 });
-      const ep = await r.p.evaluate(() => ({ bandas: document.querySelectorAll('.aurora-epica').length, gotas: document.querySelectorAll('.luz-gota').length, cometa: document.querySelectorAll('.cometa').length }));
-      ok(ep.bandas === 3 && ep.gotas === 34 && ep.cometa === 1, `1 BTC: aurora (${ep.bandas}), lluvia de luz (${ep.gotas}) y cometa (${ep.cometa})`);
+      await r.p.waitForFunction(() => window.__piezas['.cometa'] > 0, null, { timeout: 6000 }).catch(() => {});
+      const ep = await r.p.evaluate(() => ({ bandas: document.querySelectorAll('.aurora-epica').length, gotas: document.querySelectorAll('.luz-gota').length }));
+      const cm = await piezasVistas(r.p);
+      ok(ep.bandas === 3 && ep.gotas === 34 && cm['.cometa'] === 1 && cm['.cometa .cometa-cola'] === 1, `1 BTC: aurora (${ep.bandas}), lluvia de luz (${ep.gotas}) y cometa (${JSON.stringify(cm)})`);
       ok(/Llegaste a la cumbre/.test(await r.p.innerText('#hito-cel')) && /1 BTC/.test(await r.p.innerText('#hito-cel')), '1 BTC: su tarjeta propia');
       eq(await r.p.evaluate(() => document.documentElement.dataset.acento), 'naranja', '1 BTC: el acento dorado espera a que acabe la celebración');
       await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'oro', null, { timeout: 8000 });
@@ -1697,9 +1845,12 @@ try {
       r = await entrar(navegador, srv, ADMIN, { hora: 22 }, todos);
       await r.p.click('#cuenta-btn');
       await r.p.click('#dc-sistema-btn'); await r.p.waitForTimeout(400); // «Probar la celebración» vive en Estado del sistema (campamento 20)
+      await vigilarPiezas(r.p, ['.cometa', '.cometa .cometa-cola', '.aurora-epica']);
       await r.p.click('[data-previa="etapa"]');
-      await r.p.waitForSelector('.cometa', { timeout: 6000 });
-      ok(await r.p.evaluate(() => !!document.querySelector('.cometa .cometa-cola') && document.querySelectorAll('.aurora-epica').length === 0), 'cometa: una etapa lo lanza (y no la celebración de 1 BTC)');
+      await r.p.waitForFunction(() => window.__piezas['.cometa'] > 0, null, { timeout: 6000 });
+      await r.p.waitForFunction(() => document.getElementById('hito-cel').hidden === false, null, { timeout: 6000 }).catch(() => {});
+      const ce = await piezasVistas(r.p);
+      ok(ce['.cometa'] === 1 && ce['.cometa .cometa-cola'] === 1 && ce['.aurora-epica'] === 0, `cometa: una etapa lo lanza (y no la celebración de 1 BTC): ${JSON.stringify(ce)}`);
       await r.ctx.close();
     } finally {
       srv.parar();
@@ -1731,10 +1882,10 @@ try {
     } finally {
       hoy.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- suelo, leyenda plegable, altímetro, favicon con luna y curvas (campamento 10, 1/6)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const claro = () => { try { localStorage.setItem('libro.tema', 'claro'); localStorage.setItem('libro.efectos', 'ninguno'); } catch { /* sin almacenamiento */ } };
@@ -1769,10 +1920,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- identidad: iconos, avatares, estados vacíos y entrada viva (campamento 6, 1/3)
-  {
+  await bloque(async () => {
     const srv = await servidor('mil');
     try {
       const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 22 });
@@ -1866,10 +2017,10 @@ try {
     } finally {
       ent.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- la montaña sigue a la caja (también en alto) y el índice lateral se lee
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const ctx = await navegador.newContext({ viewport: { width: 1983, height: 967 } });
@@ -1918,10 +2069,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- Tu historia, medallas y qué hay de nuevo (campamento 6, 2/3)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const { ctx, p, consola } = await entrar(navegador, srv, ADMIN, { hora: 22 }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
@@ -2008,10 +2159,10 @@ try {
     } finally {
       vac.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- modo pantalla grande, sonido al guardar y guía de estilo (campamento 6, 3/3)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
@@ -2118,193 +2269,195 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- mil compras (la app después de mucho uso)
-  const mil = await servidor('mil');
-  try {
-    const { ctx, p, consola } = await entrar(navegador, mil, ADMIN);
-    const compras = await datos(p, '/api/compras');
-    ok(compras.length >= 1000, `el escenario trae mil compras o más (${compras.length})`);
-    const satsMil = compras.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
-    const sm = await saldo(p);
-    eq(sm.txt, entero(satsMil), 'con mil compras el saldo es el real');
-    ok(sm.w > 0 && sm.h > 0, 'con mil compras el saldo se ve');
-    const nodos = await p.evaluate(() => document.getElementsByTagName('*').length);
-    // Tope 3350: el HTML fijo suma ~50 nodos del diálogo «Medir este aparato» (campamento 24) y ~220 del valle (campamentos 22 y 22C); lo que importa es que no crezca con las compras.
-    ok(nodos < 3350, `el DOM no crece con las compras (${nodos} nodos)`);
-    await p.waitForSelector('.g-linea', { timeout: 15000 });
-    await verVista(p, 'valor');
-    ok(await p.locator('#valor').isVisible(), 'con mil compras sale el gráfico de valor');
-    // Vistas nuevas: costo promedio y sats acumulados
-    await verVista(p, 'costo');
-    const cp = await p.evaluate(() => ({ visible: !document.getElementById('costo-prom').hidden, mercado: getComputedStyle(document.getElementById('mercado')).display, svg: !!document.querySelector('#c-lienzo .s-linea'), puntos: document.querySelectorAll('#c-lienzo .s-puntos').length,
-      defecto: document.getElementById('c-lectura').textContent, mov: document.getElementById('c-mov').textContent, vista: document.querySelector('.cuerpo').dataset.vista, guardada: localStorage.getItem('libro.grafico.vista') }));
-    ok(cp.visible && cp.mercado === 'none' && cp.svg && cp.vista === 'costo' && cp.guardada === 'costo', 'la vista «Costo» enseña el costo promedio y esconde el precio; se recuerda');
-    ok(/^Tu costo promedio empezó en \$[\d,]+ y hoy es \$[\d,]+ \([+−]?\d+\.\d%\)\.$/.test(cp.defecto) && /^Las compras que más lo movieron: .+\(/.test(cp.mov), `costo promedio: «${cp.defecto}» · «${cp.mov.slice(0, 60)}…»`);
-    const cc = await p.locator('#c-lienzo').boundingBox();
-    await p.evaluate(() => document.getElementById('c-lienzo').scrollIntoView({ block: 'center' }));
-    const cc2 = await p.locator('#c-lienzo').boundingBox();
-    await p.mouse.move(cc2.x + cc2.width * 0.5, cc2.y + cc2.height * 0.5); await p.waitForTimeout(200);
-    ok(/costo promedio \$[\d,]+/.test(await p.textContent('#c-lectura')), 'al recorrer el gráfico del costo se lee cada compra');
-    await p.mouse.move(5, 5);
-    await p.focus('#c-lienzo'); await p.keyboard.press('Home');
-    ok(/primera compra/.test(await p.textContent('#c-sr')) && /primera compra/.test(await p.textContent('#c-lectura')), 'con el teclado (Inicio) se lee la primera compra y se anuncia');
-    void cc;
-    await verVista(p, 'sats');
-    const sa = await p.evaluate(() => ({ visible: !document.getElementById('sats-acum').hidden, svg: !!document.querySelector('#s-lienzo .s-linea'), area: !!document.querySelector('#s-lienzo .s-area'), defecto: document.getElementById('s-lectura').textContent }));
-    ok(sa.visible && sa.svg && sa.area, 'la vista «Sats» enseña la escalera de tus sats');
-    eq(sa.defecto, `Hoy tienes ${entero(satsMil)} sats.`, 'la escalera dice los mismos sats que el saldo');
-    await p.evaluate(() => document.getElementById('s-lienzo').scrollIntoView({ block: 'center' }));
-    // Con el desplazamiento suave la caja se mueve un rato: se espera a que la página quede quieta antes de apuntar con el ratón
-    await p.evaluate(() => new Promise((listo) => { let ultimo = -1, quietos = 0; const t = () => { if (scrollY === ultimo) { if (++quietos >= 5) return listo(); } else { quietos = 0; ultimo = scrollY; } requestAnimationFrame(t); }; t(); }));
-    const sb = await p.locator('#s-lienzo').boundingBox();
-    await p.mouse.move(sb.x + sb.width * 0.4, sb.y + sb.height * 0.5);
-    await p.mouse.move(sb.x + sb.width * 0.42, sb.y + sb.height * 0.5);
-    await p.waitForFunction(() => /sats · .* en total/.test(document.getElementById('s-lectura').textContent), null, { timeout: 4000 }).catch(() => {}); // sin espera fija: bajo carga tarda más
-    ok(/sats · .* en total/.test(await p.textContent('#s-lectura')), 'al recorrer la escalera se lee cuánto sumó cada movimiento');
-    await p.mouse.move(5, 5);
-    await verVista(p, 'precio');
-    // Dibujo del precio: anillos de extras, máximo de 30 días (hay gran caída), degradado, zona entre precio y costo, bandas y leyenda.
-    await p.click('#rangos button[data-r="0"]');
-    await p.waitForTimeout(700);
-    const dib = await p.evaluate(() => {
-      const q = (s) => document.querySelectorAll(`#lienzo ${s}`).length;
-      const ley = (c) => !document.querySelector(`.mercado .leyenda ${c}`).hidden;
-      return { extras: q('.g-extras'), max: q('.g-max'), maxTxt: document.querySelector('#lienzo .g-max-t')?.textContent, trend: q('#g-trend stop'), zonaG: q('.g-zona-g'), zonaP: q('.g-zona-p'),
-        bandas: q('.g-banda'), stroke: getComputedStyle(document.querySelector('#lienzo .g-linea')).stroke, leyX: ley('.k-x'), leyG: ley('.k-g'), leyL: ley('.k-l'), leyM: ley('.k-m'), leyB: ley('.k-b') };
-    });
-    ok(dib.extras === 1 && dib.leyX, 'con compras extra el gráfico las rodea con un anillo y la leyenda lo explica');
-    ok(dib.max === 1 && /^Máx\. 30 días \$[\d,]+$/.test(dib.maxTxt) && dib.leyM, `con gran caída, el máximo de 30 días ${dib.maxTxt}`);
-    ok(dib.trend === 13 && /url\(/.test(dib.stroke), 'la línea usa el degradado de tendencia');
-    ok(dib.zonaG === 1 && dib.zonaP === 1 && dib.leyG && dib.leyL, 'zona entre el precio y tu costo: lisa a favor, a rayas en contra');
-    ok(dib.bandas >= 1 && dib.leyB, `bandas de caída fuerte (${dib.bandas})`);
-    // Al cambiar de rango el dibujo anterior se desvanece y se retira solo; sin cambio de rango no hay transición.
-    await p.click('#rangos button[data-r="182"]');
-    await p.waitForTimeout(80);
-    ok(await p.locator('#lienzo .g-sale').count() === 1 && await p.locator('#lienzo .g-entra').count() === 1, 'al cambiar de rango se funde el dibujo anterior con el nuevo');
-    await p.waitForTimeout(700);
-    ok(await p.locator('#lienzo .g-sale').count() === 0 && await p.locator('#lienzo svg').count() === 1, 'el dibujo anterior se retira solo');
-    await p.evaluate(() => window.libroEfectos.fijar('ninguno'));
-    await p.click('#rangos button[data-r="365"]');
-    await p.waitForTimeout(80);
-    ok(await p.locator('#lienzo .g-sale').count() === 0, 'sin movimiento no hay fundido');
-    await p.evaluate(() => window.libroEfectos.fijar('auto'));
-    // ---- Leer el gráfico: tarjeta flotante, tocar una compra, teclado, leyenda interactiva, escala logarítmica y pantalla completa.
-    await p.click('#rangos button[data-r="182"]');
-    await p.evaluate(() => document.getElementById('lienzo').scrollIntoView({ block: 'center' })); // el ratón solo actúa dentro de la pantalla
-    await p.waitForTimeout(700);
-    const caja = async (sel) => p.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }, sel);
-    // Dónde está (en pantalla) la primera compra dibujada: el primer subtrazado de `.g-compras` empieza en (cx − r, cy).
-    const primeraCompra = async (host = '#lienzo') => p.evaluate((h) => {
-      const svg = document.querySelector(`${h} svg`), d = svg.querySelector('.g-compras').getAttribute('d');
-      const m = /^M([\d.]+) ([\d.]+)a([\d.]+)/.exec(d), r = svg.getBoundingClientRect();
-      return { x: r.left + Number(m[1]) + Number(m[3]), y: r.top + Number(m[2]) };
-    }, host);
-    let lc = await caja('#lienzo');
-    await p.mouse.move(lc.x + lc.w * 0.5, lc.y + lc.h * 0.5);
-    await p.waitForTimeout(150);
-    const flot = await p.evaluate(() => { const t = document.getElementById('g-tarjeta'); return { vis: !t.hidden, modo: t.dataset.modo, txt: t.innerText, eventos: getComputedStyle(t).pointerEvents, oculta: t.getAttribute('aria-hidden') }; });
-    ok(flot.vis && flot.modo === 'lectura' && /BTC \$[\d,]+/.test(flot.txt) && flot.eventos === 'none' && flot.oculta === 'true', `tarjeta flotante al recorrer el gráfico: «${flot.txt.replace(/\s+/g, ' ').slice(0, 60)}»`);
-    await p.mouse.move(5, 5);
-    await p.waitForTimeout(150);
-    ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'al salir del gráfico la tarjeta se va');
-    // Tocar una compra la fija, con sus datos, «Editar» (admin) y «Cerrar»
-    const pc = await primeraCompra();
-    await p.mouse.click(pc.x, pc.y);
-    await p.waitForTimeout(200);
-    const fija = await p.evaluate(() => { const t = document.getElementById('g-tarjeta'); return { vis: !t.hidden, modo: t.dataset.modo, role: t.getAttribute('role'), txt: t.innerText.replace(/\s+/g, ' '), editar: !t.querySelector('.gt-editar').hidden, sr: document.getElementById('g-sr').textContent }; });
-    ok(fija.vis && fija.modo === 'fija' && fija.role === 'group' && /^(Compra|Compra extra|Venta o gasto) · /.test(fija.txt) && /[+−][\d,]+ sats/.test(fija.txt) && fija.editar, `tocar un punto fija su compra: «${fija.txt.slice(0, 90)}»`);
-    ok(fija.sr.length > 20, 'y se anuncia a los lectores de pantalla');
-    const botones = await p.evaluate(() => [...document.querySelectorAll('#g-tarjeta .gt-acciones button:not([hidden])')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
-    ok(botones.length === 2 && botones.every(([w, h]) => w >= 44 && h >= 44), `Editar y Cerrar con zona de toque de 44 px (${JSON.stringify(botones)})`);
-    // Cerrar con el botón, con Esc, y tocando en otro sitio
-    await p.click('#g-tarjeta .gt-cerrar');
-    ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), '«Cerrar» quita la tarjeta fija');
-    await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
-    await p.keyboard.press('Escape'); await p.waitForTimeout(150);
-    ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'Esc quita la tarjeta fija');
-    await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
-    lc = await caja('#lienzo');
-    await p.mouse.click(lc.x + lc.w - 3, lc.y + 8); await p.waitForTimeout(150);
-    ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'tocar en otro sitio del gráfico quita la tarjeta fija');
-    // «Editar» abre esa compra en la hoja
-    await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
-    await p.click('#g-tarjeta .gt-editar');
-    await p.waitForTimeout(500);
-    ok(await p.evaluate(() => document.getElementById('hoja').hidden === false && /Editar/i.test(document.getElementById('h-titulo')?.textContent ?? 'Editar')), '«Editar» abre la compra en la hoja');
-    await p.keyboard.press('Escape'); await p.waitForTimeout(500);
-    // Con teclado: flechas para recorrer y Intro para fijar la compra de ese día (si la hay)
-    await p.focus('#lienzo');
-    await p.keyboard.press('End');
-    let fijadaTeclado = false;
-    for (let k = 0; k < 120 && !fijadaTeclado; k++) {
-      await p.keyboard.press('ArrowLeft');
-      await p.keyboard.press('Enter');
-      fijadaTeclado = await p.evaluate(() => document.getElementById('g-tarjeta').dataset.modo === 'fija');
+  await bloque(async () => {
+    const mil = await servidor('mil');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, mil, ADMIN);
+      const compras = await datos(p, '/api/compras');
+      ok(compras.length >= 1000, `el escenario trae mil compras o más (${compras.length})`);
+      const satsMil = compras.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0);
+      const sm = await saldo(p);
+      eq(sm.txt, entero(satsMil), 'con mil compras el saldo es el real');
+      ok(sm.w > 0 && sm.h > 0, 'con mil compras el saldo se ve');
+      const nodos = await p.evaluate(() => document.getElementsByTagName('*').length);
+      // Tope 3350: el HTML fijo suma ~50 nodos del diálogo «Medir este aparato» (campamento 24) y ~220 del valle (campamentos 22 y 22C); lo que importa es que no crezca con las compras.
+      ok(nodos < 3350, `el DOM no crece con las compras (${nodos} nodos)`);
+      await p.waitForSelector('.g-linea', { timeout: 15000 });
+      await verVista(p, 'valor');
+      ok(await p.locator('#valor').isVisible(), 'con mil compras sale el gráfico de valor');
+      // Vistas nuevas: costo promedio y sats acumulados
+      await verVista(p, 'costo');
+      const cp = await p.evaluate(() => ({ visible: !document.getElementById('costo-prom').hidden, mercado: getComputedStyle(document.getElementById('mercado')).display, svg: !!document.querySelector('#c-lienzo .s-linea'), puntos: document.querySelectorAll('#c-lienzo .s-puntos').length,
+        defecto: document.getElementById('c-lectura').textContent, mov: document.getElementById('c-mov').textContent, vista: document.querySelector('.cuerpo').dataset.vista, guardada: localStorage.getItem('libro.grafico.vista') }));
+      ok(cp.visible && cp.mercado === 'none' && cp.svg && cp.vista === 'costo' && cp.guardada === 'costo', 'la vista «Costo» enseña el costo promedio y esconde el precio; se recuerda');
+      ok(/^Tu costo promedio empezó en \$[\d,]+ y hoy es \$[\d,]+ \([+−]?\d+\.\d%\)\.$/.test(cp.defecto) && /^Las compras que más lo movieron: .+\(/.test(cp.mov), `costo promedio: «${cp.defecto}» · «${cp.mov.slice(0, 60)}…»`);
+      const cc = await p.locator('#c-lienzo').boundingBox();
+      await p.evaluate(() => document.getElementById('c-lienzo').scrollIntoView({ block: 'center' }));
+      const cc2 = await p.locator('#c-lienzo').boundingBox();
+      await p.mouse.move(cc2.x + cc2.width * 0.5, cc2.y + cc2.height * 0.5); await p.waitForTimeout(200);
+      ok(/costo promedio \$[\d,]+/.test(await p.textContent('#c-lectura')), 'al recorrer el gráfico del costo se lee cada compra');
+      await p.mouse.move(5, 5);
+      await p.focus('#c-lienzo'); await p.keyboard.press('Home');
+      ok(/primera compra/.test(await p.textContent('#c-sr')) && /primera compra/.test(await p.textContent('#c-lectura')), 'con el teclado (Inicio) se lee la primera compra y se anuncia');
+      void cc;
+      await verVista(p, 'sats');
+      const sa = await p.evaluate(() => ({ visible: !document.getElementById('sats-acum').hidden, svg: !!document.querySelector('#s-lienzo .s-linea'), area: !!document.querySelector('#s-lienzo .s-area'), defecto: document.getElementById('s-lectura').textContent }));
+      ok(sa.visible && sa.svg && sa.area, 'la vista «Sats» enseña la escalera de tus sats');
+      eq(sa.defecto, `Hoy tienes ${entero(satsMil)} sats.`, 'la escalera dice los mismos sats que el saldo');
+      await p.evaluate(() => document.getElementById('s-lienzo').scrollIntoView({ block: 'center' }));
+      // Con el desplazamiento suave la caja se mueve un rato: se espera a que la página quede quieta antes de apuntar con el ratón
+      await p.evaluate(() => new Promise((listo) => { let ultimo = -1, quietos = 0; const t = () => { if (scrollY === ultimo) { if (++quietos >= 5) return listo(); } else { quietos = 0; ultimo = scrollY; } requestAnimationFrame(t); }; t(); }));
+      const sb = await p.locator('#s-lienzo').boundingBox();
+      await p.mouse.move(sb.x + sb.width * 0.4, sb.y + sb.height * 0.5);
+      await p.mouse.move(sb.x + sb.width * 0.42, sb.y + sb.height * 0.5);
+      await p.waitForFunction(() => /sats · .* en total/.test(document.getElementById('s-lectura').textContent), null, { timeout: 4000 }).catch(() => {}); // sin espera fija: bajo carga tarda más
+      ok(/sats · .* en total/.test(await p.textContent('#s-lectura')), 'al recorrer la escalera se lee cuánto sumó cada movimiento');
+      await p.mouse.move(5, 5);
+      await verVista(p, 'precio');
+      // Dibujo del precio: anillos de extras, máximo de 30 días (hay gran caída), degradado, zona entre precio y costo, bandas y leyenda.
+      await p.click('#rangos button[data-r="0"]');
+      await p.waitForTimeout(700);
+      const dib = await p.evaluate(() => {
+        const q = (s) => document.querySelectorAll(`#lienzo ${s}`).length;
+        const ley = (c) => !document.querySelector(`.mercado .leyenda ${c}`).hidden;
+        return { extras: q('.g-extras'), max: q('.g-max'), maxTxt: document.querySelector('#lienzo .g-max-t')?.textContent, trend: q('#g-trend stop'), zonaG: q('.g-zona-g'), zonaP: q('.g-zona-p'),
+          bandas: q('.g-banda'), stroke: getComputedStyle(document.querySelector('#lienzo .g-linea')).stroke, leyX: ley('.k-x'), leyG: ley('.k-g'), leyL: ley('.k-l'), leyM: ley('.k-m'), leyB: ley('.k-b') };
+      });
+      ok(dib.extras === 1 && dib.leyX, 'con compras extra el gráfico las rodea con un anillo y la leyenda lo explica');
+      ok(dib.max === 1 && /^Máx\. 30 días \$[\d,]+$/.test(dib.maxTxt) && dib.leyM, `con gran caída, el máximo de 30 días ${dib.maxTxt}`);
+      ok(dib.trend === 13 && /url\(/.test(dib.stroke), 'la línea usa el degradado de tendencia');
+      ok(dib.zonaG === 1 && dib.zonaP === 1 && dib.leyG && dib.leyL, 'zona entre el precio y tu costo: lisa a favor, a rayas en contra');
+      ok(dib.bandas >= 1 && dib.leyB, `bandas de caída fuerte (${dib.bandas})`);
+      // Al cambiar de rango el dibujo anterior se desvanece y se retira solo; sin cambio de rango no hay transición.
+      await p.click('#rangos button[data-r="182"]');
+      await p.waitForTimeout(80);
+      ok(await p.locator('#lienzo .g-sale').count() === 1 && await p.locator('#lienzo .g-entra').count() === 1, 'al cambiar de rango se funde el dibujo anterior con el nuevo');
+      await p.waitForTimeout(700);
+      ok(await p.locator('#lienzo .g-sale').count() === 0 && await p.locator('#lienzo svg').count() === 1, 'el dibujo anterior se retira solo');
+      await p.evaluate(() => window.libroEfectos.fijar('ninguno'));
+      await p.click('#rangos button[data-r="365"]');
+      await p.waitForTimeout(80);
+      ok(await p.locator('#lienzo .g-sale').count() === 0, 'sin movimiento no hay fundido');
+      await p.evaluate(() => window.libroEfectos.fijar('auto'));
+      // ---- Leer el gráfico: tarjeta flotante, tocar una compra, teclado, leyenda interactiva, escala logarítmica y pantalla completa.
+      await p.click('#rangos button[data-r="182"]');
+      await p.evaluate(() => document.getElementById('lienzo').scrollIntoView({ block: 'center' })); // el ratón solo actúa dentro de la pantalla
+      await p.waitForTimeout(700);
+      const caja = async (sel) => p.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }, sel);
+      // Dónde está (en pantalla) la primera compra dibujada: el primer subtrazado de `.g-compras` empieza en (cx − r, cy).
+      const primeraCompra = async (host = '#lienzo') => p.evaluate((h) => {
+        const svg = document.querySelector(`${h} svg`), d = svg.querySelector('.g-compras').getAttribute('d');
+        const m = /^M([\d.]+) ([\d.]+)a([\d.]+)/.exec(d), r = svg.getBoundingClientRect();
+        return { x: r.left + Number(m[1]) + Number(m[3]), y: r.top + Number(m[2]) };
+      }, host);
+      let lc = await caja('#lienzo');
+      await p.mouse.move(lc.x + lc.w * 0.5, lc.y + lc.h * 0.5);
+      await p.waitForTimeout(150);
+      const flot = await p.evaluate(() => { const t = document.getElementById('g-tarjeta'); return { vis: !t.hidden, modo: t.dataset.modo, txt: t.innerText, eventos: getComputedStyle(t).pointerEvents, oculta: t.getAttribute('aria-hidden') }; });
+      ok(flot.vis && flot.modo === 'lectura' && /BTC \$[\d,]+/.test(flot.txt) && flot.eventos === 'none' && flot.oculta === 'true', `tarjeta flotante al recorrer el gráfico: «${flot.txt.replace(/\s+/g, ' ').slice(0, 60)}»`);
+      await p.mouse.move(5, 5);
+      await p.waitForTimeout(150);
+      ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'al salir del gráfico la tarjeta se va');
+      // Tocar una compra la fija, con sus datos, «Editar» (admin) y «Cerrar»
+      const pc = await primeraCompra();
+      await p.mouse.click(pc.x, pc.y);
+      await p.waitForTimeout(200);
+      const fija = await p.evaluate(() => { const t = document.getElementById('g-tarjeta'); return { vis: !t.hidden, modo: t.dataset.modo, role: t.getAttribute('role'), txt: t.innerText.replace(/\s+/g, ' '), editar: !t.querySelector('.gt-editar').hidden, sr: document.getElementById('g-sr').textContent }; });
+      ok(fija.vis && fija.modo === 'fija' && fija.role === 'group' && /^(Compra|Compra extra|Venta o gasto) · /.test(fija.txt) && /[+−][\d,]+ sats/.test(fija.txt) && fija.editar, `tocar un punto fija su compra: «${fija.txt.slice(0, 90)}»`);
+      ok(fija.sr.length > 20, 'y se anuncia a los lectores de pantalla');
+      const botones = await p.evaluate(() => [...document.querySelectorAll('#g-tarjeta .gt-acciones button:not([hidden])')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
+      ok(botones.length === 2 && botones.every(([w, h]) => w >= 44 && h >= 44), `Editar y Cerrar con zona de toque de 44 px (${JSON.stringify(botones)})`);
+      // Cerrar con el botón, con Esc, y tocando en otro sitio
+      await p.click('#g-tarjeta .gt-cerrar');
+      ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), '«Cerrar» quita la tarjeta fija');
+      await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+      ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'Esc quita la tarjeta fija');
+      await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
+      lc = await caja('#lienzo');
+      await p.mouse.click(lc.x + lc.w - 3, lc.y + 8); await p.waitForTimeout(150);
+      ok(await p.evaluate(() => document.getElementById('g-tarjeta').hidden), 'tocar en otro sitio del gráfico quita la tarjeta fija');
+      // «Editar» abre esa compra en la hoja
+      await p.mouse.click(pc.x, pc.y); await p.waitForTimeout(150);
+      await p.click('#g-tarjeta .gt-editar');
+      await p.waitForTimeout(500);
+      ok(await p.evaluate(() => document.getElementById('hoja').hidden === false && /Editar/i.test(document.getElementById('h-titulo')?.textContent ?? 'Editar')), '«Editar» abre la compra en la hoja');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+      // Con teclado: flechas para recorrer y Intro para fijar la compra de ese día (si la hay)
+      await p.focus('#lienzo');
+      await p.keyboard.press('End');
+      let fijadaTeclado = false;
+      for (let k = 0; k < 120 && !fijadaTeclado; k++) {
+        await p.keyboard.press('ArrowLeft');
+        await p.keyboard.press('Enter');
+        fijadaTeclado = await p.evaluate(() => document.getElementById('g-tarjeta').dataset.modo === 'fija');
+      }
+      ok(fijadaTeclado, 'con el teclado: flechas para recorrer e Intro para fijar la compra de ese día');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(100);
+      // Leyenda interactiva: ocultar series y que siempre quede una a la vista
+      const oculto = (cls) => p.evaluate((c) => getComputedStyle(document.querySelector(`#lienzo ${c}`)).display === 'none', cls);
+      await p.evaluate(() => { document.getElementById('ley-det').open = true; }); // en el teléfono la leyenda empieza plegada
+      await p.click('.leyenda button[data-serie="compras"]');
+      eq([await p.getAttribute('.leyenda button[data-serie="compras"]', 'aria-pressed'), await oculto('.g-compras'), await p.evaluate(() => document.getElementById('lienzo').dataset.ocultas)], ['false', true, 'compras'], 'la leyenda oculta las compras');
+      await p.click('.leyenda button[data-serie="precio"]');
+      eq([await oculto('.g-linea'), await oculto('.g-prom-tag')], [true, false], 'y también el precio, pero el costo sigue a la vista');
+      await p.click('.leyenda button[data-serie="costo"]');
+      eq([await p.getAttribute('.leyenda button[data-serie="costo"]', 'aria-pressed'), await oculto('.g-prom-tag')], ['true', false], 'la última línea no se puede ocultar: siempre queda al menos una');
+      ok(await p.evaluate(() => (localStorage.getItem('libro.grafico.ocultas') ?? '').split(',').sort().join()) === 'compras,precio', 'lo oculto se recuerda en el dispositivo');
+      const alto = await p.evaluate(() => [...document.querySelectorAll('.leyenda button:not([hidden])')].every((b) => b.getBoundingClientRect().height >= 44));
+      ok(alto, 'los botones de la leyenda miden al menos 44 px');
+      await p.click('.leyenda button[data-serie="precio"]');
+      await p.click('.leyenda button[data-serie="compras"]');
+      eq(await p.evaluate(() => document.getElementById('lienzo').dataset.ocultas), '', 'volver a tocar los muestra otra vez');
+      // Escala logarítmica: solo con «Todo»
+      ok(await p.locator('#g-log').isHidden(), 'la escala logarítmica no se ofrece con 6M');
+      await p.click('#rangos button[data-r="0"]'); await p.waitForTimeout(500);
+      const yLineal = await p.evaluate(() => document.querySelector('#lienzo .g-linea').getAttribute('d').slice(0, 60));
+      const escala = () => p.evaluate(() => document.querySelector('#lienzo .g-escala')?.textContent ?? ''); // con más de 150 compras dice además «un punto por mes» (campamento 20)
+      ok(await p.locator('#g-log').isVisible() && !/logarítmica/.test(await escala()), 'con «Todo» se ofrece la escala logarítmica (apagada)');
+      await p.click('#g-log'); await p.waitForTimeout(500);
+      const yLog = await p.evaluate(() => document.querySelector('#lienzo .g-linea').getAttribute('d').slice(0, 60));
+      ok(yLineal !== yLog && await p.getAttribute('#g-log', 'aria-pressed') === 'true' && /^Escala logarítmica( · un punto por mes)?$/.test(await escala()), 'la escala logarítmica cambia el dibujo y lo dice con una etiqueta');
+      eq(await p.evaluate(() => localStorage.getItem('libro.grafico.log')), '1', 'y se recuerda');
+      await p.click('#g-log'); await p.waitForTimeout(300);
+      ok(!/logarítmica/.test(await escala()), 'se vuelve a lineal');
+      // Pantalla completa
+      await p.click('#g-ampliar'); await p.waitForTimeout(700);
+      const pant = await p.evaluate(() => { const d = document.getElementById('d-grafico'), l = document.getElementById('dg-lienzo'), s = l.querySelector('svg'); return { abierto: d.open, w: d.getBoundingClientRect().width, vw: innerWidth, hs: s ? s.getBoundingClientRect().height : 0, hl: l.clientHeight, linea: !!l.querySelector('.g-linea') }; });
+      ok(pant.abierto && Math.abs(pant.w - pant.vw) < 2 && pant.linea && pant.hs > 300 && Math.abs(pant.hs - pant.hl) < 4, `el gráfico a pantalla completa ocupa el alto disponible (${Math.round(pant.hs)} px de ${pant.hl})`);
+      const cerrar = await caja('#dg-cerrar');
+      ok(cerrar.w >= 44 && cerrar.h >= 44, `el botón de cerrar es grande (${Math.round(cerrar.w)}×${Math.round(cerrar.h)})`);
+      const pcg = await primeraCompra('#dg-lienzo');
+      await p.mouse.click(pcg.x, pcg.y); await p.waitForTimeout(200);
+      ok(await p.evaluate(() => document.getElementById('dg-tarjeta').dataset.modo === 'fija'), 'a pantalla completa también se puede tocar una compra');
+      await p.click('#dg-rangos button[data-r="365"]'); await p.waitForTimeout(500);
+      eq(await p.getAttribute('#rangos button[data-r="365"]', 'aria-pressed'), 'true', 'el rango se cambia también desde la pantalla completa');
+      await p.keyboard.press('Escape'); await p.waitForTimeout(100);
+      await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+      ok(await p.evaluate(() => !document.getElementById('d-grafico').open), 'Esc cierra la pantalla completa');
+      await p.click('#g-ampliar'); await p.waitForTimeout(400);
+      await p.click('#dg-cerrar'); await p.waitForTimeout(300);
+      ok(await p.evaluate(() => !document.getElementById('d-grafico').open), 'el botón Cerrar también');
+      eq(consola.filter((c) => !/503/.test(c)), [], `con mil compras la consola queda limpia: ${consola.join(' | ')}`);
+      await ctx.close();
+      // El lector ve el gráfico con sus bandas y zonas, pero no el máximo de 30 días (va con la tarjeta de gran caída, que es del admin).
+      const lec = await entrar(navegador, mil, LECTOR);
+      await lec.p.waitForSelector('#lienzo .g-linea', { timeout: 15000 });
+      if (await lec.p.locator('#nov-ok').isVisible()) { await lec.p.click('#nov-ok'); await lec.p.waitForTimeout(400); } // la bienvenida del lector
+      await lec.p.click('#rangos button[data-r="0"]');
+      await lec.p.waitForTimeout(500);
+      eq(await lec.p.evaluate(() => [document.querySelectorAll('#lienzo .g-max').length, document.querySelectorAll('#lienzo .g-banda').length > 0, document.querySelectorAll('#lienzo .g-extras').length]), [0, true, 1], 'el lector no ve el máximo de 30 días pero sí las bandas y los anillos');
+      await lec.ctx.close();
+    } finally {
+      mil.parar();
     }
-    ok(fijadaTeclado, 'con el teclado: flechas para recorrer e Intro para fijar la compra de ese día');
-    await p.keyboard.press('Escape'); await p.waitForTimeout(100);
-    // Leyenda interactiva: ocultar series y que siempre quede una a la vista
-    const oculto = (cls) => p.evaluate((c) => getComputedStyle(document.querySelector(`#lienzo ${c}`)).display === 'none', cls);
-    await p.evaluate(() => { document.getElementById('ley-det').open = true; }); // en el teléfono la leyenda empieza plegada
-    await p.click('.leyenda button[data-serie="compras"]');
-    eq([await p.getAttribute('.leyenda button[data-serie="compras"]', 'aria-pressed'), await oculto('.g-compras'), await p.evaluate(() => document.getElementById('lienzo').dataset.ocultas)], ['false', true, 'compras'], 'la leyenda oculta las compras');
-    await p.click('.leyenda button[data-serie="precio"]');
-    eq([await oculto('.g-linea'), await oculto('.g-prom-tag')], [true, false], 'y también el precio, pero el costo sigue a la vista');
-    await p.click('.leyenda button[data-serie="costo"]');
-    eq([await p.getAttribute('.leyenda button[data-serie="costo"]', 'aria-pressed'), await oculto('.g-prom-tag')], ['true', false], 'la última línea no se puede ocultar: siempre queda al menos una');
-    ok(await p.evaluate(() => (localStorage.getItem('libro.grafico.ocultas') ?? '').split(',').sort().join()) === 'compras,precio', 'lo oculto se recuerda en el dispositivo');
-    const alto = await p.evaluate(() => [...document.querySelectorAll('.leyenda button:not([hidden])')].every((b) => b.getBoundingClientRect().height >= 44));
-    ok(alto, 'los botones de la leyenda miden al menos 44 px');
-    await p.click('.leyenda button[data-serie="precio"]');
-    await p.click('.leyenda button[data-serie="compras"]');
-    eq(await p.evaluate(() => document.getElementById('lienzo').dataset.ocultas), '', 'volver a tocar los muestra otra vez');
-    // Escala logarítmica: solo con «Todo»
-    ok(await p.locator('#g-log').isHidden(), 'la escala logarítmica no se ofrece con 6M');
-    await p.click('#rangos button[data-r="0"]'); await p.waitForTimeout(500);
-    const yLineal = await p.evaluate(() => document.querySelector('#lienzo .g-linea').getAttribute('d').slice(0, 60));
-    const escala = () => p.evaluate(() => document.querySelector('#lienzo .g-escala')?.textContent ?? ''); // con más de 150 compras dice además «un punto por mes» (campamento 20)
-    ok(await p.locator('#g-log').isVisible() && !/logarítmica/.test(await escala()), 'con «Todo» se ofrece la escala logarítmica (apagada)');
-    await p.click('#g-log'); await p.waitForTimeout(500);
-    const yLog = await p.evaluate(() => document.querySelector('#lienzo .g-linea').getAttribute('d').slice(0, 60));
-    ok(yLineal !== yLog && await p.getAttribute('#g-log', 'aria-pressed') === 'true' && /^Escala logarítmica( · un punto por mes)?$/.test(await escala()), 'la escala logarítmica cambia el dibujo y lo dice con una etiqueta');
-    eq(await p.evaluate(() => localStorage.getItem('libro.grafico.log')), '1', 'y se recuerda');
-    await p.click('#g-log'); await p.waitForTimeout(300);
-    ok(!/logarítmica/.test(await escala()), 'se vuelve a lineal');
-    // Pantalla completa
-    await p.click('#g-ampliar'); await p.waitForTimeout(700);
-    const pant = await p.evaluate(() => { const d = document.getElementById('d-grafico'), l = document.getElementById('dg-lienzo'), s = l.querySelector('svg'); return { abierto: d.open, w: d.getBoundingClientRect().width, vw: innerWidth, hs: s ? s.getBoundingClientRect().height : 0, hl: l.clientHeight, linea: !!l.querySelector('.g-linea') }; });
-    ok(pant.abierto && Math.abs(pant.w - pant.vw) < 2 && pant.linea && pant.hs > 300 && Math.abs(pant.hs - pant.hl) < 4, `el gráfico a pantalla completa ocupa el alto disponible (${Math.round(pant.hs)} px de ${pant.hl})`);
-    const cerrar = await caja('#dg-cerrar');
-    ok(cerrar.w >= 44 && cerrar.h >= 44, `el botón de cerrar es grande (${Math.round(cerrar.w)}×${Math.round(cerrar.h)})`);
-    const pcg = await primeraCompra('#dg-lienzo');
-    await p.mouse.click(pcg.x, pcg.y); await p.waitForTimeout(200);
-    ok(await p.evaluate(() => document.getElementById('dg-tarjeta').dataset.modo === 'fija'), 'a pantalla completa también se puede tocar una compra');
-    await p.click('#dg-rangos button[data-r="365"]'); await p.waitForTimeout(500);
-    eq(await p.getAttribute('#rangos button[data-r="365"]', 'aria-pressed'), 'true', 'el rango se cambia también desde la pantalla completa');
-    await p.keyboard.press('Escape'); await p.waitForTimeout(100);
-    await p.keyboard.press('Escape'); await p.waitForTimeout(300);
-    ok(await p.evaluate(() => !document.getElementById('d-grafico').open), 'Esc cierra la pantalla completa');
-    await p.click('#g-ampliar'); await p.waitForTimeout(400);
-    await p.click('#dg-cerrar'); await p.waitForTimeout(300);
-    ok(await p.evaluate(() => !document.getElementById('d-grafico').open), 'el botón Cerrar también');
-    eq(consola.filter((c) => !/503/.test(c)), [], `con mil compras la consola queda limpia: ${consola.join(' | ')}`);
-    await ctx.close();
-    // El lector ve el gráfico con sus bandas y zonas, pero no el máximo de 30 días (va con la tarjeta de gran caída, que es del admin).
-    const lec = await entrar(navegador, mil, LECTOR);
-    await lec.p.waitForSelector('#lienzo .g-linea', { timeout: 15000 });
-    if (await lec.p.locator('#nov-ok').isVisible()) { await lec.p.click('#nov-ok'); await lec.p.waitForTimeout(400); } // la bienvenida del lector
-    await lec.p.click('#rangos button[data-r="0"]');
-    await lec.p.waitForTimeout(500);
-    eq(await lec.p.evaluate(() => [document.querySelectorAll('#lienzo .g-max').length, document.querySelectorAll('#lienzo .g-banda').length > 0, document.querySelectorAll('#lienzo .g-extras').length]), [0, true, 1], 'el lector no ve el máximo de 30 días pero sí las bandas y los anillos');
-    await lec.ctx.close();
-  } finally {
-    mil.parar();
-  }
+  });
 
   // ---------------------------------------------------------------- iPhone: arranque, insignia del icono e icono por tema (campamento 7, 1/2)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const espia = () => {
@@ -2367,10 +2520,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- teléfono acostado y pantallas muy anchas (campamento 7, 2/2)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
@@ -2437,10 +2590,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- datos y etiquetas (campamento 8, 1/4)
-  {
+  await bloque(async () => {
     const srv = await servidor('mil');
     try {
       const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
@@ -2519,10 +2672,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- estado del sistema (campamento 8, 2/4)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
@@ -2545,14 +2698,39 @@ try {
       const errores = await a.p.$$eval('#sis-err .sis-fila', (fs) => fs.map((f) => f.textContent));
       ok(errores.some((t) => t.includes('prueba de error en el navegador') && t.includes('Safari · iPhone')), `el error del navegador aparece con su agente: ${errores[0]}`);
       ok(await a.p.locator('#sis-err-limpiar').isVisible(), 'y se puede limpiar la lista');
+      // V6 (Pulido D): «Limpiar la lista» va justo bajo los errores, no abajo junto a «Volver»; con su zona de toque
+      const lim = await a.p.evaluate(() => {
+        const b = document.getElementById('sis-err-limpiar').getBoundingClientRect(), l = document.getElementById('sis-err').getBoundingClientRect();
+        const sig = document.getElementById('sis-rg-h').getBoundingClientRect();
+        return { tras: document.getElementById('sis-err').nextElementSibling?.contains(document.getElementById('sis-err-limpiar')), gap: Math.round(b.top - l.bottom), antes: b.bottom <= sig.top, alto: Math.round(b.height) };
+      });
+      ok(lim.tras && lim.gap >= 0 && lim.gap <= 24 && lim.antes && lim.alto >= 47.5, `V6: «Limpiar la lista» va justo bajo la lista de errores (${JSON.stringify(lim)})`);
+      // V7: la ruta de la tabla de peticiones no se parte por dentro («/api/ compras»)
+      const enteras = (p) => p.$$eval('#sis-met th[scope="row"] .nw', (s) => s.length > 0 && s.every((x) => x.getClientRects().length === 1));
+      ok(await enteras(a.p), 'V7: cada tramo de cada ruta, en un solo renglón');
       await a.p.click('#sis-err-limpiar');
       await a.p.waitForTimeout(700);
       eq(await a.p.locator('#sis-err .sis-fila').count(), 0, 'limpiada la lista, no quedan errores');
       ok((await a.p.textContent('#sis-err')).includes('Sin errores'), 'y lo dice');
+      ok(await a.p.locator('#sis-err-bot').isHidden(), 'V6: sin errores, el botón (y su renglón) se van');
       // El estado nunca trae claves ni contenido de las compras
       const crudo = JSON.stringify(await datos(a.p, '/api/sistema'));
       ok(!/p256dh|endpoint|vapid|"hash"|scrypt/.test(crudo), 'el estado no incluye claves ni hashes');
       await a.ctx.close();
+      // V6/V7 a 320 px con letra muy grande: la página no se desplaza a lo ancho, las rutas no se parten y el botón sigue bajo la lista
+      const g = await entrar(navegador, srv, ADMIN, { viewport: { width: 320, height: 640 } }, () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.letra', 'muy-grande'); } catch { /* sin almacenamiento */ } });
+      await g.p.evaluate(() => { setTimeout(() => { throw new Error('otro error de prueba'); }, 10); });
+      await g.p.waitForTimeout(1200);
+      await g.p.click('#cuenta-btn'); await g.p.click('#dc-sistema-btn');
+      await g.p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent), null, { timeout: 5000 });
+      await g.p.locator('#sis-err-limpiar').scrollIntoViewIfNeeded();
+      const angosto = await g.p.evaluate(() => {
+        const d = document.getElementById('d-cuenta'), b = document.getElementById('sis-err-limpiar').getBoundingClientRect(), l = document.getElementById('sis-err').getBoundingClientRect();
+        return { pagina: document.documentElement.scrollWidth - document.documentElement.clientWidth, dialogo: d ? d.scrollWidth - d.clientWidth : 0, gap: Math.round(b.top - l.bottom), alto: Math.round(b.height), letra: document.documentElement.dataset.letra, tabla: (() => { const x = document.querySelector('.sis-tabla'); return x.scrollWidth - x.clientWidth; })() };
+      });
+      ok(angosto.letra === 'muy-grande' && angosto.pagina <= 0 && angosto.dialogo <= 0 && angosto.gap >= 0 && angosto.gap <= 24 && angosto.alto >= 47.5, `V6/V7 a 320 px con letra muy grande: sin desplazarse a lo ancho y el botón bajo la lista (${JSON.stringify(angosto)})`);
+      ok(await enteras(g.p), 'V7 a 320 px con letra muy grande: las rutas no se parten por dentro');
+      await g.ctx.close();
       // Una lectora: sin botón, sin acceso, y sus errores sí se reportan
       const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, sinAvisos);
       if (await l.p.locator('#d-novedades[open]').count()) await l.p.click('#nov-ok');
@@ -2565,10 +2743,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- pulido final (cliente): Gráficos sin el bucle de ResizeObserver (R1) y el interruptor de atajos (V5)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       // Cuenta los «ResizeObserver loop…» que lanza el navegador y los reportes que salen hacia /api/errores.
@@ -2609,10 +2787,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- sesiones y operación (campamento 8, 3/4)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
@@ -2669,10 +2847,10 @@ try {
     } finally {
       mant.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- tu eco y tus números (campamento 11)
-  {
+  await bloque(async () => {
     // Las cuentas de prueba ven «Qué hay de nuevo» al entrar: se cierra para poder tocar la página.
     const ent = async (...a) => { const r = await entrar(...a); if (await r.p.locator('#d-cambios[open]').count()) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(300); } return r; };
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
@@ -2781,10 +2959,10 @@ try {
       ok(/árboles de honor: un ceibo, un amate, un maquilishuat/.test(t.d), 'los árboles de honor están en la descripción de la montaña');
       await ctx.close();
     } finally { sMil.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 12: El Salvador en la escena
-  {
+  await bloque(async () => {
     const ent = async (...a) => { const r = await entrar(...a); if (await r.p.locator('#d-cambios[open]').count()) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(300); } return r; };
     // Día y efectos fijos (el papel picado, los cohetes y el clima dependen de la fecha de El Salvador).
     const con = (dia, efectos = 'todos') => [([d, e]) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, [dia, efectos]];
@@ -2888,10 +3066,10 @@ try {
       ok(z.uso === '#i-zopilote' && z.txt === '—' && z.alto <= 26, `sin precio: el zopilote en el hueco del precio (${JSON.stringify(z)})`);
       await ctx.close();
     } finally { sSin.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- Tu historia en objetos: tronco, constelación y torre de piedras (campamento 13)
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const ent = async (...a) => { const r = await entrar(...a); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
     const abrirHistoria = async (p) => { await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('[data-cuenta="historia"]'); await p.waitForTimeout(400); };
@@ -2973,10 +3151,10 @@ try {
       ok(await p.locator('#dh-vistas').isHidden() || await p.locator('#dh-cuerpo').isHidden(), 'historia: sin compras no hay selector ni dibujos');
       await ctx.close();
     } finally { sVac.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 13C: estratos, partitura, pasaporte, petroglifo y sello de la semana
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const ent = async (...a) => { const r = await entrar(...a); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
     const abrirHistoria = async (p) => { await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('[data-cuenta="historia"]'); await p.waitForTimeout(400); };
@@ -2985,7 +3163,6 @@ try {
     try {
       const { ctx, p, consola } = await ent(navegador, sLargo, ADMIN, {}, sinAviso);
       const todos = await datos(p, '/api/compras');
-      const compras = todos.filter((c) => c.tipo !== 'venta');
       // ---- La montaña: el petroglifo (antes de abrir «Tu cuenta»)
       await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(500);
       const nBand = await p.locator('.m-bandera').count();
@@ -3100,10 +3277,10 @@ try {
       ok(await p.locator('#dh-pasaporte li').count() === 1, 'pasaporte: con una compra, un sello');
       await ctx.close();
     } finally { sUna.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 14: pestañas (Resumen · Gráficos · Historia · Movimientos)
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const ent = async (srv, cuenta, opts = {}) => { const r = await entrar(navegador, srv, cuenta, { pestanas: true, ...opts }, sinAviso); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
     const ver = (p, sel) => p.locator(sel).first().isVisible();
@@ -3197,10 +3374,10 @@ try {
         await ctx.close();
       } finally { srv.parar(); }
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 15A: Diario, cartas selladas y mensajes en la bandera
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const ent = async (srv, cuenta, opts = {}) => { const r = await entrar(navegador, srv, cuenta, opts, sinAviso); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
     const ver = (p, sel) => p.locator(sel).first().isVisible();
@@ -3317,10 +3494,10 @@ try {
       ok(!(await ver(l.p, '#capsulas')), '15A cartas: sin cartas, una lectora no ve la tarjeta');
       await l.ctx.close();
     } finally { sHoy.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 15B: piedritas, cumpleaños y la tele
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const ent = async (srv, cuenta, opts = {}, init = sinAviso) => { const r = await entrar(navegador, srv, cuenta, opts, init); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
     const ver = (p, sel) => p.locator(sel).first().isVisible();
@@ -3424,56 +3601,58 @@ try {
       ok(await t.p.evaluate(() => localStorage.getItem('libro.tv.atardecer') != null), '15B tele: y queda anotado que hoy ya lo hizo (una vez al día)');
       await t.ctx.close();
     } finally { sAtar.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- una sola compra
-  const una = await servidor('hoy');
-  try {
-    const { ctx, p, consola } = await entrar(navegador, una, ADMIN);
-    // La etiqueta «Tu primera compra» no pisa la línea del precio (se coloca donde haya sitio).
-    await p.waitForSelector('.g-nota text', { timeout: 12000 }); // el gráfico sale cuando termina de cargar el histórico
-    const roces = await p.evaluate(() => {
-      const t = document.querySelector('.g-nota text'), l = document.querySelector('.g-linea');
-      if (!t || !l) return -1;
-      const bb = t.getBBox(), total = l.getTotalLength();
-      let n = 0;
-      for (let i = 0; i <= total; i += 2) { const q = l.getPointAtLength(i); if (q.x >= bb.x - 2 && q.x <= bb.x + bb.width + 2 && q.y >= bb.y - 2 && q.y <= bb.y + bb.height + 2) n++; }
-      return n;
-    });
-    eq(roces, 0, 'la etiqueta de la compra no roza la línea del precio');
-    ok(!(await p.locator('#vistas').isVisible()), 'con 1 compra no hay selector de vistas (solo Precio)');
-    ok(await p.locator('#comienzo').isVisible(), 'con 1 compra sale «Siguiente paso»');
-    eq(consola, [], `consola limpia (1 compra): ${consola.join(' | ')}`);
-    await ctx.close();
-  } finally {
-    una.parar();
-  }
+  await bloque(async () => {
+    const una = await servidor('hoy');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, una, ADMIN);
+      // La etiqueta «Tu primera compra» no pisa la línea del precio (se coloca donde haya sitio).
+      await p.waitForSelector('.g-nota text', { timeout: 12000 }); // el gráfico sale cuando termina de cargar el histórico
+      const roces = await p.evaluate(() => {
+        const t = document.querySelector('.g-nota text'), l = document.querySelector('.g-linea');
+        if (!t || !l) return -1;
+        const bb = t.getBBox(), total = l.getTotalLength();
+        let n = 0;
+        for (let i = 0; i <= total; i += 2) { const q = l.getPointAtLength(i); if (q.x >= bb.x - 2 && q.x <= bb.x + bb.width + 2 && q.y >= bb.y - 2 && q.y <= bb.y + bb.height + 2) n++; }
+        return n;
+      });
+      eq(roces, 0, 'la etiqueta de la compra no roza la línea del precio');
+      ok(!(await p.locator('#vistas').isVisible()), 'con 1 compra no hay selector de vistas (solo Precio)');
+      ok(await p.locator('#comienzo').isVisible(), 'con 1 compra sale «Siguiente paso»');
+      eq(consola, [], `consola limpia (1 compra): ${consola.join(' | ')}`);
+      await ctx.close();
+    } finally {
+      una.parar();
+    }
+  });
 
   // ---------------------------------------------------------------- campamento 16: lago, reloj de sol, «Tú» fantasma y perfil de altitud
-  {
-    const con = (dia, hora) => [([d, h]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, [dia, hora]];
+  await bloque(async () => {
+    const con = (dia) => [(d) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, dia];
     const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
     const sMil = await servidor('mil');
     try {
       // ---- Reloj de sol: la sombra cae a un lado de mañana y al otro de tarde; de noche no hay
       const sombra = (p) => p.evaluate(() => { const g = document.querySelector('.reloj'); const d = g.querySelector('.reloj-sombra').getAttribute('d'); const m = d.match(/M([\d.]+) .*?L([\d.-]+) /); return { d, sx: Number(g.dataset.sx), punta: m ? Number(m[2]) : null, visible: getComputedStyle(g).display !== 'none' }; });
-      const m = await entrar(navegador, sMil, ADMIN, { hora: 9 }, con('2026-08-20', 9)); await cerrar(m.p); await m.p.waitForTimeout(800);
+      const m = await entrar(navegador, sMil, ADMIN, { hora: 9 }, con('2026-08-20')); await cerrar(m.p); await m.p.waitForTimeout(800);
       const sm = await sombra(m.p);
       ok(sm.visible && sm.punta !== null && sm.punta < sm.sx, '16A reloj de sol: de mañana la sombra cae hacia la izquierda');
       ok(await m.p.locator('.reloj .reloj-piedra').count() === 11, '16A reloj de sol: once piedritas, de las 7 a las 17');
       await m.ctx.close();
-      const t = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(t.p);
+      const t = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20')); await cerrar(t.p);
       const st = await sombra(t.p);
       ok(st.visible && st.punta > st.sx, '16A reloj de sol: de tarde la sombra cae hacia la derecha');
       await t.ctx.close();
-      const n22 = await entrar(navegador, sMil, ADMIN, { hora: 22 }, con('2026-08-20', 22)); await cerrar(n22.p);
+      const n22 = await entrar(navegador, sMil, ADMIN, { hora: 22 }, con('2026-08-20')); await cerrar(n22.p);
       const sn = await sombra(n22.p);
       ok(!sn.visible && sn.d === '', '16A reloj de sol: de noche no hay sombra');
       // ---- El lago guarda lo vendido: una monedita por venta (hasta 5)
       eq(await n22.p.locator('.lago-moneda').count(), 5, '16A lago: mil tiene ventas de sobra: cinco monedas');
       await n22.ctx.close();
       // ---- «Tú» fantasma en la hoja
-      const h = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(h.p);
+      const h = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20')); await cerrar(h.p);
       await h.p.keyboard.press('a'); await h.p.waitForTimeout(600);
       ok(await h.p.locator('#h-ruta').isHidden(), '16B fantasma: sin sats escritos no hay regla');
       await h.p.fill('#h-sats', '2500000'); await h.p.waitForTimeout(600);
@@ -3486,7 +3665,7 @@ try {
       eq(h.consola.filter((c) => !/503/.test(c)), [], '16 sin errores de consola');
       await h.ctx.close();
       // ---- Perfil de altitud: la vista Sats en escala logarítmica
-      const pf = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20', 15)); await cerrar(pf.p);
+      const pf = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20')); await cerrar(pf.p);
       await verVista(pf.p, 'sats');
       ok(await pf.p.locator('#s-lienzo .pf-farol').count() >= 1, '16B perfil: hay faroles donde cruzaste un campamento');
       ok(/^Tú$/.test((await pf.p.locator('#s-lienzo .pf-tu').textContent()).trim()), '16B perfil: «Tú» al final');
@@ -3495,10 +3674,10 @@ try {
     } finally {
       sMil.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 17: primera impresión
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const cerrar = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(350); } };
     const ent = async (srv, cuenta, opts = {}, init = sinAviso) => { const r = await entrar(navegador, srv, cuenta, { pestanas: true, hora: 15, ...opts }, init); await cerrar(r.p); return r; };
@@ -3862,10 +4041,10 @@ try {
     } finally {
       s17v.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 18: el ritual de anotar
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const ayerSV = () => { const [y, m, d] = hoySV().split('-').map(Number); return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10); };
@@ -4096,9 +4275,9 @@ try {
     } finally {
       srv.parar();
     }
-  }
-  // Ventas y traslados también tienen su comprobante (escenario «mil»).
-  {
+  });
+  // ---------------------------------------------------------------- campamento 18: el comprobante de una venta y de un traslado (con mil compras)
+  await bloque(async () => {
     const mil18 = await servidor('mil');
     try {
       const { ctx, p, consola } = await entrar(navegador, mil18, ADMIN);
@@ -4120,10 +4299,10 @@ try {
     } finally {
       mil18.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamentos (arte) y campamento 21: hitos tallados, farol, rellanos, cumbre y marcas de etapa
-  {
+  await bloque(async () => {
     const srv = await servidor('ballena');
     try {
       const medir = (p) => p.evaluate(() => {
@@ -4248,10 +4427,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 19: la familia (escuchar el Diario, libro de cumbre y nombre de la montaña; el aviso del domingo, en test_api)
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const ent = async (srv, cuenta, opts = {}, init = sinAviso) => {
       const r = await entrar(navegador, srv, cuenta, opts, init);
@@ -4505,10 +4684,10 @@ try {
       ok(!(await q.p.textContent('#dia-edicion')).includes('Ceiba') && (await datos(q.p, '/api/montana')).nombre === null, '19·nombre: se quita y el Diario vuelve a su fecha');
       await q.ctx.close();
     } finally { sLargo.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 20: cada cosa en su sitio
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const ent = async (srv, cuenta, opts = {}, init = sinAviso) => {
       const r = await entrar(navegador, srv, cuenta, { pestanas: true, hora: 15, ...opts }, init);
@@ -4801,10 +4980,10 @@ try {
       ok(!(await ver(t.p, '#pestanas')), '20·dock: la pantalla grande no lo enseña');
       await t.ctx.close();
     } finally { sDock.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 21: etapas más cercanas
-  {
+  await bloque(async () => {
     const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
     const conLocal = (pares) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
     const ent = async (srv, cuenta, opts = {}, init = sinAviso) => {
@@ -4833,9 +5012,10 @@ try {
       await a.p.evaluate(() => window.scrollTo(0, 0));
       await a.p.click('#anotar'); await a.p.waitForTimeout(400);
       await a.p.fill('#h-sats', '40000');
+      await vigilarPiezas(a.p, ['.cometa', '.plantada', '#m-fx .anillo']); // lo que no debe salir, contado desde antes de guardar
       await a.p.click('#guardar');
       await a.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
-      const c = await a.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), k: document.getElementById('hc-k').textContent, txt: document.getElementById('hc-txt').textContent, lacre: document.getElementById('hc-lacre').innerHTML, cometa: document.querySelectorAll('.cometa').length, plantada: document.querySelectorAll('.plantada').length, anillos: document.querySelectorAll('#m-fx .anillo').length }));
+      const c = await a.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), k: document.getElementById('hc-k').textContent, txt: document.getElementById('hc-txt').textContent, lacre: document.getElementById('hc-lacre').innerHTML, cometa: window.__piezas['.cometa'], plantada: window.__piezas['.plantada'], anillos: window.__piezas['#m-fx .anillo'] }));
       eq(c, { ligera: true, k: 'Nueva etapa', txt: '1.25M sats', lacre: '', cometa: 0, plantada: 0, anillos: 0 }, '21·celebración: una etapa intermedia se celebra en ligero');
       const t0 = Date.now();
       await a.p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 6000 });
@@ -4852,16 +5032,19 @@ try {
       const b = await ent(sAnio, ADMIN, { hora: 22 }, conLocal([['libro.efectos', 'todos']]));
       await b.p.click('#cuenta-btn'); await b.p.click('#dc-sistema-btn'); await b.p.waitForTimeout(400);
       eq(await b.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia'], '21·probar: «Etapa» y «Etapa con sello»');
+      await vigilarPiezas(b.p, ['.cometa']);
       await b.p.click('[data-previa="etapa"]');
       await b.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
-      const g = await b.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), txt: document.getElementById('hc-txt').textContent, lacre: !!document.querySelector('#hc-lacre svg.lacre'), cometa: document.querySelectorAll('.cometa').length }));
+      await b.p.waitForFunction(() => window.__piezas['.cometa'] > 0, null, { timeout: 4000 }).catch(() => {});
+      const g = await b.p.evaluate(() => ({ ligera: document.getElementById('hito-cel').classList.contains('ligera'), txt: document.getElementById('hc-txt').textContent, lacre: !!document.querySelector('#hc-lacre svg.lacre'), cometa: window.__piezas['.cometa'] }));
       eq(g, { ligera: false, txt: '2.5M sats', lacre: true, cometa: 1 }, '21·celebración: una etapa con sello trae su lacre y el cometa');
       await b.p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 8000 });
       await b.p.waitForTimeout(5000);
       await b.p.click('#cuenta-btn'); await b.p.click('#dc-sistema-btn'); await b.p.waitForTimeout(400);
+      await vigilarPiezas(b.p, ['.cometa']);
       await b.p.click('[data-previa="paso"]');
       await b.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
-      ok(await b.p.evaluate(() => document.getElementById('hito-cel').classList.contains('ligera') && !document.querySelector('#hc-lacre svg') && !document.querySelector('.cometa')), '21·probar: «Etapa» enseña la celebración ligera');
+      ok(await b.p.evaluate(() => document.getElementById('hito-cel').classList.contains('ligera') && !document.querySelector('#hc-lacre svg') && window.__piezas['.cometa'] === 0), '21·probar: «Etapa» enseña la celebración ligera (sin cometa en ningún momento)');
       await b.ctx.close();
       // ---- Cartas: las dos siguientes etapas y después las de siempre (una carta puede esperar a 10M)
       const cr = await ent(sAnio, ADMIN, { hora: 15 });
@@ -4950,10 +5133,10 @@ try {
         }
       } finally { srv.parar(); }
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 21B: la tele de la sala (tarjetas que no tapan, reloj, la tele duerme, el marco y entrar con un código)
-  {
+  await bloque(async () => {
     // `marco`: el reloj de la página se adelanta (solo `Date`, no los temporizadores) hasta 4 s dentro de la ventana del marco de la historia
     // (las :05, :15… de `lib.marcoTele`), en cada carga: así el pulso de la tele, que mira la hora de verdad, lo enseña sin esperar 10 minutos.
     const conLocal = (pares, marco = false) => [([ps, mc]) => {
@@ -5252,10 +5435,10 @@ try {
         await c.close();
       }
     } finally { sCod.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- tele: el saldo contra la montaña (pulido final: la cifra y su unidad nunca tocan «Tú», la cumbre, los campamentos, los rótulos, el sendero ni la silueta)
-  {
+  await bloque(async () => {
     /**
      * La caja del saldo de verdad (la cifra que se ve, `.od-num`, y su unidad, `#s-unidad`) con 8 px de margen: qué de lo dibujado la
      * toca. Se calcula aparte del CSS que la coloca: la placa de «Tú», los rótulos, los campamentos y la cumbre (sus cajas), el sendero
@@ -5318,10 +5501,10 @@ try {
         await recorrer(srv, ADMIN, APP, false, esc); // y la regla de siempre: la cumbre nunca invade el saldo
       } finally { srv.parar(); }
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 24: medir este aparato (idea 44)
-  {
+  await bloque(async () => {
     const srv = await servidor('anio');
     try {
       const sinAvisos = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestana', 'graficos'); } catch { /* sin almacenamiento */ } };
@@ -5460,10 +5643,10 @@ try {
     } finally {
       sl.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 24: confianza (la revisión tranquila del respaldo y la suma por etiqueta)
-  {
+  await bloque(async () => {
     const srv = await servidor('mil'); // con etiquetas «bono» y «cumpleaños»
     try {
       // Push de mentira (como en el bloque de avisos) y sin la oferta de avisos al entrar
@@ -5638,10 +5821,10 @@ try {
     } finally {
       srv.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 22: el valle vivo
-  {
+  await bloque(async () => {
     // Todo lo de fecha se prueba con `libro.dia` (y `libro.hora`): nunca depende del día en que corra la prueba.
     const conDia = (dia, extra = {}) => [([d, x]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, [dia, extra]];
     const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
@@ -5777,10 +5960,10 @@ try {
       ok(e.canton && e.ventanas === '' && !e.arbol && e.pis === 0 && !e.grabado, '22 entrada: el pueblo está, pero sin ventanas encendidas, árbol del primer día, piscuchas ni grabado (sin datos de nadie)');
       await ctx.close();
     } finally { srvE.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 22B: el valle vivo, parte 2
-  {
+  await bloque(async () => {
     const conDia = (dia, extra = {}) => [([d, x]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, [dia, extra]];
     const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
     // Lo que se mueve en la escena: el torogoz (si su vuelo está animado), las luciérnagas y las bandadas, los zompopos y los relámpagos (si se ven y están animados).
@@ -5911,10 +6094,10 @@ try {
       ok(e.mar && e.vacas && e.mueve === 'torogoz', '22B entrada: el mar de niebla y las vacas también (paisaje, sin datos de nadie)');
       await ctx.close();
     } finally { srvE.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 22C: el valle, de verdad (el pueblo delante, los campos, la ladera baja y la Navidad en toda la montaña)
-  {
+  await bloque(async () => {
     const conDia = (dia, extra = {}) => [([d, x]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, [dia, extra]];
     const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
     const escena = (p) => p.evaluate(() => {
@@ -5994,10 +6177,10 @@ try {
       ok(r.pueblo && r.apagadas === 0 && r.encendidas > 0 && r.ventanas === '', `22C entrada: el pueblo y las luminarias, todas encendidas; sin ventanas de nadie (${JSON.stringify(r)})`);
       await ctx.close();
     } finally { srvE.parar(); }
-  }
+  });
 
   // ---------------------------------------------------------------- campamento 23: tu camino, otra vez (tal día como hoy y la película del ascenso)
-  {
+  await bloque(async () => {
     const sinAvisos = (extra = {}) => [(x) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, extra];
     const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
     const ent = async (srv, cuenta, opts = {}, extra = {}) => { const x = await entrar(navegador, srv, cuenta, { hora: 15, ...opts }, sinAvisos(extra)); await cerrar(x.p); return x; };
@@ -6207,22 +6390,26 @@ try {
     } finally {
       sLargo.parar();
     }
-  }
+  });
 
   // ---------------------------------------------------------------- sin histórico de precios
-  const sinhist = await servidor('sinhist');
-  try {
-    const { ctx, p, consola } = await entrar(navegador, sinhist, ADMIN);
-    ok(!(await p.locator('#vistas button[data-vista="valor"]').isVisible()), 'sin histórico no sale la vista de valor');
-    const s = await saldo(p);
-    ok(s.w > 0 && s.txt.length > 0, 'el saldo se ve aunque falle el histórico');
-    // El 503 del histórico es lo esperado en este escenario; cualquier otro mensaje no.
-    eq(consola.filter((c) => !/503/.test(c)), [], 'sin errores raros sin histórico');
-    await ctx.close();
-  } finally {
-    sinhist.parar();
-  }
+  await bloque(async () => {
+    const sinhist = await servidor('sinhist');
+    try {
+      const { ctx, p, consola } = await entrar(navegador, sinhist, ADMIN);
+      ok(!(await p.locator('#vistas button[data-vista="valor"]').isVisible()), 'sin histórico no sale la vista de valor');
+      const s = await saldo(p);
+      ok(s.w > 0 && s.txt.length > 0, 'el saldo se ve aunque falle el histórico');
+      // El 503 del histórico es lo esperado en este escenario; cualquier otro mensaje no.
+      eq(consola.filter((c) => !/503/.test(c)), [], 'sin errores raros sin histórico');
+      await ctx.close();
+    } finally {
+      sinhist.parar();
+    }
+  });
 } finally {
   await navegador.close();
 }
-console.log(`OK ${n} comprobaciones de navegador`);
+// Ningún bloque se quedó sin recorrer: cada uno pasa por `bloque()`, corra o no en esta parte.
+if (recorridos !== TITULOS.length) throw new Error(`Se recorrieron ${recorridos} bloques de ${TITULOS.length}: alguno no va dentro de bloque(…)`);
+console.log(`OK ${n} comprobaciones de navegador${PARTE ? ` (parte ${PARTE.k}/${PARTE.de}: ${corridos} de ${TITULOS.length} bloques)` : ''}`);

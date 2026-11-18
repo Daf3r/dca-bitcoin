@@ -1,6 +1,6 @@
 import { $, api } from './estado.js';
 import { avisar } from './avisar.js';
-import { ESTADO_FPS, PALABRA_FPS, REGLA_LENTO, fechaLarga, textoResguardo, veredictoFps } from './lib.js';
+import { ESTADO_FPS, PALABRA_FPS, REGLA_LENTO, fechaLarga, textoResguardo, tramosRuta, veredictoFps } from './lib.js';
 
 // «Estado del sistema» (ideas 53, 145, 96, 74, 46): una vista de «Tu cuenta» solo para el admin. Muestra estados y fechas, nunca claves ni
 // contenido de las compras. Cada fila lleva una palabra («Bien», «Revisar», «Falla») además del símbolo: no depende del color.
@@ -157,7 +157,9 @@ export async function pintarSistema() {
     for (const [k, v] of [['ruta', m.ruta], ['n', m.n.toLocaleString('en-US')], ['medio', `${m.ms_medio} ms`], ['max', `${m.ms_max} ms`], ['lentas', m.lentas], ['err', m.errores]]) {
       const td = document.createElement(k === 'ruta' ? 'th' : 'td');
       if (k === 'ruta') td.scope = 'row';
-      if (k === 'ruta') String(v).split('/').forEach((t, i) => { if (i) td.append('/', document.createElement('wbr')); td.append(t); });
+      // La ruta solo se parte entre tramos y nunca dentro del primero: «/api/compras» queda entera y «/api/compras/<int:cid>» puede
+      // seguir en otro renglón desde «/<int:cid>» (antes se partía tras cualquier «/»: «/api/ compras»).
+      if (k === 'ruta') td.append(...tramosRuta(String(v)).flatMap((t, i) => [...(i ? [document.createElement('wbr')] : []), Object.assign(document.createElement('span'), { className: 'nw', textContent: t })]));
       else td.textContent = String(v);
       tr.append(td);
     }
@@ -166,7 +168,8 @@ export async function pintarSistema() {
   $('sis-err').replaceChildren(...(e.errores.length ? e.errores.map((x) => fila('aviso', `${x.mensaje}`,
     `${x.pantalla} · ${x.agente}${x.usuario ? ` · ${x.usuario}` : ''} · ${hace(x.ultimo, e.ahora)}${x.n > 1 ? ` · ${x.n} veces` : ''}`))
     : [Object.assign(document.createElement('li'), { className: 'vacio', textContent: 'Sin errores. Los de cualquier dispositivo aparecen aquí.' })]));
-  $('sis-err-limpiar').hidden = !e.errores.length;
+  // «Limpiar la lista» va justo bajo los errores (antes abajo, junto a «Volver», lejos de lo que limpiaba).
+  $('sis-err-limpiar').hidden = $('sis-err-bot').hidden = !e.errores.length;
 }
 $('sis-err-limpiar').addEventListener('click', async () => {
   try { await api('/api/errores', { metodo: 'DELETE' }); avisar('Lista de errores limpiada.', null, true); } catch (err) { avisar(`No se pudo limpiar. ${err.message}`); }

@@ -1048,9 +1048,12 @@ div.fila:hover { background: none; }
 .sis-rg-res:empty { display: none; }
 .sis-tabla { overflow-x: auto; }
 .sis-tabla table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
-.sis-tabla th, .sis-tabla td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--s3); white-space: nowrap; }
+.sis-tabla th, .sis-tabla td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--s3); white-space: nowrap; }
+/* La ruta entera ocupa más: las columnas se juntan (la primera, al ras del título) y la tabla desborda menos que antes en el teléfono. */
+.sis-tabla tr > :first-child { padding-left: 0; }
+.sis-tabla tr > :last-child { padding-right: 2px; }
 .sis-tabla th[scope="col"], .sis-tabla th[scope="row"] { text-align: left; }
-.sis-tabla th[scope="row"] { font-weight: 500; overflow-wrap: break-word; white-space: normal; }
+.sis-tabla th[scope="row"] { font-weight: 500; white-space: normal; } /* la ruta solo se parte entre sus tramos (sistema.js: tramosRuta; cada uno, .nw) */
 .dc-sesiones p, .dc-enlaces p { margin: 6px 0 12px; color: var(--txt2); font-size: 0.9375rem; line-height: 1.4; }
 .ses-fila { align-items: center; justify-content: space-between; }
 .ses-fila > span { min-width: 0; }
