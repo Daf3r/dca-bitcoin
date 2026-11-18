@@ -2220,6 +2220,17 @@ export function textoResultadosLista(vistos, todos, conEtiqueta = null) {
   const s = conEtiqueta && vistos ? sumaEtiqueta(conEtiqueta) : null;
   return `${entero(vistos)} de ${entero(todos)} ${todos === 1 ? 'movimiento' : 'movimientos'}${s ? ` · ${s.texto}` : ''}`;
 }
+/**
+ * El botón «Ver más» de la lista, en dos piezas que no se parten por dentro: cuántas trae el toque y, si no son todas, cuántas quedan
+ * sin ver («Ver 25 más» · «quedan 44»). Con las últimas, una sola: «Ver los 12 que quedan» (o «Ver el que queda»).
+ * @param {number} faltan las filas que aún no se ven
+ * @param {number} paso las que trae cada toque
+ * @returns {string[]}
+ */
+export function textoVerMas(faltan, paso) {
+  if (faltan > paso) return [`Ver ${entero(paso)} más`, `quedan ${entero(faltan)}`];
+  return [faltan === 1 ? 'Ver el que queda' : `Ver los ${entero(faltan)} que quedan`];
+}
 
 /** Cada cuántos días pregunta la revisión del respaldo (la regla vive en el servidor: `server.resguardo`). */
 export const RESGUARDO_DIAS = 180;

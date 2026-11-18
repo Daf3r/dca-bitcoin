@@ -150,7 +150,7 @@ const PESOS = [
   ['atmósfera: parallax, nubes, niebla, aves', 20], // 15 comprobaciones
   ['rendimiento iPhone: la escena en capas,', 9], // 16 comprobaciones
   ['se siente como app: recargar al arrastra', 33], // 23 comprobaciones
-  ['la lista: meses, «Ver más», buscar, filt', 47], // 45 comprobaciones
+  ['la lista: meses, «Ver más», buscar, filt', 47], // 48 comprobaciones
   ['anotar y datos vivos: compra de siempre,', 62], // 24 comprobaciones
   ['accesibilidad y teclado: saltar al conte', 20], // 39 comprobaciones
   ['la montaña viva: humo, fogata, huellas,', 30], // 13 comprobaciones
@@ -1213,9 +1213,13 @@ try {
       const cab = await p.locator('#lista .mes-cab h3').first().innerText();
       ok(/^[A-ZÁÉÍÓÚ][a-záéíóú]+ \d{4} · \d+ (compra|compras)/.test(cab.replace(/\s+/g, ' ')), `lista: encabezado por mes con su resumen («${cab}»)`);
       eq(await filas(), 8, 'lista: arranca con las 8 más recientes');
-      eq((await p.textContent('#ver-todas')).trim(), `Ver más (${(total - 8).toLocaleString('en-US')} más)`, 'lista: «Ver más» dice cuántas faltan');
+      // «Ver 25 más · quedan 1,032»; con las últimas, «Ver los 12 que quedan» (nunca «Ver 25 más» si quedan menos)
+      const verMas = (f) => (f > 25 ? `Ver 25 más · quedan ${f.toLocaleString('en-US')}` : f === 1 ? 'Ver el que queda' : `Ver los ${f} que quedan`);
+      eq((await p.textContent('#ver-todas')).trim(), verMas(total - 8), 'lista: «Ver más» dice cuántas trae y cuántas quedan');
       await p.click('#ver-todas');
       eq(await filas(), 33, 'lista: «Ver más» trae 25 más');
+      eq((await p.textContent('#ver-todas')).trim(), verMas(total - 33), 'lista: y después, las que quedan');
+      ok(await p.$$eval('#ver-todas .nw', (s) => s.length === 2 && s.every((x) => x.getClientRects().length === 1)), 'lista: cada pieza de «Ver más» en un renglón, sin partirse');
       ok(await p.evaluate(() => document.activeElement?.classList.contains('fila')), 'lista: el foco pasa a la primera fila nueva');
       ok(await p.locator('#l-ctl').isVisible(), 'lista: con muchos movimientos salen el buscador y los filtros');
 
@@ -1243,8 +1247,10 @@ try {
       await p.fill('#l-desde', desde);
       await p.waitForTimeout(150);
       const esperadas = compras.filter((c) => c.fecha >= desde).length + traslados.filter((t) => t.fecha >= desde).length;
-      while (await p.locator('#ver-todas').isVisible()) await p.click('#ver-todas');
+      const textosVer = [];
+      while (await p.locator('#ver-todas').isVisible()) { textosVer.push((await p.textContent('#ver-todas')).trim()); await p.click('#ver-todas'); }
       eq(await filas(), esperadas, `rango: desde ${desde} deja ${esperadas} movimientos`);
+      ok(esperadas > 8 && textosVer.at(-1) === verMas(esperadas - 8 - 25 * (textosVer.length - 1)) && /que queda/.test(textosVer.at(-1)), `«Ver más»: el último toque dice que trae las que quedan (${textosVer.join(' | ')})`);
       const saldoAntes = await p.evaluate(() => document.querySelector('#s-sats .sr').textContent);
       eq(saldoAntes, entero(compras.reduce((a, c) => a + (c.tipo === 'venta' ? -c.sats : c.sats), 0)), 'rango: el saldo de arriba sigue siendo el de todo');
       await p.fill('#l-hasta', desde);

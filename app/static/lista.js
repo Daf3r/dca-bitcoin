@@ -1,4 +1,4 @@
-import { agruparPorMes, nombreWallet, piedritasPorCompra, textoPiedritas, ultimaPiedrita, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, textoResultadosLista, usd, usd0, usdSigno } from './lib.js';
+import { agruparPorMes, nombreWallet, piedritasPorCompra, textoPiedritas, ultimaPiedrita, entero, etiquetasUsadas, fechaCorta, fechaLarga, filtrarMovimientos, mempoolUrl, movimientosLista, ordenarMovimientos, pct, textoResultadosLista, textoVerMas, usd, usd0, usdSigno } from './lib.js';
 import { avisar } from './avisar.js';
 import { pegado, pegarHtml } from './cifras.js';
 import { apacheta, piedrita } from './arte.js';
@@ -223,7 +223,9 @@ export function pintarLista() {
   const vt = $('ver-todas');
   const faltan = vistos.length - filas.length;
   vt.hidden = faltan <= 0;
-  vt.textContent = `Ver más (${entero(faltan)} más)`;
+  // «Ver 25 más · quedan 44» (antes «Ver más (44 más)», que repetía «más»): cada pieza en un renglón, nunca partida por dentro.
+  const piezas = textoVerMas(faltan, PASO).map((t) => Object.assign(document.createElement('span'), { className: 'nw', textContent: t }));
+  vt.replaceChildren(...piezas.flatMap((s, i) => (i ? [' · ', s] : [s])));
   if (foco) host.querySelector(`.fila${foco}`)?.focus();
   aplicarResalte(host);
   pintarEstadoTx();

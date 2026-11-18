@@ -1498,6 +1498,13 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   eq(L.textoResultadosLista(0, 140, []), '0 de 140 movimientos', 'resultados: nada coincide, sin suma');
   eq(L.textoResultadosLista(1, 1, [mv('compra', 25_000)]), '1 de 1 movimiento · 25,000 sats comprados', 'resultados: un solo movimiento');
   eq(L.textoResultadosLista(12, 1040, comprasBono), '12 de 1,040 movimientos · 310,000 sats comprados', 'resultados: las cuentas con comas');
+  // «Ver más» (Pulido D): cuántas trae el toque y cuántas quedan, sin repetir «más»; con las últimas, una sola pieza.
+  eq(L.textoVerMas(44, 25), ['Ver 25 más', 'quedan 44'], 'ver más: trae 25 y dice cuántas quedan');
+  eq(L.textoVerMas(1032, 25), ['Ver 25 más', 'quedan 1,032'], 'ver más: las que quedan, con comas');
+  eq(L.textoVerMas(26, 25), ['Ver 25 más', 'quedan 26'], 'ver más: una más que el paso');
+  eq(L.textoVerMas(25, 25), ['Ver los 25 que quedan'], 'ver más: justo las que trae, son las últimas');
+  eq(L.textoVerMas(12, 25), ['Ver los 12 que quedan'], 'ver más: menos que el paso, nunca «Ver 25 más»');
+  eq(L.textoVerMas(1, 25), ['Ver el que queda'], 'ver más: la última');
   // Sobre lo que de verdad filtra la lista (filtrarMovimientos): la suma solo ve lo filtrado, también con otro filtro encima
   const items = [{ id: 1, fecha: '2026-01-05', tipo: 'compra', sats: 100_000, monto: 90, etiquetas: ['bono'] }, { id: 2, fecha: '2026-02-05', tipo: 'compra', sats: 50_000, monto: 45, etiquetas: [] },
     { id: 3, fecha: '2026-03-05', tipo: 'venta', sats: 30_000, monto: 30, etiquetas: ['bono'] }, { id: 4, fecha: '2026-04-05', tipo: 'compra', sats: 70_000, monto: 60, etiquetas: ['bono', 'regalo'] }];
