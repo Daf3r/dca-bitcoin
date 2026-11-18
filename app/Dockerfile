@@ -1,5 +1,6 @@
 # Imagen base fijada por huella digital: cada construcción usa exactamente lo mismo. Dependabot propone actualizarla cada mes.
-FROM python:3.12-slim@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54
+# (python:3.12-slim = 3.12.16-slim-trixie, el índice publicado el 8 nov 2026; comprobado el 18 nov 2026)
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN useradd --uid 1000 --no-create-home --shell /usr/sbin/nologin app
 WORKDIR /app
