@@ -528,28 +528,26 @@ try {
       await auditar(p, `entrar con un código, con un error ${esquema}`);
       await ctx.close();
     }
-    { // campamento 22: el valle vivo (de noche con sus luces, Nochebuena con luna llena y su grabado, piscuchas de octubre), teléfono y escritorio
-      for (const [nombre, dia, hora, vp] of [['valle de noche', '2026-07-10', 20, null], ['Nochebuena con luna llena', '2026-12-24', 23.95, null], ['piscuchas y fogón', '2026-10-20', 18.5, null], ['valle de día en escritorio', '2026-07-10', 12, { width: 1440, height: 900 }], ['Nochebuena en escritorio', '2026-12-24', 23.95, { width: 1440, height: 900 }]]) {
-        const ctx = await navegador.newContext({ ...(vp ? { viewport: vp } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
-        const p = await ctx.newPage();
-        await p.addInitScript(([h, d]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, [hora, dia]);
-        await entrar(p, anio.url, ADMIN); await cerrarOferta(p);
-        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
-        await auditar(p, `${nombre} ${esquema}`);
-        await ctx.close();
-      }
+    // campamento 22: el valle vivo (de noche con sus luces, Nochebuena con luna llena y su grabado, piscuchas de octubre), teléfono y escritorio
+    for (const [nombre, dia, hora, vp] of [['valle de noche', '2026-07-10', 20, null], ['Nochebuena con luna llena', '2026-12-24', 23.95, null], ['piscuchas y fogón', '2026-10-20', 18.5, null], ['valle de día en escritorio', '2026-07-10', 12, { width: 1440, height: 900 }], ['Nochebuena en escritorio', '2026-12-24', 23.95, { width: 1440, height: 900 }]]) {
+      const ctx = await navegador.newContext({ ...(vp ? { viewport: vp } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
+      const p = await ctx.newPage();
+      await p.addInitScript(([h, d]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, [hora, dia]);
+      await entrar(p, anio.url, ADMIN); await cerrarOferta(p);
+      for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+      await auditar(p, `${nombre} ${esquema}`);
+      await ctx.close();
     }
-    { // campamento 22B: el valle vivo, parte 2 (mar de niebla, azacuanes, pericos, zompopos, relámpagos, árboles en flor y vacas echadas)
-      for (const [nombre, dia, hora, vp] of [['mar de niebla', '2026-10-15', 6, null], ['azacuanes', '2026-10-15', 12, null], ['pericos', '2026-10-15', 17, null], ['zompopos y el valle reverdeciendo', '2026-05-17', 8.5, null],
-        ['relámpagos lejanos', '2026-08-10', 23, null], ['maquilishuat en flor y valle dorado', '2027-02-10', 12, null], ['mar de niebla en escritorio', '2026-10-15', 6.5, { width: 1440, height: 900 }], ['árbol de fuego y vacas en escritorio', '2026-04-20', 12, { width: 1440, height: 900 }]]) {
-        const ctx = await navegador.newContext({ ...(vp ? { viewport: vp } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
-        const p = await ctx.newPage();
-        await p.addInitScript(([h, d]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); } catch { /* sin almacenamiento */ } }, [hora, dia]);
-        await entrar(p, anio.url, ADMIN); await cerrarOferta(p);
-        for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
-        await auditar(p, `22B ${nombre} ${esquema}`);
-        await ctx.close();
-      }
+    // campamento 22B: el valle vivo, parte 2 (mar de niebla, azacuanes, pericos, zompopos, relámpagos, árboles en flor y vacas echadas)
+    for (const [nombre, dia, hora, vp] of [['mar de niebla', '2026-10-15', 6, null], ['azacuanes', '2026-10-15', 12, null], ['pericos', '2026-10-15', 17, null], ['zompopos y el valle reverdeciendo', '2026-05-17', 8.5, null],
+      ['relámpagos lejanos', '2026-08-10', 23, null], ['maquilishuat en flor y valle dorado', '2027-02-10', 12, null], ['mar de niebla en escritorio', '2026-10-15', 6.5, { width: 1440, height: 900 }], ['árbol de fuego y vacas en escritorio', '2026-04-20', 12, { width: 1440, height: 900 }]]) {
+      const ctx = await navegador.newContext({ ...(vp ? { viewport: vp } : devices['iPhone 13']), colorScheme: esquema, bypassCSP: true });
+      const p = await ctx.newPage();
+      await p.addInitScript(([h, d]) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'todos'); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); } catch { /* sin almacenamiento */ } }, [hora, dia]);
+      await entrar(p, anio.url, ADMIN); await cerrarOferta(p);
+      for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
+      await auditar(p, `22B ${nombre} ${esquema}`);
+      await ctx.close();
     }
     { // campamento 22C: el valle, de verdad (el pueblo delante y la Navidad en toda la montaña), en el teléfono, con letra muy grande, acostado, en escritorio y la entrada
       for (const [nombre, dia, hora, vp, letra] of [['Nochebuena en el teléfono', '2026-12-24', 21, { width: 390, height: 844 }, ''], ['Navidad de día con letra muy grande', '2026-12-10', 12, { width: 320, height: 568 }, 'muy-grande'],
@@ -718,16 +716,15 @@ try {
       await auditar(p, `índice lateral (pantalla ancha) ${esquema}`);
       await ctx.close();
     }
-    { // teléfono acostado (app y entrada) y monitor ultra ancho
-      for (const [nombre, w, h, ruta] of [['app acostada 844×390', 844, 390, null], ['entrada acostada 568×320', 568, 320, '/login'], ['pantalla ultra ancha 3440×1440', 3440, 1440, null]]) {
-        const ctx = await navegador.newContext({ viewport: { width: w, height: h }, colorScheme: esquema, bypassCSP: true });
-        const p = await ctx.newPage();
-        await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
-        if (ruta) { await p.goto(`${anio.url}${ruta}`, { waitUntil: 'networkidle' }); await p.waitForTimeout(800); }
-        else { await entrar(p, anio.url, ADMIN); await cerrarOferta(p); }
-        await auditar(p, `${nombre} ${esquema}`);
-        await ctx.close();
-      }
+    // teléfono acostado (app y entrada) y monitor ultra ancho
+    for (const [nombre, w, h, ruta] of [['app acostada 844×390', 844, 390, null], ['entrada acostada 568×320', 568, 320, '/login'], ['pantalla ultra ancha 3440×1440', 3440, 1440, null]]) {
+      const ctx = await navegador.newContext({ viewport: { width: w, height: h }, colorScheme: esquema, bypassCSP: true });
+      const p = await ctx.newPage();
+      await p.addInitScript((hh) => { try { localStorage.setItem('libro.hora', String(hh)); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+      if (ruta) { await p.goto(`${anio.url}${ruta}`, { waitUntil: 'networkidle' }); await p.waitForTimeout(800); }
+      else { await entrar(p, anio.url, ADMIN); await cerrarOferta(p); }
+      await auditar(p, `${nombre} ${esquema}`);
+      await ctx.close();
     }
     { // la oferta de avisos al entrar
       const { ctx, p } = await nuevo(hoy, ADMIN, conPush);
