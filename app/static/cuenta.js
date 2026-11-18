@@ -61,6 +61,8 @@ export async function cargarYo() {
     document.body.dataset.rol = yo.rol;
     document.body.dataset.mant = yo.mantenimiento ? '1' : ''; // modo solo lectura de emergencia (SOLO_LECTURA=1 en el servidor)
     $('mant').hidden = !yo.mantenimiento;
+    // (Campamento 27) El grande duerme junto al aviso: el libro descansa un rato (una vez: el dibujo no cambia).
+    if (yo.mantenimiento && !$('mant').querySelector('.oso-ilu')) $('mant').insertAdjacentHTML('afterbegin', pose('duerme', { tam: 52 }));
     // ¿Flota el botón «Anotar» en este dispositivo? El CSS lo usa para el alto de la escena (campamento 17). El rol se recuerda
     // (`libro.rol`) para que la próxima vez la escena salga ya con su alto (efectos.js). Solo es una pista de diseño: no da permisos.
     document.documentElement.toggleAttribute('data-boton', yo.rol === 'admin' && !yo.mantenimiento);

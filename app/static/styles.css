@@ -4508,6 +4508,9 @@ html .oso-ilu .oso-hocico { fill: var(--oso-hocico); }
 .oso-saluda { transform-box: fill-box; transform-origin: 19.7% 85.2%; }
 html[data-efectos="todos"] .nov-osos .oso-saluda { animation: oso-saluda 1.2s ease-in-out 0.35s both; }
 @keyframes oso-saluda { 0%, 100% { transform: none; } 20%, 60% { transform: rotate(-16deg); } 40%, 80% { transform: rotate(9deg); } }
+/* (Campamento 27) Cuando algo no va: el error de la lista lleva al grande confundido (en el sitio del dibujo, como el estado vacío) y el
+   aviso de mantenimiento, al grande dormido a su izquierda. Sin colores de alarma: el texto de siempre. */
+.mant:not([hidden]) { display: flex; gap: 12px; align-items: center; }
 /* La guía de estilo: cada pose en una tarjeta, con su nombre. */
 .guia-osos { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px; margin: 10px 0; padding: 0; list-style: none; }
 .guia-osos li { display: grid; justify-items: center; align-content: end; gap: 6px; padding: 12px 8px 10px; border-radius: 12px; background: var(--s1); }

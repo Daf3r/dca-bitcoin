@@ -19,9 +19,9 @@ const LECTOR = ['Ana', 'lectora-de-prueba'];
 const puertoLibre = () => new Promise((res) => {
   const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); });
 });
-async function servidor(escenario) {
+async function servidor(escenario, env = {}) {
   const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore' });
+  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore', env: { ...process.env, ...env } });
   const url = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {
     try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
@@ -100,6 +100,15 @@ try {
         await a.ctx.close();
       } finally {
         vac.parar();
+      }
+      const sl = await servidor('anio', { SOLO_LECTURA: '1' });
+      try { // (Campamento 27) el aviso de mantenimiento con el grande dormido
+        const m = await nuevo(sl, ADMIN);
+        for (let k = 0; k < 3 && await m.p.locator('dialog[open]').count(); k++) { await m.p.keyboard.press('Escape'); await m.p.waitForTimeout(300); }
+        await auditar(m.p, `mantenimiento con el grande dormido ${esquema}`);
+        await m.ctx.close();
+      } finally {
+        sl.parar();
       }
     }
     // El cielo cambia con la hora: la entrada y la app se revisan en cada franja y a mitad de las dos mezclas de claro a oscuro.

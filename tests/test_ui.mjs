@@ -199,6 +199,7 @@ const PESOS = [
   ['campamento 23: tu camino, otra vez (tal', 87], // 52 comprobaciones
   ['campamento 25: los osos polares de pel', 167], // 98 comprobaciones (medido en su parte, el 18 nov 2026)
   ['campamento 26: los osos en la interfaz', 46], // 22 comprobaciones
+  ['campamento 27: cuando algo no va', 25], // 4 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -6924,6 +6925,51 @@ try {
       await t.ctx.close();
     } finally {
       g.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 27: cuando algo no va (el grande confundido si no cargan las compras y dormido en el mantenimiento)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Si no cargan las compras: el texto de siempre (con la voz de cada uno) y el grande confundido en el sitio del dibujo.
+    const anio = await servidor('anio');
+    try {
+      for (const [cuenta, quien, texto] of [[ADMIN, 'el dueño', 'No se pudieron cargar tus compras.'], [LECTOR, 'quien solo mira', 'No se pudieron cargar las compras.']]) {
+        const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+        const p = await ctx.newPage();
+        await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+        await p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
+        await p.fill('input[autocomplete="username"]', cuenta[0]); await p.fill('input[autocomplete="current-password"]', cuenta[1]);
+        await p.route('**/api/compras*', (r) => r.abort());
+        await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+        await p.waitForFunction(() => /No se pudieron/.test(document.querySelector('#lista .vacio')?.textContent ?? ''), null, { timeout: 30000 });
+        const r = await p.evaluate(() => {
+          const li = document.querySelector('#lista .vacio'), s = li.querySelector(':scope > svg.oso-ilu');
+          return { confundido: Boolean(s?.classList.contains('oso-pose-confundido')), aria: s?.getAttribute('aria-hidden'), alto: Math.round(s?.getBoundingClientRect().height ?? 0), txt: li.innerText.trim(), con: li.classList.contains('con-ilu') };
+        });
+        ok(r.confundido && r.aria === 'true' && r.alto === 92 && r.con && r.txt === texto, `27 sin poder cargar (${quien}): el grande confundido y «${r.txt}»`);
+        await ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+    // Mantenimiento (SOLO_LECTURA): el aviso de siempre, que sigue siendo un estado para el lector de pantalla, con el grande dormido al lado.
+    const mant = await servidor('anio', { SOLO_LECTURA: '1' });
+    try {
+      for (const w of [390, 320]) {
+        const m = await entrar(navegador, mant, ADMIN, { hora: 12, viewport: { width: w, height: 700 } }, conLs());
+        await cerrar(m.p);
+        const r = await m.p.evaluate(() => {
+          const e = document.getElementById('mant'), s = e.querySelector(':scope > svg.oso-pose-duerme'), t = e.querySelector(':scope > span');
+          const a = s?.getBoundingClientRect(), b = t?.getBoundingClientRect();
+          return { ve: !e.hidden && Boolean(s) && s.getAttribute('aria-hidden') === 'true', rol: e.getAttribute('role'), una: e.querySelectorAll('svg').length, lado: a && b ? b.left >= a.right - 1 : false, txt: t?.textContent ?? '', ancho: document.documentElement.scrollWidth <= innerWidth };
+        });
+        ok(r.ve && r.rol === 'status' && r.una === 1 && r.lado && /^Mantenimiento: por ahora solo se puede mirar/.test(r.txt) && r.ancho, `27 mantenimiento a ${w} px: el grande dormido a la izquierda del aviso, que sigue siendo un estado`);
+        await m.ctx.close();
+      }
+    } finally {
+      mant.parar();
     }
   });
 
