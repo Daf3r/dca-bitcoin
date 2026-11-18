@@ -334,6 +334,13 @@ check(cl.get("/app.js?v=vieja").headers["Cache-Control"] == "no-cache", "versió
 check(f'url("/fonts/fraunces.woff2?v={V}")' in cl.get("/styles.css").get_data(as_text=True), "fuentes versionadas en el CSS")
 r = cl.get(f"/fonts/bricolage.woff2?v={V}")
 check(r.status_code == 200 and r.mimetype == "font/woff2" and "immutable" in r.headers["Cache-Control"], "fuente inmutable")
+# Las imágenes de fondo del CSS también van con su versión (antes se revalidaban en cada carga) y, con ella, no cambian nunca
+_css0 = cl.get("/styles.css").get_data(as_text=True)
+check(f'url("/grano.png?v={V}")' in _css0 and f'url("curvas.svg?v={V}")' in _css0 and not re.search(r'url\("[^"#]*\.(?:png|svg|woff2)"\)', _css0), "las imágenes del CSS van versionadas (y nada sin versión)")
+for _img, _tipo in (("/grano.png", "image/png"), ("/curvas.svg", "image/svg+xml")):
+    r = cl.get(f"{_img}?v={V}")
+    check(r.status_code == 200 and r.mimetype == _tipo and r.headers["Cache-Control"] == "public, max-age=31536000, immutable", f"{_img} con la versión vigente: inmutable")
+    check(cl.get(_img).headers["Cache-Control"] == "no-cache" and cl.get(f"{_img}?v=vieja").headers["Cache-Control"] == "no-cache", f"{_img} sin versión o con otra: se revalida")
 check(cl.get("/icon.svg").headers["Cache-Control"] == "no-cache", "resto de estáticos revalida")
 # --- PWA: manifiesto e iconos públicos (el navegador los pide sin cookie), con su tipo y CSP
 import re

@@ -1047,7 +1047,10 @@ def exigir_sesion() -> Any:
 ESTATICOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 _REF_JS = re.compile(r"""((?:from|import)\s*['"]\./[\w-]+\.js)(['"])""")
 _REF_HTML = re.compile(r"""((?:href|src)="/(?:[\w-]+\.(?:js|css)|fonts/[\w-]+\.woff2))(")""")
-_REF_CSS = re.compile(r"""(url\("/fonts/[\w-]+\.woff2)("\))""")
+# En el CSS, las fuentes y las imágenes de fondo (`/grano.png`, `curvas.svg`): con la versión vigente van `immutable` (ver `cabeceras`).
+_REF_CSS = re.compile(r"""(url\("(?:/fonts/[\w-]+\.woff2|/?[\w-]+\.(?:png|svg)))("\))""")
+# Lo que, pedido con `?v=` de la versión vigente, no puede cambiar: la versión es el hash de todos los estáticos.
+_VERSIONADO = re.compile(r"/(?:fonts/[\w.-]+|[\w-]+\.(?:png|svg))")
 
 
 def _version() -> str:
@@ -2881,7 +2884,7 @@ def cabeceras(resp: Response) -> Response:
     resp.headers["Referrer-Policy"] = "no-referrer"
     resp.headers["Cross-Origin-Opener-Policy"] = "same-origin"
     resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
-    if request.path.startswith("/fonts/") and request.args.get("v") == VERSION and resp.status_code == 200:
+    if request.args.get("v") == VERSION and resp.status_code == 200 and _VERSIONADO.fullmatch(request.path):
         resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     elif request.path in {"/", "/login"}:
         resp.headers["Cache-Control"] = "no-store"
