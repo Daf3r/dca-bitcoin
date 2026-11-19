@@ -206,6 +206,7 @@ const PESOS = [
   ['campamento 31: «Tú» sube como oso', 45], // 12 comprobaciones
   ['campamento 32: el teleférico del valle', 35], // 11 comprobaciones
   ['campamento 33: más ositos en el paisaje', 35], // 3 comprobaciones
+  ['campamento 34: el pueblo vive', 35], // 10 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -1041,7 +1042,8 @@ try {
           primero: `${h.firstElementChild.tagName.toLowerCase()}|${h.firstElementChild.getAttribute('role')}`,
           capas: [...h.querySelectorAll(':scope > svg.capa')].map((s) => `${[...s.classList].find((c) => c.startsWith('par-'))}|${s.getAttribute('aria-hidden')}|${cs(s).zIndex}|${cs(s).willChange}|${cs(s).transform}`),
           grupos: h.querySelector('svg').querySelectorAll('.par').length,
-          frente: (() => { const f = h.querySelector(':scope > svg.frente'); return f ? `${f.previousElementSibling === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
+          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal')) x = x.previousElementSibling; // (32, 34) entre los dos, solo las capas pequeñas de la cabina y de los animales del pueblo
+          return f ? `${x === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
           alba: document.getElementById('m-alba').ownerSVGElement.classList.contains('par-cielo'),
           aislada: cs(h).isolation, velo: cs(document.querySelector('.escena-velo')).willChange,
           toques: [cs(h.querySelector('svg')).pointerEvents, cs(h.querySelector('svg.capa')).pointerEvents],
@@ -2312,8 +2314,10 @@ try {
       const cc = await p.locator('#c-lienzo').boundingBox();
       await p.evaluate(() => document.getElementById('c-lienzo').scrollIntoView({ block: 'center' }));
       const cc2 = await p.locator('#c-lienzo').boundingBox();
-      await p.mouse.move(cc2.x + cc2.width * 0.5, cc2.y + cc2.height * 0.5); await p.waitForTimeout(200);
-      ok(/costo promedio \$[\d,]+/.test(await p.textContent('#c-lectura')), 'al recorrer el gráfico del costo se lee cada compra');
+      await p.mouse.move(cc2.x + cc2.width * 0.5, cc2.y + cc2.height * 0.5);
+      // La lectura llega en el cuadro siguiente al movimiento: se espera a que llegue (con la escena ocupada, 200 ms fijos a veces no bastaban).
+      const leeCompra = await p.waitForFunction(() => /costo promedio \$[\d,]+/.test(document.getElementById('c-lectura').textContent), null, { timeout: 3000 }).then(() => true, () => false);
+      ok(leeCompra, 'al recorrer el gráfico del costo se lee cada compra');
       await p.mouse.move(5, 5);
       await p.focus('#c-lienzo'); await p.keyboard.press('Home');
       ok(/primera compra/.test(await p.textContent('#c-sr')) && /primera compra/.test(await p.textContent('#c-lectura')), 'con el teclado (Inicio) se lee la primera compra y se anuncia');
@@ -7199,7 +7203,7 @@ try {
       const [, ax, ay, bx, by] = cable.getAttribute('d').match(/M([\d.]+) ([\d.]+)L([\d.]+) ([\d.]+)/).map(Number);
       const camino = h.querySelector('#m-sendero'), L = camino.getTotalLength(); let lejos = 1e9;
       for (let l = 0; l <= L; l += 2) { const q = camino.getPointAtLength(l), dx = bx - ax, dy = by - ay, k = Math.max(0, Math.min(1, ((q.x - ax) * dx + (q.y - ay) * dy) / (dx * dx + dy * dy))); lejos = Math.min(lejos, Math.hypot(q.x - ax - k * dx, q.y - ay - k * dy)); }
-      return { hay: true, capa: cab.previousElementSibling !== null && cab.nextElementSibling === frente && principal.contains(cable), aria: cab.getAttribute('aria-hidden'), nodos: cab.querySelectorAll('*').length + 1, anim: getComputedStyle(cab).animationName, lejos: Math.round(lejos), wc: getComputedStyle(cab).willChange, mueve: document.documentElement.dataset.mueve ?? '' };
+      return { hay: true, capa: cab.previousElementSibling !== null && Boolean(cab.compareDocumentPosition(frente) & Node.DOCUMENT_POSITION_FOLLOWING) && principal.contains(cable), aria: cab.getAttribute('aria-hidden'), nodos: cab.querySelectorAll('*').length + 1, anim: getComputedStyle(cab).animationName, lejos: Math.round(lejos), wc: getComputedStyle(cab).willChange, mueve: document.documentElement.dataset.mueve ?? '' };
     });
     const anio = await servidor('anio');
     try {
@@ -7243,6 +7247,53 @@ try {
       const v = await e.p.evaluate(() => { const o = document.querySelector('#m-osos.osos'); if (!o) return 'sin osos'; o.classList.add('estira-1'); return getComputedStyle(o.querySelector('.oso-brazos')).display; });
       ok(v === 'none', `33 con «esenciales» no se estiran (${v})`);
       await e.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 34: el pueblo vive (las gallinas picotean, el perro cruza la plaza, el Día de la Cruz)
+  await bloque(async () => {
+    const conLs = (dia, x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); for (const [k, v] of Object.entries(o.x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, { dia, x }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const pueblo = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), frente = h.querySelector(':scope > svg.frente'), ve = (e) => e && getComputedStyle(e).display !== 'none';
+      const capas = (sel) => [...h.querySelectorAll(`:scope > svg.${sel}`)].map((c) => ({ ve: ve(c), anim: getComputedStyle(c).animationName, bajoFrente: !frente || Boolean(c.compareDocumentPosition(frente) & Node.DOCUMENT_POSITION_FOLLOWING), aria: c.getAttribute('aria-hidden'), nodos: c.querySelectorAll('*').length + 1 }));
+      const vis = (sel) => { const e = h.querySelector(`#m-v-pie ${sel}`); return e ? getComputedStyle(e).visibility : 'no hay'; };
+      return { mueve: document.documentElement.dataset.mueve ?? '', gallinas: capas('v-capa-gallina'), perro: capas('v-capa-perro'), vGallina: vis('.v-gallina'), vAnimal: vis('.v-animal'), cruz: Boolean(h.querySelector('.v-cruz-mayo')) };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        // A las 8:00 picotean las tres gallinas (cada una en su capa, bajo el frente) y las del dibujo grande se esconden.
+        let t = await entrar(navegador, anio, ADMIN, { hora: 8, viewport: { width: w, height: h } }, conLs('2026-11-25', { 'libro.efectos': 'todos' }));
+        await cerrar(t.p);
+        let r = await pueblo(t.p);
+        ok(r.mueve === 'gallinas' && r.gallinas.length === 3 && r.gallinas.every((c) => c.ve && c.anim === 'gallina-pica' && c.bajoFrente && c.aria === 'true' && c.nodos === 2) && r.vGallina === 'hidden' && r.perro.every((c) => !c.ve) && r.vAnimal === 'visible', `34 a ${w} px, 8:00: las tres gallinas picotean en su capa (${JSON.stringify(r).slice(0, 220)})`);
+        await t.ctx.close();
+        // A las 15:00 el perro cruza la plaza (una vez) y se echa en su sitio.
+        t = await entrar(navegador, anio, ADMIN, { hora: 15, viewport: { width: w, height: h } }, conLs('2026-11-25', { 'libro.efectos': 'todos' }));
+        await cerrar(t.p);
+        r = await pueblo(t.p);
+        ok(r.mueve === 'perro' && r.perro.length === 2 && r.perro.every((c) => c.ve && c.bajoFrente && c.aria === 'true') && r.perro.map((c) => c.anim).join() === 'perro-cruza,perro-echa' && r.vAnimal === 'hidden' && r.gallinas.every((c) => !c.ve) && r.vGallina === 'visible', `34 a ${w} px, 15:00: el perro cruza la plaza (${JSON.stringify(r.perro)})`);
+        const fin = await t.p.evaluate(() => { for (const a of document.getAnimations()) if (/^perro-/.test(a.animationName)) a.finish(); return [...document.querySelectorAll('#montana > svg.v-capa-perro')].map((c) => getComputedStyle(c).opacity); });
+        ok(fin.join() === '0,1', `34 a ${w} px: al llegar, el que anda se va y queda el echado (${fin})`);
+        await t.ctx.close();
+      }
+      // Fuera de su franja, o con «esenciales», todos quietos como siempre.
+      for (const [hora, ef] of [[12, 'todos'], [8, 'esenciales'], [15, 'ninguno']]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: 390, height: 844 } }, conLs('2026-11-25', { 'libro.efectos': ef }));
+        await cerrar(t.p);
+        const r = await pueblo(t.p);
+        ok([...r.gallinas, ...r.perro].every((c) => !c.ve) && r.vGallina === 'visible' && r.vAnimal === 'visible' && !r.cruz, `34 a las ${hora}:00 con «${ef}»: las gallinas y el perro quietos en el dibujo, y sin cruz fuera del 3 de mayo`);
+        await t.ctx.close();
+      }
+      // El 3 de mayo, la cruz en la plaza.
+      const t = await entrar(navegador, anio, ADMIN, { hora: 11, viewport: { width: 390, height: 844 } }, conLs('2026-05-03', { 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      const c = await t.p.evaluate(() => { const g = document.querySelector('#montana .v-cruz-mayo'); if (!g) return null; const b = g.getBBox(), a = document.querySelector('#m-v-pie .v-animal').getBBox(); return { piezas: g.children.length, palo: getComputedStyle(g.querySelector('.v-cm-palo')).fill, sobrePerro: b.x + b.width * 0.5 > a.x && b.x + b.width * 0.5 < a.x + a.width }; });
+      ok(c && c.piezas === 4 && c.palo !== 'none' && !c.sobrePerro, `34 el 3 de mayo, la cruz con frutas y su cadena en la plaza, junto al perro (${JSON.stringify(c)})`);
+      await t.ctx.close();
     } finally {
       anio.parar();
     }

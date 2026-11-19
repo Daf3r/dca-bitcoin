@@ -11,9 +11,10 @@ export const CAMBIOS = [
   {
     id: '2026-12-g',
     items: [
-      'El punto naranja del sendero es ahora un osito con su mochila naranja: anda al subir, festeja al cruzar una etapa y deja huellas de oso.',
-      'Los osos de la cumbre acompañan también en otros rincones: leen en la lista sin compras, saludan a quien entra por primera vez, van en teleférico y duermen en la tele de noche.',
-      'Y siguen el calendario: de madrugada se duermen, en Navidad se abrigan, en las tardes de lluvia sacan su paraguas y en fiestas patrias, la banderita.',
+      'El punto naranja del sendero es ahora un osito con mochila: anda al subir, festeja y deja huellas.',
+      'Los osos de la cumbre también leen en la lista vacía, saludan al entrar por primera vez, van en teleférico y duermen en la tele.',
+      'De madrugada duermen, en Navidad se abrigan, con lluvia sacan paraguas y en fiestas patrias, la banderita.',
+      'En el pueblo, las gallinas picotean de mañana y el perro cruza la plaza de tarde; el 3 de mayo, la cruz luce sus frutas.',
     ],
   },
   {

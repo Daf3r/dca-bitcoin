@@ -4585,3 +4585,26 @@ html[data-efectos="todos"][data-mueve="teleferico"] .tele-cabina { animation: te
 html[data-efectos="todos"] .osos.estira-1:not([data-sin-estirar]) > .oso:nth-of-type(1) .oso-brazos,
 html[data-efectos="todos"] .osos.estira-2:not([data-sin-estirar]) > .oso:nth-of-type(2) .oso-brazos,
 html[data-efectos="todos"] .osos.estira-3:not([data-sin-estirar]) > .oso:nth-of-type(3) .oso-brazos { display: inline; }
+
+/* ---------------------------------------------------------------- Campamento 34 · El pueblo vive
+   Las gallinas de la plaza picotean de 7:00 a 10:00 y el perro cruza la plaza de 14:00 a 16:30 y se echa en su sitio de siempre: cada
+   gallina y cada perro en su capa pequeña (montana.js: animalesDelPueblo), que se mueve entera (solo transform y opacidad de la capa),
+   con «todos» (llevan `efecto-ambiente`, así también se pausan al deslizar) y en su franja de data-mueve; mientras, los del dibujo
+   grande se esconden (un cambio al empezar y otro al acabar la franja). El perro cruza una vez y se queda echado.
+   El Día de la Cruz (3 de mayo): la cruz de palo con frutas y su cadena de papel, quieta (se poda los demás días). */
+.montana svg.v-capa-animal { display: none; position: absolute; pointer-events: none; overflow: visible; will-change: transform; }
+html[data-efectos="todos"][data-mueve="gallinas"] svg.v-capa-gallina, html[data-efectos="todos"][data-mueve="perro"] svg.v-capa-perro { display: block; }
+html[data-efectos="todos"][data-mueve="gallinas"] #m-v-pie .v-gallina, html[data-efectos="todos"][data-mueve="perro"] #m-v-pie .v-animal { visibility: hidden; }
+.v-capa-gallina path { fill: color-mix(in oklab, #b8643a var(--v-luz), var(--monte-sombra)); }
+.montana svg.v-capa-gallina { transform-origin: 50% 100%; animation: gallina-pica 2.4s steps(1) infinite; }
+.montana svg.v-capa-gallina.g2 { animation-delay: -0.9s; } .montana svg.v-capa-gallina.g3 { animation-delay: -1.7s; }
+@keyframes gallina-pica { 0%, 55%, 100% { transform: none; } 65%, 85% { transform: rotate(24deg); } 75% { transform: rotate(10deg); } }
+.v-capa-perro path { fill: color-mix(in oklab, #6b4a2e var(--v-som), var(--monte-sombra)); }
+.montana svg.v-capa-perro-anda { animation: perro-cruza 22s linear forwards; }
+.montana svg.v-capa-perro-echado { animation: perro-echa 22s linear forwards; }
+@keyframes perro-cruza { 0% { transform: translateX(var(--dx)); opacity: 0; } 4% { opacity: 1; } 92% { transform: none; opacity: 1; } 93%, 100% { transform: none; opacity: 0; } }
+@keyframes perro-echa { 0%, 92% { opacity: 0; } 93%, 100% { opacity: 1; } }
+.v-cm-palo { fill: color-mix(in oklab, #7a5232 var(--v-luz), var(--monte-sombra)); }
+.v-cm-cadena { fill: none; stroke: color-mix(in oklab, #3f8fd8 var(--v-luz), var(--monte-sombra)); stroke-linejoin: round; }
+.v-cm-jocote { fill: color-mix(in oklab, #d6402e var(--v-luz), var(--monte-sombra)); }
+.v-cm-mango { fill: color-mix(in oklab, #f0b23a var(--v-luz), var(--monte-sombra)); }

@@ -122,7 +122,9 @@
    *   torogoz       5:00–7:00 (el amanecer, como siempre)
    *   zompopos      7:30–10:00, del 15 al 21 de mayo (cuando se levanta la niebla)
    *   azacuanes     8:00–16:00, del 10 al 31 de octubre y del 1 al 20 de abril (vuelan con el calor del día)
+   *   gallinas      7:00–10:00 (campamento 34; los días de zompopos y de azacuanes, quietas)
    *   teleférico   10:00–13:00 (campamento 32; solo se ve en pantallas anchas; los días de azacuanes, quieto)
+   *   perro        14:00–16:30 (campamento 34; los días de azacuanes, desde las 16:00)
    *   pericos       16:30–18:00 (el atardecer: van a dormir)
    *   relámpagos    22:00–5:00, de mayo a octubre (tormentas lejanas de madrugada)
    *   luciérnagas   18:00–5:00 (antes desde las 16:30: los pericos se quedan el primer rato del atardecer); en la lluviosa, hasta las 22:00
@@ -132,7 +134,9 @@
     if (h >= 5 && h < 7) return 'torogoz';
     if (zompopos(f) && h >= 7.5 && h < 10) return 'zompopos';
     if (azacuanes(f) && h >= 8 && h < 16) return 'azacuanes';
+    if (h >= 7 && h < 10) return 'gallinas';
     if (h >= 10 && h < 13) return 'teleferico';
+    if (h >= 14 && h < 16.5) return 'perro';
     if (h >= 16.5 && h < 18) return 'pericos';
     if (epoca(f) === 'lluviosa' && (h >= 22 || h < 5)) return 'relampagos';
     if (h >= 18 || h < 5) return 'luciernagas';

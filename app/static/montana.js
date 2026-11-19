@@ -234,7 +234,8 @@ function lago(c, W, H, ventas = 0, kv = 1) {
  * - Los ids no cambian y siguen siendo únicos: las capas usan los degradados (`url(#m-…)`) definidos en el `<svg>` principal.
  * - Los `<svg>` no reciben toques (`pointer-events: none`); la luna sí (sus tres toques: la moneda), y el clic sube hasta `host`.
  * - El frente (`<svg class="frente">`, justo después del principal): de `#m-luzhecha` al final, lo que cambia con el avance (ver abajo).
- * La forma, los `rnd()` y el orden de pintado no cambian: se ve igual. Orden en `host`: principal, frente, cielo, lejana, media.
+ * La forma, los `rnd()` y el orden de pintado no cambian: se ve igual. Orden en `host`: principal, las capas pequeñas que se mueven
+ * enteras (la cabina del teleférico y los animales del pueblo: campamentos 32 y 34), frente, cielo, lejana, media.
  */
 /**
  * (Campamento 30, idea 19) Lo de otra temporada no se queda en la escena. La escena se calcula y se arma igual (la forma no cambia: el
@@ -258,6 +259,7 @@ export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
     `.v-mp:not(.v-mp-${mp})`,
     lluviosa ? '.v-q-hilo' : '.v-q-llena',
     fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
+    md !== '05-03' && '.v-cruz-mayo', // (34) el Día de la Cruz
   ].filter(Boolean);
 }
 
@@ -309,6 +311,43 @@ function telefericoValle(host, W, u, camino, L) {
   const frente = host.querySelector(':scope > svg.frente');
   if (frente) frente.before(cab); else host.append(cab);
   return true;
+}
+
+/**
+ * (Campamento 34) El pueblo vive: las tres gallinas de la plaza picotean por la mañana y el perro cruza la plaza por la tarde y se echa
+ * en su sitio de siempre. Cada gallina y cada perro es su propia capa pequeña (un <svg> encima del dibujo grande y debajo del frente,
+ * con las coordenadas de la escena en su viewBox) que se mueve entera: solo transform y opacidad de la capa, nada se repinta. Llevan
+ * `efecto-ambiente` y se ven solo en su franja de data-mueve (gallinas 7:00–10:00, perro 14:00–16:30); mientras, las del dibujo grande
+ * se esconden. Fuera de su franja, quietos como siempre. El perro cruza una sola vez (al abrir o al empezar su franja) y se queda echado.
+ */
+function animalesDelPueblo(host) {
+  const pie = host.querySelector('#m-v-pie'), frente = host.querySelector(':scope > svg.frente');
+  if (!pie) return;
+  const capa = (clase, [x, y, w, h], html, vars = {}) => {
+    const s = document.createElementNS(NS, 'svg');
+    for (const [a, v] of [['class', `efecto-ambiente v-capa-animal ${clase}`], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
+    Object.assign(s.style, { left: `${f1(x)}px`, top: `${f1(y)}px`, width: `${f1(w)}px`, height: `${f1(h)}px` });
+    for (const [n, v] of Object.entries(vars)) s.style.setProperty(n, v);
+    s.innerHTML = html;
+    if (frente) frente.before(s); else host.append(s);
+  };
+  // La caja de un trazo suelto: se mide un momento dentro del dibujo y se quita.
+  const caja = (d) => { const t = document.createElementNS(NS, 'path'); t.setAttribute('d', d); pie.append(t); const b = t.getBBox(); t.remove(); return b; };
+  const gallinas = pie.querySelector('.v-gallina')?.getAttribute('d');
+  if (gallinas) gallinas.split(/(?=M)/).forEach((d, i) => {
+    const b = caja(d);
+    capa(`v-capa-gallina g${i + 1}`, [b.x - 0.5, b.y - 0.5, b.width + 1, b.height + 1], `<path d="${d}"/>`);
+  });
+  const perro = pie.querySelector('.v-animal');
+  if (perro?.getAttribute('d')) {
+    const b = perro.getBBox(), k = b.width / 5.2, y = b.y + b.height, x0 = b.x - 0.4 * k;
+    // De pie, de perfil, mirando a donde va (a la derecha): lomo, cabeza, cola y cuatro patas, en sus unidades k (el echado mide 5.2).
+    // Llega andando desde cinco largos a la izquierda hasta donde se echa.
+    const q = (px, py) => `${f1(x0 + px * k)} ${f1(y + py * k)}`;
+    const anda = `M${q(0, -2.4)}L${q(3.6, -2.4)}L${q(4.4, -3.4)}L${q(5.3, -3.3)}L${q(5.2, -2.6)}L${q(4.4, -1.6)}L${q(4.1, -1.6)}L${q(4.1, 0)}L${q(3.6, 0)}L${q(3.5, -1.3)}L${q(1.1, -1.3)}L${q(1, 0)}L${q(0.5, 0)}L${q(0.5, -1.5)}L${q(-0.1, -1.9)}L${q(-0.9, -3)}L${q(-0.6, -3.1)}L${q(0, -2.4)}Z`;
+    capa('v-capa-perro v-capa-perro-anda', [x0 - 1.4 * k, y - 3.9 * k, 7.2 * k, 4.2 * k], `<path d="${anda}"/>`, { '--dx': `${f1(-5 * b.width)}px` });
+    capa('v-capa-perro v-capa-perro-echado', [b.x - 0.5, b.y - 0.5, b.width + 1, b.height + 1], `<path d="${perro.getAttribute('d')}"/>`);
+  }
 }
 
 /** Quita de `raiz` (la plantilla de la escena o la escena ya puesta) lo de otra temporada (ver `fueraDeTemporada`). */
@@ -695,6 +734,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   } finally { delete host.dataset.colocando; }
   podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
   if (tocable && !pelicula) telefericoValle(host, W, pb.u, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
+  if (tocable && !pelicula) animalesDelPueblo(host); // (34)
   describir(sats, etapa);
 }
 

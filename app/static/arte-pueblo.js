@@ -189,7 +189,7 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
   };
   // ---- dibujar, de atrás adelante
   for (const a of atras) casa(a.x, a.y, a.s, a.i, 1);
-  let pz = null;
+  let pz = null, cruzMayo = ''; // (34) la cruz del Día de la Cruz
   const altos = [];
   for (const p of piezas) {
     if (p.tipo === 'iglesia') iglesia(p.x, p.s);
@@ -243,6 +243,18 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
       add('gallina', `M${P([cx - 1 * k, cy])}q${f1(0.2 * k)} ${f1(-1.6 * k)} ${f1(1.4 * k)} ${f1(-1.5 * k)}l${f1(0.5 * k)} ${f1(-0.7 * k)}l${f1(0.3 * k)} ${f1(0.7 * k)}q${f1(0.2 * k)} ${f1(1.2 * k)} ${f1(-1.2 * k)} ${f1(1.5 * k)}Z`);
     }
   }
+  // (Campamento 34) El Día de la Cruz (3 de mayo): en la plaza, una cruz de palo adornada con frutas (jocotes y mangos) y una cadena
+  // de papel de colores, como se hace aquí para recibir las lluvias. Su palo queda a la izquierda del perro echado (los brazos y las
+  // frutas, por encima de él) y la gente de la plaza se para delante. Se dibuja siempre y montana.js la poda los demás días.
+  if (pz) {
+    const k = pz.k, x = pz.cx + pz.w * 0.36 - 1.2 * k, y = yg + 1.6 * k, P2 = (dx, dy) => P([x + dx * k, y + dy * k]);
+    const palo = `M${P2(-0.35, 0)}L${P2(0.35, 0)}L${P2(0.35, -9)}L${P2(-0.35, -9)}ZM${P2(-2.8, -6.6)}L${P2(2.8, -6.6)}L${P2(2.8, -5.9)}L${P2(-2.8, -5.9)}Z`;
+    const fruta = (fx, fy, r) => `M${P2(fx - r, fy)}a${f1(r * k)} ${f1(r * k)} 0 1 0 ${f1(2 * r * k)} 0a${f1(r * k)} ${f1(r * k)} 0 1 0 ${f1(-2 * r * k)} 0`;
+    const jocotes = [[-2.4, -5.3], [2.4, -5.3], [0, -9.4]].map(([fx, fy]) => fruta(fx, fy, 0.55)).join('');
+    const mangos = [[-1.2, -5.4], [1.2, -5.4], [0.7, -3.6]].map(([fx, fy]) => fruta(fx, fy, 0.6)).join('');
+    const cadena = `M${P2(-2.8, -6.3)}L${P2(-2, -4.6)}L${P2(-1.2, -6.2)}L${P2(-0.4, -4.6)}L${P2(0.4, -6.2)}L${P2(1.2, -4.6)}L${P2(2, -6.2)}L${P2(2.8, -4.6)}`;
+    cruzMayo = `<g class="v-cruz-mayo"><path class="v-cm-palo" d="${palo}"/><path class="v-cm-cadena" d="${cadena}" stroke-width="${f1(0.5 * u)}"/><path class="v-cm-jocote" d="${jocotes}"/><path class="v-cm-mango" d="${mangos}"/></g>`;
+  }
   // Los niños de la plaza: siluetas chicas (en octubre y noviembre, con el hilo de su piscucha en la mano).
   for (const [x, y] of sit.ninos ?? []) add('gente', `M${P([x - 0.8 * u, y])}L${P([x + 0.8 * u, y])}L${P([x + 0.55 * u, y - 2.8 * u])}L${P([x - 0.55 * u, y - 2.8 * u])}ZM${P([x - 0.6 * u, y - 3.3 * u])}a${f1(0.6 * u)} ${f1(0.6 * u)} 0 1 0 ${f1(1.2 * u)} 0a${f1(0.6 * u)} ${f1(0.6 * u)} 0 1 0 ${f1(-1.2 * u)} 0Z`);
   // Fiestas patrias (13 al 15 de septiembre): la bandera azul y blanca en su asta, en la plaza.
@@ -284,7 +296,7 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     + `${mango}${fuegoV}${navidad}`
     + `${p('v-farol-poste', 'farol-poste', sw(0.55))}${p('v-farol-lampara', 'farol-lampara')}${p('v-farol-luz', 'farol-luz', sw(3.4))}`
     + `<path class="v-cordel" d="${cuerda}"${sw(0.3)}/>${foco.map((d, j) => `<path class="v-navidad v-foco v-foco-${j}" d="${d}"${sw(1.15)}/>`).join('')}${bandera.map((d, j) => `<path class="v-fiesta v-band v-band-${j}" d="${d}"/>`).join('')}`
-    + `${patrias}${p('v-gente', 'gente')}${p('v-animal', 'animal')}${p('v-gallina', 'gallina')}${humo}</g>`;
+    + `${patrias}${cruzMayo}${p('v-gente', 'gente')}${p('v-animal', 'animal')}${p('v-gallina', 'gallina')}${humo}</g>`;
 }
 
 /** El pino de Navidad de la plaza: cuatro pisos en sombra y luz, una guirnalda dorada, esferas y foquitos de tres colores. Sin estrella. */
