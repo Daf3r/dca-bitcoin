@@ -1720,4 +1720,17 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(!/\b(document|window|localStorage)\b/.test(fuente.replace(/\/\/.*$/gm, '')), 'poses: el módulo es puro (sin DOM)');
 }
 
+// Campamento 31 · «Tú» sube como oso: el osito de «Tú» (un cuarto osito, sin la ropa de los tres, con su mochila y correas naranjas).
+{
+  const O = await import('../app/static/arte-osos.js');
+  const s = O.osoTu({ k: 1.5 }), c = O.osoTu({ k: 1.5, cumple: true }), b = O.osoTu({ k: 1, bajo: '<ellipse class="yo-punto"/>' });
+  const nodos = (x) => (x.match(/<(g|path|ellipse)\b/g) || []).length;
+  ok(s.includes('class="oso oso-tu"') && ['oso-mochila', 'oso-correa', 'oso-palo', 'oso-hocico', 'oso-rasgos'].every((k) => s.includes(`class="${k}"`)) && !/oso-marino|oso-cinta|oso-celeste/.test(s), 'tú: el osito lleva su mochila, sus correas y su palito, y nada de la ropa de los tres');
+  ok(s.includes('oso-bufanda v-navidad') && !s.includes('oso-gorro"') && c.includes('class="oso-gorro"'), 'tú: la bufanda de Navidad va dibujada (el CSS la enseña) y el gorrito solo con cumpleaños');
+  ok(/<g class="tu-festeja">.*<\/g><\/g>$/.test(s) && !/style=|NaN/.test(s) && nodos(s) <= 16, `tú: los brazos alzados en su grupo, sin estilos en línea (${nodos(s)} nodos)`);
+  ok(b.indexOf('yo-punto') > b.indexOf('oso-pie') && b.indexOf('yo-punto') < b.indexOf('oso oso-tu'), 'tú: la pisada va entre la sombra y el osito');
+  const pts = [...s.matchAll(/(-?\d+\.\d) (-?\d+\.\d)/g)].map((m) => [Number(m[1]) / 1.5, Number(m[2]) / 1.5]);
+  ok(pts.every(([x, y]) => x >= O.CAJA_TU.x0 - 0.1 && x <= O.CAJA_TU.x1 + 0.1 && y >= O.CAJA_TU.y0 - 0.1 && y <= O.CAJA_TU.y1 + 0.1), 'tú: todo el osito (también los brazos alzados y la sombra) cabe en su caja');
+}
+
 console.log(`OK ${n} comprobaciones`);

@@ -11,9 +11,8 @@ export const CAMBIOS = [
   {
     id: '2026-12-g',
     items: [
-      'Los osos de la cumbre acompañan ahora también en otros rincones del libro.',
-      'Sin compras, el grande lee en la lista y espera con su mochila en «Tu historia»; en las cartas para el futuro, lleva un sobre.',
-      'Los tres saludan a quien entra por primera vez, van en teleférico en la película del ascenso y duermen en la tele de noche.',
+      'El punto naranja del sendero es ahora un osito con su mochila naranja: anda al subir, festeja al cruzar una etapa y deja huellas de oso.',
+      'Los osos de la cumbre acompañan también en otros rincones: leen en la lista sin compras, saludan a quien entra por primera vez, van en teleférico en la película y duermen en la tele de noche.',
       'Y siguen el calendario: de madrugada se duermen, en Navidad se abrigan, en las tardes de lluvia sacan su paraguas y en fiestas patrias, la banderita.',
     ],
   },

@@ -110,6 +110,39 @@ export function osos(lista, { k = 1, aurora = false, cumple = false } = {}) {
   return `<path class="oso-pie" d="${pie}"/>${cuerpos}`;
 }
 
+// ---------------------------------------------------------------------------------------------------------------- «Tú»
+// (Campamento 31) «Tú» como oso que sube: un cuarto osito, blanco y sin la ropa de los tres (así no se confunde con el grande de la
+// cumbre), con su mochila y sus correas naranjas (el naranja es lo tuyo) y su palito. Sentado como ellos: un peluche que alguien hace
+// subir. Los pies en (0, 0): montana.js lo pone sobre el punto exacto del sendero, y esa altitud es el dato.
+const MOCHILA = [...arco(-7.4, -10.6, 2.6, 2.2, 180, 300, 5), [-4.2, -12.2], [-3.8, -4.4], ...arco(-6.6, -4.6, 2.8, 2, 0, 160, 5)];
+const CORREAS = [[[-4.2, -10.4], [-2.6, -10.6], [-1.4, -3.2], [-2.8, -3]], [[2.6, -10.6], [4.2, -10.4], [2.8, -3], [1.4, -3.2]]];
+const PALO = [[7.6, -15.6], [8.4, -15.6], [7.6, 0.4], [6.8, 0.4]];
+/** Un bracito (una cápsula de `a` a `b`, radio `r`), para los brazos alzados de la celebración. */
+const capsula = ([ax, ay], [bx, by], r, n = 6) => { const ang = Math.atan2(by - ay, bx - ax) / RAD; return [...arco(bx, by, r, r, ang - 90, ang + 90, n), ...arco(ax, ay, r, r, ang + 90, ang + 270, n)]; };
+const BRAZOS_ARRIBA = { luz: capsula([4.4, -7.4], [8, -15.6], 1.35), medio: capsula([-4.4, -7.4], [-8, -15.6], 1.35), hocico: [elipse(8, -15.6, 1.46, 1.35, 8), elipse(-8, -15.6, 1.46, 1.35, 8)] };
+/** La caja de «Tú» en sus unidades (de la mochila al palito y de las orejas a la sombra de los pies): para los rótulos y los choques. */
+export const CAJA_TU = { x0: -11.2, x1: 9.7, y0: -18.2, y1: 2.5 };
+/**
+ * El oso de «Tú» (decorativo; la descripción de la montaña dice dónde vas). `k`: unidades → px. Un trazo por tono; los brazos alzados
+ * de la celebración van dibujados y escondidos (`tu-festeja`: los enseña la clase `festeja` de #m-yo); la bufanda de Navidad
+ * (`v-navidad`) y, con `cumple`, el gorrito, como los de la cumbre. `bajo`: lo que va entre su sombra y el osito (la pisada de «Tú»).
+ */
+export function osoTu({ k = 1, cumple = false, bajo = '' } = {}) {
+  const T = (pts) => d(pts.map(([x, y]) => [x * k, y * k]));
+  const pl = {};
+  const add = (tono, pts) => { pl[tono] = (pl[tono] || '') + T(pts); };
+  add('mochila', MOCHILA);
+  for (const [tono, pts] of PIEZAS) add(tono, pts);
+  for (const pts of CORREAS) add('correa', pts);
+  for (const pts of BUFANDA) add('bufanda', pts);
+  for (const [tono, lista2] of Object.entries(CARA)) for (const pts of lista2) add(tono, pts);
+  if (cumple) add('gorro', GORRO);
+  add('palo', PALO);
+  const orden = ['mochila', 'sombra', 'luz', 'medio', 'correa', 'bufanda', 'hocico', 'rasgos', 'gorro', 'palo'];
+  const festeja = `<g class="tu-festeja">${['luz', 'medio'].map((t) => `<path class="oso-${t}" d="${T(BRAZOS_ARRIBA[t])}"/>`).join('')}<path class="oso-hocico" d="${BRAZOS_ARRIBA.hocico.map(T).join('')}"/></g>`;
+  return `<path class="oso-pie" d="${T(PIE)}"/>${bajo}<g class="oso oso-tu">${orden.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}${festeja}</g>`;
+}
+
 // ---------------------------------------------------------------------------------------------------------------- el sitio
 /** Todos los vértices de un oso (para que nada salga contra el cielo), con el gorrito si toca (el saltito lo suma la regla). */
 function vertices(quien, { cumple }) {

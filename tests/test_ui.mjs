@@ -203,6 +203,7 @@ const PESOS = [
   ['campamento 28: según el momento', 40], // 9 comprobaciones
   ['campamento 29: detalles con cariño', 45], // 7 comprobaciones
   ['campamento 30: hacer sitio', 30], // 9 comprobaciones
+  ['campamento 31: «Tú» sube como oso', 45], // 12 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -1662,7 +1663,7 @@ try {
         humoVisible: camp.filter((c) => vis(c.querySelector('.humo')) !== 'none').length,
         humoEnAlcanzados: camp.filter((c) => c.classList.contains('alcanzado')).every((c) => vis(c.querySelector('.humo')) !== 'none'),
         fogataVisible: camp.filter((c) => vis(c.querySelector('.fogata')) !== 'none').map((c) => c.classList.contains('sig')),
-        huellas: document.querySelectorAll('#m-huellas circle').length,
+        huellas: Number(document.querySelector('#m-huellas .huellas-oso')?.dataset.n ?? 0), // (campamento 31) huellas de oso, en un solo trazo
         largo: document.getElementById('m-sendero').getTotalLength(),
         linterna: getComputedStyle(document.querySelector('.linterna')).opacity,
         huellasDisplay: vis(document.getElementById('m-huellas')),
@@ -6800,14 +6801,17 @@ try {
       await pe.p.keyboard.press('End'); await pe.p.waitForTimeout(200);
       e = await osos(pe.p, '#pe-montana');
       ok(e.n === enPagina.n && e.fallos.length === 0, `25·película: hoy, los mismos que en la página (${resumen(e)})`);
-      // «El oso cede»: con «Tú» junto a la cumbre (su rótulo y su placa caen sobre ellos) se esconden; de vuelta en hoy, se ven otra vez.
-      await pe.p.evaluate(async () => {
-        const M = await import(document.querySelector('link[rel=modulepreload][href*="montana.js"]').href);
-        const host = document.getElementById('pe-montana'), esc = M.escalaDe(host);
-        M.fotograma(host, Math.round(esc.base * (esc.cima / esc.base) ** 0.995), { quieto: true, rotulo: 'Tú' });
-      });
-      e = await osos(pe.p, '#pe-montana');
-      ok(e.n === 0 && e.escondidos === 'rótulo', `25·película: con «Tú» junto a la cumbre, el oso cede: se esconden (${JSON.stringify(e)})`);
+      // «El oso cede»: con «Tú» llegando a la cumbre, en cada fotograma, o nada cae sobre los osos o ceden (se esconden); de vuelta en hoy,
+      // se ven otra vez. (Desde el campamento 31 «Tú» es un osito y su rótulo se aparta de su caja: aquí ya no cae sobre ellos.)
+      for (const x of [0.95, 0.98, 0.985, 0.99, 0.995, 1]) {
+        await pe.p.evaluate(async (x) => {
+          const M = await import(document.querySelector('link[rel=modulepreload][href*="montana.js"]').href);
+          const host = document.getElementById('pe-montana'), esc = M.escalaDe(host);
+          M.fotograma(host, Math.round(esc.base * (esc.cima / esc.base) ** x), { quieto: true, rotulo: 'Tú' });
+        }, x);
+        e = await osos(pe.p, '#pe-montana');
+        ok(e.escondidos === 'rótulo' || (e.n > 0 && e.fallos.length === 0), `25·película ${x}: con «Tú» junto a la cumbre, nada cae sobre los osos o ceden (${JSON.stringify(e)})`);
+      }
       await pe.p.keyboard.press('Home'); await pe.p.keyboard.press('End'); await pe.p.waitForTimeout(200);
       e = await osos(pe.p, '#pe-montana');
       ok(e.n === enPagina.n && e.fallos.length === 0, `25·película: de vuelta en hoy, se ven otra vez (${resumen(e)})`);
@@ -7120,6 +7124,65 @@ try {
       await l.ctx.close();
     } finally {
       mil.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 31: «Tú» sube como oso (el osito con su mochila naranja, la pisada, sus huellas, el eco, anda y festeja)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    /** El osito de «Tú»: dónde están sus pies frente al punto del sendero, la pisada, su caja y el rótulo. */
+    const tu = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), yo = h.querySelector('#m-yo'), oso = yo.querySelector('.tu .oso-tu'), pis = yo.querySelector('.yo-punto'), caja = yo.querySelector('.yo-anillo');
+      const [tx, ty] = yo.getAttribute('transform').match(/-?[\d.]+/g).map(Number);
+      const camino = h.querySelector('#m-sendero'), L = camino.getTotalLength();
+      let d = 1e9; for (let l = 0; l <= L; l += 0.5) { const q = camino.getPointAtLength(l); d = Math.min(d, Math.hypot(q.x - tx, q.y - ty)); }
+      const r = (e) => e.getBoundingClientRect(), cruza = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const ob = r(oso), cb = r(caja), rot = [...h.querySelectorAll('#m-etiquetas .eti-yo, #m-etiquetas .yo-txt')].map(r);
+      const naranja = getComputedStyle(oso.querySelector('.oso-mochila')).fill === getComputedStyle(pis).fill;
+      return { hay: Boolean(oso), enSendero: d < 0.6, pisadaEnPunto: Math.abs(Number(pis.getAttribute('cy') ?? 0)) < 2 && !pis.getAttribute('cx'), dentro: ob.left >= cb.left - 1 && ob.right <= cb.right + 1 && ob.top >= cb.top - 1 && ob.bottom <= cb.bottom + 2, rotulo: rot.length > 0 && !rot.some((q) => cruza(q, cb)), naranja, nodos: yo.querySelectorAll('*').length + 1, alto: Math.round(ob.height), decorativo: Boolean(yo.closest('[aria-hidden="true"]')) && !oso.closest('[role="img"]:not(svg)') };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[320, 568], [390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: w, height: h } }, conLs({ 'libro.efectos': 'todos' }));
+        await cerrar(t.p); await t.p.evaluate(() => window.scrollTo(0, 0)); await t.p.waitForTimeout(300);
+        const r = await tu(t.p);
+        ok(r.hay && r.enSendero && r.pisadaEnPunto && r.dentro && r.rotulo && r.naranja && r.decorativo, `31 a ${w} px: «Tú» es el osito con la mochila naranja, los pies sobre el sendero, dentro de su caja y sin su rótulo encima (${JSON.stringify(r)})`);
+        ok(r.nodos <= 24 && r.alto >= 18, `31 a ${w} px: el osito mide ${r.alto} px y #m-yo son ${r.nodos} nodos (≤ 24)`);
+        const hu = await t.p.evaluate(() => { const c = document.querySelector('#m-huellas'); return { trazos: c.querySelectorAll('path').length, circulos: c.querySelectorAll('circle').length, n: Number(c.querySelector('.huellas-oso')?.dataset.n ?? 0) }; });
+        ok(hu.trazos === 1 && hu.circulos === 0 && hu.n > 2, `31 a ${w} px: las huellas son de oso y van en un solo trazo (${hu.n} huellas)`);
+        await t.ctx.close();
+      }
+      // Anda mientras sube (al abrir la app sube desde la salida) y se queda quieto al llegar; con «ninguno», ni anda ni levanta los brazos.
+      const vigila = () => { window.__anda = false; const t0 = performance.now(); const mira = () => { if (document.getElementById('m-yo')?.classList.contains('anda')) window.__anda = true; if (performance.now() - t0 < 8000) setTimeout(mira, 100); }; mira(); };
+      for (const ef of ['todos', 'ninguno']) {
+        const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+        const p = await ctx.newPage();
+        await p.addInitScript((e) => { try { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, ef);
+        await p.addInitScript(vigila);
+        await p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
+        await p.fill('input[autocomplete="username"]', ADMIN[0]); await p.fill('input[autocomplete="current-password"]', ADMIN[1]);
+        await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+        await p.waitForTimeout(3000);
+        const r = await p.evaluate(() => { const yo = document.getElementById('m-yo'); yo.classList.add('festeja'); const f = getComputedStyle(yo.querySelector('.tu-festeja')).display; yo.classList.remove('festeja'); return { anduvo: window.__anda, ahora: yo.classList.contains('anda'), festeja: f, respira: getComputedStyle(yo.querySelector('.oso-tu')).animationName }; });
+        if (ef === 'todos') ok(r.anduvo && !r.ahora && r.festeja === 'inline' && r.respira === 'tu-respira', `31 con «todos»: anduvo al subir, quieto al llegar, respira y levanta los brazos (${JSON.stringify(r)})`);
+        else ok(!r.ahora && r.festeja === 'none' && r.respira === 'none', `31 con «ninguno»: quieto, sin brazos alzados ni respiración (${JSON.stringify(r)})`);
+        await ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+    // El eco de hace un año: el mismo osito, translúcido, lejos de «Tú».
+    const sEco = await servidor('eco');
+    try {
+      const t = await entrar(navegador, sEco, ADMIN, { hora: 12 }, conLs());
+      await cerrar(t.p);
+      const r = await t.p.evaluate(() => { const f = document.querySelector('#m-eco .eco-fantasma'); return { oso: Boolean(f?.querySelector('.oso-tu')), op: f ? Number(getComputedStyle(f.querySelector('.tu')).opacity) : 1, caja: Boolean(f?.querySelector('rect.eco-anillo')) }; });
+      ok(r.oso && r.caja && r.op > 0.3 && r.op < 0.7, `31 el eco de hace un año es el osito, translúcido (${JSON.stringify(r)})`);
+      await t.ctx.close();
+    } finally {
+      sEco.parar();
     }
   });
 
