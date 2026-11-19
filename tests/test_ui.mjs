@@ -211,6 +211,7 @@ const PESOS = [
   ['pulido de la iglesia y el paisaje bajo', 45], // 6 comprobaciones
   ['campamento 35: el pueblo de los osos', 90], // 16 comprobaciones
   ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
+  ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -1046,7 +1047,7 @@ try {
           primero: `${h.firstElementChild.tagName.toLowerCase()}|${h.firstElementChild.getAttribute('role')}`,
           capas: [...h.querySelectorAll(':scope > svg.capa')].map((s) => `${[...s.classList].find((c) => c.startsWith('par-'))}|${s.getAttribute('aria-hidden')}|${cs(s).zIndex}|${cs(s).willChange}|${cs(s).transform}`),
           grupos: h.querySelector('svg').querySelectorAll('.par').length,
-          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal')) x = x.previousElementSibling; // (32, 34) entre los dos, solo las capas pequeñas de la cabina y de los animales del pueblo
+          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino')) x = x.previousElementSibling; // (32, 34, 37) entre los dos, solo las capas pequeñas de la cabina y de los animales del pueblo
           return f ? `${x === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
           alba: document.getElementById('m-alba').ownerSVGElement.classList.contains('par-cielo'),
           aislada: cs(h).isolation, velo: cs(document.querySelector('.escena-velo')).willChange,
@@ -7352,8 +7353,8 @@ try {
         let r = await pueblo(t.p);
         ok(r.mueve === 'gallinas' && r.gallinas.length === 3 && r.gallinas.every((c) => c.ve && c.anim === 'gallina-pica' && c.bajoFrente && c.aria === 'true' && c.nodos === 2) && r.vGallina === 'hidden' && r.perro.every((c) => !c.ve) && r.vAnimal === 'visible', `34 a ${w} px, 8:00: las tres gallinas picotean en su capa (${JSON.stringify(r).slice(0, 220)})`);
         await t.ctx.close();
-        // A las 15:00 el perro cruza la plaza (una vez) y se echa en su sitio.
-        t = await entrar(navegador, anio, ADMIN, { hora: 15, viewport: { width: w, height: h } }, conLs('2026-11-25', { 'libro.efectos': 'todos' }));
+        // A las 14:30 el perro cruza la plaza (una vez) y se echa en su sitio (desde el campamento 37, de 14:00 a 15:00).
+        t = await entrar(navegador, anio, ADMIN, { hora: 14.5, viewport: { width: w, height: h } }, conLs('2026-11-25', { 'libro.efectos': 'todos' }));
         await cerrar(t.p);
         r = await pueblo(t.p);
         ok(r.mueve === 'perro' && r.perro.length === 2 && r.perro.every((c) => c.ve && c.bajoFrente && c.aria === 'true') && r.perro.map((c) => c.anim).join() === 'perro-cruza,perro-echa' && r.vAnimal === 'hidden' && r.gallinas.every((c) => !c.ve) && r.vGallina === 'visible', `34 a ${w} px, 15:00: el perro cruza la plaza (${JSON.stringify(r.perro)})`);
@@ -7464,6 +7465,35 @@ try {
           ok(r.turno === turno && prueba(r), `36 a ${w} px, ${dia} a las ${hora}:00: ${turno} (${JSON.stringify(r)})`);
           await t.ctx.close();
         }
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 37: el pueblo se mueve (la capa del vecino: la que barre y la pelota de los oseznos)
+  await bloque(async () => {
+    const conLs = (ef) => [(e) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-09-16'); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, ef]; // un miércoles sin azacuanes
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const capa = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), c = h.querySelector(':scope > svg.v-capa-vecino'), frente = h.querySelector(':scope > svg.frente');
+      if (!c) return { hay: false, mueve: document.documentElement.dataset.mueve ?? '' };
+      return { hay: true, actor: [...c.classList].find((x) => x.startsWith('v-actor-')), anim: getComputedStyle(c).animationName, bajoFrente: Boolean(c.compareDocumentPosition(frente) & Node.DOCUMENT_POSITION_FOLLOWING), aria: c.getAttribute('aria-hidden'), nodos: c.querySelectorAll('*').length + 1, mueve: document.documentElement.dataset.mueve ?? '' };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        for (const [hora, ef, actor, anim] of [[7.5, 'todos', 'v-actor-barre', 'vo-barre'], [15.5, 'todos', 'v-actor-pelota', 'vo-bota'], [7.5, 'esenciales', 'v-actor-barre', 'none'], [9, 'todos', 'v-actor-barre', 'none']]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(ef));
+          await cerrar(t.p);
+          const r = await capa(t.p);
+          ok(r.hay && r.actor === actor && r.anim === anim && r.bajoFrente && r.aria === 'true' && r.nodos <= 12, `37 a ${w} px, ${hora}:00 con «${ef}»: el vecino en su capa (${JSON.stringify(r)})`);
+          await t.ctx.close();
+        }
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12.5, viewport: { width: w, height: h } }, conLs('todos'));
+        await cerrar(t.p);
+        ok(!(await capa(t.p)).hay, `37 a ${w} px: en la siesta nadie se mueve (no hay capa)`);
+        await t.ctx.close();
       }
     } finally {
       anio.parar();

@@ -134,9 +134,11 @@
     if (h >= 5 && h < 7) return 'torogoz';
     if (zompopos(f) && h >= 7.5 && h < 10) return 'zompopos';
     if (azacuanes(f) && h >= 8 && h < 16) return 'azacuanes';
-    if (h >= 7 && h < 10) return 'gallinas';
+    if (h >= 7 && h < 8) return 'barre'; // (37) la que barre su acera (las gallinas, desde las 8:00)
+    if (h >= 8 && h < 10) return 'gallinas';
     if (h >= 10 && h < 13) return 'teleferico';
-    if (h >= 14 && h < 16.5) return 'perro';
+    if (h >= 14 && h < 15) return 'perro';
+    if (h >= 15 && h < 16.5) return 'pelota'; // (37) la pelota de los oseznos (el perro cruza antes)
     if (h >= 16.5 && h < 18) return 'pericos';
     if (epoca(f) === 'lluviosa' && (h >= 22 || h < 5)) return 'relampagos';
     if (h >= 18 || h < 5) return 'luciernagas';

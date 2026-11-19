@@ -186,10 +186,12 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
     }
   };
   if (t === 'amanece') { en('corredor', 0, 'estira', { r: 2 }); en('calle', 0, 'panadero', { r: 1 }); en('corredor', 1, 'escoba', { r: 0, f: -1 }); }
-  else if (t === 'manana') { en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'campesino', { r: 1 }); en('corredor', 1, 'escoba', { r: 1 }); en('calle', 1, 'vecina', { r: 2, f: -1 }); }
+  // (37) `actor`: el que se mueve en su propia capa (montana.js), en su franja de data-mueve: la que barre de 7:00 a 8:00 y la pelota de
+  // los oseznos de 15:00 a 16:30. Uno a la vez.
+  else if (t === 'manana') { en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'campesino', { r: 1 }); en('corredor', 1, 'escoba', { r: 1, actor: 'barre' }); en('calle', 1, 'vecina', { r: 2, f: -1 }); }
   else if (t === 'mananaLibre') { en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'campesino', { r: 1 }); en('calle', 1, 'vecina', { r: 2, f: -1 }); oseznos(4); }
   else if (t === 'siesta') { en('banca', 0, 'siesta', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vendedora', { r: 0, f: -1 }); }
-  else if (t === 'tarde') { en('corredor', 0, 'abuela', { r: 2 }); oseznos(5); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'campesino', { r: 2, f: -1 }); }
+  else if (t === 'tarde') { en('corredor', 0, 'abuela', { r: 2 }); oseznos(5); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'campesino', { r: 2, f: -1 }); }
   else if (t === 'pupusas' || t === 'posada') {
     // (36, idea 112) En Navidad, al anochecer, además una osa y su osezno miran el nacimiento (de espaldas; el nacimiento no cambia).
     if (t === 'posada') { en('portal', 0, 'espaldas', { r: 0 }); en('portal', 0, 'osezno', { r: 2, s: OSEZNO, dx: 3.2, dy: 0.5 }); }

@@ -977,7 +977,7 @@ html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, ht
    el bosque brota (no están en la lista); el resto del paisaje espera quieto y retoma al detenerse. La lista va en `:where` (sin peso)
    para que la regla de abajo pueda dejar correr en la película lo que cruza de paso. */
 :is(.escena[data-desliza], .pe-montana[data-corre]) :where(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
-  .eco-fantasma, .yo-halo, #m-yo:not(.anda) .oso-tu, .tele-cabina, .yo-nav, .llama, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
+  .eco-fantasma, .yo-halo, #m-yo:not(.anda) .oso-tu, .tele-cabina, .v-capa-vecino, .yo-nav, .llama, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
   .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
   .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }
 /* En la película son 15 s, no un instante: lo que cruza de paso (una estrella fugaz, el torogoz, los cohetes, la llovizna, los pétalos,
@@ -4638,3 +4638,14 @@ html[data-cielo="noche"] .v-vo-som { fill: color-mix(in oklab, var(--oso-pelo) 4
 .v-vo-pie { fill: var(--monte-sombra); fill-opacity: 0.34; }
 .v-vo-brasa { fill: #e8742c; fill-opacity: 0.85; }
 html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-vo-brasa { fill: #ffb347; fill-opacity: 1; }
+
+/* ---------------------------------------------------------------- Campamento 37 · El pueblo se mueve
+   La capa del vecino (montana.js: capaVecino): el que se mueve vive en su <svg> pequeño, encima del dibujo grande y debajo del frente,
+   y solo cambia el transform de ese elemento, a saltos (steps), con «todos» y en su franja de data-mueve. En la lista de la pausa al
+   deslizar. La que barre se mece dos grados y medio a un lado y al otro desde sus pies, cada 0.6 s (7:00–8:00); la pelota bota entre
+   los oseznos, un bote cada 1.2 s (15:00–16:30). Quietos, se ven igual con cualquier nivel de efectos. */
+.montana svg.v-capa-vecino { position: absolute; pointer-events: none; overflow: visible; will-change: transform; transform-origin: 50% var(--pie, 100%); }
+html[data-efectos="todos"][data-mueve="barre"] .montana svg.v-actor-barre { animation: vo-barre 1.2s steps(1) infinite; }
+@keyframes vo-barre { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+html[data-efectos="todos"][data-mueve="pelota"] .montana svg.v-actor-pelota { animation: vo-bota 1.2s steps(1) infinite; }
+@keyframes vo-bota { 0%, 100% { transform: none; } 50% { transform: translateY(var(--bote)); } }

@@ -3,6 +3,8 @@
 Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md). El presupuesto y el banco: [30-hacer-sitio.md](30-hacer-sitio.md), [docs/rendimiento.md](../rendimiento.md). El pueblo: [22c-valle-de-verdad.md](22c-valle-de-verdad.md); uno a la vez: [22b-valle-vivo-parte-2.md](22b-valle-vivo-parte-2.md).
 
 ## Campamento 34 · El pueblo vive (ideas 49, 50 y 51)
+*(Campamento 37: las gallinas picotean de 8:00 a 10:00 y el perro cruza de 14:00 a 15:00; de 7:00 a 8:00 barre la vecina y de 15:00 a 16:30 bota la pelota. Ver [37-el-pueblo-se-mueve.md](37-el-pueblo-se-mueve.md).)*
+
 *(Campamento 35: el perro echado es ahora de perfil, con la cabeza alzada y de color canela, y las gallinas van en la esquina de la plaza, lejos de los oseznos; el que cruza y la cruz de mayo se ajustaron a su medida. Ver [35-pueblo-de-los-osos.md](35-pueblo-de-los-osos.md).)*
 
 Los animales quietos de la plaza (el perro echado y las tres gallinas, campamento 22C) se mueven un rato al día, y el 3 de mayo el pueblo pone su cruz. Nada depende de comprar. La misa del domingo (48) queda para después: la absorbe la 108 (Pueblo de los Osos); 52–54, después.
