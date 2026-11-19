@@ -1,6 +1,9 @@
 # Campamentos 39–50 · La vida del valle (plan definido, sin implementar)
 
-**Estado (19 nov 2026): definido, no hecho.** Es la siguiente ronda de ideas para dar más vida al paisaje, al valle, al pueblo de osos, a los osos de la cumbre y a «Tú», según la hora, el día y la fecha. Se implementa **otro día**, cuando el dueño marque lo que quiere. Nada de esto está en el código; lo implementado hasta hoy son los campamentos 26–38 (PR #97, en producción).
+**Estado (19 nov 2026): definido y APROBADO POR EL DUEÑO («todo aprobado»), no hecho.** Es la siguiente ronda de ideas para dar más vida al paisaje, al valle, al pueblo de osos, a los osos de la cumbre y a «Tú», según la hora, el día y la fecha. Se implementa **otro día**, cuando el dueño marque lo que quiere. Nada de esto está en el código; lo implementado hasta hoy son los campamentos 26–38 (PR #97, en producción).
+
+## Aprobación del dueño
+El 19 nov 2026 el dueño dijo **«todo aprobado»**: todas las ideas del artifact v4 (campamentos 39–50, ids 124–222 y las «después» reexaminadas), incluidas las que **cambian una regla** y las que él había dejado a la familia (Viernes Santo, Difuntos, inditos, misa de gallo, tecolote). No hace falta pedirle la elección marcada: se implementa **todo**, en el orden de arriba. Lo que quede por confirmar de oídas (cerco de la luna 171; «Siete Cabritas» y «Alacrán» 180) se implementa con el dato más probable y se le avisa en el reporte del campamento. Las ideas que cambian una regla actualizan `CLAUDE.md` en el mismo commit. Todavía **no se ha dicho «arranca»**: espera la orden del dueño (dijo que «otro día»).
 
 ## Dónde está cada cosa
 - **El artifact** «La vida del valle» (v4, privado del dueño): https://claude.ai/artifact/LfxVgi3TnM2ER36iXUL9Tm. Ahí se marca cada idea (sí / después / no) y se copia la elección con «Copiar mi elección». La elección se guarda en el navegador del dueño, por id, así que **hay que pedírsela al dueño pegada** antes de implementar.
@@ -39,7 +42,7 @@ Cada fiesta dura **todo su día**, con guion por turnos (madrugada, mañana, med
 - **Opus implementa todo** (39 al 50): código, pruebas, mediciones, capturas, documentación y commits, como en 26–38. Una sola sesión por ronda; parte de la rama `claude/plan-39-50`.
 - **Fable solo para el arte nuevo** (sobre todo las fiestas, campamentos 41 y 42: osos con gorro, piñata, cena de Nochebuena, cuenta regresiva del 31): entrega los dibujos terminados y Opus los integra y los prueba. Si el prototipo (`prototipo-vida4.patch`) ya trae el dibujo, no hace falta.
 - **Orden**: Opus hace 39 y 41 primero (el 41 tiene fecha: 1 de diciembre). Fable (o el agente principal) hace al final un repaso crítico de las capturas para detectar cosas raras, como pasó con las casas.
-- **Para gastar menos**: la elección marcada del dueño llega antes de empezar, un solo PR, y capturas solo por campamento.
+- **Para gastar menos**: un solo PR, y capturas solo por campamento.
 
 ## Cómo se ejecuta (igual que 26–38)
 - Una rama, un commit por campamento (cada commit deja la rama verde por sí solo), capturas reales de cada uno para el dueño, `CAMBIOS` (3–6 frases) donde haya algo visible, su documento en `docs/campamentos/` con su línea en el índice de `CLAUDE.md`, y la «Definición de terminado» completa (todos los tamaños, claro/oscuro, día/noche, los tres niveles de efectos, `test_lib`, `test_api`, `test_ui` en tres partes, axe, barridos, Lighthouse, banco, regresión visual; medir antes/después cuando se toque la escena).
