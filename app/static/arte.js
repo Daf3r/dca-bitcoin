@@ -578,13 +578,20 @@ export function sismografo({ puntos = [], ancho = 600, alto = 120 } = {}) {
  * El reloj de sol (idea 35): la sombra de la cumbre cae sobre el suelo según la hora real de El Salvador y once piedritas marcan
  * de las 7 a las 17. La sombra (`.reloj-sombra`) la coloca `montana.js: colocarReloj` (cada 5 minutos). Ambiente.
  */
-export function relojDeSol(sx, gy, W) {
-  const alcance = Math.max(30, Math.min(sx - 10, W - sx - 10, W * 0.42));
+export function relojDeSol(sx, gy, W, evitar = null) {
+  let alcance = Math.max(30, Math.min(sx - 10, W - sx - 10, W * 0.42));
+  // (Pulido del paisaje bajo) Con `evitar` ([x0, x1], la calle del pueblo en el mismo suelo), el reloj se estrecha para no poner sus
+  // piedritas en la calle; si ni así cabe, las de ese lado no se ponen.
+  if (evitar) {
+    const hueco = evitar[1] < sx ? sx - evitar[1] - 8 : evitar[0] > sx ? evitar[0] - sx - 8 : 0;
+    if (hueco >= 30) alcance = Math.min(alcance, hueco);
+  }
   let piedras = '';
   // Once piedritas planas (en perspectiva: elipses), algo mayores a las 9, 12 y 15, y un gnomon corto en el centro.
   for (let h = 7; h <= 17; h++) {
-    const g = h === 12 ? 1.5 : h % 3 === 0 ? 1.2 : 1;
-    piedras += `<ellipse class="reloj-piedra${h === 12 ? ' reloj-medio' : ''}" cx="${f1(sx + ((h - 12) / 5) * alcance)}" cy="${f1(gy)}" rx="${f1(2.3 * g)}" ry="${f1(1.1 * g)}"/>`;
+    const g = h === 12 ? 1.5 : h % 3 === 0 ? 1.2 : 1, px = sx + ((h - 12) / 5) * alcance;
+    if (evitar && px > evitar[0] - 4 && px < evitar[1] + 4) continue;
+    piedras += `<ellipse class="reloj-piedra${h === 12 ? ' reloj-medio' : ''}" cx="${f1(px)}" cy="${f1(gy)}" rx="${f1(2.3 * g)}" ry="${f1(1.1 * g)}"/>`;
   }
   return `<g class="efecto-ambiente reloj" data-sx="${f1(sx)}" data-gy="${f1(gy)}" data-alcance="${f1(alcance)}" aria-hidden="true"><path class="reloj-sombra" d=""/>${piedras}<path class="reloj-gnomon" d="M${f1(sx)} ${f1(gy)}v-7"/></g>`;
 }

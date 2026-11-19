@@ -4174,6 +4174,13 @@ html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite
 .v-ig-cruz { fill: none; stroke: color-mix(in oklab, #3a2c22 70%, var(--monte-sombra)); stroke-linecap: round; }
 .v-ig-hueco, .v-ig-ventana { fill: color-mix(in oklab, #2e2219 60%, var(--monte-sombra)); }
 .v-ig-campana { fill: color-mix(in oklab, #b48a3a var(--v-luz), var(--monte-sombra)); }
+/* (Pulido de la iglesia) El relieve (zócalo y pilastras), un tono más hondo que la cal; el atrio de piedra (su piso al frente y la
+   grada en sombra). De noche el relieve sigue a la fachada encendida. Las chimeneas de las casas con fogón, de ladrillo. */
+.v-ig-relieve { fill: color-mix(in oklab, color-mix(in oklab, var(--v-cal) 82%, #8f8370) calc(var(--v-luz) + 10%), var(--monte)); }
+html[data-cielo="noche"] .v-ig-relieve { fill: color-mix(in oklab, #d8b98c 40%, var(--monte)); }
+.v-ig-atrio { fill: color-mix(in oklab, #c9bba2 calc(var(--v-luz) + 8%), var(--monte)); }
+.v-ig-atrio-s { fill: color-mix(in oklab, #8c7f6b var(--v-som), var(--monte-sombra)); }
+.v-chimenea { fill: color-mix(in oklab, #9a5f45 var(--v-luz), var(--monte-sombra)); }
 html[data-cielo="noche"] .v-ig-frente { fill: color-mix(in oklab, #f6d8a6 42%, var(--monte)); }
 html[data-cielo="noche"] :is(.v-ig-hueco, .v-ig-ventana) { fill: color-mix(in oklab, var(--v-calida) 70%, #7a3a12); }
 html:is([data-cielo="atardecer"], [data-cielo="amanecer"]) .v-ig-ventana { fill: color-mix(in oklab, var(--v-calida) 55%, #5a2e12); }

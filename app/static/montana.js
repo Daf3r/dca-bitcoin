@@ -593,10 +593,13 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // la plaza a la salida.
   const pb = sitiosPueblo({ W, H, forma: valle.forma, by, bx, pts, lago: lg, techo, sol: solV });
   if (pb.plaza) { const pzx = pb.plaza.x + 12 * pb.u; valle.camino = { ...valle.camino, ini: [pzx, pb.yg + 1.5 * pb.u], ctrl: [(pzx + bx) / 2, Math.max(by, pb.yg - 4 * pb.u)], ancho: [5 * pb.u, 3 * pb.u] }; }
+  // (Pulido del paisaje bajo) En escritorio y acostado la calle del pueblo ya lleva a la salida: el camino real pasaba por debajo de ella
+  // y su cerca asomaba entre las casas. Ahí no se pone (sus cajas siguen apartando los árboles de honor y el papel picado).
+  const conCamino = !(pb.plaza && (valle.forma === 'esc' || valle.forma === 'acostado') && Math.abs(by - pb.yg) < 8 * pb.u);
   const huecosPP = [[pb.caja[0], pb.caja[2]], [lg.cx - lg.rx, lg.cx + lg.rx]];
   // Los campos del llano, entre el bosque y el pueblo; la milpa es la parcela de delante más ancha (los zompopos salen de ella).
   const ladoV = valle.forma === 'esc' || valle.forma === 'acostado';
-  const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u * 0.55), vx: c.sx });
+  const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u * 0.55), vx: c.sx, evitar: [[pb.caja[0] - 6, pb.caja[2] + 6 * pb.u], [bx - 30, bx + 30]], ancho: W, techoPueblo: pb.yg - 27 * pb.u, lago: lg ? [lg.cx - lg.rx, lg.cy - lg.ry, lg.cx + lg.rx, lg.cy + lg.ry] : null });
   const milpaV = cm.milpa ? { ...cm.milpa, k: Math.max(1, pb.u * 0.5), sol: solV } : null;
   s = s.replace('<!--v-campos-->', `<g class="v-campos" aria-hidden="true">${cm.svg}${milpaV ? milpa(milpaV) + zompopos({ milpa: milpaV, k: milpaV.k }) : ''}</g>`);
   // (22C) Las piscuchas vuelan a la izquierda de la montaña y su hilo baja a los niños de la plaza: van delante, con el pueblo.
@@ -605,7 +608,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // no hay oseznos en la plaza) y se rehacen con ellos al cambiar de turno (`libro:turno`).
   const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q) => ({ ...q, k: kp, hilo: null }));
   const C = window.libroCielo, infoV = { lug: lugaresPueblo(pb), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo() };
-  s += `<g id="m-v-pie">${caminoReal(valle.camino)}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
+  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
@@ -652,7 +655,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s += `<g id="m-osos"></g><g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><ellipse class="yo-halo" rx="13" ry="4.6" cy="0.5"/><circle class="v-navidad yo-nav yo-nav-0" r="12.8"/><circle class="v-navidad yo-nav yo-nav-1" r="12.8"/><circle class="v-navidad yo-nav yo-nav-2" r="12.8"/>${yoTu(ec, cumples.length > 0)}</g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   // Reloj de sol (16A): sobre los pinos de adorno, pero detrás de los árboles de honor (antes sus piedras quedaban encima de las copas).
   const suelo = W < 1100 ? by - 4 : H * 0.93;
-  s += relojDeSol(c.sx, suelo, W); // 16A
+  s += relojDeSol(c.sx, suelo, W, Math.abs(suelo - pb.yg) < 10 * pb.u ? [pb.caja[0] - 6 * pb.u, pb.caja[2] + 6 * pb.u] : null); // 16A (y, desde el pulido, sin pisar la calle del pueblo)
   const bordeHonor = c.valle > 30 ? borde : null;
   const evitarHonor = bordeHonor ? cajasValle : [...cajasValle, pb.caja, [lg.cx - lg.rx, lg.cy - lg.ry * 4, lg.cx + lg.rx, lg.cy + lg.ry]];
   const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0], evitarHonor, bordeHonor);

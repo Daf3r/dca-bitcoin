@@ -182,14 +182,24 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
   else if (t === 'pupusas') { en('calle', 0, 'pupusera', { r: 0 }); en('calle', 0, 'vecino', { r: 2, dx: 6.2, f: -1 }); en('calle', 0, 'osezno', { r: 1, s: OSEZNO, dx: 9.6, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, 'vecina', { r: 1 }); }
   // 'duerme' (22:00–5:00): nadie en la calle (103).
   // Nadie se monta sobre otro: en el orden del reparto, quien cae encima de alguien ya puesto no sale (como mucho se rozan).
-  const puestos = [], m = 0.35;
-  return L.filter((v) => {
-    if (v.t === 'pelota') return true;
-    const c = cajaVecino(v), roce = m * v.k;
-    if (puestos.length >= n || puestos.some((q) => c.x0 < q.x1 - roce && c.x1 > q.x0 + roce && c.y0 < q.y1 - roce && c.y1 > q.y0 + roce)) return false;
-    puestos.push(c);
-    return true;
-  });
+  // Los oseznos de la plaza van en corro, escalonados (unos un paso más adelante): entre ellos sí se rozan. (Pulido) Tampoco se para
+  // nadie sobre el perro, las gallinas o la cruz (`lug.ocupado`): un adulto da unos pasos a un lado (3 o 6 unidades) o no sale.
+  const puestos = [...(lug.ocupado ?? [])], m = 0.35;
+  let figuras = 0;
+  const choca = (c, roce) => puestos.some((q) => !(c.osezno && q.osezno) && c.x0 < q.x1 - roce && c.x1 > q.x0 + roce && c.y0 < q.y1 - roce && c.y1 > q.y0 + roce);
+  const fuera = [];
+  for (const v of L) {
+    if (v.t === 'pelota') { fuera.push(v); continue; }
+    if (figuras >= n) continue;
+    const roce = m * v.k, adulto = (v.s ?? 1) >= 1;
+    const d = (adulto ? [0, 3, -3, 6, -6] : [0]).find((dx) => !choca({ ...cajaVecino({ ...v, x: v.x + dx * v.k }), osezno: !adulto }, roce));
+    if (d === undefined) continue;
+    const w = { ...v, x: v.x + d * v.k };
+    puestos.push({ ...cajaVecino(w), osezno: !adulto });
+    fuera.push(w);
+    figuras++;
+  }
+  return fuera;
 }
 /** El charco de luz de la plancha de la pupusera (de noche, como la luz de las puertas): [x, y, radio] o null si no está. */
 export function luzPupusa(lista) {

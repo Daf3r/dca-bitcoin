@@ -1839,4 +1839,37 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(conHilos.length === 2 && conHilos.every((v) => v.f === 1) && conHilos.map(V.manoDe).every(([x, y], i) => x > conHilos[i].x && y < conHilos[i].y - 2 * conHilos[i].k * V.OSEZNO), 'pueblo 35: los oseznos que sostienen las piscuchas, con la manita arriba y hacia ellas');
 }
 
+// Pulido de la iglesia y el paisaje bajo: cada casa bien construida (el tejado asienta en su pared y cubre su ancho, el hastial llega a
+// la cumbrera, la puerta y las ventanas dentro de la fachada y sin pisarse, la puerta de la talla de un vecino oso, la chimenea sobre su
+// tejado y más alta que la cumbrera), en todas las casas, tallas y con la luz de cada lado.
+{
+  const P = await import('../app/static/arte-pueblo.js');
+  const dentro = ([x, y], pol) => { let c = false; for (let i = 0, j = pol.length - 1; i < pol.length; j = i++) { const [xi, yi] = pol[i], [xj, yj] = pol[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+  const caja = (pol) => ({ x0: Math.min(...pol.map((q) => q[0])), x1: Math.max(...pol.map((q) => q[0])), y0: Math.min(...pol.map((q) => q[1])), y1: Math.max(...pol.map((q) => q[1])) });
+  const fallos = [];
+  for (let i = 0; i < 7; i++) for (const s of [1, 0.86, 0.72, 0.7, 0.64]) for (const sol of [1, -1]) {
+    const c = P.piezasCasa(100, 500, s, i, 3, sol), k = c.k, f = caja(c.frente), t = caja(c.techo), pu = caja(c.puerta), nom = `casa ${i} al ${s} (luz ${sol})`;
+    if (!(t.x0 <= f.x0 + 0.01 && t.x1 >= f.x1 - 0.01)) fallos.push(`${nom}: el tejado no cubre la pared`);
+    if (Math.abs(Math.max(c.techo[0][1], c.techo[1][1]) - (f.y0 + 0.9 * k)) > 0.05) fallos.push(`${nom}: el alero no asienta en lo alto de la pared`);
+    if (!(t.y0 < f.y0)) fallos.push(`${nom}: la cumbrera no queda encima de la pared`);
+    if (Math.hypot(c.lado[3][0] - c.techo[2][0], c.lado[3][1] - c.techo[2][1]) > 0.05) fallos.push(`${nom}: el hastial no llega a la cumbrera`);
+    if (!(pu.x0 >= f.x0 && pu.x1 <= f.x1 && Math.abs(pu.y1 - f.y1) < 0.05 && pu.y0 > f.y0)) fallos.push(`${nom}: la puerta fuera de su fachada`);
+    if ((pu.y1 - pu.y0) / k < 0.85 * 6.7) fallos.push(`${nom}: la puerta mucho más baja que un vecino oso (6.7)`);
+    for (const v of c.ventanas.map(caja)) if (!(v.x0 >= f.x0 && v.x1 <= f.x1 && v.y0 > f.y0 && v.y1 < f.y1) || (v.x0 < pu.x1 && v.x1 > pu.x0)) fallos.push(`${nom}: una ventana fuera de la fachada o sobre la puerta`);
+    const ch = caja(c.chimenea), pie = [(c.chimenea[0][0] + c.chimenea[1][0]) / 2, (c.chimenea[0][1] + c.chimenea[1][1]) / 2 - 0.5 * k];
+    if (!dentro(pie, c.techo) || !(ch.y0 < t.y0)) fallos.push(`${nom}: la chimenea no sale del tejado`);
+    if (!(c.humo[1] < ch.y0 + 0.01 && c.humo[0] > ch.x0 && c.humo[0] < ch.x1)) fallos.push(`${nom}: el humo no sale de la chimenea`);
+  }
+  eq(fallos, [], 'pulido: las siete casas, en sus cinco tallas y con la luz de cada lado, bien construidas (tejado, hastial, puerta, ventanas, chimenea y humo)');
+  // La milpa (campamento 22B): fuera del pueblo; si no cabe ni delante ni al pie del bosque, no hay milpa en ese tamaño.
+  const borde = P.bordeLlano({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466 });
+  const cmE = P.campos({ borde, yAbajo: 720, x0: -6, x1: 476, k: 2, vx: 890, evitar: [20, 620], ancho: 1440, techoPueblo: 610 });
+  const cmL = P.campos({ borde, yAbajo: 720, x0: -6, x1: 476, k: 2, vx: 890 });
+  ok(cmL.milpa && (!cmE.milpa || cmE.milpa.x + cmE.milpa.w < 20 || cmE.milpa.x > 620 || cmE.milpa.y + cmE.milpa.h < 610) && cmE.svg === cmL.svg, `pulido: la milpa no cae detrás ni debajo del pueblo, y los campos se ven igual (${JSON.stringify(cmE.milpa && [cmE.milpa.x, cmE.milpa.y].map(Math.round))})`);
+  // El reloj de sol (campamento 16) no pone sus piedritas en la calle del pueblo.
+  const A = await import('../app/static/arte.js');
+  const rel = A.relojDeSol(890, 716, 1440, [20, 620]), xs = [...rel.matchAll(/cx="([\d.]+)"/g)].map((m) => Number(m[1]));
+  ok(xs.length >= 6 && xs.every((x) => x < 16 || x > 624), `pulido: el reloj de sol se estrecha y no pisa la calle del pueblo (${xs.length} piedritas)`);
+}
+
 console.log(`OK ${n} comprobaciones`);

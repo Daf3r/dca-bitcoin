@@ -208,6 +208,7 @@ const PESOS = [
   ['campamento 33: más ositos en el paisaje', 35], // 3 comprobaciones
   ['campamento 34: el pueblo vive', 35], // 10 comprobaciones
   ['pulido del pueblo: las casas en su sit', 30], // 4 comprobaciones
+  ['pulido de la iglesia y el paisaje bajo', 45], // 6 comprobaciones
   ['campamento 35: el pueblo de los osos', 90], // 16 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
@@ -7278,6 +7279,52 @@ try {
         await cerrar(t.p);
         const r = await casas(t.p);
         ok(r && r.frente >= 2 && (r.atras === 0 || r.terraza) && r.sobreIglesia === 0 && r.juntas === 0 && r.peorTapada <= 40, `pulido del pueblo a ${w} px: ${r?.frente} casas delante y ${r?.atras} en la terraza, ninguna sobre la iglesia ni sobre otra; la fachada de atrás más tapada, al ${r?.peorTapada} % (${JSON.stringify(r)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- pulido de la iglesia y el paisaje bajo: la iglesia en su atrio, cada cosa con su base en el suelo, la milpa y el reloj fuera del pueblo
+  await bloque(async () => {
+    const conLs = (dia) => [(d) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } }, dia];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const mide = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), g = h.querySelector('.v-pueblo');
+      const bb = (e) => { const b = e.getBBox(); return { x0: b.x, x1: b.x + b.width, y0: b.y, y1: b.y + b.height }; };
+      const una = (sel) => { const es = [...h.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none'); if (!es.length) return null; return es.map(bb).reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) })); };
+      const cruza = (a, b, m = 0.5) => a && b && a.x0 < b.x1 - m && a.x1 > b.x0 + m && a.y0 < b.y1 - m && a.y1 > b.y0 + m;
+      const suelo = una('.v-pueblo :is(.v-calle, .v-plaza)'), fachada = una('.v-pueblo :is(.v-ig-frente, .v-ig-torre)'), atrio = una('.v-pueblo .v-ig-atrio');
+      const pueblo = una('.v-pueblo :is(.v-frente, .v-pared-l, .v-techo-l, .v-ig-frente, .v-ig-torre, .v-ig-lado)');
+      // Las bases: cada árbol del pueblo, cada farol, el perro y las gallinas, con su pie dentro de la calle o la plaza.
+      const pies = [...g.querySelectorAll('.v-ar-tronco, .v-pz-tronco, .v-farol-poste, .v-animal, .v-gallina')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => { const b = bb(e); return { c: e.getAttribute('class'), y: b.y1, x: (b.x0 + b.x1) / 2 }; });
+      const sueltos = pies.filter((q) => q.y < suelo.y0 - 1.5 || q.y > suelo.y1 + 1.5 || q.x < suelo.x0 - 2 || q.x > suelo.x1 + 40).map((q) => q.c);
+      const piedras = [...h.querySelectorAll('.reloj-piedra')].map(bb).filter((b) => cruza(b, una('.v-pueblo .v-calle'), 0)).length;
+      return { atrio: Boolean(atrio && Math.abs(atrio.y0 - fachada.y1) < 1.5 && atrio.x0 <= fachada.x0 + 1 && atrio.x1 >= fachada.x1 - 1), sueltos, piedras, milpa: cruza(una('.v-campos .v-mp'), pueblo, 1), camino: Boolean(h.querySelector('.v-cm')), chimeneas: h.querySelectorAll('.v-pueblo .v-chimenea').length };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [768, 1024], [1440, 900], [2560, 1440]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 15, viewport: { width: w, height: h } }, conLs('2026-07-10'));
+        await cerrar(t.p);
+        const r = await mide(t.p);
+        ok(r.atrio && r.sueltos.length === 0 && r.piedras === 0 && !r.milpa && r.chimeneas === 1, `pulido a ${w} px: la iglesia en su atrio, cada árbol, farol y animal con el pie en el suelo, ni el reloj ni la milpa sobre el pueblo, una chimenea (${JSON.stringify(r)})`);
+        await t.ctx.close();
+      }
+      // En Navidad el perro no queda dentro del nacimiento y el cordón de foquitos de la torre se amarra en un farol.
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 20, viewport: { width: w, height: h } }, conLs('2026-12-24'));
+        await cerrar(t.p);
+        const r = await t.p.evaluate(() => {
+          const bb = (e) => { const b = e.getBBox(); return { x0: b.x, x1: b.x + b.width, y0: b.y, y1: b.y + b.height }; };
+          const perro = bb(document.querySelector('#montana .v-animal')), portal = [...document.querySelectorAll('#montana .v-pueblo [class*="v-belen"]')].map(bb).reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) }));
+          const fin = (document.querySelector('#montana .v-cordel').getAttribute('d').split('M')[1] ?? '').trim().split(/[ QL]+/).slice(-2).map(Number);
+          const lamparas = (document.querySelector('#montana .v-farol-lampara').getAttribute('d') ?? '').split('M').filter(Boolean).map((d) => d.split(/[ L]+/).map(Number));
+          const cerca = lamparas.some((l) => Math.abs(l[0] - fin[0]) < 6 && Math.abs(l[1] - fin[1]) < 12);
+          return { dentro: perro.x0 < portal.x1 && perro.x1 > portal.x0 && perro.y0 < portal.y1 && perro.y1 > portal.y0, cerca };
+        });
+        ok(!r.dentro && r.cerca, `pulido a ${w} px en Nochebuena: el perro fuera del nacimiento y los foquitos de la torre amarrados al farol (${JSON.stringify(r)})`);
         await t.ctx.close();
       }
     } finally {
