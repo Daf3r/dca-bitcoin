@@ -2,9 +2,10 @@
 import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
-import { sitiosPueblo, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
+import { reparto, svgVecinos, manoDe, luzPupusa } from './arte-vecinos.js';
+import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
-import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
+import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 
 function azar(s) {
@@ -340,7 +341,7 @@ function animalesDelPueblo(host) {
   });
   const perro = pie.querySelector('.v-animal');
   if (perro?.getAttribute('d')) {
-    const b = perro.getBBox(), k = b.width / 5.2, y = b.y + b.height, x0 = b.x - 0.4 * k;
+    const b = perro.getBBox(), k = b.width / ANCHO_PERRO, y = b.y + b.height, x0 = b.x + COLA_PERRO * k - 0.2 * k;
     // De pie, de perfil, mirando a donde va (a la derecha): lomo, cabeza, cola y cuatro patas, en sus unidades k (el echado mide 5.2).
     // Llega andando desde cinco largos a la izquierda hasta donde se echa.
     const q = (px, py) => `${f1(x0 + px * k)} ${f1(y + py * k)}`;
@@ -348,6 +349,37 @@ function animalesDelPueblo(host) {
     capa('v-capa-perro v-capa-perro-anda', [x0 - 1.4 * k, y - 3.9 * k, 7.2 * k, 4.2 * k], `<path d="${anda}"/>`, { '--dx': `${f1(-5 * b.width)}px` });
     capa('v-capa-perro v-capa-perro-echado', [b.x - 0.5, b.y - 0.5, b.width + 1, b.height + 1], `<path d="${perro.getAttribute('d')}"/>`);
   }
+}
+
+/**
+ * (Campamento 35) El Pueblo de los Osos: el turno de ahora (cielo.js, por la hora y el día de El Salvador) y lo que se dibuja de él. Al
+ * cambiar de turno con la página abierta (`libro:turno`, unas seis veces al día) se rehace solo el grupo de los vecinos (`.v-vecinos`)
+ * de cada escena viva: es la única excepción a «nada se redibuja al cambiar de hora» (idea 102), un repintado del dibujo grande.
+ */
+const turnoDelPueblo = () => window.libroCielo?.turno?.(window.libroCielo.dia(), window.libroCielo.hora()) ?? 'manana';
+const elipseV = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
+function htmlVecinos({ lug, sol, cometas }, t) {
+  const lista = reparto(lug, t, { hilos: cometas.length });
+  const manos = lista.filter((v) => v.hilo).map(manoDe);
+  const mx = cometas.reduce((a, q) => a + q.x, 0) / Math.max(1, cometas.length);
+  const poste = [...lug.poste].sort((a, b) => Math.abs(a[0] - mx) - Math.abs(b[0] - mx))[0];
+  const luz = luzPupusa(lista);
+  return `${luz ? `<path class="v-charco v-vo-luz" d="${elipseV(luz[0], luz[1], luz[2], luz[2] * 0.32)}"/>` : ''}${svgVecinos(lista, { sol })}${hilosPiscuchas(cometas, cometas.map((_, i) => manos[i] ?? poste))}`;
+}
+const vecinosVivos = new Map(); // escena → { lug, sol, cometas, turno }
+let oyeTurno = false;
+function vigilarTurno(host, info) {
+  vecinosVivos.set(host, info);
+  if (oyeTurno) return;
+  oyeTurno = true;
+  window.addEventListener('libro:turno', () => {
+    const t = turnoDelPueblo();
+    for (const [h, v] of vecinosVivos) {
+      const g = h.isConnected && h.querySelector('.v-vecinos');
+      if (!g) { vecinosVivos.delete(h); continue; }
+      if (v.turno !== t) { g.innerHTML = htmlVecinos(v, t); v.turno = t; }
+    }
+  });
 }
 
 /** Quita de `raiz` (la plantilla de la escena o la escena ya puesta) lo de otra temporada (ver `fueraDeTemporada`). */
@@ -569,8 +601,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s = s.replace('<!--v-campos-->', `<g class="v-campos" aria-hidden="true">${cm.svg}${milpaV ? milpa(milpaV) + zompopos({ milpa: milpaV, k: milpaV.k }) : ''}</g>`);
   // (22C) Las piscuchas vuelan a la izquierda de la montaña y su hilo baja a los niños de la plaza: van delante, con el pueblo.
   const kp = Math.max(1, pb.u * 0.5);
-  const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q, i) => ({ ...q, k: kp, hilo: pb.ninos[i % Math.max(1, pb.ninos.length)] ? [pb.ninos[i % pb.ninos.length][0], pb.ninos[i % pb.ninos.length][1] - 2.6 * pb.u] : q.hilo }));
-  s += `<g id="m-v-pie">${caminoReal(valle.camino)}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
+  // (Campamento 35) Los vecinos osos del turno de ahora; sus hilos llevan las piscuchas a la manita de un osezno (o al poste del farol si
+  // no hay oseznos en la plaza) y se rehacen con ellos al cambiar de turno (`libro:turno`).
+  const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q) => ({ ...q, k: kp, hilo: null }));
+  const C = window.libroCielo, infoV = { lug: lugaresPueblo(pb), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo() };
+  s += `<g id="m-v-pie">${caminoReal(valle.camino)}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
@@ -735,6 +770,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
   if (tocable && !pelicula) telefericoValle(host, W, pb.u, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
   if (tocable && !pelicula) animalesDelPueblo(host); // (34)
+  if (tocable || pelicula) vigilarTurno(host, infoV); // (35) los vecinos cambian de turno con la página abierta
   describir(sats, etapa);
 }
 

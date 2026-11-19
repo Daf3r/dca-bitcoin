@@ -4197,8 +4197,8 @@ html:is([data-fiesta="agostinas"], [data-fiesta="patrias"]) .v-fiesta { display:
 .v-band-1 { fill: color-mix(in oklab, var(--pp-2, #f3eee2) var(--pp-luz, 88%), var(--monte-sombra)); }
 .v-band-2 { fill: color-mix(in oklab, var(--pp-3, #d0453b) var(--pp-luz, 88%), var(--monte-sombra)); }
 /* La gente y los animales: siluetas quietas. */
-.v-gente { fill: color-mix(in oklab, #2b2019 72%, var(--monte-sombra)); }
-.v-animal { fill: color-mix(in oklab, #6b4a2e var(--v-som), var(--monte-sombra)); }
+/* (Campamento 35) El perro, de color canela (oscuro se leía como una mancha). */
+.v-animal { fill: color-mix(in oklab, #b07a45 var(--v-luz), var(--monte-sombra)); }
 .v-gallina { fill: color-mix(in oklab, #b8643a var(--v-luz), var(--monte-sombra)); }
 /* (Pulido del pueblo) El muro de piedra de la terraza de la fila de atrás. */
 .v-terraza { fill: color-mix(in oklab, #9a8f7c var(--v-luz), var(--monte-sombra)); }
@@ -4601,7 +4601,7 @@ html[data-efectos="todos"][data-mueve="gallinas"] #m-v-pie .v-gallina, html[data
 .montana svg.v-capa-gallina { transform-origin: 50% 100%; animation: gallina-pica 2.4s steps(1) infinite; }
 .montana svg.v-capa-gallina.g2 { animation-delay: -0.9s; } .montana svg.v-capa-gallina.g3 { animation-delay: -1.7s; }
 @keyframes gallina-pica { 0%, 55%, 100% { transform: none; } 65%, 85% { transform: rotate(24deg); } 75% { transform: rotate(10deg); } }
-.v-capa-perro path { fill: color-mix(in oklab, #6b4a2e var(--v-som), var(--monte-sombra)); }
+.v-capa-perro path { fill: color-mix(in oklab, #b07a45 var(--v-luz), var(--monte-sombra)); }
 .montana svg.v-capa-perro-anda { animation: perro-cruza 22s linear forwards; }
 .montana svg.v-capa-perro-echado { animation: perro-echa 22s linear forwards; }
 @keyframes perro-cruza { 0% { transform: translateX(var(--dx)); opacity: 0; } 4% { opacity: 1; } 92% { transform: none; opacity: 1; } 93%, 100% { transform: none; opacity: 0; } }
@@ -4610,3 +4610,22 @@ html[data-efectos="todos"][data-mueve="gallinas"] #m-v-pie .v-gallina, html[data
 .v-cm-cadena { fill: none; stroke: color-mix(in oklab, #3f8fd8 var(--v-luz), var(--monte-sombra)); stroke-linejoin: round; }
 .v-cm-jocote { fill: color-mix(in oklab, #d6402e var(--v-luz), var(--monte-sombra)); }
 .v-cm-mango { fill: color-mix(in oklab, #f0b23a var(--v-luz), var(--monte-sombra)); }
+
+/* ---------------------------------------------------------------- Campamento 35 · El Pueblo de los Osos
+   Los vecinos del valle son osos polares en «talla pueblo» (arte-vecinos.js): un trazo por tono para todos (`v-vo-…`). Los colores
+   siguen a la hora como el resto del pueblo (--v-blanco, --v-luz); de noche la luna los deja pálidos, no grises. La ropa no repite la de
+   la familia: verde, rojo teja y maíz. La brasa de la plancha de la pupusera no sigue a la hora (como las ventanas). */
+.montana { --vo-verde: #2e8b62; --vo-rojo: #c8452f; --vo-maiz: #e3a92a; --vo-palma: #d8b56a; }
+html[data-cielo="noche"] .montana { --vo-noche: 22%; }
+.v-vo-pelo, .v-vo-pelo2 { fill: color-mix(in oklab, var(--oso-pelo) calc(var(--v-blanco) + 6%), var(--monte)); }
+.v-vo-som { fill: color-mix(in oklab, color-mix(in oklab, var(--oso-pelo) 62%, #6f7f96) var(--v-blanco), var(--monte-sombra)); }
+html[data-cielo="noche"] :is(.v-vo-pelo, .v-vo-pelo2) { fill: color-mix(in oklab, var(--oso-pelo) 66%, var(--monte)); }
+html[data-cielo="noche"] .v-vo-som { fill: color-mix(in oklab, var(--oso-pelo) 40%, var(--monte-sombra)); }
+.v-vo-r0 { fill: color-mix(in oklab, var(--vo-verde) calc(var(--v-luz) + 22% + var(--vo-noche, 0%)), var(--monte-sombra)); }
+.v-vo-r1 { fill: color-mix(in oklab, var(--vo-rojo) calc(var(--v-luz) + 22% + var(--vo-noche, 0%)), var(--monte-sombra)); }
+.v-vo-r2 { fill: color-mix(in oklab, var(--vo-maiz) calc(var(--v-luz) + 22% + var(--vo-noche, 0%)), var(--monte-sombra)); }
+.v-vo-palma { fill: color-mix(in oklab, var(--vo-palma) calc(var(--v-luz) + 18%), var(--monte-sombra)); }
+.v-vo-rasgo { fill: color-mix(in oklab, #1c1512 80%, var(--monte-sombra)); }
+.v-vo-pie { fill: var(--monte-sombra); fill-opacity: 0.34; }
+.v-vo-brasa { fill: #e8742c; fill-opacity: 0.85; }
+html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-vo-brasa { fill: #ffb347; fill-opacity: 1; }

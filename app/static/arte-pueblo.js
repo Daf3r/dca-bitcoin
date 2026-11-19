@@ -22,6 +22,13 @@ const ALTO_IGLESIA = 40; // del suelo a la punta de la cruz (unidades)
 // (Pulido del pueblo) La terraza de la fila de atrás, sobre la calle: lo más alto de una casa del frente (la cumbrera de la más alta,
 // 8.4 + 5.6 + 1.1) menos 1.3, así su tejado tapa a lo sumo el pie de la fachada de atrás.
 export const TERRAZA = 13.8;
+// (Campamento 35) El perro echado, de perfil y mirando a la derecha, con la cabeza alzada: su pie de atrás en (0, 0); `K_PERRO` es su
+// escala frente a la del pueblo. Mide `ANCHO_PERRO` unidades del pueblo (de la punta de la cola a las patas de delante).
+const PERRO = [[-1.0, -0.55], [-0.3, -0.75], [0.2, -1.55], [1.4, -1.95], [2.9, -1.85], [3.6, -1.5], [3.9, -2.45], [4.0, -3.05], [4.15, -3.55], [4.5, -3.05], [4.95, -2.95], [5.75, -2.6], [5.9, -2.35], [5.5, -2.1], [4.8, -1.95], [4.45, -1.2], [5.8, -0.45], [5.85, 0], [0.3, 0], [-0.25, -0.25]];
+const K_PERRO = 0.8;
+export const ANCHO_PERRO = 6.9 * K_PERRO;
+/** Dónde empieza el cuerpo del perro echado (su pie de atrás) desde el borde izquierdo de su caja, en unidades del pueblo. */
+export const COLA_PERRO = 1.0 * K_PERRO;
 /** La caja de una casa en la escena (pared, tejado y su fondo): [x0, y0, x1, y1]. `y0` es la cumbrera; `ym`, lo alto de la pared. */
 export function cajaCasa(x, y0, s, i, u, sol = 1) {
   const [w, h, d, rh] = CASAS[i % CASAS.length], k = u * s, ancho = (w + d * 0.62) * k;
@@ -103,18 +110,52 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
   }
   const xFin = Math.max(cursor, x0 + 40);
   // Los niños de la plaza (de octubre a noviembre sostienen el hilo de las piscuchas).
-  const ninos = plaza ? [0, 1, 2, 3, 4, 5].map((j) => [plaza.x + (5 + j * 3.4) * u * plaza.s, yg + (2.6 + (j % 2) * 1.2) * u]) : [];
-  // La gente y los animales: en la calle, delante de las casas y en la plaza (siluetas quietas, sin nadie en particular).
+  // (Campamento 35) Entre la esquina de las gallinas y el sitio del perro echado (a 0.78 del ancho de la plaza): nadie encima de él.
+  const anchoPlaza = tel || acostado ? 24 : 30, paso = (anchoPlaza * 0.78 - 6.2) / 5;
+  const ninos = plaza ? [0, 1, 2, 3, 4, 5].map((j) => [plaza.x + (4 + j * paso) * u * plaza.s, yg + (2.6 + (j % 2) * 1.2) * u]) : [];
+  // Los vecinos (osos, campamento 35) y los animales: en la calle, delante de las casas y en la plaza (`lugaresPueblo`).
   return { u, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 12 * u), xFin + 4, yg + 4 * u] };
+}
+
+// ------------------------------------------------------------------------------------------------ los sitios de los vecinos
+/**
+ * (Campamento 35) Dónde pueden estar los vecinos osos, de izquierda a derecha: el atrio de la iglesia, los corredores de las casas
+ * que lo tienen, la calle junto a las que no, los seis sitios de la plaza (los oseznos), la banca bajo el árbol de la plaza y el poste
+ * del farol (donde se amarran las piscuchas cuando no hay oseznos). Cada sitio, [x, y, k] (su pie y la escala del pueblo). Solo
+ * depende del sitio del pueblo: nunca de las cuentas ni de las compras.
+ */
+export function lugaresPueblo(sit) {
+  const { u, yg, piezas, sol } = sit;
+  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [] }, delante = [];
+  for (const q of piezas) {
+    const k = u * q.s;
+    if (q.tipo === 'iglesia') {
+      const ox = sol > 0 ? q.x + 9 * k : q.x + 21 * k, m = (px, py) => [ox + sol * px * k, yg + py * k, k];
+      lug.atrio.push(m(16.5, 1.6), m(3.5, 2.6), m(22.5, 3.4), m(10, 1.2));
+    } else if (q.tipo === 'plaza') {
+      const w = (sit.forma === 'tel' || sit.forma === 'acostado' ? 24 : 30) * k, cx = q.x + w * 0.42;
+      lug.banca.push([cx + w * 0.2, yg + 0.5 * k, k]);
+      lug.poste.push([q.x + 1 * k, yg - 5.1 * k, k], [q.x + w - 1 * k, yg - 5.1 * k, k]);
+    } else if (q.tipo === 'casa') {
+      const [w, , d, , , corredor] = CASAS[q.i % CASAS.length], ox = sol > 0 ? q.x : q.x + (w + d * 0.62) * k;
+      const m = (px, py) => [ox + sol * px * k, yg + py * k, k];
+      // Con corredor: dos sitios en él y uno en la calle, delante (va al final de la calle); sin corredor, uno en la calle, a su lado.
+      if (corredor) { lug.corredor.push(m(w * 0.7, 0.5), m(w * 0.22, 0.5)); delante.push(m(w * 0.3, 4.2)); } else lug.calle.push(m(w + 3.2, 3.4));
+    }
+  }
+  for (const [x, y] of sit.ninos ?? []) lug.plaza.push([x, y, u]);
+  lug.calle.push(...delante); // primero la calle junto a las casas sin corredor; después, delante de las que lo tienen
+  return lug;
 }
 
 // ------------------------------------------------------------------------------------------------ el dibujo
 /**
  * El pueblo. Devuelve un solo SVG (en orden de atrás adelante): la calle y la plaza, las casas de atrás, la iglesia, las casas del
  * frente, los árboles, el pino de Navidad y el portal del nacimiento (Navidad), los faroles, los cordeles (foquitos en Navidad,
- * banderitas en las fiestas), la gente y los animales, el humo del fogón. `ventanas`: cuántas se encienden de noche (una por persona).
+ * banderitas en las fiestas), los vecinos osos y los animales, el humo del fogón. `ventanas`: cuántas se encienden de noche (una por
+ * persona). `vecinos`: el SVG de los vecinos del turno de ahora (montana.js), en su grupo `.v-vecinos`, que se rehace al cambiar de turno.
  */
-export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
+export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) {
   const { u, yg, piezas, atras, sol } = sit;
   // Un acumulador por tono: todo el pueblo en unos pocos trazos. La fila de atrás va en los suyos (B), que se pintan antes que la
   // iglesia y que el frente: así nada de atrás queda encima de lo de delante (pulido del pueblo).
@@ -125,7 +166,6 @@ export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
   const humos = [];
   const faroles = [];
   const cordeles = [];
-  const gente = [];
   const charcos = []; // charcos de luz en el suelo (de noche): [x, y, radio]
   // La calle: tierra apisonada delante de las casas, de la iglesia al final del pueblo.
   add('calle', poli([[sit.x0 - 2 * u, yg + 0.4 * u], [sit.xFin + 2 * u, yg + 0.4 * u], [sit.xFin + 6 * u, yg + 5.6 * u], [sit.x0 - 6 * u, yg + 5.6 * u]]));
@@ -158,8 +198,6 @@ export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
       if (fila === 0) sitiosVentana.push({ q, orden: sitiosVentana.length }); else add('ventana', poli(q));
     }
     if (fila === 0 && i % 3 === 0) humos.push(m(w + dx * 0.7, dy * 0.7 - h - rh * 0.6));
-    if (fila === 0 && corredor) gente.push([...m(w * 0.62, 0.2), k, i]);
-    if (fila === 0 && !corredor) gente.push([...m(w + 2.2, 3.2), k, i + 1]);
     if (fila === 0) charcos.push([...m(w * 0.42 + 1.15, 0.6), 5 * k]); // la luz de la puerta en la calle
     return { techo: m(0, -h), alero: [m(-ov, -h + 1), m(w + ov * 0.4, -h + 1)] };
   };
@@ -193,7 +231,6 @@ export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
     add('ig-ventana', arco(3.4, -9, 0.9, 4) + arco(w - 3.4, -9, 0.9, 4) + arco(w + dx * 0.35, dy * 0.35 - 7, 0.8, 4) + arco(w + dx * 0.72, dy * 0.72 - 7, 0.8, 4));
     // Un cordel de la torre a la plaza (foquitos o banderitas).
     cordeles.push([m(0.4, -h - 1), m(w + dx + 22, -h * 0.55)]);
-    gente.push([...m(w / 2 + 6, 1.2), k, 7], [...m(w / 2 - 6.5, 2.4), k, 5]);
     charcos.push([...m(w / 2, 0.8), 10 * k]);
   };
   // ---- la plaza: el empedrado, el árbol de la plaza (un mango, que en Navidad deja su sitio al pino), los faroles y el portal.
@@ -248,22 +285,15 @@ export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
     }
     rnd();
   }
-  // La gente: siluetas quietas de unos 7 unidades (sombrero, canasta en la cabeza, alguien con un niño). Un trazo para todas.
-  const persona = (x, y, k, v) => {
-    const d = [];
-    const cuerpo = (cx, alto, ancho) => d.push(poli([[cx - ancho * k, y], [cx + ancho * k, y], [cx + ancho * 0.7 * k, y - alto * 0.62 * k], [cx - ancho * 0.7 * k, y - alto * 0.62 * k]]), `M${P([cx - 0.75 * k, y - alto * 0.66 * k])}a${f1(0.75 * k)} ${f1(0.8 * k)} 0 1 0 ${f1(1.5 * k)} 0a${f1(0.75 * k)} ${f1(0.8 * k)} 0 1 0 ${f1(-1.5 * k)} 0Z`);
-    if (v % 3 === 0) { cuerpo(x, 7, 1.15); d.push(poli([[x - 2 * k, y - 5.2 * k], [x + 2 * k, y - 5.2 * k], [x + 0.8 * k, y - 6 * k], [x - 0.8 * k, y - 6 * k]])); } // con sombrero
-    else if (v % 3 === 1) { cuerpo(x, 6.6, 1.4); d.push(poli([[x - 1.5 * k, y - 5.6 * k], [x + 1.5 * k, y - 5.6 * k], [x + 1.2 * k, y - 6.8 * k], [x - 1.2 * k, y - 6.8 * k]])); } // con su canasta
-    else { cuerpo(x, 7, 1.1); cuerpo(x + 2.6 * k, 4.6, 0.8); } // con un niño
-    return d.join('');
-  };
-  for (const [x, y, k, v] of gente) add('gente', persona(x, y, k, v));
-  // Animales quietos: un perro echado en la calle y tres gallinas.
+  // (Campamento 35) La gente del pueblo son los vecinos osos (`vecinos`, de arte-vecinos.js): ya no hay siluetas.
+  // Animales quietos: un perro echado en la calle y tres gallinas. (Campamento 35) El perro, de perfil y con la cabeza alzada (el
+  // hocico, la oreja, las patas de delante estiradas y la cola), para que se lea como perro y no como una mancha; las gallinas, en la
+  // esquina de la plaza, fuera de los sitios de los oseznos (entre ellos parecían coletas).
   if (pz) {
-    const k = pz.k, x = pz.cx + pz.w * 0.36, y = yg + 1.6 * k;
-    add('animal', `M${P([x, y])}q${f1(1 * k)} ${f1(-2.2 * k)} ${f1(3.6 * k)} ${f1(-1.6 * k)}l${f1(0.8 * k)} ${f1(-1 * k)}l${f1(0.7 * k)} ${f1(1.2 * k)}q${f1(0.4 * k)} ${f1(1.4 * k)} ${f1(-0.4 * k)} ${f1(1.4 * k)}Z`);
-    for (const [gx, gy] of [[-0.18, 0.8], [-0.06, 1.4], [0.06, 0.6]]) {
-      const cx = pz.cx + pz.w * gx, cy = yg + gy * k;
+    const k = pz.k, x = pz.cx + pz.w * 0.36, y = yg + 1.6 * k, kd = K_PERRO * k;
+    add('animal', `M${PERRO.map(([px, py]) => P([x + px * kd, y + py * kd])).join('L')}Z`);
+    for (const [gx, gy] of [[-2.6, 0.8], [-0.8, 1.4], [1.0, 0.6]]) {
+      const cx = pz.cx - pz.w * 0.42 + gx * k, cy = yg + gy * k;
       add('gallina', `M${P([cx - 1 * k, cy])}q${f1(0.2 * k)} ${f1(-1.6 * k)} ${f1(1.4 * k)} ${f1(-1.5 * k)}l${f1(0.5 * k)} ${f1(-0.7 * k)}l${f1(0.3 * k)} ${f1(0.7 * k)}q${f1(0.2 * k)} ${f1(1.2 * k)} ${f1(-1.2 * k)} ${f1(1.5 * k)}Z`);
     }
   }
@@ -271,7 +301,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
   // de papel de colores, como se hace aquí para recibir las lluvias. Su palo queda a la izquierda del perro echado (los brazos y las
   // frutas, por encima de él) y la gente de la plaza se para delante. Se dibuja siempre y montana.js la poda los demás días.
   if (pz) {
-    const k = pz.k, x = pz.cx + pz.w * 0.36 - 1.2 * k, y = yg + 1.6 * k, P2 = (dx, dy) => P([x + dx * k, y + dy * k]);
+    const k = pz.k, x = pz.cx + pz.w * 0.36 - 1.6 * k, y = yg + 1.6 * k, P2 = (dx, dy) => P([x + dx * k, y + dy * k]);
     const palo = `M${P2(-0.35, 0)}L${P2(0.35, 0)}L${P2(0.35, -9)}L${P2(-0.35, -9)}ZM${P2(-2.8, -6.6)}L${P2(2.8, -6.6)}L${P2(2.8, -5.9)}L${P2(-2.8, -5.9)}Z`;
     const fruta = (fx, fy, r) => `M${P2(fx - r, fy)}a${f1(r * k)} ${f1(r * k)} 0 1 0 ${f1(2 * r * k)} 0a${f1(r * k)} ${f1(r * k)} 0 1 0 ${f1(-2 * r * k)} 0`;
     const jocotes = [[-2.4, -5.3], [2.4, -5.3], [0, -9.4]].map(([fx, fy]) => fruta(fx, fy, 0.55)).join('');
@@ -279,8 +309,6 @@ export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
     const cadena = `M${P2(-2.8, -6.3)}L${P2(-2, -4.6)}L${P2(-1.2, -6.2)}L${P2(-0.4, -4.6)}L${P2(0.4, -6.2)}L${P2(1.2, -4.6)}L${P2(2, -6.2)}L${P2(2.8, -4.6)}`;
     cruzMayo = `<g class="v-cruz-mayo"><path class="v-cm-palo" d="${palo}"/><path class="v-cm-cadena" d="${cadena}" stroke-width="${f1(0.5 * u)}"/><path class="v-cm-jocote" d="${jocotes}"/><path class="v-cm-mango" d="${mangos}"/></g>`;
   }
-  // Los niños de la plaza: siluetas chicas (en octubre y noviembre, con el hilo de su piscucha en la mano).
-  for (const [x, y] of sit.ninos ?? []) add('gente', `M${P([x - 0.8 * u, y])}L${P([x + 0.8 * u, y])}L${P([x + 0.55 * u, y - 2.8 * u])}L${P([x - 0.55 * u, y - 2.8 * u])}ZM${P([x - 0.6 * u, y - 3.3 * u])}a${f1(0.6 * u)} ${f1(0.6 * u)} 0 1 0 ${f1(1.2 * u)} 0a${f1(0.6 * u)} ${f1(0.6 * u)} 0 1 0 ${f1(-1.2 * u)} 0Z`);
   // Fiestas patrias (13 al 15 de septiembre): la bandera azul y blanca en su asta, en la plaza.
   let patrias = '';
   if (pz) {
@@ -325,7 +353,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
     + `${mango}${fuegoV}${navidad}`
     + `${p('v-farol-poste', 'farol-poste', sw(0.55))}${p('v-farol-lampara', 'farol-lampara')}${p('v-farol-luz', 'farol-luz', sw(3.4))}`
     + `<path class="v-cordel" d="${cuerda}"${sw(0.3)}/>${foco.map((d, j) => `<path class="v-navidad v-foco v-foco-${j}" d="${d}"${sw(1.15)}/>`).join('')}${bandera.map((d, j) => `<path class="v-fiesta v-band v-band-${j}" d="${d}"/>`).join('')}`
-    + `${patrias}${cruzMayo}${p('v-gente', 'gente')}${p('v-animal', 'animal')}${p('v-gallina', 'gallina')}${humo}</g>`;
+    + `${patrias}${cruzMayo}<g class="v-vecinos">${vecinos}</g>${p('v-animal', 'animal')}${p('v-gallina', 'gallina')}${humo}</g>`;
 }
 
 /** El pino de Navidad de la plaza: cuatro pisos en sombra y luz, una guirnalda dorada, esferas y foquitos de tres colores. Sin estrella. */

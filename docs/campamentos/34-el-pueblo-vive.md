@@ -3,6 +3,8 @@
 Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md). El presupuesto y el banco: [30-hacer-sitio.md](30-hacer-sitio.md), [docs/rendimiento.md](../rendimiento.md). El pueblo: [22c-valle-de-verdad.md](22c-valle-de-verdad.md); uno a la vez: [22b-valle-vivo-parte-2.md](22b-valle-vivo-parte-2.md).
 
 ## Campamento 34 · El pueblo vive (ideas 49, 50 y 51)
+*(Campamento 35: el perro echado es ahora de perfil, con la cabeza alzada y de color canela, y las gallinas van en la esquina de la plaza, lejos de los oseznos; el que cruza y la cruz de mayo se ajustaron a su medida. Ver [35-pueblo-de-los-osos.md](35-pueblo-de-los-osos.md).)*
+
 Los animales quietos de la plaza (el perro echado y las tres gallinas, campamento 22C) se mueven un rato al día, y el 3 de mayo el pueblo pone su cruz. Nada depende de comprar. La misa del domingo (48) queda para después: la absorbe la 108 (Pueblo de los Osos); 52–54, después.
 
 - **Las gallinas picotean** (49): de **7:00 a 10:00**, franja nueva `gallinas` de `data-mueve` (el torogoz, los zompopos y los azacuanes ganan en sus fechas y horas). Cada gallina es **su propia capa pequeña**: un `<svg class="efecto-ambiente v-capa-animal v-capa-gallina">` de 2 nodos con su trazo (el mismo del dibujo, partido por gallina), entre el dibujo grande y el frente, con las coordenadas de la escena en su `viewBox` y su sitio por CSSOM. Cabecea con `rotate` desde sus patas (`steps`, cada una a su ritmo); mientras, las del dibujo grande se esconden (un cambio al empezar la franja y otro al acabarla).

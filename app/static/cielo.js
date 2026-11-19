@@ -142,6 +142,22 @@
     if (h >= 18 || h < 5) return 'luciernagas';
     return '';
   }
+  /**
+   * (Campamento 35, idea 102) El turno del Pueblo de los Osos: quién está en la calle según la hora y el día (El Salvador). Amanece
+   * (5:00–7:00: el que se estira, el panadero, la que barre), mañana (hasta las 11:30; entre semana los oseznos están en la escuela,
+   * salvo en vacaciones, del 15 de noviembre al 15 de enero), siesta (hasta las 14:00), tarde (hasta las 17:45: los oseznos en la
+   * plaza), pupusas (hasta las 22:00: la pupusera) y duerme (22:00–5:00: nadie). Como `mueve`, lo pinta montana.js y el CSS no.
+   */
+  function vacaciones(f) { const md = f.slice(5); return md >= '11-15' || md <= '01-15'; }
+  function turno(f, h) {
+    if (h >= 22 || h < 5) return 'duerme';
+    if (h < 7) return 'amanece';
+    const sem = new Date(`${f}T12:00:00Z`).getUTCDay();
+    if (h < 11.5) return sem >= 1 && sem <= 5 && !vacaciones(f) ? 'manana' : 'mananaLibre';
+    if (h < 14) return 'siesta';
+    if (h < 17.75) return 'tarde';
+    return 'pupusas';
+  }
   /** La franja a la que pertenece la hora. */
   function franja(h) {
     if (h >= 19 || h < 5) return 'noche';
@@ -220,6 +236,7 @@
   }
 
   let diaAplicado = null; // (Campamento 30) para avisar del cambio de día
+  let turnoAplicado = null; // (Campamento 35) para avisar del cambio de turno del pueblo
   function aplicar() {
     const h = hora();
     for (const [k, v] of Object.entries(colores(h))) raiz.style.setProperty(k, v);
@@ -248,6 +265,11 @@
     const fl = flor(d), mv = mueve(d, h);
     if (fl) raiz.dataset.flor = fl; else delete raiz.dataset.flor;
     if (mv) raiz.dataset.mueve = mv; else delete raiz.dataset.mueve;
+    // (Campamento 35) El turno del pueblo: si cambió con la página abierta, montana.js rehace solo sus vecinos (`libro:turno`).
+    const tu = turno(d, h);
+    raiz.dataset.turno = tu;
+    if (turnoAplicado !== null && tu !== turnoAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:turno'));
+    turnoAplicado = tu;
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
     // (Campamento 28) Los osos de la interfaz se duermen de 22:00 a 5:00 aunque el velo esté apagado, y las tardes (13:00 a 18:00) de la
@@ -270,5 +292,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, turno, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

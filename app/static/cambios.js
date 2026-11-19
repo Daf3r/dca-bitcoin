@@ -14,7 +14,7 @@ export const CAMBIOS = [
       'El punto naranja del sendero es ahora un osito con mochila: anda al subir, festeja y deja huellas.',
       'Los osos de la cumbre también leen en la lista vacía, saludan al entrar por primera vez, van en teleférico y duermen en la tele.',
       'De madrugada duermen, en Navidad se abrigan, con lluvia sacan paraguas y en fiestas patrias, la banderita.',
-      'En el pueblo, las casas de atrás tienen su terraza, las gallinas picotean de mañana y el perro cruza la plaza de tarde.',
+      'En el pueblo los vecinos son osos y a cada hora hay otros en la calle; las gallinas picotean de mañana y el perro cruza la plaza.',
     ],
   },
   {

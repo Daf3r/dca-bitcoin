@@ -495,11 +495,19 @@ export function lucesValle(puntos, k = 1, capa = 0) {
   return `<path class="v-luces ${capa ? 'v-luz-cerca' : 'v-luz-lejos'}" d="${d}" stroke-width="${f1((capa ? 2.1 : 1.5) * Math.min(1.2, k))}"/>`;
 }
 /** Las piscuchas (idea 22): una por persona con cuenta, de colores de aquí (no el de nadie: ninguna se puede asociar a una persona). */
+/**
+ * Los hilos de las piscuchas: de cada una a su ancla (la manita de un osezno o el poste del farol, campamento 35). Aparte de las
+ * piscuchas porque cambian con el turno del pueblo (van en el grupo de los vecinos); los mismos `efecto-ambiente v-piscuchas`.
+ */
+export function hilosPiscuchas(lista, anclas) {
+  const d = lista.map(({ x, y, k }, i) => (anclas[i] ? `M${P([x, y + k])}Q${P([(x + anclas[i][0]) / 2 + 8 * k, (y + anclas[i][1]) / 2 + 14 * k])} ${P(anclas[i])}` : '')).join('');
+  return d ? `<path class="efecto-ambiente v-piscuchas v-pis-hilo" d="${d}"/>` : '';
+}
 export function piscuchas(lista) {
-  const hilos = lista.map(({ x, y, k, hilo }) => `M${P([x, y + k])}Q${P([(x + hilo[0]) / 2 + 8 * k, (y + hilo[1]) / 2 + 14 * k])} ${P(hilo)}`).join('');
-  // (Sin grupo de afuera: cada pieza lleva `efecto-ambiente v-piscuchas`; el ritmo de cada una, por clase.)
+  // (Sin grupo de afuera: cada pieza lleva `efecto-ambiente v-piscuchas`; el ritmo de cada una, por clase.) Sin `hilo`, sin hilo: desde
+  // el campamento 35 los pone el grupo de los vecinos (`hilosPiscuchas`), que cambia con el turno.
   if (!lista.length) return '';
-  return `<path class="efecto-ambiente v-piscuchas v-pis-hilo" d="${hilos}"/>${lista.map(({ x, y, k, i }) => {
+  return `${hilosPiscuchas(lista, lista.map((q) => q.hilo))}${lista.map(({ x, y, k, i }) => {
     const a = 6.4 * k, b = 9.6 * k; // medio ancho y alto
     const arriba = [x, y - b * 0.42], abajo = [x, y + b * 0.58], izq = [x - a, y - b * 0.1], der = [x + a, y - b * 0.1], cruz = [x, y - b * 0.1];
     // La cola con sus moños (crucecitas sobre la misma línea).
