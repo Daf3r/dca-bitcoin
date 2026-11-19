@@ -35,6 +35,12 @@ Cada fiesta dura **todo su día**, con guion por turnos (madrugada, mañana, med
 - Los cumpleaños (221 y 222) van solo en la cumbre y con «Tú», **nunca en el pueblo ni en la entrada** (privacidad de la familia).
 - Si el dueño quiere subir el valle por encima del velo del pie en el teléfono acostado (844×390) y a 320 px (hoy el pueblo queda bajo el velo): ya estaba decidido dejarlo así; sería idea aparte.
 
+## Quién lo hace (decidido con el dueño, 19 nov 2026)
+- **Opus implementa todo** (39 al 50): código, pruebas, mediciones, capturas, documentación y commits, como en 26–38. Una sola sesión por ronda; parte de la rama `claude/plan-39-50`.
+- **Fable solo para el arte nuevo** (sobre todo las fiestas, campamentos 41 y 42: osos con gorro, piñata, cena de Nochebuena, cuenta regresiva del 31): entrega los dibujos terminados y Opus los integra y los prueba. Si el prototipo (`prototipo-vida4.patch`) ya trae el dibujo, no hace falta.
+- **Orden**: Opus hace 39 y 41 primero (el 41 tiene fecha: 1 de diciembre). Fable (o el agente principal) hace al final un repaso crítico de las capturas para detectar cosas raras, como pasó con las casas.
+- **Para gastar menos**: la elección marcada del dueño llega antes de empezar, un solo PR, y capturas solo por campamento.
+
 ## Cómo se ejecuta (igual que 26–38)
 - Una rama, un commit por campamento (cada commit deja la rama verde por sí solo), capturas reales de cada uno para el dueño, `CAMBIOS` (3–6 frases) donde haya algo visible, su documento en `docs/campamentos/` con su línea en el índice de `CLAUDE.md`, y la «Definición de terminado» completa (todos los tamaños, claro/oscuro, día/noche, los tres niveles de efectos, `test_lib`, `test_api`, `test_ui` en tres partes, axe, barridos, Lighthouse, banco, regresión visual; medir antes/después cuando se toque la escena).
 - **Las pruebas no dependen del día de la semana**: los datos del escenario cambian con él (un jueves falló el bloque de los osos a 320×568); fijar `FECHA_PRUEBA` en el servidor de pruebas cuando un bloque dependa de la cifra exacta del saldo.
