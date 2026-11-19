@@ -18,7 +18,7 @@ import { $, R, S, api, vozLibro } from './estado.js';
 import { conTransicion, sinMovimiento } from './movimiento.js';
 import { novedadesMostradas } from './novedades.js';
 import { atajosActivos, fijarAtajos } from './atajos.js';
-import { fijarTituloConSaldo, pintar, tituloConSaldo } from './pintar.js';
+import { cumpleDeHoy, fijarTituloConSaldo, pintar, tituloConSaldo } from './pintar.js';
 
 let avisosOfrecidos = false; // la oferta de avisos sale una sola vez por visita (y una por dispositivo, ver avisos.js)
 // ---------------------------------------------------------------- arranque
@@ -62,7 +62,7 @@ export async function cargarYo() {
     document.body.dataset.mant = yo.mantenimiento ? '1' : ''; // modo solo lectura de emergencia (SOLO_LECTURA=1 en el servidor)
     $('mant').hidden = !yo.mantenimiento;
     // (Campamento 27) El grande duerme junto al aviso: el libro descansa un rato (una vez: el dibujo no cambia).
-    if (yo.mantenimiento && !$('mant').querySelector('.oso-ilu')) $('mant').insertAdjacentHTML('afterbegin', pose('duerme', { tam: 52 }));
+    if (yo.mantenimiento && !$('mant').querySelector('.oso-ilu')) $('mant').insertAdjacentHTML('afterbegin', pose('duerme', { tam: 52, cumple: cumpleDeHoy() }));
     // ¿Flota el botón «Anotar» en este dispositivo? El CSS lo usa para el alto de la escena (campamento 17). El rol se recuerda
     // (`libro.rol`) para que la próxima vez la escena salga ya con su alto (efectos.js). Solo es una pista de diseño: no da permisos.
     document.documentElement.toggleAttribute('data-boton', yo.rol === 'admin' && !yo.mantenimiento);
@@ -258,7 +258,7 @@ async function cargarHistorial(mas = false) {
     }
     histUltimo = filas.at(-1)?.id ?? histUltimo;
     $('hist-mas').hidden = filas.length < 100;
-    if (!lista.children.length) lista.innerHTML = `<li class="vacio con-ilu">${pose('lee')}Aún no hay nada en el historial.</li>`;
+    if (!lista.children.length) lista.innerHTML = `<li class="vacio con-ilu">${pose('lee', { cumple: cumpleDeHoy() })}Aún no hay nada en el historial.</li>`;
   } catch (e) {
     lista.innerHTML = '';
     const li = document.createElement('li'); li.className = 'vacio'; li.textContent = e.message; lista.append(li);

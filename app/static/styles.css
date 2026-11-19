@@ -4476,7 +4476,7 @@ html:not([data-efectos="ninguno"]) .osos.salta .oso-pie { animation: oso-pie 0.9
    tarjeta clara y el alto contraste lo oscurece. Son decorativos: no hablan, no se tocan y no llevan texto. */
 .oso-ilu {
   --oso-pelo: #fffdf8; --oso-crema: #f6ead2; --oso-apagado: #f4f0e8; --oso-hocico: #ecd6ab; --oso-rasgo: #231a16;
-  --oso-marino: #25365f; --oso-parche: #e17f2e; --oso-cinta: #c62f2b; --oso-celeste: #9cc5dd;
+  --oso-marino: #25365f; --oso-parche: #e17f2e; --oso-cinta: #c62f2b; --oso-celeste: #9cc5dd; --oso-gorro: #e5a42b;
   --ilu-luz: #fff4e0; --ilu-sombra: #6f6a88; --ilu-medio: #8f8274;
   display: block; overflow: visible; flex: none;
 }
@@ -4487,14 +4487,14 @@ html .oso-ilu .oso-medio { fill: color-mix(in oklab, var(--pelo) 64%, var(--ilu-
 html .oso-ilu .oso-sombra { fill: color-mix(in oklab, var(--pelo) 70%, var(--ilu-sombra)); }
 html[data-contraste="alto"] .oso-ilu .oso-medio { fill: color-mix(in oklab, var(--pelo) 48%, #5f5246); }
 html .oso-ilu .oso-hocico { fill: var(--oso-hocico); }
-.oso-ilu :is(.oso-rasgos, .oso-ojos, .oso-ojos-cerrados) { fill: var(--oso-rasgo); }
+.oso-ilu :is(.oso-rasgos, .oso-ojos, .oso-ojos-cerrados, .oso-ojos-zz) { fill: var(--oso-rasgo); }
 .oso-ilu .oso-mochila { fill: color-mix(in oklab, var(--oso-parche) 78%, #5a2a08); }
 .oso-ilu .oso-tapa { fill: var(--oso-cinta); }
 .oso-ilu .oso-papel { fill: #f5e6c6; }
 .oso-ilu .oso-pliegue { fill: color-mix(in oklab, #f5e6c6 62%, var(--ilu-medio)); }
 .oso-ilu .oso-palo { fill: #8a5a34; }
 .oso-ilu .oso-chispa { fill: var(--oso-parche); }
-.oso-ilu .oso-signo { fill: var(--txt3); }
+.oso-ilu :is(.oso-signo, .oso-zz) { fill: var(--txt3); }
 .oso-ilu .oso-suelo { fill: color-mix(in oklab, var(--s3) 80%, transparent); }
 .oso-ilu .oso-huella-p { fill: var(--txt3); }
 /* Dónde van: en el sitio del dibujo de línea de los estados vacíos, arriba del título de la bienvenida y al lado de la invitación. */
@@ -4511,6 +4511,19 @@ html[data-efectos="todos"] .nov-osos .oso-saluda { animation: oso-saluda 1.2s ea
 /* (Campamento 27) Cuando algo no va: el error de la lista lleva al grande confundido (en el sitio del dibujo, como el estado vacío) y el
    aviso de mantenimiento, al grande dormido a su izquierda. Sin colores de alarma: el texto de siempre. */
 .mant:not([hidden]) { display: flex; gap: 12px; align-items: center; }
+/* (Campamento 28) Según el momento: todo va dibujado y lo enseña el CSS con las marcas de cielo.js; nada se redibuja al cambiar la hora.
+   De 22:00 a 5:00 los despiertos cierran los ojos (data-sueno, aparte del velo de madrugada); en Navidad, el gorro rojo del grande y la
+   bufanda de los otros; las tardes de la época lluviosa, el paraguas plantado al lado; en las fiestas patrias, la banderita. */
+html .oso-ilu :is(.oso-gorro-nav, .oso-bufanda) { fill: var(--oso-cinta); }
+.oso-ilu .oso-pompon { fill: #fffaf3; }
+.oso-ilu .oso-gorro { fill: var(--oso-gorro); }
+.oso-ilu .oso-paraguas { fill: var(--oso-celeste); }
+.oso-ilu .oso-bandera { fill: #2f5fae; }
+.oso-ilu .oso-bandera-b { fill: #fffaf3; }
+.oso-ilu :is(.v-navidad, .v-sueno, .v-lluvia, .v-patrias) { display: none; }
+html[data-navidad] .oso-ilu .v-navidad, html[data-sueno] .oso-ilu .v-sueno { display: inline; }
+html[data-sueno] .oso-ilu .se-duerme { display: none; }
+html[data-epoca="lluviosa"][data-tarde] .oso-ilu .v-lluvia, html[data-fiesta="patrias"] .oso-ilu .v-patrias { display: inline; }
 /* La guía de estilo: cada pose en una tarjeta, con su nombre. */
 .guia-osos { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px; margin: 10px 0; padding: 0; list-style: none; }
 .guia-osos li { display: grid; justify-items: center; align-content: end; gap: 6px; padding: 12px 8px 10px; border-radius: 12px; background: var(--s1); }

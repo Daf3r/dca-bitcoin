@@ -240,6 +240,10 @@
     if (mv) raiz.dataset.mueve = mv; else delete raiz.dataset.mueve;
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
+    // (Campamento 28) Los osos de la interfaz se duermen de 22:00 a 5:00 aunque el velo esté apagado, y las tardes (13:00 a 18:00) de la
+    // época lluviosa sacan su paraguas.
+    raiz.toggleAttribute('data-sueno', h >= 22 || h < 5);
+    raiz.toggleAttribute('data-tarde', h >= 13 && h < 18);
     raiz.dataset.tinta = ti;
     raiz.style.setProperty('--cielo-txt', t.txt);
     raiz.style.setProperty('--cielo-txt2', t.txt2);

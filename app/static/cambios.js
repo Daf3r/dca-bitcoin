@@ -11,10 +11,10 @@ export const CAMBIOS = [
   {
     id: '2026-12-g',
     items: [
-      'Los osos de la cumbre también acompañan ahora en otros rincones del libro.',
-      'Mientras no hay compras, el grande lee en la lista y espera con su mochila al pie de «Tu historia».',
-      'La primera vez que alguien de la familia entra, los tres la saludan en la bienvenida.',
-      'Y la invitación a escribir una carta para el futuro lleva al grande con su sobre lacrado.',
+      'Los osos de la cumbre acompañan ahora también en otros rincones del libro.',
+      'Sin compras, el grande lee en la lista y espera con su mochila en «Tu historia»; en las cartas para el futuro, lleva un sobre.',
+      'La primera vez que alguien de la familia entra, los tres la saludan.',
+      'Y siguen el calendario: de madrugada se duermen, en Navidad se abrigan, en las tardes de lluvia sacan su paraguas y en fiestas patrias, la banderita.',
     ],
   },
   {

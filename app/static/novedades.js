@@ -3,7 +3,7 @@ import { ofrecerAvisos } from './cuenta.js';
 import { enTV } from './tv.js';
 import { pose } from './arte-osos-poses.js';
 import { $, R, S, api } from './estado.js';
-import { progresoEtapa } from './pintar.js';
+import { cumpleDeHoy, progresoEtapa } from './pintar.js';
 import { nombreMeta, rachaTxt } from './reportes.js';
 
 // ------------------------------------------------------------- novedades
@@ -46,7 +46,7 @@ export function pintarNovedades() {
   // (Campamento 26) La primera vez, los tres saludan arriba del título. Si con el dibujo la bienvenida no cabe en la pantalla (320 px de
   // ancho, letra grande), se quita: «Entendido» nunca queda fuera. Se mide una vez, al abrir.
   const osos = $('nov-osos');
-  osos.innerHTML = n.primera ? pose('saludan', { tam: 84 }) : '';
+  osos.innerHTML = n.primera ? pose('saludan', { tam: 84, cumple: cumpleDeHoy() }) : '';
   osos.hidden = !n.primera;
   dNov.showModal();
   if (!osos.hidden && dNov.scrollHeight > dNov.clientHeight + 1) { osos.hidden = true; osos.textContent = ''; }

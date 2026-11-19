@@ -5,10 +5,13 @@
 // la montaña; si un día cambia la cara en la cumbre, cambia en todas partes. Lo que cambia es la pose (brazos, cabeza, ojos) y lo que
 // llevan en las manos (un libro, un sobre, la mochila). Cada oso va en un grupo con un trazo por tono, como en la escena; los colores, por
 // variables (`--oso-*` y las de la interfaz: bloque «Campamento 26» de styles.css). Sobre una tarjeta la luz y la sombra siguen al tema,
-// no al cielo de la escena.
+// no al cielo de la escena. (Campamento 28) Lo de temporada va dibujado siempre y lo enseña el CSS con las marcas que deja cielo.js en
+// <html>, como en la montaña: la bufanda y el gorro de Navidad (`v-navidad`), los ojos cerrados de 22:00 a 5:00 (`v-sueno`), el paraguas
+// de las tardes de lluvia (`v-lluvia`) y la banderita de las fiestas patrias (`v-patrias`). El gorrito de cumpleaños solo si se pide
+// (`cumple`: es un dato de la familia, no el calendario).
 import { PARTES } from './arte-osos.js';
 
-const { arco, elipse, canto, PIEZAS, CARA, ROPA } = PARTES;
+const { arco, elipse, canto, CAB, PIEZAS, CARA, ROPA, BUFANDA, GORRO } = PARTES;
 const f1 = (n) => n.toFixed(1);
 const RAD = Math.PI / 180;
 const ESCALA = { grande: 1, chico: 0.7, mameluco: 0.84 };
@@ -48,14 +51,16 @@ const chispa = (x, y, r) => [[x, y - r], [x + r * 0.26, y - r * 0.26], [x + r, y
 /**
  * Un oso (sus planos por tono) en una pose. `cabeza`: grados que inclina la cabeza; `ojos`: 'abiertos' | 'abajo' | 'dormido' | 'feliz';
  * `brazos`: [{ de, a, lado: 'luz'|'sombra', aparte }] (sin manitas en la panza si hay brazos). Un brazo `aparte` no se suma a los planos
- * del cuerpo: va en `pl.aparte` (el brazo que saluda, que se mueve solo). Devuelve { tono: [puntos…] }.
+ * del cuerpo: va en `pl.aparte` (el brazo que saluda, que se mueve solo). `sueno`: de madrugada cierra los ojos y le salen sus zetas
+ * (el que está despierto); `cumple`: el gorrito del grande en vez del gorro de Navidad. Devuelve { tono: [puntos…] }.
  */
-function oso(quien, { cabeza = 0, ojos = 'abiertos', brazos = [], manitas = true } = {}) {
+function oso(quien, { cabeza = 0, ojos = 'abiertos', brazos = [], manitas = true, sueno = true, cumple = false } = {}) {
   const pl = { aparte: {} };
   const add = (tono, pts, a = pl) => sumar(a, tono, pts);
   const cab = (pts) => (cabeza ? girar(pts, cabeza) : pts);
   PIEZAS.forEach(([tono, pts], i) => add(tono, DE_CABEZA.has(i) ? cab(pts) : pts));
   for (const [tono, pts] of ROPA[quien] || []) add(tono, pts);
+  if (quien !== 'grande') for (const pts of BUFANDA) add('bufanda', pts); // el grande no: ya lleva su cinta
   // Brazos: el iluminado en luz con su canto; el de la sombra, en el tono medio (en el de sombra se fundía con la media luna de la cabeza
   // y parecía un ala). La manita al final, del crema del hocico.
   for (const { de, a, lado = 'luz', r = 1.35, aparte = false } of brazos) {
@@ -69,34 +74,66 @@ function oso(quien, { cabeza = 0, ojos = 'abiertos', brazos = [], manitas = true
   add('rasgos', cab(NARIZ));
   if (ojos === 'abiertos' || ojos === 'abajo') for (const o of OJOS) add('ojos', cab(ojos === 'abajo' ? mover(o, 0, 0.7) : o));
   else for (const o of ojosCerrados(ojos === 'feliz')) add('ojos-cerrados', cab(o));
+  // De madrugada, los que están despiertos cierran los ojos (el CSS cambia unos por otros) y les salen dos zetas.
+  if (sueno && (ojos === 'abiertos' || ojos === 'abajo')) { for (const o of ojosCerrados(false)) add('ojos-zz', cab(o)); add('zz', zeta(7.2, -17.2, 2.2)); add('zz', zeta(9.9, -20.8, 2.8)); }
+  if (cumple && quien === 'grande') add('gorro', cab(GORRO));
+  else if (quien === 'grande') {
+    // El gorro de Navidad del grande (el chico y el del mameluco llevan su bufanda): rojo, con su borde y su pompón blancos.
+    add('gorro-nav', cab([[-5.6, -15.6], [-2, -19.4], [2.6, -20.2], [6.6, -18.6], [8.2, -17.4], [5.6, -16.4]]));
+    add('pompon', cab([...arco(CAB.x, CAB.y + 0.2, CAB.rx * 0.84, CAB.ry * 0.86, 205, 330, 7), ...arco(CAB.x, CAB.y - 0.3, CAB.rx * 0.84, CAB.ry * 0.86, 330, 205, 7)]));
+    add('pompon', cab(elipse(8.6, -17, 1.25, 1.2, 8)));
+  }
   return pl;
 }
 
-const TONOS = ['mochila', 'sombra', 'luz', 'medio', 'marino', 'celeste', 'parche', 'cinta', 'tapa', 'papel', 'pliegue', 'palo', 'hocico', 'rasgos', 'ojos', 'ojos-cerrados', 'chispa', 'signo'];
+const TONOS = ['mochila', 'sombra', 'luz', 'medio', 'marino', 'celeste', 'parche', 'cinta', 'bufanda', 'tapa', 'papel', 'pliegue', 'palo', 'hocico', 'rasgos', 'ojos', 'ojos-cerrados', 'ojos-zz', 'gorro', 'gorro-nav', 'pompon', 'chispa', 'signo', 'zz'];
+/** Los tonos que solo se ven en su momento (el CSS los enseña; ver arriba). Los ojos abiertos se esconden de madrugada. */
+const CLASE_TONO = { bufanda: ' v-navidad', 'gorro-nav': ' v-navidad', pompon: ' v-navidad', 'ojos-zz': ' v-sueno', zz: ' v-sueno', ojos: ' se-duerme' };
 const d = (lista) => lista.map((pts) => `M${pts.map(([x, y]) => `${f1(x)} ${f1(y)}`).join('L')}Z`).join('');
 
 /** Coloca un oso (sus planos) en (x, y) con escala `s` y lo vuelve un grupo; lo `aparte` va al final, en su propio grupo. */
 function grupo(quien, pl, x = 0, y = 0, s = ESCALA[quien]) {
   const T = (lista) => lista.map((pts) => pts.map(([px, py]) => [x + px * s, y + py * s]));
   const todos = [];
-  const trazos = (planos) => TONOS.filter((t) => planos[t]).map((t) => { const pts = T(planos[t]); todos.push(...pts.flat()); return `<path class="oso-${t}" d="${d(pts)}"/>`; }).join('');
+  const trazos = (planos) => TONOS.filter((t) => planos[t]).map((t) => { const pts = T(planos[t]); todos.push(...pts.flat()); return `<path class="oso-${t}${CLASE_TONO[t] ?? ''}" d="${d(pts)}"/>`; }).join('');
   const aparte = trazos(pl.aparte);
   return { svg: `<g class="oso oso-${quien}">${trazos(pl)}${aparte ? `<g class="oso-saluda">${aparte}</g>` : ''}</g>`, pts: todos };
+}
+
+// (Campamento 28) Lo que se planta al lado, del lado de la sombra, y se enseña según el día: el paraguas de las tardes de lluvia y la
+// banderita de las fiestas patrias (solo sus franjas: a este tamaño, sin escudo).
+function plantados(x, y, s) {
+  const T = (pts) => pts.map(([px, py]) => [x + px * s, y + py * s]);
+  const tela = T([...arco(0, -12, 6.2, 5.2, 180, 360, 10), [5.2, -11.2], [3.6, -12], [2, -11.2], [0, -12], [-2, -11.2], [-3.6, -12], [-5.2, -11.2]]);
+  const palo = T([[-0.3, -17.6], [0.3, -17.6], [0.3, 0], [-0.3, 0]]);
+  const paraguas = `<g class="v-lluvia"><path class="oso-palo" d="${d([palo])}"/><path class="oso-paraguas" d="${d([tela])}"/></g>`;
+  const asta = T([[-0.25, -13], [0.25, -13], [0.25, 0], [-0.25, 0]]);
+  const azul = T([[0.25, -13], [6, -13.2], [6, -12], [0.25, -11.8], [0.25, -10.2], [6, -10.4], [6, -9.2], [0.25, -9]]);
+  const blanco = T([[0.25, -11.8], [6, -12], [6, -10.4], [0.25, -10.2]]);
+  const bandera = `<g class="v-patrias"><path class="oso-palo" d="${d([asta])}"/><path class="oso-bandera" d="${d([azul])}"/><path class="oso-bandera-b" d="${d([blanco])}"/></g>`;
+  return { svg: paraguas + bandera, pts: [...tela, ...palo, ...azul] };
 }
 
 /** La sombra de contacto del suelo (de la tarjeta), bajo los osos. */
 const suelo = (x0, x1, y) => `<path class="oso-suelo" d="${d([arco((x0 + x1) / 2, y + 0.4, (x1 - x0) / 2, 1.5, 0, 350, 18)])}"/>`;
 
 /** Arma el <svg>: viewBox ajustado a lo dibujado (con margen), `tam` = alto en px; clase de la pose. */
-function svgDe(nombre, partes, tam) {
+function svgDe(nombre, partes, tam, plantar) {
   let cuerpo = '';
   const pts = [];
   for (const p of partes) { cuerpo += p.svg; pts.push(...p.pts); }
   const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys, 0.6);
+  let x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys, 0.6);
+  let pl = '';
+  if (plantar) {
+    const pp = plantados(plantar.x, plantar.y, plantar.s);
+    pl = pp.svg;
+    x0 = Math.min(x0, ...pp.pts.map((q) => q[0])); x1 = Math.max(x1, ...pp.pts.map((q) => q[0]));
+  }
   const m = 1.2, vb = [x0 - m, y0 - m, x1 - x0 + 2 * m, y1 - y0 + 2 * m + 1.4];
   const w = Math.round((tam * vb[2]) / vb[3]);
-  return `<svg class="oso-ilu oso-pose-${nombre}" viewBox="${vb.map(f1).join(' ')}" width="${w}" height="${tam}" aria-hidden="true" focusable="false">${suelo(x0 + 1, x1 - 1, y1 - 0.6)}${cuerpo}</svg>`;
+  return `<svg class="oso-ilu oso-pose-${nombre}" viewBox="${vb.map(f1).join(' ')}" width="${w}" height="${tam}" aria-hidden="true" focusable="false">${suelo(x0 + 1, x1 - 1, y1 - 0.6)}${pl}${cuerpo}</svg>`;
 }
 
 // ---------------------------------------------------------------------------------------------------------------- las poses
@@ -105,8 +142,8 @@ const HOMBRO = { luz: [4.4, -7.4], sombra: [-4.4, -7.4] };
 export const SALUDO = { de: HOMBRO.luz, a: [8.2, -13.6], r: 1.35 };
 const POSES = {
   /** Con un libro abierto en el regazo, leyendo (la lista y el Historial sin compras). */
-  lee: () => {
-    const pl = oso('grande', { cabeza: -5, ojos: 'abajo', manitas: false });
+  lee: (o) => {
+    const pl = oso('grande', { ...o, cabeza: -5, ojos: 'abajo', manitas: false });
     sumar(pl, 'tapa', [[-6.6, -6.9], [0, -5.7], [6.6, -6.9], [6.8, -1.5], [0, -0.4], [-6.8, -1.5]]);
     sumar(pl, 'papel', [[-6, -6.4], [-0.35, -5.3], [-0.35, -1.0], [-6.1, -2.0]], [[0.35, -5.3], [6, -6.4], [6.1, -2.0], [0.35, -1.0]]);
     sumar(pl, 'pliegue', [[-5.1, -5.2], [-1.2, -4.5], [-1.2, -4.1], [-5.1, -4.8]], [[-5.1, -3.8], [-1.2, -3.1], [-1.2, -2.7], [-5.1, -3.4]], [[1.2, -4.5], [5.1, -5.2], [5.1, -4.8], [1.2, -4.1]]);
@@ -114,8 +151,8 @@ const POSES = {
     return [grupo('grande', pl, 0, 0, 1)];
   },
   /** Con su mochila y un palito, al pie del camino («Tu historia» sin compras: la historia es un ascenso). */
-  mochila: () => {
-    const pl = oso('grande', { brazos: [{ de: HOMBRO.luz, a: [7.4, -6.2] }] });
+  mochila: (o) => {
+    const pl = oso('grande', { ...o, brazos: [{ de: HOMBRO.luz, a: [7.4, -6.2] }] });
     // La mochila asoma detrás del hombro en sombra: un bulto redondeado con su solapa, y las correas naranjas por delante.
     sumar(pl, 'mochila', [...arco(-7.4, -10.6, 2.6, 2.2, 180, 300, 5), [-4.2, -12.2], [-3.8, -4.4], ...arco(-6.6, -4.6, 2.8, 2, 0, 160, 5)]);
     sumar(pl, 'parche', [[-4.2, -10.4], [-2.6, -10.6], [-1.4, -3.2], [-2.8, -3]], [[2.6, -10.6], [4.2, -10.4], [2.8, -3], [1.4, -3.2]]);
@@ -123,15 +160,16 @@ const POSES = {
     return [grupo('grande', pl, 0, 0, 1)];
   },
   /** Los tres saludando (la bienvenida de quien solo mira, «Así va el libro»). El brazo del grande va aparte: es el que se mueve. */
-  saludan: () => {
-    const g = oso('grande', { brazos: [{ ...SALUDO, aparte: true }] });
-    const m = oso('mameluco', { brazos: [{ de: HOMBRO.sombra, a: [-8.4, -13.2], lado: 'sombra' }] });
-    const c = oso('chico', { brazos: [{ de: HOMBRO.luz, a: [8.4, -13] }] });
+  saludan: (o) => {
+    // (Saludan despiertos también de madrugada: es una bienvenida.)
+    const g = oso('grande', { ...o, sueno: false, brazos: [{ ...SALUDO, aparte: true }] });
+    const m = oso('mameluco', { ...o, sueno: false, brazos: [{ de: HOMBRO.sombra, a: [-8.4, -13.2], lado: 'sombra' }] });
+    const c = oso('chico', { ...o, sueno: false, brazos: [{ de: HOMBRO.luz, a: [8.4, -13] }] });
     return [grupo('grande', g, 0, 0), grupo('mameluco', m, -10.6, 2.6), grupo('chico', c, 10, 3.4)];
   },
   /** Con un sobre lacrado delante del pecho (Cartas para el futuro). */
-  sobre: () => {
-    const pl = oso('grande', { manitas: false });
+  sobre: (o) => {
+    const pl = oso('grande', { ...o, manitas: false });
     sumar(pl, 'papel', girar([[-4.6, -7.6], [4.6, -7.6], [4.6, -2.2], [-4.6, -2.2]], -6, [0, -5]));
     sumar(pl, 'pliegue', girar([[-4.6, -7.6], [0, -4.6], [4.6, -7.6], [4.6, -7.0], [0, -4.0], [-4.6, -7.0]], -6, [0, -5]));
     sumar(pl, 'chispa', girar(elipse(0, -4.4, 1.05, 1.05, 9), -6, [0, -5]));
@@ -139,28 +177,28 @@ const POSES = {
     return [grupo('grande', pl, 0, 0, 1)];
   },
   /** Confundido, rascándose la cabeza, con un signo de pregunta dibujado (cuando algo no cargó). */
-  confundido: () => {
-    const pl = oso('grande', { cabeza: 11, brazos: [{ de: HOMBRO.luz, a: [6.6, -15.4] }] });
+  confundido: (o) => {
+    const pl = oso('grande', { ...o, sueno: false, cabeza: 11, brazos: [{ de: HOMBRO.luz, a: [6.6, -15.4] }] });
     sumar(pl, 'signo', ...pregunta(10.6, -22.4, 6.2));
     return [grupo('grande', pl, 0, 0, 1)];
   },
   /** Dormido, con la cabeza caída y sus zetas (el mantenimiento). */
-  duerme: () => {
-    const pl = oso('grande', { cabeza: -9, ojos: 'dormido' });
+  duerme: (o) => {
+    const pl = oso('grande', { ...o, cabeza: -9, ojos: 'dormido' });
     sumar(pl, 'signo', zeta(7.4, -16.6, 2.4), zeta(10.4, -20.6, 3.1));
     return [grupo('grande', pl, 0, 0, 1)];
   },
   /** Los tres dormidos, juntos (la tele de noche). */
-  duermen: () => {
-    const g = oso('grande', { cabeza: -9, ojos: 'dormido' });
+  duermen: (o) => {
+    const g = oso('grande', { ...o, cabeza: -9, ojos: 'dormido' });
     sumar(g, 'signo', zeta(7.4, -16.6, 2.2), zeta(10.2, -20.2, 2.8));
-    const m = oso('mameluco', { cabeza: 12, ojos: 'dormido' });
-    const c = oso('chico', { cabeza: -14, ojos: 'dormido' });
+    const m = oso('mameluco', { ...o, cabeza: 12, ojos: 'dormido' });
+    const c = oso('chico', { ...o, cabeza: -14, ojos: 'dormido' });
     return [grupo('grande', g, 0, 0), grupo('mameluco', m, -10.2, 2.4), grupo('chico', c, 9.4, 3.4)];
   },
   /** Con los brazos arriba, contento (para lo que se celebre: el aniversario del libro, si un día se usa). */
-  celebra: () => {
-    const pl = oso('grande', { ojos: 'feliz', brazos: [{ de: HOMBRO.luz, a: [8, -15.6] }, { de: HOMBRO.sombra, a: [-8, -15.6], lado: 'sombra' }] });
+  celebra: (o) => {
+    const pl = oso('grande', { ...o, sueno: false, ojos: 'feliz', brazos: [{ de: HOMBRO.luz, a: [8, -15.6] }, { de: HOMBRO.sombra, a: [-8, -15.6], lado: 'sombra' }] });
     sumar(pl, 'chispa', chispa(12, -18.6, 2.2), chispa(-12.2, -14.4, 1.6));
     return [grupo('grande', pl, 0, 0, 1)];
   },
@@ -168,9 +206,15 @@ const POSES = {
 /** Los nombres de las poses, en el orden de la guía. */
 export const NOMBRES_POSES = Object.keys(POSES);
 
-/** Una pose como <svg> decorativo; `tam`: el alto en px. Un nombre que no existe no dibuja nada. */
-export function pose(nombre, { tam = 96 } = {}) {
-  return POSES[nombre] ? svgDe(nombre, POSES[nombre](), tam) : '';
+/**
+ * Una pose como <svg> decorativo. `tam`: el alto en px; `cumple`: el gorrito de cumpleaños del grande (en vez del gorro de Navidad);
+ * `plantar`: false para no dibujar el paraguas ni la banderita al lado. Un nombre que no existe no dibuja nada.
+ */
+export function pose(nombre, { tam = 96, cumple = false, plantar = true } = {}) {
+  if (!POSES[nombre]) return '';
+  const partes = POSES[nombre]({ cumple });
+  const trio = partes.length > 1;
+  return svgDe(nombre, partes, tam, plantar ? (trio ? { x: 20.6, y: 3.4, s: 0.7 } : { x: -10.6, y: 0, s: 0.78 }) : null);
 }
 
 /** La huella de una pata (el sello de los de la cumbre): la almohadilla y cuatro deditos, en un solo trazo. */

@@ -2,6 +2,7 @@ import { avisar } from './avisar.js';
 import { etapasFuturas, fechaLarga, mananaISO, nombreHito, textoApertura } from './lib.js';
 import { cartaAbierta, cartaSellada } from './arte-sellos.js';
 import { pose } from './arte-osos-poses.js';
+import { cumpleDeHoy } from './pintar.js';
 import { $, R, S, api, esAdmin, reducido } from './estado.js';
 
 // Cartas para el futuro (campamento 15A, idea 33): el dueño escribe una carta con lacre que se abre sola en una fecha o al llegar a una
@@ -18,8 +19,9 @@ export function pintarCapsulas() {
   caja.hidden = !S.cargado || (!hay && !admin) || !R?.nCompras;
   $('cap-nueva').hidden = !admin;
   $('cap-pista').hidden = !admin || hay;
-  // (Campamento 26) La invitación lleva al grande con su sobre lacrado (una vez: el dibujo no cambia).
-  if (!$('cap-pista').hidden && !$('cap-pista').querySelector('.oso-ilu')) $('cap-pista').insertAdjacentHTML('afterbegin', pose('sobre', { tam: 72 }));
+  // (Campamentos 26 y 28) La invitación lleva al grande con su sobre lacrado; se vuelve a dibujar solo si cambia el gorrito del cumpleaños.
+  const pista = $('cap-pista'), ya = pista.querySelector('.oso-ilu'), cumple = cumpleDeHoy();
+  if (!pista.hidden && (!ya || Boolean(ya.querySelector('.oso-gorro')) !== cumple)) { ya?.remove(); pista.insertAdjacentHTML('afterbegin', pose('sobre', { tam: 72, cumple })); }
   lista.textContent = '';
   const vistas = leidas();
   for (const c of S.capsulas) {

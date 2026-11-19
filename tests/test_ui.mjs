@@ -200,6 +200,7 @@ const PESOS = [
   ['campamento 25: los osos polares de pel', 167], // 98 comprobaciones (medido en su parte, el 18 nov 2026)
   ['campamento 26: los osos en la interfaz', 46], // 22 comprobaciones
   ['campamento 27: cuando algo no va', 25], // 4 comprobaciones
+  ['campamento 28: según el momento', 40], // 9 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -6970,6 +6971,48 @@ try {
       }
     } finally {
       mant.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 28: según el momento (los osos de la interfaz se duermen, se abrigan, sacan el paraguas, la banderita y el gorrito)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    /** Qué se ve del grande que lee en la lista sin compras (todo va dibujado: el CSS enseña lo que toca). */
+    const lee = (p) => p.evaluate(() => {
+      const s = document.querySelector('#lista .vacio svg.oso-pose-lee');
+      const ve = (sel) => [...(s?.querySelectorAll(sel) ?? [])].some((e) => getComputedStyle(e).display !== 'none' && getComputedStyle(e.parentElement).display !== 'none');
+      return { hay: Boolean(s), abiertos: ve('.oso-ojos'), dormido: ve('.oso-ojos-zz') && ve('.oso-zz'), gorro: ve('.oso-gorro-nav'), gorrito: ve('.oso-gorro'), paraguas: ve('.oso-paraguas'), bandera: ve('.oso-bandera') };
+    });
+    const vac = await servidor('vacio');
+    try {
+      const casos = [
+        ['un día cualquiera, 12 h', '2026-11-25', 12, {}, { abiertos: true, dormido: false, gorro: false, paraguas: false, bandera: false }],
+        ['de madrugada con el velo apagado, 23 h', '2026-11-25', 23, { 'libro.madrugada': '0' }, { abiertos: false, dormido: true }],
+        ['a las 5 ya despierto', '2026-11-25', 5, {}, { abiertos: true, dormido: false }],
+        ['Nochebuena', '2026-12-24', 12, {}, { gorro: true, paraguas: false }],
+        ['una tarde de lluvia, 15 h', '2026-07-10', 15, {}, { paraguas: true, bandera: false }],
+        ['la misma noche de lluvia, 19 h', '2026-07-10', 19, {}, { paraguas: false }],
+        ['una tarde de la época seca, 15 h', '2026-02-10', 15, {}, { paraguas: false }],
+        ['el 15 de septiembre', '2026-09-15', 12, {}, { bandera: true }],
+      ];
+      for (const [caso, dia, hora, extra, espera] of casos) {
+        const t = await entrar(navegador, vac, ADMIN, { hora }, conLs({ 'libro.dia': dia, ...extra }));
+        await cerrar(t.p);
+        const r = await lee(t.p);
+        ok(r.hay && Object.entries(espera).every(([k, v]) => r[k] === v), `28 ${caso}: ${JSON.stringify(r)}`);
+        await t.ctx.close();
+      }
+      // El cumpleaños de alguien de la familia: el grande estrena su gorrito (no dice de quién) y deja el gorro de Navidad.
+      const t = await entrar(navegador, vac, ADMIN, { hora: 12 }, conLs({ 'libro.dia': '2026-12-02' }));
+      await cerrar(t.p);
+      await t.p.evaluate(() => fetch('/api/yo/cumple', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ cumple: '12-02' }) }));
+      await t.p.reload({ waitUntil: 'networkidle' }); await t.p.waitForTimeout(2600); await cerrar(t.p);
+      const r = await lee(t.p);
+      ok(r.gorrito && !r.gorro, `28 un cumpleaños en diciembre: el gorrito y no el gorro de Navidad (${JSON.stringify(r)})`);
+      await t.ctx.close();
+    } finally {
+      vac.parar();
     }
   });
 

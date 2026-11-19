@@ -536,6 +536,11 @@ eq(ubicacionSats([tr(600)], 1000).partes, [{ id: 0, nombre: 'Mi wallet', sats: 6
     eq([raiz.dataset.fiesta, raiz.dataset.epoca, raiz.atributos.has('data-cohetes')], ['patrias', 'lluviosa', false], 'aplicar: deja la fiesta y la época en html');
     almacen['libro.dia'] = '2026-12-31'; almacen['libro.hora'] = '23.9'; C.aplicar();
     eq([raiz.dataset.fiesta, raiz.dataset.epoca, raiz.atributos.has('data-cohetes')], [undefined, 'seca', true], 'aplicar: cohetes a fin de año y sin fiesta');
+    // (Campamento 28) Los osos de la interfaz: duermen de 22:00 a 5:00 (aunque el velo de madrugada esté apagado) y las tardes son de 13 a 18.
+    const marcas = (h) => { almacen['libro.hora'] = String(h); C.aplicar(); return [raiz.atributos.has('data-sueno'), raiz.atributos.has('data-tarde')]; };
+    almacen['libro.madrugada'] = '0';
+    eq([4.9, 5, 12.9, 13, 17.9, 18, 21.9, 22].map(marcas), [[true, false], [false, false], [false, false], [false, true], [false, true], [false, false], [false, false], [true, false]], 'aplicar: data-sueno de 22 a 5 (con el velo apagado) y data-tarde de 13 a 18');
+    delete almacen['libro.madrugada'];
     delete almacen['libro.dia']; delete almacen['libro.hora'];
   }
   // Modo madrugada (idea 20): de 22:00 a 5:00, y se apaga con `libro.madrugada` = 0
@@ -1681,10 +1686,20 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
     const clases = [...s.matchAll(/<path class="([^"]+)"/g)].map((m) => m[1]);
     ok(s.startsWith(`<svg class="oso-ilu oso-pose-${nombre}" `) && s.includes('aria-hidden="true"') && s.includes('focusable="false"') && s.includes('height="84"'), `poses: ${nombre} es un <svg> decorativo con su clase y su alto`);
     ok(!/style=|fill=|NaN|undefined/.test(s) && vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0, `poses: ${nombre} sin estilos en línea, sin NaN y con su viewBox`);
-    ok(clases.length > 0 && clases.every((c) => /^oso-[a-z-]+$/.test(c)) && clases.includes('oso-luz') && clases.includes('oso-hocico') && clases.includes('oso-suelo'), `poses: ${nombre} pinta con las clases oso-… (${new Set(clases).size} tonos)`);
-    ok(nodos(s) <= 32, `poses: ${nombre}, ${nodos(s)} nodos (≤ 32)`);
+    ok(clases.length > 0 && clases.every((c) => /^oso-[a-z-]+( v-(navidad|sueno)| se-duerme)?$/.test(c)) && clases.includes('oso-luz') && clases.includes('oso-hocico') && clases.includes('oso-suelo'), `poses: ${nombre} pinta con las clases oso-… (${new Set(clases).size} tonos)`);
+    ok(nodos(s) <= 44, `poses: ${nombre}, ${nodos(s)} nodos con lo de temporada (≤ 44)`);
   }
   ok(P.pose('no-existe') === '', 'poses: un nombre que no existe no dibuja nada');
+  // (Campamento 28) Lo de temporada va dibujado siempre (el CSS lo enseña); el gorrito de cumpleaños, solo si se pide.
+  const despiertos = ['lee', 'mochila', 'sobre'];
+  for (const nombre of P.NOMBRES_POSES) {
+    const s = P.pose(nombre), c = P.pose(nombre, { cumple: true }), sin = P.pose(nombre, { plantar: false });
+    const otros = (s.match(/class="oso oso-(chico|mameluco)"/g) || []).length;
+    ok(s.includes('oso-gorro-nav v-navidad') && (s.match(/oso-bufanda v-navidad/g) || []).length === otros, `poses: ${nombre} en Navidad, el gorro rojo del grande y ${otros} bufandas`);
+    ok(c.includes('class="oso-gorro"') && !c.includes('gorro-nav'), `poses: ${nombre} con cumpleaños, el gorrito en vez del gorro de Navidad`);
+    ok(s.includes('oso-ojos-zz v-sueno') === despiertos.includes(nombre) && s.includes('oso-zz v-sueno') === despiertos.includes(nombre), `poses: ${nombre} ${despiertos.includes(nombre) ? 'se duerme' : 'no cambia'} de madrugada`);
+    ok(s.includes('<g class="v-lluvia">') && s.includes('<g class="v-patrias">') && !sin.includes('v-lluvia') && !sin.includes('v-patrias'), `poses: ${nombre} con su paraguas y su banderita plantados (y sin ellos si se pide)`);
+  }
   const saludan = P.pose('saludan'), brazo = saludan.match(/<g class="oso-saluda">(.*?)<\/g>/);
   ok(brazo && (saludan.match(/oso-saluda/g) || []).length === 1 && ['oso-luz', 'oso-medio', 'oso-hocico'].every((c) => brazo[1].includes(`class="${c}"`)), 'poses: en «saludan», el brazo del grande va aparte (el que se mueve), con su luz, su canto y su manita');
   ok(P.NOMBRES_POSES.filter((n) => n !== 'saludan').every((n) => !P.pose(n).includes('oso-saluda')), 'poses: solo «saludan» lleva el brazo aparte');

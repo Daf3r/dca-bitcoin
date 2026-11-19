@@ -8,7 +8,7 @@ import { pose } from './arte-osos-poses.js';
 import { $, R, S, api, esAdmin, normalizar, reducido, vozLibro } from './estado.js';
 import { abrirComprobante } from './comprobante.js';
 import { abrirHoja, esc } from './hoja.js';
-import { pintar } from './pintar.js';
+import { cumpleDeHoy, pintar } from './pintar.js';
 
 // ----------------------------------------------------------------- lista
 // Compras, ventas y traslados en una sola lista, agrupada por mes, con búsqueda, filtros y orden (solo cambian lo que se ve aquí:
@@ -177,7 +177,7 @@ export function pintarLista() {
   if (host.querySelector('.f-notaed')) return; // se está editando una nota: no se la quitamos de debajo del dedo
   if (!R.n) {
     // Sin compras, el grande lee; si no se pudieron cargar, se rasca la cabeza (campamentos 26 y 27). Mientras carga, solo el texto.
-    const ilu = !S.cargado ? '' : pose(S.errorCarga ? 'confundido' : 'lee', { tam: S.errorCarga ? 92 : 96 });
+    const ilu = !S.cargado ? '' : pose(S.errorCarga ? 'confundido' : 'lee', { tam: S.errorCarga ? 92 : 96, cumple: cumpleDeHoy() });
     host.innerHTML = `<li class="vacio${ilu ? ' con-ilu' : ''}">${ilu}${!S.cargado ? 'Cargando compras…' : S.errorCarga ? (vozLibro() ? 'No se pudieron cargar las compras.' : 'No se pudieron cargar tus compras.') : vozLibro() ? 'Aún no hay compras en el libro.' : 'Aún no hay compras. Anota la primera o importa un CSV.'}</li>`;
     $('ver-todas').hidden = true;
     $('l-ctl').hidden = true;
