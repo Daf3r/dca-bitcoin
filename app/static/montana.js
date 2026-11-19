@@ -236,14 +236,44 @@ function lago(c, W, H, ventas = 0, kv = 1) {
  * - El frente (`<svg class="frente">`, justo después del principal): de `#m-luzhecha` al final, lo que cambia con el avance (ver abajo).
  * La forma, los `rnd()` y el orden de pintado no cambian: se ve igual. Orden en `host`: principal, frente, cielo, lejana, media.
  */
+/**
+ * (Campamento 30, idea 19) Lo de otra temporada no se queda en la escena. La escena se calcula y se arma igual (la forma no cambia: el
+ * mismo `rnd()` en el mismo orden) y, al ponerla, se quitan las piezas que el calendario de hoy esconde en todo el día: la Navidad
+ * fuera del 1 dic – 6 ene, los cohetes fuera del 24–25 y 31 dic – 1 ene, el papel picado y las banderas fuera de las fiestas, las
+ * piscuchas fuera de octubre y noviembre, los zompopos fuera del 15–21 de mayo, las otras etapas de la milpa, la quebrada de la otra
+ * época y las flores de otro mes. **Lo de la hora no se toca** (luna, estrellas, luciérnagas, el mar de niebla, la luz del lago): eso
+ * sigue dibujado y lo enseña el CSS. Al cambiar de día con la app abierta, cielo.js avisa (`libro:dia`) y la escena se vuelve a dibujar.
+ * Las fechas son las de cielo.js (`window.libroCielo`), las mismas que deja en <html>; sin cielo.js no se quita nada.
+ */
+export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
+  if (!C?.navidad) return [];
+  const md = d.slice(5), fi = C.fiesta(d), mp = C.milpa(d), fl = C.flor(d), lluviosa = C.epoca(d) === 'lluviosa';
+  return [
+    !C.navidad(d) && '.v-navidad, .oso-bufanda',
+    !['12-24', '12-25', '12-31', '01-01'].includes(md) && '.cohetes',
+    !fi && '.papel-picado',
+    !['agostinas', 'patrias'].includes(fi) && '.v-fiesta',
+    !C.piscuchas(d) && '.v-piscuchas',
+    !C.zompopos(d) && '.v-zompopos',
+    `.v-mp:not(.v-mp-${mp})`,
+    lluviosa ? '.v-q-hilo' : '.v-q-llena',
+    fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
+  ].filter(Boolean);
+}
+
+/** Quita de `raiz` (la plantilla de la escena o la escena ya puesta) lo de otra temporada (ver `fueraDeTemporada`). */
+function podar(raiz) {
+  for (const sel of fueraDeTemporada(globalThis.window?.libroCielo?.dia?.() ?? '')) for (const e of raiz.querySelectorAll(sel)) e.remove();
+}
+
 function enCapas(host, W, H) {
   const svg = host.querySelector('svg');
   host.style.isolation = 'isolate';
   const capas = [...svg.querySelectorAll('.par')].map((g) => {
     const capa = document.createElementNS(NS, 'svg');
     for (const [k, v] of [['viewBox', `0 0 ${W} ${H}`], ['width', W], ['height', H], ['aria-hidden', 'true'], ['focusable', 'false'], ['class', `capa ${g.getAttribute('class')}`]]) capa.setAttribute(k, v);
-    g.removeAttribute('class');
-    capa.append(g);
+    capa.append(...g.childNodes); // (30, idea 20) sin el grupo de antes, que ya no llevaba nada: un nodo menos por capa
+    g.remove();
     return capa;
   });
   const alba = svg.querySelector('#m-alba');
@@ -512,7 +542,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
   s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
-  host.innerHTML = s + '</g></svg>';
+  // (30, idea 19) Se arma en una plantilla (inerte: sin estilos ni medidas), se le quita lo de otra temporada y entra ya podada.
+  const plantilla = document.createElement('template');
+  plantilla.innerHTML = s + '</g></svg>';
+  podar(plantilla.content);
+  host.replaceChildren(plantilla.content);
   if (!document.documentElement.dataset.sin?.includes('capas')) enCapas(host, W, H); // (rendimiento iPhone) el cielo y las dos sierras del parallax, cada una en su <svg>: ver `enCapas` (`/medir?sin=capas`: como antes, para comparar)
   colocarReloj(host);
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
@@ -609,6 +643,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     if (inicio !== sats) colocar(inicio, false);
     host.getBoundingClientRect(); // (el estado de `inicio`, ya calculado sin transiciones)
   } finally { delete host.dataset.colocando; }
+  podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
   describir(sats, etapa);
 }
 
@@ -1094,19 +1129,19 @@ function medidor(inicio, tramos, largo) {
  */
 function detalleSendero(caja, camino, L, by, sy, abajo, arriba) {
   if (!caja) return;
-  let s = '';
+  let s = '', peldanos = ''; // (30, idea 20) todos los peldaños en un solo trazo: no se tocan y no se mueven
   for (let d = 22, i = 0; d < L - 10; d += 17, i++) {
     const a = camino.getPointAtLength(d), b = camino.getPointAtLength(Math.min(L, d + 1.5));
     const dx = b.x - a.x, dy = b.y - a.y, n = Math.hypot(dx, dy) || 1, nx = -dy / n, ny = dx / n;
     const f = Math.min(1, Math.max(0, (by - a.y) / ((by - sy) || 1)));
     const w = (abajo + (arriba - abajo) * f) / 2;
-    s += `<path class="peldano" d="M${f1(a.x - nx * w * 0.8)} ${f1(a.y - ny * w * 0.8)}L${f1(a.x + nx * w * 0.8)} ${f1(a.y + ny * w * 0.8)}"/>`;
+    peldanos += `M${f1(a.x - nx * w * 0.8)} ${f1(a.y - ny * w * 0.8)}L${f1(a.x + nx * w * 0.8)} ${f1(a.y + ny * w * 0.8)}`;
     if (i % 3 === 1) {
       const lado = i % 2 ? 1 : -1, r = 1.2 + (i % 4) * 0.35 + (1 - f) * 0.8;
       s += `<ellipse class="piedra" cx="${f1(a.x + nx * (w + 2.6) * lado)}" cy="${f1(a.y + ny * (w + 2.6) * lado)}" rx="${f1(r * 1.3)}" ry="${f1(r)}"/>`;
     }
   }
-  caja.innerHTML = s;
+  caja.innerHTML = (peldanos ? `<path class="peldano" d="${peldanos}"/>` : '') + s;
 }
 
 /** Huellas del tramo recorrido: puntitos que alternan a cada lado del sendero, hasta donde estás. Solo con todos los efectos. */

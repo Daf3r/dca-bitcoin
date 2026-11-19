@@ -128,9 +128,9 @@ jobs:
         run: node tests/auditoria_axe.mjs
 
   rendimiento:
-    name: Rendimiento (Lighthouse)
+    name: Rendimiento (Lighthouse y banco de la escena)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -146,6 +146,8 @@ jobs:
           cache-dependency-path: tests/package-lock.json
       - run: npm ci --prefix tests
       - run: npx --prefix tests playwright install --with-deps chromium
+      - name: Banco de la escena (topes de nodos y animaciones a la vista por capa; los fps solo informan)
+        run: node tests/banco_rendimiento.mjs
       - name: Lighthouse en la entrada y en la app (umbrales holgados)
         run: node tests/rendimiento_lighthouse.mjs
 

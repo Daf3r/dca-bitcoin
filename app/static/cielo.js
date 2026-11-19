@@ -213,6 +213,7 @@
     aplicar();
   }
 
+  let diaAplicado = null; // (Campamento 30) para avisar del cambio de día
   function aplicar() {
     const h = hora();
     for (const [k, v] of Object.entries(colores(h))) raiz.style.setProperty(k, v);
@@ -220,6 +221,9 @@
     raiz.dataset.cielo = franja(h);
     // Fiestas, época del año y cohetes de fin de año: el CSS muestra lo que toque (la escena dibuja todo y se queda oculto).
     const d = dia(), fi = fiesta(d);
+    // (Campamento 30) La escena dibuja solo lo de la temporada de hoy: si el día cambió con la página abierta, lo avisa para volver a dibujarla.
+    if (diaAplicado !== null && d !== diaAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:dia'));
+    diaAplicado = d;
     if (fi) raiz.dataset.fiesta = fi; else delete raiz.dataset.fiesta;
     raiz.dataset.epoca = epoca(d);
     raiz.toggleAttribute('data-cohetes', cohetes(d, h));

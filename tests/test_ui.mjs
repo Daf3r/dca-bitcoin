@@ -202,6 +202,7 @@ const PESOS = [
   ['campamento 27: cuando algo no va', 25], // 4 comprobaciones
   ['campamento 28: según el momento', 40], // 9 comprobaciones
   ['campamento 29: detalles con cariño', 45], // 7 comprobaciones
+  ['campamento 30: hacer sitio', 30], // 9 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -2988,9 +2989,10 @@ try {
       let r = await ent(navegador, sAnio, ADMIN, { hora: 12 }, con('2026-03-10'));
       const v = await r.p.evaluate(() => ({ vol: document.querySelector('.lejos')?.dataset.volcanes ?? '', ceniza: document.querySelectorAll('.volcan-ceniza').length }));
       ok(/izalco/.test(v.vol) && /santa-ana/.test(v.vol) && v.ceniza === 1, `volcanes en el teléfono (${v.vol})`);
-      // Fuera de temporada: sin papel picado ni cohetes; época seca de día: aire dorado y sin llovizna; de día no cruza el torogoz.
+      // Fuera de temporada: sin papel picado ni cohetes (desde el campamento 30 ni se dibujan: no hay elemento); época seca de día: aire
+      // dorado y sin llovizna; de día no cruza el torogoz.
       eq([await cs(r.p, '.papel-picado', 'display'), await cs(r.p, '.cohetes', 'display'), await cs(r.p, '.aire-seco', 'display'), await cs(r.p, '.clima-lluvia', 'display'), await cs(r.p, '.torogoz', 'animationName')],
-        ['none', 'none', 'inline', 'none', 'none'], 'fuera de temporada: sin papel picado ni cohetes; época seca: aire dorado; de día no cruza el torogoz');
+        [null, null, 'inline', 'none', 'none'], 'fuera de temporada: sin papel picado ni cohetes (ni dibujados); época seca: aire dorado; de día no cruza el torogoz');
       await r.ctx.close();
       r = await ent(navegador, sAnio, ADMIN, { hora: 12, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, con('2026-03-10'));
       ok(/san-salvador/.test(await r.p.evaluate(() => document.querySelector('.lejos').dataset.volcanes)), 'volcanes: en escritorio también el de San Salvador');
@@ -6051,7 +6053,7 @@ try {
         milpa: ['siembra', 'jilote', 'doblada', 'tapisca', 'rastrojo'].filter((e) => visto(`.v-mp-${e}`)),
         // Ninguna luz de la sierra queda tapada por la loma del cantón ni por la montaña (se cuentan las que se ven).
         lucesTapadas: (() => { const loma = document.querySelector('.v-loma'), monte = document.querySelector('path.monte'); return [...(document.querySelector('.v-luz-lejos')?.getAttribute('d') ?? '').matchAll(/M([\d.]+) ([\d.]+)/g)].filter(([, x, y]) => { const q = new DOMPoint(Number(x), Number(y)); return loma.isPointInFill(q) || monte.isPointInFill(q); }).length; })(),
-        humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: getComputedStyle(document.querySelector('.v-pn-foco')).animationName,
+        humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: (() => { const f = document.querySelector('.v-pn-foco'); return f ? getComputedStyle(f).animationName : 'sin pino'; })(), // (30) fuera de la Navidad no se dibuja
         pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-pis'),
         // El ritmo de cada piscucha y de cada bocanada de humo (campamento 22B: va por clase, no por su orden): duración/retraso.
         ritmoPis: [...document.querySelectorAll('.v-pis')].map((e) => `${getComputedStyle(e).animationDuration}/${getComputedStyle(e).animationDelay}`),
@@ -7074,6 +7076,50 @@ try {
       }
     } finally {
       anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 30: hacer sitio (lo de otra temporada no se dibuja ese día, los peldaños en un trazo y las capas sin grupo vacío)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const piezas = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), n = (sel) => h.querySelectorAll(sel).length;
+      return { total: n('*'), navidad: n('.v-navidad'), bufanda: n('.oso-bufanda'), cohetes: n('.cohetes'), papel: n('.papel-picado'), fiesta: n('.v-fiesta'), piscuchas: n('.v-piscuchas'), zompopos: n('.v-zompopos'), milpa: [...new Set([...h.querySelectorAll('.v-mp')].map((e) => [...e.classList].find((c) => /^v-mp-(siembra|jilote|doblada|tapisca|rastrojo)$/.test(c))))], llena: n('.v-q-llena'), hilo: n('.v-q-hilo'), peldanos: n('.peldano'), vacios: [...h.querySelectorAll(':scope > svg.capa > g')].filter((g) => !g.attributes.length).length, milpaHtml: document.documentElement.dataset.milpa };
+    });
+    const mil = await servidor('mil');
+    try {
+      // Un día cualquiera de noviembre (época seca, piscuchas): sin Navidad, sin cohetes, sin papel picado ni banderas, sin zompopos; de la
+      // milpa solo su etapa de hoy; de la quebrada, solo el hilo.
+      const t = await entrar(navegador, mil, ADMIN, { hora: 12, viewport: { width: 390, height: 664 } }, conLs({ 'libro.dia': '2026-11-25', 'libro.efectos': 'esenciales' }));
+      await cerrar(t.p);
+      let r = await piezas(t.p);
+      ok(r.navidad === 0 && r.bufanda === 0 && r.cohetes === 0 && r.papel === 0 && r.fiesta === 0 && r.zompopos === 0 && r.piscuchas > 0, `30 un día de noviembre: nada de otra temporada en la escena (${JSON.stringify(r)})`);
+      ok(r.milpa.length === 1 && r.milpa[0] === `v-mp-${r.milpaHtml}` && r.llena === 0 && r.hilo > 0, `30 la milpa solo en su etapa de hoy (${r.milpa}) y la quebrada de la época seca`);
+      ok(r.peldanos === 1 && r.vacios === 0, `30 los peldaños en un solo trazo (${r.peldanos}) y las capas sin su grupo vacío (${r.vacios})`);
+      ok(r.total <= 960, `30 la escena con mil compras un día de noviembre: ${r.total} nodos (antes, 1070)`);
+      // Si cambia el día con la página abierta (cielo.js avisa con «libro:dia»), la escena se vuelve a dibujar con lo de la temporada nueva.
+      const r2 = await t.p.evaluate(() => { localStorage.setItem('libro.dia', '2026-12-24'); window.libroCielo.aplicar(); const h = document.getElementById('montana'); return { navidad: h.querySelectorAll('.v-navidad').length, cohetes: h.querySelectorAll('.cohetes').length, total: h.querySelectorAll('*').length }; });
+      ok(r2.navidad > 0 && r2.cohetes > 0 && r2.total > r.total, `30 al pasar a Nochebuena con la página abierta, la escena se vuelve a dibujar con su Navidad (${JSON.stringify(r2)})`);
+      ok(t.consola.length === 0, `30 consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+      // Nochebuena desde el principio: la Navidad y los cohetes (salen a las 23:50), y la escena dentro del tope con margen.
+      const n = await entrar(navegador, mil, ADMIN, { hora: 21, viewport: { width: 390, height: 664 } }, conLs({ 'libro.dia': '2026-12-24', 'libro.efectos': 'esenciales' }));
+      await cerrar(n.p);
+      r = await piezas(n.p);
+      ok(r.navidad > 0 && r.bufanda > 0 && r.cohetes > 0 && r.piscuchas === 0 && r.total <= 1030, `30 Nochebuena: con su Navidad y sus cohetes, sin piscuchas; ${r.total} nodos (antes, 1070)`);
+      await n.ctx.close();
+      // Una tarde de lluvia de julio: la quebrada llena (y no el hilo); en las agostinas, el papel picado y las banderas.
+      const l = await entrar(navegador, mil, ADMIN, { hora: 15, viewport: { width: 390, height: 664 } }, conLs({ 'libro.dia': '2026-07-10' }));
+      await cerrar(l.p);
+      r = await piezas(l.p);
+      ok(r.llena > 0 && r.hilo === 0 && r.papel === 0, `30 en julio, la quebrada llena (${r.llena}) y sin el hilo de la época seca`);
+      await l.p.evaluate(() => { localStorage.setItem('libro.dia', '2026-08-03'); window.libroCielo.aplicar(); });
+      r = await piezas(l.p);
+      ok(r.papel === 1 && r.fiesta > 0, `30 en las agostinas (cambiando de día con la página abierta), el papel picado y las banderas del pueblo`);
+      await l.ctx.close();
+    } finally {
+      mil.parar();
     }
   });
 

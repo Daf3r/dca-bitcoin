@@ -2,7 +2,7 @@
 import { S } from './estado.js';
 import { actualizarSuave, cargarCompras, consultarPrecio } from './datos.js';
 import './avisar.js';
-import { pintarPrecio } from './pintar.js';
+import { pintarMontana, pintarPrecio } from './pintar.js';
 import './mercado.js';
 import './lista.js';
 import { hoja } from './hoja.js';
@@ -38,6 +38,8 @@ setInterval(() => aLaVista() && consultarPrecio(), 30_000);
 setInterval(() => aLaVista() && hoja.hidden && !document.querySelector('dialog[open]') && actualizarSuave(), 60_000);
 // El «hace X s» del precio avanza solo, sin volver a consultar.
 setInterval(() => aLaVista() && S.precio && pintarPrecio(), 5_000);
+// (Campamento 30) Al cambiar de día con la app abierta, la escena se vuelve a dibujar con lo de la temporada nueva (cielo.js avisa).
+window.addEventListener('libro:dia', () => { if (S.cargado && !reproduciendo()) pintarMontana(false); });
 // Al volver a la pestaña: precio fresco y compras al día (la base es compartida por la familia).
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
