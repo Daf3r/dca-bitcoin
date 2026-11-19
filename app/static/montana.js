@@ -1,10 +1,11 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
+import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
-import { sitiosPueblo, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
-import { OSOS, osos, sitioOsos, piesOsos, dentroDe } from './arte-osos.js';
-import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
+import { reparto, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
+import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
+import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
+import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 
 function azar(s) {
@@ -234,16 +235,186 @@ function lago(c, W, H, ventas = 0, kv = 1) {
  * - Los ids no cambian y siguen siendo únicos: las capas usan los degradados (`url(#m-…)`) definidos en el `<svg>` principal.
  * - Los `<svg>` no reciben toques (`pointer-events: none`); la luna sí (sus tres toques: la moneda), y el clic sube hasta `host`.
  * - El frente (`<svg class="frente">`, justo después del principal): de `#m-luzhecha` al final, lo que cambia con el avance (ver abajo).
- * La forma, los `rnd()` y el orden de pintado no cambian: se ve igual. Orden en `host`: principal, frente, cielo, lejana, media.
+ * La forma, los `rnd()` y el orden de pintado no cambian: se ve igual. Orden en `host`: principal, las capas pequeñas que se mueven
+ * enteras (la cabina del teleférico y los animales del pueblo: campamentos 32 y 34), frente, cielo, lejana, media.
  */
+/**
+ * (Campamento 30, idea 19) Lo de otra temporada no se queda en la escena. La escena se calcula y se arma igual (la forma no cambia: el
+ * mismo `rnd()` en el mismo orden) y, al ponerla, se quitan las piezas que el calendario de hoy esconde en todo el día: la Navidad
+ * fuera del 1 dic – 6 ene, los cohetes fuera del 24–25 y 31 dic – 1 ene, el papel picado y las banderas fuera de las fiestas, las
+ * piscuchas fuera de octubre y noviembre, los zompopos fuera del 15–21 de mayo, las otras etapas de la milpa, la quebrada de la otra
+ * época y las flores de otro mes. **Lo de la hora no se toca** (luna, estrellas, luciérnagas, el mar de niebla, la luz del lago): eso
+ * sigue dibujado y lo enseña el CSS. Al cambiar de día con la app abierta, cielo.js avisa (`libro:dia`) y la escena se vuelve a dibujar.
+ * Las fechas son las de cielo.js (`window.libroCielo`), las mismas que deja en <html>; sin cielo.js no se quita nada.
+ */
+export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
+  if (!C?.navidad) return [];
+  const md = d.slice(5), fi = C.fiesta(d), mp = C.milpa(d), fl = C.flor(d), lluviosa = C.epoca(d) === 'lluviosa';
+  return [
+    !C.navidad(d) && '.v-navidad, .oso-bufanda',
+    !['12-24', '12-25', '12-31', '01-01'].includes(md) && '.cohetes',
+    !fi && '.papel-picado',
+    !['agostinas', 'patrias'].includes(fi) && '.v-fiesta',
+    !C.piscuchas(d) && '.v-piscuchas',
+    !C.zompopos(d) && '.v-zompopos',
+    `.v-mp:not(.v-mp-${mp})`,
+    lluviosa ? '.v-q-hilo' : '.v-q-llena',
+    fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
+    md !== '05-03' && '.v-cruz-mayo', // (34) el Día de la Cruz
+  ].filter(Boolean);
+}
+
+/**
+ * (Campamento 31) «Tú» es un osito que sube: la escala del osito (un cuarto más que los de la cumbre) y lo que va en #m-yo debajo de él:
+ * la caja de «Tú» (`.yo-anillo`, invisible: con ella se apartan los rótulos, los osos de la cumbre y las tarjetas de la tele), la pisada
+ * naranja con borde de nieve (`.yo-punto`: el dato, que se lee igual a 320 px) y el osito con los pies en el punto exacto del sendero.
+ */
+const kTu = (ec) => ec * 1.1 * K_OSO * 1.25;
+export const cajaTu = (ec) => { const k = kTu(ec); return { x: CAJA_TU.x0 * k, y: CAJA_TU.y0 * k, w: (CAJA_TU.x1 - CAJA_TU.x0) * k, h: (CAJA_TU.y1 - CAJA_TU.y0) * k }; };
+function yoTu(ec, cumple) {
+  const c = cajaTu(ec);
+  // La pisada va sobre la sombra del osito y bajo su cuerpo, más ancha que él: asoma a los lados y por delante.
+  return `<rect class="yo-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/><g class="tu">${osoTu({ k: kTu(ec), cumple, bajo: `<ellipse class="yo-punto" rx="${f1(8.6 * kTu(ec))}" ry="${f1(2.4 * kTu(ec))}" cy="${f1(0.6 * kTu(ec))}"/>` })}</g>`;
+}
+
+/**
+ * (Campamento 32) El teleférico del valle, solo en pantallas anchas (desde 1100 px; en el teléfono el cable cruzaría el sendero): un
+ * cable de la torre de la iglesia a la loma de detrás del pueblo, con sus dos torres, quietos en el dibujo grande (en el valle); y la
+ * cabina roja con los tres asomados en su propia capa pequeña (un <svg> encima del dibujo grande y debajo del frente), que solo se mueve
+ * con «todos» y en su franja de `data-mueve` (10:00–13:00): cruza en 40 s, espera y vuelve; si no, quieta en la estación del pueblo.
+ * Si el cable pasara a menos de 10 px del sendero, no se pone. Devuelve si se puso.
+ */
+function telefericoValle(host, W, u, camino, L) {
+  const torre = host.querySelector('.v-ig-torre');
+  if (W < 1100 || !torre || !camino) return false;
+  const t = torre.getBBox(), A = [t.x + t.width / 2, t.y + 2], B = [A[0] + 55 * u, A[1] - 17 * u];
+  const [dx, dy] = [B[0] - A[0], B[1] - A[1]], dd = dx * dx + dy * dy;
+  for (let l = 0; l <= L; l += 4) {
+    const q = camino.getPointAtLength(l), k = Math.max(0, Math.min(1, ((q.x - A[0]) * dx + (q.y - A[1]) * dy) / dd));
+    if (Math.hypot(q.x - A[0] - k * dx, q.y - A[1] - k * dy) < 10) return false;
+  }
+  const pie = host.querySelector('#m-v-pie');
+  if (!pie) return false;
+  const torres = [A, B].map(([x, y]) => `M${f1(x - 0.9)} ${f1(y)}L${f1(x + 0.9)} ${f1(y)}L${f1(x + 1.6)} ${f1(y + 6 * u)}L${f1(x - 1.6)} ${f1(y + 6 * u)}Z`).join('');
+  pie.insertAdjacentHTML('beforeend', `<path class="v-tele-cable" d="M${f1(A[0])} ${f1(A[1])}L${f1(B[0])} ${f1(B[1])}"/><path class="v-tele-torre" d="${torres}"/>`);
+  // La cabina, en sus unidades (el colgador arriba, en el 0,0 del cable): 18 de ancho, del tamaño de la gente del pueblo.
+  const k = u / 3.2, w = 18 * k, h = 16 * k;
+  const cab = document.createElementNS(NS, 'svg');
+  for (const [a, v] of [['class', 'tele-cabina'], ['viewBox', '-9 -1 18 16'], ['width', f1(w)], ['height', f1(h)], ['aria-hidden', 'true'], ['focusable', 'false']]) cab.setAttribute(a, v);
+  cab.innerHTML = '<path class="tc-colgador" d="M-0.4 -1H0.4V4H-0.4Z"/><path class="tc-techo" d="M-8.4 5.4L-6.2 3.6H6.2L8.4 5.4Z"/><path class="tc-ventana" d="M-7 5.6H7V10H-7Z"/>'
+    + '<path class="tc-caras" d="M-5.4 9.2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0M-1.6 8.8a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0M2.6 9.4a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0 -2.6 0"/>'
+    + '<path class="tc-cabina" d="M-8 5.6H-7V10H7V5.6H8V14.6H-8Z"/>';
+  // Las dos estaciones, en px del anfitrión (el svg de la escena mide W×H px: 1 unidad = 1 px), para el CSS del viaje.
+  const pos = ([x, y]) => [`${f1(x - w / 2)}px`, `${f1(y)}px`];
+  const [ax, ay] = pos([A[0] + dx * 0.08, A[1] + dy * 0.08]), [bx, by] = pos([A[0] + dx * 0.92, A[1] + dy * 0.92]);
+  for (const [n, v] of [['--ax', ax], ['--ay', ay], ['--bx', bx], ['--by', by]]) cab.style.setProperty(n, v);
+  cab.style.width = `${f1(w)}px`; cab.style.height = `${f1(h)}px`; // (`.montana svg` las estira al anfitrión entero)
+  const frente = host.querySelector(':scope > svg.frente');
+  if (frente) frente.before(cab); else host.append(cab);
+  return true;
+}
+
+/**
+ * (Campamento 34) El pueblo vive: las tres gallinas de la plaza picotean por la mañana y el perro cruza la plaza por la tarde y se echa
+ * en su sitio de siempre. Cada gallina y cada perro es su propia capa pequeña (un <svg> encima del dibujo grande y debajo del frente,
+ * con las coordenadas de la escena en su viewBox) que se mueve entera: solo transform y opacidad de la capa, nada se repinta. Llevan
+ * `efecto-ambiente` y se ven solo en su franja de data-mueve (gallinas 7:00–10:00, perro 14:00–16:30); mientras, las del dibujo grande
+ * se esconden. Fuera de su franja, quietos como siempre. El perro cruza una sola vez (al abrir o al empezar su franja) y se queda echado.
+ */
+function animalesDelPueblo(host) {
+  const pie = host.querySelector('#m-v-pie'), frente = host.querySelector(':scope > svg.frente');
+  if (!pie) return;
+  const capa = (clase, [x, y, w, h], html, vars = {}) => {
+    const s = document.createElementNS(NS, 'svg');
+    for (const [a, v] of [['class', `efecto-ambiente v-capa-animal ${clase}`], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
+    Object.assign(s.style, { left: `${f1(x)}px`, top: `${f1(y)}px`, width: `${f1(w)}px`, height: `${f1(h)}px` });
+    for (const [n, v] of Object.entries(vars)) s.style.setProperty(n, v);
+    s.innerHTML = html;
+    if (frente) frente.before(s); else host.append(s);
+  };
+  // La caja de un trazo suelto: se mide un momento dentro del dibujo y se quita.
+  const caja = (d) => { const t = document.createElementNS(NS, 'path'); t.setAttribute('d', d); pie.append(t); const b = t.getBBox(); t.remove(); return b; };
+  const gallinas = pie.querySelector('.v-gallina')?.getAttribute('d');
+  if (gallinas) gallinas.split(/(?=M)/).forEach((d, i) => {
+    const b = caja(d);
+    capa(`v-capa-gallina g${i + 1}`, [b.x - 0.5, b.y - 0.5, b.width + 1, b.height + 1], `<path d="${d}"/>`);
+  });
+  const perro = pie.querySelector('.v-animal');
+  if (perro?.getAttribute('d')) {
+    const b = perro.getBBox(), k = b.width / ANCHO_PERRO, y = b.y + b.height, x0 = b.x + COLA_PERRO * k - 0.2 * k;
+    // De pie, de perfil, mirando a donde va (a la derecha): lomo, cabeza, cola y cuatro patas, en sus unidades k (el echado mide 5.2).
+    // Llega andando desde cinco largos a la izquierda hasta donde se echa.
+    const q = (px, py) => `${f1(x0 + px * k)} ${f1(y + py * k)}`;
+    const anda = `M${q(0, -2.4)}L${q(3.6, -2.4)}L${q(4.4, -3.4)}L${q(5.3, -3.3)}L${q(5.2, -2.6)}L${q(4.4, -1.6)}L${q(4.1, -1.6)}L${q(4.1, 0)}L${q(3.6, 0)}L${q(3.5, -1.3)}L${q(1.1, -1.3)}L${q(1, 0)}L${q(0.5, 0)}L${q(0.5, -1.5)}L${q(-0.1, -1.9)}L${q(-0.9, -3)}L${q(-0.6, -3.1)}L${q(0, -2.4)}Z`;
+    capa('v-capa-perro v-capa-perro-anda', [x0 - 1.4 * k, y - 3.9 * k, 7.2 * k, 4.2 * k], `<path d="${anda}"/>`, { '--dx': `${f1(-5 * b.width)}px` });
+    capa('v-capa-perro v-capa-perro-echado', [b.x - 0.5, b.y - 0.5, b.width + 1, b.height + 1], `<path d="${perro.getAttribute('d')}"/>`);
+  }
+}
+
+/**
+ * (Campamento 35) El Pueblo de los Osos: el turno de ahora (cielo.js, por la hora y el día de El Salvador) y lo que se dibuja de él. Al
+ * cambiar de turno con la página abierta (`libro:turno`, unas seis veces al día) se rehace solo el grupo de los vecinos (`.v-vecinos`)
+ * de cada escena viva: es la única excepción a «nada se redibuja al cambiar de hora» (idea 102), un repintado del dibujo grande.
+ */
+const turnoDelPueblo = () => window.libroCielo?.turno?.(window.libroCielo.dia(), window.libroCielo.hora()) ?? 'manana';
+const elipseV = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
+function htmlVecinos({ lug, sol, cometas, conCapa = false }, t) {
+  const todos = reparto(lug, t, { hilos: cometas.length }), lista = conCapa ? todos.filter((v) => !v.actor) : todos;
+  const manos = lista.filter((v) => v.hilo).map(manoDe);
+  const mx = cometas.reduce((a, q) => a + q.x, 0) / Math.max(1, cometas.length);
+  const poste = [...lug.poste].sort((a, b) => Math.abs(a[0] - mx) - Math.abs(b[0] - mx))[0];
+  const luz = luzPupusa(lista);
+  return `${luz ? `<path class="v-charco v-vo-luz" d="${elipseV(luz[0], luz[1], luz[2], luz[2] * 0.32)}"/>` : ''}${svgVecinos(lista, { sol })}${hilosPiscuchas(cometas, cometas.map((_, i) => manos[i] ?? poste))}`;
+}
+/**
+ * (Campamento 37, idea 114) La capa del vecino: el que se mueve (la que barre, la pelota de los oseznos) no vive en el dibujo grande
+ * sino en su propio <svg> pequeño, hermano del principal, encima de él y debajo del frente; lo único que cambia es el transform de ese
+ * elemento, solo con «todos» y en su franja de data-mueve. Quieto, se ve igual con cualquier nivel de efectos. Se rehace con el turno.
+ */
+function capaVecino(host, info, t) {
+  host.querySelector(':scope > svg.v-capa-vecino')?.remove();
+  const actor = reparto(info.lug, t, { hilos: info.cometas.length }).find((v) => v.actor);
+  if (!actor) return;
+  const c = cajaVecino(actor), m = 1.5 * actor.k, arriba = actor.actor === 'pelota' ? 3 * actor.k : 0;
+  const [x, y, w, h] = [c.x0 - m, c.y0 - m - arriba, c.x1 - c.x0 + 2 * m, c.y1 - c.y0 + 2 * m + arriba];
+  const s = document.createElementNS(NS, 'svg');
+  for (const [a, v] of [['class', `v-capa-vecino v-actor-${actor.actor}`], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
+  Object.assign(s.style, { left: `${f1(x)}px`, top: `${f1(y)}px`, width: `${f1(w)}px`, height: `${f1(h)}px` });
+  s.style.setProperty('--bote', `${f1(-2.4 * actor.k)}px`);
+  s.style.setProperty('--pie', `${f1(((c.y1 - y) / h) * 100)}%`);
+  s.innerHTML = svgVecinos([actor], { sol: info.sol });
+  const frente = host.querySelector(':scope > svg.frente');
+  if (frente) frente.before(s); else host.append(s);
+}
+const vecinosVivos = new Map(); // escena → { lug, sol, cometas, turno, conCapa }
+let oyeTurno = false;
+function vigilarTurno(host, info) {
+  vecinosVivos.set(host, info);
+  if (oyeTurno) return;
+  oyeTurno = true;
+  window.addEventListener('libro:turno', () => {
+    const t = turnoDelPueblo();
+    for (const [h, v] of vecinosVivos) {
+      const g = h.isConnected && h.querySelector('.v-vecinos');
+      if (!g) { vecinosVivos.delete(h); continue; }
+      if (v.turno !== t) { g.innerHTML = htmlVecinos(v, t); v.turno = t; if (v.conCapa) capaVecino(h, v, t); }
+    }
+  });
+}
+
+/** Quita de `raiz` (la plantilla de la escena o la escena ya puesta) lo de otra temporada (ver `fueraDeTemporada`). */
+function podar(raiz) {
+  for (const sel of fueraDeTemporada(globalThis.window?.libroCielo?.dia?.() ?? '')) for (const e of raiz.querySelectorAll(sel)) e.remove();
+}
+
 function enCapas(host, W, H) {
   const svg = host.querySelector('svg');
   host.style.isolation = 'isolate';
   const capas = [...svg.querySelectorAll('.par')].map((g) => {
     const capa = document.createElementNS(NS, 'svg');
     for (const [k, v] of [['viewBox', `0 0 ${W} ${H}`], ['width', W], ['height', H], ['aria-hidden', 'true'], ['focusable', 'false'], ['class', `capa ${g.getAttribute('class')}`]]) capa.setAttribute(k, v);
-    g.removeAttribute('class');
-    capa.append(g);
+    capa.append(...g.childNodes); // (30, idea 20) sin el grupo de antes, que ya no llevaba nada: un nodo menos por capa
+    g.remove();
     return capa;
   });
   const alba = svg.querySelector('#m-alba');
@@ -442,16 +613,22 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // la plaza a la salida.
   const pb = sitiosPueblo({ W, H, forma: valle.forma, by, bx, pts, lago: lg, techo, sol: solV });
   if (pb.plaza) { const pzx = pb.plaza.x + 12 * pb.u; valle.camino = { ...valle.camino, ini: [pzx, pb.yg + 1.5 * pb.u], ctrl: [(pzx + bx) / 2, Math.max(by, pb.yg - 4 * pb.u)], ancho: [5 * pb.u, 3 * pb.u] }; }
+  // (Pulido del paisaje bajo) En escritorio y acostado la calle del pueblo ya lleva a la salida: el camino real pasaba por debajo de ella
+  // y su cerca asomaba entre las casas. Ahí no se pone (sus cajas siguen apartando los árboles de honor y el papel picado).
+  const conCamino = !(pb.plaza && (valle.forma === 'esc' || valle.forma === 'acostado') && Math.abs(by - pb.yg) < 8 * pb.u);
   const huecosPP = [[pb.caja[0], pb.caja[2]], [lg.cx - lg.rx, lg.cx + lg.rx]];
   // Los campos del llano, entre el bosque y el pueblo; la milpa es la parcela de delante más ancha (los zompopos salen de ella).
   const ladoV = valle.forma === 'esc' || valle.forma === 'acostado';
-  const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u * 0.55), vx: c.sx });
+  const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u * 0.55), vx: c.sx, evitar: [[pb.caja[0] - 6, pb.caja[2] + 6 * pb.u], [bx - 30, bx + 30]], ancho: W, techoPueblo: pb.yg - 27 * pb.u, lago: lg ? [lg.cx - lg.rx, lg.cy - lg.ry, lg.cx + lg.rx, lg.cy + lg.ry] : null });
   const milpaV = cm.milpa ? { ...cm.milpa, k: Math.max(1, pb.u * 0.5), sol: solV } : null;
   s = s.replace('<!--v-campos-->', `<g class="v-campos" aria-hidden="true">${cm.svg}${milpaV ? milpa(milpaV) + zompopos({ milpa: milpaV, k: milpaV.k }) : ''}</g>`);
   // (22C) Las piscuchas vuelan a la izquierda de la montaña y su hilo baja a los niños de la plaza: van delante, con el pueblo.
   const kp = Math.max(1, pb.u * 0.5);
-  const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q, i) => ({ ...q, k: kp, hilo: pb.ninos[i % Math.max(1, pb.ninos.length)] ? [pb.ninos[i % pb.ninos.length][0], pb.ninos[i % pb.ninos.length][1] - 2.6 * pb.u] : q.hilo }));
-  s += `<g id="m-v-pie">${caminoReal(valle.camino)}${pueblo(pb, { ventanas: personas })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
+  // (Campamento 35) Los vecinos osos del turno de ahora; sus hilos llevan las piscuchas a la manita de un osezno (o al poste del farol si
+  // no hay oseznos en la plaza) y se rehacen con ellos al cambiar de turno (`libro:turno`).
+  const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q) => ({ ...q, k: kp, hilo: null }));
+  const C = window.libroCielo, infoV = { lug: lugaresPueblo(pb), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula };
+  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
@@ -495,10 +672,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 22C) Navidad en la subida: luminarias a los dos lados del camino que se encienden hasta donde llegaste (las de más
   // arriba esperan apagadas) y, en «Tú», una corona de foquitos. Solo del 1 de diciembre al 6 de enero (el CSS las enseña).
   s += '<g class="v-navidad nav-sendero" id="m-nav-sendero"><path class="ns-off"/><path class="ns-glow"/><path class="ns-on ns-0"/><path class="ns-on ns-1"/><path class="ns-on ns-2"/></g>';
-  s += `<g id="m-osos"></g><g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><circle class="yo-halo" r="15"/><circle class="v-navidad yo-nav yo-nav-0" r="12.8"/><circle class="v-navidad yo-nav yo-nav-1" r="12.8"/><circle class="v-navidad yo-nav yo-nav-2" r="12.8"/><circle class="yo-anillo" r="10"/><circle class="yo-punto" r="7"/></g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
+  s += `<g id="m-osos"></g><g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><ellipse class="yo-halo" rx="13" ry="4.6" cy="0.5"/><circle class="v-navidad yo-nav yo-nav-0" r="12.8"/><circle class="v-navidad yo-nav yo-nav-1" r="12.8"/><circle class="v-navidad yo-nav yo-nav-2" r="12.8"/>${yoTu(ec, cumples.length > 0)}</g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   // Reloj de sol (16A): sobre los pinos de adorno, pero detrás de los árboles de honor (antes sus piedras quedaban encima de las copas).
   const suelo = W < 1100 ? by - 4 : H * 0.93;
-  s += relojDeSol(c.sx, suelo, W); // 16A
+  s += relojDeSol(c.sx, suelo, W, Math.abs(suelo - pb.yg) < 10 * pb.u ? [pb.caja[0] - 6 * pb.u, pb.caja[2] + 6 * pb.u] : null); // 16A (y, desde el pulido, sin pisar la calle del pueblo)
   const bordeHonor = c.valle > 30 ? borde : null;
   const evitarHonor = bordeHonor ? cajasValle : [...cajasValle, pb.caja, [lg.cx - lg.rx, lg.cy - lg.ry * 4, lg.cx + lg.rx, lg.cy + lg.ry]];
   const honor = arbolesHonor(W, H, bx, compras, plantar, pts, c.sol[0], evitarHonor, bordeHonor);
@@ -512,7 +689,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
   s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
-  host.innerHTML = s + '</g></svg>';
+  // (30, idea 19) Se arma en una plantilla (inerte: sin estilos ni medidas), se le quita lo de otra temporada y entra ya podada.
+  const plantilla = document.createElement('template');
+  plantilla.innerHTML = s + '</g></svg>';
+  podar(plantilla.content);
+  host.replaceChildren(plantilla.content);
   if (!document.documentElement.dataset.sin?.includes('capas')) enCapas(host, W, H); // (rendimiento iPhone) el cielo y las dos sierras del parallax, cada una en su <svg>: ver `enCapas` (`/medir?sin=capas`: como antes, para comparar)
   colocarReloj(host);
   host.style.setProperty('--luna-ilum', f1(iluminacionLunar(window.libroCielo?.faseLunar() ?? 0.5)));
@@ -591,9 +772,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const memoriaL = sats <= 0 && memoria > 0 ? enAltura(altitud(memoria, esc)) : 0;
   if (memoriaL > 4) host.querySelector('#m-eco').innerHTML = `<path class="sendero-memoria" d="${camino.getAttribute('d')}" stroke-dasharray="${f1(memoriaL)} ${f1(L)}"/>`;
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
-  if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><circle class="eco-halo" r="15"/><circle class="eco-sombra" r="7.5"/><circle class="eco-anillo" r="10"/><circle class="eco-punto" r="4.2"/></g></g>`;
+  if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><ellipse class="eco-halo" rx="12" ry="4.2" cy="0.5"/>${(() => { const c = cajaTu(ec); return `<rect class="eco-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/>`; })()}<ellipse class="eco-punto" rx="5" ry="1.9" cy="0.5"/><g class="tu">${osoTu({ k: kTu(ec) * 0.92 })}</g></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null } : null, osos: null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa) } : null, osos: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   // (Campamento 25) Los osos polares de peluche de la familia, en la nieve al sol bajo la cumbre (los tres, la pareja o uno: lo que quepa).
   // Se sientan esquivando los rótulos de «Tú» donde quedará al final de la subida (por eso se pone a «Tú» un momento ahí) y en la nieve
@@ -609,6 +790,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     if (inicio !== sats) colocar(inicio, false);
     host.getBoundingClientRect(); // (el estado de `inicio`, ya calculado sin transiciones)
   } finally { delete host.dataset.colocando; }
+  podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
+  if (tocable && !pelicula) telefericoValle(host, W, pb.u, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
+  if (tocable && !pelicula) animalesDelPueblo(host); // (34)
+  if (tocable || pelicula) vigilarTurno(host, infoV); // (35) los vecinos cambian de turno con la página abierta
+  if (infoV.conCapa) capaVecino(host, infoV, infoV.turno); // (37) el vecino que se mueve, en su capa
   describir(sats, etapa);
 }
 
@@ -652,6 +838,9 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
   g.setAttribute('aria-hidden', 'true');
   g.dataset.zona = sitio.zona; // dónde se sentaron: «nieve» (la de siempre), «nieveHoy» o «cumbre» (lo leen las pruebas)
   g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora, cumple });
+  // (Campamento 33) ¿Caben estirados? Las puntas de los brazos alzados, con 2 px de aire, dentro de la montaña; si no, no se estiran.
+  const caben = sitio.lista.every(({ x, y, s = 1 }) => PUNTAS_ESTIRA.every(([px, py]) => { const e = ec * 1.1 * s * K_OSO, X = x + px * e, Y = y + py * e; return [[0, 0], [2, 0], [-2, 0], [0, -2]].every(([dx, dy]) => dentroDe(silueta, X + dx, Y + dy)); }));
+  if (!caben) g.dataset.sinEstirar = '1';
   // Si se sentaron en la nieve de hoy (no en la que hay siempre), ¿desde qué altitud los cubre? Más abajo (al empezar la película, o
   // al principio de una subida que les trae la nieve) quedarían sobre la roca: esperan escondidos hasta que la nieve llega (`colocar`).
   let nieve = 0;
@@ -1094,34 +1283,41 @@ function medidor(inicio, tramos, largo) {
  */
 function detalleSendero(caja, camino, L, by, sy, abajo, arriba) {
   if (!caja) return;
-  let s = '';
+  let s = '', peldanos = ''; // (30, idea 20) todos los peldaños en un solo trazo: no se tocan y no se mueven
   for (let d = 22, i = 0; d < L - 10; d += 17, i++) {
     const a = camino.getPointAtLength(d), b = camino.getPointAtLength(Math.min(L, d + 1.5));
     const dx = b.x - a.x, dy = b.y - a.y, n = Math.hypot(dx, dy) || 1, nx = -dy / n, ny = dx / n;
     const f = Math.min(1, Math.max(0, (by - a.y) / ((by - sy) || 1)));
     const w = (abajo + (arriba - abajo) * f) / 2;
-    s += `<path class="peldano" d="M${f1(a.x - nx * w * 0.8)} ${f1(a.y - ny * w * 0.8)}L${f1(a.x + nx * w * 0.8)} ${f1(a.y + ny * w * 0.8)}"/>`;
+    peldanos += `M${f1(a.x - nx * w * 0.8)} ${f1(a.y - ny * w * 0.8)}L${f1(a.x + nx * w * 0.8)} ${f1(a.y + ny * w * 0.8)}`;
     if (i % 3 === 1) {
       const lado = i % 2 ? 1 : -1, r = 1.2 + (i % 4) * 0.35 + (1 - f) * 0.8;
       s += `<ellipse class="piedra" cx="${f1(a.x + nx * (w + 2.6) * lado)}" cy="${f1(a.y + ny * (w + 2.6) * lado)}" rx="${f1(r * 1.3)}" ry="${f1(r)}"/>`;
     }
   }
-  caja.innerHTML = s;
+  caja.innerHTML = (peldanos ? `<path class="peldano" d="${peldanos}"/>` : '') + s;
 }
 
-/** Huellas del tramo recorrido: puntitos que alternan a cada lado del sendero, hasta donde estás. Solo con todos los efectos. */
+/**
+ * Huellas del tramo recorrido, hasta donde estás. Solo con todos los efectos. (Campamento 31) Son huellas de oso —una almohadilla y
+ * tres deditos, alternando a cada lado del sendero cada 20 px— y van todas en un solo trazo (antes, un círculo por huella); `data-n`
+ * dice cuántas son.
+ */
 function huellas(l) {
   const { camino, host } = estado;
   const caja = host.querySelector('#m-huellas');
   if (!caja) return;
-  const pasos = [];
-  for (let d = 16, i = 0; d < l - 14; d += 10, i++) {
+  let dd = '', n = 0;
+  const circ = (cx, cy, r) => `M${f1(cx - r)} ${f1(cy)}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+  for (let d = 16, i = 0; d < l - 14; d += 20, i++) {
     const a = camino.getPointAtLength(d), b = camino.getPointAtLength(d + 1.5);
-    const dx = b.x - a.x, dy = b.y - a.y, n = Math.hypot(dx, dy) || 1;
-    const lado = i % 2 ? 1 : -1;
-    pasos.push(`<circle cx="${f1(a.x - (dy / n) * 2.2 * lado)}" cy="${f1(a.y + (dx / n) * 2.2 * lado)}" r="1.1"/>`);
+    const dx = b.x - a.x, dy = b.y - a.y, m = Math.hypot(dx, dy) || 1, ux = dx / m, uy = dy / m, lado = i % 2 ? 1 : -1;
+    const x = a.x - uy * 2.4 * lado, y = a.y + ux * 2.4 * lado;
+    // Los deditos, por delante (hacia donde se sube) y abiertos; la almohadilla, detrás.
+    dd += circ(x - ux * 0.5, y - uy * 0.5, 1) + [-0.9, 0, 0.9].map((t) => circ(x + ux * 1.2 - uy * t, y + uy * 1.2 + ux * t, 0.42)).join('');
+    n++;
   }
-  caja.innerHTML = pasos.join('');
+  caja.innerHTML = n ? `<path class="huellas-oso" data-n="${n}" d="${dd}"/>` : '';
 }
 
 /** Etiquetas sin choques: a la derecha de la bandera; si choca o se sale, a la izquierda; si sigue, se oculta. */
@@ -1130,7 +1326,9 @@ function etiquetar(yo, sats = estado.sats) {
   // Cada campamento (mástil, banderín y tienda) y el punto de «Tú» ocupan su sitio: ninguna etiqueta se les encima.
   const e = estado.ec || 1;
   const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 12 * e, y: p.y - 26 * e, w: 34 * e, h: 34 * e, m } : { x: p.x + (lado < 0 ? -32 : 0) * e, y: p.y - 38 * e, w: 32 * e, h: 42 * e, m }));
-  cajas.push({ x: yo.x - 18, y: yo.y - 18, w: 36, h: 36 });
+  // (Campamento 31) «Tú» es un osito: ocupa su caja, de la mochila al palito y de las orejas a los pies (más 2 px de aire).
+  const tb = cajaTu(estado.ec || 1);
+  cajas.push({ x: yo.x + tb.x - 2, y: yo.y + tb.y - 2, w: tb.w + 4, h: tb.h + 4 });
   if (estado.eco) cajas.push({ x: estado.eco.p.x - 12, y: estado.eco.p.y - 12, w: 24, h: 24 });
   // Las marcas de etapa también ocupan su sitio (solo la siguiente lleva rótulo).
   for (const { m, p } of estado.etapas || []) cajas.push({ x: p.x - 9, y: p.y - 9, w: 18, h: 18, m, fina: rangoEtapa(m) === 'intermedia' });
@@ -1145,9 +1343,11 @@ function etiquetar(yo, sats = estado.sats) {
   // (Campamento 23) La película del ascenso pone el suyo («Íbamos aquí» los días de antes, para quien solo mira).
   const rotulo = estado.rotulo ?? (estado.libro ? 'Vamos aquí' : 'Tú');
   const wYo = rotulo !== 'Tú' ? rotulo.length * 7.4 + 16 : 36;
-  const yoOpc = [[-46, -38, 'end', -16], [10, -38, 'start', 16], [-46, 12, 'end', -16], [10, 12, 'start', 16], [-54, -8, 'end', -24], [18, -8, 'start', 24], [-18, -64, 'middle', 0], [-18, 26, 'middle', 0]]
-    .map(([dx, dy, a, tx]) => ({ x: a === 'end' ? yo.x + dx + 36 - wYo : a === 'middle' ? yo.x - wYo / 2 : yo.x + dx, y: yo.y + dy, w: wYo, h: 24, anclaje: a, tx: yo.x + tx }));
-  // (Con `middle` la caja ya va centrada: dx = −18.)
+  // (Campamento 31) Los rincones se miden desde la caja del osito, no desde el punto: arriba, a media altura y abajo, a cada lado; y
+  // encima y debajo. La placa se aparta 4 px del osito; el texto, 6 px dentro de la placa.
+  const izq = yo.x + tb.x - 4, der = yo.x + tb.x + tb.w + 4, arriba = yo.y + tb.y, medio = yo.y + tb.y + tb.h / 2 - 12;
+  const yoOpc = [[izq, arriba - 6, 'end'], [der, arriba - 6, 'start'], [izq, yo.y + 6, 'end'], [der, yo.y + 6, 'start'], [izq - 8, medio, 'end'], [der + 8, medio, 'start'], [yo.x, arriba - 30, 'middle'], [yo.x, yo.y + 10, 'middle']]
+    .map(([bx, y, a]) => ({ x: a === 'end' ? bx - wYo : a === 'middle' ? bx - wYo / 2 : bx, y, w: wYo, h: 24, anclaje: a, tx: a === 'end' ? bx - 6 : a === 'middle' ? bx : bx + 6 }));
   // «Vamos aquí» es más largo que «Tú»: además se aparta del propio sendero (unas muestras del trazo a cada lado del punto).
   const senda = [];
   if (rotulo !== 'Tú') {
@@ -1249,7 +1449,8 @@ function ocultarOsos(yo) {
   const g = estado.osos && estado.host.querySelector('#m-osos');
   if (!g) return;
   const rotulos = [...estado.host.querySelectorAll('#m-etiquetas > text, #m-etiquetas > rect')].map((t) => t.getBBox()).filter((q) => q.width > 0);
-  rotulos.push({ x: yo.x - 10, y: yo.y - 10, width: 20, height: 20 });
+  const tb = cajaTu(estado.ec || 1); // (31) la caja del osito «Tú», la misma con la que se apartan los rótulos
+  rotulos.push({ x: yo.x + tb.x, y: yo.y + tb.y, width: tb.w, height: tb.h });
   const pisa = estado.osos.cajas.some(([a, b, c, d]) => rotulos.some((q) => q.x < c && q.x + q.width > a && q.y < d && q.y + q.height > b));
   if (pisa) g.setAttribute('visibility', 'hidden'); else g.removeAttribute('visibility');
 }
@@ -1324,6 +1525,8 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
   const estela = festejo && host.querySelector('#m-estela');
   const l0 = estela ? enAltura(a0) : 0;
   if (estela) estela.classList.add('viva');
+  const yo = host.querySelector('#m-yo');
+  yo.classList.add('anda'); // (31) el osito anda mientras sube; al llegar, quieto
   const t0 = performance.now();
   const paso = (t) => {
     if (estado.host !== host || !host.isConnected) return; // la escena se redibujó (resize)
@@ -1333,7 +1536,7 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
     const p = colocar(k < 1 ? satsAhora : hasta, k < 1);
     if (estela) estela.style.strokeDasharray = `0 ${f1(l0)} ${f1(Math.max(0, enAltura(alt) - l0))} ${f1(L)}`;
     if (k < 1) requestAnimationFrame(paso);
-    else if (festejo) llegar(festejo, p, hasta);
+    else { yo.classList.remove('anda'); if (festejo) llegar(festejo, p, hasta); }
   };
   requestAnimationFrame(paso);
 }
@@ -1355,6 +1558,7 @@ export function fotograma(host, sats, { compras = null, quieto = false, rotulo =
     host.querySelectorAll('#m-etapas .etapa[visibility]').forEach((g) => g.removeAttribute('visibility'));
   }
   estado.enMarcha = !quieto;
+  host.querySelector('#m-yo')?.classList.toggle('anda', !quieto); // (31) en la película, el osito anda mientras avanza
   const antes = estado.satsFoto;
   colocar(sats, !quieto);
   if (antes != null && sats > antes) {
@@ -1408,6 +1612,8 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
 
   // Cada compra: brasas desde tu punto, la cifra flotando y la siguiente bandera que se agita.
   brasas(fx, p.x, p.y, nivel === 'compra' ? 9 : 14, nivel === 'compra' ? 46 : 64);
+  // (Campamento 31) Al cruzar una etapa o un campamento, el osito de «Tú» levanta los brazos un momento (un cambio a saltos, no una animación).
+  if (nivel !== 'compra') { const yo = host.querySelector('#m-yo'); yo?.classList.add('festeja'); setTimeout(() => yo?.classList.remove('festeja'), 1200); }
   // (Campamento 25) Y los osos de la cumbre dan un saltito (0.9 s, solo transform; el CSS lo apaga con efectos «ninguno»).
   const os = host.querySelector('#m-osos.osos');
   if (os) {
@@ -1515,6 +1721,19 @@ export function colocarReloj(host = document.querySelector('.montana')) {
   sombra.setAttribute('d', `M${sx.toFixed(1)} ${(gy - ancho).toFixed(1)}L${punta.toFixed(1)} ${gy.toFixed(1)}L${sx.toFixed(1)} ${(gy + ancho).toFixed(1)}Z`);
 }
 setInterval(() => { if (document.visibilityState === 'visible') colocarReloj(); }, 300_000);
+// (Campamento 33) De 7:00 a 8:00, cada cinco minutos, los osos de la cumbre se estiran: la clase `estira` dos segundos y medio (el CSS
+// los enseña uno tras otro, solo con «todos»). Un cambio a saltos, no una animación que corra siempre.
+let estirados = -1;
+setInterval(() => {
+  const h = globalThis.window?.libroCielo?.hora?.() ?? 0, slot = Math.floor(h * 12);
+  if (document.visibilityState !== 'visible' || !estiranLosOsos(h) || slot === estirados) return;
+  estirados = slot;
+  const os = estado?.host?.querySelector('#m-osos.osos');
+  if (!os) return;
+  // Uno tras otro: el grande, el chico y el del mameluco, con 0.3 s entre cada uno; a los 2.6 s, todos quietos.
+  [1, 2, 3].forEach((i) => setTimeout(() => os.classList.add(`estira-${i}`), (i - 1) * 300));
+  setTimeout(() => os.classList.remove('estira-1', 'estira-2', 'estira-3'), 2600);
+}, 20_000);
 
 /** Tras una venta (idea 40): la última monedita del lago cae desde arriba y se queda brillando en el fondo. */
 export function hundirMoneda() {

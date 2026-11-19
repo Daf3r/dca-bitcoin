@@ -536,6 +536,11 @@ eq(ubicacionSats([tr(600)], 1000).partes, [{ id: 0, nombre: 'Mi wallet', sats: 6
     eq([raiz.dataset.fiesta, raiz.dataset.epoca, raiz.atributos.has('data-cohetes')], ['patrias', 'lluviosa', false], 'aplicar: deja la fiesta y la época en html');
     almacen['libro.dia'] = '2026-12-31'; almacen['libro.hora'] = '23.9'; C.aplicar();
     eq([raiz.dataset.fiesta, raiz.dataset.epoca, raiz.atributos.has('data-cohetes')], [undefined, 'seca', true], 'aplicar: cohetes a fin de año y sin fiesta');
+    // (Campamento 28) Los osos de la interfaz: duermen de 22:00 a 5:00 (aunque el velo de madrugada esté apagado) y las tardes son de 13 a 18.
+    const marcas = (h) => { almacen['libro.hora'] = String(h); C.aplicar(); return [raiz.atributos.has('data-sueno'), raiz.atributos.has('data-tarde')]; };
+    almacen['libro.madrugada'] = '0';
+    eq([4.9, 5, 12.9, 13, 17.9, 18, 21.9, 22].map(marcas), [[true, false], [false, false], [false, false], [false, true], [false, true], [false, false], [false, false], [true, false]], 'aplicar: data-sueno de 22 a 5 (con el velo apagado) y data-tarde de 13 a 18');
+    delete almacen['libro.madrugada'];
     delete almacen['libro.dia']; delete almacen['libro.hora'];
   }
   // Modo madrugada (idea 20): de 22:00 a 5:00, y se apaga con `libro.madrugada` = 0
@@ -1352,17 +1357,19 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   eq(['2026-05-14', '2026-05-15', '2026-05-21', '2026-05-22'].map(C.zompopos), [false, true, true, false], 'valle 22B: zompopos del 15 al 21 de mayo');
   // Lo que se mueve: uno a la vez, cada uno a su hora.
   eq([5, 6.9, 7, 7.5, 9.9, 10, 12, 16.4, 16.5, 17.9, 18, 21.9, 22, 2, 4.9].map((h) => C.mueve('2026-05-17', h)),
-    ['torogoz', 'torogoz', '', 'zompopos', 'zompopos', '', '', '', 'pericos', 'pericos', 'luciernagas', 'luciernagas', 'relampagos', 'relampagos', 'relampagos'], 'valle 22B: un 17 de mayo, torogoz, zompopos, pericos, luciérnagas y relámpagos, cada uno a su hora');
-  eq([7.9, 8, 15.9, 16, 16.5, 22, 2].map((h) => C.mueve('2026-10-15', h)), ['', 'azacuanes', 'azacuanes', '', 'pericos', 'relampagos', 'relampagos'], 'valle 22B: un 15 de octubre, los azacuanes de día; relámpagos de madrugada (lluviosa)');
-  eq([8, 12, 18, 22, 2, 5.5].map((h) => C.mueve('2027-02-10', h)), ['', '', 'luciernagas', 'luciernagas', 'luciernagas', 'torogoz'], 'valle 22B: en la seca no hay relámpagos y las luciérnagas siguen toda la noche');
-  eq([7.5, 12].map((h) => C.mueve('2026-04-20', h)), ['', 'azacuanes'], 'valle 22B: en abril pasan los azacuanes (sin zompopos)');
+    ['torogoz', 'torogoz', 'barre', 'zompopos', 'zompopos', 'teleferico', 'teleferico', 'pelota', 'pericos', 'pericos', 'luciernagas', 'luciernagas', 'relampagos', 'relampagos', 'relampagos'], 'valle 22B: un 17 de mayo, torogoz, la que barre (37), zompopos, el teleférico (32), la pelota (37), pericos, luciérnagas y relámpagos, cada uno a su hora');
+  eq([7.9, 8, 15.9, 16, 16.5, 22, 2].map((h) => C.mueve('2026-10-15', h)), ['barre', 'azacuanes', 'azacuanes', 'pelota', 'pericos', 'relampagos', 'relampagos'], 'valle 22B: un 15 de octubre, los azacuanes de día; relámpagos de madrugada (lluviosa)');
+  eq([8, 12, 18, 22, 2, 5.5].map((h) => C.mueve('2027-02-10', h)), ['gallinas', 'teleferico', 'luciernagas', 'luciernagas', 'luciernagas', 'torogoz'], 'valle 22B: en la seca no hay relámpagos y las luciérnagas siguen toda la noche');
+  eq([9.9, 10, 12.9, 13, 11].map((h) => C.mueve('2026-11-25', h)).concat(C.mueve('2026-10-15', 11)), ['gallinas', 'teleferico', 'teleferico', '', 'teleferico', 'azacuanes'], 'valle 32: el teleférico de 10:00 a 13:00, y los días de azacuanes, ellos');
+  eq([7.5, 12].map((h) => C.mueve('2026-04-20', h)), ['barre', 'azacuanes'], 'valle 22B: en abril pasan los azacuanes (sin zompopos)');
+  eq([6.9, 7, 7.9, 8, 9.9, 10, 13.9, 14, 14.9, 15, 16.4, 16.5].map((h) => C.mueve('2026-11-25', h)), ['torogoz', 'barre', 'barre', 'gallinas', 'gallinas', 'teleferico', '', 'perro', 'perro', 'pelota', 'pelota', 'pericos'], 'pueblo 34 y 37: la que barre de 7:00 a 8:00, las gallinas de 8:00 a 10:00, el perro de 14:00 a 15:00 y la pelota de 15:00 a 16:30');
   // Nunca dos a la vez: en cada media hora de todo un año, `mueve` da una sola cosa (o nada) y respeta sus fechas y horas.
   let malos = 0;
   for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) {
     const f = new Date(t).toISOString().slice(0, 10);
     for (let h = 0; h < 24; h += 0.5) {
       const m = C.mueve(f, h);
-      if ((m === 'zompopos' && !C.zompopos(f)) || (m === 'azacuanes' && !C.azacuanes(f)) || (m === 'relampagos' && C.epoca(f) !== 'lluviosa') || (m === 'torogoz' && C.franja(h) !== 'amanecer')) malos++;
+      if ((m === 'zompopos' && !C.zompopos(f)) || (m === 'azacuanes' && !C.azacuanes(f)) || (m === 'relampagos' && C.epoca(f) !== 'lluviosa') || (m === 'torogoz' && C.franja(h) !== 'amanecer') || (m === 'gallinas' && (h < 8 || h >= 10)) || (m === 'perro' && (h < 14 || h >= 15)) || (m === 'barre' && (h < 7 || h >= 8)) || (m === 'pelota' && (h < 15 || h >= 16.5))) malos++;
     }
   }
   eq(malos, 0, 'valle 22B: lo que se mueve respeta sus fechas y horas en todo el año (el torogoz, siempre en la franja del amanecer)');
@@ -1370,7 +1377,7 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   almacen['libro.dia'] = '2026-05-07'; almacen['libro.hora'] = '6'; C.aplicar();
   ok(raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '1.000' && raiz.estilo['--v-verde'] === '0.467' && raiz.dataset.mueve === 'torogoz' && !raiz.dataset.flor, `valle 22B: el 7 de mayo a las 6:00, mar de niebla, el valle a medio reverdecer y el torogoz (${JSON.stringify(raiz.estilo['--v-verde'])})`);
   almacen['libro.dia'] = '2027-02-10'; almacen['libro.hora'] = '12'; C.aplicar();
-  ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === undefined, 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y nada que se mueva');
+  ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === 'teleferico', 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y solo el teleférico (campamento 32) que se mueva');
   delete almacen['libro.dia']; delete almacen['libro.hora'];
 
   // El arte de la parte 2: funciones puras, sin estilos en línea, con clases v-…; lo que se mueve lleva `efecto-ambiente`.
@@ -1439,8 +1446,8 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   eq(subtrazos(svg, 'v-luz'), 3, 'pueblo: tres personas, tres ventanas encendidas (una por persona, nunca más)');
   ok(subtrazos(P.pueblo(sp, { ventanas: 99 }), 'v-luz') === casas.length * 2 && subtrazos(P.pueblo(sp, { ventanas: 0 }), 'v-luz') === 0, 'pueblo: cada casa del frente tiene dos ventanas; sin personas, ninguna encendida (la entrada)');
   ok(!/style=|<script|on[a-z]+=|NaN/i.test(svg) && (svg.match(/class="([^"]+)"/g) || []).every((x) => /class="(efecto-ambiente |copa|v-)/.test(x)), 'pueblo: SVG sin estilos ni scripts en línea, sin NaN, con clases propias');
-  ok(['v-ig-frente', 'v-ig-torre', 'v-ig-cupula', 'v-plaza', 'v-farol-poste', 'v-gente', 'v-navidad v-pino-nav v-pn', 'v-navidad v-belen-figuras', 'v-navidad v-foco v-foco-0', 'v-fiesta v-band v-band-0', 'v-patrias v-bandera-azul'].every((c) => svg.includes(`class="${c}`)),
-    'pueblo: la iglesia, la plaza con sus faroles, la gente, el pino y el portal (Navidad), los foquitos, las banderitas (fiestas) y la bandera (patrias)');
+  ok(['v-ig-frente', 'v-ig-torre', 'v-ig-cupula', 'v-plaza', 'v-farol-poste', 'v-vecinos', 'v-navidad v-pino-nav v-pn', 'v-navidad v-belen-figuras', 'v-navidad v-foco v-foco-0', 'v-fiesta v-band v-band-0', 'v-patrias v-bandera-azul'].every((c) => svg.includes(`class="${c}`)),
+    'pueblo: la iglesia, la plaza con sus faroles, el grupo de los vecinos (35), el pino y el portal (Navidad), los foquitos, las banderitas (fiestas) y la bandera (patrias)');
   eq([(svg.match(/v-hu v-hu-/g) || []).length, sp.ninos.length], [3, 6], 'pueblo: el humo de un fogón (tres bocanadas) y seis niños en la plaza (sostienen las piscuchas)');
   ok(!/v-estrella|estrella/.test(P.pinoPlaza(100, 700, 2)), 'pueblo: el pino de Navidad no lleva estrella (nada sobresale contra el cielo)');
   // Escritorio: a la izquierda de la salida, más grande.
@@ -1462,7 +1469,9 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   // personas): 300 nodos. La ladera baja y la Navidad de la subida son unos pocos trazos más (fuera del valle).
   const sv = A.sitiosValle({ W: 390, H: 764, techo: 270, izq: [[-23, 752], [40, 640], [95, 550], [150, 470], [200, 400], [242, 327]], der: [[242, 327], [300, 420], [360, 560], [420, 700]], cresta: [[0, 560], [60, 548], [120, 566], [200, 552], [300, 570], [400, 556]], bx: 55, by: 600, pts, lago, personas: 6, meses: 13, anios: 1.2, primera: '2025-09-01' });
   const restoValle = [A.canton({ ...sv.canton, H: 764 }), A.milpa(cm.milpa), A.caminoReal(sv.camino), A.arbolPrimerDia({ ...sv.arbol, etapa: 'joven', tam: 0.5 }), A.lucesValle(sv.luces, 1, 0), A.lucesValle(sv.luces, 1, 1), A.piscuchas(sv.piscuchas), A.tule(lago), A.vidaLago(lago), A.potrero({ vacas: sv.vacas, k: sv.k })].join('');
-  const nodos = ((todo.replace(lb, '') + P.pueblo(sp, { ventanas: 6 }) + restoValle).match(/<(?!\/)[a-zA-Z]/g) || []).length - (svg.match(/<(?!\/)[a-zA-Z]/g) || []).length;
+  // (35) con los vecinos del turno más cargado (la pupusera con su brasa y su luz, más los hilos de seis piscuchas).
+  const V35 = await import('../app/static/arte-vecinos.js'), conV = Math.max(...['amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas'].map((t) => (V35.svgVecinos(V35.reparto(P.lugaresPueblo(sp), t, { hilos: 6 })).match(/<path/g) || []).length)) + 2;
+  const nodos = ((todo.replace(lb, '') + P.pueblo(sp, { ventanas: 6 }) + restoValle).match(/<(?!\/)[a-zA-Z]/g) || []).length - (svg.match(/<(?!\/)[a-zA-Z]/g) || []).length + conV;
   ok(nodos <= 300, `valle 22C: el valle del teléfono con seis personas cabe en 300 nodos (${nodos})`);
   ok((lb.match(/<path/g) || []).length === 7, 'valle 22C: la ladera baja son siete trazos (claros, peñas en tres tonos y pinos en tres)');
 }
@@ -1611,8 +1620,10 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
       let cielo = 0, senda = Infinity, encima = 0;
       const cajas = [];
       for (const o of s.lista) {
-        const pts = puntosDe(O.osos([o], { k, aurora, cumple }));
-        const sinPie = puntosDe(O.osos([o], { k, aurora, cumple }).replace(/<path class="oso-pie"[^>]*>/, ''));
+        // (Campamento 33) Los brazos de estirarse van aparte: montana.js comprueba sus puntas y, si no caben, no se estiran.
+        const sinBrazos = O.osos([o], { k, aurora, cumple }).replace(/<path class="oso-brazos"[^>]*>/g, '');
+        const pts = puntosDe(sinBrazos);
+        const sinPie = puntosDe(sinBrazos.replace(/<path class="oso-pie"[^>]*>/, ''));
         for (const [x, y] of sinPie) if (!enPol(g.silueta, x, y - O.SALTO - 1)) cielo++;
         const bx = [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
         for (const [px, py] of g.sendero) senda = Math.min(senda, Math.hypot(Math.max(bx[0] - px, 0, px - bx[2]), Math.max(bx[1] - py, 0, py - bx[3])));
@@ -1649,8 +1660,9 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
     ok(!/style=|NaN|undefined/.test(svg) && svg.startsWith('<path class="oso-pie"'), `osos (${k}): sin estilos en línea ni NaN; primero la sombra de contacto de todos`);
     ok([...svg.matchAll(/class="([^"]+)"/g)].every((m) => /^(oso oso-(grande|chico|mameluco)|oso-[a-z-]+( v-navidad)?)$/.test(m[1])), `osos (${k}): solo clases oso- (y v-navidad en las bufandas)`);
   }
-  ok(nodos(svgs.trio) <= 25 && nodos(svgs.aurora) <= 31 && nodos(svgs.todo) <= 32, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 25), con aurora ${nodos(svgs.aurora)} (≤ 31), con gorrito ${nodos(svgs.todo)} (≤ 32)`);
-  ok(nodos(svgs.uno) <= 10, `osos: el grande solo, ${nodos(svgs.uno)} nodos`);
+  // (Campamento 33: un trazo más por oso, los brazos de estirarse.)
+  ok(nodos(svgs.trio) <= 28 && nodos(svgs.aurora) <= 34 && nodos(svgs.todo) <= 35, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 28), con aurora ${nodos(svgs.aurora)} (≤ 34), con gorrito ${nodos(svgs.todo)} (≤ 35)`);
+  ok(nodos(svgs.uno) <= 11, `osos: el grande solo, ${nodos(svgs.uno)} nodos`);
   ok(svgs.trio.includes('oso-marino') && svgs.trio.includes('oso-cinta') && svgs.trio.includes('oso-parche') && svgs.trio.includes('oso-celeste') && svgs.trio.includes('oso-chico'), 'osos: el grande con su camiseta, su parche y su cinta; el del mameluco; el chico');
   ok(!svgs.uno.includes('oso-celeste') && !svgs.uno.includes('oso-bufanda'), 'osos: el grande solo no lleva mameluco ni bufanda de Navidad (ya tiene su cinta)');
   ok((svgs.trio.match(/oso-bufanda v-navidad/g) || []).length === 2 && !svgs.trio.includes('oso-gorro') && svgs.todo.includes('oso-gorro'), 'osos: dos bufandas de Navidad (las enseña el CSS) y el gorrito solo con cumpleaños');
@@ -1667,6 +1679,239 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(osoDe(lacre(1e8)) === 3 && montanitaDe(lacre(1e8)) === 0 && osoDe(lacre(1e8, { grande: true })) === 3, 'osos: el lacre de 1 BTC lleva la cabeza del oso en relieve');
   ok([1e5, 2.5e6, 1e7, 2.5e8, 1e9].every((m) => osoDe(lacre(m)) === 0 && montanitaDe(lacre(m)) === 3), 'osos: los demás lacres siguen con su montañita (también 2.5 y 10 BTC)');
   ok(!/NaN|undefined/.test(lacre(1e8)) && lacre(1e8).match(/<[a-z]/g).length === lacre(1e9).match(/<[a-z]/g).length, 'osos: el lacre de 1 BTC tiene los mismos nodos que los demás y sin NaN');
+}
+
+// Campamento 26 · Los osos en la interfaz: las poses son SVG decorativos y puros, sin estilos en línea, con las piezas de la cumbre.
+{
+  const P = await import('../app/static/arte-osos-poses.js');
+  const { PARTES } = await import('../app/static/arte-osos.js');
+  const nodos = (s) => (s.match(/<(svg|g|path)\b/g) || []).length;
+  ok(P.NOMBRES_POSES.join() === 'lee,mochila,saludan,sobre,confundido,duerme,duermen,celebra', `poses: las ocho, en el orden de la guía (${P.NOMBRES_POSES})`);
+  for (const nombre of P.NOMBRES_POSES) {
+    const s = P.pose(nombre, { tam: 84 });
+    const vb = s.match(/viewBox="([^"]+)"/)[1].split(' ').map(Number);
+    const clases = [...s.matchAll(/<path class="([^"]+)"/g)].map((m) => m[1]);
+    ok(s.startsWith(`<svg class="oso-ilu oso-pose-${nombre}" `) && s.includes('aria-hidden="true"') && s.includes('focusable="false"') && s.includes('height="84"'), `poses: ${nombre} es un <svg> decorativo con su clase y su alto`);
+    ok(!/style=|fill=|NaN|undefined/.test(s) && vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0, `poses: ${nombre} sin estilos en línea, sin NaN y con su viewBox`);
+    ok(clases.length > 0 && clases.every((c) => /^oso-[a-z-]+( v-(navidad|sueno)| se-duerme)?$/.test(c)) && clases.includes('oso-luz') && clases.includes('oso-hocico') && clases.includes('oso-suelo'), `poses: ${nombre} pinta con las clases oso-… (${new Set(clases).size} tonos)`);
+    ok(nodos(s) <= 44, `poses: ${nombre}, ${nodos(s)} nodos con lo de temporada (≤ 44)`);
+  }
+  ok(P.pose('no-existe') === '', 'poses: un nombre que no existe no dibuja nada');
+  // (Campamento 28) Lo de temporada va dibujado siempre (el CSS lo enseña); el gorrito de cumpleaños, solo si se pide.
+  const despiertos = ['lee', 'mochila', 'sobre'];
+  for (const nombre of P.NOMBRES_POSES) {
+    const s = P.pose(nombre), c = P.pose(nombre, { cumple: true }), sin = P.pose(nombre, { plantar: false });
+    const otros = (s.match(/class="oso oso-(chico|mameluco)"/g) || []).length;
+    ok(s.includes('oso-gorro-nav v-navidad') && (s.match(/oso-bufanda v-navidad/g) || []).length === otros, `poses: ${nombre} en Navidad, el gorro rojo del grande y ${otros} bufandas`);
+    ok(c.includes('class="oso-gorro"') && !c.includes('gorro-nav'), `poses: ${nombre} con cumpleaños, el gorrito en vez del gorro de Navidad`);
+    ok(s.includes('oso-ojos-zz v-sueno') === despiertos.includes(nombre) && s.includes('oso-zz v-sueno') === despiertos.includes(nombre), `poses: ${nombre} ${despiertos.includes(nombre) ? 'se duerme' : 'no cambia'} de madrugada`);
+    ok(s.includes('<g class="v-lluvia">') && s.includes('<g class="v-patrias">') && !sin.includes('v-lluvia') && !sin.includes('v-patrias'), `poses: ${nombre} con su paraguas y su banderita plantados (y sin ellos si se pide)`);
+  }
+  const saludan = P.pose('saludan'), brazo = saludan.match(/<g class="oso-saluda">(.*?)<\/g>/);
+  ok(brazo && (saludan.match(/oso-saluda/g) || []).length === 1 && ['oso-luz', 'oso-medio', 'oso-hocico'].every((c) => brazo[1].includes(`class="${c}"`)), 'poses: en «saludan», el brazo del grande va aparte (el que se mueve), con su luz, su canto y su manita');
+  ok(P.NOMBRES_POSES.filter((n) => n !== 'saludan').every((n) => !P.pose(n).includes('oso-saluda')), 'poses: solo «saludan» lleva el brazo aparte');
+  // El eje del saludo en styles.css es el hombro, medido sobre la caja del brazo dibujado.
+  const pts = [...brazo[1].matchAll(/(-?\d+\.\d) (-?\d+\.\d)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]);
+  const ox = ((P.SALUDO.de[0] - Math.min(...xs)) / (Math.max(...xs) - Math.min(...xs))) * 100, oy = ((P.SALUDO.de[1] - Math.min(...ys)) / (Math.max(...ys) - Math.min(...ys))) * 100;
+  const css = fs.readFileSync(new URL('../app/static/styles.css', import.meta.url), 'utf8').match(/\.oso-saluda \{[^}]*transform-origin: ([\d.]+)% ([\d.]+)%/);
+  ok(css && Math.abs(Number(css[1]) - ox) < 1.5 && Math.abs(Number(css[2]) - oy) < 1.5, `poses: el saludo gira desde el hombro (CSS ${css?.[1]}% ${css?.[2]}%, dibujo ${ox.toFixed(1)}% ${oy.toFixed(1)}%)`);
+  // (Campamento 29) La cabina del teleférico: decorativa, los tres asomados (que de madrugada cierran los ojos), sin estilos en línea.
+  const tel = P.teleferico({ tam: 78 });
+  ok(tel.startsWith('<svg class="oso-ilu oso-pose-teleferico" ') && tel.includes('aria-hidden="true"') && !/style=|fill=|NaN/.test(tel) && nodos(tel) <= 32, `poses: la cabina del teleférico, decorativa (${nodos(tel)} nodos)`);
+  ok((tel.match(/class="oso oso-(grande|chico|mameluco)"/g) || []).length === 3 && (tel.match(/oso-ojos-zz v-sueno/g) || []).length === 3 && ['oso-cabina', 'oso-ventana', 'oso-techo', 'oso-cable'].every((c) => tel.includes(`class="${c}"`)), 'poses: en la cabina van los tres, con su ventana, su techo y su cable');
+  const h = P.huella({ tam: 30 });
+  ok(nodos(h) === 2 && h.includes('class="oso-ilu oso-huella"') && h.includes('aria-hidden="true"') && !/style=|NaN/.test(h), 'poses: la huella es un solo trazo, decorativa');
+  ok(['arco', 'elipse', 'canto', 'CAB', 'PIEZAS', 'CARA', 'ROPA'].every((k) => k in PARTES) && PARTES.PIEZAS.length > 8, 'poses: salen de las mismas piezas que los osos de la cumbre (PARTES)');
+  const fuente = fs.readFileSync(new URL('../app/static/arte-osos-poses.js', import.meta.url), 'utf8');
+  ok(!/\b(document|window|localStorage)\b/.test(fuente.replace(/\/\/.*$/gm, '')), 'poses: el módulo es puro (sin DOM)');
+}
+
+// Campamento 31 · «Tú» sube como oso: el osito de «Tú» (un cuarto osito, sin la ropa de los tres, con su mochila y correas naranjas).
+{
+  const O = await import('../app/static/arte-osos.js');
+  const s = O.osoTu({ k: 1.5 }), c = O.osoTu({ k: 1.5, cumple: true }), b = O.osoTu({ k: 1, bajo: '<ellipse class="yo-punto"/>' });
+  const nodos = (x) => (x.match(/<(g|path|ellipse)\b/g) || []).length;
+  ok(s.includes('class="oso oso-tu"') && ['oso-mochila', 'oso-correa', 'oso-palo', 'oso-hocico', 'oso-rasgos'].every((k) => s.includes(`class="${k}"`)) && !/oso-marino|oso-cinta|oso-celeste/.test(s), 'tú: el osito lleva su mochila, sus correas y su palito, y nada de la ropa de los tres');
+  ok(s.includes('oso-bufanda v-navidad') && !s.includes('oso-gorro"') && c.includes('class="oso-gorro"'), 'tú: la bufanda de Navidad va dibujada (el CSS la enseña) y el gorrito solo con cumpleaños');
+  ok(/<g class="tu-festeja">.*<\/g><\/g>$/.test(s) && !/style=|NaN/.test(s) && nodos(s) <= 16, `tú: los brazos alzados en su grupo, sin estilos en línea (${nodos(s)} nodos)`);
+  ok(b.indexOf('yo-punto') > b.indexOf('oso-pie') && b.indexOf('yo-punto') < b.indexOf('oso oso-tu'), 'tú: la pisada va entre la sombra y el osito');
+  const pts = [...s.matchAll(/(-?\d+\.\d) (-?\d+\.\d)/g)].map((m) => [Number(m[1]) / 1.5, Number(m[2]) / 1.5]);
+  ok(pts.every(([x, y]) => x >= O.CAJA_TU.x0 - 0.1 && x <= O.CAJA_TU.x1 + 0.1 && y >= O.CAJA_TU.y0 - 0.1 && y <= O.CAJA_TU.y1 + 0.1), 'tú: todo el osito (también los brazos alzados y la sombra) cabe en su caja');
+}
+
+// Campamento 33 · Los de la cumbre se estiran por la mañana: cuándo (pura) y los brazos (un trazo por oso, dentro del contorno).
+{
+  const L = await import('../app/static/lib.js'), O = await import('../app/static/arte-osos.js');
+  eq([6.99, 7, 7 + 0.9 / 60, 7 + 1 / 60, 7 + 5 / 60, 7.5, 7 + 59 / 60, 8, 12].map(L.estiranLosOsos), [false, true, true, false, true, true, false, false, false], 'estira: de 7 a 8, el primer minuto de cada cinco');
+  const s = O.osos([{ x: 0, y: 0, s: 1, quien: 'grande' }, { x: 12, y: 2, s: 0.7, quien: 'chico' }], { k: 1 });
+  ok((s.match(/class="oso-brazos"/g) || []).length === 2 && !/NaN/.test(s), 'estira: un trazo de brazos alzados por oso');
+  const brazos = [...s.matchAll(/class="oso-brazos" d="([^"]+)"/g)][0][1], pts = [...brazos.matchAll(/(-?\d+\.\d) (-?\d+\.\d)/g)].map((m) => [Number(m[1]) / O.K_OSO, Number(m[2]) / O.K_OSO]);
+  const xs = pts.map((q) => Math.abs(q[0])), ys = pts.map((q) => q[1]), px = Math.max(...O.PUNTAS_ESTIRA.map((q) => Math.abs(q[0]))), py = Math.min(...O.PUNTAS_ESTIRA.map((q) => q[1]));
+  ok(Math.max(...xs) <= px + 0.15 && Math.min(...ys) >= py - 0.15 && Math.max(...xs) > 8, `estira: los brazos salen por fuera de la cabeza (${Math.max(...xs).toFixed(1)}) y sus puntas, las que se comprueban contra la montaña, los cubren`);
+}
+
+// Pulido del pueblo: las casas no se montan unas sobre otras ni sobre la iglesia, en ningún tamaño ni con la luz de ningún lado. La fila
+// de atrás va en su terraza (su fachada se ve por encima de los tejados de delante) y se pinta antes que la iglesia y que el frente.
+{
+  const P = await import('../app/static/arte-pueblo.js');
+  const CONF = [
+    { W: 320, H: 640, forma: 'tel', by: 505, bx: 45, pts: [[45, 505], [190, 455], [95, 395], [200, 275]], lago: { cx: 268, cy: 590, rx: 50, ry: 10 }, techo: 225 },
+    { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 768, H: 900, forma: 'tab', by: 760, bx: 150, pts: [[150, 760], [520, 650], [260, 520], [470, 330]], lago: { cx: 640, cy: 830, rx: 100, ry: 14 }, techo: 300 },
+    { W: 844, H: 390, forma: 'acostado', by: 360, bx: 420, pts: [[420, 360], [600, 300], [470, 220], [560, 60]], lago: null, techo: 120 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 2560, H: 1300, forma: 'esc', by: 1190, bx: 900, pts: [[900, 1190], [1500, 1000], [1000, 800], [1550, 100]], lago: null, techo: 600 },
+  ];
+  const cruza = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+  const fallos = [];
+  let atras = 0;
+  for (const c of CONF) for (const sol of [1, -1]) {
+    const sp = P.sitiosPueblo({ ...c, sol }), u = sp.u, nom = `${c.W} ${c.forma} sol ${sol}`;
+    const ig = sp.iglesia && P.cajaIglesia(sp.iglesia.x, sp.iglesia.s, u, sp.yg, sol);
+    const fr = sp.piezas.filter((q) => q.tipo === 'casa').map((q) => P.cajaCasa(q.x, sp.yg, q.s, q.i, u, sol));
+    const at = sp.atras.map((a) => P.cajaCasa(a.x, a.y, a.s, a.i, u, sol));
+    atras += at.length;
+    for (const [i, a] of at.entries()) {
+      if (ig && cruza(a, ig)) fallos.push(`${nom}: la de atrás ${i} detrás de la iglesia`);
+      if (at.slice(i + 1).some((b) => cruza(a, b))) fallos.push(`${nom}: dos de atrás juntas`);
+      const tapa = Math.max(0, ...fr.filter((f) => a.x0 < f.x1 && a.x1 > f.x0).map((f) => Math.max(0, a.y1 - Math.max(a.ym, f.y0)) / (a.y1 - a.ym)));
+      if (tapa > 0.4) fallos.push(`${nom}: la de atrás ${i} con el ${Math.round(tapa * 100)} % de la fachada tapada por un tejado de delante`);
+    }
+    for (const [i, a] of fr.entries()) if ((ig && cruza(a, ig)) || fr.slice(i + 1).some((b) => cruza(a, b))) fallos.push(`${nom}: la de delante ${i} se monta en otra o en la iglesia`);
+    const svg = P.pueblo(sp, { ventanas: 3 });
+    if (svg.indexOf('v-ig-lado') < svg.lastIndexOf('v-terraza') || (sp.atras.length && !svg.includes('v-terraza'))) fallos.push(`${nom}: la fila de atrás no se pinta antes que la iglesia`);
+  }
+  eq(fallos, [], `pulido del pueblo: ninguna casa sobre la iglesia ni sobre otra, la fila de atrás con su fachada a la vista y pintada antes (${atras} casas de atrás en 12 casos)`);
+  const sp = P.sitiosPueblo({ ...CONF[1], sol: 1 });
+  const evita = P.pueblo(sp, { evitar: [sp.xFin, sp.xFin + 30 * sp.u] }), sin = P.pueblo(sp, {});
+  ok(sin.includes('copa v-fuego') && !evita.includes('copa v-fuego'), 'pulido del pueblo: si el árbol del primer día está al final de la calle, el árbol de fuego no se pone (los dos troncos parecían una persona)');
+}
+
+// Campamento 35 · El Pueblo de los Osos: los turnos (cielo.js), el reparto y el dibujo de los vecinos (arte-vecinos.js).
+{
+  const almacen = {};
+  const raiz = { dataset: {}, atributos: new Set(), estilo: {}, toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty(k, v) { raiz.estilo[k] = v; } } };
+  const avisos = [];
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem: (k, v) => { almacen[k] = String(v); }, removeItem: (k) => { delete almacen[k]; } }, setInterval() {}, Intl, Date, Math, Number, Object, Event: class { constructor(t) { this.type = t; } }, dispatchEvent: (ev) => avisos.push(ev.type) };
+  ctx.window = ctx;
+  almacen['libro.dia'] = '2026-10-14'; almacen['libro.hora'] = '13';
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo;
+  const t0 = raiz.dataset.turno;
+  almacen['libro.hora'] = '13.5'; C.aplicar(); almacen['libro.hora'] = '14'; C.aplicar();
+  ok(t0 === 'siesta' && raiz.dataset.turno === 'tarde' && avisos.filter((x) => x === 'libro:turno').length === 1, `pueblo 35: <html data-turno> y un solo aviso «libro:turno» al cambiar de turno (${JSON.stringify(avisos)})`);
+  const V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
+  eq([2, 5, 6.9, 7, 11.4, 11.5, 13.9, 14, 17.7, 17.75, 21.9, 22].map((h) => C.turno('2026-10-14', h)), ['duerme', 'amanece', 'amanece', 'manana', 'manana', 'siesta', 'siesta', 'tarde', 'tarde', 'pupusas', 'pupusas', 'duerme'], 'pueblo 35: los turnos de un miércoles de octubre');
+  eq([['2026-10-18', 10.5], ['2026-11-16', 9], ['2027-01-15', 9], ['2027-01-18', 9]].map(([f, h]) => C.turno(f, h)), ['mananaLibre', 'mananaLibre', 'mananaLibre', 'manana'], 'pueblo 35: el domingo (después de misa) y las vacaciones (15 nov – 15 ene), los oseznos salen desde la mañana');
+  let malos = 0;
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) {
+    const f = new Date(t).toISOString().slice(0, 10), sem = new Date(t).getUTCDay();
+    for (let h = 0; h < 24; h += 0.25) {
+      const x = C.turno(f, h);
+      if (!['duerme', 'amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas', 'misa', 'mercado', 'desfile', 'posada', 'nochebuena'].includes(x) || (x !== 'nochebuena' && (h >= 22 || h < 5) !== (x === 'duerme')) || (x === 'manana' && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
+    }
+  }
+  eq(malos, 0, 'pueblo 35: en cada cuarto de hora de un año, un turno válido; de noche nadie; la escuela solo entre semana fuera de vacaciones');
+  const CONF = [
+    { W: 320, H: 640, forma: 'tel', by: 505, bx: 45, pts: [[45, 505], [190, 455], [95, 395], [200, 275]], lago: { cx: 268, cy: 590, rx: 50, ry: 10 }, techo: 225 },
+    { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 768, H: 900, forma: 'tab', by: 760, bx: 150, pts: [[150, 760], [520, 650], [260, 520], [470, 330]], lago: { cx: 640, cy: 830, rx: 100, ry: 14 }, techo: 300 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+  ];
+  const TURNOS = ['duerme', 'amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas', 'misa', 'mercado', 'desfile', 'posada', 'nochebuena'], fallos = [];
+  for (const c of CONF) for (const sol of [1, -1]) {
+    const lug = P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }));
+    for (const t of TURNOS) for (const hilos of [0, 3, 6]) {
+      const l = V.reparto(lug, t, { hilos }), fig = l.filter((v) => v.t !== 'pelota'), svg = V.svgVecinos(l, { sol });
+      if (fig.length > V.MAX_VECINOS) fallos.push(`${c.W} ${t}: ${fig.length} figuras`);
+      if (/style=|NaN/.test(svg) || !(svg.match(/class="([^"]+)"/g) || []).every((x) => /^class="v-vo-[a-z0-9]+"$/.test(x)) || (svg.match(/<path/g) || []).length > V.TONOS.length + 1) fallos.push(`${c.W} ${t}: el SVG`);
+      if (l.some((v) => !V.PERSONAJES.includes(v.t) || !Number.isFinite(v.x + v.y + v.k))) fallos.push(`${c.W} ${t}: alguien sin sitio`);
+      if (V.reparto(lug, t, { hilos: 0 }).length !== l.length) fallos.push(`${c.W} ${t}: los hilos cambian cuántos hay`);
+      if (l.filter((v) => v.hilo).some((v) => v.t !== 'oseznoArriba')) fallos.push(`${c.W} ${t}: un hilo sin manita alzada`);
+    }
+  }
+  eq(fallos, [], 'pueblo 35: en cada tamaño, luz y turno, ocho figuras como mucho, solo trazos `v-vo-…` (uno por tono y la sombra), todos en su sitio; las piscuchas no cambian cuántos hay');
+  const lug = P.lugaresPueblo(P.sitiosPueblo({ ...CONF[1], sol: 1 })), quien = (t) => V.reparto(lug, t).map((v) => v.t);
+  ok(quien('duerme').length === 0 && quien('manana').every((t) => !t.startsWith('osezno')) && quien('tarde').filter((t) => t.startsWith('osezno')).length === 5 && quien('tarde').includes('pelota'), 'pueblo 35: de noche nadie en la calle (103); entre semana por la mañana, los oseznos en la escuela; por la tarde, cinco en la plaza con su pelota (104)');
+  ok(quien('pupusas').includes('pupusera') && V.luzPupusa(V.reparto(lug, 'pupusas')) && !V.luzPupusa(V.reparto(lug, 'tarde')) && quien('amanece').includes('panadero') && quien('amanece').includes('estira'), 'pueblo 35: al anochecer la pupusera con su luz (105); al amanecer, el panadero en su bicicleta y el que se estira (106)');
+  const conHilos = V.reparto(lug, 'tarde', { hilos: 2 }).filter((v) => v.hilo);
+  ok(conHilos.length === 2 && conHilos.every((v) => v.f === 1) && conHilos.map(V.manoDe).every(([x, y], i) => x > conHilos[i].x && y < conHilos[i].y - 2 * conHilos[i].k * V.OSEZNO), 'pueblo 35: los oseznos que sostienen las piscuchas, con la manita arriba y hacia ellas');
+}
+
+// Pulido de la iglesia y el paisaje bajo: cada casa bien construida (el tejado asienta en su pared y cubre su ancho, el hastial llega a
+// la cumbrera, la puerta y las ventanas dentro de la fachada y sin pisarse, la puerta de la talla de un vecino oso, la chimenea sobre su
+// tejado y más alta que la cumbrera), en todas las casas, tallas y con la luz de cada lado.
+{
+  const P = await import('../app/static/arte-pueblo.js');
+  const dentro = ([x, y], pol) => { let c = false; for (let i = 0, j = pol.length - 1; i < pol.length; j = i++) { const [xi, yi] = pol[i], [xj, yj] = pol[j]; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+  const caja = (pol) => ({ x0: Math.min(...pol.map((q) => q[0])), x1: Math.max(...pol.map((q) => q[0])), y0: Math.min(...pol.map((q) => q[1])), y1: Math.max(...pol.map((q) => q[1])) });
+  const fallos = [];
+  for (let i = 0; i < 7; i++) for (const s of [1, 0.86, 0.72, 0.7, 0.64]) for (const sol of [1, -1]) {
+    const c = P.piezasCasa(100, 500, s, i, 3, sol), k = c.k, f = caja(c.frente), t = caja(c.techo), pu = caja(c.puerta), nom = `casa ${i} al ${s} (luz ${sol})`;
+    if (!(t.x0 <= f.x0 + 0.01 && t.x1 >= f.x1 - 0.01)) fallos.push(`${nom}: el tejado no cubre la pared`);
+    if (Math.abs(Math.max(c.techo[0][1], c.techo[1][1]) - (f.y0 + 0.9 * k)) > 0.05) fallos.push(`${nom}: el alero no asienta en lo alto de la pared`);
+    if (!(t.y0 < f.y0)) fallos.push(`${nom}: la cumbrera no queda encima de la pared`);
+    if (Math.hypot(c.lado[3][0] - c.techo[2][0], c.lado[3][1] - c.techo[2][1]) > 0.05) fallos.push(`${nom}: el hastial no llega a la cumbrera`);
+    if (!(pu.x0 >= f.x0 && pu.x1 <= f.x1 && Math.abs(pu.y1 - f.y1) < 0.05 && pu.y0 > f.y0)) fallos.push(`${nom}: la puerta fuera de su fachada`);
+    if ((pu.y1 - pu.y0) / k < 0.85 * 6.7) fallos.push(`${nom}: la puerta mucho más baja que un vecino oso (6.7)`);
+    for (const v of c.ventanas.map(caja)) if (!(v.x0 >= f.x0 && v.x1 <= f.x1 && v.y0 > f.y0 && v.y1 < f.y1) || (v.x0 < pu.x1 && v.x1 > pu.x0)) fallos.push(`${nom}: una ventana fuera de la fachada o sobre la puerta`);
+    const ch = caja(c.chimenea), pie = [(c.chimenea[0][0] + c.chimenea[1][0]) / 2, (c.chimenea[0][1] + c.chimenea[1][1]) / 2 - 0.5 * k];
+    if (!dentro(pie, c.techo) || !(ch.y0 < t.y0)) fallos.push(`${nom}: la chimenea no sale del tejado`);
+    if (!(c.humo[1] < ch.y0 + 0.01 && c.humo[0] > ch.x0 && c.humo[0] < ch.x1)) fallos.push(`${nom}: el humo no sale de la chimenea`);
+  }
+  eq(fallos, [], 'pulido: las siete casas, en sus cinco tallas y con la luz de cada lado, bien construidas (tejado, hastial, puerta, ventanas, chimenea y humo)');
+  // La milpa (campamento 22B): fuera del pueblo; si no cabe ni delante ni al pie del bosque, no hay milpa en ese tamaño.
+  const borde = P.bordeLlano({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466 });
+  const cmE = P.campos({ borde, yAbajo: 720, x0: -6, x1: 476, k: 2, vx: 890, evitar: [20, 620], ancho: 1440, techoPueblo: 610 });
+  const cmL = P.campos({ borde, yAbajo: 720, x0: -6, x1: 476, k: 2, vx: 890 });
+  ok(cmL.milpa && (!cmE.milpa || cmE.milpa.x + cmE.milpa.w < 20 || cmE.milpa.x > 620 || cmE.milpa.y + cmE.milpa.h < 610) && cmE.svg === cmL.svg, `pulido: la milpa no cae detrás ni debajo del pueblo, y los campos se ven igual (${JSON.stringify(cmE.milpa && [cmE.milpa.x, cmE.milpa.y].map(Math.round))})`);
+  // El reloj de sol (campamento 16) no pone sus piedritas en la calle del pueblo.
+  const A = await import('../app/static/arte.js');
+  const rel = A.relojDeSol(890, 716, 1440, [20, 620]), xs = [...rel.matchAll(/cx="([\d.]+)"/g)].map((m) => Number(m[1]));
+  ok(xs.length >= 6 && xs.every((x) => x < 16 || x > 624), `pulido: el reloj de sol se estrecha y no pisa la calle del pueblo (${xs.length} piedritas)`);
+}
+
+// Campamento 36 · El calendario del pueblo: la misa del domingo (con el padre), el sábado de plaza, el desfile del 15 de septiembre, los
+// vecinos frente al nacimiento en Navidad y las estrellitas de Nochebuena y del 31. Cada fecha, otro reparto de los mismos osos.
+{
+  const almacen = {};
+  const raiz = { dataset: {}, atributos: new Set(), estilo: {}, toggleAttribute() {}, style: { setProperty() {} } };
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem() {}, removeItem() {} }, setInterval() {}, Intl, Date, Math, Number, Object };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo, V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
+  eq([['2026-10-18', 7.4], ['2026-10-18', 8], ['2026-10-18', 10], ['2026-10-17', 7], ['2026-10-17', 11.9], ['2026-10-17', 12], ['2026-09-15', 9], ['2026-09-15', 12], ['2026-12-10', 19], ['2027-01-06', 19], ['2027-01-07', 19], ['2026-12-24', 18], ['2026-12-24', 23.5], ['2026-12-25', 0.5], ['2026-12-25', 1.5], ['2026-12-31', 20], ['2027-01-01', 0.9]].map(([f, h]) => C.turno(f, h)),
+    ['mananaLibre', 'misa', 'mananaLibre', 'mercado', 'mercado', 'siesta', 'desfile', 'siesta', 'posada', 'posada', 'pupusas', 'nochebuena', 'nochebuena', 'nochebuena', 'duerme', 'nochebuena', 'nochebuena'], 'pueblo 36: la misa del domingo, el sábado de plaza, el desfile, la posada de Navidad y las estrellitas de Nochebuena y del 31 (hasta la 1:00)');
+  const lug = P.lugaresPueblo(P.sitiosPueblo({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400, sol: 1 })), quien = (t) => V.reparto(lug, t).map((v) => v.t);
+  ok(quien('misa').includes('cura') && quien('misa').filter((t) => t === 'espaldas').length === 2, `pueblo 36: el domingo dos vecinos de espaldas camino de la puerta y el padre en ella (${quien('misa')})`);
+  ok(quien('mercado').filter((t) => t === 'vendedora').length === 2 && !quien('mercado').includes('minutero'), 'pueblo 36: el sábado, dos vendedoras con su canasto y más vecinos (sin puestos ni el de las minutas)');
+  ok(quien('desfile').includes('abanderado') && quien('desfile').includes('bombo') && /v-vo-azul/.test(V.svgVecinos(V.reparto(lug, 'desfile'))) && !/v-vo-azul/.test(V.svgVecinos(V.reparto(lug, 'tarde'))), 'pueblo 36: el 15 de septiembre, el abanderado con la azul y blanco y el del bombo (el azul, solo ese día)');
+  ok(quien('nochebuena').filter((t) => t === 'oseznoLuz').length === 3 && (V.svgVecinos(V.reparto(lug, 'nochebuena')).match(/v-vo-brasa" d="([^"]*)"/)?.[1].match(/M/g) || []).length === 3, 'pueblo 36: en Nochebuena, tres oseznos con su estrellita');
+  // Frente al nacimiento, con aire: la osa de espaldas no toca el portal (su techo mide 8.6 unidades a cada lado de su centro).
+  for (const sol of [1, -1]) {
+    const sp = P.sitiosPueblo({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400, sol }), pz = sp.piezas.find((q) => q.tipo === 'plaza');
+    const k = sp.u * pz.s, w = 30 * k, xp = pz.x + w * 0.42 + w * 0.62, osa = V.reparto(P.lugaresPueblo(sp), 'posada').find((v) => v.t === 'espaldas');
+    const c = V.cajaVecino(osa), aire = sol > 0 ? xp - 8.6 * 0.9 * k - c.x1 : c.x0 - (xp + 8.6 * 0.9 * k);
+    ok(aire >= 2 * k, `pueblo 36: en Navidad la osa mira el nacimiento con aire (${(aire / k).toFixed(1)} unidades, luz ${sol})`);
+  }
+}
+
+// Campamento 37 · El pueblo se mueve: un solo actor por turno, en su capa (la que barre por la mañana entre semana, la pelota de la tarde).
+{
+  const V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
+  const lug = P.lugaresPueblo(P.sitiosPueblo({ W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270, sol: 1 }));
+  const actores = (t) => V.reparto(lug, t).filter((v) => v.actor).map((v) => `${v.t}:${v.actor}`);
+  eq(['manana', 'tarde', 'mananaLibre', 'misa', 'pupusas', 'duerme'].map((t) => actores(t).join()), ['escoba:barre', 'pelota:pelota', '', '', '', ''], 'pueblo 37: un solo actor por turno: la que barre entre semana por la mañana y la pelota de la tarde');
+}
+
+// Campamento 38 · Lo que cambia de la app de hoy: el pescador del cayuco es un oso (120) y la descripción de la montaña dice «osos» (121).
+{
+  const L = await import('../app/static/lib.js'), A = await import('../app/static/arte-valle.js');
+  const tv = L.textoValle({ luces: 3 }), sin = L.textoValle({ luces: 3, milpa: false });
+  ok(/En el pueblo, los vecinos son osos polares\./.test(tv) && !/\b(tu|tus|tú)\b/i.test(tv) && /con su milpa/.test(tv) && !/milpa/.test(sin), 'pueblo 38: la descripción de la montaña dice que los vecinos son osos polares (sin tutear) y nombra la milpa solo si está');
+  const vl = A.vidaLago({ cx: 300, cy: 600, rx: 80, ry: 12, k: 1.4 });
+  ok(/class="v-cy-cuerpo v-cy-oso"/.test(vl) && /class="v-cy-cuerpo v-cy-sombrero"/.test(vl) && !/style=|NaN/.test(vl), 'pueblo 38: el pescador del cayuco es un oso con su sombrero (y de noche, como siempre, se esconde con el cayuco)');
 }
 
 console.log(`OK ${n} comprobaciones`);

@@ -9,6 +9,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    id: '2026-12-g',
+    items: [
+      'El punto naranja del sendero es ahora un osito con mochila: anda al subir, festeja y deja huellas.',
+      'Los osos de la cumbre también leen en la lista vacía, saludan al entrar por primera vez, van en teleférico y duermen en la tele.',
+      'De madrugada duermen, en Navidad se abrigan, con lluvia sacan paraguas y en fiestas patrias, la banderita.',
+      'En el pueblo los vecinos son osos: a cada hora hay otros en la calle, el domingo van a misa y el 15 de septiembre desfilan.',
+    ],
+  },
+  {
     id: '2026-12-f',
     items: [
       'En la nieve, bajo la cumbre, se sentaron tres osos polares de peluche: el grande con su camiseta azul y su cinta roja, el chico y el del mameluco celeste.',

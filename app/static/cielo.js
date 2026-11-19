@@ -122,6 +122,9 @@
    *   torogoz       5:00–7:00 (el amanecer, como siempre)
    *   zompopos      7:30–10:00, del 15 al 21 de mayo (cuando se levanta la niebla)
    *   azacuanes     8:00–16:00, del 10 al 31 de octubre y del 1 al 20 de abril (vuelan con el calor del día)
+   *   gallinas      7:00–10:00 (campamento 34; los días de zompopos y de azacuanes, quietas)
+   *   teleférico   10:00–13:00 (campamento 32; solo se ve en pantallas anchas; los días de azacuanes, quieto)
+   *   perro        14:00–16:30 (campamento 34; los días de azacuanes, desde las 16:00)
    *   pericos       16:30–18:00 (el atardecer: van a dormir)
    *   relámpagos    22:00–5:00, de mayo a octubre (tormentas lejanas de madrugada)
    *   luciérnagas   18:00–5:00 (antes desde las 16:30: los pericos se quedan el primer rato del atardecer); en la lluviosa, hasta las 22:00
@@ -131,10 +134,39 @@
     if (h >= 5 && h < 7) return 'torogoz';
     if (zompopos(f) && h >= 7.5 && h < 10) return 'zompopos';
     if (azacuanes(f) && h >= 8 && h < 16) return 'azacuanes';
+    if (h >= 7 && h < 8) return 'barre'; // (37) la que barre su acera (las gallinas, desde las 8:00)
+    if (h >= 8 && h < 10) return 'gallinas';
+    if (h >= 10 && h < 13) return 'teleferico';
+    if (h >= 14 && h < 15) return 'perro';
+    if (h >= 15 && h < 16.5) return 'pelota'; // (37) la pelota de los oseznos (el perro cruza antes)
     if (h >= 16.5 && h < 18) return 'pericos';
     if (epoca(f) === 'lluviosa' && (h >= 22 || h < 5)) return 'relampagos';
     if (h >= 18 || h < 5) return 'luciernagas';
     return '';
+  }
+  /**
+   * (Campamento 35, idea 102) El turno del Pueblo de los Osos: quién está en la calle según la hora y el día (El Salvador). Amanece
+   * (5:00–7:00: el que se estira, el panadero, la que barre), mañana (hasta las 11:30; entre semana los oseznos están en la escuela,
+   * salvo en vacaciones, del 15 de noviembre al 15 de enero), siesta (hasta las 14:00), tarde (hasta las 17:45: los oseznos en la
+   * plaza), pupusas (hasta las 22:00: la pupusera) y duerme (22:00–5:00: nadie). Como `mueve`, lo pinta montana.js y el CSS no.
+   */
+  function vacaciones(f) { const md = f.slice(5); return md >= '11-15' || md <= '01-15'; }
+  function turno(f, h) {
+    // (Campamento 36) El calendario del pueblo: el desfile del 15 de septiembre (7:00–12:00), Nochebuena y el 31 (18:00–1:00, pasada
+    // la medianoche ya es el 25 o el 1), la misa del domingo (7:30–10:00), el sábado de plaza (7:00–12:00) y, en Navidad, la posada
+    // frente al nacimiento al anochecer (1 dic – 6 ene).
+    const md = f.slice(5);
+    if (md === '09-15' && h >= 7 && h < 12) return 'desfile';
+    if (((md === '12-24' || md === '12-31') && h >= 18) || ((md === '12-25' || md === '01-01') && h < 1)) return 'nochebuena';
+    if (h >= 22 || h < 5) return 'duerme';
+    if (h < 7) return 'amanece';
+    const sem = new Date(`${f}T12:00:00Z`).getUTCDay();
+    if (sem === 0 && h >= 7.5 && h < 10) return 'misa';
+    if (sem === 6 && h < 12) return 'mercado';
+    if (h < 11.5) return sem >= 1 && sem <= 5 && !vacaciones(f) ? 'manana' : 'mananaLibre';
+    if (h < 14) return 'siesta';
+    if (h < 17.75) return 'tarde';
+    return md >= '12-01' || md <= '01-06' ? 'posada' : 'pupusas';
   }
   /** La franja a la que pertenece la hora. */
   function franja(h) {
@@ -213,6 +245,8 @@
     aplicar();
   }
 
+  let diaAplicado = null; // (Campamento 30) para avisar del cambio de día
+  let turnoAplicado = null; // (Campamento 35) para avisar del cambio de turno del pueblo
   function aplicar() {
     const h = hora();
     for (const [k, v] of Object.entries(colores(h))) raiz.style.setProperty(k, v);
@@ -220,6 +254,9 @@
     raiz.dataset.cielo = franja(h);
     // Fiestas, época del año y cohetes de fin de año: el CSS muestra lo que toque (la escena dibuja todo y se queda oculto).
     const d = dia(), fi = fiesta(d);
+    // (Campamento 30) La escena dibuja solo lo de la temporada de hoy: si el día cambió con la página abierta, lo avisa para volver a dibujarla.
+    if (diaAplicado !== null && d !== diaAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:dia'));
+    diaAplicado = d;
     if (fi) raiz.dataset.fiesta = fi; else delete raiz.dataset.fiesta;
     raiz.dataset.epoca = epoca(d);
     raiz.toggleAttribute('data-cohetes', cohetes(d, h));
@@ -238,8 +275,17 @@
     const fl = flor(d), mv = mueve(d, h);
     if (fl) raiz.dataset.flor = fl; else delete raiz.dataset.flor;
     if (mv) raiz.dataset.mueve = mv; else delete raiz.dataset.mueve;
+    // (Campamento 35) El turno del pueblo: si cambió con la página abierta, montana.js rehace solo sus vecinos (`libro:turno`).
+    const tu = turno(d, h);
+    raiz.dataset.turno = tu;
+    if (turnoAplicado !== null && tu !== turnoAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:turno'));
+    turnoAplicado = tu;
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
+    // (Campamento 28) Los osos de la interfaz se duermen de 22:00 a 5:00 aunque el velo esté apagado, y las tardes (13:00 a 18:00) de la
+    // época lluviosa sacan su paraguas.
+    raiz.toggleAttribute('data-sueno', h >= 22 || h < 5);
+    raiz.toggleAttribute('data-tarde', h >= 13 && h < 18);
     raiz.dataset.tinta = ti;
     raiz.style.setProperty('--cielo-txt', t.txt);
     raiz.style.setProperty('--cielo-txt2', t.txt2);
@@ -256,5 +302,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, turno, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

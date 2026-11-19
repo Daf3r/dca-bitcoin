@@ -19,9 +19,9 @@ const LECTOR = ['Ana', 'lectora-de-prueba'];
 const puertoLibre = () => new Promise((res) => {
   const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); });
 });
-async function servidor(escenario) {
+async function servidor(escenario, env = {}) {
   const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore' });
+  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore', env: { ...process.env, ...env } });
   const url = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {
     try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
@@ -86,6 +86,30 @@ try {
       await p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
       await auditar(p, `entrada ${esquema}`);
       await ctx.close();
+    }
+    { // (Campamento 26) Los osos en la interfaz: la bienvenida de la lectora con los tres saludando y la lista sin compras con el grande
+      const l = await nuevo(anio, LECTOR);
+      await l.p.waitForSelector('#d-novedades[open]', { timeout: 8000 }).catch(() => {});
+      await auditar(l.p, `bienvenida con los osos (lectora) ${esquema}`);
+      await l.ctx.close();
+      const vac = await servidor('vacio');
+      try {
+        const a = await nuevo(vac, ADMIN);
+        for (let k = 0; k < 3 && await a.p.locator('dialog[open]').count(); k++) { await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(300); }
+        await auditar(a.p, `sin compras, con el grande leyendo ${esquema}`);
+        await a.ctx.close();
+      } finally {
+        vac.parar();
+      }
+      const sl = await servidor('anio', { SOLO_LECTURA: '1' });
+      try { // (Campamento 27) el aviso de mantenimiento con el grande dormido
+        const m = await nuevo(sl, ADMIN);
+        for (let k = 0; k < 3 && await m.p.locator('dialog[open]').count(); k++) { await m.p.keyboard.press('Escape'); await m.p.waitForTimeout(300); }
+        await auditar(m.p, `mantenimiento con el grande dormido ${esquema}`);
+        await m.ctx.close();
+      } finally {
+        sl.parar();
+      }
     }
     // El cielo cambia con la hora: la entrada y la app se revisan en cada franja y a mitad de las dos mezclas de claro a oscuro.
     for (const hora of [2, 5, 6, 12, 16.5, 17.5]) {

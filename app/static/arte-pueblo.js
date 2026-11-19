@@ -9,6 +9,7 @@ import { facetas } from './arte.js';
 const f1 = (n) => n.toFixed(1);
 const P = ([x, y]) => `${f1(x)} ${f1(y)}`;
 const poli = (pts) => `M${pts.map(P).join('L')}Z`;
+const elipse = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
 function azar(s) {
   return () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
 }
@@ -19,6 +20,59 @@ const punto = ([x, y]) => `M${P([x, y])}h0.01`;
 const COLORES = ['cal', 'anil', 'ocre', 'rosa', 'menta'];
 const CASAS = [[15, 8, 9, 5.4, 1, true], [12, 7.4, 8, 5, 2, false], [16, 8.4, 9, 5.6, 0, true], [12.5, 7.6, 8, 5, 3, false], [14, 8, 9, 5.4, 4, true], [12, 7, 8, 4.8, 0, false], [13, 7.6, 8.5, 5, 2, true]];
 const ALTO_IGLESIA = 40; // del suelo a la punta de la cruz (unidades)
+// (Pulido del pueblo) La terraza de la fila de atrás, sobre la calle: lo más alto de una casa del frente (la cumbrera de la más alta,
+// 8.4 + 5.6 + 1.1) menos 1.3, así su tejado tapa a lo sumo el pie de la fachada de atrás.
+export const TERRAZA = 13.8;
+// (Campamento 35) El perro echado, de perfil y mirando a la derecha, con la cabeza alzada: su pie de atrás en (0, 0); `K_PERRO` es su
+// escala frente a la del pueblo. Mide `ANCHO_PERRO` unidades del pueblo (de la punta de la cola a las patas de delante).
+const PERRO = [[-1.0, -0.55], [-0.3, -0.75], [0.2, -1.55], [1.4, -1.95], [2.9, -1.85], [3.6, -1.5], [3.9, -2.45], [4.0, -3.05], [4.15, -3.55], [4.5, -3.05], [4.95, -2.95], [5.75, -2.6], [5.9, -2.35], [5.5, -2.1], [4.8, -1.95], [4.45, -1.2], [5.8, -0.45], [5.85, 0], [0.3, 0], [-0.25, -0.25]];
+const K_PERRO = 0.8;
+export const ANCHO_PERRO = 6.9 * K_PERRO;
+/** Dónde empieza el cuerpo del perro echado (su pie de atrás) desde el borde izquierdo de su caja, en unidades del pueblo. */
+export const COLA_PERRO = 1.0 * K_PERRO;
+/**
+ * (Pulido de la iglesia y el paisaje bajo) Las piezas de una casa, como polígonos en la escena: el frente, el hastial (al lado del
+ * astro), el faldón de teja con su borde, el canto del tejado de atrás, el alero, los postes del corredor, la puerta, las dos ventanas
+ * y, en las casas con fogón, la chimenea sobre el faldón, de donde sale el humo. Pura: la dibuja `pueblo` y la comprueba test_lib
+ * (el tejado asienta sobre la pared, la puerta y las ventanas dentro de su fachada, la chimenea sobre el tejado).
+ * Escala: la puerta mide 6 unidades (un vecino oso, 6.7) y las ventanas van de 3 a 5.6, a la altura de una persona.
+ */
+export function piezasCasa(x, y0, s, i, u, sol = 1) {
+  const [w, h, d, rh, color, corredor] = CASAS[i % CASAS.length];
+  const k = u * s, ox = sol > 0 ? x : x + (w + d * 0.62) * k;
+  const m = (px, py) => [ox + sol * px * k, y0 + py * k];
+  const dx = d * 0.62, dy = -d * 0.24, ov = 1.4; // el fondo en perspectiva y el vuelo del alero
+  const cumbrera = [m(dx / 2 - ov * 0.5, dy / 2 - h - rh), m(w + dx / 2, dy / 2 - h - rh)];
+  // La chimenea: en el faldón, cerca de la cumbrera y hacia el hastial; su pie entra en el tejado y asoma 2.2 por encima de la cumbrera.
+  const cx = w * 0.74 + dx * 0.4, cy = -h + 0.9 + 0.8 * (dy / 2 - rh - 0.9);
+  return {
+    k, color: COLORES[color], corredor, fogon: i % 3 === 0,
+    sombra: [m(-1.5, 0.4), m(w + dx + 1, dy + 0.4), m(w + dx - 3, dy + 1.8), m(-4, 1.6)],
+    frente: [m(0, 0), m(w, 0), m(w, -h), m(0, -h)],
+    lado: [m(w, 0), m(w + dx, dy), m(w + dx, dy - h), m(w + dx / 2, dy / 2 - h - rh), m(w, -h)],
+    techo: [m(-ov, -h + 0.9), m(w + ov * 0.4, -h + 0.9), cumbrera[1], cumbrera[0]],
+    techoS: [cumbrera[1], m(w + dx + ov * 0.6, dy - h + 0.9), m(w + dx + ov * 0.6, dy - h + 1.8), m(w + dx / 2, dy / 2 - h - rh + 1.1), m(w + ov * 0.4, -h + 0.9), m(w + ov * 0.4, -h + 1.8)],
+    teja: [m(-ov, -h + 0.9), m(w + ov * 0.4, -h + 0.9)],
+    alero: [m(0, -h), m(w, -h), m(w, -h + (corredor ? h * 0.82 : 1.6)), m(0, -h + (corredor ? h * 0.82 : 1.6))],
+    postes: corredor ? [0.04, 0.36, 0.68, 0.96].map((t) => [m(w * t, 0), m(w * t, -h + 0.9)]) : [],
+    puerta: [m(w * 0.42, 0), m(w * 0.42 + 2.6, 0), m(w * 0.42 + 2.6, -6), m(w * 0.42, -6)],
+    ventanas: [0.14, 0.76].map((t) => [m(w * t, -3), m(w * t + 2, -3), m(w * t + 2, -5.6), m(w * t, -5.6)]),
+    chimenea: [m(cx - 0.65, cy + 0.6), m(cx + 0.65, cy + 0.6), m(cx + 0.65, dy / 2 - h - rh - 2.2), m(cx - 0.65, dy / 2 - h - rh - 2.2)],
+    humo: m(cx, dy / 2 - h - rh - 2.6),
+    luzPuerta: [...m(w * 0.42 + 1.3, 0.6), 5 * k],
+    alerosCordel: [m(-ov, -h + 1), m(w + ov * 0.4, -h + 1)],
+  };
+}
+/** La caja de una casa en la escena (pared, tejado y su fondo): [x0, y0, x1, y1]. `y0` es la cumbrera; `ym`, lo alto de la pared. */
+export function cajaCasa(x, y0, s, i, u, sol = 1) {
+  const [w, h, d, rh] = CASAS[i % CASAS.length], k = u * s, ancho = (w + d * 0.62) * k;
+  return { x0: x - 1.4 * k, x1: x + ancho + 1.4 * k, y0: y0 - (h + rh + d * 0.12) * k, ym: y0 - h * k, y1: y0, sol };
+}
+/** La caja de la iglesia (torre, fachada y nave, hasta la cruz). */
+export function cajaIglesia(x, s, u, yg, sol = 1) {
+  const k = u * s, xa = sol > 0 ? x : x - 11 * k;
+  return { x0: xa, x1: xa + 41 * k, y0: yg - 37 * k, ym: yg - 21 * k, y1: yg };
+}
 
 /**
  * Dónde va cada pieza del pueblo. `limite(xa, xb)`: la y más alta (en pantalla, la menor) que pueden alcanzar los tejados entre `xa` y
@@ -75,79 +129,113 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
     casasFrente.push(c);
     piezas.push(c);
   }
-  // Una segunda fila, detrás y más chica (las casas de la loma de atrás): en los huecos que deja el sendero.
-  // La fila de atrás: casas más chicas, más arriba, que asoman entre los tejados del frente (el pueblo tiene fondo).
+  // La fila de atrás (pulido del pueblo): casas más chicas en una terraza detrás de la calle, con su muro de piedra, a la altura de
+  // los tejados del frente: el tejado de delante tapa a lo sumo el pie de su fachada (se ven enteras, no un tejado montado sobre
+  // otro). Empieza donde acaba la iglesia (su nave, o su torre si la luz viene del otro lado): nunca detrás de ella. Donde el sendero
+  // no deja sitio encima, no se pone. (Antes iba a 10 unidades de la calle, detrás de los tejados, y desde la mitad de la nave.)
   const atras = [];
-  const yAtras = yg - 10 * u;
-  const desde = iglesia ? iglesia.x + 26 * u * iglesia.s : x0;
+  const yAtras = yg - TERRAZA * u;
+  const desde = iglesia ? iglesia.x + (sol > 0 ? 41 : 30) * u * iglesia.s + 2 * u : x0;
   for (let x = desde, j = 0; x < cursor - 6 * u; j++) {
     const i = (j * 3 + 2) % CASAS.length, [w, h, d, rh] = CASAS[i], s = 0.7 - (j % 2) * 0.06;
-    const xb = x + (w + d * 0.62) * u * s, y = yAtras - (j % 2) * 2.2 * u;
-    if (xb < xMax && y - (h + rh + d * 0.24) * u * s >= limite(x, xb)) atras.push({ x, s, i, y });
+    const xb = x + (w + d * 0.62) * u * s;
+    if (xb < xMax && yAtras - (h + rh + d * 0.24) * u * s >= limite(x, xb)) atras.push({ x, s, i, y: yAtras });
     x = xb + (2 + (j % 3) * 3) * u;
   }
   const xFin = Math.max(cursor, x0 + 40);
   // Los niños de la plaza (de octubre a noviembre sostienen el hilo de las piscuchas).
-  const ninos = plaza ? [0, 1, 2, 3, 4, 5].map((j) => [plaza.x + (5 + j * 3.4) * u * plaza.s, yg + (2.6 + (j % 2) * 1.2) * u]) : [];
-  // La gente y los animales: en la calle, delante de las casas y en la plaza (siluetas quietas, sin nadie en particular).
-  return { u, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 14 * u), xFin + 4, yg + 4 * u] };
+  // (Campamento 35) Entre la esquina del perro y las gallinas (a 0.78 del ancho de la plaza): nadie encima de ellos.
+  const anchoPlaza = tel || acostado ? 24 : 30, paso = (anchoPlaza * 0.78 - 6.6) / 5;
+  const ninos = plaza ? [0, 1, 2, 3, 4, 5].map((j) => [plaza.x + (4 + j * paso) * u * plaza.s, yg + (2.6 + (j % 2) * 1.2) * u]) : [];
+  // Los vecinos (osos, campamento 35) y los animales: en la calle, delante de las casas y en la plaza (`lugaresPueblo`).
+  return { u, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 12 * u), xFin + 4, yg + 4 * u] };
+}
+
+// ------------------------------------------------------------------------------------------------ los sitios de los vecinos
+/**
+ * (Campamento 35) Dónde pueden estar los vecinos osos, de izquierda a derecha: el atrio de la iglesia, los corredores de las casas
+ * que lo tienen, la calle junto a las que no, los seis sitios de la plaza (los oseznos), la banca bajo el árbol de la plaza y el poste
+ * del farol (donde se amarran las piscuchas cuando no hay oseznos). Cada sitio, [x, y, k] (su pie y la escala del pueblo). Solo
+ * depende del sitio del pueblo: nunca de las cuentas ni de las compras.
+ */
+export function lugaresPueblo(sit) {
+  const { u, yg, piezas, sol } = sit;
+  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [] }, delante = [];
+  for (const q of piezas) {
+    const k = u * q.s;
+    if (q.tipo === 'iglesia') {
+      const ox = sol > 0 ? q.x + 9 * k : q.x + 21 * k, m = (px, py) => [ox + sol * px * k, yg + py * k, k];
+      // A los lados de la puerta, delante de la nave, en la puerta (el padre, el domingo: campamento 36) y delante de la torre.
+      lug.atrio.push(m(16.5, 1.6), m(3.5, 2.6), m(22.5, 3.4), m(10, 1.2), m(-4.5, 3.4));
+    } else if (q.tipo === 'plaza') {
+      const w = (sit.forma === 'tel' || sit.forma === 'acostado' ? 24 : 30) * k, cx = q.x + w * 0.42;
+      lug.banca.push([cx + w * 0.2, yg + 0.5 * k, k]);
+      // (36) Frente al nacimiento de Navidad, del lado contrario al astro y con aire (no lo tapan).
+      lug.portal.push([cx + w * 0.62 - sol * 14 * k, yg + 2.4 * k, k]);
+      lug.poste.push([q.x + 3.6 * k, yg - 5.1 * k, k], [q.x + w - 1 * k, yg - 5.1 * k, k]);
+      // (Pulido) Lo que ya ocupa la plaza y nadie pisa: el perro echado y las gallinas (ver `pueblo`). Delante de la cruz de mayo sí
+      // se para la gente (así se diseñó en el campamento 34).
+      const xp = q.x - 1.8 * k, kd = K_PERRO * k, xg = cx + w * 0.36;
+      lug.ocupado.push({ x0: xp - 1.0 * kd, x1: xp + 5.9 * kd, y0: yg + 1.6 * k - 3.6 * kd, y1: yg + 1.6 * k + 0.3 * k }, { x0: xg - 0.6 * k, x1: xg + 5.2 * k, y0: yg - 1.6 * k, y1: yg + 1.6 * k });
+    } else if (q.tipo === 'casa') {
+      const [w, , d, , , corredor] = CASAS[q.i % CASAS.length], ox = sol > 0 ? q.x : q.x + (w + d * 0.62) * k;
+      const m = (px, py) => [ox + sol * px * k, yg + py * k, k];
+      // Con corredor: dos sitios en él y uno en la calle, delante (va al final de la calle); sin corredor, uno en la calle, a su lado.
+      if (corredor) { lug.corredor.push(m(w * 0.7, 0.5), m(w * 0.22, 0.5)); delante.push(m(w * 0.3, 4.2)); } else lug.calle.push(m(w + 3.2, 3.4));
+    }
+  }
+  for (const [x, y] of sit.ninos ?? []) lug.plaza.push([x, y, u]);
+  lug.calle.push(...delante); // primero la calle junto a las casas sin corredor; después, delante de las que lo tienen
+  return lug;
 }
 
 // ------------------------------------------------------------------------------------------------ el dibujo
 /**
  * El pueblo. Devuelve un solo SVG (en orden de atrás adelante): la calle y la plaza, las casas de atrás, la iglesia, las casas del
  * frente, los árboles, el pino de Navidad y el portal del nacimiento (Navidad), los faroles, los cordeles (foquitos en Navidad,
- * banderitas en las fiestas), la gente y los animales, el humo del fogón. `ventanas`: cuántas se encienden de noche (una por persona).
+ * banderitas en las fiestas), los vecinos osos y los animales, el humo del fogón. `ventanas`: cuántas se encienden de noche (una por
+ * persona). `vecinos`: el SVG de los vecinos del turno de ahora (montana.js), en su grupo `.v-vecinos`, que se rehace al cambiar de turno.
  */
-export function pueblo(sit, { ventanas = 0 } = {}) {
+export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) {
   const { u, yg, piezas, atras, sol } = sit;
-  // Un acumulador por tono: todo el pueblo en unos pocos trazos.
-  const A = {};
-  const add = (k, d) => { A[k] = (A[k] ?? '') + d; };
+  // Un acumulador por tono: todo el pueblo en unos pocos trazos. La fila de atrás va en los suyos (B), que se pintan antes que la
+  // iglesia y que el frente: así nada de atrás queda encima de lo de delante (pulido del pueblo).
+  const A = {}, B = {};
+  let dest = A;
+  const add = (k, d) => { dest[k] = (dest[k] ?? '') + d; };
   const sitiosVentana = [];
   const humos = [];
   const faroles = [];
   const cordeles = [];
-  const gente = [];
   const charcos = []; // charcos de luz en el suelo (de noche): [x, y, radio]
   // La calle: tierra apisonada delante de las casas, de la iglesia al final del pueblo.
   add('calle', poli([[sit.x0 - 2 * u, yg + 0.4 * u], [sit.xFin + 2 * u, yg + 0.4 * u], [sit.xFin + 6 * u, yg + 5.6 * u], [sit.x0 - 6 * u, yg + 5.6 * u]]));
   // ---- una casa: frente (la pared larga, de cara), su hastial (al lado del astro), el tejado de teja, el alero y la puerta.
   const casa = (x, y0, s, i, fila) => {
-    const [w, h, d, rh, color, corredor] = CASAS[i % CASAS.length];
-    const k = u * s;
-    // El frente va de x a x + w; el hastial y el fondo, hacia el lado del astro. Con la luz por la izquierda, se refleja.
-    const ox = sol > 0 ? x : x + (w + d * 0.62) * k;
-    const m = (px, py) => [ox + sol * px * k, y0 + py * k];
-    const dx = d * 0.62, dy = -d * 0.24; // el fondo en perspectiva
-    const col = COLORES[color];
-    // La sombra en el suelo (hacia el lado contrario del astro).
-    add('sombra', poli([m(-1.5, 0.4), m(w + dx + 1, dy + 0.4), m(w + dx - 3, dy + 1.8), m(-4, 1.6)]));
-    add(`frente-${col}`, poli([m(0, 0), m(w, 0), m(w, -h), m(0, -h)]));
-    add(`lado-${col}`, poli([m(w, 0), m(w + dx, dy), m(w + dx, dy - h), m(w + dx / 2, dy / 2 - h - rh), m(w, -h)]));
-    // El tejado: el faldón de delante (con luz) y el canto del de atrás sobre el hastial.
-    const ov = 1.4;
-    const cumbrera = [m(dx / 2 - ov * 0.5, dy / 2 - h - rh), m(w + dx / 2, dy / 2 - h - rh)];
-    add('techo-l', poli([m(-ov, -h + 0.9), m(w + ov * 0.4, -h + 0.9), cumbrera[1], cumbrera[0]]));
-    add('techo-s', poli([cumbrera[1], m(w + dx + ov * 0.6, dy - h + 0.9), m(w + dx + ov * 0.6, dy - h + 1.8), m(w + dx / 2, dy / 2 - h - rh + 1.1), m(w + ov * 0.4, -h + 0.9), m(w + ov * 0.4, -h + 1.8)]));
-    add('teja', `M${P(m(-ov, -h + 0.9))}L${P(m(w + ov * 0.4, -h + 0.9))}`); // el borde de las tejas
+    const c = piezasCasa(x, y0, s, i, u, sol);
+    add('sombra', poli(c.sombra));
+    add(`frente-${c.color}`, poli(c.frente));
+    add(`lado-${c.color}`, poli(c.lado));
+    add('techo-l', poli(c.techo));
+    add('techo-s', poli(c.techoS));
+    add('teja', `M${P(c.teja[0])}L${P(c.teja[1])}`); // el borde de las tejas
     // El alero echa su sombra en la pared; con corredor, la sombra es honda y hay postes.
-    add('alero', poli([m(0, -h), m(w, -h), m(w, -h + (corredor ? h * 0.82 : 1.6)), m(0, -h + (corredor ? h * 0.82 : 1.6))]));
-    if (corredor) for (const t of [0.04, 0.36, 0.68, 0.96]) add('poste', `M${P(m(w * t, 0))}L${P(m(w * t, -h + 0.9))}`);
+    add('alero', poli(c.alero));
+    for (const [a, b] of c.postes) add('poste', `M${P(a)}L${P(b)}`);
     // La puerta y las ventanas (en el frente; las de la fila de atrás no cuentan para las personas).
-    add('puerta', poli([m(w * 0.42, 0), m(w * 0.42 + 2.3, 0), m(w * 0.42 + 2.3, -4.6), m(w * 0.42, -4.6)]));
-    for (const t of [0.16, 0.76]) {
-      const q = [m(w * t, -2.4), m(w * t + 2, -2.4), m(w * t + 2, -4.8), m(w * t, -4.8)];
-      if (fila === 0) sitiosVentana.push({ q, orden: sitiosVentana.length }); else add('ventana', poli(q));
-    }
-    if (fila === 0 && i % 3 === 0) humos.push(m(w + dx * 0.7, dy * 0.7 - h - rh * 0.6));
-    if (fila === 0 && corredor) gente.push([...m(w * 0.62, 0.2), k, i]);
-    if (fila === 0 && !corredor) gente.push([...m(w + 2.2, 3.2), k, i + 1]);
-    if (fila === 0) charcos.push([...m(w * 0.42 + 1.15, 0.6), 5 * k]); // la luz de la puerta en la calle
-    return { techo: m(0, -h), alero: [m(-ov, -h + 1), m(w + ov * 0.4, -h + 1)] };
+    add('puerta', poli(c.puerta));
+    for (const q of c.ventanas) { if (fila === 0) sitiosVentana.push({ q, orden: sitiosVentana.length }); else add('ventana', poli(q)); }
+    // El fogón: su chimenea en el tejado y, delante, de donde sale el humo (solo en la fila de delante).
+    if (fila === 0 && c.fogon) { add('chimenea', poli(c.chimenea)); humos.push(c.humo); }
+    if (fila === 0) charcos.push(c.luzPuerta); // la luz de la puerta en la calle
+    return { techo: c.frente[3], alero: c.alerosCordel };
   };
   // ---- la iglesia: fachada encalada con su frontón barroco, la puerta en arco y el óculo; la torre con su campanario y una cúpula
   // pequeña; la nave hacia atrás con su tejado. La cruz es corta (no sobresale contra el cielo: delante tiene la montaña).
+  // (Pulido de la iglesia) Asentada en su atrio de piedra (una plataforma con su grada, de la torre al canto de la fachada); la fachada
+  // con su zócalo y cuatro pilastras; la nave con tres contrafuertes y la cumbrera de su tejado; la torre con su basa, una cornisa a
+  // media altura y una ventanita (de noche, encendida como las otras).
+  let cordelTorre = null;
   const iglesia = (x, s) => {
     const k = u * s;
     const ox = sol > 0 ? x + 9 * k : x + 21 * k; // la torre va del lado de la sombra
@@ -158,14 +246,20 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     add('ig-lado', poli([m(w, -3), m(w + dx, dy - 3), m(w + dx, dy - h + 3), m(w, -h + 3)]));
     add('techo-l', poli([m(w - 0.5, -h + 3), m(w + dx, dy - h + 3), m(w + dx - 3, dy - h - 2.4), m(w - 3.5, -h - 2.4)]));
     add('ig-lado', poli([m(w, 0), m(w + dx, dy), m(w + dx, dy - 3), m(w, -3)])); // el zócalo
+    // Los contrafuertes de la nave (entre las ventanas) y la cumbrera de su tejado.
+    for (const tt of [0.12, 0.54, 0.94]) add('ig-torre-s', poli([m(w + dx * tt - 0.45, dy * tt), m(w + dx * tt + 0.55, dy * tt), m(w + dx * tt + 0.55, dy * tt - h + 3.4), m(w + dx * tt - 0.45, dy * tt - h + 3.4)]));
+    add('techo-s', poli([m(w - 3.5, -h - 2.4), m(w + dx - 3, dy - h - 2.4), m(w + dx - 2.6, dy - h - 1.6), m(w - 3.1, -h - 1.6)]));
     // La fachada: el muro y el frontón (curvo, con su remate).
     const fr = [m(0, 0), m(w, 0), m(w, -h), m(w - 2, -h), m(w - 3.2, -h - 2.8), m(w / 2 + 2.4, -h - 4.2), m(w / 2 + 1.2, -h - 6.4), m(w / 2 - 1.2, -h - 6.4), m(w / 2 - 2.4, -h - 4.2), m(3.2, -h - 2.8), m(2, -h), m(0, -h)];
     add('ig-frente', poli(fr));
     add('ig-moldura', `M${P(m(0, -h + 0.6))}L${P(m(w, -h + 0.6))}M${P(m(0, -6.6))}L${P(m(w, -6.6))}`);
+    // El relieve de la fachada y de la torre: el zócalo y las pilastras (en los cantos y a los lados de la puerta), un tono más hondo.
+    const banda = (a, b, y1, y2) => poli([m(a, y1), m(b, y1), m(b, y2), m(a, y2)]);
+    add('ig-relieve', banda(-8.5, w, 0, -1.4) + banda(0.2, 1.3, -1.4, -h + 0.6) + banda(w - 1.3, w - 0.2, -1.4, -h + 0.6) + banda(w / 2 - 4.3, w / 2 - 3.4, -1.4, -h + 0.6) + banda(w / 2 + 3.4, w / 2 + 4.3, -1.4, -h + 0.6));
     // La torre: cuerpo, campanario con su arco y la cúpula pequeña con su linterna.
     add('ig-torre', poli([m(-8.5, 0), m(0, 0), m(0, -h - 9), m(-8.5, -h - 9)]));
     add('ig-torre-s', poli([m(-8.5, 0), m(-6.6, 0), m(-6.6, -h - 9), m(-8.5, -h - 9)]));
-    add('ig-moldura', `M${P(m(-9, -h - 0.4))}L${P(m(0.4, -h - 0.4))}M${P(m(-9, -h - 9))}L${P(m(0.4, -h - 9))}`);
+    add('ig-moldura', `M${P(m(-9, -h - 0.4))}L${P(m(0.4, -h - 0.4))}M${P(m(-9, -h - 9))}L${P(m(0.4, -h - 9))}M${P(m(-8.8, -h * 0.5))}L${P(m(0.2, -h * 0.5))}`);
     add('ig-cupula', `M${P(m(-8.6, -h - 9.4))}Q${P(m(-8.4, -h - 15))} ${P(m(-4.25, -h - 15.6))}Q${P(m(-0.1, -h - 15))} ${P(m(0.1, -h - 9.4))}Z`);
     add('ig-cruz', `M${P(m(-4.25, -h - 15.4))}L${P(m(-4.25, -h - 19.8))}M${P(m(-5.6, -h - 18.4))}L${P(m(-2.9, -h - 18.4))}`);
     // Los huecos oscuros (o encendidos de noche): el arco del campanario, la puerta en arco, el óculo y dos ventanas altas.
@@ -173,10 +267,12 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     add('ig-hueco', arco(-4.25, -h - 1.6, 1.9, 6) + arco(w / 2, 0, 2.6, 8.4));
     add('ig-hueco', `M${P(m(w / 2 - 1.3, -h + 3))}a${f1(1.3 * k)} ${f1(1.3 * k)} 0 1 0 ${f1(2.6 * k * sol)} 0a${f1(1.3 * k)} ${f1(1.3 * k)} 0 1 0 ${f1(-2.6 * k * sol)} 0Z`);
     add('ig-campana', arco(-4.25, -h - 2.6, 0.9, 2.6));
-    add('ig-ventana', arco(3.4, -9, 0.9, 4) + arco(w - 3.4, -9, 0.9, 4) + arco(w + dx * 0.35, dy * 0.35 - 7, 0.8, 4) + arco(w + dx * 0.72, dy * 0.72 - 7, 0.8, 4));
-    // Un cordel de la torre a la plaza (foquitos o banderitas).
-    cordeles.push([m(0.4, -h - 1), m(w + dx + 22, -h * 0.55)]);
-    gente.push([...m(w / 2 + 6, 1.2), k, 7], [...m(w / 2 - 6.5, 2.4), k, 5]);
+    add('ig-ventana', arco(3.4, -9, 0.9, 4) + arco(w - 3.4, -9, 0.9, 4) + arco(w + dx * 0.35, dy * 0.35 - 7, 0.8, 4) + arco(w + dx * 0.72, dy * 0.72 - 7, 0.8, 4) + arco(-4.25, -h * 0.5 - 1.4, 0.7, 3.2));
+    // El atrio: la plataforma de piedra (su piso, al frente, y su grada) donde asientan la torre y la fachada.
+    add('ig-atrio', poli([m(-9.6, 0), m(w + 0.8, 0), m(w - 1.6, 1.0), m(-12, 1.0)]));
+    add('ig-atrio-s', poli([m(-12, 1.0), m(w - 1.6, 1.0), m(w - 1.6, 2.1), m(-12, 2.1)]) + poli([m(w - 1.6, 1.0), m(w + 0.8, 0), m(w + 0.8, 1.1), m(w - 1.6, 2.1)]));
+    // Un cordel de la torre a la plaza (foquitos o banderitas): se amarra al farol del otro lado de la plaza.
+    cordelTorre = m(0.4, -h - 1);
     charcos.push([...m(w / 2, 0.8), 10 * k]);
   };
   // ---- la plaza: el empedrado, el árbol de la plaza (un mango, que en Navidad deja su sitio al pino), los faroles y el portal.
@@ -184,12 +280,19 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     const k = u * s, w = (sit.forma === 'tel' || sit.forma === 'acostado' ? 24 : 30) * k;
     add('plaza', `M${f1(x - 4 * k)} ${f1(yg + 1.6 * k)}L${f1(x + w + 4 * k)} ${f1(yg + 1.6 * k)}L${f1(x + w - 1 * k)} ${f1(yg - 3.2 * k)}L${f1(x + 2 * k)} ${f1(yg - 3.2 * k)}Z`);
     add('plaza-borde', `M${f1(x + 2 * k)} ${f1(yg - 3.2 * k)}L${f1(x + w - 1 * k)} ${f1(yg - 3.2 * k)}`);
-    for (const fx of [x + 1 * k, x + w - 1 * k]) faroles.push([fx, yg - 0.6 * k, k]);
+    for (const fx of [x + 3.6 * k, x + w - 1 * k]) faroles.push([fx, yg - 0.6 * k, k]); // (36) el de la esquina, tras el perro
     return { cx: x + w * 0.42, w, k, alto: Math.min(1, alto / 36) };
   };
   // ---- dibujar, de atrás adelante
+  dest = B;
   for (const a of atras) casa(a.x, a.y, a.s, a.i, 1);
-  let pz = null;
+  // El muro de la terraza: piedra baja bajo la fila de atrás (su pie asoma entre los tejados de delante).
+  if (atras.length) {
+    const ya = atras[0].y, xa = atras[0].x - 3 * u, xb = Math.max(...atras.map((a) => a.x + (CASAS[a.i][0] + CASAS[a.i][2] * 0.62) * u * a.s)) + 3 * u;
+    add('terraza', poli([[xa, ya - 0.2 * u], [xb, ya - 0.2 * u], [xb + 1.2 * u, ya + 1.6 * u], [xa - 1.2 * u, ya + 1.6 * u]]));
+  }
+  dest = A;
+  let pz = null, cruzMayo = ''; // (34) la cruz del Día de la Cruz
   const altos = [];
   for (const p of piezas) {
     if (p.tipo === 'iglesia') iglesia(p.x, p.s);
@@ -203,12 +306,14 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
   }
   // Los faroles de la plaza: poste, brazo y la lámpara (de noche, con su luz).
   for (const [fx, fy, k] of faroles) {
+    add('sombra', elipse(fx - sol * 0.5 * k, fy + 0.3 * k, 1.6 * k, 0.45 * k)); // (pulido) su pie, asentado
     charcos.push([fx, fy + 0.6 * k, 9 * k]);
     add('farol-poste', `M${f1(fx)} ${f1(fy)}L${f1(fx)} ${f1(fy - 10.5 * k)}`);
     add('farol-lampara', poli([[fx - 1.1 * k, fy - 10.4 * k], [fx + 1.1 * k, fy - 10.4 * k], [fx + 0.8 * k, fy - 12.4 * k], [fx - 0.8 * k, fy - 12.4 * k]]));
     add('farol-luz', punto([fx, fy - 11.4 * k]));
   }
   if (faroles.length >= 2) cordeles.push([[faroles[0][0], faroles[0][1] - 10 * faroles[0][2]], [faroles[1][0], faroles[1][1] - 10 * faroles[1][2]]]);
+  if (cordelTorre && faroles.length) { const [fx, fy, fk] = faroles.at(-1); cordeles.unshift([cordelTorre, [fx, fy - 10 * fk]]); }
   // Los cordeles: una catenaria entre sus dos puntos; en Navidad, foquitos de tres colores; en las fiestas, banderitas.
   const rnd = azar(61);
   const foco = ['', '', ''], bandera = ['', '', ''];
@@ -224,27 +329,33 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     }
     rnd();
   }
-  // La gente: siluetas quietas de unos 7 unidades (sombrero, canasta en la cabeza, alguien con un niño). Un trazo para todas.
-  const persona = (x, y, k, v) => {
-    const d = [];
-    const cuerpo = (cx, alto, ancho) => d.push(poli([[cx - ancho * k, y], [cx + ancho * k, y], [cx + ancho * 0.7 * k, y - alto * 0.62 * k], [cx - ancho * 0.7 * k, y - alto * 0.62 * k]]), `M${P([cx - 0.75 * k, y - alto * 0.66 * k])}a${f1(0.75 * k)} ${f1(0.8 * k)} 0 1 0 ${f1(1.5 * k)} 0a${f1(0.75 * k)} ${f1(0.8 * k)} 0 1 0 ${f1(-1.5 * k)} 0Z`);
-    if (v % 3 === 0) { cuerpo(x, 7, 1.15); d.push(poli([[x - 2 * k, y - 5.2 * k], [x + 2 * k, y - 5.2 * k], [x + 0.8 * k, y - 6 * k], [x - 0.8 * k, y - 6 * k]])); } // con sombrero
-    else if (v % 3 === 1) { cuerpo(x, 6.6, 1.4); d.push(poli([[x - 1.5 * k, y - 5.6 * k], [x + 1.5 * k, y - 5.6 * k], [x + 1.2 * k, y - 6.8 * k], [x - 1.2 * k, y - 6.8 * k]])); } // con su canasta
-    else { cuerpo(x, 7, 1.1); cuerpo(x + 2.6 * k, 4.6, 0.8); } // con un niño
-    return d.join('');
-  };
-  for (const [x, y, k, v] of gente) add('gente', persona(x, y, k, v));
-  // Animales quietos: un perro echado en la calle y tres gallinas.
+  // (Campamento 35) La gente del pueblo son los vecinos osos (`vecinos`, de arte-vecinos.js): ya no hay siluetas.
+  // Animales quietos: un perro echado y tres gallinas. (Campamento 35) El perro, de perfil y con la cabeza alzada (el hocico, la oreja,
+  // las patas de delante estiradas y la cola), para que se lea como perro y no como una mancha. (Pulido del paisaje bajo) El perro se
+  // echa en la esquina de la plaza, junto a la grada del atrio (en Navidad quedaba metido en el nacimiento), y las gallinas picotean
+  // donde estaba él, al otro lado de los oseznos (entre ellos parecían coletas; en diciembre, junto al portal). (36) El farol de esa
+  // esquina va un poco más adentro, detrás del perro, para que su poste no le atraviese la cabeza y quepan los vecinos del atrio.
   if (pz) {
-    const k = pz.k, x = pz.cx + pz.w * 0.36, y = yg + 1.6 * k;
-    add('animal', `M${P([x, y])}q${f1(1 * k)} ${f1(-2.2 * k)} ${f1(3.6 * k)} ${f1(-1.6 * k)}l${f1(0.8 * k)} ${f1(-1 * k)}l${f1(0.7 * k)} ${f1(1.2 * k)}q${f1(0.4 * k)} ${f1(1.4 * k)} ${f1(-0.4 * k)} ${f1(1.4 * k)}Z`);
-    for (const [gx, gy] of [[-0.18, 0.8], [-0.06, 1.4], [0.06, 0.6]]) {
-      const cx = pz.cx + pz.w * gx, cy = yg + gy * k;
+    const k = pz.k, x = pz.cx - pz.w * 0.42 - 1.8 * k, y = yg + 1.6 * k, kd = K_PERRO * k;
+    add('animal', `M${PERRO.map(([px, py]) => P([x + px * kd, y + py * kd])).join('L')}Z`);
+    add('sombra', elipse(x + 2.4 * kd - sol * 0.6 * k, y + 0.2 * k, 3.4 * kd, 0.5 * kd));
+    for (const [gx, gy] of [[0.4, 0.8], [2.2, 1.4], [4.0, 0.6]]) {
+      const cx = pz.cx + pz.w * 0.36 + gx * k, cy = yg + gy * k;
       add('gallina', `M${P([cx - 1 * k, cy])}q${f1(0.2 * k)} ${f1(-1.6 * k)} ${f1(1.4 * k)} ${f1(-1.5 * k)}l${f1(0.5 * k)} ${f1(-0.7 * k)}l${f1(0.3 * k)} ${f1(0.7 * k)}q${f1(0.2 * k)} ${f1(1.2 * k)} ${f1(-1.2 * k)} ${f1(1.5 * k)}Z`);
     }
   }
-  // Los niños de la plaza: siluetas chicas (en octubre y noviembre, con el hilo de su piscucha en la mano).
-  for (const [x, y] of sit.ninos ?? []) add('gente', `M${P([x - 0.8 * u, y])}L${P([x + 0.8 * u, y])}L${P([x + 0.55 * u, y - 2.8 * u])}L${P([x - 0.55 * u, y - 2.8 * u])}ZM${P([x - 0.6 * u, y - 3.3 * u])}a${f1(0.6 * u)} ${f1(0.6 * u)} 0 1 0 ${f1(1.2 * u)} 0a${f1(0.6 * u)} ${f1(0.6 * u)} 0 1 0 ${f1(-1.2 * u)} 0Z`);
+  // (Campamento 34) El Día de la Cruz (3 de mayo): en la plaza, una cruz de palo adornada con frutas (jocotes y mangos) y una cadena
+  // de papel de colores, como se hace aquí para recibir las lluvias. Su palo queda a la izquierda del perro echado (los brazos y las
+  // frutas, por encima de él) y la gente de la plaza se para delante. Se dibuja siempre y montana.js la poda los demás días.
+  if (pz) {
+    const k = pz.k, x = pz.cx - pz.w * 0.42 - 3.4 * k, y = yg + 1.6 * k, P2 = (dx, dy) => P([x + dx * k, y + dy * k]);
+    const palo = `M${P2(-0.35, 0)}L${P2(0.35, 0)}L${P2(0.35, -9)}L${P2(-0.35, -9)}ZM${P2(-2.8, -6.6)}L${P2(2.8, -6.6)}L${P2(2.8, -5.9)}L${P2(-2.8, -5.9)}Z`;
+    const fruta = (fx, fy, r) => `M${P2(fx - r, fy)}a${f1(r * k)} ${f1(r * k)} 0 1 0 ${f1(2 * r * k)} 0a${f1(r * k)} ${f1(r * k)} 0 1 0 ${f1(-2 * r * k)} 0`;
+    const jocotes = [[-2.4, -5.3], [2.4, -5.3], [0, -9.4]].map(([fx, fy]) => fruta(fx, fy, 0.55)).join('');
+    const mangos = [[-1.2, -5.4], [1.2, -5.4], [0.7, -3.6]].map(([fx, fy]) => fruta(fx, fy, 0.6)).join('');
+    const cadena = `M${P2(-2.8, -6.3)}L${P2(-2, -4.6)}L${P2(-1.2, -6.2)}L${P2(-0.4, -4.6)}L${P2(0.4, -6.2)}L${P2(1.2, -4.6)}L${P2(2, -6.2)}L${P2(2.8, -4.6)}`;
+    cruzMayo = `<g class="v-cruz-mayo"><path class="v-cm-palo" d="${palo}"/><path class="v-cm-cadena" d="${cadena}" stroke-width="${f1(0.5 * u)}"/><path class="v-cm-jocote" d="${jocotes}"/><path class="v-cm-mango" d="${mangos}"/></g>`;
+  }
   // Fiestas patrias (13 al 15 de septiembre): la bandera azul y blanca en su asta, en la plaza.
   let patrias = '';
   if (pz) {
@@ -256,12 +367,17 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
   let navidad = '';
   if (pz) navidad = pinoPlaza(pz.cx, yg - 0.6 * pz.k, pz.k * 1.05 * pz.alto) + portal(pz.cx + pz.w * 0.62, yg + 0.4 * pz.k, pz.k * 0.9, sol);
   // El árbol de la plaza, un maquilishuat (en febrero, todo rosado); en Navidad deja su sitio al pino.
+  // (Pulido) La sombra del árbol de la plaza (o del pino) en el suelo, como la de las casas.
+  if (pz) add('sombra', elipse(pz.cx - sol * 1.5 * pz.k, yg - 0.2 * pz.k, 5.2 * pz.k, 0.9 * pz.k));
   const mango = pz ? (() => { const k = pz.k, c = facetas(pz.cx, yg - 12 * k, 8.4 * k, 6.2 * k, [1, 0.93, 1.05, 0.96, 1.02, 0.91, 1.04], sol, 0.3, undefined, 0.55); return `<path class="v-flores v-flores-maqui v-sin-navidad" d="M${f1(pz.cx - 9 * k)} ${f1(yg + 0.4 * k)}Q${f1(pz.cx)} ${f1(yg - 1.4 * k)} ${f1(pz.cx + 9 * k)} ${f1(yg + 0.4 * k)}Q${f1(pz.cx)} ${f1(yg + 1.8 * k)} ${f1(pz.cx - 9 * k)} ${f1(yg + 0.4 * k)}Z"/><path class="v-pz-tronco v-sin-navidad" d="${poli([[pz.cx - 0.9 * k, yg - 0.6 * k], [pz.cx + 0.9 * k, yg - 0.6 * k], [pz.cx + 0.6 * k, yg - 8 * k], [pz.cx - 0.6 * k, yg - 8 * k]])}"/><path class="copa v-maqui v-sin-navidad" d="${c.base}"/><path class="copa-media v-maqui v-sin-navidad" d="${c.media}"/><path class="copa-luz v-maqui v-sin-navidad" d="${c.luz}"/><path class="copa-sombra v-maqui v-sin-navidad" d="${c.sombra}"/>`; })() : '';
   // El humo del fogón (ambiente, a sus horas): tres bocanadas a destiempo de la primera cocina.
   const humo = humos.slice(0, sit.forma === 'esc' ? 2 : 1).map(([hx, hy], i) => [0, 1, 2].map((j) => `<circle class="efecto-ambiente v-humos v-hu v-hu-${j}${i ? ' v-hu-b' : ''}" cx="${f1(hx)}" cy="${f1(hy)}" r="${f1((1.4 + j * 0.45) * u)}"/>`).join('')).join('');
   const sw = (n) => ` stroke-width="${f1(n * u)}"`;
-  const p = (clase, k, extra = '') => (A[k] ? `<path class="${clase}" d="${A[k]}"${extra}/>` : '');
+  const p = (clase, k, extra = '', X = A) => (X[k] ? `<path class="${clase}" d="${X[k]}"${extra}/>` : '');
   const frentes = COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`)).join('');
+  // La fila de atrás, entera y en su orden (sombra, muro de la terraza, paredes, tejados, puertas y ventanas), antes que la iglesia.
+  const filaAtras = p('v-sombra', 'sombra', '', B) + p('v-terraza', 'terraza', '', B) + COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`, '', B)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`, '', B)).join('')
+    + p('v-alero', 'alero', '', B) + p('v-techo-l', 'techo-l', '', B) + p('v-techo-s', 'techo-s', '', B) + p('v-teja', 'teja', sw(0.6), B) + p('v-poste', 'poste', sw(0.55), B) + p('v-puerta', 'puerta', '', B) + p('v-ventana v-ventana-atras', 'ventana', '', B);
   // Los árboles de aquí, detrás de las casas (campamento 22B, idea 56, ahora en el pueblo): un maquilishuat junto a la iglesia (en
   // febrero, todo rosado) y un árbol de fuego al final de la calle (en abril, rojo). Con sus flores caídas cuando florecen.
   const arbolito = (sp, x, y, r) => {
@@ -273,18 +389,20 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     return `<path class="v-flores v-flores-${sp}" d="M${f1(fx - fr)} ${f1(fy)}Q${f1(fx)} ${f1(fy - 1.6 * u)} ${f1(fx + fr)} ${f1(fy)}Q${f1(fx)} ${f1(fy + 1.6 * u)} ${f1(fx - fr)} ${f1(fy)}Z"/><path class="v-ar-tronco" d="${tronco}"/>`
       + `<path class="copa v-${sp}" d="${c.base}"/><path class="copa-media v-${sp}" d="${c.media}"/><path class="copa-luz v-${sp}" d="${c.luz}"/><path class="copa-sombra v-${sp}" d="${c.sombra}"/>`;
   };
-  const fuegoV = arbolito('fuego', Math.min(sit.xFin + 7 * u, (sit.xMaxArbol ?? Infinity)), yg + 0.6 * u, 6.6 * u); // al final de la calle, a la vista
+  // (Pulido del pueblo) Si el árbol del primer día está en ese sitio, el de fuego no se pone: sus dos troncos juntos se leían como una persona.
+  const xFuego = Math.min(sit.xFin + 7 * u, (sit.xMaxArbol ?? Infinity)), rFuego = 6.6 * u * 1.3 + 2 * u;
+  const fuegoV = evitar && xFuego + rFuego > evitar[0] && xFuego - rFuego < evitar[1] ? '' : arbolito('fuego', xFuego, yg + 0.6 * u, 6.6 * u); // al final de la calle, a la vista
+  if (fuegoV) add('sombra', elipse(xFuego - sol * 1.6 * u, yg + 0.9 * u, 6 * u, 1.1 * u));
   // Los charcos de luz: dos trazos (el halo ancho y el centro), sin degradados (más baratos de pintar que una elipse con degradado cada uno).
-  const elipse = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
   const luzSuelo = `<path class="v-charco" d="${charcos.map(([x, y, r]) => elipse(x, y, r, r * 0.32)).join('')}"/><path class="v-charco v-charco-c" d="${charcos.map(([x, y, r]) => elipse(x, y, r * 0.5, r * 0.16)).join('')}"/>`;
-  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}`
-    + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
-    + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-poste', 'poste', sw(0.55))}`
+  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${filaAtras}`
+    + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-relieve', 'ig-relieve')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-atrio', 'ig-atrio')}${p('v-ig-atrio-s', 'ig-atrio-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
+    + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-chimenea', 'chimenea')}${p('v-poste', 'poste', sw(0.55))}`
     + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`
     + `${mango}${fuegoV}${navidad}`
     + `${p('v-farol-poste', 'farol-poste', sw(0.55))}${p('v-farol-lampara', 'farol-lampara')}${p('v-farol-luz', 'farol-luz', sw(3.4))}`
     + `<path class="v-cordel" d="${cuerda}"${sw(0.3)}/>${foco.map((d, j) => `<path class="v-navidad v-foco v-foco-${j}" d="${d}"${sw(1.15)}/>`).join('')}${bandera.map((d, j) => `<path class="v-fiesta v-band v-band-${j}" d="${d}"/>`).join('')}`
-    + `${patrias}${p('v-gente', 'gente')}${p('v-animal', 'animal')}${p('v-gallina', 'gallina')}${humo}</g>`;
+    + `${patrias}${cruzMayo}<g class="v-vecinos">${vecinos}</g>${p('v-animal', 'animal')}${p('v-gallina', 'gallina')}${humo}</g>`;
 }
 
 /** El pino de Navidad de la plaza: cuatro pisos en sombra y luz, una guirnalda dorada, esferas y foquitos de tres colores. Sin estrella. */
@@ -371,7 +489,7 @@ export function llano(geo) {
  * Los campos del llano: parcelas en perspectiva (verde tierno, verde hondo y la del color de la época), separadas por setos de matas,
  * entre el bosque del pie de la montaña y el pueblo. Una de ellas es la milpa (devuelve su sitio). De `x0` a `x1`.
  */
-export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx }) {
+export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx, evitar = null, ancho = Infinity, techoPueblo = -Infinity, lago = null }) {
   const rnd = azar(83);
   const tono = ['', '', '', ''];
   let surco = '', copa = '', copaL = '', tronco = '', loma = '';
@@ -390,7 +508,28 @@ export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx }) {
       tono[t] += poli([...arriba, ...abajo.reverse()]);
       // Surcos: en las parcelas aradas y en las de la época, rayas que siguen la loma.
       if (t >= 2) for (const s of [0.35, 0.7]) surco += `M${curva(j, a + 3 * k, b - 3 * k).map(([x, y]) => P([x + (x - vx) * 0.22 * (fr[j] + (fr[j + 1] - fr[j]) * s), y + (yF(j + 1, x) - y) * s])).join('L')}`;
-      if (j === 2 && b - a > mejor) { mejor = b - a; const ya = Math.max(yF(2, a), yF(2, b)); milpa = { x: inclina(a, 2) + 3 * k, y: ya + 2 * k, w: b - a - 8 * k, h: Math.max(8 * k, yAbajo - ya - 4 * k), caida: 0 }; }
+      // La milpa: la parcela de delante más ancha. (Pulido del paisaje bajo) Con `evitar` (el pueblo, [x0, x1]), primero las de delante
+      // que quedan fuera de él y dentro de la pantalla; si no hay, una de la franja de atrás que quede entera por encima de sus tejados
+      // (`techoPueblo`, al pie del bosque); si tampoco, no hay milpa en ese tamaño. Detrás de las casas, sus matas salían entre los
+      // tejados y bajo la calle parecían una cerca. Solo elige: no gasta azar (los campos se ven igual).
+      // El trozo de la parcela donde puede ir: dentro de la pantalla y fuera del pueblo (el mayor de los dos lados); `crudo` deshace la
+      // inclinación de la franja para medir su alto en ese trozo.
+      const A = inclina(a, j), B = inclina(b, j), crudo = (X) => (X + vx * 0.22 * fr[j]) / (1 + 0.22 * fr[j]);
+      let lados = [[Math.max(A, 2), Math.min(B, ancho - 2)]];
+      for (const [e0, e1] of evitar ? (Array.isArray(evitar[0]) ? evitar : [evitar]) : []) lados = lados.flatMap(([s0, s1]) => [[s0, Math.min(s1, e0)], [Math.max(s0, e1), s1]]).filter(([s0, s1]) => s1 > s0);
+      const [sa, sb] = evitar ? lados.reduce((u, s) => (s[1] - s[0] > u[1] - u[0] ? s : u), [0, 0]) : [A, B];
+      const ra = crudo(sa), rb = crudo(sb), ya = Math.max(yF(j, ra), yF(j, rb)), yb = Math.min(yF(j + 1, ra), yF(j + 1, rb));
+      // Ni en el lago: sus matas (unas 11 unidades de alto) no pueden subir hasta el agua.
+      const enLago = (x0l, x1l) => lago && x0l < lago[2] + 4 && x1l > lago[0] - 4 && ya - 11 * k < lago[3] + 2 && yb > lago[1];
+      const ancha = sb - sa >= 26 * k;
+      // Primero un trozo fuera del pueblo (mejor delante); si no, la parcela entera de atrás que quede por encima de sus tejados.
+      const sobre = evitar && j === 0 && Math.max(yF(1, a), yF(1, b)) < techoPueblo && A >= 2 && B <= ancho - 2 && !enLago(A, B);
+      const valor = !evitar ? (j === 2 ? b - a : -1) : ancha && !enLago(sa, sb) ? (sb - sa) + [1e4, 2e4, 3e4][j] : sobre ? (B - A) + 5e3 : -1;
+      if (valor > mejor) {
+        mejor = valor;
+        const [x0m, x1m] = !evitar || !(ancha && !enLago(sa, sb)) ? [A, B] : [sa, sb], y0m = Math.max(yF(j, crudo(x0m)), yF(j, crudo(x1m))), y1m = Math.min(yF(j + 1, crudo(x0m)), yF(j + 1, crudo(x1m)));
+        milpa = { x: x0m + 3 * k, y: y0m + 2 * k, w: x1m - x0m - 8 * k, h: Math.max(8 * k, y1m - y0m - 4 * k), caida: 0 };
+      }
       a = b;
     }
     // La loma de esta franja: un filo de luz en su borde de arriba.
@@ -416,7 +555,7 @@ export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx }) {
   const svg = tono.map((d, i) => `<path class="v-parc v-parc-${i}" d="${d}"/>`).join('') + `<path class="v-surco" d="${surco}" stroke-width="${f1(0.8 * k)}"/><path class="v-loma-campo" d="${loma}" stroke-width="${f1(1.1 * k)}"/>`
     + `<path class="v-arbolito-tronco" d="${tronco}" stroke-width="${f1(0.9 * k)}"/><path class="v-arbolito" d="${copa}"/><path class="v-arbolito-l" d="${copaL}"/>`
     + `<path class="v-mar v-mar-luz v-mar-valle" d="${velo(-8 * k, 5)}"/><path class="v-mar v-mar-cuerpo v-mar-valle" d="${velo(2 * k, 9)}"/>`;
-  return { svg, milpa };
+  return { svg, milpa: evitar && mejor < 0 ? null : milpa };
 }
 
 /**

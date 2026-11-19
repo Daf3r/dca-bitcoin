@@ -198,6 +198,22 @@ const PESOS = [
   ['campamento 22C: el valle, de verdad (el', 28], // 21 comprobaciones
   ['campamento 23: tu camino, otra vez (tal', 87], // 52 comprobaciones
   ['campamento 25: los osos polares de pel', 167], // 98 comprobaciones (medido en su parte, el 18 nov 2026)
+  ['campamento 26: los osos en la interfaz', 46], // 22 comprobaciones
+  ['campamento 27: cuando algo no va', 25], // 4 comprobaciones
+  ['campamento 28: según el momento', 40], // 9 comprobaciones
+  ['campamento 29: detalles con cariño', 45], // 7 comprobaciones
+  ['campamento 30: hacer sitio', 30], // 9 comprobaciones
+  ['campamento 31: «Tú» sube como oso', 45], // 12 comprobaciones
+  ['campamento 32: el teleférico del valle', 35], // 11 comprobaciones
+  ['campamento 33: más ositos en el paisaje', 35], // 3 comprobaciones
+  ['campamento 34: el pueblo vive', 35], // 10 comprobaciones
+  ['pulido del pueblo: las casas en su sit', 30], // 4 comprobaciones
+  ['pulido de la iglesia y el paisaje bajo', 45], // 6 comprobaciones
+  ['campamento 35: el pueblo de los osos', 90], // 16 comprobaciones
+  ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
+  ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
+  ['campamento 38: lo que cambia de la app', 25], // 3 comprobaciones
+  ['pulido integral: el movimiento (nada co', 90], // 16 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -1033,7 +1049,8 @@ try {
           primero: `${h.firstElementChild.tagName.toLowerCase()}|${h.firstElementChild.getAttribute('role')}`,
           capas: [...h.querySelectorAll(':scope > svg.capa')].map((s) => `${[...s.classList].find((c) => c.startsWith('par-'))}|${s.getAttribute('aria-hidden')}|${cs(s).zIndex}|${cs(s).willChange}|${cs(s).transform}`),
           grupos: h.querySelector('svg').querySelectorAll('.par').length,
-          frente: (() => { const f = h.querySelector(':scope > svg.frente'); return f ? `${f.previousElementSibling === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
+          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino')) x = x.previousElementSibling; // (32, 34, 37) entre los dos, solo las capas pequeñas de la cabina y de los animales del pueblo
+          return f ? `${x === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
           alba: document.getElementById('m-alba').ownerSVGElement.classList.contains('par-cielo'),
           aislada: cs(h).isolation, velo: cs(document.querySelector('.escena-velo')).willChange,
           toques: [cs(h.querySelector('svg')).pointerEvents, cs(h.querySelector('svg.capa')).pointerEvents],
@@ -1657,7 +1674,7 @@ try {
         humoVisible: camp.filter((c) => vis(c.querySelector('.humo')) !== 'none').length,
         humoEnAlcanzados: camp.filter((c) => c.classList.contains('alcanzado')).every((c) => vis(c.querySelector('.humo')) !== 'none'),
         fogataVisible: camp.filter((c) => vis(c.querySelector('.fogata')) !== 'none').map((c) => c.classList.contains('sig')),
-        huellas: document.querySelectorAll('#m-huellas circle').length,
+        huellas: Number(document.querySelector('#m-huellas .huellas-oso')?.dataset.n ?? 0), // (campamento 31) huellas de oso, en un solo trazo
         largo: document.getElementById('m-sendero').getTotalLength(),
         linterna: getComputedStyle(document.querySelector('.linterna')).opacity,
         huellasDisplay: vis(document.getElementById('m-huellas')),
@@ -1980,8 +1997,8 @@ try {
     const vac = await servidor('vacio');
     try {
       const { ctx, p } = await entrar(navegador, vac, ADMIN, { hora: 22 });
-      const r = await p.evaluate(() => { const i = document.querySelector('#lista .vacio.con-ilu .ilu'); const b = i?.getBoundingClientRect(); return { hay: !!i, w: b && Math.round(b.width), txt: document.querySelector('#lista .vacio')?.innerText }; });
-      ok(r.hay && r.w === 64 && /Aún no hay compras/.test(r.txt), `estado vacío: la lista sin compras lleva su dibujo (${r.w}px)`);
+      const r = await p.evaluate(() => { const i = document.querySelector('#lista .vacio.con-ilu .oso-ilu'); const b = i?.getBoundingClientRect(); return { hay: !!i, h: b && Math.round(b.height), txt: document.querySelector('#lista .vacio')?.innerText }; });
+      ok(r.hay && r.h === 96 && /Aún no hay compras/.test(r.txt), `estado vacío: la lista sin compras lleva su dibujo, el grande leyendo (campamento 26; ${r.h}px)`);
       await ctx.close();
     } finally {
       vac.parar();
@@ -2160,7 +2177,7 @@ try {
       await p.click('#cuenta-btn');
       await p.click('#dc-historia-btn');
       await p.waitForSelector('#dh-cuerpo:not([hidden]), #dh-vacio:not([hidden])', { timeout: 4000 }); await p.waitForTimeout(500); // «Tu historia» ahora es una sección de la página (el botón de «Tu cuenta» lleva hasta ella)
-      const v = await p.evaluate(() => ({ vacio: !document.getElementById('dh-vacio').hidden && !!document.querySelector('#dh-vacio .ilu'), cuerpo: document.getElementById('dh-cuerpo').hidden, txt: document.getElementById('dh-vacio').innerText }));
+      const v = await p.evaluate(() => ({ vacio: !document.getElementById('dh-vacio').hidden && !!document.querySelector('#dh-vacio .oso-ilu'), cuerpo: document.getElementById('dh-cuerpo').hidden, txt: document.getElementById('dh-vacio').innerText }));
       ok(v.vacio && v.cuerpo && /primera compra/.test(v.txt), 'historia: sin compras dice que empieza con la primera, con su dibujo');
       await ctx.close();
     } finally {
@@ -2304,8 +2321,10 @@ try {
       const cc = await p.locator('#c-lienzo').boundingBox();
       await p.evaluate(() => document.getElementById('c-lienzo').scrollIntoView({ block: 'center' }));
       const cc2 = await p.locator('#c-lienzo').boundingBox();
-      await p.mouse.move(cc2.x + cc2.width * 0.5, cc2.y + cc2.height * 0.5); await p.waitForTimeout(200);
-      ok(/costo promedio \$[\d,]+/.test(await p.textContent('#c-lectura')), 'al recorrer el gráfico del costo se lee cada compra');
+      await p.mouse.move(cc2.x + cc2.width * 0.5, cc2.y + cc2.height * 0.5);
+      // La lectura llega en el cuadro siguiente al movimiento: se espera a que llegue (con la escena ocupada, 200 ms fijos a veces no bastaban).
+      const leeCompra = await p.waitForFunction(() => /costo promedio \$[\d,]+/.test(document.getElementById('c-lectura').textContent), null, { timeout: 3000 }).then(() => true, () => false);
+      ok(leeCompra, 'al recorrer el gráfico del costo se lee cada compra');
       await p.mouse.move(5, 5);
       await p.focus('#c-lienzo'); await p.keyboard.press('Home');
       ok(/primera compra/.test(await p.textContent('#c-sr')) && /primera compra/.test(await p.textContent('#c-lectura')), 'con el teclado (Inicio) se lee la primera compra y se anuncia');
@@ -2984,9 +3003,10 @@ try {
       let r = await ent(navegador, sAnio, ADMIN, { hora: 12 }, con('2026-03-10'));
       const v = await r.p.evaluate(() => ({ vol: document.querySelector('.lejos')?.dataset.volcanes ?? '', ceniza: document.querySelectorAll('.volcan-ceniza').length }));
       ok(/izalco/.test(v.vol) && /santa-ana/.test(v.vol) && v.ceniza === 1, `volcanes en el teléfono (${v.vol})`);
-      // Fuera de temporada: sin papel picado ni cohetes; época seca de día: aire dorado y sin llovizna; de día no cruza el torogoz.
+      // Fuera de temporada: sin papel picado ni cohetes (desde el campamento 30 ni se dibujan: no hay elemento); época seca de día: aire
+      // dorado y sin llovizna; de día no cruza el torogoz.
       eq([await cs(r.p, '.papel-picado', 'display'), await cs(r.p, '.cohetes', 'display'), await cs(r.p, '.aire-seco', 'display'), await cs(r.p, '.clima-lluvia', 'display'), await cs(r.p, '.torogoz', 'animationName')],
-        ['none', 'none', 'inline', 'none', 'none'], 'fuera de temporada: sin papel picado ni cohetes; época seca: aire dorado; de día no cruza el torogoz');
+        [null, null, 'inline', 'none', 'none'], 'fuera de temporada: sin papel picado ni cohetes (ni dibujados); época seca: aire dorado; de día no cruza el torogoz');
       await r.ctx.close();
       r = await ent(navegador, sAnio, ADMIN, { hora: 12, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, con('2026-03-10'));
       ok(/san-salvador/.test(await r.p.evaluate(() => document.querySelector('.lejos').dataset.volcanes)), 'volcanes: en escritorio también el de San Salvador');
@@ -3772,7 +3792,8 @@ try {
         const v = await voz(l.p);
         eq([v.saldo, v.punto, v.marca], ['Saldo del libro', 'Vamos aquí', 'libro'], '17·2 lectora: «Saldo del libro» y «Vamos aquí»');
         eq(v.prox, 'Lo anota Daf3r', '17·2 lectora: dice quién lleva el libro (el nombre ya venía en la carta sembrada)');
-        ok(v.desc.startsWith('El libro está a 1,211,769 sats de altitud') && /Ya pasó 2 de 3 campamentos/.test(v.desc) && /Al pie crece el bosque del libro/.test(v.desc), `17·2 lectora: la descripción de la montaña habla del libro («${v.desc.slice(0, 70)}…»)`);
+        // (El saldo del escenario cambia con el día real: desde el 19 nov 2026 a las 0:00 de El Salvador ya no es 1,211,769; también en main.)
+        ok(/^El libro está a [\d,]+ sats de altitud/.test(v.desc) && /Ya pasó 2 de 3 campamentos/.test(v.desc) && /Al pie crece el bosque del libro/.test(v.desc), `17·2 lectora: la descripción de la montaña habla del libro («${v.desc.slice(0, 70)}…»)`);
         ok(v.ayuda.startsWith('Saldo del libro.') && /Se alcanzó el /.test(v.banderas) && /Faltan [\d,]+ sats para la cumbre\. El libro va al \d+%\./.test(v.banderas), `17·2 lectora: ayuda del saldo y banderas («${v.banderas.slice(0, 90)}»)`);
         ok(!tuteo.test(v.todo) && !tuteo.test(v.desc) && !tuteo.test(v.banderas) && !tuteo.test(v.ayuda), `17·2 lectora: en la escena, el título y la mini-cabecera nada dice «tu» («${(tuteo.exec(`${v.todo} ${v.desc} ${v.banderas}`) ?? [''])[0]}»)`);
         ok(v.pildora && v.pildora[0] >= 4 && v.pildora[1] <= v.ancho - 4, `17·2 lectora: la píldora «Vamos aquí» cabe en la escena (${v.pildora})`);
@@ -6047,7 +6068,7 @@ try {
         milpa: ['siembra', 'jilote', 'doblada', 'tapisca', 'rastrojo'].filter((e) => visto(`.v-mp-${e}`)),
         // Ninguna luz de la sierra queda tapada por la loma del cantón ni por la montaña (se cuentan las que se ven).
         lucesTapadas: (() => { const loma = document.querySelector('.v-loma'), monte = document.querySelector('path.monte'); return [...(document.querySelector('.v-luz-lejos')?.getAttribute('d') ?? '').matchAll(/M([\d.]+) ([\d.]+)/g)].filter(([, x, y]) => { const q = new DOMPoint(Number(x), Number(y)); return loma.isPointInFill(q) || monte.isPointInFill(q); }).length; })(),
-        humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: getComputedStyle(document.querySelector('.v-pn-foco')).animationName,
+        humo: visto('.v-humos'), navidad: visto('.v-canton .v-navidad') && visto('.v-pino-nav'), pinoParpadea: (() => { const f = document.querySelector('.v-pn-foco'); return f ? getComputedStyle(f).animationName : 'sin pino'; })(), // (30) fuera de la Navidad no se dibuja
         pis: document.querySelectorAll('.v-pis').length, pisVis: visto('.v-piscuchas'), pisCaja: caja('.v-pis'),
         // El ritmo de cada piscucha y de cada bocanada de humo (campamento 22B: va por clase, no por su orden): duración/retraso.
         ritmoPis: [...document.querySelectorAll('.v-pis')].map((e) => `${getComputedStyle(e).animationDuration}/${getComputedStyle(e).animationDelay}`),
@@ -6630,7 +6651,8 @@ try {
     // caben, los tres; si no, la pareja o el grande; si no, ninguno. Nunca tocan nada.
     const MATRIZ = { anio: [[390, 844, 3], [430, 873, 3], [390, 664, 3], [320, 568, 1], [844, 390, 1], [768, 1024, 3], [1440, 900, 3], [2560, 1440, 3]], mil: [[390, 844, 3], [1440, 900, 3], [320, 568, 0]], ballena: [[390, 844, 3], [1440, 900, 3], [844, 390, 0]], hoy: [[390, 844, 3], [844, 390, 2]] };
     for (const [esc, tams] of Object.entries(MATRIZ)) {
-      const srv = await servidor(esc);
+      // Los datos del escenario se fijan a un miércoles: a 320×568 que quepa o no el oso depende de la cifra del saldo, que cambia con el día de la semana (un jueves salía 0).
+      const srv = await servidor(esc, { FECHA_PRUEBA: '2026-11-18' });
       try {
         for (const [w, h, esperados] of tams) {
           const t = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: w, height: h }, deviceScaleFactor: 1, isMobile: w < 900, hasTouch: w < 1100, pestanas: true }, conLs({ 'libro.efectos': 'ninguno' }));
@@ -6794,14 +6816,17 @@ try {
       await pe.p.keyboard.press('End'); await pe.p.waitForTimeout(200);
       e = await osos(pe.p, '#pe-montana');
       ok(e.n === enPagina.n && e.fallos.length === 0, `25·película: hoy, los mismos que en la página (${resumen(e)})`);
-      // «El oso cede»: con «Tú» junto a la cumbre (su rótulo y su placa caen sobre ellos) se esconden; de vuelta en hoy, se ven otra vez.
-      await pe.p.evaluate(async () => {
-        const M = await import(document.querySelector('link[rel=modulepreload][href*="montana.js"]').href);
-        const host = document.getElementById('pe-montana'), esc = M.escalaDe(host);
-        M.fotograma(host, Math.round(esc.base * (esc.cima / esc.base) ** 0.995), { quieto: true, rotulo: 'Tú' });
-      });
-      e = await osos(pe.p, '#pe-montana');
-      ok(e.n === 0 && e.escondidos === 'rótulo', `25·película: con «Tú» junto a la cumbre, el oso cede: se esconden (${JSON.stringify(e)})`);
+      // «El oso cede»: con «Tú» llegando a la cumbre, en cada fotograma, o nada cae sobre los osos o ceden (se esconden); de vuelta en hoy,
+      // se ven otra vez. (Desde el campamento 31 «Tú» es un osito y su rótulo se aparta de su caja: aquí ya no cae sobre ellos.)
+      for (const x of [0.95, 0.98, 0.985, 0.99, 0.995, 1]) {
+        await pe.p.evaluate(async (x) => {
+          const M = await import(document.querySelector('link[rel=modulepreload][href*="montana.js"]').href);
+          const host = document.getElementById('pe-montana'), esc = M.escalaDe(host);
+          M.fotograma(host, Math.round(esc.base * (esc.cima / esc.base) ** x), { quieto: true, rotulo: 'Tú' });
+        }, x);
+        e = await osos(pe.p, '#pe-montana');
+        ok(e.escondidos === 'rótulo' || (e.n > 0 && e.fallos.length === 0), `25·película ${x}: con «Tú» junto a la cumbre, nada cae sobre los osos o ceden (${JSON.stringify(e)})`);
+      }
       await pe.p.keyboard.press('Home'); await pe.p.keyboard.press('End'); await pe.p.waitForTimeout(200);
       e = await osos(pe.p, '#pe-montana');
       ok(e.n === enPagina.n && e.fallos.length === 0, `25·película: de vuelta en hoy, se ven otra vez (${resumen(e)})`);
@@ -6843,6 +6868,705 @@ try {
         await ctx.close();
       }
     } finally { sE.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamento 26: los osos en la interfaz (la lista y «Tu historia» sin compras, la bienvenida, las cartas y la guía)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const decorativo = (s) => Boolean(s) && s.getAttribute('aria-hidden') === 'true' && s.getAttribute('focusable') === 'false' && !s.closest('[role="img"]');
+    // Sin compras: el grande lee en la lista y lleva su mochila en «Tu historia»; quien solo mira no recibe «Anota la primera».
+    const vac = await servidor('vacio');
+    try {
+      for (const [cuenta, quien] of [[ADMIN, 'el dueño'], [LECTOR, 'quien solo mira']]) {
+        const t = await entrar(navegador, vac, cuenta, { hora: 12, viewport: { width: 320, height: 640 } }, conLs());
+        await cerrar(t.p);
+        await t.p.click('#cuenta-btn'); await t.p.click('#dc-historia-btn');
+        await t.p.waitForSelector('#dh-vacio:not([hidden])', { timeout: 4000 }); await t.p.waitForTimeout(400);
+        const r = await t.p.evaluate((decorativoTxt) => {
+          const decorativo = new Function(`return ${decorativoTxt}`)();
+          const li = document.querySelector('#lista .vacio'), s = li?.querySelector(':scope > svg.oso-ilu'), h = document.querySelector('#dh-vacio > svg.oso-ilu');
+          return { lee: Boolean(s?.classList.contains('oso-pose-lee')) && decorativo(s), alto: Math.round(s?.getBoundingClientRect().height ?? 0), linea: Boolean(li?.querySelector('.ilu')), txt: li?.innerText ?? '',
+            mochila: Boolean(h?.classList.contains('oso-pose-mochila')) && decorativo(h), htxt: document.getElementById('dh-vacio').innerText, ancho: document.documentElement.scrollWidth <= innerWidth };
+        }, decorativo.toString());
+        ok(r.lee && r.alto === 96 && !r.linea, `26 lista sin compras (${quien}): el grande leyendo, decorativo y en el sitio del dibujo de línea (${r.alto} px)`);
+        ok(quien === 'el dueño' ? /Anota la primera o importa un CSV/.test(r.txt) : r.txt.trim() === 'Aún no hay compras en el libro.', `26 lista sin compras (${quien}): «${r.txt.trim()}»`);
+        ok(r.mochila && /primera compra/.test(r.htxt), `26 «Tu historia» sin compras (${quien}): el grande con su mochila, sobre «${r.htxt.trim()}»`);
+        ok(r.ancho && t.consola.length === 0, `26 sin compras a 320 px (${quien}): sin desplazamiento de lado y consola limpia (${t.consola.slice(0, 2)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      vac.parar();
+    }
+    // La bienvenida de quien solo mira: los tres saludan arriba del título, solo si cabe; el brazo saluda solo con «todos».
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h, ef, letra] of [[390, 844, 'todos', ''], [360, 640, 'ninguno', ''], [320, 568, 'todos', ''], [390, 844, 'todos', 'muy-grande']]) {
+        const t = await entrar(navegador, anio, LECTOR, { hora: 12, viewport: { width: w, height: h } }, conLs({ 'libro.efectos': ef, ...(letra ? { 'libro.letra': letra } : {}) }));
+        await t.p.waitForSelector('#d-novedades[open]', { timeout: 8000 });
+        await t.p.waitForTimeout(1700);
+        const r = await t.p.evaluate(() => {
+          const d = document.getElementById('d-novedades'), o = document.getElementById('nov-osos'), s = o.querySelector('svg.oso-pose-saludan'), b = document.getElementById('nov-ok').getBoundingClientRect();
+          const brazo = s?.querySelector('.oso-saluda');
+          return { ve: !o.hidden && Boolean(s), aria: s?.getAttribute('aria-hidden'), cabe: d.scrollHeight <= d.clientHeight + 1, boton: b.bottom <= innerHeight && b.top >= 0, anim: brazo ? getComputedStyle(brazo).animationName : null, titulo: document.getElementById('nov-titulo').textContent, antes: o.nextElementSibling?.id };
+        });
+        const caso = `${w}×${h}, efectos ${ef}${letra ? `, letra ${letra}` : ''}`;
+        ok(r.titulo === 'Así va el libro' && r.boton && (!r.ve || r.cabe), `26 bienvenida (${caso}): «Entendido» a la vista y, con los osos, cabe sin desplazarse (osos ${r.ve}, cabe ${r.cabe})`);
+        if (w >= 360 && !letra) ok(r.ve && r.aria === 'true' && r.antes === 'nov-titulo', `26 bienvenida (${caso}): los tres saludan arriba del título, decorativos`);
+        if (w === 320) ok(!r.ve, `26 bienvenida (${caso}): no caben, así que no salen`);
+        if (r.ve) ok(r.anim === (ef === 'todos' ? 'oso-saluda' : 'none'), `26 bienvenida (${caso}): el brazo ${ef === 'todos' ? 'saluda' : 'se queda quieto'} (${r.anim})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+    // Cartas para el futuro: mientras no hay cartas, el dueño ve la invitación con el grande y su sobre (en 320 px, encima del texto).
+    const hoy = await servidor('hoy');
+    try {
+      for (const w of [390, 320]) {
+        const t = await entrar(navegador, hoy, ADMIN, { hora: 12, viewport: { width: w, height: 800 } }, conLs());
+        await cerrar(t.p);
+        const r = await t.p.evaluate(() => {
+          const c = document.getElementById('cap-pista'), s = c.querySelector(':scope > svg.oso-pose-sobre'), txt = c.querySelector(':scope > span');
+          const a = s?.getBoundingClientRect(), b = txt?.getBoundingClientRect();
+          return { ve: !c.hidden && Boolean(s) && s.getAttribute('aria-hidden') === 'true', uno: c.querySelectorAll('svg').length, lado: a && b ? (b.left >= a.right - 1 ? 'al lado' : b.top >= a.bottom - 1 ? 'encima' : 'encima a medias') : '', txt: txt?.textContent ?? '' };
+        });
+        ok(r.ve && r.uno === 1 && /Escribe una carta/.test(r.txt) && r.lado === (w >= 360 ? 'al lado' : 'encima'), `26 cartas a ${w} px: el sobre ${r.lado} de la invitación, una sola vez`);
+        await t.ctx.close();
+      }
+    } finally {
+      hoy.parar();
+    }
+    // La guía de estilo: las ocho poses y la huella, cada una con su nombre.
+    const g = await servidor('anio');
+    try {
+      const t = await entrar(navegador, g, ADMIN, { hora: 12 }, conLs());
+      await t.p.goto(`${g.url}/guia`, { waitUntil: 'networkidle' });
+      const r = await t.p.evaluate(() => [...document.querySelectorAll('#guia-osos li')].map((li) => [li.querySelector('svg.oso-ilu')?.getAttribute('aria-hidden'), li.innerText.trim()]));
+      ok(r.length === 9 && r.every(([a, n]) => a === 'true' && n.length > 2) && r.at(-1)[1] === 'La huella', `26 guía: las poses y la huella con su nombre (${r.map((x) => x[1]).join(', ')})`);
+      ok(t.consola.length === 0, `26 guía: consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+    } finally {
+      g.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 27: cuando algo no va (el grande confundido si no cargan las compras y dormido en el mantenimiento)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Si no cargan las compras: el texto de siempre (con la voz de cada uno) y el grande confundido en el sitio del dibujo.
+    const anio = await servidor('anio');
+    try {
+      for (const [cuenta, quien, texto] of [[ADMIN, 'el dueño', 'No se pudieron cargar tus compras.'], [LECTOR, 'quien solo mira', 'No se pudieron cargar las compras.']]) {
+        const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+        const p = await ctx.newPage();
+        await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } });
+        await p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
+        await p.fill('input[autocomplete="username"]', cuenta[0]); await p.fill('input[autocomplete="current-password"]', cuenta[1]);
+        await p.route('**/api/compras*', (r) => r.abort());
+        await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+        await p.waitForFunction(() => /No se pudieron/.test(document.querySelector('#lista .vacio')?.textContent ?? ''), null, { timeout: 30000 });
+        const r = await p.evaluate(() => {
+          const li = document.querySelector('#lista .vacio'), s = li.querySelector(':scope > svg.oso-ilu');
+          return { confundido: Boolean(s?.classList.contains('oso-pose-confundido')), aria: s?.getAttribute('aria-hidden'), alto: Math.round(s?.getBoundingClientRect().height ?? 0), txt: li.innerText.trim(), con: li.classList.contains('con-ilu') };
+        });
+        ok(r.confundido && r.aria === 'true' && r.alto === 92 && r.con && r.txt === texto, `27 sin poder cargar (${quien}): el grande confundido y «${r.txt}»`);
+        await ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+    // Mantenimiento (SOLO_LECTURA): el aviso de siempre, que sigue siendo un estado para el lector de pantalla, con el grande dormido al lado.
+    const mant = await servidor('anio', { SOLO_LECTURA: '1' });
+    try {
+      for (const w of [390, 320]) {
+        const m = await entrar(navegador, mant, ADMIN, { hora: 12, viewport: { width: w, height: 700 } }, conLs());
+        await cerrar(m.p);
+        const r = await m.p.evaluate(() => {
+          const e = document.getElementById('mant'), s = e.querySelector(':scope > svg.oso-pose-duerme'), t = e.querySelector(':scope > span');
+          const a = s?.getBoundingClientRect(), b = t?.getBoundingClientRect();
+          return { ve: !e.hidden && Boolean(s) && s.getAttribute('aria-hidden') === 'true', rol: e.getAttribute('role'), una: e.querySelectorAll('svg').length, lado: a && b ? b.left >= a.right - 1 : false, txt: t?.textContent ?? '', ancho: document.documentElement.scrollWidth <= innerWidth };
+        });
+        ok(r.ve && r.rol === 'status' && r.una === 1 && r.lado && /^Mantenimiento: por ahora solo se puede mirar/.test(r.txt) && r.ancho, `27 mantenimiento a ${w} px: el grande dormido a la izquierda del aviso, que sigue siendo un estado`);
+        await m.ctx.close();
+      }
+    } finally {
+      mant.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 28: según el momento (los osos de la interfaz se duermen, se abrigan, sacan el paraguas, la banderita y el gorrito)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    /** Qué se ve del grande que lee en la lista sin compras (todo va dibujado: el CSS enseña lo que toca). */
+    const lee = (p) => p.evaluate(() => {
+      const s = document.querySelector('#lista .vacio svg.oso-pose-lee');
+      const ve = (sel) => [...(s?.querySelectorAll(sel) ?? [])].some((e) => getComputedStyle(e).display !== 'none' && getComputedStyle(e.parentElement).display !== 'none');
+      return { hay: Boolean(s), abiertos: ve('.oso-ojos'), dormido: ve('.oso-ojos-zz') && ve('.oso-zz'), gorro: ve('.oso-gorro-nav'), gorrito: ve('.oso-gorro'), paraguas: ve('.oso-paraguas'), bandera: ve('.oso-bandera') };
+    });
+    const vac = await servidor('vacio');
+    try {
+      const casos = [
+        ['un día cualquiera, 12 h', '2026-11-25', 12, {}, { abiertos: true, dormido: false, gorro: false, paraguas: false, bandera: false }],
+        ['de madrugada con el velo apagado, 23 h', '2026-11-25', 23, { 'libro.madrugada': '0' }, { abiertos: false, dormido: true }],
+        ['a las 5 ya despierto', '2026-11-25', 5, {}, { abiertos: true, dormido: false }],
+        ['Nochebuena', '2026-12-24', 12, {}, { gorro: true, paraguas: false }],
+        ['una tarde de lluvia, 15 h', '2026-07-10', 15, {}, { paraguas: true, bandera: false }],
+        ['la misma noche de lluvia, 19 h', '2026-07-10', 19, {}, { paraguas: false }],
+        ['una tarde de la época seca, 15 h', '2026-02-10', 15, {}, { paraguas: false }],
+        ['el 15 de septiembre', '2026-09-15', 12, {}, { bandera: true }],
+      ];
+      for (const [caso, dia, hora, extra, espera] of casos) {
+        const t = await entrar(navegador, vac, ADMIN, { hora }, conLs({ 'libro.dia': dia, ...extra }));
+        await cerrar(t.p);
+        const r = await lee(t.p);
+        ok(r.hay && Object.entries(espera).every(([k, v]) => r[k] === v), `28 ${caso}: ${JSON.stringify(r)}`);
+        await t.ctx.close();
+      }
+      // El cumpleaños de alguien de la familia: el grande estrena su gorrito (no dice de quién) y deja el gorro de Navidad.
+      const t = await entrar(navegador, vac, ADMIN, { hora: 12 }, conLs({ 'libro.dia': '2026-12-02' }));
+      await cerrar(t.p);
+      await t.p.evaluate(() => fetch('/api/yo/cumple', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ cumple: '12-02' }) }));
+      await t.p.reload({ waitUntil: 'networkidle' }); await t.p.waitForTimeout(2600); await cerrar(t.p);
+      const r = await lee(t.p);
+      ok(r.gorrito && !r.gorro, `28 un cumpleaños en diciembre: el gorrito y no el gorro de Navidad (${JSON.stringify(r)})`);
+      await t.ctx.close();
+    } finally {
+      vac.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 29: detalles con cariño (la huella del libro de cumbre, la tele dormida y el teleférico de la película)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const anio = await servidor('anio');
+    try {
+      // El libro de cumbre de un campamento alcanzado: la huella junto a «Libro de cumbre», del color de la tinta, decorativa.
+      {
+        const t = await entrar(navegador, anio, LECTOR, { hora: 12 }, conLs());
+        await cerrar(t.p);
+        const abrirLibro = async () => {
+          await t.p.evaluate(() => window.scrollTo(0, 0)); await t.p.waitForTimeout(400);
+          if (!(await t.p.evaluate(() => document.getElementById('m-firmas')?.checkVisibility()))) {
+            await t.p.evaluate(() => [...document.querySelectorAll('#m-banderas .m-bandera')].find((x) => /alcanz|pasaste|pasó/i.test(x.getAttribute('aria-label') || ''))?.click());
+            await t.p.waitForTimeout(600);
+          }
+          await t.p.evaluate(() => document.getElementById('m-firmas')?.click());
+          await t.p.waitForSelector('#d-firmas[open]', { timeout: 4000 });
+        };
+        await abrirLibro();
+        const r = await t.p.evaluate(() => {
+          const marca = document.querySelector('#d-firmas .fi-marca'), s = marca.querySelector(':scope > svg.oso-huella'), tinta = getComputedStyle(marca).color;
+          return { hay: Boolean(s) && s.getAttribute('aria-hidden') === 'true', una: marca.querySelectorAll('svg').length, txt: marca.innerText.trim(), color: s ? getComputedStyle(s.querySelector('path')).fill === tinta : false };
+        });
+        ok(r.hay && r.una === 1 && /^libro de cumbre$/i.test(r.txt) && r.color, `29 libro de cumbre: una huella del color de la tinta junto a «${r.txt}»`);
+        await t.p.keyboard.press('Escape'); await t.p.waitForTimeout(300);
+        await abrirLibro();
+        ok(await t.p.evaluate(() => document.querySelectorAll('#d-firmas .fi-marca svg').length) === 1, '29 libro de cumbre: al volver a abrirlo, sigue una sola huella');
+        await t.ctx.close();
+      }
+      // La tele dormida (23:30): los tres durmiendo bajo la hora, tenues, dentro de la caja que se corre con la hora.
+      {
+        const t = await entrar(navegador, anio, LECTOR, { hora: 23.5, viewport: { width: 1920, height: 1080 } }, conLs());
+        await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.reload({ waitUntil: 'networkidle' }); await t.p.waitForTimeout(4500);
+        const r = await t.p.evaluate(() => {
+          const caja = document.getElementById('tvn-caja'), s = caja.querySelector(':scope > svg.oso-pose-duermen');
+          return { duerme: document.documentElement.dataset.tvDuerme === '1', hay: Boolean(s) && s.getAttribute('aria-hidden') === 'true', op: s ? Number(getComputedStyle(s).opacity) : 1, abajo: s ? s.getBoundingClientRect().top >= document.querySelector('.tvn-nota').getBoundingClientRect().bottom - 1 : false, una: caja.querySelectorAll('svg.oso-ilu').length };
+        });
+        ok(r.duerme && r.hay && r.una === 1 && r.op > 0.3 && r.op < 0.5 && r.abajo, `29 la tele dormida: los tres durmiendo bajo la hora, tenues (${JSON.stringify(r)})`);
+        await t.ctx.close();
+      }
+      // La tarjeta de la película: la cabina del teleférico, sin tocar el botón ni desbordar, en el teléfono y en escritorio.
+      for (const [w, h] of [[320, 640], [390, 844], [768, 1024], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: w, height: h } }, conLs());
+        await cerrar(t.p);
+        await t.p.click('#cuenta-btn'); await t.p.click('#dc-historia-btn');
+        await t.p.waitForSelector('#dh-peli:not([hidden])', { timeout: 6000 }); await t.p.waitForTimeout(300);
+        const r = await t.p.evaluate(() => {
+          const c = document.getElementById('dh-peli'), s = c.querySelector(':scope > svg.oso-pose-teleferico'), b = document.getElementById('dh-peli-ver').getBoundingClientRect(), q = c.getBoundingClientRect(), a = s?.getBoundingClientRect();
+          const cruza = a && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+          return { hay: Boolean(s) && s.getAttribute('aria-hidden') === 'true', boton: Math.round(b.height), dentro: a ? a.left >= q.left && a.right <= q.right + 0.5 && b.right <= q.right + 0.5 : false, cruza, ancho: document.documentElement.scrollWidth <= innerWidth, una: c.querySelectorAll('svg.oso-ilu').length };
+        });
+        ok(r.hay && r.una === 1 && r.boton >= 48 && r.dentro && !r.cruza && r.ancho, `29 la película a ${w} px: la cabina dentro de la tarjeta, sin tocar «Ver la película» (${r.boton} px)`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 30: hacer sitio (lo de otra temporada no se dibuja ese día, los peldaños en un trazo y las capas sin grupo vacío)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const piezas = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), n = (sel) => h.querySelectorAll(sel).length;
+      return { total: n('*'), navidad: n('.v-navidad'), bufanda: n('.oso-bufanda'), cohetes: n('.cohetes'), papel: n('.papel-picado'), fiesta: n('.v-fiesta'), piscuchas: n('.v-piscuchas'), zompopos: n('.v-zompopos'), milpa: [...new Set([...h.querySelectorAll('.v-mp')].map((e) => [...e.classList].find((c) => /^v-mp-(siembra|jilote|doblada|tapisca|rastrojo)$/.test(c))))], llena: n('.v-q-llena'), hilo: n('.v-q-hilo'), peldanos: n('.peldano'), vacios: [...h.querySelectorAll(':scope > svg.capa > g')].filter((g) => !g.attributes.length).length, milpaHtml: document.documentElement.dataset.milpa };
+    });
+    const mil = await servidor('mil');
+    try {
+      // Un día cualquiera de noviembre (época seca, piscuchas): sin Navidad, sin cohetes, sin papel picado ni banderas, sin zompopos; de la
+      // milpa solo su etapa de hoy; de la quebrada, solo el hilo.
+      const t = await entrar(navegador, mil, ADMIN, { hora: 12, viewport: { width: 390, height: 664 } }, conLs({ 'libro.dia': '2026-11-25', 'libro.efectos': 'esenciales' }));
+      await cerrar(t.p);
+      let r = await piezas(t.p);
+      ok(r.navidad === 0 && r.bufanda === 0 && r.cohetes === 0 && r.papel === 0 && r.fiesta === 0 && r.zompopos === 0 && r.piscuchas > 0, `30 un día de noviembre: nada de otra temporada en la escena (${JSON.stringify(r)})`);
+      ok(r.milpa.length === 1 && r.milpa[0] === `v-mp-${r.milpaHtml}` && r.llena === 0 && r.hilo > 0, `30 la milpa solo en su etapa de hoy (${r.milpa}) y la quebrada de la época seca`);
+      ok(r.peldanos === 1 && r.vacios === 0, `30 los peldaños en un solo trazo (${r.peldanos}) y las capas sin su grupo vacío (${r.vacios})`);
+      ok(r.total <= 960, `30 la escena con mil compras un día de noviembre: ${r.total} nodos (antes, 1070)`);
+      // Si cambia el día con la página abierta (cielo.js avisa con «libro:dia»), la escena se vuelve a dibujar con lo de la temporada nueva.
+      const r2 = await t.p.evaluate(() => { localStorage.setItem('libro.dia', '2026-12-24'); window.libroCielo.aplicar(); const h = document.getElementById('montana'); return { navidad: h.querySelectorAll('.v-navidad').length, cohetes: h.querySelectorAll('.cohetes').length, total: h.querySelectorAll('*').length }; });
+      ok(r2.navidad > 0 && r2.cohetes > 0 && r2.total > r.total, `30 al pasar a Nochebuena con la página abierta, la escena se vuelve a dibujar con su Navidad (${JSON.stringify(r2)})`);
+      ok(t.consola.length === 0, `30 consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+      // Nochebuena desde el principio: la Navidad y los cohetes (salen a las 23:50), y la escena dentro del tope con margen.
+      const n = await entrar(navegador, mil, ADMIN, { hora: 21, viewport: { width: 390, height: 664 } }, conLs({ 'libro.dia': '2026-12-24', 'libro.efectos': 'esenciales' }));
+      await cerrar(n.p);
+      r = await piezas(n.p);
+      ok(r.navidad > 0 && r.bufanda > 0 && r.cohetes > 0 && r.piscuchas === 0 && r.total <= 1030, `30 Nochebuena: con su Navidad y sus cohetes, sin piscuchas; ${r.total} nodos (antes, 1070)`);
+      await n.ctx.close();
+      // Una tarde de lluvia de julio: la quebrada llena (y no el hilo); en las agostinas, el papel picado y las banderas.
+      const l = await entrar(navegador, mil, ADMIN, { hora: 15, viewport: { width: 390, height: 664 } }, conLs({ 'libro.dia': '2026-07-10' }));
+      await cerrar(l.p);
+      r = await piezas(l.p);
+      ok(r.llena > 0 && r.hilo === 0 && r.papel === 0, `30 en julio, la quebrada llena (${r.llena}) y sin el hilo de la época seca`);
+      await l.p.evaluate(() => { localStorage.setItem('libro.dia', '2026-08-03'); window.libroCielo.aplicar(); });
+      r = await piezas(l.p);
+      ok(r.papel === 1 && r.fiesta > 0, `30 en las agostinas (cambiando de día con la página abierta), el papel picado y las banderas del pueblo`);
+      await l.ctx.close();
+    } finally {
+      mil.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 31: «Tú» sube como oso (el osito con su mochila naranja, la pisada, sus huellas, el eco, anda y festeja)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    /** El osito de «Tú»: dónde están sus pies frente al punto del sendero, la pisada, su caja y el rótulo. */
+    const tu = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), yo = h.querySelector('#m-yo'), oso = yo.querySelector('.tu .oso-tu'), pis = yo.querySelector('.yo-punto'), caja = yo.querySelector('.yo-anillo');
+      const [tx, ty] = yo.getAttribute('transform').match(/-?[\d.]+/g).map(Number);
+      const camino = h.querySelector('#m-sendero'), L = camino.getTotalLength();
+      let d = 1e9; for (let l = 0; l <= L; l += 0.5) { const q = camino.getPointAtLength(l); d = Math.min(d, Math.hypot(q.x - tx, q.y - ty)); }
+      const r = (e) => e.getBoundingClientRect(), cruza = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const ob = r(oso), cb = r(caja), rot = [...h.querySelectorAll('#m-etiquetas .eti-yo, #m-etiquetas .yo-txt')].map(r);
+      const naranja = getComputedStyle(oso.querySelector('.oso-mochila')).fill === getComputedStyle(pis).fill;
+      return { hay: Boolean(oso), enSendero: d < 0.6, pisadaEnPunto: Math.abs(Number(pis.getAttribute('cy') ?? 0)) < 2 && !pis.getAttribute('cx'), dentro: ob.left >= cb.left - 1 && ob.right <= cb.right + 1 && ob.top >= cb.top - 1 && ob.bottom <= cb.bottom + 2, rotulo: rot.length > 0 && !rot.some((q) => cruza(q, cb)), naranja, nodos: yo.querySelectorAll('*').length + 1, alto: Math.round(ob.height), decorativo: Boolean(yo.closest('[aria-hidden="true"]')) && !oso.closest('[role="img"]:not(svg)') };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[320, 568], [390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: w, height: h } }, conLs({ 'libro.efectos': 'todos' }));
+        await cerrar(t.p); await t.p.evaluate(() => window.scrollTo(0, 0)); await t.p.waitForTimeout(300);
+        const r = await tu(t.p);
+        ok(r.hay && r.enSendero && r.pisadaEnPunto && r.dentro && r.rotulo && r.naranja && r.decorativo, `31 a ${w} px: «Tú» es el osito con la mochila naranja, los pies sobre el sendero, dentro de su caja y sin su rótulo encima (${JSON.stringify(r)})`);
+        ok(r.nodos <= 24 && r.alto >= 18, `31 a ${w} px: el osito mide ${r.alto} px y #m-yo son ${r.nodos} nodos (≤ 24)`);
+        const hu = await t.p.evaluate(() => { const c = document.querySelector('#m-huellas'); return { trazos: c.querySelectorAll('path').length, circulos: c.querySelectorAll('circle').length, n: Number(c.querySelector('.huellas-oso')?.dataset.n ?? 0) }; });
+        ok(hu.trazos === 1 && hu.circulos === 0 && hu.n > 2, `31 a ${w} px: las huellas son de oso y van en un solo trazo (${hu.n} huellas)`);
+        await t.ctx.close();
+      }
+      // Anda mientras sube (al abrir la app sube desde la salida) y se queda quieto al llegar; con «ninguno», ni anda ni levanta los brazos.
+      const vigila = () => { window.__anda = false; const t0 = performance.now(); const mira = () => { if (document.getElementById('m-yo')?.classList.contains('anda')) window.__anda = true; if (performance.now() - t0 < 8000) setTimeout(mira, 100); }; mira(); };
+      for (const ef of ['todos', 'ninguno']) {
+        const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+        const p = await ctx.newPage();
+        await p.addInitScript((e) => { try { localStorage.setItem('libro.hora', '12'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, ef);
+        await p.addInitScript(vigila);
+        await p.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
+        await p.fill('input[autocomplete="username"]', ADMIN[0]); await p.fill('input[autocomplete="current-password"]', ADMIN[1]);
+        await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+        await p.waitForTimeout(3000);
+        const r = await p.evaluate(() => { const yo = document.getElementById('m-yo'); yo.classList.add('festeja'); const f = getComputedStyle(yo.querySelector('.tu-festeja')).display; yo.classList.remove('festeja'); return { anduvo: window.__anda, ahora: yo.classList.contains('anda'), festeja: f, respira: getComputedStyle(yo.querySelector('.oso-tu')).animationName }; });
+        if (ef === 'todos') ok(r.anduvo && !r.ahora && r.festeja === 'inline' && r.respira === 'tu-respira', `31 con «todos»: anduvo al subir, quieto al llegar, respira y levanta los brazos (${JSON.stringify(r)})`);
+        else ok(!r.ahora && r.festeja === 'none' && r.respira === 'none', `31 con «ninguno»: quieto, sin brazos alzados ni respiración (${JSON.stringify(r)})`);
+        await ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+    // El eco de hace un año: el mismo osito, translúcido, lejos de «Tú».
+    const sEco = await servidor('eco');
+    try {
+      const t = await entrar(navegador, sEco, ADMIN, { hora: 12 }, conLs());
+      await cerrar(t.p);
+      const r = await t.p.evaluate(() => { const f = document.querySelector('#m-eco .eco-fantasma'); return { oso: Boolean(f?.querySelector('.oso-tu')), op: f ? Number(getComputedStyle(f.querySelector('.tu')).opacity) : 1, caja: Boolean(f?.querySelector('rect.eco-anillo')) }; });
+      ok(r.oso && r.caja && r.op > 0.3 && r.op < 0.7, `31 el eco de hace un año es el osito, translúcido (${JSON.stringify(r)})`);
+      await t.ctx.close();
+    } finally {
+      sEco.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 32: el teleférico del valle (pantallas anchas; la cabina en su capa, se mueve solo en su franja)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const tele = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), cab = h.querySelector(':scope > svg.tele-cabina'), cable = h.querySelector('#m-v-pie .v-tele-cable');
+      if (!cab || !cable) return { hay: false, cabina: Boolean(cab), cable: Boolean(cable) };
+      const principal = h.querySelector(':scope > svg'), frente = h.querySelector(':scope > svg.frente');
+      const [, ax, ay, bx, by] = cable.getAttribute('d').match(/M([\d.]+) ([\d.]+)L([\d.]+) ([\d.]+)/).map(Number);
+      const camino = h.querySelector('#m-sendero'), L = camino.getTotalLength(); let lejos = 1e9;
+      for (let l = 0; l <= L; l += 2) { const q = camino.getPointAtLength(l), dx = bx - ax, dy = by - ay, k = Math.max(0, Math.min(1, ((q.x - ax) * dx + (q.y - ay) * dy) / (dx * dx + dy * dy))); lejos = Math.min(lejos, Math.hypot(q.x - ax - k * dx, q.y - ay - k * dy)); }
+      return { hay: true, capa: cab.previousElementSibling !== null && Boolean(cab.compareDocumentPosition(frente) & Node.DOCUMENT_POSITION_FOLLOWING) && principal.contains(cable), aria: cab.getAttribute('aria-hidden'), nodos: cab.querySelectorAll('*').length + 1, anim: getComputedStyle(cab).animationName, lejos: Math.round(lejos), wc: getComputedStyle(cab).willChange, mueve: document.documentElement.dataset.mueve ?? '' };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h, hora, ef, espera] of [[1440, 900, 11, 'todos', 'tele-va'], [1440, 900, 14, 'todos', 'none'], [1440, 900, 11, 'esenciales', 'none'], [2560, 1440, 11, 'todos', 'tele-va'], [1100, 800, 12, 'todos', 'tele-va']]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs({ 'libro.efectos': ef }));
+        await cerrar(t.p);
+        const r = await tele(t.p);
+        ok(r.hay && r.capa && r.aria === 'true' && r.nodos <= 7 && r.lejos >= 10 && r.wc === 'transform', `32 a ${w} px: el cable en el valle y la cabina en su capa (bajo el frente), lejos del sendero (${r.lejos} px), ${r.nodos} nodos`);
+        ok(r.anim === espera, `32 a ${w} px, ${hora} h, «${ef}»: la cabina ${espera === 'none' ? 'quieta' : 'viaja'} (data-mueve «${r.mueve}», ${r.anim})`);
+        await t.ctx.close();
+      }
+      const t = await entrar(navegador, anio, ADMIN, { hora: 11, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      const r = await tele(t.p);
+      ok(!r.hay && !r.cabina && !r.cable, '32 en el teléfono no hay teleférico (cruzaría el sendero)');
+      await t.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 33: más ositos en el paisaje (los de la cumbre se estiran por la mañana)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const anio = await servidor('anio');
+    try {
+      // A las 7:00 (el primer minuto de su franja), el reloj de la escena los pone a estirarse; uno tras otro, y después quietos.
+      const t = await entrar(navegador, anio, ADMIN, { hora: 7, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      await t.p.waitForFunction(() => document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 25000 });
+      const r = await t.p.evaluate(() => ({ sin: document.querySelector('#m-osos.osos').hasAttribute('data-sin-estirar'), ve: [...document.querySelectorAll('#m-osos .oso .oso-brazos')].map((b) => getComputedStyle(b).display) }));
+      ok(r.sin || r.ve[0] === 'inline', `33 a las 7:00 los de la cumbre se estiran, uno tras otro (${JSON.stringify(r)})`);
+      await t.p.waitForFunction(() => !document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 5000 });
+      const q = await t.p.evaluate(() => [...document.querySelectorAll('#m-osos .oso .oso-brazos')].every((b) => getComputedStyle(b).display === 'none'));
+      ok(q, '33 a los dos segundos y medio, otra vez quietos');
+      await t.ctx.close();
+      // Con «esenciales» no (es ambiente); y a mediodía el reloj no los pone.
+      const e = await entrar(navegador, anio, ADMIN, { hora: 7, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'esenciales' }));
+      await cerrar(e.p);
+      const v = await e.p.evaluate(() => { const o = document.querySelector('#m-osos.osos'); if (!o) return 'sin osos'; o.classList.add('estira-1'); return getComputedStyle(o.querySelector('.oso-brazos')).display; });
+      ok(v === 'none', `33 con «esenciales» no se estiran (${v})`);
+      await e.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- pulido del pueblo: las casas en su sitio (ninguna sobre la iglesia ni montada en otra; la fila de atrás en su terraza)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } }, null];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Las cajas de cada casa, como se dibujaron: cada subtrazo de las fachadas y de los tejados, medido en la escena.
+    const casas = (p) => p.evaluate(() => {
+      const g = document.querySelector('#montana .v-pueblo'); if (!g) return null;
+      const svg = g.ownerSVGElement, hijos = [...g.children], iIg = hijos.findIndex((e) => e.matches('.v-ig-lado'));
+      const sub = (e) => (e.getAttribute('d') || '').split(/(?=M)/).filter(Boolean).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); svg.append(t); const b = t.getBBox(); t.remove(); return { x0: b.x, x1: b.x + b.width, y0: b.y, y1: b.y + b.height }; });
+      const de = (sel, atras) => hijos.filter((e, i) => e.matches(sel) && (atras ? i < iIg : i > iIg)).flatMap(sub);
+      const ig = hijos.filter((e) => e.matches('.v-ig-lado, .v-ig-frente, .v-ig-torre, .v-ig-cupula')).flatMap(sub);
+      const cajaIg = ig.reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) }), { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 });
+      const cruza = (a, b, m = 0.5) => a.x0 < b.x1 - m && a.x1 > b.x0 + m && a.y0 < b.y1 - m && a.y1 > b.y0 + m;
+      const fachAt = de('.v-frente', true), techoFr = de('.v-techo-l', false).filter((b) => !cruza(b, cajaIg)), fachFr = de('.v-frente', false);
+      const tapadas = fachAt.map((a) => Math.max(0, ...techoFr.filter((t) => a.x0 < t.x1 && a.x1 > t.x0).map((t) => Math.max(0, a.y1 - Math.max(a.y0, t.y0)) / (a.y1 - a.y0))));
+      return { atras: fachAt.length, frente: fachFr.length, terraza: hijos.some((e, i) => e.matches('.v-terraza') && i < iIg), sobreIglesia: [...fachAt, ...fachFr].filter((a) => cruza(a, cajaIg)).length, juntas: fachFr.filter((a, i) => fachFr.slice(i + 1).some((b) => cruza(a, b))).length, peorTapada: Math.round(Math.max(0, ...tapadas) * 100) };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h, hora] of [[390, 844, 12], [768, 1024, 21], [1440, 900, 12], [2560, 1440, 21]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs);
+        await cerrar(t.p);
+        const r = await casas(t.p);
+        ok(r && r.frente >= 2 && (r.atras === 0 || r.terraza) && r.sobreIglesia === 0 && r.juntas === 0 && r.peorTapada <= 40, `pulido del pueblo a ${w} px: ${r?.frente} casas delante y ${r?.atras} en la terraza, ninguna sobre la iglesia ni sobre otra; la fachada de atrás más tapada, al ${r?.peorTapada} % (${JSON.stringify(r)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- pulido de la iglesia y el paisaje bajo: la iglesia en su atrio, cada cosa con su base en el suelo, la milpa y el reloj fuera del pueblo
+  await bloque(async () => {
+    const conLs = (dia) => [(d) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } }, dia];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const mide = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), g = h.querySelector('.v-pueblo');
+      const bb = (e) => { const b = e.getBBox(); return { x0: b.x, x1: b.x + b.width, y0: b.y, y1: b.y + b.height }; };
+      const una = (sel) => { const es = [...h.querySelectorAll(sel)].filter((e) => getComputedStyle(e).display !== 'none'); if (!es.length) return null; return es.map(bb).reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) })); };
+      const cruza = (a, b, m = 0.5) => a && b && a.x0 < b.x1 - m && a.x1 > b.x0 + m && a.y0 < b.y1 - m && a.y1 > b.y0 + m;
+      const suelo = una('.v-pueblo :is(.v-calle, .v-plaza)'), fachada = una('.v-pueblo :is(.v-ig-frente, .v-ig-torre)'), atrio = una('.v-pueblo .v-ig-atrio');
+      const pueblo = una('.v-pueblo :is(.v-frente, .v-pared-l, .v-techo-l, .v-ig-frente, .v-ig-torre, .v-ig-lado)');
+      // Las bases: cada árbol del pueblo, cada farol, el perro y las gallinas, con su pie dentro de la calle o la plaza.
+      const pies = [...g.querySelectorAll('.v-ar-tronco, .v-pz-tronco, .v-farol-poste, .v-animal, .v-gallina')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => { const b = bb(e); return { c: e.getAttribute('class'), y: b.y1, x: (b.x0 + b.x1) / 2 }; });
+      const sueltos = pies.filter((q) => q.y < suelo.y0 - 1.5 || q.y > suelo.y1 + 1.5 || q.x < suelo.x0 - 2 || q.x > suelo.x1 + 40).map((q) => q.c);
+      const piedras = [...h.querySelectorAll('.reloj-piedra')].map(bb).filter((b) => cruza(b, una('.v-pueblo .v-calle'), 0)).length;
+      return { atrio: Boolean(atrio && Math.abs(atrio.y0 - fachada.y1) < 1.5 && atrio.x0 <= fachada.x0 + 1 && atrio.x1 >= fachada.x1 - 1), sueltos, piedras, milpa: cruza(una('.v-campos .v-mp'), pueblo, 1), camino: Boolean(h.querySelector('.v-cm')), chimeneas: h.querySelectorAll('.v-pueblo .v-chimenea').length };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [768, 1024], [1440, 900], [2560, 1440]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 15, viewport: { width: w, height: h } }, conLs('2026-07-10'));
+        await cerrar(t.p);
+        const r = await mide(t.p);
+        ok(r.atrio && r.sueltos.length === 0 && r.piedras === 0 && !r.milpa && r.chimeneas === 1, `pulido a ${w} px: la iglesia en su atrio, cada árbol, farol y animal con el pie en el suelo, ni el reloj ni la milpa sobre el pueblo, una chimenea (${JSON.stringify(r)})`);
+        await t.ctx.close();
+      }
+      // En Navidad el perro no queda dentro del nacimiento y el cordón de foquitos de la torre se amarra en un farol.
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 20, viewport: { width: w, height: h } }, conLs('2026-12-24'));
+        await cerrar(t.p);
+        const r = await t.p.evaluate(() => {
+          const bb = (e) => { const b = e.getBBox(); return { x0: b.x, x1: b.x + b.width, y0: b.y, y1: b.y + b.height }; };
+          const perro = bb(document.querySelector('#montana .v-animal')), portal = [...document.querySelectorAll('#montana .v-pueblo [class*="v-belen"]')].map(bb).reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) }));
+          const fin = (document.querySelector('#montana .v-cordel').getAttribute('d').split('M')[1] ?? '').trim().split(/[ QL]+/).slice(-2).map(Number);
+          const lamparas = (document.querySelector('#montana .v-farol-lampara').getAttribute('d') ?? '').split('M').filter(Boolean).map((d) => d.split(/[ L]+/).map(Number));
+          const cerca = lamparas.some((l) => Math.abs(l[0] - fin[0]) < 6 && Math.abs(l[1] - fin[1]) < 12);
+          return { dentro: perro.x0 < portal.x1 && perro.x1 > portal.x0 && perro.y0 < portal.y1 && perro.y1 > portal.y0, cerca };
+        });
+        ok(!r.dentro && r.cerca, `pulido a ${w} px en Nochebuena: el perro fuera del nacimiento y los foquitos de la torre amarrados al farol (${JSON.stringify(r)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 34: el pueblo vive (las gallinas picotean, el perro cruza la plaza, el Día de la Cruz)
+  await bloque(async () => {
+    const conLs = (dia, x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); for (const [k, v] of Object.entries(o.x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, { dia, x }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const pueblo = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), frente = h.querySelector(':scope > svg.frente'), ve = (e) => e && getComputedStyle(e).display !== 'none';
+      const capas = (sel) => [...h.querySelectorAll(`:scope > svg.${sel}`)].map((c) => ({ ve: ve(c), anim: getComputedStyle(c).animationName, bajoFrente: !frente || Boolean(c.compareDocumentPosition(frente) & Node.DOCUMENT_POSITION_FOLLOWING), aria: c.getAttribute('aria-hidden'), nodos: c.querySelectorAll('*').length + 1 }));
+      const vis = (sel) => { const e = h.querySelector(`#m-v-pie ${sel}`); return e ? getComputedStyle(e).visibility : 'no hay'; };
+      return { mueve: document.documentElement.dataset.mueve ?? '', gallinas: capas('v-capa-gallina'), perro: capas('v-capa-perro'), vGallina: vis('.v-gallina'), vAnimal: vis('.v-animal'), cruz: Boolean(h.querySelector('.v-cruz-mayo')) };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        // A las 8:00 picotean las tres gallinas (cada una en su capa, bajo el frente) y las del dibujo grande se esconden.
+        let t = await entrar(navegador, anio, ADMIN, { hora: 8, viewport: { width: w, height: h } }, conLs('2026-11-25', { 'libro.efectos': 'todos' }));
+        await cerrar(t.p);
+        let r = await pueblo(t.p);
+        ok(r.mueve === 'gallinas' && r.gallinas.length === 3 && r.gallinas.every((c) => c.ve && c.anim === 'gallina-pica' && c.bajoFrente && c.aria === 'true' && c.nodos === 2) && r.vGallina === 'hidden' && r.perro.every((c) => !c.ve) && r.vAnimal === 'visible', `34 a ${w} px, 8:00: las tres gallinas picotean en su capa (${JSON.stringify(r).slice(0, 220)})`);
+        await t.ctx.close();
+        // A las 14:30 el perro cruza la plaza (una vez) y se echa en su sitio (desde el campamento 37, de 14:00 a 15:00).
+        t = await entrar(navegador, anio, ADMIN, { hora: 14.5, viewport: { width: w, height: h } }, conLs('2026-11-25', { 'libro.efectos': 'todos' }));
+        await cerrar(t.p);
+        r = await pueblo(t.p);
+        ok(r.mueve === 'perro' && r.perro.length === 2 && r.perro.every((c) => c.ve && c.bajoFrente && c.aria === 'true') && r.perro.map((c) => c.anim).join() === 'perro-cruza,perro-echa' && r.vAnimal === 'hidden' && r.gallinas.every((c) => !c.ve) && r.vGallina === 'visible', `34 a ${w} px, 15:00: el perro cruza la plaza (${JSON.stringify(r.perro)})`);
+        const fin = await t.p.evaluate(() => { for (const a of document.getAnimations()) if (/^perro-/.test(a.animationName)) a.finish(); return [...document.querySelectorAll('#montana > svg.v-capa-perro')].map((c) => getComputedStyle(c).opacity); });
+        ok(fin.join() === '0,1', `34 a ${w} px: al llegar, el que anda se va y queda el echado (${fin})`);
+        await t.ctx.close();
+      }
+      // Fuera de su franja, o con «esenciales», todos quietos como siempre.
+      for (const [hora, ef] of [[12, 'todos'], [8, 'esenciales'], [15, 'ninguno']]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: 390, height: 844 } }, conLs('2026-11-25', { 'libro.efectos': ef }));
+        await cerrar(t.p);
+        const r = await pueblo(t.p);
+        ok([...r.gallinas, ...r.perro].every((c) => !c.ve) && r.vGallina === 'visible' && r.vAnimal === 'visible' && !r.cruz, `34 a las ${hora}:00 con «${ef}»: las gallinas y el perro quietos en el dibujo, y sin cruz fuera del 3 de mayo`);
+        await t.ctx.close();
+      }
+      // El 3 de mayo, la cruz en la plaza.
+      const t = await entrar(navegador, anio, ADMIN, { hora: 11, viewport: { width: 390, height: 844 } }, conLs('2026-05-03', { 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      const c = await t.p.evaluate(() => { const g = document.querySelector('#montana .v-cruz-mayo'); if (!g) return null; const b = g.getBBox(), a = document.querySelector('#m-v-pie .v-animal').getBBox(); return { piezas: g.children.length, palo: getComputedStyle(g.querySelector('.v-cm-palo')).fill, sobrePerro: b.x + b.width * 0.5 > a.x && b.x + b.width * 0.5 < a.x + a.width }; });
+      ok(c && c.piezas === 4 && c.palo !== 'none' && !c.sobrePerro, `34 el 3 de mayo, la cruz con frutas y su cadena en la plaza, junto al perro (${JSON.stringify(c)})`);
+      await t.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 35: el pueblo de los osos (los vecinos son osos, por turnos; de noche nadie; los hilos de las piscuchas)
+  await bloque(async () => {
+    const conLs = (dia, x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); for (const [k, v] of Object.entries(o.x)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, { dia, x }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Los vecinos: uno por subtrazo de la sombra de contacto (`.v-vo-pie`), con su caja; todos en la calle o la plaza, ninguno encima de otro.
+    const pueblo = (p) => p.evaluate(() => {
+      const g = document.querySelector('#montana .v-vecinos'); if (!g) return null;
+      const svg = g.ownerSVGElement, pie = g.querySelector('.v-vo-pie');
+      const cajas = (pie?.getAttribute('d') || '').split(/(?=M)/).filter(Boolean).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); svg.append(t); const b = t.getBBox(); t.remove(); return b; });
+      const calle = [...document.querySelectorAll('#montana .v-pueblo :is(.v-calle, .v-plaza)')].map((e) => e.getBBox()).reduce((u, b) => ({ x0: Math.min(u.x0, b.x), x1: Math.max(u.x1, b.x + b.width), y0: Math.min(u.y0, b.y), y1: Math.max(u.y1, b.y + b.height) }), { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 });
+      const fuera = cajas.filter((b) => { const cx = b.x + b.width / 2, cy = b.y + b.height / 2; return cx < calle.x0 || cx > calle.x1 || cy < calle.y0 - 2 || cy > calle.y1 + 2; }).length;
+      const encima = cajas.filter((a, i) => cajas.slice(i + 1).some((b) => Math.abs(a.x + a.width / 2 - (b.x + b.width / 2)) < Math.min(a.width, b.width) * 0.5 && Math.abs(a.y - b.y) < a.height * 2)).length;
+      const hilos = [...(g.querySelector('.v-pis-hilo')?.getAttribute('d') ?? '').matchAll(/ ([\d.]+) ([\d.]+)(?=M|$)/g)].map((m) => `${m[1]},${m[2]}`);
+      return { turno: document.documentElement.dataset.turno, n: cajas.length, fuera, encima, paths: g.querySelectorAll('path').length, gente: document.querySelectorAll('.v-gente').length, clases: [...g.querySelectorAll('path')].every((e) => /^(v-vo-[a-z0-9]+|v-charco v-vo-luz|efecto-ambiente v-piscuchas v-pis-hilo)$/.test(e.getAttribute('class'))), hilos, svg: svg === document.querySelector('#montana > svg') && svg, pieV: document.getElementById('m-v-pie') };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        // Un miércoles de octubre (escuela): por la mañana sin oseznos; por la tarde, los cinco con su pelota; de noche, nadie.
+        for (const [hora, turno, min, max] of [[6, 'amanece', 2, 3], [9, 'manana', 3, 5], [12.5, 'siesta', 2, 3], [15, 'tarde', 6, 8], [19, 'pupusas', 3, 5], [23, 'duerme', 0, 0]]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs('2026-10-14', { 'libro.efectos': 'esenciales' }));
+          await cerrar(t.p);
+          const r = await pueblo(t.p);
+          ok(r && r.turno === turno && r.n >= min && r.n <= max && r.fuera === 0 && r.encima === 0 && r.gente === 0 && r.clases, `35 a ${w} px, ${hora}:00 (${turno}): ${r?.n} vecinos osos en la calle y la plaza, ninguno encima de otro ni fuera, sin siluetas de antes (${JSON.stringify({ ...r, svg: undefined, pieV: undefined, hilos: undefined })})`);
+          await t.ctx.close();
+        }
+      }
+      // Con la página abierta, al cambiar de turno se rehacen solo los vecinos: el dibujo grande es el mismo.
+      const t = await entrar(navegador, anio, ADMIN, { hora: 13.9, viewport: { width: 390, height: 844 } }, conLs('2026-10-14', { 'libro.efectos': 'esenciales' }));
+      await cerrar(t.p);
+      const antes = await t.p.evaluateHandle(() => document.querySelector('#montana > svg'));
+      const a = await pueblo(t.p);
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '14.1'); window.libroCielo.aplicar(); });
+      await t.p.waitForTimeout(200);
+      const b = await pueblo(t.p);
+      const mismo = await t.p.evaluate((x) => x === document.querySelector('#montana > svg'), antes);
+      ok(a.turno === 'siesta' && b.turno === 'tarde' && b.n > a.n && mismo, `35: al pasar de la siesta a la tarde con la página abierta, salen los oseznos sin redibujar la escena (${a.n} → ${b.n})`);
+      await t.ctx.close();
+      // En noviembre, con «todos»: de tarde los hilos de las piscuchas bajan a la manita de un osezno; de noche, amarrados al poste del farol.
+      const hilos = async (hora) => { const x = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: 1440, height: 900 } }, conLs('2026-11-25', { 'libro.efectos': 'todos' })); await cerrar(x.p); const r = await pueblo(x.p); await x.ctx.close(); return r.hilos; };
+      const [tarde, noche] = [await hilos(15), await hilos(23)];
+      ok(tarde.length >= 2 && new Set(tarde).size === tarde.length && noche.length === tarde.length && new Set(noche).size === 1, `35: los hilos de las piscuchas, de tarde a cada osezno (${tarde.join(' · ')}) y de noche al poste del farol (${noche[0]})`);
+      // La entrada también enseña el pueblo de los osos (por la hora y el día; nada de la familia).
+      const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+      const pg = await ctx.newPage();
+      await pg.addInitScript(() => { try { localStorage.setItem('libro.hora', '15'); localStorage.setItem('libro.dia', '2026-10-14'); } catch { /* sin almacenamiento */ } });
+      await pg.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
+      await pg.waitForTimeout(800);
+      const ent = await pg.evaluate(() => ({ osos: (document.querySelector('.v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').split('M').length - 1, gente: document.querySelectorAll('.v-gente').length }));
+      ok(ent.osos >= 6 && ent.gente === 0, `35: la entrada enseña a los vecinos osos de la tarde (${ent.osos})`);
+      await ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 36: el calendario del pueblo (misa, sábado de plaza, desfile, posada y estrellitas)
+  await bloque(async () => {
+    const conLs = (dia) => [(d) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } }, dia];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const pueblo = (p) => p.evaluate(() => {
+      const g = document.querySelector('#montana .v-vecinos'), n = (sel) => ((g.querySelector(sel)?.getAttribute('d') ?? '').match(/M/g) || []).length;
+      const bb = (e) => { const b = e.getBBox(); return { x0: b.x, x1: b.x + b.width, y0: b.y, y1: b.y + b.height }; };
+      const belen = [...document.querySelectorAll('#montana .v-pueblo [class*="v-belen"]')].map(bb);
+      const portal = belen.length ? belen.reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) })) : null;
+      const pies = (g.querySelector('.v-vo-pie')?.getAttribute('d') ?? '').split(/(?=M)/).filter(Boolean).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); g.append(t); const b = bb(t); t.remove(); return b; });
+      return { turno: document.documentElement.dataset.turno, vecinos: pies.length, azul: n('.v-vo-azul'), brasa: n('.v-vo-brasa'), sobrePortal: portal ? pies.filter((b) => b.x0 < portal.x1 && b.x1 > portal.x0 && b.y1 > portal.y1 - 4).length : 0, portal: Boolean(portal) };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        for (const [dia, hora, turno, prueba] of [
+          ['2026-10-18', 8, 'misa', (r) => r.vecinos >= 4],
+          ['2026-10-17', 9, 'mercado', (r) => r.vecinos >= 5],
+          ['2026-09-15', 9, 'desfile', (r) => r.azul >= 2 && r.vecinos >= 5],
+          ['2026-12-10', 19, 'posada', (r) => r.portal && r.sobrePortal === 0 && r.vecinos >= 4],
+          ['2026-12-24', 20, 'nochebuena', (r) => r.brasa >= 3],
+        ]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia));
+          await cerrar(t.p);
+          const r = await pueblo(t.p);
+          ok(r.turno === turno && prueba(r), `36 a ${w} px, ${dia} a las ${hora}:00: ${turno} (${JSON.stringify(r)})`);
+          await t.ctx.close();
+        }
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 37: el pueblo se mueve (la capa del vecino: la que barre y la pelota de los oseznos)
+  await bloque(async () => {
+    const conLs = (ef) => [(e) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-09-16'); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, ef]; // un miércoles sin azacuanes
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const capa = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), c = h.querySelector(':scope > svg.v-capa-vecino'), frente = h.querySelector(':scope > svg.frente');
+      if (!c) return { hay: false, mueve: document.documentElement.dataset.mueve ?? '' };
+      return { hay: true, actor: [...c.classList].find((x) => x.startsWith('v-actor-')), anim: getComputedStyle(c).animationName, bajoFrente: Boolean(c.compareDocumentPosition(frente) & Node.DOCUMENT_POSITION_FOLLOWING), aria: c.getAttribute('aria-hidden'), nodos: c.querySelectorAll('*').length + 1, mueve: document.documentElement.dataset.mueve ?? '' };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        for (const [hora, ef, actor, anim] of [[7.5, 'todos', 'v-actor-barre', 'vo-barre'], [15.5, 'todos', 'v-actor-pelota', 'vo-bota'], [7.5, 'esenciales', 'v-actor-barre', 'none'], [9, 'todos', 'v-actor-barre', 'none']]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(ef));
+          await cerrar(t.p);
+          const r = await capa(t.p);
+          ok(r.hay && r.actor === actor && r.anim === anim && r.bajoFrente && r.aria === 'true' && r.nodos <= 12, `37 a ${w} px, ${hora}:00 con «${ef}»: el vecino en su capa (${JSON.stringify(r)})`);
+          await t.ctx.close();
+        }
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12.5, viewport: { width: w, height: h } }, conLs('todos'));
+        await cerrar(t.p);
+        ok(!(await capa(t.p)).hay, `37 a ${w} px: en la siesta nadie se mueve (no hay capa)`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 38: lo que cambia de la app de hoy (el pescador oso, la descripción, la entrada)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-09-16'); localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } }, null];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const anio = await servidor('anio');
+    try {
+      for (const [hora, de] of [[15, 'día'], [21, 'noche']]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: 390, height: 844 } }, conLs);
+        await cerrar(t.p);
+        const r = await t.p.evaluate(() => ({ desc: document.getElementById('m-desc')?.textContent ?? '', oso: getComputedStyle(document.querySelector('#montana .v-cy-oso')).display, lampara: getComputedStyle(document.querySelector('#montana .v-cy-lampara')).display }));
+        ok(/los vecinos son osos polares/.test(r.desc) && (de === 'día' ? r.oso !== 'none' : r.oso === 'none' && r.lampara !== 'none'), `38 de ${de}: la descripción dice que los vecinos son osos polares y el pescador del cayuco es un oso (de noche, solo su lámpara) (${r.oso}, ${r.lampara})`);
+        await t.ctx.close();
+      }
+      // La entrada enseña el pueblo de osos por la hora y el día, y nada de la familia: ninguna ventana encendida.
+      const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+      const pg = await ctx.newPage();
+      await pg.addInitScript(() => { try { localStorage.setItem('libro.hora', '21'); localStorage.setItem('libro.dia', '2026-09-16'); } catch { /* sin almacenamiento */ } });
+      await pg.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
+      await pg.waitForTimeout(800);
+      const e = await pg.evaluate(() => ({ vecinos: document.querySelectorAll('.v-vecinos path').length, luces: (document.querySelector('.v-pueblo .v-luz')?.getAttribute('d') ?? '').length, turno: document.documentElement.dataset.turno }));
+      ok(e.vecinos > 0 && e.luces === 0 && e.turno === 'pupusas', `38 la entrada: los vecinos osos de su turno y ninguna ventana encendida (${JSON.stringify(e)})`);
+      await ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- pulido integral: el movimiento (nada corre escondido, solo transform y opacidad, el ambiente solo con «todos» y todo quieto al deslizar)
+  await bloque(async () => {
+    const conLs = (dia, ef) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } }, { dia, ef }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const audita = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), esc = h.closest('.escena');
+      const oculto = (e) => { for (let y = e; y && y !== document.body; y = y.parentElement) { const st = getComputedStyle(y); if (st.display === 'none' || st.visibility === 'hidden') return true; } return false; };
+      const nombre = (a) => `${a.animationName}@${(a.effect.target.getAttribute('class') || a.effect.target.tagName).split(' ').slice(0, 2).join('.')}`;
+      const vivas = () => document.getAnimations().filter((a) => a.effect?.target && h.contains(a.effect.target) && a.playState === 'running');
+      const v = vivas(), r = { vivas: v.length, ocultas: [], props: [], infinitas: [], sinPausa: [] };
+      for (const a of v) {
+        if (oculto(a.effect.target)) r.ocultas.push(nombre(a));
+        const props = new Set(a.effect.getKeyframes().flatMap((k) => Object.keys(k)).filter((x) => !['offset', 'easing', 'composite', 'computedOffset'].includes(x)));
+        if ([...props].some((x) => !['transform', 'opacity', 'translate', 'rotate', 'scale'].includes(x))) r.props.push(nombre(a));
+        if (a.effect.getTiming().iterations === Infinity) r.infinitas.push(nombre(a));
+      }
+      esc?.setAttribute('data-desliza', '');
+      r.sinPausa = vivas().filter((a) => a.effect.getTiming().iterations === Infinity && !a.effect.target.closest('#m-fx')).map(nombre);
+      esc?.removeAttribute('data-desliza');
+      return r;
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        for (const [dia, hora, ef] of [['2026-09-16', 7.5, 'todos'], ['2026-09-16', 12, 'todos'], ['2026-09-16', 15.5, 'todos'], ['2026-09-16', 21, 'todos'], ['2026-12-24', 21, 'todos'], ['2026-07-10', 15, 'todos'], ['2026-09-16', 12, 'esenciales'], ['2026-12-24', 21, 'esenciales']]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h }, reducedMotion: 'no-preference' }, conLs(dia, ef));
+          await cerrar(t.p);
+          await t.p.waitForTimeout(1500);
+          const r = await audita(t.p);
+          ok(r.ocultas.length === 0 && r.props.length === 0 && r.sinPausa.length === 0 && (ef === 'todos' || r.infinitas.length === 0), `pulido integral a ${w} px, ${dia} ${hora}:00, «${ef}»: ${r.vivas} animaciones, ninguna sobre algo escondido, solo transform y opacidad, quietas al deslizar${ef === 'todos' ? '' : ' y ninguna infinita'} (${JSON.stringify({ ocultas: r.ocultas.slice(0, 4), props: r.props.slice(0, 4), sinPausa: r.sinPausa.slice(0, 4), infinitas: ef === 'todos' ? undefined : r.infinitas.slice(0, 4) })})`);
+          await t.ctx.close();
+        }
+      }
+    } finally {
+      anio.parar();
+    }
   });
 
   // ---------------------------------------------------------------- sin histórico de precios

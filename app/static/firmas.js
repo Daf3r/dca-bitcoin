@@ -1,6 +1,7 @@
 import { avisar } from './avisar.js';
 import { fechaLarga, firmasDe, nombreHito } from './lib.js';
 import { avatar } from './iconos.js';
+import { huella } from './arte-osos-poses.js';
 import { $, S, api, esAdmin } from './estado.js';
 import { actualizarFirmas } from './montana.js';
 import { refrescarHistoria } from './historia.js';
@@ -65,6 +66,9 @@ export function abrirFirmas(m, { alcanzado: alc = false } = {}) {
   confirmar = null;
   pintarLista();
   pintarFormulario();
+  // (Campamento 29) Una huella de oso junto a «Libro de cumbre», del color de la tinta del cuaderno: los de la cumbre también firman.
+  const marca = dlg.querySelector('.fi-marca');
+  if (!marca.querySelector('.oso-huella')) marca.insertAdjacentHTML('afterbegin', huella({ tam: 20 }));
   if (!dlg.open) dlg.showModal();
   $('fi-t').focus();
 }

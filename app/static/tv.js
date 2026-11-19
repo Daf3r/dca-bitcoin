@@ -1,4 +1,5 @@
 import { $, R, S } from './estado.js';
+import { pose } from './arte-osos-poses.js';
 import { corrimientoReloj, dibujosListos, entero, fechaCorta, fechaEscrita, horaSV, hoyISO, medianocheSV, modoTele, muestrasSismo, rejilla, riel, sitioLibre, tarjetaFiesta, textoReloj, usd } from './lib.js';
 import { sismografo } from './arte.js';
 import { sinMovimiento } from './movimiento.js';
@@ -268,6 +269,9 @@ function dormir(si) {
   if (si) {
     // Se apaga: la pantalla se funde a negro y, ya a oscuras, la escena deja de dibujarse (no gasta nada mientras duerme).
     $('tv-fiesta').hidden = true;
+    // (Campamento 29) Los tres duermen bajo la hora, muy tenues; se corren con la caja (no marcan la pantalla).
+    const caja = $('tvn-caja');
+    if (!caja.querySelector('.oso-ilu')) caja.insertAdjacentHTML('beforeend', pose('duermen', { tam: 150, plantar: false }));
     noche.hidden = false;
     void noche.offsetWidth;
     noche.classList.add('vis');

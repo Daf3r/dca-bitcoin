@@ -2,7 +2,9 @@ import { aniosTronco, datosCertificado, entero, nombreHito, estratosMes, firmasD
 import { constelacion, estratos, manta, mantaPrimer, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
-import { ico, ilustracion, medalla } from './iconos.js';
+import { ico, medalla } from './iconos.js';
+import { pose, teleferico } from './arte-osos-poses.js';
+import { cumpleDeHoy } from './pintar.js';
 import { $, R, S, esAdmin, reducido, vozLibro } from './estado.js';
 import { abrirPelicula, hayPelicula } from './pelicula.js';
 
@@ -283,7 +285,7 @@ export function pintarHistoria() {
   lista.textContent = '';
   med.textContent = '';
   $('dh-vacio').hidden = R.nCompras > 0;
-  if (!R.nCompras) $('dh-vacio').innerHTML = `${ilustracion('montana')}${vozLibro() ? 'La historia del libro empieza con su primera compra.' : 'Tu historia empieza con tu primera compra.'}`;
+  if (!R.nCompras) $('dh-vacio').innerHTML = `${pose('mochila', { cumple: cumpleDeHoy() })}${vozLibro() ? 'La historia del libro empieza con su primera compra.' : 'Tu historia empieza con tu primera compra.'}`;
   $('dh-cuerpo').hidden = !R.nCompras;
   if (!R.nCompras) return;
   seleccion = null;
@@ -291,6 +293,8 @@ export function pintarHistoria() {
   pintarHoy();
   const peli = hayPelicula();
   $('dh-peli').hidden = !peli;
+  // (Campamento 29) La cabina del teleférico con los tres asomados: la película es «subir». Decorativa; el botón no cambia.
+  if (peli && !$('dh-peli').querySelector('.oso-ilu')) $('dh-peli').insertAdjacentHTML('beforeend', teleferico());
   $('dh-peli-d').textContent = `Cómo subió ${vozLibro() ? 'el libro' : 'tu libro'}, de la primera compra a hoy, sobre la montaña de hoy.`;
   const ms = medallas(R), ganadas = ms.filter((m) => m.ganada).length;
   cuenta('medallas', ganadas ? `${ganadas} ${ganadas === 1 ? 'ganada' : 'ganadas'}` : 'aún ninguna');

@@ -235,6 +235,8 @@ function marcarSaldo() {
  */
 let delDiaHecho = false;
 export const diaVista = () => { try { return localStorage.getItem('libro.dia') || hoyISO(); } catch { return hoyISO(); } };
+/** (Campamento 28) Si hoy cumple años alguien de la familia: el grande de los dibujos de la interfaz estrena su gorrito (no dice de quién). */
+export const cumpleDeHoy = () => cumpleHoy(S.cumples ?? [], diaVista()).length > 0;
 function pintarDelDia() {
   if (delDiaHecho || !S.cargado || S.errorCarga || document.documentElement.hasAttribute('data-tv') || enMedir()) return;
   delDiaHecho = true;
