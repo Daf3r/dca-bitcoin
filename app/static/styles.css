@@ -4631,6 +4631,8 @@ html[data-cielo="noche"] .v-vo-som { fill: color-mix(in oklab, var(--oso-pelo) 4
 .v-vo-r0 { fill: color-mix(in oklab, var(--vo-verde) calc(var(--v-luz) + 22% + var(--vo-noche, 0%)), var(--monte-sombra)); }
 .v-vo-r1 { fill: color-mix(in oklab, var(--vo-rojo) calc(var(--v-luz) + 22% + var(--vo-noche, 0%)), var(--monte-sombra)); }
 .v-vo-r2 { fill: color-mix(in oklab, var(--vo-maiz) calc(var(--v-luz) + 22% + var(--vo-noche, 0%)), var(--monte-sombra)); }
+/* (Campamento 36) El azul de la bandera del abanderado y del bombo, el 15 de septiembre (el mismo de la bandera de la plaza). */
+.v-vo-azul { fill: color-mix(in oklab, #1f5fbf calc(var(--v-luz) + 22% + var(--vo-noche, 0%)), var(--monte-sombra)); }
 .v-vo-palma { fill: color-mix(in oklab, var(--vo-palma) calc(var(--v-luz) + 18%), var(--monte-sombra)); }
 .v-vo-rasgo { fill: color-mix(in oklab, #1c1512 80%, var(--monte-sombra)); }
 .v-vo-pie { fill: var(--monte-sombra); fill-opacity: 0.34; }

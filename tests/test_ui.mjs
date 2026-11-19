@@ -210,6 +210,7 @@ const PESOS = [
   ['pulido del pueblo: las casas en su sit', 30], // 4 comprobaciones
   ['pulido de la iglesia y el paisaje bajo', 45], // 6 comprobaciones
   ['campamento 35: el pueblo de los osos', 90], // 16 comprobaciones
+  ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -7430,6 +7431,40 @@ try {
       const ent = await pg.evaluate(() => ({ osos: (document.querySelector('.v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').split('M').length - 1, gente: document.querySelectorAll('.v-gente').length }));
       ok(ent.osos >= 6 && ent.gente === 0, `35: la entrada enseña a los vecinos osos de la tarde (${ent.osos})`);
       await ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 36: el calendario del pueblo (misa, sábado de plaza, desfile, posada y estrellitas)
+  await bloque(async () => {
+    const conLs = (dia) => [(d) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } }, dia];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const pueblo = (p) => p.evaluate(() => {
+      const g = document.querySelector('#montana .v-vecinos'), n = (sel) => ((g.querySelector(sel)?.getAttribute('d') ?? '').match(/M/g) || []).length;
+      const bb = (e) => { const b = e.getBBox(); return { x0: b.x, x1: b.x + b.width, y0: b.y, y1: b.y + b.height }; };
+      const belen = [...document.querySelectorAll('#montana .v-pueblo [class*="v-belen"]')].map(bb);
+      const portal = belen.length ? belen.reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) })) : null;
+      const pies = (g.querySelector('.v-vo-pie')?.getAttribute('d') ?? '').split(/(?=M)/).filter(Boolean).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); g.append(t); const b = bb(t); t.remove(); return b; });
+      return { turno: document.documentElement.dataset.turno, vecinos: pies.length, azul: n('.v-vo-azul'), brasa: n('.v-vo-brasa'), sobrePortal: portal ? pies.filter((b) => b.x0 < portal.x1 && b.x1 > portal.x0 && b.y1 > portal.y1 - 4).length : 0, portal: Boolean(portal) };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        for (const [dia, hora, turno, prueba] of [
+          ['2026-10-18', 8, 'misa', (r) => r.vecinos >= 4],
+          ['2026-10-17', 9, 'mercado', (r) => r.vecinos >= 5],
+          ['2026-09-15', 9, 'desfile', (r) => r.azul >= 2 && r.vecinos >= 5],
+          ['2026-12-10', 19, 'posada', (r) => r.portal && r.sobrePortal === 0 && r.vecinos >= 4],
+          ['2026-12-24', 20, 'nochebuena', (r) => r.brasa >= 3],
+        ]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia));
+          await cerrar(t.p);
+          const r = await pueblo(t.p);
+          ok(r.turno === turno && prueba(r), `36 a ${w} px, ${dia} a las ${hora}:00: ${turno} (${JSON.stringify(r)})`);
+          await t.ctx.close();
+        }
+      }
     } finally {
       anio.parar();
     }

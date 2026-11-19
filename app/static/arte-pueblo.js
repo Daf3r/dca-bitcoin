@@ -160,19 +160,23 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
  */
 export function lugaresPueblo(sit) {
   const { u, yg, piezas, sol } = sit;
-  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], ocupado: [] }, delante = [];
+  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [] }, delante = [];
   for (const q of piezas) {
     const k = u * q.s;
     if (q.tipo === 'iglesia') {
       const ox = sol > 0 ? q.x + 9 * k : q.x + 21 * k, m = (px, py) => [ox + sol * px * k, yg + py * k, k];
-      lug.atrio.push(m(16.5, 1.6), m(3.5, 2.6), m(22.5, 3.4), m(10, 1.2));
+      // A los lados de la puerta, delante de la nave, en la puerta (el padre, el domingo: campamento 36) y delante de la torre.
+      lug.atrio.push(m(16.5, 1.6), m(3.5, 2.6), m(22.5, 3.4), m(10, 1.2), m(-4.5, 3.4));
     } else if (q.tipo === 'plaza') {
       const w = (sit.forma === 'tel' || sit.forma === 'acostado' ? 24 : 30) * k, cx = q.x + w * 0.42;
       lug.banca.push([cx + w * 0.2, yg + 0.5 * k, k]);
-      lug.poste.push([q.x + 1 * k, yg - 5.1 * k, k], [q.x + w - 1 * k, yg - 5.1 * k, k]);
-      // (Pulido) Lo que ya ocupa la plaza y nadie pisa: el perro echado (y la cruz de mayo, a su lado) y las gallinas (ver `pueblo`).
-      const xp = q.x - 4.2 * k, kd = K_PERRO * k, xg = cx + w * 0.36;
-      lug.ocupado.push({ x0: xp - 1.6 * k - 2.8 * k, x1: xp + 5.9 * kd, y0: yg + 1.6 * k - 3.6 * kd, y1: yg + 1.6 * k + 0.3 * k }, { x0: xg - 0.6 * k, x1: xg + 5.2 * k, y0: yg - 1.6 * k, y1: yg + 1.6 * k });
+      // (36) Frente al nacimiento de Navidad, del lado contrario al astro y con aire (no lo tapan).
+      lug.portal.push([cx + w * 0.62 - sol * 14 * k, yg + 2.4 * k, k]);
+      lug.poste.push([q.x + 3.6 * k, yg - 5.1 * k, k], [q.x + w - 1 * k, yg - 5.1 * k, k]);
+      // (Pulido) Lo que ya ocupa la plaza y nadie pisa: el perro echado y las gallinas (ver `pueblo`). Delante de la cruz de mayo sí
+      // se para la gente (así se diseñó en el campamento 34).
+      const xp = q.x - 1.8 * k, kd = K_PERRO * k, xg = cx + w * 0.36;
+      lug.ocupado.push({ x0: xp - 1.0 * kd, x1: xp + 5.9 * kd, y0: yg + 1.6 * k - 3.6 * kd, y1: yg + 1.6 * k + 0.3 * k }, { x0: xg - 0.6 * k, x1: xg + 5.2 * k, y0: yg - 1.6 * k, y1: yg + 1.6 * k });
     } else if (q.tipo === 'casa') {
       const [w, , d, , , corredor] = CASAS[q.i % CASAS.length], ox = sol > 0 ? q.x : q.x + (w + d * 0.62) * k;
       const m = (px, py) => [ox + sol * px * k, yg + py * k, k];
@@ -276,7 +280,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
     const k = u * s, w = (sit.forma === 'tel' || sit.forma === 'acostado' ? 24 : 30) * k;
     add('plaza', `M${f1(x - 4 * k)} ${f1(yg + 1.6 * k)}L${f1(x + w + 4 * k)} ${f1(yg + 1.6 * k)}L${f1(x + w - 1 * k)} ${f1(yg - 3.2 * k)}L${f1(x + 2 * k)} ${f1(yg - 3.2 * k)}Z`);
     add('plaza-borde', `M${f1(x + 2 * k)} ${f1(yg - 3.2 * k)}L${f1(x + w - 1 * k)} ${f1(yg - 3.2 * k)}`);
-    for (const fx of [x + 1 * k, x + w - 1 * k]) faroles.push([fx, yg - 0.6 * k, k]);
+    for (const fx of [x + 3.6 * k, x + w - 1 * k]) faroles.push([fx, yg - 0.6 * k, k]); // (36) el de la esquina, tras el perro
     return { cx: x + w * 0.42, w, k, alto: Math.min(1, alto / 36) };
   };
   // ---- dibujar, de atrás adelante
@@ -329,9 +333,10 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   // Animales quietos: un perro echado y tres gallinas. (Campamento 35) El perro, de perfil y con la cabeza alzada (el hocico, la oreja,
   // las patas de delante estiradas y la cola), para que se lea como perro y no como una mancha. (Pulido del paisaje bajo) El perro se
   // echa en la esquina de la plaza, junto a la grada del atrio (en Navidad quedaba metido en el nacimiento), y las gallinas picotean
-  // donde estaba él, al otro lado de los oseznos (entre ellos parecían coletas; en diciembre, junto al portal).
+  // donde estaba él, al otro lado de los oseznos (entre ellos parecían coletas; en diciembre, junto al portal). (36) El farol de esa
+  // esquina va un poco más adentro, detrás del perro, para que su poste no le atraviese la cabeza y quepan los vecinos del atrio.
   if (pz) {
-    const k = pz.k, x = pz.cx - pz.w * 0.42 - 4.2 * k, y = yg + 1.6 * k, kd = K_PERRO * k;
+    const k = pz.k, x = pz.cx - pz.w * 0.42 - 1.8 * k, y = yg + 1.6 * k, kd = K_PERRO * k;
     add('animal', `M${PERRO.map(([px, py]) => P([x + px * kd, y + py * kd])).join('L')}Z`);
     add('sombra', elipse(x + 2.4 * kd - sol * 0.6 * k, y + 0.2 * k, 3.4 * kd, 0.5 * kd));
     for (const [gx, gy] of [[0.4, 0.8], [2.2, 1.4], [4.0, 0.6]]) {
@@ -343,7 +348,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   // de papel de colores, como se hace aquí para recibir las lluvias. Su palo queda a la izquierda del perro echado (los brazos y las
   // frutas, por encima de él) y la gente de la plaza se para delante. Se dibuja siempre y montana.js la poda los demás días.
   if (pz) {
-    const k = pz.k, x = pz.cx - pz.w * 0.42 - 5.8 * k, y = yg + 1.6 * k, P2 = (dx, dy) => P([x + dx * k, y + dy * k]);
+    const k = pz.k, x = pz.cx - pz.w * 0.42 - 3.4 * k, y = yg + 1.6 * k, P2 = (dx, dy) => P([x + dx * k, y + dy * k]);
     const palo = `M${P2(-0.35, 0)}L${P2(0.35, 0)}L${P2(0.35, -9)}L${P2(-0.35, -9)}ZM${P2(-2.8, -6.6)}L${P2(2.8, -6.6)}L${P2(2.8, -5.9)}L${P2(-2.8, -5.9)}Z`;
     const fruta = (fx, fy, r) => `M${P2(fx - r, fy)}a${f1(r * k)} ${f1(r * k)} 0 1 0 ${f1(2 * r * k)} 0a${f1(r * k)} ${f1(r * k)} 0 1 0 ${f1(-2 * r * k)} 0`;
     const jocotes = [[-2.4, -5.3], [2.4, -5.3], [0, -9.4]].map(([fx, fy]) => fruta(fx, fy, 0.55)).join('');

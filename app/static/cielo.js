@@ -150,13 +150,21 @@
    */
   function vacaciones(f) { const md = f.slice(5); return md >= '11-15' || md <= '01-15'; }
   function turno(f, h) {
+    // (Campamento 36) El calendario del pueblo: el desfile del 15 de septiembre (7:00–12:00), Nochebuena y el 31 (18:00–1:00, pasada
+    // la medianoche ya es el 25 o el 1), la misa del domingo (7:30–10:00), el sábado de plaza (7:00–12:00) y, en Navidad, la posada
+    // frente al nacimiento al anochecer (1 dic – 6 ene).
+    const md = f.slice(5);
+    if (md === '09-15' && h >= 7 && h < 12) return 'desfile';
+    if (((md === '12-24' || md === '12-31') && h >= 18) || ((md === '12-25' || md === '01-01') && h < 1)) return 'nochebuena';
     if (h >= 22 || h < 5) return 'duerme';
     if (h < 7) return 'amanece';
     const sem = new Date(`${f}T12:00:00Z`).getUTCDay();
+    if (sem === 0 && h >= 7.5 && h < 10) return 'misa';
+    if (sem === 6 && h < 12) return 'mercado';
     if (h < 11.5) return sem >= 1 && sem <= 5 && !vacaciones(f) ? 'manana' : 'mananaLibre';
     if (h < 14) return 'siesta';
     if (h < 17.75) return 'tarde';
-    return 'pupusas';
+    return md >= '12-01' || md <= '01-06' ? 'posada' : 'pupusas';
   }
   /** La franja a la que pertenece la hora. */
   function franja(h) {

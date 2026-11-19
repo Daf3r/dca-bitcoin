@@ -7,7 +7,7 @@
 // Quién está dónde depende del turno (cielo.js: `turno`, por la hora y el día de El Salvador) y nunca de las cuentas ni de las compras.
 const f1 = (n) => n.toFixed(1);
 const RAD = Math.PI / 180;
-export const TONOS = ['pelo', 'som', 'r0', 'r1', 'r2', 'palma', 'pelo2', 'rasgo', 'brasa'];
+export const TONOS = ['pelo', 'som', 'r0', 'r1', 'r2', 'azul', 'palma', 'pelo2', 'rasgo', 'brasa']; // ('azul', solo el 15 de septiembre)
 /** Cuánto mide una unidad del dibujo frente a la unidad del pueblo (`u`): el adulto queda en unas 6.7 u (una persona de antes, 7). */
 export const E = 0.82;
 /** La talla de un osezno frente a un adulto. */
@@ -78,6 +78,17 @@ const TIPOS = {
   oseznoArriba: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false)],
   // la pelota de los oseznos
   pelota: () => [['r1', e(0, -0.75, 0.75)]],
+  // (Campamento 36) de espaldas, de camino a misa o mirando el nacimiento (sin cara: la nuca y las orejas)
+  espaldas: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ['pelo', e(0, CAB.y, CAB.rx, CAB.ry)], ['pelo', e(-1.85, CAB.y - 1.6, 0.74)], ['pelo', e(1.85, CAB.y - 1.6, 0.74)], ['som', luna(0, CAB.y, CAB.rx, CAB.ry)], ['pelo', e(0, -0.9, 0.5, 0.42)]],
+  // (36, idea 109) el padre a la puerta de la iglesia, el domingo: sotana negra y alzacuellos
+  cura: () => [...cuerpo(), ...brazos(), ['rasgo', p([-1.1, -4.4], [1.1, -4.4], [2.6, -3.75], [2.62, -2.75], [2.0, -2.85], [2.4, -0.45], [-2.4, -0.45], [-2.0, -2.85], [-2.62, -2.75], [-2.6, -3.75])], ['pelo2', p([-0.5, -4.4], [0.5, -4.4], [0.4, -3.95], [-0.4, -3.95])], ...cabeza()],
+  // (36) el abanderado del 15 de septiembre: el asta y la bandera azul, blanca y azul, sin escudo (el blanco, del pelo de encima)
+  abanderado: (r) => [...cuerpo(), ...brazos(0, 1), ...camisa(r), ...cabeza(),
+    ['rasgo', p([2.45, -11.6], [2.75, -11.6], [2.75, -3.3], [2.45, -3.3])], ['azul', p([2.75, -11.5], [6.6, -11.3], [6.6, -8.5], [2.75, -8.7])], ['pelo2', p([2.75, -10.55], [6.6, -10.35], [6.6, -9.45], [2.75, -9.65])]],
+  // (36) el del bombo de la banda de paz
+  bombo: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ['azul', e(0, -2.3, 1.95, 1.95)], ['pelo2', e(0, -2.3, 1.45, 1.45)], ['rasgo', p([-2.6, -3.3], [-0.9, -2.6], [-1.0, -2.3], [-2.7, -3.0])]],
+  // (36, idea 113) en Nochebuena y el 31, el osezno con su estrellita encendida (quieta: no titila)
+  oseznoLuz: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['rasgo', p([2.15, -7.4], [2.35, -7.4], [2.35, -5.6], [2.15, -5.6])], ['brasa', e(2.25, -7.9, 0.7)]],
   // la pupusera detrás de su plancha (la plancha y su mesa, en negro; las pupusas, de masa; la brasa, encendida)
   pupusera: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(),
     ['rasgo', p([-3.6, -3.1], [3.6, -3.1], [3.6, -2.5], [3.0, -2.5], [3.0, 0], [2.6, 0], [2.6, -2.5], [-2.6, -2.5], [-2.6, 0], [-3.0, 0], [-3.0, -2.5], [-3.6, -2.5])],
@@ -168,10 +179,10 @@ export function manoDe({ x, y, k, f = 1, s = 1 }) {
 export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
   const L = [];
   const en = (sitio, i, tipo, extra = {}) => { const q = lug[sitio]?.[i]; if (q) L.push({ t: tipo, x: q[0] + (extra.dx ?? 0) * q[2], y: q[1] + (extra.dy ?? 0) * q[2], k: q[2], ...extra }); };
-  const oseznos = (cuantos) => {
+  const oseznos = (cuantos, tipo = null) => {
     for (let i = 0; i < cuantos; i++) {
-      const hilo = i < hilos;
-      en('plaza', i, hilo || i % 3 === 1 ? 'oseznoArriba' : 'osezno', { s: OSEZNO, r: i, f: hilo || i % 2 === 0 ? 1 : -1, hilo });
+      const hilo = !tipo && i < hilos;
+      en('plaza', i, tipo ?? (hilo || i % 3 === 1 ? 'oseznoArriba' : 'osezno'), { s: OSEZNO, r: i, f: hilo || i % 2 === 0 ? 1 : -1, hilo });
     }
   };
   if (t === 'amanece') { en('corredor', 0, 'estira', { r: 2 }); en('calle', 0, 'panadero', { r: 1 }); en('corredor', 1, 'escoba', { r: 0, f: -1 }); }
@@ -179,7 +190,20 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
   else if (t === 'mananaLibre') { en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'campesino', { r: 1 }); en('calle', 1, 'vecina', { r: 2, f: -1 }); oseznos(4); }
   else if (t === 'siesta') { en('banca', 0, 'siesta', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vendedora', { r: 0, f: -1 }); }
   else if (t === 'tarde') { en('corredor', 0, 'abuela', { r: 2 }); oseznos(5); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'campesino', { r: 2, f: -1 }); }
-  else if (t === 'pupusas') { en('calle', 0, 'pupusera', { r: 0 }); en('calle', 0, 'vecino', { r: 2, dx: 6.2, f: -1 }); en('calle', 0, 'osezno', { r: 1, s: OSEZNO, dx: 9.6, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, 'vecina', { r: 1 }); }
+  else if (t === 'pupusas' || t === 'posada') {
+    // (36, idea 112) En Navidad, al anochecer, además una osa y su osezno miran el nacimiento (de espaldas; el nacimiento no cambia).
+    if (t === 'posada') { en('portal', 0, 'espaldas', { r: 0 }); en('portal', 0, 'osezno', { r: 2, s: OSEZNO, dx: 3.2, dy: 0.5 }); }
+    en('calle', 0, 'pupusera', { r: 0 }); en('calle', 0, 'vecino', { r: 2, dx: 6.2, f: -1 }); en('calle', 0, 'osezno', { r: 1, s: OSEZNO, dx: 9.6, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, 'vecina', { r: 1 });
+  }
+  // ---- (Campamento 36) El calendario del pueblo: cada fecha, otro reparto de los mismos osos.
+  // El domingo, a misa (108): de espaldas camino de la puerta, un vecino con su osezno de la mano y el padre a la puerta (109).
+  else if (t === 'misa') { en('atrio', 3, 'cura', {}); en('atrio', 0, 'espaldas', { r: 0 }); en('atrio', 1, 'espaldas', { r: 2 }); en('atrio', 4, 'vecino', { r: 1 }); en('atrio', 4, 'osezno', { r: 0, s: OSEZNO, dx: 3.1 }); en('corredor', 0, 'abuela', { r: 1 }); en('calle', 0, 'campesino', { r: 2, f: -1 }); }
+  // El sábado, más plaza (110): dos vendedoras con su canasto, vecinos y un osezno; sin puestos ni rótulos.
+  else if (t === 'mercado') { en('atrio', 0, 'vendedora', { r: 0 }); en('plaza', 0, 'vendedora', { r: 2, f: -1 }); en('plaza', 2, 'campesino', { r: 1 }); en('plaza', 4, 'vecina', { r: 0 }); en('plaza', 5, 'osezno', { r: 1, s: OSEZNO, dx: 0.8 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vecina', { r: 1, f: -1 }); }
+  // El 15 de septiembre, el desfile (111): el abanderado con la azul y blanco, el del bombo de la banda de paz y los vecinos mirando.
+  else if (t === 'desfile') { en('calle', 0, 'abanderado', { r: 0, f: -1 }); en('plaza', 1, 'bombo', { r: 0 }); en('plaza', 3, 'oseznoArriba', { r: 0, s: OSEZNO }); en('plaza', 5, 'vecino', { r: 0 }); en('atrio', 0, 'vecina', { r: 2 }); en('atrio', 0, 'osezno', { r: 1, s: OSEZNO, dx: 3 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'campesino', { r: 1, f: -1 }); }
+  // Nochebuena y el 31 (113): los oseznos de la plaza con su estrellita y los vecinos en la calle, mirando el nacimiento.
+  else if (t === 'nochebuena') { oseznos(3, 'oseznoLuz'); en('portal', 0, 'espaldas', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 0, 'vecino', { r: 2, dx: 5.4, f: -1 }); en('atrio', 1, 'vendedora', { r: 0 }); }
   // 'duerme' (22:00–5:00): nadie en la calle (103).
   // Nadie se monta sobre otro: en el orden del reparto, quien cae encima de alguien ya puesto no sale (como mucho se rozan).
   // Los oseznos de la plaza van en corro, escalonados (unos un paso más adelante): entre ellos sí se rozan. (Pulido) Tampoco se para
