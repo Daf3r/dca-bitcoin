@@ -63,7 +63,8 @@ function oso(quien, { cabeza = 0, ojos = 'abiertos', brazos = [], manitas = true
   if (quien !== 'grande') for (const pts of BUFANDA) add('bufanda', pts); // el grande no: ya lleva su cinta
   // Brazos: el iluminado en luz con su canto; el de la sombra, en el tono medio (en el de sombra se fundía con la media luna de la cabeza
   // y parecía un ala). La manita al final, del crema del hocico.
-  for (const { de, a, lado = 'luz', r = 1.35, aparte = false } of brazos) {
+  // (Pulido integral) Bracitos de peluche, gorditos (r 1.75; antes 1.35 se leían como palitos).
+  for (const { de, a, lado = 'luz', r = 1.75, aparte = false } of brazos) {
     const dest = aparte ? pl.aparte : pl;
     add(lado === 'luz' ? 'luz' : 'medio', capsula(de, a, r), dest);
     if (lado === 'luz') add('medio', cantoBrazo(de, a, r, a[0] < de[0] ? -1 : 1), dest);
@@ -139,7 +140,7 @@ function svgDe(nombre, partes, tam, plantar) {
 // ---------------------------------------------------------------------------------------------------------------- las poses
 const HOMBRO = { luz: [4.4, -7.4], sombra: [-4.4, -7.4] };
 /** Dónde termina el brazo que saluda del grande (lo usa la prueba que comprueba el eje del saludo en styles.css). */
-export const SALUDO = { de: HOMBRO.luz, a: [8.2, -13.6], r: 1.35 };
+export const SALUDO = { de: HOMBRO.luz, a: [8.2, -13.6], r: 1.75 };
 const POSES = {
   /** Con un libro abierto en el regazo, leyendo (la lista y el Historial sin compras). */
   lee: (o) => {

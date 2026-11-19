@@ -213,6 +213,7 @@ const PESOS = [
   ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
   ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
   ['campamento 38: lo que cambia de la app', 25], // 3 comprobaciones
+  ['pulido integral: el movimiento (nada co', 90], // 16 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -3791,7 +3792,8 @@ try {
         const v = await voz(l.p);
         eq([v.saldo, v.punto, v.marca], ['Saldo del libro', 'Vamos aquí', 'libro'], '17·2 lectora: «Saldo del libro» y «Vamos aquí»');
         eq(v.prox, 'Lo anota Daf3r', '17·2 lectora: dice quién lleva el libro (el nombre ya venía en la carta sembrada)');
-        ok(v.desc.startsWith('El libro está a 1,211,769 sats de altitud') && /Ya pasó 2 de 3 campamentos/.test(v.desc) && /Al pie crece el bosque del libro/.test(v.desc), `17·2 lectora: la descripción de la montaña habla del libro («${v.desc.slice(0, 70)}…»)`);
+        // (El saldo del escenario cambia con el día real: desde el 19 nov 2026 a las 0:00 de El Salvador ya no es 1,211,769; también en main.)
+        ok(/^El libro está a [\d,]+ sats de altitud/.test(v.desc) && /Ya pasó 2 de 3 campamentos/.test(v.desc) && /Al pie crece el bosque del libro/.test(v.desc), `17·2 lectora: la descripción de la montaña habla del libro («${v.desc.slice(0, 70)}…»)`);
         ok(v.ayuda.startsWith('Saldo del libro.') && /Se alcanzó el /.test(v.banderas) && /Faltan [\d,]+ sats para la cumbre\. El libro va al \d+%\./.test(v.banderas), `17·2 lectora: ayuda del saldo y banderas («${v.banderas.slice(0, 90)}»)`);
         ok(!tuteo.test(v.todo) && !tuteo.test(v.desc) && !tuteo.test(v.banderas) && !tuteo.test(v.ayuda), `17·2 lectora: en la escena, el título y la mini-cabecera nada dice «tu» («${(tuteo.exec(`${v.todo} ${v.desc} ${v.banderas}`) ?? [''])[0]}»)`);
         ok(v.pildora && v.pildora[0] >= 4 && v.pildora[1] <= v.ancho - 4, `17·2 lectora: la píldora «Vamos aquí» cabe en la escena (${v.pildora})`);
@@ -7523,6 +7525,44 @@ try {
       const e = await pg.evaluate(() => ({ vecinos: document.querySelectorAll('.v-vecinos path').length, luces: (document.querySelector('.v-pueblo .v-luz')?.getAttribute('d') ?? '').length, turno: document.documentElement.dataset.turno }));
       ok(e.vecinos > 0 && e.luces === 0 && e.turno === 'pupusas', `38 la entrada: los vecinos osos de su turno y ninguna ventana encendida (${JSON.stringify(e)})`);
       await ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- pulido integral: el movimiento (nada corre escondido, solo transform y opacidad, el ambiente solo con «todos» y todo quieto al deslizar)
+  await bloque(async () => {
+    const conLs = (dia, ef) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } }, { dia, ef }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const audita = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), esc = h.closest('.escena');
+      const oculto = (e) => { for (let y = e; y && y !== document.body; y = y.parentElement) { const st = getComputedStyle(y); if (st.display === 'none' || st.visibility === 'hidden') return true; } return false; };
+      const nombre = (a) => `${a.animationName}@${(a.effect.target.getAttribute('class') || a.effect.target.tagName).split(' ').slice(0, 2).join('.')}`;
+      const vivas = () => document.getAnimations().filter((a) => a.effect?.target && h.contains(a.effect.target) && a.playState === 'running');
+      const v = vivas(), r = { vivas: v.length, ocultas: [], props: [], infinitas: [], sinPausa: [] };
+      for (const a of v) {
+        if (oculto(a.effect.target)) r.ocultas.push(nombre(a));
+        const props = new Set(a.effect.getKeyframes().flatMap((k) => Object.keys(k)).filter((x) => !['offset', 'easing', 'composite', 'computedOffset'].includes(x)));
+        if ([...props].some((x) => !['transform', 'opacity', 'translate', 'rotate', 'scale'].includes(x))) r.props.push(nombre(a));
+        if (a.effect.getTiming().iterations === Infinity) r.infinitas.push(nombre(a));
+      }
+      esc?.setAttribute('data-desliza', '');
+      r.sinPausa = vivas().filter((a) => a.effect.getTiming().iterations === Infinity && !a.effect.target.closest('#m-fx')).map(nombre);
+      esc?.removeAttribute('data-desliza');
+      return r;
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        for (const [dia, hora, ef] of [['2026-09-16', 7.5, 'todos'], ['2026-09-16', 12, 'todos'], ['2026-09-16', 15.5, 'todos'], ['2026-09-16', 21, 'todos'], ['2026-12-24', 21, 'todos'], ['2026-07-10', 15, 'todos'], ['2026-09-16', 12, 'esenciales'], ['2026-12-24', 21, 'esenciales']]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h }, reducedMotion: 'no-preference' }, conLs(dia, ef));
+          await cerrar(t.p);
+          await t.p.waitForTimeout(1500);
+          const r = await audita(t.p);
+          ok(r.ocultas.length === 0 && r.props.length === 0 && r.sinPausa.length === 0 && (ef === 'todos' || r.infinitas.length === 0), `pulido integral a ${w} px, ${dia} ${hora}:00, «${ef}»: ${r.vivas} animaciones, ninguna sobre algo escondido, solo transform y opacidad, quietas al deslizar${ef === 'todos' ? '' : ' y ninguna infinita'} (${JSON.stringify({ ocultas: r.ocultas.slice(0, 4), props: r.props.slice(0, 4), sinPausa: r.sinPausa.slice(0, 4), infinitas: ef === 'todos' ? undefined : r.infinitas.slice(0, 4) })})`);
+          await t.ctx.close();
+        }
+      }
     } finally {
       anio.parar();
     }
