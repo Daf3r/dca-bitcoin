@@ -6651,7 +6651,8 @@ try {
     // caben, los tres; si no, la pareja o el grande; si no, ninguno. Nunca tocan nada.
     const MATRIZ = { anio: [[390, 844, 3], [430, 873, 3], [390, 664, 3], [320, 568, 1], [844, 390, 1], [768, 1024, 3], [1440, 900, 3], [2560, 1440, 3]], mil: [[390, 844, 3], [1440, 900, 3], [320, 568, 0]], ballena: [[390, 844, 3], [1440, 900, 3], [844, 390, 0]], hoy: [[390, 844, 3], [844, 390, 2]] };
     for (const [esc, tams] of Object.entries(MATRIZ)) {
-      const srv = await servidor(esc);
+      // Los datos del escenario se fijan a un miércoles: a 320×568 que quepa o no el oso depende de la cifra del saldo, que cambia con el día de la semana (un jueves salía 0).
+      const srv = await servidor(esc, { FECHA_PRUEBA: '2026-11-18' });
       try {
         for (const [w, h, esperados] of tams) {
           const t = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: w, height: h }, deviceScaleFactor: 1, isMobile: w < 900, hasTouch: w < 1100, pestanas: true }, conLs({ 'libro.efectos': 'ninguno' }));

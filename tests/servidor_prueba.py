@@ -31,7 +31,9 @@ import server  # noqa: E402
 puerto = int(sys.argv[1])
 esc = sys.argv[2] if len(sys.argv) > 2 else "anio"
 PRECIO = 77598.24
-HOY = date.today()
+# `FECHA_PRUEBA` (AAAA-MM-DD) fija el «hoy» de los datos del escenario: un bloque cuyo resultado depende de la cifra exacta del saldo
+# (p. ej. si caben o no los osos a 320×568) no cambia con el día de la semana en que corre. Sin ella, el día real.
+HOY = date.fromisoformat(os.environ["FECHA_PRUEBA"]) if os.environ.get("FECHA_PRUEBA") else date.today()
 # Precio diario simulado: interpola (en logaritmo) entre unas anclas de seis años y le añade ruido suave.
 ANCLAS = [(-2192, 13800), (-2026, 63000), (-1929, 30000), (-1817, 67000), (-1597, 19000), (-1441, 15800),
           (-1209, 31000), (-1040, 42500), (-964, 71000), (-788, 54000), (-686, 106000), (-574, 77000),
