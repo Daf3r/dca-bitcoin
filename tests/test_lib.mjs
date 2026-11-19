@@ -1749,4 +1749,41 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(Math.max(...xs) <= px + 0.15 && Math.min(...ys) >= py - 0.15 && Math.max(...xs) > 8, `estira: los brazos salen por fuera de la cabeza (${Math.max(...xs).toFixed(1)}) y sus puntas, las que se comprueban contra la montaña, los cubren`);
 }
 
+// Pulido del pueblo: las casas no se montan unas sobre otras ni sobre la iglesia, en ningún tamaño ni con la luz de ningún lado. La fila
+// de atrás va en su terraza (su fachada se ve por encima de los tejados de delante) y se pinta antes que la iglesia y que el frente.
+{
+  const P = await import('../app/static/arte-pueblo.js');
+  const CONF = [
+    { W: 320, H: 640, forma: 'tel', by: 505, bx: 45, pts: [[45, 505], [190, 455], [95, 395], [200, 275]], lago: { cx: 268, cy: 590, rx: 50, ry: 10 }, techo: 225 },
+    { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 768, H: 900, forma: 'tab', by: 760, bx: 150, pts: [[150, 760], [520, 650], [260, 520], [470, 330]], lago: { cx: 640, cy: 830, rx: 100, ry: 14 }, techo: 300 },
+    { W: 844, H: 390, forma: 'acostado', by: 360, bx: 420, pts: [[420, 360], [600, 300], [470, 220], [560, 60]], lago: null, techo: 120 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 2560, H: 1300, forma: 'esc', by: 1190, bx: 900, pts: [[900, 1190], [1500, 1000], [1000, 800], [1550, 100]], lago: null, techo: 600 },
+  ];
+  const cruza = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+  const fallos = [];
+  let atras = 0;
+  for (const c of CONF) for (const sol of [1, -1]) {
+    const sp = P.sitiosPueblo({ ...c, sol }), u = sp.u, nom = `${c.W} ${c.forma} sol ${sol}`;
+    const ig = sp.iglesia && P.cajaIglesia(sp.iglesia.x, sp.iglesia.s, u, sp.yg, sol);
+    const fr = sp.piezas.filter((q) => q.tipo === 'casa').map((q) => P.cajaCasa(q.x, sp.yg, q.s, q.i, u, sol));
+    const at = sp.atras.map((a) => P.cajaCasa(a.x, a.y, a.s, a.i, u, sol));
+    atras += at.length;
+    for (const [i, a] of at.entries()) {
+      if (ig && cruza(a, ig)) fallos.push(`${nom}: la de atrás ${i} detrás de la iglesia`);
+      if (at.slice(i + 1).some((b) => cruza(a, b))) fallos.push(`${nom}: dos de atrás juntas`);
+      const tapa = Math.max(0, ...fr.filter((f) => a.x0 < f.x1 && a.x1 > f.x0).map((f) => Math.max(0, a.y1 - Math.max(a.ym, f.y0)) / (a.y1 - a.ym)));
+      if (tapa > 0.4) fallos.push(`${nom}: la de atrás ${i} con el ${Math.round(tapa * 100)} % de la fachada tapada por un tejado de delante`);
+    }
+    for (const [i, a] of fr.entries()) if ((ig && cruza(a, ig)) || fr.slice(i + 1).some((b) => cruza(a, b))) fallos.push(`${nom}: la de delante ${i} se monta en otra o en la iglesia`);
+    const svg = P.pueblo(sp, { ventanas: 3 });
+    if (svg.indexOf('v-ig-lado') < svg.lastIndexOf('v-terraza') || (sp.atras.length && !svg.includes('v-terraza'))) fallos.push(`${nom}: la fila de atrás no se pinta antes que la iglesia`);
+  }
+  eq(fallos, [], `pulido del pueblo: ninguna casa sobre la iglesia ni sobre otra, la fila de atrás con su fachada a la vista y pintada antes (${atras} casas de atrás en 12 casos)`);
+  const sp = P.sitiosPueblo({ ...CONF[1], sol: 1 });
+  const evita = P.pueblo(sp, { evitar: [sp.xFin, sp.xFin + 30 * sp.u] }), sin = P.pueblo(sp, {});
+  ok(sin.includes('copa v-fuego') && !evita.includes('copa v-fuego'), 'pulido del pueblo: si el árbol del primer día está al final de la calle, el árbol de fuego no se pone (los dos troncos parecían una persona)');
+}
+
 console.log(`OK ${n} comprobaciones`);

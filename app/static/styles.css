@@ -4200,6 +4200,8 @@ html:is([data-fiesta="agostinas"], [data-fiesta="patrias"]) .v-fiesta { display:
 .v-gente { fill: color-mix(in oklab, #2b2019 72%, var(--monte-sombra)); }
 .v-animal { fill: color-mix(in oklab, #6b4a2e var(--v-som), var(--monte-sombra)); }
 .v-gallina { fill: color-mix(in oklab, #b8643a var(--v-luz), var(--monte-sombra)); }
+/* (Pulido del pueblo) El muro de piedra de la terraza de la fila de atrás. */
+.v-terraza { fill: color-mix(in oklab, #9a8f7c var(--v-luz), var(--monte-sombra)); }
 /* El pino de Navidad de la plaza: guirnalda dorada, esferas y su lazo. */
 .v-pn-guirnalda { fill: none; stroke: #e8c25a; stroke-linecap: round; stroke-opacity: 0.9; }
 .v-pe-0 { fill: #d23a3a; } .v-pe-1 { fill: #f0c24a; }

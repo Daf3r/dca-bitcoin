@@ -19,6 +19,19 @@ const punto = ([x, y]) => `M${P([x, y])}h0.01`;
 const COLORES = ['cal', 'anil', 'ocre', 'rosa', 'menta'];
 const CASAS = [[15, 8, 9, 5.4, 1, true], [12, 7.4, 8, 5, 2, false], [16, 8.4, 9, 5.6, 0, true], [12.5, 7.6, 8, 5, 3, false], [14, 8, 9, 5.4, 4, true], [12, 7, 8, 4.8, 0, false], [13, 7.6, 8.5, 5, 2, true]];
 const ALTO_IGLESIA = 40; // del suelo a la punta de la cruz (unidades)
+// (Pulido del pueblo) La terraza de la fila de atrás, sobre la calle: lo más alto de una casa del frente (la cumbrera de la más alta,
+// 8.4 + 5.6 + 1.1) menos 1.3, así su tejado tapa a lo sumo el pie de la fachada de atrás.
+export const TERRAZA = 13.8;
+/** La caja de una casa en la escena (pared, tejado y su fondo): [x0, y0, x1, y1]. `y0` es la cumbrera; `ym`, lo alto de la pared. */
+export function cajaCasa(x, y0, s, i, u, sol = 1) {
+  const [w, h, d, rh] = CASAS[i % CASAS.length], k = u * s, ancho = (w + d * 0.62) * k;
+  return { x0: x - 1.4 * k, x1: x + ancho + 1.4 * k, y0: y0 - (h + rh + d * 0.12) * k, ym: y0 - h * k, y1: y0, sol };
+}
+/** La caja de la iglesia (torre, fachada y nave, hasta la cruz). */
+export function cajaIglesia(x, s, u, yg, sol = 1) {
+  const k = u * s, xa = sol > 0 ? x : x - 11 * k;
+  return { x0: xa, x1: xa + 41 * k, y0: yg - 37 * k, ym: yg - 21 * k, y1: yg };
+}
 
 /**
  * Dónde va cada pieza del pueblo. `limite(xa, xb)`: la y más alta (en pantalla, la menor) que pueden alcanzar los tejados entre `xa` y
@@ -75,22 +88,24 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
     casasFrente.push(c);
     piezas.push(c);
   }
-  // Una segunda fila, detrás y más chica (las casas de la loma de atrás): en los huecos que deja el sendero.
-  // La fila de atrás: casas más chicas, más arriba, que asoman entre los tejados del frente (el pueblo tiene fondo).
+  // La fila de atrás (pulido del pueblo): casas más chicas en una terraza detrás de la calle, con su muro de piedra, a la altura de
+  // los tejados del frente: el tejado de delante tapa a lo sumo el pie de su fachada (se ven enteras, no un tejado montado sobre
+  // otro). Empieza donde acaba la iglesia (su nave, o su torre si la luz viene del otro lado): nunca detrás de ella. Donde el sendero
+  // no deja sitio encima, no se pone. (Antes iba a 10 unidades de la calle, detrás de los tejados, y desde la mitad de la nave.)
   const atras = [];
-  const yAtras = yg - 10 * u;
-  const desde = iglesia ? iglesia.x + 26 * u * iglesia.s : x0;
+  const yAtras = yg - TERRAZA * u;
+  const desde = iglesia ? iglesia.x + (sol > 0 ? 41 : 30) * u * iglesia.s + 2 * u : x0;
   for (let x = desde, j = 0; x < cursor - 6 * u; j++) {
     const i = (j * 3 + 2) % CASAS.length, [w, h, d, rh] = CASAS[i], s = 0.7 - (j % 2) * 0.06;
-    const xb = x + (w + d * 0.62) * u * s, y = yAtras - (j % 2) * 2.2 * u;
-    if (xb < xMax && y - (h + rh + d * 0.24) * u * s >= limite(x, xb)) atras.push({ x, s, i, y });
+    const xb = x + (w + d * 0.62) * u * s;
+    if (xb < xMax && yAtras - (h + rh + d * 0.24) * u * s >= limite(x, xb)) atras.push({ x, s, i, y: yAtras });
     x = xb + (2 + (j % 3) * 3) * u;
   }
   const xFin = Math.max(cursor, x0 + 40);
   // Los niños de la plaza (de octubre a noviembre sostienen el hilo de las piscuchas).
   const ninos = plaza ? [0, 1, 2, 3, 4, 5].map((j) => [plaza.x + (5 + j * 3.4) * u * plaza.s, yg + (2.6 + (j % 2) * 1.2) * u]) : [];
   // La gente y los animales: en la calle, delante de las casas y en la plaza (siluetas quietas, sin nadie en particular).
-  return { u, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 14 * u), xFin + 4, yg + 4 * u] };
+  return { u, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 12 * u), xFin + 4, yg + 4 * u] };
 }
 
 // ------------------------------------------------------------------------------------------------ el dibujo
@@ -99,11 +114,13 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
  * frente, los árboles, el pino de Navidad y el portal del nacimiento (Navidad), los faroles, los cordeles (foquitos en Navidad,
  * banderitas en las fiestas), la gente y los animales, el humo del fogón. `ventanas`: cuántas se encienden de noche (una por persona).
  */
-export function pueblo(sit, { ventanas = 0 } = {}) {
+export function pueblo(sit, { ventanas = 0, evitar = null } = {}) {
   const { u, yg, piezas, atras, sol } = sit;
-  // Un acumulador por tono: todo el pueblo en unos pocos trazos.
-  const A = {};
-  const add = (k, d) => { A[k] = (A[k] ?? '') + d; };
+  // Un acumulador por tono: todo el pueblo en unos pocos trazos. La fila de atrás va en los suyos (B), que se pintan antes que la
+  // iglesia y que el frente: así nada de atrás queda encima de lo de delante (pulido del pueblo).
+  const A = {}, B = {};
+  let dest = A;
+  const add = (k, d) => { dest[k] = (dest[k] ?? '') + d; };
   const sitiosVentana = [];
   const humos = [];
   const faroles = [];
@@ -188,7 +205,14 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     return { cx: x + w * 0.42, w, k, alto: Math.min(1, alto / 36) };
   };
   // ---- dibujar, de atrás adelante
+  dest = B;
   for (const a of atras) casa(a.x, a.y, a.s, a.i, 1);
+  // El muro de la terraza: piedra baja bajo la fila de atrás (su pie asoma entre los tejados de delante).
+  if (atras.length) {
+    const ya = atras[0].y, xa = atras[0].x - 3 * u, xb = Math.max(...atras.map((a) => a.x + (CASAS[a.i][0] + CASAS[a.i][2] * 0.62) * u * a.s)) + 3 * u;
+    add('terraza', poli([[xa, ya - 0.2 * u], [xb, ya - 0.2 * u], [xb + 1.2 * u, ya + 1.6 * u], [xa - 1.2 * u, ya + 1.6 * u]]));
+  }
+  dest = A;
   let pz = null, cruzMayo = ''; // (34) la cruz del Día de la Cruz
   const altos = [];
   for (const p of piezas) {
@@ -272,8 +296,11 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
   // El humo del fogón (ambiente, a sus horas): tres bocanadas a destiempo de la primera cocina.
   const humo = humos.slice(0, sit.forma === 'esc' ? 2 : 1).map(([hx, hy], i) => [0, 1, 2].map((j) => `<circle class="efecto-ambiente v-humos v-hu v-hu-${j}${i ? ' v-hu-b' : ''}" cx="${f1(hx)}" cy="${f1(hy)}" r="${f1((1.4 + j * 0.45) * u)}"/>`).join('')).join('');
   const sw = (n) => ` stroke-width="${f1(n * u)}"`;
-  const p = (clase, k, extra = '') => (A[k] ? `<path class="${clase}" d="${A[k]}"${extra}/>` : '');
+  const p = (clase, k, extra = '', X = A) => (X[k] ? `<path class="${clase}" d="${X[k]}"${extra}/>` : '');
   const frentes = COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`)).join('');
+  // La fila de atrás, entera y en su orden (sombra, muro de la terraza, paredes, tejados, puertas y ventanas), antes que la iglesia.
+  const filaAtras = p('v-sombra', 'sombra', '', B) + p('v-terraza', 'terraza', '', B) + COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`, '', B)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`, '', B)).join('')
+    + p('v-alero', 'alero', '', B) + p('v-techo-l', 'techo-l', '', B) + p('v-techo-s', 'techo-s', '', B) + p('v-teja', 'teja', sw(0.6), B) + p('v-poste', 'poste', sw(0.55), B) + p('v-puerta', 'puerta', '', B) + p('v-ventana v-ventana-atras', 'ventana', '', B);
   // Los árboles de aquí, detrás de las casas (campamento 22B, idea 56, ahora en el pueblo): un maquilishuat junto a la iglesia (en
   // febrero, todo rosado) y un árbol de fuego al final de la calle (en abril, rojo). Con sus flores caídas cuando florecen.
   const arbolito = (sp, x, y, r) => {
@@ -285,11 +312,13 @@ export function pueblo(sit, { ventanas = 0 } = {}) {
     return `<path class="v-flores v-flores-${sp}" d="M${f1(fx - fr)} ${f1(fy)}Q${f1(fx)} ${f1(fy - 1.6 * u)} ${f1(fx + fr)} ${f1(fy)}Q${f1(fx)} ${f1(fy + 1.6 * u)} ${f1(fx - fr)} ${f1(fy)}Z"/><path class="v-ar-tronco" d="${tronco}"/>`
       + `<path class="copa v-${sp}" d="${c.base}"/><path class="copa-media v-${sp}" d="${c.media}"/><path class="copa-luz v-${sp}" d="${c.luz}"/><path class="copa-sombra v-${sp}" d="${c.sombra}"/>`;
   };
-  const fuegoV = arbolito('fuego', Math.min(sit.xFin + 7 * u, (sit.xMaxArbol ?? Infinity)), yg + 0.6 * u, 6.6 * u); // al final de la calle, a la vista
+  // (Pulido del pueblo) Si el árbol del primer día está en ese sitio, el de fuego no se pone: sus dos troncos juntos se leían como una persona.
+  const xFuego = Math.min(sit.xFin + 7 * u, (sit.xMaxArbol ?? Infinity)), rFuego = 6.6 * u * 1.3 + 2 * u;
+  const fuegoV = evitar && xFuego + rFuego > evitar[0] && xFuego - rFuego < evitar[1] ? '' : arbolito('fuego', xFuego, yg + 0.6 * u, 6.6 * u); // al final de la calle, a la vista
   // Los charcos de luz: dos trazos (el halo ancho y el centro), sin degradados (más baratos de pintar que una elipse con degradado cada uno).
   const elipse = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
   const luzSuelo = `<path class="v-charco" d="${charcos.map(([x, y, r]) => elipse(x, y, r, r * 0.32)).join('')}"/><path class="v-charco v-charco-c" d="${charcos.map(([x, y, r]) => elipse(x, y, r * 0.5, r * 0.16)).join('')}"/>`;
-  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}`
+  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${filaAtras}`
     + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
     + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-poste', 'poste', sw(0.55))}`
     + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`

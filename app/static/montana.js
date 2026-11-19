@@ -570,7 +570,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (22C) Las piscuchas vuelan a la izquierda de la montaña y su hilo baja a los niños de la plaza: van delante, con el pueblo.
   const kp = Math.max(1, pb.u * 0.5);
   const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q, i) => ({ ...q, k: kp, hilo: pb.ninos[i % Math.max(1, pb.ninos.length)] ? [pb.ninos[i % pb.ninos.length][0], pb.ninos[i % pb.ninos.length][1] - 2.6 * pb.u] : q.hilo }));
-  s += `<g id="m-v-pie">${caminoReal(valle.camino)}${pueblo(pb, { ventanas: personas })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
+  s += `<g id="m-v-pie">${caminoReal(valle.camino)}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);

@@ -207,6 +207,7 @@ const PESOS = [
   ['campamento 32: el teleférico del valle', 35], // 11 comprobaciones
   ['campamento 33: más ositos en el paisaje', 35], // 3 comprobaciones
   ['campamento 34: el pueblo vive', 35], // 10 comprobaciones
+  ['pulido del pueblo: las casas en su sit', 30], // 4 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -7247,6 +7248,37 @@ try {
       const v = await e.p.evaluate(() => { const o = document.querySelector('#m-osos.osos'); if (!o) return 'sin osos'; o.classList.add('estira-1'); return getComputedStyle(o.querySelector('.oso-brazos')).display; });
       ok(v === 'none', `33 con «esenciales» no se estiran (${v})`);
       await e.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- pulido del pueblo: las casas en su sitio (ninguna sobre la iglesia ni montada en otra; la fila de atrás en su terraza)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } }, null];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Las cajas de cada casa, como se dibujaron: cada subtrazo de las fachadas y de los tejados, medido en la escena.
+    const casas = (p) => p.evaluate(() => {
+      const g = document.querySelector('#montana .v-pueblo'); if (!g) return null;
+      const svg = g.ownerSVGElement, hijos = [...g.children], iIg = hijos.findIndex((e) => e.matches('.v-ig-lado'));
+      const sub = (e) => (e.getAttribute('d') || '').split(/(?=M)/).filter(Boolean).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); svg.append(t); const b = t.getBBox(); t.remove(); return { x0: b.x, x1: b.x + b.width, y0: b.y, y1: b.y + b.height }; });
+      const de = (sel, atras) => hijos.filter((e, i) => e.matches(sel) && (atras ? i < iIg : i > iIg)).flatMap(sub);
+      const ig = hijos.filter((e) => e.matches('.v-ig-lado, .v-ig-frente, .v-ig-torre, .v-ig-cupula')).flatMap(sub);
+      const cajaIg = ig.reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) }), { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 });
+      const cruza = (a, b, m = 0.5) => a.x0 < b.x1 - m && a.x1 > b.x0 + m && a.y0 < b.y1 - m && a.y1 > b.y0 + m;
+      const fachAt = de('.v-frente', true), techoFr = de('.v-techo-l', false).filter((b) => !cruza(b, cajaIg)), fachFr = de('.v-frente', false);
+      const tapadas = fachAt.map((a) => Math.max(0, ...techoFr.filter((t) => a.x0 < t.x1 && a.x1 > t.x0).map((t) => Math.max(0, a.y1 - Math.max(a.y0, t.y0)) / (a.y1 - a.y0))));
+      return { atras: fachAt.length, frente: fachFr.length, terraza: hijos.some((e, i) => e.matches('.v-terraza') && i < iIg), sobreIglesia: [...fachAt, ...fachFr].filter((a) => cruza(a, cajaIg)).length, juntas: fachFr.filter((a, i) => fachFr.slice(i + 1).some((b) => cruza(a, b))).length, peorTapada: Math.round(Math.max(0, ...tapadas) * 100) };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h, hora] of [[390, 844, 12], [768, 1024, 21], [1440, 900, 12], [2560, 1440, 21]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs);
+        await cerrar(t.p);
+        const r = await casas(t.p);
+        ok(r && r.frente >= 2 && (r.atras === 0 || r.terraza) && r.sobreIglesia === 0 && r.juntas === 0 && r.peorTapada <= 40, `pulido del pueblo a ${w} px: ${r?.frente} casas delante y ${r?.atras} en la terraza, ninguna sobre la iglesia ni sobre otra; la fachada de atrás más tapada, al ${r?.peorTapada} % (${JSON.stringify(r)})`);
+        await t.ctx.close();
+      }
     } finally {
       anio.parar();
     }
