@@ -201,6 +201,7 @@ const PESOS = [
   ['campamento 26: los osos en la interfaz', 46], // 22 comprobaciones
   ['campamento 27: cuando algo no va', 25], // 4 comprobaciones
   ['campamento 28: según el momento', 40], // 9 comprobaciones
+  ['campamento 29: detalles con cariño', 45], // 7 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -7013,6 +7014,66 @@ try {
       await t.ctx.close();
     } finally {
       vac.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 29: detalles con cariño (la huella del libro de cumbre, la tele dormida y el teleférico de la película)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const anio = await servidor('anio');
+    try {
+      // El libro de cumbre de un campamento alcanzado: la huella junto a «Libro de cumbre», del color de la tinta, decorativa.
+      {
+        const t = await entrar(navegador, anio, LECTOR, { hora: 12 }, conLs());
+        await cerrar(t.p);
+        const abrirLibro = async () => {
+          await t.p.evaluate(() => window.scrollTo(0, 0)); await t.p.waitForTimeout(400);
+          if (!(await t.p.evaluate(() => document.getElementById('m-firmas')?.checkVisibility()))) {
+            await t.p.evaluate(() => [...document.querySelectorAll('#m-banderas .m-bandera')].find((x) => /alcanz|pasaste|pasó/i.test(x.getAttribute('aria-label') || ''))?.click());
+            await t.p.waitForTimeout(600);
+          }
+          await t.p.evaluate(() => document.getElementById('m-firmas')?.click());
+          await t.p.waitForSelector('#d-firmas[open]', { timeout: 4000 });
+        };
+        await abrirLibro();
+        const r = await t.p.evaluate(() => {
+          const marca = document.querySelector('#d-firmas .fi-marca'), s = marca.querySelector(':scope > svg.oso-huella'), tinta = getComputedStyle(marca).color;
+          return { hay: Boolean(s) && s.getAttribute('aria-hidden') === 'true', una: marca.querySelectorAll('svg').length, txt: marca.innerText.trim(), color: s ? getComputedStyle(s.querySelector('path')).fill === tinta : false };
+        });
+        ok(r.hay && r.una === 1 && /^libro de cumbre$/i.test(r.txt) && r.color, `29 libro de cumbre: una huella del color de la tinta junto a «${r.txt}»`);
+        await t.p.keyboard.press('Escape'); await t.p.waitForTimeout(300);
+        await abrirLibro();
+        ok(await t.p.evaluate(() => document.querySelectorAll('#d-firmas .fi-marca svg').length) === 1, '29 libro de cumbre: al volver a abrirlo, sigue una sola huella');
+        await t.ctx.close();
+      }
+      // La tele dormida (23:30): los tres durmiendo bajo la hora, tenues, dentro de la caja que se corre con la hora.
+      {
+        const t = await entrar(navegador, anio, LECTOR, { hora: 23.5, viewport: { width: 1920, height: 1080 } }, conLs());
+        await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.reload({ waitUntil: 'networkidle' }); await t.p.waitForTimeout(4500);
+        const r = await t.p.evaluate(() => {
+          const caja = document.getElementById('tvn-caja'), s = caja.querySelector(':scope > svg.oso-pose-duermen');
+          return { duerme: document.documentElement.dataset.tvDuerme === '1', hay: Boolean(s) && s.getAttribute('aria-hidden') === 'true', op: s ? Number(getComputedStyle(s).opacity) : 1, abajo: s ? s.getBoundingClientRect().top >= document.querySelector('.tvn-nota').getBoundingClientRect().bottom - 1 : false, una: caja.querySelectorAll('svg.oso-ilu').length };
+        });
+        ok(r.duerme && r.hay && r.una === 1 && r.op > 0.3 && r.op < 0.5 && r.abajo, `29 la tele dormida: los tres durmiendo bajo la hora, tenues (${JSON.stringify(r)})`);
+        await t.ctx.close();
+      }
+      // La tarjeta de la película: la cabina del teleférico, sin tocar el botón ni desbordar, en el teléfono y en escritorio.
+      for (const [w, h] of [[320, 640], [390, 844], [768, 1024], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: w, height: h } }, conLs());
+        await cerrar(t.p);
+        await t.p.click('#cuenta-btn'); await t.p.click('#dc-historia-btn');
+        await t.p.waitForSelector('#dh-peli:not([hidden])', { timeout: 6000 }); await t.p.waitForTimeout(300);
+        const r = await t.p.evaluate(() => {
+          const c = document.getElementById('dh-peli'), s = c.querySelector(':scope > svg.oso-pose-teleferico'), b = document.getElementById('dh-peli-ver').getBoundingClientRect(), q = c.getBoundingClientRect(), a = s?.getBoundingClientRect();
+          const cruza = a && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+          return { hay: Boolean(s) && s.getAttribute('aria-hidden') === 'true', boton: Math.round(b.height), dentro: a ? a.left >= q.left && a.right <= q.right + 0.5 && b.right <= q.right + 0.5 : false, cruza, ancho: document.documentElement.scrollWidth <= innerWidth, una: c.querySelectorAll('svg.oso-ilu').length };
+        });
+        ok(r.hay && r.una === 1 && r.boton >= 48 && r.dentro && !r.cruza && r.ancho, `29 la película a ${w} px: la cabina dentro de la tarjeta, sin tocar «Ver la película» (${r.boton} px)`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
     }
   });
 

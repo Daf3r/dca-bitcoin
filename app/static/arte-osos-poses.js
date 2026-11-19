@@ -96,7 +96,7 @@ function grupo(quien, pl, x = 0, y = 0, s = ESCALA[quien]) {
   const T = (lista) => lista.map((pts) => pts.map(([px, py]) => [x + px * s, y + py * s]));
   const todos = [];
   const trazos = (planos) => TONOS.filter((t) => planos[t]).map((t) => { const pts = T(planos[t]); todos.push(...pts.flat()); return `<path class="oso-${t}${CLASE_TONO[t] ?? ''}" d="${d(pts)}"/>`; }).join('');
-  const aparte = trazos(pl.aparte);
+  const aparte = pl.aparte ? trazos(pl.aparte) : '';
   return { svg: `<g class="oso oso-${quien}">${trazos(pl)}${aparte ? `<g class="oso-saluda">${aparte}</g>` : ''}</g>`, pts: todos };
 }
 
@@ -215,6 +215,34 @@ export function pose(nombre, { tam = 96, cumple = false, plantar = true } = {}) 
   const partes = POSES[nombre]({ cumple });
   const trio = partes.length > 1;
   return svgDe(nombre, partes, tam, plantar ? (trio ? { x: 20.6, y: 3.4, s: 0.7 } : { x: -10.6, y: 0, s: 0.78 }) : null);
+}
+
+/**
+ * (Campamento 29) Los tres asomados a la ventana de una cabina roja que cuelga de un cable en diagonal: la idea del teleférico, en la
+ * tarjeta de «La película del ascenso». Fuera de la escena: la montaña no lleva cable. De madrugada, en la cabina, también cierran los ojos.
+ */
+export function teleferico({ tam = 78 } = {}) {
+  const cabeza = (quien, x, y, s) => {
+    const pl = {};
+    PIEZAS.forEach(([tono, pts], i) => { if (DE_CABEZA.has(i)) sumar(pl, tono, pts); });
+    sumar(pl, 'hocico', HOCICO); sumar(pl, 'rasgos', NARIZ); sumar(pl, 'ojos', ...OJOS); sumar(pl, 'ojos-zz', ...ojosCerrados(false));
+    return grupo(quien, pl, x, y, s);
+  };
+  const ventana = [[-12.4, -10.6], [12.4, -10.6], [12.4, -1.6], [-12.4, -1.6]];
+  // La cabina por delante: el panel de abajo, los marcos de la ventana y el techo; el colgador, la rueda y el cable, encima.
+  const panel = [[-14, -2.2], [14, -2.2], [13.4, 5.6], [-13.4, 5.6]];
+  const marcos = [[[-14, -11.6], [-12.4, -11.6], [-12.4, -2], [-14, -2]], [[12.4, -11.6], [14, -11.6], [14, -2], [12.4, -2]], [[-0.6, -10.8], [0.6, -10.8], [0.6, -2], [-0.6, -2]]];
+  const techo = [[-15, -11.4], [-10.6, -14.6], [10.6, -14.6], [15, -11.4]];
+  const colgador = [[-0.5, -21.4], [0.5, -21.4], [0.5, -14.4], [-0.5, -14.4]];
+  const rueda = elipse(0, -21.6, 1.6, 1.6, 10);
+  const cable = [[-30, -9.6], [30, -33.6], [30, -32.8], [-30, -8.8]];
+  const caras = [cabeza('mameluco', -7.2, 8.4, 0.78), cabeza('grande', 0.6, 8.8, 0.86), cabeza('chico', 7.6, 8.4, 0.66)];
+  const pts = [...ventana, ...panel, ...techo, ...cable, ...caras.flatMap((c) => c.pts)];
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const vb = [Math.min(...xs) - 1, Math.min(...ys) - 1, Math.max(...xs) - Math.min(...xs) + 2, Math.max(...ys) - Math.min(...ys) + 2];
+  return `<svg class="oso-ilu oso-pose-teleferico" viewBox="${vb.map(f1).join(' ')}" width="${Math.round((tam * vb[2]) / vb[3])}" height="${tam}" aria-hidden="true" focusable="false">`
+    + `<path class="oso-ventana" d="${d([ventana])}"/>${caras.map((c) => c.svg).join('')}`
+    + `<path class="oso-cabina" d="${d([panel, ...marcos])}"/><path class="oso-techo" d="${d([techo])}"/><path class="oso-cable" d="${d([cable, colgador, rueda])}"/></svg>`;
 }
 
 /** La huella de una pata (el sello de los de la cumbre): la almohadilla y cuatro deditos, en un solo trazo. */

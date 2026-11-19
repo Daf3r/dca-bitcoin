@@ -1709,6 +1709,10 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   const ox = ((P.SALUDO.de[0] - Math.min(...xs)) / (Math.max(...xs) - Math.min(...xs))) * 100, oy = ((P.SALUDO.de[1] - Math.min(...ys)) / (Math.max(...ys) - Math.min(...ys))) * 100;
   const css = fs.readFileSync(new URL('../app/static/styles.css', import.meta.url), 'utf8').match(/\.oso-saluda \{[^}]*transform-origin: ([\d.]+)% ([\d.]+)%/);
   ok(css && Math.abs(Number(css[1]) - ox) < 1.5 && Math.abs(Number(css[2]) - oy) < 1.5, `poses: el saludo gira desde el hombro (CSS ${css?.[1]}% ${css?.[2]}%, dibujo ${ox.toFixed(1)}% ${oy.toFixed(1)}%)`);
+  // (Campamento 29) La cabina del teleférico: decorativa, los tres asomados (que de madrugada cierran los ojos), sin estilos en línea.
+  const tel = P.teleferico({ tam: 78 });
+  ok(tel.startsWith('<svg class="oso-ilu oso-pose-teleferico" ') && tel.includes('aria-hidden="true"') && !/style=|fill=|NaN/.test(tel) && nodos(tel) <= 32, `poses: la cabina del teleférico, decorativa (${nodos(tel)} nodos)`);
+  ok((tel.match(/class="oso oso-(grande|chico|mameluco)"/g) || []).length === 3 && (tel.match(/oso-ojos-zz v-sueno/g) || []).length === 3 && ['oso-cabina', 'oso-ventana', 'oso-techo', 'oso-cable'].every((c) => tel.includes(`class="${c}"`)), 'poses: en la cabina van los tres, con su ventana, su techo y su cable');
   const h = P.huella({ tam: 30 });
   ok(nodos(h) === 2 && h.includes('class="oso-ilu oso-huella"') && h.includes('aria-hidden="true"') && !/style=|NaN/.test(h), 'poses: la huella es un solo trazo, decorativa');
   ok(['arco', 'elipse', 'canto', 'CAB', 'PIEZAS', 'CARA', 'ROPA'].every((k) => k in PARTES) && PARTES.PIEZAS.length > 8, 'poses: salen de las mismas piezas que los osos de la cumbre (PARTES)');

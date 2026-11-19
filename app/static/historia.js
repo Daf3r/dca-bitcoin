@@ -3,7 +3,7 @@ import { constelacion, estratos, manta, mantaPrimer, partitura as dibujarPartitu
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
 import { ico, medalla } from './iconos.js';
-import { pose } from './arte-osos-poses.js';
+import { pose, teleferico } from './arte-osos-poses.js';
 import { cumpleDeHoy } from './pintar.js';
 import { $, R, S, esAdmin, reducido, vozLibro } from './estado.js';
 import { abrirPelicula, hayPelicula } from './pelicula.js';
@@ -293,6 +293,8 @@ export function pintarHistoria() {
   pintarHoy();
   const peli = hayPelicula();
   $('dh-peli').hidden = !peli;
+  // (Campamento 29) La cabina del teleférico con los tres asomados: la película es «subir». Decorativa; el botón no cambia.
+  if (peli && !$('dh-peli').querySelector('.oso-ilu')) $('dh-peli').insertAdjacentHTML('beforeend', teleferico());
   $('dh-peli-d').textContent = `Cómo subió ${vozLibro() ? 'el libro' : 'tu libro'}, de la primera compra a hoy, sobre la montaña de hoy.`;
   const ms = medallas(R), ganadas = ms.filter((m) => m.ganada).length;
   cuenta('medallas', ganadas ? `${ganadas} ${ganadas === 1 ? 'ganada' : 'ganadas'}` : 'aún ninguna');

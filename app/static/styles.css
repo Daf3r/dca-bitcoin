@@ -4524,6 +4524,20 @@ html .oso-ilu :is(.oso-gorro-nav, .oso-bufanda) { fill: var(--oso-cinta); }
 html[data-navidad] .oso-ilu .v-navidad, html[data-sueno] .oso-ilu .v-sueno { display: inline; }
 html[data-sueno] .oso-ilu .se-duerme { display: none; }
 html[data-epoca="lluviosa"][data-tarde] .oso-ilu .v-lluvia, html[data-fiesta="patrias"] .oso-ilu .v-patrias { display: inline; }
+/* (Campamento 29) Detalles con cariño. El libro de cumbre: una huella del color de la tinta del cuaderno junto a «Libro de cumbre».
+   La tele dormida: los tres durmiendo bajo la hora, muy tenues (la noche de la tele es siempre oscura: sus tonos, los del tema oscuro).
+   La tarjeta de la película: la cabina del teleférico a la derecha del texto; con menos de 380 px, más chica y encima. */
+.d-firmas .fi-papel .fi-marca { display: inline-flex; align-items: center; gap: 6px; }
+.d-firmas .oso-huella .oso-huella-p { fill: var(--fi-tinta2); }
+.tvn-caja .oso-ilu { --ilu-sombra: #6f6a88; --ilu-medio: #8f8274; --s3: #263149; --txt3: #8f9ab0; margin-top: 0.7em; opacity: 0.42; }
+.oso-ilu .oso-ventana { fill: color-mix(in oklab, #bcd7ea 70%, var(--s1)); }
+.oso-ilu .oso-cabina { fill: var(--oso-cinta); }
+.oso-ilu .oso-techo { fill: var(--oso-marino); }
+.oso-ilu .oso-cable { fill: color-mix(in oklab, var(--txt) 70%, var(--s1)); }
+.dh-peli:has(> .oso-ilu) { grid-template-columns: minmax(0, 1fr) auto; }
+.dh-peli > .oso-ilu { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+@media (max-width: 379px) { .dh-peli:has(> .oso-ilu) { grid-template-columns: minmax(0, 1fr); } .dh-peli > .oso-ilu { grid-column: 1; grid-row: 1; justify-self: end; width: auto; height: 56px; margin-bottom: -4px; } }
+@media (min-width: 700px) { .dh-peli:has(> .oso-ilu) { grid-template-columns: minmax(0, 1fr) auto auto; } .dh-peli > .oso-ilu { grid-row: 1; } .dh-peli:has(> .oso-ilu) .dh-peli-ver { grid-column: 3; grid-row: 1; } }
 /* La guía de estilo: cada pose en una tarjeta, con su nombre. */
 .guia-osos { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px; margin: 10px 0; padding: 0; list-style: none; }
 .guia-osos li { display: grid; justify-items: center; align-content: end; gap: 6px; padding: 12px 8px 10px; border-radius: 12px; background: var(--s1); }
