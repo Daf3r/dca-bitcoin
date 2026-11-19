@@ -4026,6 +4026,9 @@ html[data-cielo="noche"] .v-garza { display: none; }
 .v-cy-casco { fill: color-mix(in oklab, #5a3a22 var(--v-som), var(--monte-sombra)); }
 .v-cy-borda { fill: color-mix(in oklab, #a0703f var(--v-luz), var(--monte)); }
 .v-cy-pescador { fill: color-mix(in oklab, #3a3430 55%, var(--monte-sombra)); }
+/* (Campamento 38) El pescador del cayuco es un oso polar con su sombrero de palma (como los vecinos del pueblo). */
+.v-cy-oso { fill: color-mix(in oklab, var(--oso-pelo) calc(var(--v-blanco) + 6%), var(--monte)); }
+.v-cy-sombrero { fill: color-mix(in oklab, #d8b56a calc(var(--v-luz) + 18%), var(--monte-sombra)); }
 .v-cy-remo, .v-cy-palo { fill: none; stroke: color-mix(in oklab, #6e4c2c var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
 .v-cy-halo, .v-cy-lampara, .v-cy-reflejo { display: none; }
 .v-cy-lampara { fill: var(--v-calida); }

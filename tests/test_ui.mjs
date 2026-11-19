@@ -212,6 +212,7 @@ const PESOS = [
   ['campamento 35: el pueblo de los osos', 90], // 16 comprobaciones
   ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
   ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
+  ['campamento 38: lo que cambia de la app', 25], // 3 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -7495,6 +7496,33 @@ try {
         ok(!(await capa(t.p)).hay, `37 a ${w} px: en la siesta nadie se mueve (no hay capa)`);
         await t.ctx.close();
       }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 38: lo que cambia de la app de hoy (el pescador oso, la descripción, la entrada)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-09-16'); localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } }, null];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const anio = await servidor('anio');
+    try {
+      for (const [hora, de] of [[15, 'día'], [21, 'noche']]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: 390, height: 844 } }, conLs);
+        await cerrar(t.p);
+        const r = await t.p.evaluate(() => ({ desc: document.getElementById('m-desc')?.textContent ?? '', oso: getComputedStyle(document.querySelector('#montana .v-cy-oso')).display, lampara: getComputedStyle(document.querySelector('#montana .v-cy-lampara')).display }));
+        ok(/los vecinos son osos polares/.test(r.desc) && (de === 'día' ? r.oso !== 'none' : r.oso === 'none' && r.lampara !== 'none'), `38 de ${de}: la descripción dice que los vecinos son osos polares y el pescador del cayuco es un oso (de noche, solo su lámpara) (${r.oso}, ${r.lampara})`);
+        await t.ctx.close();
+      }
+      // La entrada enseña el pueblo de osos por la hora y el día, y nada de la familia: ninguna ventana encendida.
+      const ctx = await navegador.newContext({ ...devices['iPhone 13'] });
+      const pg = await ctx.newPage();
+      await pg.addInitScript(() => { try { localStorage.setItem('libro.hora', '21'); localStorage.setItem('libro.dia', '2026-09-16'); } catch { /* sin almacenamiento */ } });
+      await pg.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
+      await pg.waitForTimeout(800);
+      const e = await pg.evaluate(() => ({ vecinos: document.querySelectorAll('.v-vecinos path').length, luces: (document.querySelector('.v-pueblo .v-luz')?.getAttribute('d') ?? '').length, turno: document.documentElement.dataset.turno }));
+      ok(e.vecinos > 0 && e.luces === 0 && e.turno === 'pupusas', `38 la entrada: los vecinos osos de su turno y ninguna ventana encendida (${JSON.stringify(e)})`);
+      await ctx.close();
     } finally {
       anio.parar();
     }

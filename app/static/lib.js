@@ -2115,12 +2115,13 @@ export const PISCUCHAS_MAX = 6;
 export const piscuchasDelValle = (personas) => Math.max(0, Math.min(PISCUCHAS_MAX, Math.floor(Number(personas) || 0)));
 /**
  * La frase del valle para la descripción de la montaña (lectores de pantalla). Sin «tu»: el valle es el mismo para toda la familia.
- * `arbol` = { fecha, etapa } si el libro ya tiene su árbol.
- * @param {{ luces?: number, arbol?: { fecha: string, etapa: string } | null }} [valle]
+ * `arbol` = { fecha, etapa } si el libro ya tiene su árbol; `milpa`: si en ese tamaño se dibuja (campamento 38).
+ * @param {{ luces?: number, arbol?: { fecha: string, etapa: string } | null, milpa?: boolean }} [valle]
  */
-export function textoValle({ luces = 0, arbol = null } = {}) {
-  // (22C) El pueblo bajó al pie de la montaña: el sendero empieza en él.
-  let t = `Al pie de la montaña hay un pueblo con su iglesia, su plaza y sus casas de colores; de él sale el camino real hasta donde empieza el sendero. Alrededor hay campos con su milpa, un bosque y un lago, y una quebrada baja de la montaña${luces ? `; de noche se ven ${luces} luces, una por mes del libro, en los caseríos de la sierra` : ''}.`;
+export function textoValle({ luces = 0, arbol = null, milpa = true } = {}) {
+  // (22C) El pueblo bajó al pie de la montaña: el sendero empieza en él. (Campamento 38, idea 121) Sus vecinos son osos polares: lo
+  // decorativo va con aria-hidden y lo que se ve tiene que estar aquí (sin tutear y sin nombres). Sin milpa en ese tamaño, no se nombra.
+  let t = `Al pie de la montaña hay un pueblo con su iglesia, su plaza y sus casas de colores; de él sale el camino real hasta donde empieza el sendero. En el pueblo, los vecinos son osos polares. Alrededor hay campos${milpa ? ' con su milpa' : ''}, un bosque y un lago, y una quebrada baja de la montaña${luces ? `; de noche se ven ${luces} luces, una por mes del libro, en los caseríos de la sierra` : ''}.`;
   if (arbol?.fecha) t += ` Junto a la salida crece ${{ retono: 'el retoño de un conacaste', joven: 'un conacaste joven', arbol: 'un conacaste', grande: 'un conacaste grande' }[arbol.etapa] ?? 'un conacaste'}, sembrado el ${fechaLarga(arbol.fecha)}, el día de la primera compra.`;
   return t;
 }

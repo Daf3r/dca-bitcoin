@@ -1905,4 +1905,13 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   eq(['manana', 'tarde', 'mananaLibre', 'misa', 'pupusas', 'duerme'].map((t) => actores(t).join()), ['escoba:barre', 'pelota:pelota', '', '', '', ''], 'pueblo 37: un solo actor por turno: la que barre entre semana por la mañana y la pelota de la tarde');
 }
 
+// Campamento 38 · Lo que cambia de la app de hoy: el pescador del cayuco es un oso (120) y la descripción de la montaña dice «osos» (121).
+{
+  const L = await import('../app/static/lib.js'), A = await import('../app/static/arte-valle.js');
+  const tv = L.textoValle({ luces: 3 }), sin = L.textoValle({ luces: 3, milpa: false });
+  ok(/En el pueblo, los vecinos son osos polares\./.test(tv) && !/\b(tu|tus|tú)\b/i.test(tv) && /con su milpa/.test(tv) && !/milpa/.test(sin), 'pueblo 38: la descripción de la montaña dice que los vecinos son osos polares (sin tutear) y nombra la milpa solo si está');
+  const vl = A.vidaLago({ cx: 300, cy: 600, rx: 80, ry: 12, k: 1.4 });
+  ok(/class="v-cy-cuerpo v-cy-oso"/.test(vl) && /class="v-cy-cuerpo v-cy-sombrero"/.test(vl) && !/style=|NaN/.test(vl), 'pueblo 38: el pescador del cayuco es un oso con su sombrero (y de noche, como siempre, se esconde con el cayuco)');
+}
+
 console.log(`OK ${n} comprobaciones`);

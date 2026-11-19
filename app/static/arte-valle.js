@@ -474,15 +474,19 @@ export function vidaLago({ cx, cy, rx, ry, k }) {
   const garza = `<path class="v-garza v-gz-pata" d="${patas}" stroke-width="${f1(0.55 * s)}"/><path class="v-garza v-gz-reflejo" d="${reflejo}" stroke-width="${f1(1.4 * s)}"/><path class="v-garza v-gz-cuello" d="${cuello}" stroke-width="${f1(1.1 * s)}"/>`
     + `<path class="v-garza v-gz" d="${cuerpo}"/><path class="v-garza v-gz-s" d="${sombraG}"/><path class="v-garza v-gz-pico" d="${pico}"/>`;
   // El cayuco: casco de madera (borda clara y costado en sombra), el pescador sentado con su sombrero, el remo y la lámpara.
+  // (Campamento 38, idea 120) El pescador es un oso polar, como los vecinos del pueblo: cuerpo y cabeza blancos con sus orejas, el
+  // hocico y el sombrero de palma, y la nariz y el ojo oscuros (mira a la lámpara). De noche, como siempre, solo la lámpara y su reflejo.
   const qx = cx + rx * 0.08, qy = cy + ry * 0.12, l = 15 * k, h = 2.2 * k;
   const casco = poli([[qx - l / 2, qy - h * 0.6], [qx + l / 2, qy - h * 0.8], [qx + l / 2 - 2.4 * k, qy + h * 0.5], [qx - l / 2 + 2 * k, qy + h * 0.5]]);
   const borda = poli([[qx - l / 2, qy - h * 0.6], [qx + l / 2, qy - h * 0.8], [qx + l / 2 - 0.6 * k, qy - h * 0.2], [qx - l / 2 + 0.6 * k, qy - h * 0.05]]);
   const px = qx - 1.2 * k, py = qy - h * 0.6;
-  const pescador = `M${f1(px - 1.6 * k)} ${f1(py)}L${f1(px - 1.1 * k)} ${f1(py - 4.2 * k)}L${f1(px + 1.1 * k)} ${f1(py - 4.2 * k)}L${f1(px + 1.6 * k)} ${f1(py)}Z`
-    + `M${f1(px - 2.6 * k)} ${f1(py - 4.4 * k)}L${f1(px + 2.6 * k)} ${f1(py - 4.4 * k)}L${f1(px + 1 * k)} ${f1(py - 5.7 * k)}L${f1(px - 1 * k)} ${f1(py - 5.7 * k)}Z`;
+  const ov = (x, y, a, b) => `M${f1(x - a)} ${f1(y)}a${f1(a)} ${f1(b)} 0 1 0 ${f1(2 * a)} 0a${f1(a)} ${f1(b)} 0 1 0 ${f1(-2 * a)} 0Z`;
+  const oso = ov(px, py - 1.7 * k, 1.75 * k, 1.9 * k) + ov(px + 0.2 * k, py - 4.3 * k, 1.4 * k, 1.25 * k) + ov(px - 0.95 * k, py - 5.3 * k, 0.5 * k, 0.5 * k) + ov(px + 1.35 * k, py - 5.3 * k, 0.5 * k, 0.5 * k);
+  const sombrero = ov(px + 0.2 * k, py - 5.55 * k, 2.5 * k, 0.45 * k) + `M${f1(px - 0.7 * k)} ${f1(py - 5.6 * k)}L${f1(px + 1.1 * k)} ${f1(py - 5.6 * k)}L${f1(px + 0.9 * k)} ${f1(py - 6.6 * k)}L${f1(px - 0.5 * k)} ${f1(py - 6.6 * k)}Z` + ov(px + 0.85 * k, py - 4.0 * k, 0.65 * k, 0.45 * k);
+  const pescador = ov(px + 1.25 * k, py - 4.15 * k, 0.28 * k, 0.22 * k) + ov(px + 0.55 * k, py - 4.75 * k, 0.17 * k, 0.17 * k);
   const remo = `M${f1(px + 0.8 * k)} ${f1(py - 2.6 * k)}L${f1(px + 6.4 * k)} ${f1(qy + 2.8 * k)}`;
   const lx = qx + l / 2 - 1.6 * k, ly = qy - h - 3.4 * k;
-  const cayuco = `<g class="v-cayuco"><path class="v-cy-cuerpo v-cy-remo" d="${remo}" stroke-width="${f1(0.7 * k)}"/><path class="v-cy-cuerpo v-cy-casco" d="${casco}"/><path class="v-cy-cuerpo v-cy-borda" d="${borda}"/><path class="v-cy-cuerpo v-cy-pescador" d="${pescador}M${f1(lx - 0.25 * k)} ${f1(qy - h * 0.6)}L${f1(lx - 0.25 * k)} ${f1(ly)}h${f1(0.5 * k)}L${f1(lx + 0.25 * k)} ${f1(qy - h * 0.6)}Z"/>`
+  const cayuco = `<g class="v-cayuco"><path class="v-cy-cuerpo v-cy-remo" d="${remo}" stroke-width="${f1(0.7 * k)}"/><path class="v-cy-cuerpo v-cy-casco" d="${casco}"/><path class="v-cy-cuerpo v-cy-borda" d="${borda}"/><path class="v-cy-cuerpo v-cy-oso" d="${oso}"/><path class="v-cy-cuerpo v-cy-sombrero" d="${sombrero}"/><path class="v-cy-cuerpo v-cy-pescador" d="${pescador}M${f1(lx - 0.25 * k)} ${f1(qy - h * 0.6)}L${f1(lx - 0.25 * k)} ${f1(ly)}h${f1(0.5 * k)}L${f1(lx + 0.25 * k)} ${f1(qy - h * 0.6)}Z"/>`
     + `<circle class="v-cy-halo" cx="${f1(lx)}" cy="${f1(ly)}" r="${f1(9 * k)}" fill="url(#m-farol)"/><circle class="v-cy-lampara" cx="${f1(lx)}" cy="${f1(ly)}" r="${f1(1 * k)}"/>`
     + `<path class="v-cy-reflejo" d="M${f1(lx)} ${f1(qy + h * 0.9)}l0 ${f1(5.5 * k)}" stroke-width="${f1(1.3 * k)}"/></g>`;
   return garza + cayuco;
