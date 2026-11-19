@@ -274,6 +274,43 @@ function yoTu(ec, cumple) {
   return `<rect class="yo-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/><g class="tu">${osoTu({ k: kTu(ec), cumple, bajo: `<ellipse class="yo-punto" rx="${f1(8.6 * kTu(ec))}" ry="${f1(2.4 * kTu(ec))}" cy="${f1(0.6 * kTu(ec))}"/>` })}</g>`;
 }
 
+/**
+ * (Campamento 32) El teleférico del valle, solo en pantallas anchas (desde 1100 px; en el teléfono el cable cruzaría el sendero): un
+ * cable de la torre de la iglesia a la loma de detrás del pueblo, con sus dos torres, quietos en el dibujo grande (en el valle); y la
+ * cabina roja con los tres asomados en su propia capa pequeña (un <svg> encima del dibujo grande y debajo del frente), que solo se mueve
+ * con «todos» y en su franja de `data-mueve` (10:00–13:00): cruza en 40 s, espera y vuelve; si no, quieta en la estación del pueblo.
+ * Si el cable pasara a menos de 10 px del sendero, no se pone. Devuelve si se puso.
+ */
+function telefericoValle(host, W, u, camino, L) {
+  const torre = host.querySelector('.v-ig-torre');
+  if (W < 1100 || !torre || !camino) return false;
+  const t = torre.getBBox(), A = [t.x + t.width / 2, t.y + 2], B = [A[0] + 55 * u, A[1] - 17 * u];
+  const [dx, dy] = [B[0] - A[0], B[1] - A[1]], dd = dx * dx + dy * dy;
+  for (let l = 0; l <= L; l += 4) {
+    const q = camino.getPointAtLength(l), k = Math.max(0, Math.min(1, ((q.x - A[0]) * dx + (q.y - A[1]) * dy) / dd));
+    if (Math.hypot(q.x - A[0] - k * dx, q.y - A[1] - k * dy) < 10) return false;
+  }
+  const pie = host.querySelector('#m-v-pie');
+  if (!pie) return false;
+  const torres = [A, B].map(([x, y]) => `M${f1(x - 0.9)} ${f1(y)}L${f1(x + 0.9)} ${f1(y)}L${f1(x + 1.6)} ${f1(y + 6 * u)}L${f1(x - 1.6)} ${f1(y + 6 * u)}Z`).join('');
+  pie.insertAdjacentHTML('beforeend', `<path class="v-tele-cable" d="M${f1(A[0])} ${f1(A[1])}L${f1(B[0])} ${f1(B[1])}"/><path class="v-tele-torre" d="${torres}"/>`);
+  // La cabina, en sus unidades (el colgador arriba, en el 0,0 del cable): 18 de ancho, del tamaño de la gente del pueblo.
+  const k = u / 3.2, w = 18 * k, h = 16 * k;
+  const cab = document.createElementNS(NS, 'svg');
+  for (const [a, v] of [['class', 'tele-cabina'], ['viewBox', '-9 -1 18 16'], ['width', f1(w)], ['height', f1(h)], ['aria-hidden', 'true'], ['focusable', 'false']]) cab.setAttribute(a, v);
+  cab.innerHTML = '<path class="tc-colgador" d="M-0.4 -1H0.4V4H-0.4Z"/><path class="tc-techo" d="M-8.4 5.4L-6.2 3.6H6.2L8.4 5.4Z"/><path class="tc-ventana" d="M-7 5.6H7V10H-7Z"/>'
+    + '<path class="tc-caras" d="M-5.4 9.2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0M-1.6 8.8a1.7 1.7 0 1 0 3.4 0a1.7 1.7 0 1 0 -3.4 0M2.6 9.4a1.3 1.3 0 1 0 2.6 0a1.3 1.3 0 1 0 -2.6 0"/>'
+    + '<path class="tc-cabina" d="M-8 5.6H-7V10H7V5.6H8V14.6H-8Z"/>';
+  // Las dos estaciones, en px del anfitrión (el svg de la escena mide W×H px: 1 unidad = 1 px), para el CSS del viaje.
+  const pos = ([x, y]) => [`${f1(x - w / 2)}px`, `${f1(y)}px`];
+  const [ax, ay] = pos([A[0] + dx * 0.08, A[1] + dy * 0.08]), [bx, by] = pos([A[0] + dx * 0.92, A[1] + dy * 0.92]);
+  for (const [n, v] of [['--ax', ax], ['--ay', ay], ['--bx', bx], ['--by', by]]) cab.style.setProperty(n, v);
+  cab.style.width = `${f1(w)}px`; cab.style.height = `${f1(h)}px`; // (`.montana svg` las estira al anfitrión entero)
+  const frente = host.querySelector(':scope > svg.frente');
+  if (frente) frente.before(cab); else host.append(cab);
+  return true;
+}
+
 /** Quita de `raiz` (la plantilla de la escena o la escena ya puesta) lo de otra temporada (ver `fueraDeTemporada`). */
 function podar(raiz) {
   for (const sel of fueraDeTemporada(globalThis.window?.libroCielo?.dia?.() ?? '')) for (const e of raiz.querySelectorAll(sel)) e.remove();
@@ -657,6 +694,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     host.getBoundingClientRect(); // (el estado de `inicio`, ya calculado sin transiciones)
   } finally { delete host.dataset.colocando; }
   podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
+  if (tocable && !pelicula) telefericoValle(host, W, pb.u, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
   describir(sats, etapa);
 }
 

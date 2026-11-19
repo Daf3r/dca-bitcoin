@@ -977,7 +977,7 @@ html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, ht
    el bosque brota (no están en la lista); el resto del paisaje espera quieto y retoma al detenerse. La lista va en `:where` (sin peso)
    para que la regla de abajo pueda dejar correr en la película lo que cruza de paso. */
 :is(.escena[data-desliza], .pe-montana[data-corre]) :where(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
-  .eco-fantasma, .yo-halo, #m-yo:not(.anda) .oso-tu, .yo-nav, .llama, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
+  .eco-fantasma, .yo-halo, #m-yo:not(.anda) .oso-tu, .tele-cabina, .yo-nav, .llama, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
   .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
   .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }
 /* En la película son 15 s, no un instante: lo que cruza de paso (una estrella fugaz, el torogoz, los cohetes, la llovizna, los pétalos,
@@ -4559,3 +4559,19 @@ html:not([data-efectos="ninguno"]) #m-yo.festeja .tu-festeja { display: inline; 
 /* El eco de hace un año: el mismo osito, translúcido y quieto (respira con el fantasma, como siempre). */
 .eco-fantasma .tu { opacity: 0.5; }
 .eco-fantasma .oso-tu { animation: none; }
+
+/* ---------------------------------------------------------------- Campamento 32 · El teleférico del valle (pantallas anchas)
+   El cable y sus dos torres, quietos en el valle (en el dibujo grande); la cabina roja con los tres asomados, en su propia capa pequeña
+   (un <svg> con will-change: transform encima del dibujo grande y debajo del frente). Solo se mueve con «todos» y en su franja de
+   data-mueve (10:00–13:00): espera en el pueblo, cruza en unos 40 s, espera en la loma y vuelve; si no, quieta en la estación del
+   pueblo. Solo transform; en la lista de la pausa al deslizar. Los colores, con la luz del valle. */
+.v-tele-cable { fill: none; stroke: color-mix(in oklab, #2a2a33 72%, var(--monte)); stroke-width: 0.9; }
+.v-tele-torre { fill: color-mix(in oklab, #4a3d33 80%, var(--monte-sombra)); }
+.tele-cabina { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; will-change: transform; transform: translate(var(--ax), var(--ay)); }
+html[data-efectos="todos"][data-mueve="teleferico"] .tele-cabina { animation: tele-va 240s linear infinite; }
+@keyframes tele-va { 0%, 55% { transform: translate(var(--ax), var(--ay)); } 72%, 83% { transform: translate(var(--bx), var(--by)); } 100% { transform: translate(var(--ax), var(--ay)); } }
+.tele-cabina .tc-cabina { fill: color-mix(in oklab, #c62f2b 86%, var(--monte-sombra)); }
+.tele-cabina .tc-techo { fill: color-mix(in oklab, #25365f 86%, var(--monte-sombra)); }
+.tele-cabina .tc-ventana { fill: color-mix(in oklab, #bcd7ea 70%, var(--monte)); }
+.tele-cabina .tc-caras { fill: color-mix(in oklab, #fffdf8 88%, var(--monte)); }
+.tele-cabina .tc-colgador { fill: color-mix(in oklab, #2a2a33 80%, var(--monte)); }

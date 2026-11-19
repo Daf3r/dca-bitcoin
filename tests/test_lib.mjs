@@ -1357,9 +1357,10 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   eq(['2026-05-14', '2026-05-15', '2026-05-21', '2026-05-22'].map(C.zompopos), [false, true, true, false], 'valle 22B: zompopos del 15 al 21 de mayo');
   // Lo que se mueve: uno a la vez, cada uno a su hora.
   eq([5, 6.9, 7, 7.5, 9.9, 10, 12, 16.4, 16.5, 17.9, 18, 21.9, 22, 2, 4.9].map((h) => C.mueve('2026-05-17', h)),
-    ['torogoz', 'torogoz', '', 'zompopos', 'zompopos', '', '', '', 'pericos', 'pericos', 'luciernagas', 'luciernagas', 'relampagos', 'relampagos', 'relampagos'], 'valle 22B: un 17 de mayo, torogoz, zompopos, pericos, luciérnagas y relámpagos, cada uno a su hora');
+    ['torogoz', 'torogoz', '', 'zompopos', 'zompopos', 'teleferico', 'teleferico', '', 'pericos', 'pericos', 'luciernagas', 'luciernagas', 'relampagos', 'relampagos', 'relampagos'], 'valle 22B: un 17 de mayo, torogoz, zompopos, el teleférico (campamento 32), pericos, luciérnagas y relámpagos, cada uno a su hora');
   eq([7.9, 8, 15.9, 16, 16.5, 22, 2].map((h) => C.mueve('2026-10-15', h)), ['', 'azacuanes', 'azacuanes', '', 'pericos', 'relampagos', 'relampagos'], 'valle 22B: un 15 de octubre, los azacuanes de día; relámpagos de madrugada (lluviosa)');
-  eq([8, 12, 18, 22, 2, 5.5].map((h) => C.mueve('2027-02-10', h)), ['', '', 'luciernagas', 'luciernagas', 'luciernagas', 'torogoz'], 'valle 22B: en la seca no hay relámpagos y las luciérnagas siguen toda la noche');
+  eq([8, 12, 18, 22, 2, 5.5].map((h) => C.mueve('2027-02-10', h)), ['', 'teleferico', 'luciernagas', 'luciernagas', 'luciernagas', 'torogoz'], 'valle 22B: en la seca no hay relámpagos y las luciérnagas siguen toda la noche');
+  eq([9.9, 10, 12.9, 13, 11].map((h) => C.mueve('2026-11-25', h)).concat(C.mueve('2026-10-15', 11)), ['', 'teleferico', 'teleferico', '', 'teleferico', 'azacuanes'], 'valle 32: el teleférico de 10:00 a 13:00, y los días de azacuanes, ellos');
   eq([7.5, 12].map((h) => C.mueve('2026-04-20', h)), ['', 'azacuanes'], 'valle 22B: en abril pasan los azacuanes (sin zompopos)');
   // Nunca dos a la vez: en cada media hora de todo un año, `mueve` da una sola cosa (o nada) y respeta sus fechas y horas.
   let malos = 0;
@@ -1375,7 +1376,7 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   almacen['libro.dia'] = '2026-05-07'; almacen['libro.hora'] = '6'; C.aplicar();
   ok(raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '1.000' && raiz.estilo['--v-verde'] === '0.467' && raiz.dataset.mueve === 'torogoz' && !raiz.dataset.flor, `valle 22B: el 7 de mayo a las 6:00, mar de niebla, el valle a medio reverdecer y el torogoz (${JSON.stringify(raiz.estilo['--v-verde'])})`);
   almacen['libro.dia'] = '2027-02-10'; almacen['libro.hora'] = '12'; C.aplicar();
-  ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === undefined, 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y nada que se mueva');
+  ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === 'teleferico', 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y solo el teleférico (campamento 32) que se mueva');
   delete almacen['libro.dia']; delete almacen['libro.hora'];
 
   // El arte de la parte 2: funciones puras, sin estilos en línea, con clases v-…; lo que se mueve lleva `efecto-ambiente`.

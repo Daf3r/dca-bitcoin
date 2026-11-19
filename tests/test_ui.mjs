@@ -204,6 +204,7 @@ const PESOS = [
   ['campamento 29: detalles con cariño', 45], // 7 comprobaciones
   ['campamento 30: hacer sitio', 30], // 9 comprobaciones
   ['campamento 31: «Tú» sube como oso', 45], // 12 comprobaciones
+  ['campamento 32: el teleférico del valle', 35], // 11 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -7183,6 +7184,39 @@ try {
       await t.ctx.close();
     } finally {
       sEco.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 32: el teleférico del valle (pantallas anchas; la cabina en su capa, se mueve solo en su franja)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const tele = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), cab = h.querySelector(':scope > svg.tele-cabina'), cable = h.querySelector('#m-v-pie .v-tele-cable');
+      if (!cab || !cable) return { hay: false, cabina: Boolean(cab), cable: Boolean(cable) };
+      const principal = h.querySelector(':scope > svg'), frente = h.querySelector(':scope > svg.frente');
+      const [, ax, ay, bx, by] = cable.getAttribute('d').match(/M([\d.]+) ([\d.]+)L([\d.]+) ([\d.]+)/).map(Number);
+      const camino = h.querySelector('#m-sendero'), L = camino.getTotalLength(); let lejos = 1e9;
+      for (let l = 0; l <= L; l += 2) { const q = camino.getPointAtLength(l), dx = bx - ax, dy = by - ay, k = Math.max(0, Math.min(1, ((q.x - ax) * dx + (q.y - ay) * dy) / (dx * dx + dy * dy))); lejos = Math.min(lejos, Math.hypot(q.x - ax - k * dx, q.y - ay - k * dy)); }
+      return { hay: true, capa: cab.previousElementSibling !== null && cab.nextElementSibling === frente && principal.contains(cable), aria: cab.getAttribute('aria-hidden'), nodos: cab.querySelectorAll('*').length + 1, anim: getComputedStyle(cab).animationName, lejos: Math.round(lejos), wc: getComputedStyle(cab).willChange, mueve: document.documentElement.dataset.mueve ?? '' };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, h, hora, ef, espera] of [[1440, 900, 11, 'todos', 'tele-va'], [1440, 900, 14, 'todos', 'none'], [1440, 900, 11, 'esenciales', 'none'], [2560, 1440, 11, 'todos', 'tele-va'], [1100, 800, 12, 'todos', 'tele-va']]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs({ 'libro.efectos': ef }));
+        await cerrar(t.p);
+        const r = await tele(t.p);
+        ok(r.hay && r.capa && r.aria === 'true' && r.nodos <= 7 && r.lejos >= 10 && r.wc === 'transform', `32 a ${w} px: el cable en el valle y la cabina en su capa (bajo el frente), lejos del sendero (${r.lejos} px), ${r.nodos} nodos`);
+        ok(r.anim === espera, `32 a ${w} px, ${hora} h, «${ef}»: la cabina ${espera === 'none' ? 'quieta' : 'viaja'} (data-mueve «${r.mueve}», ${r.anim})`);
+        await t.ctx.close();
+      }
+      const t = await entrar(navegador, anio, ADMIN, { hora: 11, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      const r = await tele(t.p);
+      ok(!r.hay && !r.cabina && !r.cable, '32 en el teléfono no hay teleférico (cruzaría el sendero)');
+      await t.ctx.close();
+    } finally {
+      anio.parar();
     }
   });
 
