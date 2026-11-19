@@ -105,7 +105,9 @@ export function osos(lista, { k = 1, aurora = false, cumple = false } = {}) {
     for (const [tono, lista2] of Object.entries(CARA)) for (const pts of lista2) add(tono, pts);
     if (aurora) for (const [tono, lista2] of Object.entries(CARA_ARRIBA)) for (const pts of lista2) add(`${tono}-arriba`, pts);
     if (cumple && quien === 'grande') add('gorro', GORRO);
-    cuerpos += `<g class="oso oso-${quien}">${TONOS.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}</g>`;
+    // (Campamento 33) Los brazos alzados de estirarse, en un solo trazo y escondidos: dentro del contorno de siempre (nada sale contra el cielo).
+    const brazos = [...ESTIRA, ...ESTIRA_MANOS].map(T).join('');
+    cuerpos += `<g class="oso oso-${quien}">${TONOS.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}<path class="oso-brazos" d="${brazos}"/></g>`;
   }
   return `<path class="oso-pie" d="${pie}"/>${cuerpos}`;
 }
@@ -120,6 +122,14 @@ const PALO = [[7.6, -15.6], [8.4, -15.6], [7.6, 0.4], [6.8, 0.4]];
 /** Un bracito (una cápsula de `a` a `b`, radio `r`), para los brazos alzados de la celebración. */
 const capsula = ([ax, ay], [bx, by], r, n = 6) => { const ang = Math.atan2(by - ay, bx - ax) / RAD; return [...arco(bx, by, r, r, ang - 90, ang + 90, n), ...arco(ax, ay, r, r, ang + 90, ang + 270, n)]; };
 const BRAZOS_ARRIBA = { luz: capsula([4.4, -7.4], [8, -15.6], 1.35), medio: capsula([-4.4, -7.4], [-8, -15.6], 1.35), hocico: [elipse(8, -15.6, 1.46, 1.35, 8), elipse(-8, -15.6, 1.46, 1.35, 8)] };
+/**
+ * (Campamento 33) Los brazos de estirarse: en V, de los hombros a los lados de la cabeza (por fuera de ella, para que se vean sobre la
+ * nieve blanca). Salen un poco del contorno del oso: montana.js comprueba sus puntas (`PUNTAS_ESTIRA`) contra la montaña y, si alguna
+ * quedara contra el cielo, esos osos no se estiran. Escondidos con `display: none` (no cuentan en su caja: los rótulos ni se enteran).
+ */
+const ESTIRA = [capsula([4.4, -7.4], [7.8, -14.6], 1.3), capsula([-4.4, -7.4], [-7.8, -14.6], 1.3)];
+const ESTIRA_MANOS = [elipse(7.8, -14.6, 1.42, 1.3, 8), elipse(-7.8, -14.6, 1.42, 1.3, 8)];
+export const PUNTAS_ESTIRA = [[9.3, -14.6], [-9.3, -14.6], [7.8, -16], [-7.8, -16]];
 /** La caja de «Tú» en sus unidades (de la mochila al palito y de las orejas a la sombra de los pies): para los rótulos y los choques. */
 export const CAJA_TU = { x0: -11.2, x1: 9.7, y0: -18.2, y1: 2.5 };
 /**

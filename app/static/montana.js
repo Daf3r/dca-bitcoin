@@ -1,9 +1,9 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
+import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { sitiosPueblo, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
-import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO } from './arte-osos.js';
+import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
 import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 
@@ -738,6 +738,9 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
   g.setAttribute('aria-hidden', 'true');
   g.dataset.zona = sitio.zona; // dónde se sentaron: «nieve» (la de siempre), «nieveHoy» o «cumbre» (lo leen las pruebas)
   g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora, cumple });
+  // (Campamento 33) ¿Caben estirados? Las puntas de los brazos alzados, con 2 px de aire, dentro de la montaña; si no, no se estiran.
+  const caben = sitio.lista.every(({ x, y, s = 1 }) => PUNTAS_ESTIRA.every(([px, py]) => { const e = ec * 1.1 * s * K_OSO, X = x + px * e, Y = y + py * e; return [[0, 0], [2, 0], [-2, 0], [0, -2]].every(([dx, dy]) => dentroDe(silueta, X + dx, Y + dy)); }));
+  if (!caben) g.dataset.sinEstirar = '1';
   // Si se sentaron en la nieve de hoy (no en la que hay siempre), ¿desde qué altitud los cubre? Más abajo (al empezar la película, o
   // al principio de una subida que les trae la nieve) quedarían sobre la roca: esperan escondidos hasta que la nieve llega (`colocar`).
   let nieve = 0;
@@ -1618,6 +1621,19 @@ export function colocarReloj(host = document.querySelector('.montana')) {
   sombra.setAttribute('d', `M${sx.toFixed(1)} ${(gy - ancho).toFixed(1)}L${punta.toFixed(1)} ${gy.toFixed(1)}L${sx.toFixed(1)} ${(gy + ancho).toFixed(1)}Z`);
 }
 setInterval(() => { if (document.visibilityState === 'visible') colocarReloj(); }, 300_000);
+// (Campamento 33) De 7:00 a 8:00, cada cinco minutos, los osos de la cumbre se estiran: la clase `estira` dos segundos y medio (el CSS
+// los enseña uno tras otro, solo con «todos»). Un cambio a saltos, no una animación que corra siempre.
+let estirados = -1;
+setInterval(() => {
+  const h = globalThis.window?.libroCielo?.hora?.() ?? 0, slot = Math.floor(h * 12);
+  if (document.visibilityState !== 'visible' || !estiranLosOsos(h) || slot === estirados) return;
+  estirados = slot;
+  const os = estado?.host?.querySelector('#m-osos.osos');
+  if (!os) return;
+  // Uno tras otro: el grande, el chico y el del mameluco, con 0.3 s entre cada uno; a los 2.6 s, todos quietos.
+  [1, 2, 3].forEach((i) => setTimeout(() => os.classList.add(`estira-${i}`), (i - 1) * 300));
+  setTimeout(() => os.classList.remove('estira-1', 'estira-2', 'estira-3'), 2600);
+}, 20_000);
 
 /** Tras una venta (idea 40): la última monedita del lago cae desde arriba y se queda brillando en el fondo. */
 export function hundirMoneda() {

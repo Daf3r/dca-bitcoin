@@ -1617,8 +1617,10 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
       let cielo = 0, senda = Infinity, encima = 0;
       const cajas = [];
       for (const o of s.lista) {
-        const pts = puntosDe(O.osos([o], { k, aurora, cumple }));
-        const sinPie = puntosDe(O.osos([o], { k, aurora, cumple }).replace(/<path class="oso-pie"[^>]*>/, ''));
+        // (Campamento 33) Los brazos de estirarse van aparte: montana.js comprueba sus puntas y, si no caben, no se estiran.
+        const sinBrazos = O.osos([o], { k, aurora, cumple }).replace(/<path class="oso-brazos"[^>]*>/g, '');
+        const pts = puntosDe(sinBrazos);
+        const sinPie = puntosDe(sinBrazos.replace(/<path class="oso-pie"[^>]*>/, ''));
         for (const [x, y] of sinPie) if (!enPol(g.silueta, x, y - O.SALTO - 1)) cielo++;
         const bx = [Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1])), Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))];
         for (const [px, py] of g.sendero) senda = Math.min(senda, Math.hypot(Math.max(bx[0] - px, 0, px - bx[2]), Math.max(bx[1] - py, 0, py - bx[3])));
@@ -1655,8 +1657,9 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
     ok(!/style=|NaN|undefined/.test(svg) && svg.startsWith('<path class="oso-pie"'), `osos (${k}): sin estilos en línea ni NaN; primero la sombra de contacto de todos`);
     ok([...svg.matchAll(/class="([^"]+)"/g)].every((m) => /^(oso oso-(grande|chico|mameluco)|oso-[a-z-]+( v-navidad)?)$/.test(m[1])), `osos (${k}): solo clases oso- (y v-navidad en las bufandas)`);
   }
-  ok(nodos(svgs.trio) <= 25 && nodos(svgs.aurora) <= 31 && nodos(svgs.todo) <= 32, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 25), con aurora ${nodos(svgs.aurora)} (≤ 31), con gorrito ${nodos(svgs.todo)} (≤ 32)`);
-  ok(nodos(svgs.uno) <= 10, `osos: el grande solo, ${nodos(svgs.uno)} nodos`);
+  // (Campamento 33: un trazo más por oso, los brazos de estirarse.)
+  ok(nodos(svgs.trio) <= 28 && nodos(svgs.aurora) <= 34 && nodos(svgs.todo) <= 35, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 28), con aurora ${nodos(svgs.aurora)} (≤ 34), con gorrito ${nodos(svgs.todo)} (≤ 35)`);
+  ok(nodos(svgs.uno) <= 11, `osos: el grande solo, ${nodos(svgs.uno)} nodos`);
   ok(svgs.trio.includes('oso-marino') && svgs.trio.includes('oso-cinta') && svgs.trio.includes('oso-parche') && svgs.trio.includes('oso-celeste') && svgs.trio.includes('oso-chico'), 'osos: el grande con su camiseta, su parche y su cinta; el del mameluco; el chico');
   ok(!svgs.uno.includes('oso-celeste') && !svgs.uno.includes('oso-bufanda'), 'osos: el grande solo no lleva mameluco ni bufanda de Navidad (ya tiene su cinta)');
   ok((svgs.trio.match(/oso-bufanda v-navidad/g) || []).length === 2 && !svgs.trio.includes('oso-gorro') && svgs.todo.includes('oso-gorro'), 'osos: dos bufandas de Navidad (las enseña el CSS) y el gorrito solo con cumpleaños');
@@ -1732,6 +1735,17 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(b.indexOf('yo-punto') > b.indexOf('oso-pie') && b.indexOf('yo-punto') < b.indexOf('oso oso-tu'), 'tú: la pisada va entre la sombra y el osito');
   const pts = [...s.matchAll(/(-?\d+\.\d) (-?\d+\.\d)/g)].map((m) => [Number(m[1]) / 1.5, Number(m[2]) / 1.5]);
   ok(pts.every(([x, y]) => x >= O.CAJA_TU.x0 - 0.1 && x <= O.CAJA_TU.x1 + 0.1 && y >= O.CAJA_TU.y0 - 0.1 && y <= O.CAJA_TU.y1 + 0.1), 'tú: todo el osito (también los brazos alzados y la sombra) cabe en su caja');
+}
+
+// Campamento 33 · Los de la cumbre se estiran por la mañana: cuándo (pura) y los brazos (un trazo por oso, dentro del contorno).
+{
+  const L = await import('../app/static/lib.js'), O = await import('../app/static/arte-osos.js');
+  eq([6.99, 7, 7 + 0.9 / 60, 7 + 1 / 60, 7 + 5 / 60, 7.5, 7 + 59 / 60, 8, 12].map(L.estiranLosOsos), [false, true, true, false, true, true, false, false, false], 'estira: de 7 a 8, el primer minuto de cada cinco');
+  const s = O.osos([{ x: 0, y: 0, s: 1, quien: 'grande' }, { x: 12, y: 2, s: 0.7, quien: 'chico' }], { k: 1 });
+  ok((s.match(/class="oso-brazos"/g) || []).length === 2 && !/NaN/.test(s), 'estira: un trazo de brazos alzados por oso');
+  const brazos = [...s.matchAll(/class="oso-brazos" d="([^"]+)"/g)][0][1], pts = [...brazos.matchAll(/(-?\d+\.\d) (-?\d+\.\d)/g)].map((m) => [Number(m[1]) / O.K_OSO, Number(m[2]) / O.K_OSO]);
+  const xs = pts.map((q) => Math.abs(q[0])), ys = pts.map((q) => q[1]), px = Math.max(...O.PUNTAS_ESTIRA.map((q) => Math.abs(q[0]))), py = Math.min(...O.PUNTAS_ESTIRA.map((q) => q[1]));
+  ok(Math.max(...xs) <= px + 0.15 && Math.min(...ys) >= py - 0.15 && Math.max(...xs) > 8, `estira: los brazos salen por fuera de la cabeza (${Math.max(...xs).toFixed(1)}) y sus puntas, las que se comprueban contra la montaña, los cubren`);
 }
 
 console.log(`OK ${n} comprobaciones`);

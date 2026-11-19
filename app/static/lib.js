@@ -1635,6 +1635,14 @@ export function ultimaPiedrita(piedritas, compras) {
 }
 
 /** ¿Quién cumple años hoy? `cumples`: [{ nombre, cumple: 'MM-DD' }]. El 29 de febrero se celebra el 28 en los años sin 29. */
+/**
+ * (Campamento 33) Los osos de la cumbre se estiran por la mañana: de 7:00 a 8:00, en el primer minuto de cada cinco (dos segundos,
+ * uno tras otro; el reloj de montana.js lo mira cada 20 s). `h`: la hora decimal de El Salvador. Antes de las 7 cruza el torogoz.
+ * @param {number} h
+ * @returns {boolean}
+ */
+export const estiranLosOsos = (h) => h >= 7 && h < 8 && Math.floor(h * 60 + 1e-9) % 5 === 0;
+
 export function cumpleHoy(cumples, hoy = hoyISO()) {
   const [y, m, d] = hoy.split('-').map(Number);
   const bisiesto = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;

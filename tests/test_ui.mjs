@@ -205,6 +205,7 @@ const PESOS = [
   ['campamento 30: hacer sitio', 30], // 9 comprobaciones
   ['campamento 31: «Tú» sube como oso', 45], // 12 comprobaciones
   ['campamento 32: el teleférico del valle', 35], // 11 comprobaciones
+  ['campamento 33: más ositos en el paisaje', 35], // 3 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -7215,6 +7216,33 @@ try {
       const r = await tele(t.p);
       ok(!r.hay && !r.cabina && !r.cable, '32 en el teléfono no hay teleférico (cruzaría el sendero)');
       await t.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 33: más ositos en el paisaje (los de la cumbre se estiran por la mañana)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const anio = await servidor('anio');
+    try {
+      // A las 7:00 (el primer minuto de su franja), el reloj de la escena los pone a estirarse; uno tras otro, y después quietos.
+      const t = await entrar(navegador, anio, ADMIN, { hora: 7, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      await t.p.waitForFunction(() => document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 25000 });
+      const r = await t.p.evaluate(() => ({ sin: document.querySelector('#m-osos.osos').hasAttribute('data-sin-estirar'), ve: [...document.querySelectorAll('#m-osos .oso .oso-brazos')].map((b) => getComputedStyle(b).display) }));
+      ok(r.sin || r.ve[0] === 'inline', `33 a las 7:00 los de la cumbre se estiran, uno tras otro (${JSON.stringify(r)})`);
+      await t.p.waitForFunction(() => !document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 5000 });
+      const q = await t.p.evaluate(() => [...document.querySelectorAll('#m-osos .oso .oso-brazos')].every((b) => getComputedStyle(b).display === 'none'));
+      ok(q, '33 a los dos segundos y medio, otra vez quietos');
+      await t.ctx.close();
+      // Con «esenciales» no (es ambiente); y a mediodía el reloj no los pone.
+      const e = await entrar(navegador, anio, ADMIN, { hora: 7, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'esenciales' }));
+      await cerrar(e.p);
+      const v = await e.p.evaluate(() => { const o = document.querySelector('#m-osos.osos'); if (!o) return 'sin osos'; o.classList.add('estira-1'); return getComputedStyle(o.querySelector('.oso-brazos')).display; });
+      ok(v === 'none', `33 con «esenciales» no se estiran (${v})`);
+      await e.ctx.close();
     } finally {
       anio.parar();
     }
