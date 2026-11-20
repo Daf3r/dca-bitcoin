@@ -3,7 +3,7 @@ import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, 
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { reparto, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
-import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, perroBajoBanca, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
+import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, perroEnLaComida, perroBajoBanca, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, recuerdosNavidad, sitioRecuerdo, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
 import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
@@ -363,7 +363,9 @@ function htmlVecinos({ lug, sol, cometas, conCapa = false }, t) {
   const todos = reparto(lug, t, { hilos: cometas.length }), lista = conCapa ? todos.filter((v) => !v.actor) : todos;
   const actorFiesta = conCapa && todos.find((v) => v.actor === 'brindis' || v.actor === 'volcancito');
   const quieto = actorFiesta ? `<g class="v-quieto-${actorFiesta.actor}">${svgVecinos([actorFiesta], { sol })}</g>` : '';
-  const perro = t === 'esperaTorre' || t === 'abrazoNavidad' || t === 'abrazoNuevo' ? perroBajoBanca(lug) : '';
+  let perro = '';
+  if (['esperaTorre', 'abrazoNavidad', 'abrazoNuevo'].includes(t)) perro = perroBajoBanca(lug);
+  if (['olla', 'tamales', 'recalentado'].includes(t)) perro = perroEnLaComida(lista.find((v) => v.t === 'mesa' || v.t === 'tamales'));
   const manos = lista.filter((v) => v.hilo).map(manoDe);
   const mx = cometas.reduce((a, q) => a + q.x, 0) / Math.max(1, cometas.length);
   const poste = [...lug.poste].sort((a, b) => Math.abs(a[0] - mx) - Math.abs(b[0] - mx))[0];
@@ -633,7 +635,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // no hay oseznos en la plaza) y se rehacen con ellos al cambiar de turno (`libro:turno`).
   const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q) => ({ ...q, k: kp, hilo: null }));
   const C = window.libroCielo, infoV = { lug: lugaresPueblo(pb), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula };
-  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
+  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, cambiaPerro: ['12-24', '12-25', '12-31', '01-01'].includes(C?.dia().slice(5)), evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);

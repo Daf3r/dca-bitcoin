@@ -4669,8 +4669,8 @@ html[data-efectos="todos"][data-mueve="brindis"] svg.v-actor-brindis { animation
 html[data-efectos="todos"][data-mueve="volcancito"] svg.v-actor-volcancito { animation: vo-chispea 1.8s steps(2) infinite; }
 @keyframes vo-brinda { 0%, 80%, 100% { transform: none; } 50% { transform: rotate(-7deg); } }
 @keyframes vo-chispea { 0%, 100% { transform: scaleY(0.73); opacity: 0.76; } 55% { transform: none; opacity: 1; } }
-.v-perro-banca { fill: color-mix(in oklab, #b07a45 var(--v-luz), var(--monte-sombra)); }
-html[data-perro-banca] :is(.v-animal, .v-gallina), html[data-descanso-festivo] .v-gallina { display: none; }
+.v-perro-banca, .v-perro-fiesta { fill: color-mix(in oklab, #b07a45 var(--v-luz), var(--monte-sombra)); }
+html[data-perro-banca] :is(.v-animal, .v-gallina, .sombra-perro), html:is([data-turno="olla"], [data-turno="tamales"], [data-turno="recalentado"]) :is(.v-animal, .sombra-perro), html[data-descanso-festivo] .v-gallina { display: none; }
 html[data-abrazo] .osos:not([data-sin-estirar]) .oso-brazos, html[data-abrazo] #m-yo .tu-festeja { display: inline; }
 html[data-abrazo] #m-yo .oso-palo { display: none; }
 .oso-descansa, .tu-carpa, .cajas-nav, .tapas-nav { display: none; }
@@ -4691,3 +4691,8 @@ html[data-efectos="todos"][data-cohetes] #m-yo:not(.anda) .oso-tu { animation: n
 
 .osos[visibility="hidden"] + .recuerdo-cumbre, .osos.sin-nieve + .recuerdo-cumbre,
 .recuerdo-cumbre:is(.tapado, .sin-nieve) { visibility: hidden; }
+
+/* Los saludos hacia las visitas y los ayudantes usan el bracito que ya lleva Tú dentro de su caja. */
+html:is([data-turno="paseo"], [data-turno="visitas"], [data-turno="guardaFocos"]) #m-yo:not(.festeja) .tu-festeja { display: inline; }
+html:is([data-turno="paseo"], [data-turno="visitas"], [data-turno="guardaFocos"]) #m-yo:not(.festeja) :is(.tu-festeja .oso-medio, .tu-festeja .oso-hocico, .oso-palo) { display: none; }
+html:is([data-turno="juguetes"], [data-turno="visitaAcera"], [data-turno="despedida"], [data-turno="comprasNavidad"]) #m-osos :is(.oso-rasgos, .oso-hocico, .oso-hocico-arriba, .oso-rasgos-arriba) { transform-box: fill-box; transform: translateY(10%); }

@@ -28,11 +28,18 @@ export const TERRAZA = 13.8;
 const PERRO = [[-1.0, -0.55], [-0.3, -0.75], [0.2, -1.55], [1.4, -1.95], [2.9, -1.85], [3.6, -1.5], [3.9, -2.45], [4.0, -3.05], [4.15, -3.55], [4.5, -3.05], [4.95, -2.95], [5.75, -2.6], [5.9, -2.35], [5.5, -2.1], [4.8, -1.95], [4.45, -1.2], [5.8, -0.45], [5.85, 0], [0.3, 0], [-0.25, -0.25]];
 const K_PERRO = 0.8;
 export const ANCHO_PERRO = 6.9 * K_PERRO;
+const trazoPerro = (x, y, k) => poli(PERRO.map(([a, b]) => [x + a * k, y + b * k]));
+/** A un lado del fuego o debajo de la mesa, a la escala y en el sitio real de esa figura. */
+export function perroEnLaComida(vecino) {
+  if (!vecino) return '';
+  const { x, y, k } = vecino, mesa = vecino.t === 'mesa';
+  return `<path class="v-perro-fiesta" d="${trazoPerro(x + (mesa ? -1.2 : 3.5) * k, y + 0.4 * k, k * (mesa ? 0.38 : 0.62))}"/>`;
+}
 /** El perro y la banca en la franja de cohetes. Ambos entran en el grupo que cambia de turno. */
 export function perroBajoBanca(lug) {
   if (!lug.banca.length) return '';
   const [x, y, k] = lug.banca[0], m = ([a, b]) => [x + a * k, y + b * k];
-  const perro = poli(PERRO.map(([a, b]) => m([-2.4 + a * 0.72, 1.2 + b * 0.72])));
+  const perro = trazoPerro(x - 2.4 * k, y + 1.2 * k, 0.72 * k);
   const banca = poli([[-4, -2], [4, -2], [4, -1.35], [3.5, -1.35], [3.5, 1.4], [3, 1.4], [3, -1.35], [-3, -1.35], [-3, 1.4], [-3.5, 1.4], [-3.5, -1.35], [-4, -1.35]].map(m));
   return `<path class="v-perro-banca" d="${perro}"/><path class="v-vo-palma" d="${banca}"/>`;
 }
@@ -204,7 +211,7 @@ export function lugaresPueblo(sit) {
  * banderitas en las fiestas), los vecinos osos y los animales, el humo del fogón. `ventanas`: cuántas se encienden de noche (una por
  * persona). `vecinos`: el SVG de los vecinos del turno de ahora (montana.js), en su grupo `.v-vecinos`, que se rehace al cambiar de turno.
  */
-export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) {
+export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '', cambiaPerro = false } = {}) {
   const { u, yg, piezas, atras, sol } = sit;
   // Un acumulador por tono: todo el pueblo en unos pocos trazos. La fila de atrás va en los suyos (B), que se pintan antes que la
   // iglesia y que el frente: así nada de atrás queda encima de lo de delante (pulido del pueblo).
@@ -345,8 +352,8 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   // esquina va un poco más adentro, detrás del perro, para que su poste no le atraviese la cabeza y quepan los vecinos del atrio.
   if (pz) {
     const k = pz.k, x = pz.cx - pz.w * 0.42 - 1.8 * k, y = yg + 1.6 * k, kd = K_PERRO * k;
-    add('animal', `M${PERRO.map(([px, py]) => P([x + px * kd, y + py * kd])).join('L')}Z`);
-    add('sombra', elipse(x + 2.4 * kd - sol * 0.6 * k, y + 0.2 * k, 3.4 * kd, 0.5 * kd));
+    add('animal', trazoPerro(x, y, kd));
+    add(cambiaPerro ? 'sombra-perro' : 'sombra', elipse(x + 2.4 * kd - sol * 0.6 * k, y + 0.2 * k, 3.4 * kd, 0.5 * kd));
     for (const [gx, gy] of [[0.4, 0.8], [2.2, 1.4], [4.0, 0.6]]) {
       const cx = pz.cx + pz.w * 0.36 + gx * k, cy = yg + gy * k;
       add('gallina', `M${P([cx - 1 * k, cy])}q${f1(0.2 * k)} ${f1(-1.6 * k)} ${f1(1.4 * k)} ${f1(-1.5 * k)}l${f1(0.5 * k)} ${f1(-0.7 * k)}l${f1(0.3 * k)} ${f1(0.7 * k)}q${f1(0.2 * k)} ${f1(1.2 * k)} ${f1(-1.2 * k)} ${f1(1.5 * k)}Z`);
@@ -403,7 +410,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   if (fuegoV) add('sombra', elipse(xFuego - sol * 1.6 * u, yg + 0.9 * u, 6 * u, 1.1 * u));
   // Los charcos de luz: dos trazos (el halo ancho y el centro), sin degradados (más baratos de pintar que una elipse con degradado cada uno).
   const luzSuelo = `<path class="v-charco" d="${charcos.map(([x, y, r]) => elipse(x, y, r, r * 0.32)).join('')}"/><path class="v-charco v-charco-c" d="${charcos.map(([x, y, r]) => elipse(x, y, r * 0.5, r * 0.16)).join('')}"/>`;
-  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${filaAtras}`
+  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${cambiaPerro ? p('v-sombra sombra-perro', 'sombra-perro') : ''}${filaAtras}`
     + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-relieve', 'ig-relieve')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-atrio', 'ig-atrio')}${p('v-ig-atrio-s', 'ig-atrio-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
     + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-chimenea', 'chimenea')}${p('v-poste', 'poste', sw(0.55))}`
     + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`

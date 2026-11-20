@@ -147,6 +147,7 @@
     if (t === 'abrazoNavidad' || t === 'abrazoNuevo') return 'volcancito';
     if (t === 'misaGallo' || t === 'esperaTorre' || t === 'restos' || t === 'recalentado') return '';
     if (t === 'limpiaAcera') return 'barre';
+    if ((t === 'tamales' && h < 15) || t === 'olla') return '';
     if (t === 'juguetes') return 'pelota';
     if (h >= 5 && h < 7) return 'torogoz';
     if (zompopos(f) && h >= 7.5 && h < 10) return 'zompopos';
