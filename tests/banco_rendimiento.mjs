@@ -13,6 +13,8 @@ import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ADMIN, entornoCuentas } from './cuentas_temporales.mjs';
+
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require('playwright');
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
@@ -25,13 +27,15 @@ export const PRESUPUESTO = { principal: 56, frente: 16, 'par-cielo': 44, 'par-le
 /** Los momentos que se miden: el día y la noche de siempre, la noche más cargada (Nochebuena) y la época lluviosa. */
 const CASOS = [
   ['día normal', '2026-11-25', 12], ['noche normal', '2026-11-25', 21], ['Nochebuena', '2026-12-24', 21],
+  ['cena del 24', '2026-12-24', 19], ['doce del 24', '2026-12-24', 23.95],
+  ['Navidad', '2026-12-25', 0.1], ['espera del 31', '2026-12-31', 23.9], ['Año Nuevo', '2027-01-01', 0.1],
   ['tarde de lluvia', '2026-07-10', 15], ['noche de lluvia', '2026-07-10', 21],
 ];
 
 const puertoLibre = () => new Promise((res) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); }); });
 async function servidor(escenario) {
   const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore' });
+  const hijo = spawn(PYTHON, [path.join(AQUI, 'escenario_temporal.py'), String(port), escenario], { stdio: 'ignore', env: { ...process.env, ...entornoCuentas } });
   const url = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {
     try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
@@ -46,8 +50,8 @@ async function abrir(navegador, srv, dia, hora, efectos) {
   const p = await ctx.newPage();
   await p.addInitScript(([d, h, e]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.efectos', e); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.madrugada', '0'); } catch { /* sin almacenamiento */ } }, [dia, hora, efectos]);
   await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
-  await p.fill('input[autocomplete="username"]', 'Daf3r');
-  await p.fill('input[autocomplete="current-password"]', 'clave-de-prueba-12');
+  await p.fill('input[autocomplete="username"]', ADMIN[0]);
+  await p.fill('input[autocomplete="current-password"]', ADMIN[1]);
   await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
   await p.waitForTimeout(4000); // la subida de «Tú», las letras y los osos ya en su sitio
   for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }

@@ -10,12 +10,12 @@ import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { ADMIN, LECTOR, entornoCuentas } from './cuentas_temporales.mjs';
+
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require('playwright');
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const PYTHON = process.env.PYTHON || 'python3';
-const ADMIN = ['Daf3r', 'clave-de-prueba-12'];
-const LECTOR = ['Ana', 'lectora-de-prueba'];
 let n = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
 const eq = (a, b, msg) => { assert.deepEqual(a, b, msg); n++; };
@@ -30,7 +30,7 @@ const puertoLibre = () => new Promise((res) => {
 /** Arranca el servidor de pruebas con un escenario y espera a que responda. */
 async function servidor(escenario, env = {}) {
   const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, ...env } });
+  const hijo = spawn(PYTHON, [path.join(AQUI, 'escenario_temporal.py'), String(port), escenario], { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, ...env, ...entornoCuentas } });
   let err = '';
   hijo.stderr.on('data', (d) => { err += d; });
   const url = `http://127.0.0.1:${port}`;
@@ -7461,7 +7461,7 @@ try {
           ['2026-10-17', 9, 'mercado', (r) => r.vecinos >= 5],
           ['2026-09-15', 9, 'desfile', (r) => r.azul >= 2 && r.vecinos >= 5],
           ['2026-12-10', 19, 'posada', (r) => r.portal && r.sobrePortal === 0 && r.vecinos >= 4],
-          ['2026-12-24', 20, 'nochebuena', (r) => r.brasa >= 3],
+          ['2026-12-24', 20, 'cenaNavidad', (r) => r.brasa >= 2],
         ]) {
           const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia));
           await cerrar(t.p);
@@ -7473,6 +7473,58 @@ try {
     } finally {
       anio.parar();
     }
+  });
+
+  // ---------------------------------------------------------------- campamento 41: la Navidad entera, los cambios de turno y las dos medianoches
+  await bloque(async () => {
+    const guiones = [
+      ['2026-12-24', [[0, 'duerme'], [270, 'panNavideno'], [420, 'comprasNavidad'], [690, 'olla'], [840, 'tamales'], [1065, 'cenaNavidad'], [1260, 'misaGallo'], [1420, 'abrazoNavidad']]],
+      ['2026-12-25', [[0, 'abrazoNavidad'], [60, 'restos'], [420, 'limpiaAcera'], [540, 'juguetes'], [720, 'recalentado'], [840, 'paseo'], [1065, 'pupusasAcera'], [1200, 'sillas'], [1320, 'duerme']]],
+      ['2026-12-31', [[0, 'duerme'], [300, 'primeraEscoba'], [420, 'limpieza'], [690, 'estreno'], [840, 'preparativos'], [1065, 'cenaFin'], [1320, 'ultimoBrindis'], [1380, 'esperaTorre']]],
+      ['2027-01-01', [[0, 'abrazoNuevo'], [60, 'restos'], [540, 'limpiaAcera'], [720, 'almuerzoCasa'], [840, 'visitas'], [1065, 'visitaAcera'], [1200, 'sillas'], [1320, 'duerme']]],
+      ['2027-01-06', [[0, 'duerme'], [300, 'amanece'], [420, 'mananaLibre'], [690, 'cajas'], [840, 'guardaFocos'], [1065, 'despedida'], [1200, 'sillas'], [1320, 'duerme']]],
+      ['2027-01-07', [[0, 'duerme']]],
+    ];
+    const srv = await servidor('mil', { FECHA_PRUEBA: '2026-11-18' });
+    try {
+      const { p, ctx, consola } = await entrar(navegador, srv, ADMIN, { hora: 12, viewport: { width: 390, height: 664 } }, () => {
+        localStorage.setItem('libro.dia', '2026-12-23'); localStorage.setItem('libro.efectos', 'todos');
+      });
+      for (const [fecha, filas] of guiones) {
+        for (const [min, turno] of filas) {
+          const r = await p.evaluate(([fecha, min]) => {
+            const host = document.querySelector('#montana'), antes = host.querySelector('#m-sendero');
+            localStorage.setItem('libro.dia', fecha); localStorage.setItem('libro.hora', String(min / 60));
+            window.libroCielo.aplicar();
+            const raiz = document.documentElement, capa = host.querySelector('svg.v-capa-vecino');
+            const g = host.querySelector('.v-vecinos');
+            return { turno: raiz.dataset.turno, misma: antes === host.querySelector('#m-sendero'), contenido: g.childElementCount,
+              actor: capa?.getAttribute('class'), anim: capa && getComputedStyle(capa).animationName, mueve: raiz.dataset.mueve,
+              bajoBanca: Boolean(g.querySelector('.v-perro-banca')), festeja: getComputedStyle(host.querySelector('#m-yo .tu-festeja')).display !== 'none' && getComputedStyle(host.querySelector('#m-yo .tu-festeja .oso-medio')).display !== 'none',
+              comida: Boolean(g.querySelector('.v-perro-fiesta')), tapado: raiz.hasAttribute('data-descanso-festivo'),
+              cajaNavidad: Boolean(host.querySelector('.cajas-nav')), sueno: Boolean(host.querySelector('.oso-descansa')),
+              carpa: Boolean(host.querySelector('.tu-carpa')), pino: Boolean(host.querySelector('.v-pino-nav')), nodos: host.querySelectorAll('*').length };
+          }, [fecha, min]);
+          eq(r.turno, turno, `${fecha} a las ${min / 60}: turno civil`);
+          eq(r.misma, min !== 0, 'solo se rehace la montaña al cambiar de día');
+          eq(Boolean(r.contenido || r.actor), turno !== 'duerme', `el dibujo corresponde al turno ${turno}`);
+          ok(r.nodos <= 1100, `escena del teléfono: ${r.nodos} nodos`);
+          const abrazo = turno.startsWith('abrazo');
+          eq(r.bajoBanca, abrazo || turno === 'esperaTorre', 'perro bajo la banca');
+          eq(r.comida, ['olla', 'tamales', 'recalentado'].includes(turno), 'el perro está con la olla o la mesa');
+          const descansa = fecha === '2026-12-25' || fecha === '2027-01-01';
+          eq(r.tapado, descansa && min >= 60 && min < 540, 'reposo hasta las nueve');
+          eq(r.sueno, descansa, 'la cara dormida solo existe en su fecha');
+          eq(r.cajaNavidad, fecha === '2026-12-24' || fecha === '2026-12-25', 'el escenario mil tiene espacio para los regalos de Navidad');
+          eq(r.festeja, abrazo, 'los brazos de Tú acompañan las doce');
+          eq(r.pino, fecha !== '2027-01-07', 'el 7 se guarda la Navidad');
+          eq(r.carpa, ['12-24', '12-25', '12-31', '01-01'].includes(fecha.slice(5)), 'la carpa solo pertenece a las fechas de las dos fiestas');
+          if (['brindis', 'volcancito'].includes(r.mueve)) ok(r.actor?.includes(`v-actor-${r.mueve}`) && r.anim !== 'none', `${turno}: el actor se mueve en su capa`);
+        }
+      }
+      ok(!consola.some((x) => x.startsWith('pageerror')), 'sin errores de ejecución al cruzar los turnos');
+      await ctx.close();
+    } finally { srv.parar(); }
   });
 
   // ---------------------------------------------------------------- campamento 37: el pueblo se mueve (la capa del vecino: la que barre y la pelota de los oseznos)
