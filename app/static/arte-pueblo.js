@@ -28,6 +28,14 @@ export const TERRAZA = 13.8;
 const PERRO = [[-1.0, -0.55], [-0.3, -0.75], [0.2, -1.55], [1.4, -1.95], [2.9, -1.85], [3.6, -1.5], [3.9, -2.45], [4.0, -3.05], [4.15, -3.55], [4.5, -3.05], [4.95, -2.95], [5.75, -2.6], [5.9, -2.35], [5.5, -2.1], [4.8, -1.95], [4.45, -1.2], [5.8, -0.45], [5.85, 0], [0.3, 0], [-0.25, -0.25]];
 const K_PERRO = 0.8;
 export const ANCHO_PERRO = 6.9 * K_PERRO;
+/** El perro y la banca en la franja de cohetes. Ambos entran en el grupo que cambia de turno. */
+export function perroBajoBanca(lug) {
+  if (!lug.banca.length) return '';
+  const [x, y, k] = lug.banca[0], m = ([a, b]) => [x + a * k, y + b * k];
+  const perro = poli(PERRO.map(([a, b]) => m([-2.4 + a * 0.72, 1.2 + b * 0.72])));
+  const banca = poli([[-4, -2], [4, -2], [4, -1.35], [3.5, -1.35], [3.5, 1.4], [3, 1.4], [3, -1.35], [-3, -1.35], [-3, 1.4], [-3.5, 1.4], [-3.5, -1.35], [-4, -1.35]].map(m));
+  return `<path class="v-perro-banca" d="${perro}"/><path class="v-vo-palma" d="${banca}"/>`;
+}
 /** Dónde empieza el cuerpo del perro echado (su pie de atrás) desde el borde izquierdo de su caja, en unidades del pueblo. */
 export const COLA_PERRO = 1.0 * K_PERRO;
 /**
@@ -160,7 +168,7 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
  */
 export function lugaresPueblo(sit) {
   const { u, yg, piezas, sol } = sit;
-  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [] }, delante = [];
+  const lug = { compacto: sit.forma === 'tel' || sit.forma === 'acostado', atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [] }, delante = [];
   for (const q of piezas) {
     const k = u * q.s;
     if (q.tipo === 'iglesia') {

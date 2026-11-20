@@ -4661,3 +4661,33 @@ html[data-efectos="todos"][data-mueve="barre"] .montana svg.v-actor-barre { anim
 @keyframes vo-barre { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
 html[data-efectos="todos"][data-mueve="pelota"] .montana svg.v-actor-pelota { animation: vo-bota 1.2s steps(1) infinite; }
 @keyframes vo-bota { 0%, 100% { transform: none; } 50% { transform: translateY(var(--bote)); } }
+
+/* Campamento 41. El brindis y las chispas tienen un doble quieto en el pueblo para los niveles sin ambiente. */
+html[data-efectos="todos"][data-mueve="brindis"] .v-quieto-brindis,
+html[data-efectos="todos"][data-mueve="volcancito"] .v-quieto-volcancito { display: none; }
+html[data-efectos="todos"][data-mueve="brindis"] svg.v-actor-brindis { animation: vo-brinda 2.8s steps(1) infinite; }
+html[data-efectos="todos"][data-mueve="volcancito"] svg.v-actor-volcancito { animation: vo-chispea 1.8s steps(2) infinite; }
+@keyframes vo-brinda { 0%, 80%, 100% { transform: none; } 50% { transform: rotate(-7deg); } }
+@keyframes vo-chispea { 0%, 100% { transform: scaleY(0.73); opacity: 0.76; } 55% { transform: none; opacity: 1; } }
+.v-perro-banca { fill: color-mix(in oklab, #b07a45 var(--v-luz), var(--monte-sombra)); }
+html[data-perro-banca] :is(.v-animal, .v-gallina), html[data-descanso-festivo] .v-gallina { display: none; }
+html[data-abrazo] .osos:not([data-sin-estirar]) .oso-brazos, html[data-abrazo] #m-yo .tu-festeja { display: inline; }
+html[data-abrazo] #m-yo .oso-palo { display: none; }
+.oso-descansa, .tu-carpa, .cajas-nav, .tapas-nav { display: none; }
+.oso-descansa { fill: var(--oso-rasgo); }
+.tu-carpa .oso-mochila { fill: var(--naranja); }
+html[data-carpa-fiesta] #m-yo .tu-carpa, html[data-descanso-festivo] .oso-descansa { display: inline; }
+html[data-carpa-fiesta] #m-yo .oso-tu { display: none; animation: none; }
+html[data-descanso-festivo] #m-osos :is(.oso-rasgos, .oso-rasgos-arriba, .oso-hocico-arriba, .oso-brazos) { display: none; }
+html[data-descanso-festivo] #m-osos .oso-hocico { display: inline; }
+html:is([data-turno="cenaNavidad"], [data-turno="misaGallo"], [data-turno="cenaFin"], [data-turno="ultimoBrindis"]) #m-osos :is(.oso-rasgos, .oso-hocico, .oso-hocico-arriba, .oso-rasgos-arriba) { display: none; }
+html[data-mira-torre] #m-osos :is(.oso-hocico-arriba, .oso-rasgos-arriba) { display: inline; }
+html[data-mira-torre] #m-osos :is(.oso-hocico, .oso-rasgos) { display: none; }
+html[data-abrazo] :is(.muneco-nav, .bufanda-nav), html[data-turno="panNavideno"] .bufanda-nav, html[data-turno="duerme"] .bufanda-nav { display: none; }
+html[data-abrazo] .cajas-nav, .recuerdo-cumbre:has(.tapas-nav) .cajas-nav, html:not([data-abrazo]) .tapas-nav { display: inline; }
+/* Durante los cohetes se queda quieto el ambiente del primer plano. El sendero y los adornos siguen visibles. */
+html[data-efectos="todos"][data-cohetes] svg.frente :is(.pp-bandera, .yo-nav, .eco-fantasma, .yo-halo, .llama, .humo, .banderin),
+html[data-efectos="todos"][data-cohetes] #m-yo:not(.anda) .oso-tu { animation: none; }
+
+.osos[visibility="hidden"] + .recuerdo-cumbre, .osos.sin-nieve + .recuerdo-cumbre,
+.recuerdo-cumbre:is(.tapado, .sin-nieve) { visibility: hidden; }

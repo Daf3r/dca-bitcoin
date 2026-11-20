@@ -3,8 +3,8 @@ import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, 
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { reparto, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
-import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
-import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
+import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, perroBajoBanca, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
+import { OSOS, osos, recuerdosNavidad, sitioRecuerdo, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
 import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 
@@ -273,8 +273,9 @@ const kTu = (ec) => ec * 1.1 * K_OSO * 1.25;
 export const cajaTu = (ec) => { const k = kTu(ec); return { x: CAJA_TU.x0 * k, y: CAJA_TU.y0 * k, w: (CAJA_TU.x1 - CAJA_TU.x0) * k, h: (CAJA_TU.y1 - CAJA_TU.y0) * k }; };
 function yoTu(ec, cumple) {
   const c = cajaTu(ec);
+  const carpa = ['12-24', '12-25', '12-31', '01-01'].includes(window.libroCielo?.dia().slice(5));
   // La pisada va sobre la sombra del osito y bajo su cuerpo, más ancha que él: asoma a los lados y por delante.
-  return `<rect class="yo-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/><g class="tu">${osoTu({ k: kTu(ec), cumple, bajo: `<ellipse class="yo-punto" rx="${f1(8.6 * kTu(ec))}" ry="${f1(2.4 * kTu(ec))}" cy="${f1(0.6 * kTu(ec))}"/>` })}</g>`;
+  return `<rect class="yo-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/><g class="tu">${osoTu({ k: kTu(ec), cumple, carpa, bajo: `<ellipse class="yo-punto" rx="${f1(8.6 * kTu(ec))}" ry="${f1(2.4 * kTu(ec))}" cy="${f1(0.6 * kTu(ec))}"/>` })}</g>`;
 }
 
 /**
@@ -360,11 +361,14 @@ const turnoDelPueblo = () => window.libroCielo?.turno?.(window.libroCielo.dia(),
 const elipseV = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
 function htmlVecinos({ lug, sol, cometas, conCapa = false }, t) {
   const todos = reparto(lug, t, { hilos: cometas.length }), lista = conCapa ? todos.filter((v) => !v.actor) : todos;
+  const actorFiesta = conCapa && todos.find((v) => v.actor === 'brindis' || v.actor === 'volcancito');
+  const quieto = actorFiesta ? `<g class="v-quieto-${actorFiesta.actor}">${svgVecinos([actorFiesta], { sol })}</g>` : '';
+  const perro = t === 'esperaTorre' || t === 'abrazoNavidad' || t === 'abrazoNuevo' ? perroBajoBanca(lug) : '';
   const manos = lista.filter((v) => v.hilo).map(manoDe);
   const mx = cometas.reduce((a, q) => a + q.x, 0) / Math.max(1, cometas.length);
   const poste = [...lug.poste].sort((a, b) => Math.abs(a[0] - mx) - Math.abs(b[0] - mx))[0];
   const luz = luzPupusa(lista);
-  return `${luz ? `<path class="v-charco v-vo-luz" d="${elipseV(luz[0], luz[1], luz[2], luz[2] * 0.32)}"/>` : ''}${svgVecinos(lista, { sol })}${hilosPiscuchas(cometas, cometas.map((_, i) => manos[i] ?? poste))}`;
+  return `${luz ? `<path class="v-charco v-vo-luz" d="${elipseV(luz[0], luz[1], luz[2], luz[2] * 0.32)}"/>` : ''}${svgVecinos(lista, { sol })}${quieto}${perro}${hilosPiscuchas(cometas, cometas.map((_, i) => manos[i] ?? poste))}`;
 }
 /**
  * (Campamento 37, idea 114) La capa del vecino: el que se mueve (la que barre, la pelota de los oseznos) no vive en el dibujo grande
@@ -375,10 +379,11 @@ function capaVecino(host, info, t) {
   host.querySelector(':scope > svg.v-capa-vecino')?.remove();
   const actor = reparto(info.lug, t, { hilos: info.cometas.length }).find((v) => v.actor);
   if (!actor) return;
+  const ambiente = actor.actor === 'brindis' || actor.actor === 'volcancito' ? ' efecto-ambiente' : '';
   const c = cajaVecino(actor), m = 1.5 * actor.k, arriba = actor.actor === 'pelota' ? 3 * actor.k : 0;
   const [x, y, w, h] = [c.x0 - m, c.y0 - m - arriba, c.x1 - c.x0 + 2 * m, c.y1 - c.y0 + 2 * m + arriba];
   const s = document.createElementNS(NS, 'svg');
-  for (const [a, v] of [['class', `v-capa-vecino v-actor-${actor.actor}`], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
+  for (const [a, v] of [['class', `v-capa-vecino v-actor-${actor.actor}${ambiente}`], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
   Object.assign(s.style, { left: `${f1(x)}px`, top: `${f1(y)}px`, width: `${f1(w)}px`, height: `${f1(h)}px` });
   s.style.setProperty('--bote', `${f1(-2.4 * actor.k)}px`);
   s.style.setProperty('--pie', `${f1(((c.y1 - y) / h) * 100)}%`);
@@ -793,7 +798,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
   if (tocable && !pelicula) telefericoValle(host, W, pb.u, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
   if (tocable && !pelicula) animalesDelPueblo(host); // (34)
-  if (tocable || pelicula) vigilarTurno(host, infoV); // (35) los vecinos cambian de turno con la página abierta
+  vigilarTurno(host, infoV); // (35) los vecinos cambian de turno con la página abierta
   if (infoV.conCapa) capaVecino(host, infoV, infoV.turno); // (37) el vecino que se mueve, en su capa
   describir(sats, etapa);
 }
@@ -837,20 +842,26 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
   g.setAttribute('class', `osos${aurora ? ' con-aurora' : ''}`);
   g.setAttribute('aria-hidden', 'true');
   g.dataset.zona = sitio.zona; // dónde se sentaron: «nieve» (la de siempre), «nieveHoy» o «cumbre» (lo leen las pruebas)
-  g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora, cumple });
+  const md = window.libroCielo?.dia().slice(5);
+  g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora: aurora || md === '12-31', cumple, descanso: md === '12-25' || md === '01-01' });
+  const k = ec * 0.72;
+  const recuerdo = md === '12-24' || md === '12-25' ? sitioRecuerdo(sitio, geo, k) : null;
+  if (recuerdo) g.insertAdjacentHTML('afterend', `<g class="recuerdo-cumbre" aria-hidden="true">${recuerdosNavidad(recuerdo.x, recuerdo.y, k, md)}</g>`);
   // (Campamento 33) ¿Caben estirados? Las puntas de los brazos alzados, con 2 px de aire, dentro de la montaña; si no, no se estiran.
   const caben = sitio.lista.every(({ x, y, s = 1 }) => PUNTAS_ESTIRA.every(([px, py]) => { const e = ec * 1.1 * s * K_OSO, X = x + px * e, Y = y + py * e; return [[0, 0], [2, 0], [-2, 0], [0, -2]].every(([dx, dy]) => dentroDe(silueta, X + dx, Y + dy)); }));
   if (!caben) g.dataset.sinEstirar = '1';
   // Si se sentaron en la nieve de hoy (no en la que hay siempre), ¿desde qué altitud los cubre? Más abajo (al empezar la película, o
   // al principio de una subida que les trae la nieve) quedarían sobre la roca: esperan escondidos hasta que la nieve llega (`colocar`).
-  let nieve = 0;
-  if (sitio.zona === 'nieveHoy') {
-    const pies = piesOsos(sitio.lista, ec * 1.1), cubre = (a) => { const pol = puntosNieve(nieveMedidas, a); return pies.every(([px, py]) => dentroDe(pol, px, py)); };
+  const altNieve = (pies) => {
+    const cubre = (a) => { const pol = puntosNieve(nieveMedidas, a); return pies.every(([px, py]) => dentroDe(pol, px, py)); };
+    if (cubre(0)) return 0;
     let a = 0, b = altitud(inicio, esc);
     for (let i = 0; i < 18; i++) { const m = (a + b) / 2; if (cubre(m)) b = m; else a = m; }
-    nieve = b;
-  }
-  return { cajas: sitio.cajas, n: sitio.lista.length, zona: sitio.zona, nieve };
+    return b;
+  };
+  const nieve = sitio.zona === 'nieveHoy' ? altNieve(piesOsos(sitio.lista, ec * 1.1)) : 0;
+  if (recuerdo) recuerdo.nieve = altNieve(recuerdo.pies);
+  return { cajas: sitio.cajas, n: sitio.lista.length, zona: sitio.zona, nieve, recuerdo };
 }
 
 /**
@@ -1452,6 +1463,10 @@ function ocultarOsos(yo) {
   const tb = cajaTu(estado.ec || 1); // (31) la caja del osito «Tú», la misma con la que se apartan los rótulos
   rotulos.push({ x: yo.x + tb.x, y: yo.y + tb.y, width: tb.w, height: tb.h });
   const pisa = estado.osos.cajas.some(([a, b, c, d]) => rotulos.some((q) => q.x < c && q.x + q.width > a && q.y < d && q.y + q.height > b));
+  if (estado.osos.recuerdo) {
+    const [a, b, c, d] = estado.osos.recuerdo.caja;
+    g.nextElementSibling.classList.toggle('tapado', rotulos.some((q) => q.x < c && q.x + q.width > a && q.y < d && q.y + q.height > b));
+  }
   if (pisa) g.setAttribute('visibility', 'hidden'); else g.removeAttribute('visibility');
 }
 
@@ -1485,6 +1500,7 @@ function colocar(sats, animado) {
   // fundido solo si «Tú» va subiendo (al dibujar, o al saltar con el deslizador de la película, quedan ya como deben).
   const go = estado.osos && host.querySelector('#m-osos');
   if (go) {
+    if (estado.osos.recuerdo) go.nextElementSibling.classList.toggle('sin-nieve', altN < estado.osos.recuerdo.nieve - 1e-9);
     const sin = altN < estado.osos.nieve - 1e-9;
     if (sin !== go.classList.contains('sin-nieve')) { go.toggleAttribute('data-fundido', Boolean(animado)); go.classList.toggle('sin-nieve', sin); }
   }

@@ -116,6 +116,17 @@
   const azacuanes = (f) => (f.slice(5) >= '10-10' && f.slice(5) <= '10-31') || (f.slice(5) >= '04-01' && f.slice(5) <= '04-20');
   /** Zompopos de mayo: la semana del 15 al 21 de mayo, con las primeras lluvias fuertes. */
   const zompopos = (f) => f.slice(5) >= '05-15' && f.slice(5) <= '05-21';
+  // Hora de inicio en minutos civiles. La primera fila de cada fecha rige desde las 00:00.
+  const GUIONES = {
+    '12-24': [[0, 'duerme'], [270, 'panNavideno'], [420, 'comprasNavidad'], [690, 'olla'], [840, 'tamales'], [1065, 'cenaNavidad'], [1260, 'misaGallo'], [1420, 'abrazoNavidad']],
+    '12-25': [[0, 'abrazoNavidad'], [60, 'restos'], [420, 'limpiaAcera'], [540, 'juguetes'], [720, 'recalentado'], [840, 'paseo'], [1065, 'pupusasAcera'], [1200, 'sillas'], [1320, 'duerme']],
+    '12-31': [[0, 'duerme'], [300, 'primeraEscoba'], [420, 'limpieza'], [690, 'estreno'], [840, 'preparativos'], [1065, 'cenaFin'], [1320, 'ultimoBrindis'], [1380, 'esperaTorre']],
+    '01-01': [[0, 'abrazoNuevo'], [60, 'restos'], [540, 'limpiaAcera'], [720, 'almuerzoCasa'], [840, 'visitas'], [1065, 'visitaAcera'], [1200, 'sillas'], [1320, 'duerme']],
+    '01-06': [[0, 'duerme'], [300, 'amanece'], [420, 'mananaLibre'], [690, 'cajas'], [840, 'guardaFocos'], [1065, 'despedida'], [1200, 'sillas'], [1320, 'duerme']],
+  };
+  function turnoFiesta(f, h) {
+    return GUIONES[f.slice(5)]?.findLast(([inicio]) => h * 60 >= inicio)?.[1];
+  }
   /**
    * Lo que se mueve en el valle y en el cielo (ideas 57, 60 y 61, con el torogoz y las luciérnagas de antes): **nunca más de un animal o
    * bandada a la vez**, ni los relámpagos junto a ellos. Cada uno tiene su hora y no se pisan:
@@ -131,6 +142,12 @@
    * Si no toca nada, ''.
    */
   function mueve(f, h) {
+    const t = turnoFiesta(f, h);
+    if (t === 'cenaNavidad' || t === 'cenaFin' || t === 'ultimoBrindis') return 'brindis';
+    if (t === 'abrazoNavidad' || t === 'abrazoNuevo') return 'volcancito';
+    if (t === 'misaGallo' || t === 'esperaTorre' || t === 'restos' || t === 'recalentado') return '';
+    if (t === 'limpiaAcera') return 'barre';
+    if (t === 'juguetes') return 'pelota';
     if (h >= 5 && h < 7) return 'torogoz';
     if (zompopos(f) && h >= 7.5 && h < 10) return 'zompopos';
     if (azacuanes(f) && h >= 8 && h < 16) return 'azacuanes';
@@ -157,7 +174,8 @@
     // frente al nacimiento al anochecer (1 dic – 6 ene).
     const md = f.slice(5);
     if (md === '09-15' && h >= 7 && h < 12) return 'desfile';
-    if (((md === '12-24' || md === '12-31') && h >= 18) || ((md === '12-25' || md === '01-01') && h < 1)) return 'nochebuena';
+    const especial = turnoFiesta(f, h);
+    if (especial) return especial;
     if (h >= 22 || h < 5) return 'duerme';
     if (h < 7) return 'amanece';
     const sem = new Date(`${f}T12:00:00Z`).getUTCDay();
@@ -255,7 +273,7 @@
     // Fiestas, época del año y cohetes de fin de año: el CSS muestra lo que toque (la escena dibuja todo y se queda oculto).
     const d = dia(), fi = fiesta(d);
     // (Campamento 30) La escena dibuja solo lo de la temporada de hoy: si el día cambió con la página abierta, lo avisa para volver a dibujarla.
-    if (diaAplicado !== null && d !== diaAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:dia'));
+    const cambiaDia = diaAplicado !== null && d !== diaAplicado;
     diaAplicado = d;
     if (fi) raiz.dataset.fiesta = fi; else delete raiz.dataset.fiesta;
     raiz.dataset.epoca = epoca(d);
@@ -278,6 +296,16 @@
     // (Campamento 35) El turno del pueblo: si cambió con la página abierta, montana.js rehace solo sus vecinos (`libro:turno`).
     const tu = turno(d, h);
     raiz.dataset.turno = tu;
+    const md = d.slice(5);
+    const posfiesta = md === '12-25' || md === '01-01';
+    raiz.toggleAttribute('data-carpa-fiesta', posfiesta ? (h >= 1 && h < 9) || h >= 22 : (md === '12-24' || md === '12-31') && h < 5);
+    const reposo = posfiesta && h >= 1 && h < 9;
+    const abrazo = tu === 'abrazoNavidad' || tu === 'abrazoNuevo';
+    raiz.toggleAttribute('data-descanso-festivo', reposo);
+    raiz.toggleAttribute('data-abrazo', abrazo);
+    raiz.toggleAttribute('data-mira-torre', md === '12-31' && h >= 23 + 50 / 60);
+    raiz.toggleAttribute('data-perro-banca', abrazo || tu === 'esperaTorre');
+    if (cambiaDia && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:dia'));
     if (turnoAplicado !== null && tu !== turnoAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:turno'));
     turnoAplicado = tu;
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
@@ -300,7 +328,14 @@
     aplicar();
   }
   aplicar();
-  setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
+  // Todas las entradas del guion caen en múltiplos de cinco minutos, incluida medianoche.
+  function programarReloj() {
+    window.setTimeout?.(() => {
+      if (document.visibilityState === 'visible' && horaTemporal === null) aplicar();
+      programarReloj();
+    }, 300_000 - Date.now() % 300_000);
+  }
+  programarReloj();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
   window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, turno, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

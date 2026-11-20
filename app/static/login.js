@@ -5,6 +5,7 @@ const $ = (id) => document.getElementById(id);
 const host = $('montana');
 const pintar = () => dibujarMontana(host, { sats: 0, meta: 1e5, inicio: 0, techo: 40 });
 pintar();
+window.addEventListener('libro:dia', pintar);
 instalarParallax();
 let ancho = host.clientWidth, alto = host.clientHeight;
 new ResizeObserver(() => { if (host.clientWidth !== ancho || Math.abs(host.clientHeight - alto) > 2) { ancho = host.clientWidth; alto = host.clientHeight; pintar(); } }).observe(host);

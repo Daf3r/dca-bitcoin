@@ -118,6 +118,7 @@ function dibujar() {
   ultimoDia = -1;
   pintarDia(dia, null);
 }
+window.addEventListener('libro:dia', () => { if (abierta) dibujar(); });
 new ResizeObserver(() => {
   if (!abierta) return;
   const r = host.getBoundingClientRect();

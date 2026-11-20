@@ -92,7 +92,8 @@ export const PARTES = { arco, elipse, canto, CAB, PIEZAS, CARA, ROPA, BUFANDA, G
  * debajo. Con `aurora`, cada cara va también mirando arriba (el CSS enseña una u otra); con `cumple`, el grande lleva su gorrito.
  * Devuelve el contenido del grupo de los osos (decorativo: la descripción de la montaña lo dice).
  */
-export function osos(lista, { k = 1, aurora = false, cumple = false } = {}) {
+export function osos(lista, { k = 1, aurora = false, cumple = false, descanso = false } = {}) {
+  let ojos = '';
   let pie = '', cuerpos = '';
   for (const { x, y, s = 1, quien = 'grande' } of [...lista].sort((a, b) => a.y - b.y)) {
     const e = k * s * K_OSO, T = (pts) => d(pts.map(([px, py]) => [x + px * e, y + py * e]));
@@ -104,12 +105,45 @@ export function osos(lista, { k = 1, aurora = false, cumple = false } = {}) {
     if (quien !== 'grande') for (const pts of BUFANDA) add('bufanda', pts);
     for (const [tono, lista2] of Object.entries(CARA)) for (const pts of lista2) add(tono, pts);
     if (aurora) for (const [tono, lista2] of Object.entries(CARA_ARRIBA)) for (const pts of lista2) add(`${tono}-arriba`, pts);
+    if (descanso) {
+      ojos += T(CARA.rasgos[0]);
+      for (const cx of [-3.1, 4.3]) ojos += T([[cx - 1.1, -13.3], [cx, -12.9], [cx + 1.1, -13.3], [cx + 0.9, -12.7], [cx, -12.3], [cx - 0.9, -12.7]]);
+    }
     if (cumple && quien === 'grande') add('gorro', GORRO);
     // (Campamento 33) Los brazos alzados de estirarse, en un solo trazo y escondidos: dentro del contorno de siempre (nada sale contra el cielo).
     const brazos = [...ESTIRA, ...ESTIRA_MANOS].map(T).join('');
     cuerpos += `<g class="oso oso-${quien}">${TONOS.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}<path class="oso-brazos" d="${brazos}"/></g>`;
   }
-  return `<path class="oso-pie" d="${pie}"/>${cuerpos}`;
+  return `<path class="oso-pie" d="${pie}"/>${cuerpos}${ojos ? `<path class="oso-descansa" d="${ojos}"/>` : ''}`;
+}
+
+/** Un sitio para el adorno, independiente de los osos: nunca les quita su lugar ni pisa el sendero. */
+export function sitioRecuerdo(sitio, geo, k) {
+  const [izq, arriba, der, abajo] = sitio.caja, cx = (izq + der) / 2;
+  const ocupadas = [...sitio.cajas, geo.meta, ...geo.textos];
+  for (const y of [abajo, abajo + 8 * k, abajo + 15 * k, abajo - 6 * k, arriba + 4 * k]) {
+    for (const x of [der + 8 * k, izq - 8 * k, cx, cx + 7 * k, cx - 7 * k]) {
+      const caja = [x - 7 * k, y - 12 * k, x + 7 * k, y + k];
+      if (ocupadas.some(([a, b, c, d]) => a < caja[2] && c > caja[0] && b < caja[3] && d > caja[1])) continue;
+      const pies = [[caja[0], y], [x, y], [caja[2], y]];
+      if (!pies.every(([px, py]) => dentroDe(geo.nieveHoy, px, py) && dentroDe(geo.cara, px, py) && dentroDe(geo.silueta, px, caja[1] - 2))) continue;
+      if (geo.sendero.some(([a, b]) => Math.hypot(Math.max(caja[0] - a, 0, a - caja[2]), Math.max(caja[1] - b, 0, b - caja[3])) < 12)) continue;
+      return { x, y, caja, pies };
+    }
+  }
+  return null;
+}
+
+/** Dos paquetes o un osito de nieve. El sitio comprobado mide 14 × 14, con los pies en (x,y). */
+export function recuerdosNavidad(x, y, k, md) {
+  const T = (pts) => d(pts.map(([a, b]) => [x + a * k, y + b * k]));
+  const path = (clase, piezas) => `<path class="${clase}" d="${piezas.map(T).join('')}"/>`;
+  const cajas = path('cajas-nav oso-cinta', [[[-6, 0], [-6, -5], [-0.6, -5], [-0.6, 0]], [[0.4, 0], [0.4, -3.7], [6, -3.7], [6, 0]]]);
+  const lazos = path('cajas-nav v-vo-r2', [[[-4, 0], [-4, -5], [-3, -5], [-3, 0]], [[3, 0], [3, -3.7], [4, -3.7], [4, 0]]]);
+  if (md === '12-25') return cajas + lazos + path('tapas-nav v-vo-palma', [[[-6, -5], [-7, -7.2], [-3.4, -5]], [[0.4, -3.7], [3, -5.2], [5.8, -5.7], [4, -3.7]]]);
+  const nieve = path('muneco-nav v-vo-pelo', [elipse(0, -3.4, 4.6, 3.5), elipse(0, -8.2, 3.4, 3), elipse(-2.5, -10.6, 1), elipse(2.5, -10.6, 1)]);
+  const cara = path('muneco-nav oso-rasgos', [elipse(-0.9, -8.8, 0.42), elipse(1.4, -8.8, 0.42), elipse(0.2, -7.9, 0.7, 0.5)]);
+  return nieve + cara + path('bufanda-nav oso-cinta', [[[-3, -6.5], [2.7, -6.2], [3.1, -5.1], [2.3, -3.6], [1.3, -4], [1.6, -5.3], [-2.6, -5.4]]]) + cajas + lazos;
 }
 
 // ---------------------------------------------------------------------------------------------------------------- «Tú»
@@ -137,7 +171,7 @@ export const CAJA_TU = { x0: -11.2, x1: 9.9, y0: -18.2, y1: 2.5 };
  * de la celebración van dibujados y escondidos (`tu-festeja`: los enseña la clase `festeja` de #m-yo); la bufanda de Navidad
  * (`v-navidad`) y, con `cumple`, el gorrito, como los de la cumbre. `bajo`: lo que va entre su sombra y el osito (la pisada de «Tú»).
  */
-export function osoTu({ k = 1, cumple = false, bajo = '' } = {}) {
+export function osoTu({ k = 1, cumple = false, bajo = '', carpa = false } = {}) {
   const T = (pts) => d(pts.map(([x, y]) => [x * k, y * k]));
   const pl = {};
   const add = (tono, pts) => { pl[tono] = (pl[tono] || '') + T(pts); };
@@ -150,7 +184,8 @@ export function osoTu({ k = 1, cumple = false, bajo = '' } = {}) {
   add('palo', PALO);
   const orden = ['mochila', 'sombra', 'luz', 'medio', 'correa', 'bufanda', 'hocico', 'rasgos', 'gorro', 'palo'];
   const festeja = `<g class="tu-festeja">${['luz', 'medio'].map((t) => `<path class="oso-${t}" d="${T(BRAZOS_ARRIBA[t])}"/>`).join('')}<path class="oso-hocico" d="${BRAZOS_ARRIBA.hocico.map(T).join('')}"/></g>`;
-  return `<path class="oso-pie" d="${T(PIE)}"/>${bajo}<g class="oso oso-tu">${orden.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}${festeja}</g>`;
+  const tienda = carpa ? `<g class="tu-carpa"><path class="oso-mochila" d="${T([[-10, 0], [-3.4, -12], [3.2, -11.5], [9.4, 0]])}"/><path class="oso-marino" d="${T([[-7, -0.3], [-3.6, -9], [0.7, -0.3]])}"/></g>` : '';
+  return `<path class="oso-pie" d="${T(PIE)}"/>${bajo}${tienda}<g class="oso oso-tu">${orden.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}${festeja}</g>`;
 }
 
 // ---------------------------------------------------------------------------------------------------------------- el sitio
