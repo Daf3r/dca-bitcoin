@@ -1,0 +1,224 @@
+diff --git a/app/static/arte-vecinos.js b/app/static/arte-vecinos.js
+index b2f996c..747a921 100644
+--- a/app/static/arte-vecinos.js
++++ b/app/static/arte-vecinos.js
+@@ -55,6 +55,7 @@ const canasto = (r) => [ // el canasto en la cabeza, con lo que lleva
+ ];
+ 
+ /** Los personajes (101): cada uno, una lista de [tono, pieza] en sus unidades (el pie en 0, 0; el astro por +x). `r` = su color de ropa. */
++const mv = (ps, dx, dy = 0) => ps.map(([t, q]) => [t, q[0] === 'p' ? ['p', q[1].map(([x, y]) => [x + dx, y + dy])] : [q[0], q[1] + dx, q[2] + dy, ...q.slice(3)]]);
+ const TIPOS = {
+   campesino: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ...sombrero()],
+   vendedora: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(), ...canasto('r1')],
+@@ -112,7 +113,116 @@ const TIPOS = {
+     ['palma', p([-2.7, -5.9], [3.5, -5.2], [3.4, -4.7], [-2.8, -5.4])], ['palma', p([-0.8, -5.7], [1.6, -5.4], [1.3, -6.6], [-0.4, -6.85])],
+     ['pelo2', e(-1.6, -6.45, 0.55, 0.45)], ['pelo2', e(2.2, -6.2, 0.55, 0.45)],
+   ],
++  // ==================== PROTOTIPO v4 (sin commitear): personajes nuevos para las maquetas del artifact ====================
++  tortillera: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(),
++    ['palma', p([-3.1, 0], [-2.7, -2.3], [2.7, -2.3], [3.1, 0])], ['rasgo', e(0, -2.45, 3.2, 0.45)],
++    ['pelo2', e(-1.6, -2.8, 0.85, 0.3)], ['pelo2', e(0.3, -2.8, 0.85, 0.3)], ['brasa', e(0, -0.75, 1.3, 0.5)], ['pelo2', e(1.3, -4.0, 0.62, 0.5)], ['pelo2', e(2.1, -3.75, 0.62, 0.5)]],
++  sentado: (r) => [
++    ['rasgo', p([-2.3, 0], [-1.9, 0], [-1.9, -1.2], [1.6, -1.2], [1.5, 0], [1.9, 0], [2.0, -1.6], [-1.9, -1.6], [-1.9, -5.4], [-2.3, -5.4])],
++    ['pelo', e(0, -3.1, 2.05, 1.85)], ['pelo', e(-1.15, -1.15, 0.9, 0.55)], ['pelo', e(1.15, -1.15, 0.9, 0.55)], ['som', luna(0, -3.1, 2.05, 1.85, 0.36)],
++    [r, p([-1.1, -4.55], [1.1, -4.55], [2.3, -3.6], [2.1, -2.3], [-2.1, -2.3], [-2.3, -3.6])], ['pelo', e(2.0, -2.5, 0.6, 1.0)], ['pelo', e(-2.0, -2.5, 0.6, 1.0)],
++    ...cabeza(0, 0.55)],
++  paraguas: (r) => [...cuerpo(), ...brazos(0, 1), ...vestido(r), ...cabeza(),
++    ['rasgo', p([2.1, -10.4], [2.35, -10.4], [2.35, -4.6], [2.1, -4.6])], ['rasgo', [...arco(1.0, -9.3, 4.6, 2.5, 180, 360, 10)].reduce((a, q) => (a[1].push(q), a), ['p', []])]],
++  hojaHuerta: (r) => [...cuerpo(), ...brazos(1, 1), ...camisa(r).map(([t, [, pts]]) => [t, ['p', pts.filter(([x, y]) => !(Math.abs(x) > 2.2 && y > -3.5))]]), ...cabeza(0, 0.15),
++    ['r0', p([-5.0, -7.5], [-4.6, -8.5], [-2, -9.5], [1.5, -9.7], [4.8, -8.8], [5.4, -7.9], [1.6, -8.7], [-2, -8.6])], ['pelo2', e(-2.3, -8.8, 0.55)], ['pelo2', e(2.3, -9.0, 0.55)]],
++  oseznoBolson: (r) => [...cuerpo(), ...brazos(), ...pantaloncito(r), ...cabeza(0, 0, false),
++    ['rasgo', p([-1.3, -4.3], [-0.9, -4.3], [1.9, -2.3], [1.5, -2.1])], ['palma', p([0.9, -2.7], [3.0, -2.7], [3.0, -0.8], [0.9, -0.8])]],
++  oseznoLlanta: () => [...cuerpo(), ...brazos(1, 1), ...cabeza(0, 0, false), ['rasgo', aro(0, -2.4, 3.1, 1.05)]],
++  oseznoVara: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false),
++    ['palma', p([2.0, -15.5], [2.4, -15.5], [2.5, -4.6], [2.1, -4.6])], ['palma', p([-5.2, -1.7], [-2.9, -1.7], [-3.2, 0], [-4.9, 0])], ['r2', e(-4.05, -1.9, 1.05, 0.55)]],
++  oseznoFarol: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false),
++    ['rasgo', p([2.15, -8.6], [2.35, -8.6], [2.35, -5.6], [2.15, -5.6])], ['brasa', p([1.35, -10.8], [3.15, -10.8], [3.4, -8.6], [1.1, -8.6])], ['r1', p([1.2, -11.3], [3.3, -11.3], [3.15, -10.8], [1.35, -10.8])]],
++  oseznoIndito: () => [...cuerpo(), ...brazos(), ['palma', camisa('x')[0][1]], ['r1', p([-1.1, -4.5], [1.1, -4.5], [0, -3.3])], ...cabeza(0, 0, false), ...sombrero()],
++  vendado: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false),
++    ['r1', p([-2.3, -6.85], [2.3, -6.85], [2.3, -6.2], [-2.3, -6.2])], ['palma', p([1.9, -10.2], [2.3, -10.3], [2.6, -5.0], [2.2, -5.0])]],
++  pinata: () => [['rasgo', p([-0.1, -21], [0.1, -21], [0.1, -14.2], [-0.1, -14.2])], ['r2', p([0, -15.6], [0.8, -13.6], [-0.8, -13.6])], ['r2', p([0, -9.2], [0.8, -11.2], [-0.8, -11.2])],
++    ['r0', p([-3.2, -12.4], [-1.2, -13.2], [-1.2, -11.6])], ['r0', p([3.2, -12.4], [1.2, -13.2], [1.2, -11.6])], ['r1', e(0, -12.4, 1.6)], ['pelo2', e(0, -12.4, 0.6)]],
++  ramos: (r) => [...cuerpo(), ...brazos(0, 1), ...vestido(r), ...cabeza(),
++    ['palma', p([2.0, -5.2], [2.4, -5.2], [3.9, -11.6], [3.0, -12.2], [2.5, -9.2], [1.4, -12.0], [0.7, -11.3], [1.9, -8.2])], ['r0', p([2.3, -9.0], [4.6, -10.4], [4.3, -9.6])]],
++  flores: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...cabeza(),
++    ['r0', p([0.5, -3.7], [1.2, -3.7], [1.5, -1.9], [1.1, -1.9])], ['r1', e(0.25, -4.15, 0.62)], ['r2', e(1.35, -4.3, 0.62)], ['r1', e(0.85, -4.85, 0.5)], ['pelo2', e(1.0, -3.2, 0.6, 0.45)]],
++  corona: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ['r2', aro(0, -2.3, 1.9, 0.6)], ['r1', e(-1.6, -2.3, 0.45)], ['r1', e(1.6, -2.3, 0.45)], ['r1', e(0, -3.9, 0.45)], ['r1', e(0, -0.7, 0.45)]],
++  olla: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(),
++    ['rasgo', p([-2.8, -3.4], [2.8, -3.4], [2.3, -0.9], [-2.3, -0.9])], ['rasgo', e(0, -3.4, 2.9, 0.55)], ['r2', e(0, -3.45, 2.2, 0.32)], ['brasa', e(0, -0.5, 2.5, 0.5)],
++    ['palma', p([1.5, -6.6], [1.8, -6.6], [1.2, -3.4], [0.9, -3.4])], ['pelo2', e(1.6, -5.7, 0.6, 0.5)]],
++  huacal: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ['palma', p([0.9, -3.5], [3.0, -3.5], [2.6, -2.5], [1.3, -2.5])], ['pelo2', e(1.95, -2.5, 0.6, 0.45)]],
++  tendedero: () => [['rasgo', p([-7.2, 0], [-6.85, 0], [-6.85, -6.7], [-7.2, -6.7])], ['rasgo', p([6.85, 0], [7.2, 0], [7.2, -6.7], [6.85, -6.7])], ['rasgo', p([-7, -6.45], [7, -6.25], [7, -6.1], [-7, -6.3])],
++    ['r1', p([-5.6, -6.25], [-3.7, -6.2], [-3.9, -3.6], [-5.4, -3.6])], ['pelo2', p([-3.0, -6.2], [0.4, -6.15], [0.4, -2.8], [-3.0, -2.8])], ['r2', p([1.2, -6.15], [2.9, -6.1], [3.3, -4.0], [0.9, -4.0])], ['r0', p([3.9, -6.1], [5.7, -6.05], [5.5, -3.3], [4.1, -3.3])]],
++  antorcha: (r) => [...cuerpo(), ...brazos(0, 1), ...camisa(r), ...cabeza(), ['palma', p([2.0, -8.6], [2.5, -8.6], [2.4, -5.2], [2.1, -5.2])], ['brasa', p([1.5, -8.6], [3.0, -8.6], [2.7, -9.8], [2.25, -11.0], [1.8, -9.7])]],
++  abrazo: (r) => [...mv([...cuerpo(), ...vestido(r), ...cabeza(0.35, 0)], -1.9), ...mv([...cuerpo(), ...camisa('r2'), ...cabeza(-0.35, 0)], 1.9), ['pelo2', e(0, -3.5, 1.7, 0.55)]],
++  chuzo: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ...sombrero(), ['palma', p([2.35, -7.6], [2.7, -7.6], [2.85, 0.2], [2.5, 0.2])], ['pelo2', e(2.6, -3.3, 0.6, 0.55)]],
++  matate: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ...sombrero(), ['palma', p([1.2, -3.4], [3.4, -3.4], [3.2, -1.0], [1.4, -1.0])], ['r2', e(1.8, -3.5, 0.5, 0.8)], ['r2', e(2.8, -3.6, 0.5, 0.8)], ['rasgo', p([-1.3, -4.3], [-0.9, -4.3], [1.9, -3.2], [1.5, -3.0])]],
++  hamaca: (r) => [['rasgo', p([-6.4, 0], [-6.0, 0], [-6.0, -5.6], [-6.4, -5.6])], ['rasgo', p([6.0, 0], [6.4, 0], [6.4, -5.6], [6.0, -5.6])],
++    [r, p([-6.1, -5.3], [-4, -3.0], [0, -1.7], [4, -3.0], [6.1, -5.3], [6.1, -4.5], [4, -1.9], [0, -0.7], [-4, -1.9], [-6.1, -4.5])],
++    ['pelo', e(0.6, -3.0, 2.7, 1.15)], ['pelo', e(-3.0, -3.7, 1.55, 1.35)], ['pelo', e(-4.1, -4.75, 0.6)], ['som', luna(-3.0, -3.7, 1.55, 1.35)], ['pelo', e(3.3, -3.3, 0.9, 0.55)],
++    ['palma', p([-4.4, -4.6], [-1.6, -4.9], [-1.7, -4.3], [-4.3, -4.0])], ['palma', e(-2.9, -4.95, 0.9, 0.6)]],
++  porteria: () => [['pelo2', p([-4, 0], [-3.7, 0], [-3.7, -5], [3.7, -5], [3.7, 0], [4, 0], [4, -5.3], [-4, -5.3])]],
++  velita: () => [['pelo2', p([-0.3, -1.7], [0.3, -1.7], [0.3, 0], [-0.3, 0])], ['brasa', e(0, -2.25, 0.5, 0.7)]],
++  oseznoSalta: (r) => [...mv([...cuerpo(), ...brazos(1, 1), ...pantaloncito(r), ...cabeza(0, 0, false)], 0, -1.3), ['som', e(0, 0.25, 3.4, 0.6)], ['pelo2', e(-2.6, -0.5, 0.35, 0.5)], ['pelo2', e(2.7, -0.7, 0.35, 0.5)]],
++  oseznoElote: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['palma', p([2.1, -6.6], [2.35, -6.6], [2.35, -5.4], [2.1, -5.4])], ['r2', e(2.22, -7.6, 0.55, 1.05)]],
++  oseznoFlor: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['r0', p([2.12, -7.4], [2.32, -7.4], [2.32, -5.6], [2.12, -5.6])], ['r1', e(2.22, -7.8, 0.7)], ['r2', e(2.22, -7.8, 0.28)]],
++  gallo: () => [['rasgo', p([-1.6, -1.0], [-1.9, -2.8], [-1.2, -2.0], [-0.2, -2.2], [0.5, -3.4], [1.1, -3.6], [1.6, -3.1], [1.2, -2.9], [1.1, -1.6], [0.3, -0.8], [0.3, 0], [0, 0], [0, -0.8], [-0.9, -0.8])], ['r1', p([0.5, -3.5], [0.8, -4.1], [1.1, -3.6], [1.4, -4.0], [1.5, -3.3])]],
++  zanates: () => [['rasgo', p([-3.2, -0.9], [-2.2, -1.3], [-1.6, -1.0], [-2.0, -0.6], [-1.2, 0], [-3.4, -0.5])], ['rasgo', p([0.2, -0.9], [1.2, -1.3], [1.8, -1.0], [1.4, -0.6], [2.2, 0], [0, -0.5])], ['rasgo', p([3.8, -0.9], [4.8, -1.3], [5.4, -1.0], [5.0, -0.6], [5.8, 0], [3.6, -0.5])]],
++  garrobo: () => [['r0', p([-3.4, -0.3], [-1.2, -0.9], [0.6, -1.3], [1.8, -1.9], [2.7, -1.7], [2.9, -1.2], [1.9, -0.9], [1.5, -0.3], [0.9, 0], [0.7, -0.5], [-0.8, -0.3], [-1.0, 0], [-1.5, 0], [-1.5, -0.3])], ['rasgo', e(2.3, -1.5, 0.18)]],
++  tecolote: () => [['rasgo', e(0, -1.6, 1.25, 1.6)], ['rasgo', p([-1.2, -2.6], [-1.0, -3.6], [-0.4, -3.0])], ['rasgo', p([1.2, -2.6], [1.0, -3.6], [0.4, -3.0])], ['brasa', e(-0.5, -2.2, 0.32)], ['brasa', e(0.5, -2.2, 0.32)]],
++  // ---- PROTOTIPO v4 · fiestas
++  mesa: () => [['rasgo', p([-7.6, 0], [-7.2, 0], [-7.2, -2.4], [7.2, -2.4], [7.2, 0], [7.6, 0], [7.6, -2.9], [-7.6, -2.9])], ['pelo2', p([-7.9, -3.4], [7.9, -3.4], [7.9, -2.3], [-7.9, -2.3])],
++    ['r1', e(-5.2, -3.7, 0.9, 0.35)], ['r2', e(-2.2, -3.7, 0.9, 0.35)], ['r0', e(0.8, -3.7, 0.9, 0.35)], ['r2', e(3.6, -3.7, 0.9, 0.35)], ['palma', p([5.2, -5.2], [6.4, -5.2], [6.6, -3.5], [5.0, -3.5])], ['brasa', e(-0.7, -4.6, 0.3, 0.55)]],
++  brindis: (r) => [...cuerpo(), ...brazos(0, 1), ...camisa(r), ...cabeza(), ['palma', p([1.9, -6.9], [2.7, -6.9], [2.55, -5.9], [2.05, -5.9])]],
++  regalo: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...cabeza(), ['r1', p([0.2, -3.9], [2.6, -3.9], [2.6, -1.9], [0.2, -1.9])], ['r2', p([1.2, -3.9], [1.6, -3.9], [1.6, -1.9], [1.2, -1.9])], ['r2', p([0.6, -4.5], [1.4, -3.9], [2.2, -4.5], [1.4, -4.1])], ['pelo2', e(0.2, -2.6, 0.5, 0.45)]],
++  oseznoJuguete: (r) => [...cuerpo(), ...brazos(), ...pantaloncito(r), ...cabeza(0, 0, false), ['rasgo', p([2.2, -2.6], [2.35, -2.6], [4.0, -0.9], [3.85, -0.9])], ['r1', p([3.4, -1.9], [6.4, -1.9], [6.4, -0.7], [3.4, -0.7])], ['rasgo', e(4.1, -0.45, 0.5)], ['rasgo', e(5.8, -0.45, 0.5)]],
++  volcancito: () => [['r1', p([-0.7, 0], [0.7, 0], [0.25, -1.5], [-0.25, -1.5])], ['brasa', p([-0.2, -1.5], [0.2, -1.5], [1.3, -4.2], [0.3, -2.8], [0, -4.9], [-0.3, -2.8], [-1.3, -4.2])]],
++  hombros: (r) => [...cuerpo(), ...brazos(1, 1), ...camisa(r), ...cabeza(), ...mv([['pelo', e(0, -2.5, 1.95, 2.4)], ...pantaloncito('r1'), ...cabeza(0, 0, false)].map(([t, q]) => [t, q[0] === 'p' ? ['p', q[1].map(([x, y]) => [x * 0.62, y * 0.62])] : [q[0], q[1] * 0.62, q[2] * 0.62, q[3] * 0.62, (q[4] ?? q[3]) * 0.62]]), 0, -7.6)],
++  escalera: (r) => [['palma', p([-2.2, 0], [-1.8, 0], [-0.4, -11], [-0.8, -11])], ['palma', p([1.2, 0], [1.6, 0], [0.6, -11], [0.2, -11])], ['palma', p([-1.7, -2.6], [1.3, -2.6], [1.25, -2.2], [-1.65, -2.2])], ['palma', p([-1.3, -5.4], [1.0, -5.4], [0.95, -5.0], [-1.25, -5.0])], ['palma', p([-1.0, -8.2], [0.8, -8.2], [0.75, -7.8], [-0.95, -7.8])],
++    ...mv([...cuerpo(), ...brazos(1, 1), ...camisa(r), ...cabeza()], 0, -5.2)],
++  tamales: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(),
++    ['rasgo', p([-2.8, -3.4], [2.8, -3.4], [2.3, -0.9], [-2.3, -0.9])], ['rasgo', e(0, -3.4, 2.9, 0.55)], ['r0', e(-1.0, -3.7, 1.1, 0.5)], ['r0', e(0.9, -3.8, 1.1, 0.5)], ['brasa', e(0, -0.5, 2.5, 0.5)], ['pelo2', e(1.9, -4.3, 0.6, 0.5)]],
++  polvora: () => [['r1', p([-4, -0.3], [-3.2, -0.5], [-3.0, 0], [-3.8, 0.1])], ['palma', p([-1.2, -0.4], [-0.3, -0.2], [-0.5, 0.2], [-1.3, 0])], ['r1', p([1.4, -0.5], [2.3, -0.3], [2.1, 0.1], [1.3, 0])], ['palma', p([3.6, -0.2], [4.4, -0.4], [4.5, 0.1], [3.7, 0.2])], ['rasgo', p([-2.2, 0.3], [-1.6, 0.2], [-1.5, 0.6], [-2.1, 0.6])]],
++  guitarra: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ...sombrero(), ['palma', e(0.6, -2.4, 1.5, 1.2)], ['palma', e(-0.4, -3.1, 1.0, 0.85)], ['rasgo', e(0.5, -2.5, 0.42)], ['rasgo', p([-0.6, -3.5], [-0.3, -3.8], [-3.9, -5.6], [-4.1, -5.2])], ['pelo2', e(1.6, -2.4, 0.55, 0.45)]],
++  // ==================== PROTOTIPO v5 (sin commitear): sistemas, historias y visitas ====================
++  oseznoGlobo: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['rasgo', p([2.15, -10.9], [2.35, -10.9], [2.35, -5.6], [2.15, -5.6])], ['r1', e(2.25, -12.8, 1.9, 2.3)], ['pelo2', e(1.55, -13.7, 0.45, 0.6)]],
++  globoSuelto: () => [['rasgo', p([-0.1, -3.0], [0.1, -3.0], [0.6, -0.4], [0.4, -0.4])], ['r1', e(0, -4.9, 1.9, 2.3)], ['pelo2', e(-0.7, -5.8, 0.45, 0.6)]],
++  globero: (r) => [...cuerpo(), ...brazos(0, 1), ...camisa(r), ...cabeza(), ...sombrero(), ['rasgo', p([2.2, -5.6], [2.4, -5.6], [2.4, -11], [2.2, -11])],
++    ['r1', e(1.0, -12.4, 1.5, 1.8)], ['r2', e(3.7, -12.7, 1.5, 1.8)], ['r0', e(2.3, -14.8, 1.5, 1.8)], ['azul', e(0.1, -15.1, 1.4, 1.7)], ['brasa', e(4.5, -15.3, 1.4, 1.7)]],
++  fotografo: (r) => [...mv([...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ...sombrero()], -3.6),
++    ['rasgo', p([0.9, 0], [1.2, 0], [2.6, -5.0], [2.3, -5.0])], ['rasgo', p([4.1, 0], [4.4, 0], [3.0, -5.0], [2.7, -5.0])], ['rasgo', p([2.5, 0], [2.8, 0], [2.8, -5], [2.5, -5])],
++    ['rasgo', p([1.0, -7.8], [4.3, -7.8], [4.3, -5.0], [1.0, -5.0])], ['palma', e(4.5, -6.4, 0.5, 0.85)], ['r1', p([0.2, -8.1], [1.9, -8.1], [1.5, -4.4], [-0.1, -4.7])]],
++  caballito: () => [['palma', p([-2.6, -3.2], [1.4, -3.4], [2.0, -5.6], [3.2, -5.9], [3.6, -4.6], [2.7, -4.3], [2.2, -2.0], [1.8, 0], [1.3, 0], [1.2, -1.8], [-1.8, -1.8], [-2.0, 0], [-2.5, 0], [-2.6, -1.6], [-3.4, -0.9], [-3.3, -2.4])],
++    ['r1', p([-1.2, -3.5], [0.6, -3.6], [0.5, -2.6], [-1.1, -2.5])], ['rasgo', e(2.9, -5.2, 0.22)]],
++  carpa: () => [['r1', p([-9, 0], [-9, -6], [0, -13], [9, -6], [9, 0])], ['pelo2', p([-5.4, 0], [-5.4, -8.8], [-1.8, -11.6], [-1.8, 0])], ['pelo2', p([1.8, 0], [1.8, -11.6], [5.4, -8.8], [5.4, 0])],
++    ['r2', p([-9.6, -6.3], [9.6, -6.3], [9.6, -5.3], [-9.6, -5.3])], ['rasgo', p([-1.3, 0], [-1.3, -4.0], [0, -5.0], [1.3, -4.0], [1.3, 0])],
++    ['rasgo', p([-0.12, -13], [0.12, -13], [0.12, -15.6], [-0.12, -15.6])], ['r2', p([0.12, -15.6], [2.4, -15.0], [0.12, -14.3])]],
++  lona: () => [['r1', p([-7, 0], [-5, -1.6], [3, -1.9], [7, -0.4], [6, 0.5], [-6, 0.6])], ['pelo2', p([-3, -1.75], [-0.5, -1.85], [0.4, 0.55], [-2.2, 0.55])], ['pelo2', p([3, -1.9], [5, -1.2], [5.6, 0.5], [3.4, 0.5])],
++    ['palma', p([-9, 0.4], [-8.6, 0.4], [-8.0, -9], [-8.4, -9])], ['palma', p([8.4, 0.2], [8.8, 0.2], [9.2, -6], [8.8, -6])]],
++  malabar: (r) => [...cuerpo(), ...brazos(1, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['r1', e(-2.6, -10.6, 0.6)], ['r2', e(0, -12.0, 0.6)], ['r0', e(2.6, -10.6, 0.6)]],
++  zancos: (r) => [['palma', p([-1.4, 0], [-1.0, 0], [-1.0, -5], [-1.4, -5])], ['palma', p([1.0, 0], [1.4, 0], [1.4, -5], [1.0, -5])],
++    ...mv([...cuerpo(), ...brazos(1, 0), ...camisa(r), ...cabeza(), ['r1', p([-1.6, -8.0], [1.6, -8.0], [0, -11.2])], ['r2', e(0, -11.3, 0.5)]], 0, -4.6)],
++  novios: () => [...mv([...cuerpo(), ['pelo2', vestido('x')[0][1]], ...cabeza(0.35, 0), ['pelo2', p([-2.7, -7.6], [-1.5, -8.3], [-2.0, -3.0], [-3.7, -1.2])]], -1.9),
++    ...mv([...cuerpo(), ['rasgo', camisa('x')[0][1]], ...cabeza(-0.35, 0)], 1.9), ['r1', e(-0.3, -3.3, 0.7)], ['r0', e(0.3, -2.8, 0.45)]],
++  arroz: (r) => [...cuerpo(), ...brazos(1, 1), ...vestido(r), ...cabeza(), ['pelo2', e(-3.6, -10, 0.25)], ['pelo2', e(-2.2, -11.2, 0.25)], ['pelo2', e(3.2, -10.6, 0.25)], ['pelo2', e(1.6, -11.6, 0.25)], ['pelo2', e(0, -10.4, 0.25)], ['pelo2', e(4.4, -9.2, 0.25)]],
++  oseznoSuelo: (r) => [['pelo', e(0, -1.5, 2.0, 1.5)], ['pelo', e(-1.5, -0.4, 1.0, 0.5)], ['pelo', e(1.5, -0.4, 1.0, 0.5)], [r, p([-1.7, -2.6], [1.7, -2.6], [1.9, -1.0], [-1.9, -1.0])], ...cabeza(0, 2.2, false)],
++  confeti: () => [['r1', p([-6, -0.2], [-5.3, -0.4], [-5.1, 0.1], [-5.8, 0.2])], ['r2', p([-3.6, 0.4], [-2.9, 0.2], [-2.8, 0.7], [-3.5, 0.8])], ['r0', p([-1.2, -0.5], [-0.5, -0.4], [-0.6, 0.1], [-1.3, 0])],
++    ['azul', p([1.4, 0.3], [2.1, 0.1], [2.2, 0.6], [1.5, 0.7])], ['brasa', p([3.6, -0.4], [4.3, -0.3], [4.2, 0.2], [3.5, 0.1])], ['r1', p([5.4, 0.5], [6.1, 0.4], [6.1, 0.9], [5.4, 0.9])], ['r2', p([0.2, 0.9], [0.9, 0.8], [0.9, 1.3], [0.2, 1.3])],
++    ['r0', p([-4.6, 1.0], [-3.9, 0.9], [-3.9, 1.4], [-4.6, 1.4])], ['r2', p([-1.4, -1.9], [0.2, -2.3], [1.0, -0.9], [-0.6, -0.3])], ['r1', p([-0.9, -1.6], [-0.3, -1.8], [0.2, -0.9], [-0.4, -0.7])]],
++  charcos3: () => [['som', e(-4, 0, 3.4, 0.75)], ['som', e(2.4, 0.9, 2.5, 0.55)], ['som', e(6.2, -0.4, 1.5, 0.38)], ['pelo2', e(-4.6, -0.15, 1.3, 0.16)]],
++  charcos2: () => [['som', e(-4, 0, 2.3, 0.5)], ['som', e(2.4, 0.9, 1.4, 0.32)], ['pelo2', e(-4.4, -0.1, 0.8, 0.12)]],
++  charcos1: () => [['som', e(-4, 0, 1.2, 0.28)]],
++  bebe: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...cabeza(), ['pelo2', p([-0.2, -4.0], [2.7, -3.6], [2.5, -1.9], [-0.4, -2.2])], ['pelo', e(1.7, -4.4, 0.95, 0.85)], ['pelo', e(1.0, -5.1, 0.32)], ['pelo', e(2.4, -5.1, 0.32)], ['rasgo', e(2.0, -4.3, 0.16)]],
++  panales: () => [['rasgo', p([-7.2, 0], [-6.85, 0], [-6.85, -6.7], [-7.2, -6.7])], ['rasgo', p([6.85, 0], [7.2, 0], [7.2, -6.7], [6.85, -6.7])], ['rasgo', p([-7, -6.45], [7, -6.25], [7, -6.1], [-7, -6.3])],
++    ...[-5.6, -3.4, -1.2, 1.0, 3.2].map((x) => ['pelo2', p([x, -6.25], [x + 1.7, -6.22], [x + 1.7, -4.4], [x, -4.4])]), ['r2', p([5.0, -6.15], [6.3, -6.12], [6.5, -4.9], [5.65, -4.7], [4.8, -4.9])]],
++  puesto: (r) => [['palma', p([-5, 0], [5, 0], [5, -3.2], [-5, -3.2])], ['rasgo', p([-5, 0], [-4.7, 0], [-4.7, -8.5], [-5, -8.5])], ['rasgo', p([4.7, 0], [5, 0], [5, -8.5], [4.7, -8.5])],
++    [r, p([-5.8, -8.4], [5.8, -8.4], [6.4, -6.4], [-6.4, -6.4])], ['pelo2', p([-3.5, -8.4], [-1.2, -8.4], [-1.3, -6.4], [-3.9, -6.4])], ['pelo2', p([1.2, -8.4], [3.5, -8.4], [3.9, -6.4], [1.3, -6.4])],
++    ['r2', e(-2.6, -3.6, 0.7, 0.5)], ['r1', e(-0.6, -3.6, 0.7, 0.5)], ['r0', e(1.4, -3.6, 0.7, 0.5)], ['brasa', e(3.3, -3.7, 0.6, 0.6)]],
++  oseznoAlgodon: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['palma', p([2.15, -7.0], [2.35, -7.0], [2.35, -5.6], [2.15, -5.6])], ['pelo2', e(2.25, -8.3, 1.25, 1.45)]],
++  paletero: (r) => [...cuerpo(), ...brazos(0, 1), ...camisa(r), ...cabeza(), ...sombrero(), ['pelo2', p([-4.4, -4.8], [-1.7, -4.8], [-1.7, -1.6], [-4.4, -1.6])], ['azul', p([-4.4, -3.7], [-1.7, -3.7], [-1.7, -3.0], [-4.4, -3.0])],
++    ['rasgo', p([-1.7, -4.7], [-1.5, -4.9], [1.3, -4.5], [1.2, -4.25])], ['palma', p([2.15, -6.5], [2.35, -6.5], [2.35, -5.6], [2.15, -5.6])], ['r1', p([1.8, -8.2], [2.7, -8.2], [2.7, -6.5], [1.8, -6.5])]],
++  ramada: (r) => [['palma', p([-8, 0], [-7.6, 0], [-7.6, -8], [-8, -8])], ['palma', p([7.6, 0], [8, 0], [8, -8], [7.6, -8])], ['palma', p([-2.6, -1.2], [-2.2, -1.2], [-2.2, -8.6], [-2.6, -8.6])], ['palma', p([2.6, -1.2], [3.0, -1.2], [3.0, -8.6], [2.6, -8.6])],
++    ...(r === 'r0' ? [] : [['r0', p([-9, -7.6], [-4, -10.4], [5, -10.4], [9.2, -7.6], [9.2, -8.6], [5, -11.4], [-4, -11.4], [-9, -8.6])], ['r0', p([-9, -7.6], [9.2, -7.6], [5, -10.4], [-4, -10.4])]]),
++    ...(r === 'r2' ? [['r1', p([-7.6, -7.4], [-6.4, -7.4], [-7, -6.2])], ['r2', p([-5.2, -7.4], [-4, -7.4], [-4.6, -6.2])], ['azul', p([-2.8, -7.4], [-1.6, -7.4], [-2.2, -6.2])], ['r1', p([-0.4, -7.4], [0.8, -7.4], [0.2, -6.2])], ['r2', p([2, -7.4], [3.2, -7.4], [2.6, -6.2])], ['azul', p([4.4, -7.4], [5.6, -7.4], [5, -6.2])], ['r1', p([6.6, -7.4], [7.6, -7.4], [7.1, -6.2])]] : [])],
++  palmas: () => [['r0', p([-5, 0.3], [-3, -1.6], [3, -1.9], [5.5, -0.2], [3.6, 0.6], [-3.4, 0.7])], ['palma', p([-4.6, 0.9], [4.8, 0.5], [4.8, 0.9], [-4.6, 1.3])]],
+ };
++const SIN_PIE = new Set(['mesa', 'volcancito', 'polvora', 'pelota', 'pinata', 'tendedero', 'hamaca', 'porteria', 'velita', 'gallo', 'zanates', 'garrobo', 'tecolote', 'globoSuelto', 'caballito', 'carpa', 'lona', 'confeti', 'charcos3', 'charcos2', 'charcos1', 'panales', 'puesto', 'ramada', 'palmas']);
+ export const PERSONAJES = Object.keys(TIPOS);
+ // La caja de cada personaje en sus unidades (de todas sus piezas): para que dos vecinos nunca se monten uno sobre otro.
+ const CAJAS = Object.fromEntries(Object.entries(TIPOS).map(([t, fn]) => {
+@@ -155,7 +265,7 @@ export function vecinos(lista, { sol = 1 } = {}) {
+     const m = (px, py) => [x + f * px * kk, y + py * kk];
+     const mSom = (px, py) => [x + sol * px * kk, y + py * kk];
+     for (const [tono, pieza] of piezas) tonos[tono] += trazo(pieza, tono === 'som' ? mSom : m, kk);
+-    if (t !== 'pelota') pie += `M${f1(x - 2.2 * kk)} ${f1(y)}L${f1(x + 2.2 * kk)} ${f1(y)}L${f1(x + (1.4 - sol * 2.6) * kk)} ${f1(y + 0.85 * kk)}L${f1(x - (1.4 + sol * 2.6) * kk)} ${f1(y + 0.7 * kk)}Z`;
++    if (!SIN_PIE.has(t)) pie += `M${f1(x - 2.2 * kk)} ${f1(y)}L${f1(x + 2.2 * kk)} ${f1(y)}L${f1(x + (1.4 - sol * 2.6) * kk)} ${f1(y + 0.85 * kk)}L${f1(x - (1.4 + sol * 2.6) * kk)} ${f1(y + 0.7 * kk)}Z`;
+   }
+   return { tonos, pie };
+ }
+@@ -206,6 +316,64 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
+   else if (t === 'desfile') { en('calle', 0, 'abanderado', { r: 0, f: -1 }); en('plaza', 1, 'bombo', { r: 0 }); en('plaza', 3, 'oseznoArriba', { r: 0, s: OSEZNO }); en('plaza', 5, 'vecino', { r: 0 }); en('atrio', 0, 'vecina', { r: 2 }); en('atrio', 0, 'osezno', { r: 1, s: OSEZNO, dx: 3 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'campesino', { r: 1, f: -1 }); }
+   // Nochebuena y el 31 (113): los oseznos de la plaza con su estrellita y los vecinos en la calle, mirando el nacimiento.
+   else if (t === 'nochebuena') { oseznos(3, 'oseznoLuz'); en('portal', 0, 'espaldas', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 0, 'vecino', { r: 2, dx: 5.4, f: -1 }); en('atrio', 1, 'vendedora', { r: 0 }); }
++  // ==================== PROTOTIPO v4: turnos de maqueta ====================
++  else if (t === 'p-mediodia') { en('calle', 0, 'tortillera', { r: 0 }); en('calle', 0, 'vecino', { r: 2, dx: 6.4, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); for (let i = 0; i < 4; i++) en('plaza', i, 'oseznoBolson', { s: OSEZNO, r: i, f: i % 2 ? -1 : 1 }); en('atrio', 1, 'vecina', { r: 1 }); }
++  else if (t === 'p-hamaca') { en('banca', 0, 'hamaca', { r: 1, dy: 0.4 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vendedora', { r: 0, f: -1 }); en('plaza', 4, 'garrobo', { dx: 3 }); }
++  else if (t === 'p-fresca') { en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'sentado', { r: 0 }); en('calle', 0, 'sentado', { r: 1, dx: 5.6, f: -1 }); en('calle', 1, 'sentado', { r: 2, f: -1 }); en('atrio', 1, 'vecina', { r: 1 }); en('atrio', 0, 'vecino', { r: 0, f: -1 }); }
++  else if (t === 'p-lluvia') { en('calle', 0, 'paraguas', { r: 1 }); en('atrio', 1, 'paraguas', { r: 2, f: -1 }); en('calle', 1, 'hojaHuerta', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'osezno', { s: OSEZNO, r: 1 }); en('plaza', 1, 'oseznoSalta', { s: OSEZNO, r: 0 }); en('plaza', 3, 'oseznoSalta', { s: OSEZNO, r: 2, f: -1 }); }
++  else if (t === 'p-ramos') { en('atrio', 3, 'cura', {}); en('atrio', 0, 'ramos', { r: 0 }); en('atrio', 1, 'ramos', { r: 2, f: -1 }); en('atrio', 4, 'ramos', { r: 1 }); en('calle', 0, 'ramos', { r: 2 }); en('calle', 1, 'ramos', { r: 0, f: -1 }); en('corredor', 0, 'abuela', { r: 1 }); en('plaza', 2, 'oseznoArriba', { s: OSEZNO, r: 1 }); }
++  else if (t === 'p-pinata') { en('plaza', 2, 'pinata', { dx: 1.6 }); en('plaza', 1, 'vendado', { s: OSEZNO, r: 0 }); for (const i of [0, 3, 4, 5]) en('plaza', i, i % 2 ? 'oseznoArriba' : 'osezno', { s: OSEZNO, r: i, f: i < 2 ? 1 : -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'vecino', { r: 2, f: -1 }); }
++  else if (t === 'p-farolitos') { for (let i = 0; i < 5; i++) en('plaza', i, 'oseznoFarol', { s: OSEZNO, r: i, f: i % 2 ? -1 : 1 }); en('calle', 0, 'antorcha', { r: 0 }); en('calle', 1, 'vecina', { r: 1, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); }
++  else if (t === 'p-difuntos') { en('calle', 0, 'flores', { r: 0 }); en('calle', 0, 'corona', { r: 2, dx: 5.6 }); en('atrio', 0, 'flores', { r: 1, f: -1 }); en('atrio', 4, 'vecino', { r: 0 }); en('atrio', 4, 'oseznoFlor', { s: OSEZNO, r: 1, dx: 3.1 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'velita', {}); en('calle', 1, 'velita', { dx: -3, dy: -3.4 }); }
++  else if (t === 'p-mangos') { en('banca', 0, 'oseznoVara', { s: OSEZNO, r: 0, dx: -3 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 1 }); en('plaza', 3, 'oseznoArriba', { s: OSEZNO, r: 2, f: -1 }); en('atrio', 0, 'vendedora', { r: 2 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'campesino', { r: 1 }); en('banca', 0, 'garrobo', { dx: 6, dy: 0.6 }); }
++  else if (t === 'p-lavar') { en('calle', 1, 'tendedero', { dy: -0.6 }); en('corredor', 1, 'escoba', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 0 }); en('atrio', 0, 'vendedora', { r: 0 }); }
++  else if (t === 'p-atolada') { en('calle', 0, 'olla', { r: 0 }); en('calle', 0, 'huacal', { r: 2, dx: 6.2, f: -1 }); en('calle', 1, 'huacal', { r: 1 }); en('plaza', 0, 'oseznoElote', { s: OSEZNO, r: 0 }); en('plaza', 2, 'oseznoElote', { s: OSEZNO, r: 2, f: -1 }); en('plaza', 4, 'osezno', { s: OSEZNO, r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); }
++  else if (t === 'p-inditos') { en('atrio', 3, 'cura', {}); for (const i of [0, 1, 4]) en('atrio', i, 'oseznoIndito', { s: OSEZNO, f: i ? -1 : 1 }); en('atrio', 0, 'vecina', { r: 1, dx: 3.4 }); en('atrio', 2, 'vecino', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'oseznoIndito', { s: OSEZNO }); en('calle', 0, 'vecina', { r: 2, dx: 3.4 }); }
++  else if (t === 'p-abrazo') { en('calle', 0, 'abrazo', { r: 0 }); en('atrio', 1, 'abrazo', { r: 1 }); oseznos(3, 'oseznoLuz'); en('corredor', 0, 'abuela', { r: 2 }); en('portal', 0, 'espaldas', { r: 0 }); }
++  else if (t === 'p-mejenga') { en('plaza', 0, 'porteria', { dx: -3 }); en('plaza', 5, 'porteria', { dx: 4 }); for (const i of [1, 2, 3, 4]) en('plaza', i, i % 2 ? 'osezno' : 'oseznoArriba', { s: OSEZNO, r: i, f: i < 3 ? 1 : -1 }); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2 }); en('calle', 0, 'vecino', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vecina', { r: 0, f: -1 }); }
++  else if (t === 'p-gloria') { for (const i of [0, 2, 4]) en('plaza', i, 'oseznoLlanta', { s: OSEZNO, f: i % 4 ? -1 : 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); }
++  else if (t === 'p-alba') { en('corredor', 0, 'estira', { r: 2 }); en('calle', 0, 'panadero', { r: 1 }); en('corredor', 1, 'escoba', { r: 0, f: -1 }); en('plaza', 4, 'gallo', { dx: 2 }); }
++  // ---- PROTOTIPO v4 · fiestas: el día entero por turnos
++  else if (t === 'p-nb1') { en('corredor', 0, 'estira', { r: 2 }); en('calle', 0, 'panadero', { r: 1 }); en('corredor', 1, 'escoba', { r: 0, f: -1 }); en('atrio', 0, 'vendedora', { r: 2 }); en('plaza', 4, 'gallo', { dx: 2 }); }
++  else if (t === 'p-nb2') { en('atrio', 0, 'vendedora', { r: 0 }); en('plaza', 0, 'vendedora', { r: 2, f: -1 }); en('plaza', 2, 'huacal', { r: 1 }); en('calle', 0, 'matate', { r: 2 }); en('calle', 1, 'escalera', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('plaza', 4, 'oseznoArriba', { s: OSEZNO, r: 1 }); en('plaza', 5, 'osezno', { s: OSEZNO, r: 0, dx: 0.8 }); }
++  else if (t === 'p-nb3') { en('calle', 0, 'tamales', { r: 0 }); en('calle', 0, 'sentado', { r: 2, dx: 6.4, f: -1 }); en('calle', 1, 'vecina', { r: 1, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); oseznos(4); en('atrio', 1, 'regalo', { r: 0 }); }
++  else if (t === 'p-nb4') { en('calle', 0, 'mesa', { dx: 3 }); en('calle', 0, 'sentado', { r: 0, dx: -6.5 }); en('calle', 0, 'brindis', { r: 1, dx: 12.5, f: -1 }); en('calle', 1, 'brindis', { r: 2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); oseznos(3, 'oseznoLuz'); en('portal', 0, 'espaldas', { r: 0 }); }
++  else if (t === 'p-nb5') { en('atrio', 3, 'cura', {}); en('atrio', 0, 'espaldas', { r: 0 }); en('atrio', 1, 'espaldas', { r: 2 }); en('atrio', 4, 'espaldas', { r: 1 }); en('atrio', 2, 'espaldas', { r: 0 }); en('calle', 0, 'vecino', { r: 2, f: -1 }); en('calle', 0, 'osezno', { s: OSEZNO, r: 1, dx: -3.2 }); en('corredor', 0, 'abuela', { r: 2 }); }
++  else if (t === 'p-nb6') { en('calle', 0, 'abrazo', { r: 0 }); en('atrio', 1, 'abrazo', { r: 1 }); en('calle', 1, 'regalo', { r: 2, f: -1 }); en('plaza', 0, 'volcancito', {}); en('plaza', 1, 'oseznoArriba', { s: OSEZNO, r: 0 }); en('plaza', 3, 'oseznoLuz', { s: OSEZNO, r: 2, f: -1 }); en('plaza', 5, 'volcancito', { dx: 1 }); en('plaza', 4, 'oseznoArriba', { s: OSEZNO, r: 1, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); }
++  else if (t === 'p-n25a') { en('calle', 0, 'polvora', {}); en('plaza', 2, 'polvora', {}); en('corredor', 1, 'escoba', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); }
++  else if (t === 'p-n25b') { for (let i = 0; i < 5; i++) en('plaza', i, i % 2 ? 'oseznoJuguete' : 'osezno', { s: OSEZNO, r: i, f: i % 2 ? 1 : -1 }); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'sentado', { r: 1 }); en('calle', 1, 'vecina', { r: 0, f: -1 }); }
++  else if (t === 'p-n25c') { en('calle', 0, 'hombros', { r: 0 }); en('calle', 0, 'vecina', { r: 1, dx: 5.2 }); en('portal', 0, 'espaldas', { r: 2 }); en('portal', 0, 'osezno', { s: OSEZNO, r: 0, dx: 3.2, dy: 0.5 }); en('atrio', 0, 'vecino', { r: 2 }); en('atrio', 0, 'oseznoJuguete', { s: OSEZNO, r: 1, dx: 3.4 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'sentado', { r: 2, f: -1 }); }
++  else if (t === 'p-f31a') { en('corredor', 1, 'escoba', { r: 1 }); en('calle', 1, 'tendedero', { dy: -0.6 }); en('atrio', 0, 'vendedora', { r: 0 }); en('calle', 0, 'escoba', { r: 2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 0 }); en('plaza', 3, 'oseznoArriba', { s: OSEZNO, r: 1, f: -1 }); }
++  else if (t === 'p-f31b') { en('calle', 0, 'mesa', { dx: 3 }); en('calle', 0, 'brindis', { r: 0, dx: -6.5 }); en('calle', 0, 'brindis', { r: 1, dx: 12.5, f: -1 }); en('calle', 1, 'sentado', { r: 2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); oseznos(3, 'oseznoLuz'); en('atrio', 1, 'vecina', { r: 1 }); }
++  else if (t === 'p-f31c') { for (const i of [0, 1, 2, 4]) en('atrio', i, 'espaldas', { r: i }); en('calle', 0, 'espaldas', { r: 1 }); en('calle', 1, 'espaldas', { r: 2 }); oseznos(3, 'oseznoLuz'); en('corredor', 0, 'abuela', { r: 2 }); en('plaza', 5, 'volcancito', { dx: 1 }); }
++  else if (t === 'p-madre1') { en('calle', 0, 'guitarra', { r: 0 }); en('calle', 0, 'oseznoFlor', { s: OSEZNO, r: 1, dx: 4.2 }); en('calle', 0, 'oseznoFlor', { s: OSEZNO, r: 2, dx: 7.2 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'vecina', { r: 1, f: -1 }); }
++  else if (t === 'p-madre2') { en('calle', 0, 'mesa', { dx: 3 }); en('calle', 0, 'flores', { r: 0, dx: -6.5 }); en('calle', 0, 'sentado', { r: 1, dx: 12.5, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); for (const i of [0, 2, 4]) en('plaza', i, 'oseznoFlor', { s: OSEZNO, r: i, f: i ? -1 : 1 }); en('atrio', 0, 'flores', { r: 1 }); }
++  else if (t === 'p-padre') { en('calle', 0, 'hombros', { r: 0 }); en('plaza', 1, 'vecino', { r: 2 }); en('plaza', 3, 'osezno', { s: OSEZNO, r: 1, f: -1 }); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2 }); en('atrio', 0, 'hombros', { r: 1, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'chuzo', { r: 2, f: -1 }); en('calle', 1, 'osezno', { s: OSEZNO, r: 0, dx: -3.4 }); }
++  else if (t === 'p-nino1') { en('plaza', 2, 'pinata', { dx: 1.6 }); en('plaza', 4, 'escalera', { r: 0, dx: 1 }); en('calle', 0, 'vecina', { r: 1 }); en('plaza', 0, 'oseznoArriba', { s: OSEZNO, r: 0 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 2 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'vendedora', { r: 2 }); }
++  else if (t === 'p-dif2') { en('corredor', 1, 'velita', {}); en('calle', 1, 'velita', { dx: -3, dy: -3.4 }); en('calle', 0, 'velita', { dx: -2 }); en('atrio', 2, 'velita', {}); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'sentado', { r: 0, dx: 4 }); en('atrio', 0, 'corona', { r: 2 }); en('calle', 1, 'vecina', { r: 1, f: -1 }); }
++  // ==================== PROTOTIPO v5: turnos de maqueta ====================
++  else if (t === 'p5-pan2') { en('atrio', 1, 'panadero', { r: 1 }); en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'escoba', { r: 1 }); en('calle', 0, 'campesino', { r: 2 }); }
++  else if (t === 'p5-pan3') { en('plaza', 4, 'panadero', { r: 1, f: -1 }); en('plaza', 1, 'oseznoArriba', { s: OSEZNO, r: 0 }); en('plaza', 2, 'osezno', { s: OSEZNO, r: 2 }); en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vecina', { r: 2, f: -1 }); }
++  else if (t === 'p5-pan4') { en('calle', 0, 'tortillera', { r: 0 }); en('calle', 0, 'panadero', { r: 1, dx: 7.6, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); for (let i = 0; i < 3; i++) en('plaza', i, 'oseznoBolson', { s: OSEZNO, r: i, f: i % 2 ? -1 : 1 }); en('atrio', 1, 'vecina', { r: 1 }); }
++  else if (t === 'p5-globo1') { en('plaza', 4, 'globero', { r: 0, dx: 1 }); en('plaza', 1, 'oseznoGlobo', { s: OSEZNO, r: 2 }); en('plaza', 2, 'oseznoArriba', { s: OSEZNO, r: 1, f: -1 }); en('plaza', 0, 'osezno', { s: OSEZNO, r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'campesino', { r: 2, f: -1 }); }
++  else if (t === 'p5-globo2') { en('banca', 0, 'globoSuelto', { dx: -1.5, dy: -13.5 }); for (const i of [0, 1, 2]) en('plaza', i, 'oseznoArriba', { s: OSEZNO, r: i, f: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'campesino', { r: 2, f: -1 }); }
++  else if (t === 'p5-circo1') { en('plaza', 2, 'lona', { dy: -1 }); en('plaza', 5, 'zancos', { r: 0, dx: 2 }); en('plaza', 0, 'oseznoArriba', { s: OSEZNO, r: 2 }); en('calle', 0, 'escalera', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vecina', { r: 1, f: -1 }); }
++  else if (t === 'p5-circo2') { en('plaza', 2, 'carpa', { dy: -1.4 }); en('plaza', 5, 'zancos', { r: 0, dx: 3.5 }); en('plaza', 0, 'malabar', { s: OSEZNO, r: 1, dx: -3 }); en('plaza', 4, 'oseznoArriba', { s: OSEZNO, r: 2, dx: 2, dy: 1 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 0, dy: 1.6 }); en('calle', 0, 'hombros', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, 'vecina', { r: 1 }); }
++  else if (t === 'p5-foto') { en('plaza', 1, 'fotografo', { r: 2 }); en('plaza', 4, 'caballito', { dx: 4, dy: 0.4 }); en('plaza', 4, 'osezno', { s: OSEZNO, r: 1, dx: 3.6, dy: -2.8, libre: 1 }); en('plaza', 5, 'vecina', { r: 0, dx: 2 }); en('plaza', 5, 'osezno', { s: OSEZNO, r: 2, dx: 5.4 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'campesino', { r: 1 }); }
++  else if (t === 'p5-boda') { en('atrio', 0, 'novios', { dx: 2.5, dy: 0.6, libre: 1 }); en('atrio', 3, 'cura', {}); en('atrio', 1, 'arroz', { r: 0 }); en('atrio', 2, 'arroz', { r: 2, f: -1 }); en('atrio', 4, 'guitarra', { r: 1 }); en('calle', 0, 'oseznoFlor', { s: OSEZNO, r: 1 }); en('calle', 0, 'vecino', { r: 2, dx: 3.6 }); en('corredor', 0, 'abuela', { r: 2 }); en('plaza', 1, 'oseznoArriba', { s: OSEZNO, r: 0, f: -1 }); }
++  else if (t === 'p5-cuentos') { en('plaza', 2, 'abuela', { r: 2, dx: 1 }); for (const [i, dx, dy] of [[0, 0, 0], [1, 0, 0.6], [3, 0.5, 0.8], [4, 0, 0.4], [5, 0, 0]]) en('plaza', i, 'oseznoSuelo', { s: OSEZNO, r: i % 3, dx, dy, f: i < 2 ? 1 : -1 }); en('calle', 0, 'sentado', { r: 1 }); en('calle', 1, 'sentado', { r: 0, f: -1 }); }
++  else if (t === 'p5-confeti') { en('plaza', 2, 'confeti', { dx: 1 }); en('plaza', 4, 'escoba', { r: 1, f: -1 }); en('plaza', 0, 'oseznoSuelo', { s: OSEZNO, r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'vendedora', { r: 0 }); en('calle', 0, 'campesino', { r: 1 }); }
++  else if (t === 'p5-charco3') { en('plaza', 2, 'charcos3', { dx: 1 }); en('plaza', 1, 'oseznoSalta', { s: OSEZNO, r: 0 }); en('plaza', 3, 'oseznoSalta', { s: OSEZNO, r: 2, f: -1 }); en('calle', 0, 'paraguas', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vecina', { r: 0, f: -1 }); }
++  else if (t === 'p5-charco2') { en('plaza', 2, 'charcos2', { dx: 1 }); en('plaza', 1, 'oseznoSalta', { s: OSEZNO, r: 0 }); en('calle', 0, 'pupusera', { r: 0 }); en('calle', 0, 'vecino', { r: 2, dx: 6.2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, 'vecina', { r: 1 }); }
++  else if (t === 'p5-charco1') { en('plaza', 2, 'charcos1', { dx: 1 }); en('calle', 0, 'pupusera', { r: 0 }); en('calle', 0, 'vecino', { r: 2, dx: 6.2, f: -1 }); en('calle', 0, 'osezno', { r: 1, s: OSEZNO, dx: 9.6, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, 'vecina', { r: 1 }); }
++  else if (t === 'p5-bebe1') { en('calle', 1, 'panales', { dy: -0.6 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'vendedora', { r: 0 }); en('calle', 0, 'campesino', { r: 1 }); en('corredor', 1, 'escoba', { r: 1 }); }
++  else if (t === 'p5-bebe2') { en('calle', 1, 'panales', { dy: -0.6 }); en('calle', 0, 'olla', { r: 0 }); en('calle', 0, 'flores', { r: 1, dx: 5.6 }); en('calle', 0, 'huacal', { r: 2, dx: 10.2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'vendedora', { r: 0 }); }
++  else if (t === 'p5-bebe3') { en('corredor', 1, 'bebe', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'oseznoArriba', { s: OSEZNO, r: 0 }); en('calle', 0, 'vecino', { r: 2, dx: 4 }); en('calle', 1, 'vecina', { r: 0, f: -1 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 2 }); en('plaza', 3, 'osezno', { s: OSEZNO, r: 1, f: -1 }); }
++  else if (t === 'p5-feria') { en('plaza', 0, 'puesto', { r: 'r1', dx: -3, dy: -1.2 }); en('plaza', 5, 'puesto', { r: 'azul', dx: 5, dy: -1.2 }); en('plaza', 2, 'oseznoAlgodon', { s: OSEZNO, r: 0 }); en('plaza', 3, 'oseznoElote', { s: OSEZNO, r: 2, f: -1 }); en('plaza', 1, 'malabar', { s: OSEZNO, r: 1, dy: 1.2 }); en('calle', 0, 'hombros', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'globero', { r: 1 }); }
++  else if (t === 'p5-paletero') { en('plaza', 2, 'paletero', { r: 0 }); en('plaza', 0, 'oseznoArriba', { s: OSEZNO, r: 1 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 2, dy: 0.8 }); en('plaza', 4, 'oseznoArriba', { s: OSEZNO, r: 0, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'sentado', { r: 1 }); }
++  else if (t === 'p5-ramada1') { en('plaza', 2, 'ramada', { r: 'r0', dy: -1 }); en('plaza', 2, 'palmas', { dx: 12, dy: 0.5 }); en('plaza', 0, 'chuzo', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 0 }); en('plaza', 5, 'osezno', { s: OSEZNO, r: 2, dx: 3 }); }
++  else if (t === 'p5-ramada2') { en('plaza', 2, 'ramada', { r: 'r1', dy: -1 }); en('plaza', 5, 'escalera', { r: 0, dx: 3 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 0 }); en('plaza', 0, 'oseznoArriba', { s: OSEZNO, r: 2 }); }
++  else if (t === 'p5-ramada3') { en('plaza', 2, 'ramada', { r: 'r2', dy: -1 }); en('plaza', 2, 'olla', { r: 0, dx: -1.5, dy: 0.6, libre: 1 }); en('plaza', 2, 'huacal', { r: 2, dx: 3.6, dy: 0.8, libre: 1 }); en('plaza', 0, 'oseznoElote', { s: OSEZNO, r: 1, dx: -2 }); en('plaza', 5, 'guitarra', { r: 1, dx: 4 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'hombros', { r: 0 }); en('plaza', 4, 'oseznoArriba', { s: OSEZNO, r: 0, dx: 4, dy: 1.4 }); }
+   // 'duerme' (22:00–5:00): nadie en la calle (103).
+   // Nadie se monta sobre otro: en el orden del reparto, quien cae encima de alguien ya puesto no sale (como mucho se rozan).
+   // Los oseznos de la plaza van en corro, escalonados (unos un paso más adelante): entre ellos sí se rozan. (Pulido) Tampoco se para
+@@ -215,7 +383,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
+   const choca = (c, roce) => puestos.some((q) => !(c.osezno && q.osezno) && c.x0 < q.x1 - roce && c.x1 > q.x0 + roce && c.y0 < q.y1 - roce && c.y1 > q.y0 + roce);
+   const fuera = [];
+   for (const v of L) {
+-    if (v.t === 'pelota') { fuera.push(v); continue; }
++    if (SIN_PIE.has(v.t) || v.libre) { fuera.push(v); continue; }
+     if (figuras >= n) continue;
+     const roce = m * v.k, adulto = (v.s ?? 1) >= 1;
+     const d = (adulto ? [0, 3, -3, 6, -6] : [0]).find((dx) => !choca({ ...cajaVecino({ ...v, x: v.x + dx * v.k }), osezno: !adulto }, roce));
+diff --git a/app/static/cielo.js b/app/static/cielo.js
+index f449c27..a5728cc 100644
+--- a/app/static/cielo.js
++++ b/app/static/cielo.js
+@@ -152,6 +152,7 @@
+    */
+   function vacaciones(f) { const md = f.slice(5); return md >= '11-15' || md <= '01-15'; }
+   function turno(f, h) {
++    try { const pr = localStorage.getItem('libro.turnoProto'); if (pr) return pr; } catch { /* prototipo v4 */ }
+     // (Campamento 36) El calendario del pueblo: el desfile del 15 de septiembre (7:00–12:00), Nochebuena y el 31 (18:00–1:00, pasada
+     // la medianoche ya es el 25 o el 1), la misa del domingo (7:30–10:00), el sábado de plaza (7:00–12:00) y, en Navidad, la posada
+     // frente al nacimiento al anochecer (1 dic – 6 ene).
