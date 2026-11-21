@@ -70,6 +70,14 @@ El dueño probó el campamento 41 con ChatGPT en la rama `chatgpt/campamento-41`
 
 **Cuándo se arranca**: cuando el dueño lo diga («arranca»), por tener poco límite ahora; el orden sigue siendo 39 → 41 → 40 → resto.
 
+## CI sin minutos (21 nov 2026)
+El dueño avisa: **ya no hay minutos de CI** en GitHub (el CI completo de un PR suma más de 100 minutos: tres partes de Playwright de ~22 min, Lighthouse y banco, axe, etc.). Consecuencias para implementar esta ronda:
+- **La verificación es 100 % local y es la que cuenta**: `test_lib`, `test_api` (con el disco simulado si el sandbox tiene poco libre), `test_ui` **entero en sus tres partes** (nunca solo bloques sueltos), axe, barrido normal y por pestañas, Lighthouse y banco (A/B contra `main` en el mismo sandbox), tsc, Biome, ruff, mypy, recorte y regresión visual. Se pega el resultado real en el informe; sin CI que lo respalde, **no se dice «listo» si algo no corrió**.
+- **Un solo PR y un solo push** (como en 26–38): sin CI no hay red de seguridad remota, así que cada commit de campamento debe dejar la rama verde por sí solo y localmente comprobado.
+- Una prueba no puede depender del día de la semana ni de la hora real (usar `FECHA_PRUEBA` y `libro.hora`/`libro.dia`); el sandbox local ya mostró dos casos (jueves, saldo del día).
+- El PR puede salir sin checks (o con el aviso de minutos agotados): el dueño lo mezcla igual. Cuando se renueve el ciclo de minutos, que el CI de `main` corra una vez y se vea; si falla, se arregla en un PR chico.
+- Ahorro a futuro (si el dueño quiere): que el CI de Playwright y Lighthouse corra solo en `main` o con una etiqueta (no en cada push del PR), y no en cambios que solo tocan `docs/`.
+
 ## Cómo se ejecuta (igual que 26–38)
 - Una rama, un commit por campamento (cada commit deja la rama verde por sí solo), capturas reales de cada uno para el dueño, `CAMBIOS` (3–6 frases) donde haya algo visible, su documento en `docs/campamentos/` con su línea en el índice de `CLAUDE.md`, y la «Definición de terminado» completa (todos los tamaños, claro/oscuro, día/noche, los tres niveles de efectos, `test_lib`, `test_api`, `test_ui` en tres partes, axe, barridos, Lighthouse, banco, regresión visual; medir antes/después cuando se toque la escena).
 - **Las pruebas no dependen del día de la semana**: los datos del escenario cambian con él (un jueves falló el bloque de los osos a 320×568); fijar `FECHA_PRUEBA` en el servidor de pruebas cuando un bloque dependa de la cifra exacta del saldo.
