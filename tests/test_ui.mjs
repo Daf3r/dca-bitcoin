@@ -171,77 +171,79 @@ const TITULOS = FUENTE.map((l) => TITULO.exec(l)?.[1].trim()).filter(Boolean);
   const envoltorios = FUENTE.filter((l) => l === '  await bloque(async () => {').length;
   if (sin.length || envoltorios !== TITULOS.length) throw new Error(`Cada título lleva debajo su \`await bloque(async () => {\` (${TITULOS.length} títulos, ${envoltorios} envoltorios): ${sin.join(' · ')}`);
 }
-/** Segundos que tarda cada bloque (por el principio de su título): una corrida entera, de uno en uno, el 18 nov 2026 (4 núcleos;
- * 2,987 s y 2,106 comprobaciones). Basta con que sean proporcionales; si un bloque crece mucho, se vuelve a medir: cada bloque dice
- * cuánto tardó al final de su línea en el registro del CI. */
+/** Segundos que tarda cada bloque (por el principio de su título): las tres partes, una tras otra, el 24 nov 2026 (4 núcleos; 3,970 s
+ * y 2,450 comprobaciones; 21B, ya con la tele del campamento 61). Basta con que sean proporcionales; si un bloque crece mucho, se vuelve
+ * a medir: cada bloque dice cuánto tardó al final de su línea en el registro del CI. */
 const PESOS = [
   ['un año de compras', 93], // 146 comprobaciones
-  ['avisos push (el envío real a Apple o Goo', 155], // 108 comprobaciones
+  ['avisos push (el envío real a Apple o Goo', 158], // 108 comprobaciones
   ['efectos: sistema, modo ligero y pausa', 17], // 14 comprobaciones
   ['el cielo según la hora', 22], // 37 comprobaciones
-  ['atmósfera: parallax, nubes, niebla, aves', 20], // 15 comprobaciones
-  ['rendimiento iPhone: la escena en capas,', 9], // 16 comprobaciones
-  ['se siente como app: recargar al arrastra', 33], // 23 comprobaciones
+  ['atmósfera: parallax, nubes, niebla, aves', 21], // 15 comprobaciones
+  ['rendimiento iPhone: la escena en capas,', 10], // 16 comprobaciones
+  ['se siente como app: recargar al arrastra', 34], // 23 comprobaciones
   ['la lista: meses, «Ver más», buscar, filt', 47], // 48 comprobaciones
   ['anotar y datos vivos: compra de siempre,', 62], // 24 comprobaciones
-  ['accesibilidad y teclado: saltar al conte', 20], // 39 comprobaciones
-  ['la montaña viva: humo, fogata, huellas,', 30], // 13 comprobaciones
+  ['accesibilidad y teclado: saltar al conte', 21], // 39 comprobaciones
+  ['la montaña viva: humo, fogata, huellas,', 32], // 13 comprobaciones
   ['banderas con historia, iconos por etapa', 18], // 18 comprobaciones
-  ['aurora, lago, acento dorado, cometa y 1', 49], // 20 comprobaciones
+  ['aurora, lago, acento dorado, cometa y 1', 53], // 20 comprobaciones
   ['suelo, leyenda plegable, altímetro, favi', 9], // 9 comprobaciones
   ['identidad: iconos, avatares, estados vac', 22], // 15 comprobaciones
   ['la montaña sigue a la caja (también en a', 7], // 6 comprobaciones
   ['Tu historia, medallas y qué hay de nuevo', 28], // 16 comprobaciones
-  ['modo pantalla grande, sonido al guardar', 42], // 24 comprobaciones
+  ['modo pantalla grande, sonido al guardar', 44], // 24 comprobaciones
   ['mil compras (la app después de mucho uso', 24], // 49 comprobaciones
-  ['iPhone: arranque, insignia del icono e i', 11], // 34 comprobaciones
+  ['iPhone: arranque, insignia del icono e i', 12], // 34 comprobaciones
   ['teléfono acostado y pantallas muy anchas', 35], // 53 comprobaciones
   ['datos y etiquetas (campamento 8, 1/4)', 24], // 23 comprobaciones
-  ['estado del sistema (campamento 8, 2/4)', 12], // 20 comprobaciones
-  ['pulido final (cliente): Gráficos sin el', 24], // 10 comprobaciones
-  ['sesiones y operación (campamento 8, 3/4)', 17], // 16 comprobaciones
+  ['estado del sistema (campamento 8, 2/4)', 17], // 20 comprobaciones
+  ['pulido final (cliente): Gráficos sin el', 26], // 10 comprobaciones
+  ['sesiones y operación (campamento 8, 3/4)', 20], // 16 comprobaciones
   ['tu eco y tus números (campamento 11)', 70], // 26 comprobaciones
-  ['campamento 12: El Salvador en la escena', 47], // 24 comprobaciones
+  ['campamento 12: El Salvador en la escena', 49], // 24 comprobaciones
   ['Tu historia en objetos: tronco, constela', 35], // 25 comprobaciones
-  ['campamento 13C: estratos, partitura, pas', 48], // 42 comprobaciones
-  ['campamento 14: pestañas (Resumen · Gráfi', 40], // 79 comprobaciones
+  ['campamento 13C: estratos, partitura, pas', 50], // 42 comprobaciones
+  ['campamento 14: pestañas (Resumen · Gráfi', 39], // 79 comprobaciones
   ['campamento 15A: Diario, cartas selladas', 43], // 43 comprobaciones
-  ['campamento 15B: piedritas, cumpleaños y', 135], // 29 comprobaciones
-  ['una sola compra', 5], // 4 comprobaciones
+  ['campamento 15B: piedritas, cumpleaños y', 134], // 29 comprobaciones
+  ['una sola compra', 6], // 4 comprobaciones
   ['campamento 16: lago, reloj de sol, «Tú»', 24], // 13 comprobaciones
-  ['campamento 17: primera impresión', 179], // 137 comprobaciones
+  ['campamento 17: primera impresión', 187], // 137 comprobaciones
   ['campamento 18: el ritual de anotar', 77], // 75 comprobaciones
   ['campamento 18: el comprobante de una ven', 9], // 4 comprobaciones
-  ['el precio de la compra (escribir el prec', 33], // 38 comprobaciones (medido el 18 nov 2026, de uno en uno)
+  ['el precio de la compra (escribir el prec', 34], // 38 comprobaciones
   ['campamentos (arte) y campamento 21: hito', 13], // 29 comprobaciones
-  ['campamento 19: la familia (escuchar el D', 92], // 63 comprobaciones
-  ['campamento 20: cada cosa en su sitio', 291], // 156 comprobaciones
-  ['campamento 21: etapas más cercanas', 142], // 129 comprobaciones
-  ['campamento 21B: la tele de la sala (tarj', 332], // 113 comprobaciones
-  ['tele: el saldo contra la montaña (pulido', 222], // 87 comprobaciones
-  ['campamento 24: medir este aparato (idea', 60], // 58 comprobaciones
+  ['campamento 19: la familia (escuchar el D', 94], // 63 comprobaciones
+  ['campamento 20: cada cosa en su sitio', 297], // 157 comprobaciones
+  ['campamento 21: etapas más cercanas', 151], // 129 comprobaciones
+  ['campamento 21B: la tele de la sala (tarj', 306], // 113 comprobaciones
+  ['tele: el saldo contra la montaña (pulido', 229], // 87 comprobaciones
+  ['campamento 24: medir este aparato (idea', 58], // 58 comprobaciones
   ['campamento 24: confianza (la revisión tr', 42], // 43 comprobaciones
   ['campamento 22: el valle vivo', 58], // 27 comprobaciones
-  ['campamento 22B: el valle vivo, parte 2', 73], // 36 comprobaciones
+  ['campamento 22B: el valle vivo, parte 2', 75], // 36 comprobaciones
   ['campamento 22C: el valle, de verdad (el', 28], // 21 comprobaciones
-  ['campamento 23: tu camino, otra vez (tal', 87], // 52 comprobaciones
-  ['campamento 25: los osos polares de pel', 167], // 98 comprobaciones (medido en su parte, el 18 nov 2026)
-  ['campamento 26: los osos en la interfaz', 46], // 22 comprobaciones
-  ['campamento 27: cuando algo no va', 25], // 4 comprobaciones
-  ['campamento 28: según el momento', 40], // 9 comprobaciones
-  ['campamento 29: detalles con cariño', 45], // 7 comprobaciones
-  ['campamento 30: hacer sitio', 30], // 9 comprobaciones
-  ['campamento 31: «Tú» sube como oso', 45], // 12 comprobaciones
-  ['campamento 32: el teleférico del valle', 35], // 11 comprobaciones
-  ['campamento 33: más ositos en el paisaje', 35], // 3 comprobaciones
-  ['campamento 34: el pueblo vive', 35], // 10 comprobaciones
-  ['pulido del pueblo: las casas en su sit', 30], // 4 comprobaciones
-  ['pulido de la iglesia y el paisaje bajo', 45], // 6 comprobaciones
-  ['campamento 35: el pueblo de los osos', 90], // 16 comprobaciones
-  ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
-  ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
-  ['campamento 38: lo que cambia de la app', 25], // 3 comprobaciones
-  ['pulido integral: el movimiento (nada co', 115], // 16 comprobaciones
+  ['campamento 23: tu camino, otra vez (tal', 88], // 52 comprobaciones
+  ['campamento 25: los osos polares de pel', 169], // 103 comprobaciones
+  ['campamento 39b: el tempo (tres tempos co', 14], // 8 comprobaciones (campamento 61: medido el 24 nov 2026)
+  ['campamento 51: el director del valle (el', 30], // 19 comprobaciones (campamento 61: medido el 24 nov 2026)
+  ['campamento 26: los osos en la interfaz', 49], // 22 comprobaciones
+  ['campamento 27: cuando algo no va', 36], // 4 comprobaciones
+  ['campamento 28: según el momento', 41], // 9 comprobaciones
+  ['campamento 29: detalles con cariño', 39], // 7 comprobaciones
+  ['campamento 30: hacer sitio', 13], // 9 comprobaciones
+  ['campamento 31: «Tú» sube como oso', 28], // 12 comprobaciones
+  ['campamento 32: el teleférico del valle', 26], // 11 comprobaciones
+  ['campamento 33: más ositos en el paisaje', 32], // 3 comprobaciones
+  ['campamento 34: el pueblo vive', 33], // 10 comprobaciones
+  ['pulido del pueblo: las casas en su sit', 17], // 4 comprobaciones
+  ['pulido de la iglesia y el paisaje bajo', 25], // 6 comprobaciones
+  ['campamento 35: el pueblo de los osos', 63], // 15 comprobaciones
+  ['campamento 36: el calendario del pueblo', 42], // 10 comprobaciones
+  ['campamento 37: el pueblo se mueve', 41], // 10 comprobaciones
+  ['campamento 38: lo que cambia de la app', 10], // 3 comprobaciones
+  ['pulido integral: el movimiento (nada co', 113], // 20 comprobaciones
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
