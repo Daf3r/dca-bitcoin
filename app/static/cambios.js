@@ -17,6 +17,7 @@ export const CAMBIOS = [
       'En la computadora, «Anotar compra» queda junto a las pestañas.',
       'En la barra de abajo, «Movimientos» ya cabe en su sitio.',
       'En el pueblo sale humo de una chimenea y el cayuco se mece en el lago.',
+      'Los días de fiesta un aviso corto lo cuenta, y en Navidad el pueblo vive el día entero.',
     ],
   },
   {
