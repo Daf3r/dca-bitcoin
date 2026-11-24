@@ -36,6 +36,8 @@ function pintarControles() {
 const FONDOS = ['--fondo', '--s1', '--s2', '--s3', '--c0', '--c1', '--c2', '--c3', '--c4', '--monte', '--nieve'];
 const TEXTOS = ['--txt', '--txt2', '--txt3', '--naranja-txt', '--sube', '--baja'];
 const OTROS = ['--naranja', '--naranja-osc', '--linea', '--w1', '--w2', '--w3', '--w4', '--w5']; // --w1…5: las wallets extra
+// Filos (campamento 63): el contorno de los campos donde se escribe, con 3:1 o más contra el panel (--s1) y contra su relleno (--s2).
+const FILOS = ['--campo-filo'];
 function lum(c) {
   const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -67,6 +69,14 @@ function pintarColores() {
   };
   for (const tk of FONDOS) nuevo(tk);
   for (const tk of OTROS) nuevo(tk);
+  for (const tk of FILOS) {
+    const a = lum(rgb(tk)), r = Math.min(...['--s1', '--s2'].map((f) => { const b = lum(rgb(f)); return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05); }));
+    const e = document.createElement('small');
+    e.className = r >= 3 ? 'guia-ok-filo' : 'guia-mal';
+    e.dataset.contraste = r.toFixed(2);
+    e.textContent = `${r.toFixed(1)}:1 sobre el panel y el campo ${r >= 3 ? '✓' : '✗ bajo 3'}`;
+    nuevo(tk, e);
+  }
   for (const tk of TEXTOS) {
     const a = lum(rgb(tk)), f = lum(fondo), r = (Math.max(a, f) + 0.05) / (Math.min(a, f) + 0.05);
     const e = document.createElement('small');

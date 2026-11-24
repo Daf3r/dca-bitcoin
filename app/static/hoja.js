@@ -165,11 +165,11 @@ function pintarDinero(d) {
     inp.dataset.derivado = calc === k && H[k] ? '1' : '';
     $(`${campo}-c`).hidden = !inp.dataset.derivado;
   }
-  $('h-precio-t').textContent = venta ? 'Precio de BTC al que vendiste (opcional)' : 'Precio de BTC al que compraste (opcional)';
+  $('h-precio-t').textContent = venta ? 'Precio de BTC al que vendiste' : 'Precio de BTC al que compraste';
   $('h-dinero-ay').textContent = H.manda === 'precio' ? 'Los dólares salen del precio que escribiste.'
     : H.manda === 'usd' ? 'El precio sale de los dólares que escribiste.'
       : H.manda === 'guardado' ? `Son los de esta ${venta ? 'venta' : 'compra'}. Si cambias uno, el otro se calcula.`
-        : 'Escribe los dólares o el precio: el otro se calcula. Si no escribes ninguno, se calculan con el precio de ese día.';
+        : 'Escribe uno y el otro se calcula. Vacíos: el precio de ese día.';
 }
 /** «Compra de siempre»: tu monto habitual en dólares convertido a sats con el precio de hoy. Solo una estimación hasta que escribas lo real. */
 function compraDeSiempre() {
@@ -205,8 +205,8 @@ function textoAvisos(avisos) {
     : `esto es ${a.veces} veces ${a.sentido === 'mas' ? 'más' : 'menos'} que tu compra habitual (unos ${usd(a.mediana)}). ¿Faltó o sobró un cero?`);
   return `Ojo: ${partes.join(' Además, ')} Si está bien, toca «Sí, guardar así».`;
 }
-/** Qué campos de la hoja valen para cada tipo: compra, venta o gasto, y traslado. */
-function camposSegunTipo() {
+/** Qué campos de la hoja valen para cada tipo: compra, venta o gasto, y traslado. `d`: lo que se va a guardar (`datosHoja`). */
+function camposSegunTipo(d) {
   const tras = H.tipo === 'traslado';
   $('h-sentido').hidden = !tras;
   pintarSelectorWallet(tras);
@@ -214,7 +214,9 @@ function camposSegunTipo() {
   const compra = H.tipo === 'compra';
   $('h-nota-t').textContent = compra ? '¿Qué pasó esta semana en casa?' : 'Nota (opcional)';
   $('h-nota-ay').hidden = !compra;
-  $('h-av-t').textContent = tras ? 'Más detalles: TXID y comisión' : H.tipo === 'venta' ? 'Más detalles: dólares o precio y TXID' : 'Más detalles: dólares o precio, TXID y compra extra';
+  // (Campamento 63) «(opcional)» se dice una vez, aquí, y no en cada rótulo. Sin precio del día, los dólares o el precio sí hacen falta.
+  const av = d?.sinPrecio ? 'Más detalles' : 'Más detalles (todo opcional)';
+  $('h-av-t').textContent = tras ? `${av}: TXID y comisión` : H.tipo === 'venta' ? `${av}: dólares o precio y TXID` : `${av}: dólares o precio, TXID y compra extra`;
   $('h-usd-t').textContent = H.tipo === 'venta' ? 'Recibiste (USD)' : 'Pagaste (USD)';
   $('h-nota').placeholder = tras ? 'Por ejemplo: a mi Ledger' : compra ? (H.extra ? 'Por ejemplo: cayó 20 %' : 'Por ejemplo: Sofi perdió su primer diente') : 'Por ejemplo: gasté en renta';
   document.querySelectorAll('#h-avanzado [data-solo-compra]').forEach((el) => { el.hidden = H.tipo !== 'compra'; });
@@ -276,12 +278,14 @@ function pintarHojaTraslado() {
     : falla ? (aWallet ? `No tienes tantos sats: tu saldo es ${entero(R.sats)} y ya tienes ${entero(todas)} en tus wallets.` : `No tienes tantos sats en ${nombreW}: tienes ${entero(neto)}.`)
       : id === 0 && !S.wallets.length ? `Quedarán ${entero(enWallet)} sats en tu wallet y ${entero(Math.max(0, R.sats - enWallet))} en el exchange.`
         : `Quedarán ${entero(enTodas)} sats en tus wallets${parte} y ${entero(Math.max(0, R.sats - enTodas))} en el exchange.`;
-  $('guardar').disabled = !d || falla || H.guardando || (nuevaAbierta && sinNombre);
-  $('guardar').textContent = H.guardando ? 'Guardando…' : 'Guardar traslado';
+  // (Campamento 63) Apagado, «Guardar» dice qué falta (y va en contorno, no en naranja); «Guardando…» sigue en naranja.
+  const falta = H.guardando ? '' : !d && nuevaAbierta && sinNombre ? 'Escribe los sats y la wallet' : !d ? 'Escribe los sats para guardar'
+    : nuevaAbierta && sinNombre ? 'Escribe el nombre de la wallet' : falla ? 'Revisa los sats para guardar' : '';
+  pintarGuardar(!d || falla || H.guardando || (nuevaAbierta && sinNombre), falta || (H.guardando ? 'Guardando…' : 'Guardar traslado'), falta);
 }
 function pintarHoja() {
   const d = datosHoja();
-  camposSegunTipo();
+  camposSegunTipo(d);
   const h = H.tipo === 'compra' && !H.editando ? compraDeSiempre() : null;
   $('h-habitual').hidden = !h;
   if (h) $('h-habitual').textContent = `Compra de siempre: ${usd0(h.usd)} ≈ ${entero(h.sats)} sats`;
@@ -344,8 +348,17 @@ function pintarHoja() {
   if (nueva && !precioFuera) linea('hc-precio', `${d.origen === 'precio' ? 'Precio que escribiste' : d.exacto ? 'Precio que pagaste' : 'Precio de ahora'}: ${precioTxt}.`);
   $('hc-lineas').replaceChildren(...lineas);
   $('h-cambia').hidden = !nueva;
-  $('guardar').disabled = !d || d.sinPrecio || d.precioMal || sinSaldo || H.guardando;
-  $('guardar').textContent = H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
+  const falta = H.guardando ? '' : !d ? 'Escribe los sats para guardar' : d.precioMal ? 'Revisa el precio para guardar'
+    : d.sinPrecio ? 'Escribe los dólares o el precio' : sinSaldo ? 'Revisa los sats para guardar' : '';
+  pintarGuardar(!d || d.sinPrecio || d.precioMal || sinSaldo || H.guardando,
+    falta || (H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar'), falta);
+}
+/** «Guardar»: encendido, el naranja de la acción; apagado porque falta algo, un contorno que dice qué (`data-falta`). */
+function pintarGuardar(apagado, texto, falta) {
+  const g = $('guardar');
+  g.disabled = apagado;
+  g.textContent = texto;
+  g.dataset.falta = falta ? '1' : '';
 }
 // «Qué cambia con esta compra»: se abre con un toque y el dispositivo recuerda cómo lo dejaste; si nunca lo tocaste, va cerrado en el
 // teléfono (lo que importa es el renglón de arriba y que «Guardar» quede a la vista) y abierto donde sobra sitio.

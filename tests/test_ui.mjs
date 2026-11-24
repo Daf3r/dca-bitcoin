@@ -65,6 +65,9 @@ async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
 const editarFila = async (p, fila) => { await (typeof fila === 'string' ? p.locator(fila) : fila).click(); await p.waitForTimeout(300); await p.click('#cp-editar'); };
 /** La fecha de la hoja de anotar: «Otro día» enseña el calendario (campamento 18) y ahí se escribe. */
 const ponerFecha = async (p, f) => { await p.click('#h-dia-otro'); await p.fill('#h-fecha', f); };
+// (Campamento 63) En el teléfono los tipos y «Fechas y orden» de la lista van bajo «Filtros»: se abren antes de tocarlos (en escritorio no hace falta).
+const abrirFiltros = async (p) => { if (await p.locator('#l-filtros').isVisible() && (await p.getAttribute('#l-filtros', 'aria-expanded')) !== 'true') await p.click('#l-filtros'); };
+const abrirFechas = async (p) => { await abrirFiltros(p); if ((await p.getAttribute('#l-mas', 'aria-expanded')) !== 'true') await p.click('#l-mas'); };
 const verVista = async (p, v) => { await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(400); };
 const datos = (p, ruta) => p.evaluate((r) => fetch(r).then((x) => x.json()), ruta);
 const saldo = (p) => p.evaluate(() => {
@@ -219,6 +222,7 @@ const PESOS = [
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
+  ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -1261,18 +1265,18 @@ try {
       eq(await p.locator('#lista .fila:not(:has(.f-extra))').count(), 0, 'búsqueda: todas son compras extra');
       await p.click('#l-limpiar');
       eq([await p.inputValue('#l-buscar'), await res()], ['', ''], 'filtros: «Quitar filtros» limpia todo');
-      await p.click('#l-chips button[data-f="venta"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="venta"]');
       eq(await filas(), compras.filter((c) => c.tipo === 'venta').length, 'filtro: ventas y gastos');
-      await p.click('#l-chips button[data-f="traslado"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="traslado"]');
       eq([await filas(), await p.evaluate(() => document.querySelector('#l-chips [data-f="traslado"]').getAttribute('aria-pressed'))], [traslados.length, 'true'], 'filtro: traslados');
-      await p.click('#l-chips button[data-f="txid"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="txid"]');
       eq(await filas(), 0, 'filtro: «Con TXID» sin ninguno dice que nada coincide');
       ok((await p.textContent('#lista .vacio')).includes('Nada coincide'), 'filtro: mensaje de que nada coincide');
       await quitar();
 
       // Rango de fechas y totales intactos
       const desde = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
-      await p.click('#l-mas summary');
+      await abrirFechas(p);
       await p.fill('#l-desde', desde);
       await p.waitForTimeout(150);
       const esperadas = compras.filter((c) => c.fecha >= desde).length + traslados.filter((t) => t.fecha >= desde).length;
@@ -1298,7 +1302,7 @@ try {
       await p.reload({ waitUntil: 'networkidle' });
       await p.waitForTimeout(2500);
       eq(await p.inputValue('#l-orden'), 'monto', 'orden: se recuerda en el dispositivo');
-      await p.click('#l-mas summary');
+      await abrirFechas(p);
       await p.selectOption('#l-orden', 'recientes');
       ok(await p.evaluate(() => localStorage.getItem('libro.lista.orden')) === null, 'orden: el de siempre borra la preferencia');
 
@@ -1961,10 +1965,10 @@ try {
       await p.reload({ waitUntil: 'networkidle' });
       await p.waitForTimeout(2500);
       // Las últimas 8 filas no traen de todo: se filtra por cada tipo para ver sus iconos
-      const contar = async (f, sel) => { await p.click(`#l-chips button[data-f="${f}"]`); await p.waitForTimeout(300); return p.locator(`#lista ${sel}`).count(); };
+      const contar = async (f, sel) => { await abrirFiltros(p); await p.click(`#l-chips button[data-f="${f}"]`); await p.waitForTimeout(300); return p.locator(`#lista ${sel}`).count(); };
       const nTras = await contar('traslado', '.f-sats .ico'), nExtra = await contar('extra', '.f-extra .ico'), nTx = await contar('txid', '.f-copiar .ico');
       const nExt = await p.locator('#lista .f-tx .ico').count(); // (queda filtrado por «Con TXID»)
-      await p.click('#l-chips button[data-f="todos"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="todos"]');
       const info = await p.evaluate(() => ({
         simbolos: ['traslado', 'externo', 'rayo', 'copiar', 'campana', 'lapiz', 'sube', 'baja'].map((n) => !!document.getElementById(`i-${n}`)),
         texto: document.getElementById('lista').innerText,
@@ -2634,7 +2638,7 @@ try {
       ok(conBono > conCumple && conCumple > 0, `el escenario trae etiquetas (bono ${conBono}, cumpleaños ${conCumple})`);
       // El filtro de la lista
       await r.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await r.p.click('#l-mas summary');
+      await abrirFechas(r.p);
       ok(await r.p.locator('#l-etq-l').isVisible(), 'con etiquetas sale el selector «Etiqueta»');
       const opciones = await r.p.$$eval('#l-etq option', (os) => os.map((o) => o.textContent));
       eq(opciones, ['Todas', `bono (${conBono})`, `cumpleaños (${conCumple})`], 'el selector lista las etiquetas de más a menos usadas, con su cuenta');
@@ -4197,7 +4201,7 @@ try {
           dentro: !!document.getElementById('h-nota').closest('details'), viejo: !!document.getElementById('h-nota-c') }));
         let c = await campo();
         eq([c.t, c.ay, c.max, c.dentro, c.viejo], ['¿Qué pasó esta semana en casa?', true, 120, false, false], '18·semana: en una compra la nota es la pregunta de la semana, a la vista y con 120 caracteres');
-        ok(c.vis >= 47.5 && /la ve toda la familia/.test(await p.textContent('#h-nota-ay')), '18·semana: el campo mide 48 px y dice que la ve toda la familia');
+        ok(c.vis >= 47.5 && /la ve la familia/i.test(await p.textContent('#h-nota-ay')), '18·semana: el campo mide 48 px y dice que la ve la familia');
         await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
         c = await campo();
         eq([c.t, c.ay], ['Nota (opcional)', false], '18·semana: en una venta sigue siendo «Nota»');
@@ -4315,12 +4319,12 @@ try {
     try {
       const { ctx, p, consola } = await entrar(navegador, mil18, ADMIN);
       await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' })); await p.waitForTimeout(300);
-      await p.click('#l-chips button[data-f="venta"]'); await p.waitForTimeout(400);
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="venta"]'); await p.waitForTimeout(400);
       await p.locator('#lista .fila[data-tipo="venta"]').first().click(); await p.waitForTimeout(500);
       const v = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, sats: document.getElementById('cp-sats').textContent, dts: [...document.querySelectorAll('#cp-datos dt')].map((x) => x.textContent), sello: document.getElementById('cp-sello').hidden, alt: document.getElementById('cp-alt').hidden, nota: document.getElementById('cp-nota').textContent }));
       ok(/^Venta o gasto n\.º \d+$/.test(v.t) && /^−[\d,]+ sats$/.test(v.sats) && v.dts.join('|') === 'Recibiste|Precio de BTC en la venta|Altitud antes|Altitud después|Ganancia realizada' && v.sello && v.alt && v.nota === '«Gasto»', `18·comprobante: una venta dice lo que salió y su ganancia realizada, sin sello («${v.t}»)`);
       await p.click('#cp-cerrar'); await p.waitForTimeout(200);
-      await p.click('#l-chips button[data-f="traslado"]'); await p.waitForTimeout(400);
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="traslado"]'); await p.waitForTimeout(400);
       await p.locator('#lista .fila[data-tipo="traslado"]').first().click(); await p.waitForTimeout(500);
       const t = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, filas: [...document.querySelectorAll('#cp-datos .cp-fila')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), editar: document.getElementById('cp-editar').textContent }));
       eq([t.t, t.filas, t.editar], ['Traslado', ['Salieron de: el exchange', 'Llegaron a: tu wallet', 'El saldo: no cambia'], 'Anular'], '18·comprobante: un traslado dice de dónde a dónde y ofrece anularlo');
@@ -4359,9 +4363,9 @@ try {
       await p.fill('#h-sats', '77320'); await p.waitForTimeout(150);
       await p.click('#h-avanzado summary'); await p.waitForTimeout(200);
       const campo = await p.evaluate(() => { const i = document.getElementById('h-precio'); const r = i.getBoundingClientRect(); return { modo: i.inputMode, alto: Math.round(r.height), etiqueta: i.labels[0]?.innerText.replace(/\s+/g, ' ').trim(), ayuda: i.getAttribute('aria-describedby') }; });
-      ok(await p.locator('#h-precio').isVisible() && campo.modo === 'decimal' && campo.alto >= 47.5 && campo.etiqueta === 'Precio de BTC al que compraste (opcional)' && campo.ayuda === 'h-dinero-ay', `precio: el campo está en «Más detalles», con su rótulo, teclado decimal y 48 px (${JSON.stringify(campo)})`);
+      ok(await p.locator('#h-precio').isVisible() && campo.modo === 'decimal' && campo.alto >= 47.5 && campo.etiqueta === 'Precio de BTC al que compraste' && campo.ayuda === 'h-dinero-ay', `precio: el campo está en «Más detalles», con su rótulo, teclado decimal y 48 px (${JSON.stringify(campo)})`);
       let h = await campos(p);
-      ok(h.resumen === 'Más detalles: dólares o precio, TXID y compra extra' && /^Escribe los dólares o el precio: el otro se calcula/.test(h.ay) && h.usd === '' && h.precio === '' && /^≈ \$/.test(h.uno), `precio: vacíos, como siempre: se estima con el precio del día («${h.uno}»)`);
+      ok(h.resumen === 'Más detalles (todo opcional): dólares o precio, TXID y compra extra' && h.ay === 'Escribe uno y el otro se calcula. Vacíos: el precio de ese día.' && h.usd === '' && h.precio === '' && /^≈ \$/.test(h.uno), `precio: vacíos, como siempre: se estima con el precio del día («${h.uno}»)`);
       // ---- Escribir el precio (con «$» y coma de miles, tecla por tecla) calcula los dólares
       await p.click('#h-precio'); await p.keyboard.type('$62,500'); await p.waitForTimeout(200);
       h = await campos(p);
@@ -4466,7 +4470,7 @@ try {
       // ---- En una venta el rótulo dice «al que vendiste»; en un traslado no hay precio
       await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
       h = await campos(p);
-      ok(h.tPrecio === 'Precio de BTC al que vendiste (opcional)' && h.resumen === 'Más detalles: dólares o precio y TXID' && /por la venta/.test(h.uno), `precio: en una venta, «al que vendiste» («${h.uno}»)`);
+      ok(h.tPrecio === 'Precio de BTC al que vendiste' && h.resumen === 'Más detalles (todo opcional): dólares o precio y TXID' && /por la venta/.test(h.uno), `precio: en una venta, «al que vendiste» («${h.uno}»)`);
       await p.click('#h-tipo button[data-tipo="traslado"]'); await p.waitForTimeout(200);
       ok(!(await p.locator('#h-precio').isVisible()) && !(await p.locator('#h-usd').isVisible()), 'precio: un traslado no lleva dólares ni precio');
       await p.click('#h-tipo button[data-tipo="compra"]'); await p.waitForTimeout(200);
@@ -5969,7 +5973,7 @@ try {
       ok(bonoV === 4321 && bonoC > 100_000, `24c: «bono» tiene compras y la venta (${bonoC} y ${bonoV} sats)`);
       await a.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
       eq(await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('l-res').offsetHeight]), ['', 0], '24c: sin filtros, el renglón de resultados está vacío y no ocupa sitio');
-      await a.p.click('#l-mas summary'); await a.p.selectOption('#l-etq', 'bono'); await a.p.waitForTimeout(300);
+      await abrirFechas(a.p); await a.p.selectOption('#l-etq', 'bono'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), esperaBono, '24c: con la etiqueta «bono», cuántos y su suma, con el neto y cada parte aparte');
       const pegada = await a.p.$$eval('#l-res .nw', (xs) => xs.map((x) => ({ t: x.textContent, r: x.getClientRects().length })));
       ok(pegada.some((x) => x.t === `+${nf(neto)} sats`) && pegada.every((x) => x.r === 1), `24c: «+${nf(neto)} sats» va pegado y no se parte (${JSON.stringify(pegada)})`);
@@ -5977,13 +5981,13 @@ try {
       ok(await a.p.locator('#ver-todas').isVisible(), '24c: hay más de lo que cabe en el primer tramo');
       await a.p.click('#ver-todas'); await a.p.waitForTimeout(300);
       eq(await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('lista').getBoundingClientRect().top + scrollY]), antes, '24c: «Ver más» no cambia la suma (es de todo lo filtrado) ni mueve la lista');
-      await a.p.click('#l-chips button[data-f="compra"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="compra"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `${con('bono', 'compra').length} de ${total} movimientos · ${nf(bonoC)} sats comprados`, '24c: con otro filtro encima, solo lo que se ve (solo compras: «comprados»)');
-      await a.p.click('#l-chips button[data-f="venta"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="venta"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `1 de ${total} movimientos · ${nf(bonoV)} sats vendidos`, '24c: solo la venta: «vendidos»');
-      await a.p.click('#l-chips button[data-f="traslado"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="traslado"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `0 de ${total} movimientos`, '24c: los traslados no llevan etiquetas: nada que sumar');
-      await a.p.click('#l-chips button[data-f="todos"]');
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="todos"]');
       await a.p.selectOption('#l-etq', 'cumpleaños'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `${con('cumpleaños').length} de ${total} movimientos · ${nf(suma(con('cumpleaños', 'compra')))} sats comprados`, '24c: otra etiqueta, otra suma');
       await a.p.selectOption('#l-etq', ''); await a.p.fill('#l-buscar', 'caída'); await a.p.waitForTimeout(300);
@@ -5998,7 +6002,7 @@ try {
       const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, conPushQuieto);
       await cerrar(l.p);
       await l.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await l.p.click('#l-mas summary'); await l.p.selectOption('#l-etq', 'bono'); await l.p.waitForTimeout(300);
+      await abrirFechas(l.p); await l.p.selectOption('#l-etq', 'bono'); await l.p.waitForTimeout(300);
       eq((await l.p.textContent('#l-res')).trim(), esperaBono, '24c: quien solo mira lee la misma suma');
       await l.p.evaluate(() => scrollTo(0, 0));
       await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(250);
@@ -6020,7 +6024,7 @@ try {
       }), { dlg: true, pag: true, fila: true, toque: true }, '24c: a 320 px con letra muy grande, «Estado del sistema» con la revisión no se desborda');
       await ch.p.keyboard.press('Escape'); await ch.p.waitForTimeout(300);
       await ch.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await ch.p.click('#l-mas summary'); await ch.p.selectOption('#l-etq', 'bono'); await ch.p.waitForTimeout(300);
+      await abrirFechas(ch.p); await ch.p.selectOption('#l-etq', 'bono'); await ch.p.waitForTimeout(300);
       eq(await ch.p.evaluate(() => {
         const r = document.getElementById('l-res');
         return { pag: document.documentElement.scrollWidth <= innerWidth, res: r.scrollWidth <= r.clientWidth + 1, pegadas: [...r.querySelectorAll('.nw')].every((x) => x.getClientRects().length === 1), texto: r.textContent.includes(' sats (') };
@@ -8022,6 +8026,159 @@ try {
         await r.ctx.close();
       }
     } finally { anio.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamento 63: anotar y buscar (el filo de los campos, «Guardar» dice qué falta, ayudas de un renglón y la lista en una fila)
+  await bloque(async () => {
+    const anio = await servidor('anio');
+    const sinp = await servidor('sinprecio');
+    const conLs = (pares = []) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    const cerrarTodo = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const escritorio = { isMobile: false, hasTouch: false };
+    // El filo contra el panel (--s1), el relleno (--s2) y el fondo; y el texto de «Guardar» contra el panel
+    const contrastes = (p) => p.evaluate(() => {
+      const col = (c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v; };
+      const rgb = (c) => { const m = c.match(/[\d.]+/g).map(Number); const sr = c.startsWith('color('); return m.slice(0, 3).map((x) => (sr ? x * 255 : x)); };
+      const lum = (v) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(v[0]) + 0.7152 * f(v[1]) + 0.0722 * f(v[2]); };
+      const c = (a, b) => { const x = lum(a), y = lum(b); return +((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)).toFixed(2); };
+      const filo = rgb(col('var(--campo-filo)'));
+      const g = document.getElementById('guardar'), gs = getComputedStyle(g);
+      return { panel: c(filo, rgb(col('var(--s1)'))), campo: c(filo, rgb(col('var(--s2)'))), fondo: c(filo, rgb(col('var(--fondo)'))), guardar: c(rgb(gs.color), rgb(col('var(--s1)'))), opGuardar: gs.opacity };
+    });
+    const sombra = (p, id) => p.evaluate((i) => getComputedStyle(document.getElementById(i)).boxShadow, id);
+    try {
+      // 314 y 306 · la hoja en el teléfono, en los dos temas y con alto contraste
+      for (const [tema, alto] of [['oscuro', false], ['claro', false], ['oscuro', true], ['claro', true]]) {
+        const r = await entrar(navegador, anio, ADMIN, { viewport: { width: 390, height: 844 } }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.evaluate(([t, a]) => { window.libroTema.fijar(t); window.libroAcc.fijarContraste(a ? 'alto' : 'normal'); }, [tema, alto]);
+        await r.p.waitForTimeout(300);
+        await r.p.click('#anotar'); await r.p.waitForTimeout(500);
+        const k = `${tema}${alto ? ', alto contraste' : ''}`;
+        const c = await contrastes(r.p);
+        ok(c.panel >= 3 && c.campo >= 3 && c.fondo >= 3, `63·314 el filo de los campos, a 3:1 o más del panel, del relleno y del fondo (${k}: ${JSON.stringify(c)})`);
+        const g = await r.p.evaluate(() => { const b = document.getElementById('guardar'); return { t: b.innerText, dis: b.disabled, falta: b.dataset.falta }; });
+        ok(g.dis && g.falta === '1' && g.t === 'Escribe los sats para guardar' && c.guardar >= 4.5 && c.opGuardar === '1', `63·306 «Guardar» apagado dice qué falta, con su texto a 4.5:1 o más (${k}: ${JSON.stringify(g)}, ${c.guardar}:1)`);
+        if (tema === 'oscuro' && !alto) {
+          const s = { nota: await sombra(r.p, 'h-nota'), sats: await sombra(r.p, 'h-sats') };
+          ok(/inset/.test(s.nota) && !/inset/.test(s.sats), `63·314 la nota lleva el filo por dentro; «Sats» (una raya, con su propio foco) no (${JSON.stringify(s)})`);
+          await r.p.focus('#h-nota');
+          const f = await r.p.evaluate(() => { const cs = getComputedStyle(document.getElementById('h-nota')); return [cs.outlineStyle, cs.outlineWidth]; });
+          eq(f, ['solid', '2px'], '63·314 el foco de un campo sigue siendo su contorno naranja');
+          // 306 · con sats, el naranja de siempre
+          await r.p.fill('#h-sats', '30000'); await r.p.waitForTimeout(200);
+          const e = await r.p.evaluate(() => { const b = document.getElementById('guardar'); return { t: b.innerText, dis: b.disabled, falta: b.dataset.falta, op: getComputedStyle(b).opacity }; });
+          eq(e, { t: 'Guardar', dis: false, falta: '', op: '1' }, '63·306 con los sats escritos, «Guardar» se enciende');
+          // 306 · un precio que no se entiende
+          await r.p.click('#h-avanzado summary'); await r.p.waitForTimeout(200);
+          await r.p.fill('#h-precio', '62.500'); await r.p.waitForTimeout(200);
+          eq(await r.p.evaluate(() => [document.getElementById('guardar').innerText, document.getElementById('guardar').disabled]), ['Revisa el precio para guardar', true], '63·306 con un precio que no se entiende, dice que lo revises');
+          await r.p.fill('#h-precio', ''); await r.p.waitForTimeout(200);
+          // 305 · «(opcional)» una vez, en el plegado; cada ayuda en un renglón
+          const h = await r.p.evaluate(() => {
+            const vis = [...document.querySelectorAll('#hoja .h-nota')].filter((e) => e.checkVisibility());
+            return {
+              resumen: document.getElementById('h-av-t').innerText,
+              opc: [...document.querySelectorAll('#h-avanzado label')].filter((l) => l.checkVisibility() && /opcional/i.test(l.innerText)).length,
+              renglones: vis.map((e) => Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight))),
+              palabras: vis.reduce((n, e) => n + e.innerText.split(/\s+/).filter(Boolean).length, 0),
+            };
+          });
+          ok(h.resumen === 'Más detalles (todo opcional): dólares o precio, TXID y compra extra' && h.opc === 0, `63·305 «(opcional)» se dice una vez, en el plegado (${h.resumen})`);
+          ok(h.renglones.length === 5 && h.renglones.every((x) => x <= 2) && h.renglones.reduce((x, y) => x + y) <= 7 && h.palabras <= 60, `63·305 a 390 px, las ayudas son ${h.palabras} palabras (antes 88) en ${h.renglones.reduce((x, y) => x + y)} renglones (antes 9): ${h.renglones}`);
+          eq(await r.p.evaluate(() => [...document.querySelectorAll('#h-avanzado .h-nota')].filter((e) => e.checkVisibility()).map((e) => e.innerText)),
+            ['Escribe uno y el otro se calcula. Vacíos: el precio de ese día.', 'Para comprobarla en la cadena. Lightning o dentro del exchange: no hay.', 'Va aparte: no cuenta para el ritmo ni cubre la semana.', 'Hasta 5, con comas. Filtran la lista.'], '63·305 las ayudas de «Más detalles», con las frases decididas');
+          // 306 · traslado a una wallet nueva: lo que falta, por partes
+          await r.p.click('#h-tipo button[data-tipo="traslado"]'); await r.p.fill('#h-sats', ''); await r.p.waitForTimeout(200);
+          if (await r.p.locator('#h-wallet-mas').isVisible()) await r.p.click('#h-wallet-mas');
+          else await r.p.selectOption('#h-wallet', 'nueva');
+          await r.p.waitForTimeout(200);
+          const t1 = await r.p.innerText('#guardar');
+          await r.p.fill('#h-sats', '1000'); await r.p.waitForTimeout(200);
+          const t2 = await r.p.innerText('#guardar');
+          await r.p.fill('#h-wallet-nueva', 'Ledger'); await r.p.waitForTimeout(200);
+          const t3 = await r.p.innerText('#guardar');
+          eq([t1, t2, t3], ['Escribe los sats y la wallet', 'Escribe el nombre de la wallet', 'Guardar traslado'], '63·306 en un traslado a una wallet nueva, dice qué falta en cada paso');
+          eq(r.consola, [], `63 consola limpia (hoja): ${r.consola.join(' | ')}`);
+        }
+        await r.ctx.close();
+      }
+      // 305 · sin precio del día, los dólares o el precio hacen falta: el plegado no dice «todo opcional»
+      {
+        const r = await entrar(navegador, sinp, ADMIN, { viewport: { width: 390, height: 844 } }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.click('#anotar'); await r.p.waitForTimeout(500);
+        await r.p.fill('#h-sats', '30000'); await r.p.waitForTimeout(200);
+        const s = await r.p.evaluate(() => ({ uno: document.getElementById('hc-uno').innerText, resumen: document.getElementById('h-av-t').innerText, guardar: document.getElementById('guardar').innerText }));
+        eq(s, { uno: 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares o el precio.', resumen: 'Más detalles: dólares o precio, TXID y compra extra', guardar: 'Escribe los dólares o el precio' }, '63·305 sin precio, «Más detalles» no dice «todo opcional» y «Guardar» pide los dólares o el precio');
+        await r.ctx.close();
+      }
+      // 306 · a 320 px con letra muy grande, el texto cabe en la píldora, también junto a «Anular»
+      {
+        const r = await entrar(navegador, anio, ADMIN, { viewport: { width: 320, height: 568 } }, conLs([['libro.letra', 'muy-grande']]));
+        await cerrarTodo(r.p);
+        await r.p.click('#anotar'); await r.p.waitForTimeout(500);
+        const cabe = () => r.p.evaluate(() => { const b = document.getElementById('guardar'), q = b.getBoundingClientRect(); return { cabe: b.scrollWidth <= b.clientWidth + 1 && q.height >= 47.5 && q.right <= innerWidth, pag: document.documentElement.scrollWidth <= innerWidth, t: b.innerText }; });
+        eq(await cabe(), { cabe: true, pag: true, t: 'Escribe los sats para guardar' }, '63·306 a 320 px con letra muy grande, «Escribe los sats para guardar» cabe en su píldora');
+        await r.p.click('#hoja .cerrar'); await r.p.waitForTimeout(300);
+        await editarFila(r.p, r.p.locator('#lista .fila').first()); await r.p.waitForTimeout(400);
+        await r.p.fill('#h-sats', ''); await r.p.waitForTimeout(200);
+        ok(await r.p.locator('#h-borrar').isVisible(), '63·306 al editar está «Anular»');
+        eq(await cabe(), { cabe: true, pag: true, t: 'Escribe los sats para guardar' }, '63·306 y junto a «Anular», también cabe');
+        await r.ctx.close();
+      }
+      // 307 · la lista en el teléfono: buscador y «Filtros» en una fila
+      {
+        const r = await entrar(navegador, anio, ADMIN, { viewport: { width: 390, height: 844 } }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.evaluate(() => document.getElementById('t-compras').scrollIntoView({ block: 'start' })); await r.p.waitForTimeout(300);
+        const fila = () => r.p.evaluate(() => {
+          const t = document.getElementById('t-compras').getBoundingClientRect(), f = document.querySelector('#lista li[data-clave]').getBoundingClientRect(), b = document.getElementById('l-filtros'), q = b.getBoundingClientRect(), bus = document.getElementById('l-buscar').getBoundingClientRect();
+          return { alto: Math.round(f.top - t.top), filtros: b.checkVisibility() ? b.innerText : null, exp: b.getAttribute('aria-expanded'), toque: q.height >= 47.5, juntos: Math.abs(q.top - bus.top) < 4, chips: document.getElementById('l-chips').checkVisibility(), pag: document.documentElement.scrollWidth <= innerWidth };
+        });
+        const a = await fila();
+        ok(a.alto <= 180 && a.filtros === 'Filtros' && a.exp === 'false' && a.toque && a.juntos && !a.chips && a.pag, `63·307 en el teléfono, el buscador y «Filtros» en una fila; los tipos plegados (${JSON.stringify(a)}; antes 331 px de título a primera fila)`);
+        await r.p.click('#l-filtros'); await r.p.waitForTimeout(200);
+        const b = await fila();
+        ok(b.exp === 'true' && b.chips && await r.p.locator('#l-mas').isVisible(), `63·307 «Filtros» abre los tipos y «Fechas y orden» (${JSON.stringify(b)})`);
+        await r.p.click('#l-chips button[data-f="compra"]'); await r.p.waitForTimeout(300);
+        await r.p.click('#l-filtros'); await r.p.waitForTimeout(200);
+        const c = await fila();
+        ok(c.filtros === 'Filtros: compras' && c.exp === 'false' && !c.chips && await r.p.locator('#l-limpiar').isVisible(), `63·307 cerrado, «Filtros» dice qué filtro hay y «Quitar filtros» sigue a la vista (${JSON.stringify(c)})`);
+        await abrirFechas(r.p);
+        ok(await r.p.locator('#l-desde').isVisible() && (await r.p.getAttribute('#l-mas', 'aria-expanded')) === 'true', '63·307 «Fechas y orden» abre su panel');
+        await r.p.fill('#l-desde', '2026-01-01'); await r.p.waitForTimeout(300);
+        eq(await r.p.innerText('#l-filtros'), 'Filtros: 2', '63·307 con dos filtros, «Filtros: 2»');
+        await r.p.click('#l-limpiar'); await r.p.waitForTimeout(300);
+        const d = await fila();
+        ok(d.filtros === 'Filtros' && d.exp === 'true', `63·307 «Quitar filtros» limpia el rótulo y no cierra lo que abriste (${JSON.stringify(d)})`);
+        eq(r.consola, [], `63 consola limpia (lista): ${r.consola.join(' | ')}`);
+        await r.ctx.close();
+      }
+      // 307 · en escritorio (pestaña «Movimientos»), todo en una fila y sin «Filtros»; en la columna estrecha de «todo junto», plegado como en
+      // el teléfono (lo decide el ancho de la lista, no el de la ventana); con letra grande, sin desbordes
+      for (const [w, letra, junto] of [[1100, '', false], [1440, '', false], [2560, '', false], [1440, 'grande', false], [1440, 'muy-grande', false], [1440, '', true]]) {
+        const r = await entrar(navegador, anio, ADMIN, { viewport: { width: w, height: 900 }, pestanas: !junto, ...escritorio }, conLs(letra ? [['libro.letra', letra]] : []));
+        await cerrarTodo(r.p);
+        if (!junto) { await r.p.click('#pestanas button[data-pestana="movimientos"]'); await r.p.waitForTimeout(600); }
+        await r.p.evaluate(() => document.getElementById('t-compras').scrollIntoView({ block: 'start' })); await r.p.waitForTimeout(300);
+        const e = await r.p.evaluate(() => {
+          const t = document.getElementById('t-compras').getBoundingClientRect(), f = document.querySelector('#lista li[data-clave]').getBoundingClientRect(), bus = document.getElementById('l-buscar').getBoundingClientRect(), m = document.getElementById('l-mas').getBoundingClientRect();
+          const chips = [...document.querySelectorAll('#l-chips button')].map((b) => b.getBoundingClientRect());
+          const ctl = document.getElementById('l-ctl');
+          return { alto: Math.round(f.top - t.top), filtros: document.getElementById('l-filtros').checkVisibility(), unaFila: chips.every((c) => Math.abs(c.top - bus.top) < 4) && Math.abs(m.top - bus.top) < 4, pag: document.documentElement.scrollWidth <= innerWidth, ctl: ctl.scrollWidth <= ctl.clientWidth + 1 };
+        });
+        if (junto) ok(e.filtros && e.pag && e.ctl, `63·307 a ${w} px en «todo junto» (la lista en su columna), plegado bajo «Filtros» y sin desbordes (${JSON.stringify(e)})`);
+        else if (letra) ok((e.filtros || e.unaFila) && e.pag && e.ctl, `63·307 a ${w} px con letra ${letra}: en una fila si cabe, plegado si no, y sin desbordes (${JSON.stringify(e)})`);
+        else ok(!e.filtros && e.unaFila && e.alto <= 200 && e.pag && e.ctl, `63·307 a ${w} px, buscador, tipos y «Fechas y orden» en una fila (${JSON.stringify(e)}; antes 276 px a 1100–1440 y 293 a 2560)`);
+        if (w === 1440 && !letra && !junto) {
+          await r.p.click('#l-mas'); await r.p.waitForTimeout(200);
+          const m = await r.p.evaluate(() => { const c = document.getElementById('l-mas-c').getBoundingClientRect(), b = document.getElementById('l-buscar').getBoundingClientRect(); return { debajo: c.top >= b.bottom, ancho: c.width > 600 }; });
+          eq(m, { debajo: true, ancho: true }, '63·307 en escritorio, «Fechas y orden» abre su panel debajo de la fila, a lo ancho');
+        }
+        await r.ctx.close();
+      }
+    } finally { anio.parar(); sinp.parar(); }
   });
 
   // ---------------------------------------------------------------- sin histórico de precios

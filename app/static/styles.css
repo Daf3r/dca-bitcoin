@@ -40,6 +40,9 @@
   /* Hora dorada (pulido visual): neutros con un tinte azul tinta, texto crema y un ámbar algo más cálido. */
   --fondo: #070b15; --s1: #10172a; --s2: #182136; --s3: #263149;
   --txt: #f6eee0; --txt2: #b3bccb; --txt3: #8f9ab0;
+  /* (Campamento 63) El filo de los campos donde se escribe: el relleno solo queda a 1.1:1 del panel; el filo, a 3:1 o más de los dos
+     (4.48:1 del panel en oscuro, 3.92:1 en claro). Se calcula aquí, en la raíz, con la tinta y el panel de cada tema. */
+  --campo-filo: color-mix(in srgb, var(--txt3) 80%, var(--s1));
   --naranja: #ff9228; --naranja-txt: #ffb260; --naranja-osc: #2a1405;
   --linea: #ecdcc0;
   --compra-borde: #070b15;
@@ -839,6 +842,11 @@ html[data-ganancia="color"] .hoja-calc .costo[data-tono="sube"] { color: var(--s
 .hoja-bot { display: flex; gap: 10px; }
 .guardar { flex: 1; min-height: 56px; border: 0; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font-weight: 750; font-size: 1.0625rem; cursor: pointer; }
 .guardar:disabled { opacity: 0.4; cursor: not-allowed; }
+/* (Campamento 63) Apagado porque falta algo, «Guardar» no es un naranja a medias (2.26:1, parecía roto): es un contorno en tinta que dice
+   qué falta («Escribe los sats para guardar»). El naranja relleno queda para cuando de verdad se puede guardar; «Guardando…» sigue en naranja. */
+.guardar[data-falta="1"] { opacity: 1; padding: 6px 18px; background: none; box-shadow: inset 0 0 0 1.5px var(--campo-filo); color: var(--txt2); font-weight: 650; line-height: 1.25; text-wrap: balance; }
+@media (forced-colors: active) { .guardar[data-falta="1"] { border: 1.5px solid GrayText; color: GrayText; } }
+.pag-guia .guia-guardar .guardar { flex: 1 1 12rem; max-width: 20rem; }
 .borrar { min-height: 56px; padding: 0 20px; border: 1.5px solid color-mix(in srgb, var(--baja) 60%, transparent); border-radius: 999px; background: none; color: var(--baja); font-weight: 650; cursor: pointer; }
 
 dialog { width: min(24rem, calc(100vw - 32px)); padding: 22px; border: 0; border-radius: 22px; background: var(--s1); color: var(--txt); }
@@ -1128,7 +1136,7 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .dc-clave { display: grid; gap: 6px; }
 .dc-clave label, .login-caja .campo-l { margin-top: 6px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
 .dc-clave input, .login-caja input:not([type="checkbox"]) {
-  min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 12px;
+  min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--campo-filo); border-radius: 12px;
   background: var(--s2); color: var(--txt); font: 400 1rem var(--sans);
 }
 .dc-clave input:focus-visible, .login-caja input:not([type="checkbox"]):focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
@@ -1146,9 +1154,9 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .av-horario h3 { margin: 0; font: 650 1rem var(--sans); }
 .av-horario label { display: grid; grid-template-columns: 1fr 9.5rem; align-items: center; gap: 12px; color: var(--txt2); font-size: 0.9375rem; font-weight: 600; }
 .av-horario label[hidden] { display: none; }
-.av-horario select { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
+.av-horario select { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--campo-filo); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
 .av-horario select:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
-.av-horario input { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
+.av-horario input { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--campo-filo); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
 .av-horario input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
 .av-horario > label[for] { display: block; }
 .av-prueba { display: grid; gap: 6px; margin: 10px 0 0; }
@@ -1343,14 +1351,38 @@ html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efe
 
 /* ======================================================= Campamento 4 (2/4): la lista */
 /* Buscar, filtrar y ordenar. */
-.l-ctl { display: grid; gap: 8px; margin: 0 0 10px; }
+.l-ctl { display: grid; gap: 8px; margin: 0 0 10px; container-type: inline-size; }
 .l-ctl[hidden] { display: none; }
+/* (Campamento 63) Buscar y filtrar en una fila. En el teléfono, el buscador y «Filtros» (los tipos y «Fechas y orden» se abren con él);
+   donde caben (54rem de lista: la pestaña «Movimientos» en escritorio; no la columna estrecha de «todo junto»), todo en la misma fila y
+   sin «Filtros». */
+.l-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.l-fila .l-busca { flex: 1 1 9rem; min-width: 0; }
+.l-filtrar { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+:is(.l-filtros, .l-mas) { display: inline-flex; align-items: center; gap: 10px; min-height: var(--toque); cursor: pointer; touch-action: manipulation; font-weight: 650; font-size: 0.9375rem; }
+.l-filtros { flex: none; max-width: 100%; padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; color: var(--txt); }
+.l-mas { padding: 0 4px; border: 0; background: none; color: var(--naranja-txt); }
+:is(.l-filtros, .l-mas)::after { content: ""; flex: none; width: 7px; height: 7px; margin-top: -4px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+:is(.l-filtros, .l-mas)[aria-expanded="true"]::after { margin-top: 4px; transform: rotate(-135deg); }
+:is(.l-filtros, .l-mas):focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .l-filtros:hover { background: var(--s2); } .l-mas:hover { text-decoration: underline; text-underline-offset: 4px; } }
+@container not (min-width: 54rem) {
+  .l-ctl:not([data-filtros="1"]) :is(.l-filtrar, .l-mas-c) { display: none; }
+}
+@container (min-width: 54rem) {
+  .l-filtros { display: none; }
+  .l-fila { flex-wrap: nowrap; }
+  .l-fila .l-busca { flex: 1 1 12rem; }
+  .l-filtrar { flex: none; flex-wrap: nowrap; gap: 8px; }
+  .l-filtrar .l-chips { flex-wrap: nowrap; }
+  .l-filtrar .l-chips button { padding: 0 12px; }
+  .l-mas-c { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); column-gap: 20px; }
+}
 .l-busca input { width: 100%; min-height: var(--toque); padding: 0 14px; border: 0; border-radius: 14px; background: var(--s2); color: var(--txt); font-size: 1rem; }
 .l-busca input:focus-visible, .l-mas-c :is(input, select):focus-visible, .f-notaed input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
 .l-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .l-chips button { min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; color: var(--txt2); font-weight: 650; font-size: 0.9375rem; cursor: pointer; touch-action: manipulation; }
 .l-chips button[aria-pressed="true"] { background: var(--txt); border-color: var(--txt); color: var(--fondo); }
-.l-mas summary { display: flex; align-items: center; min-height: var(--toque); color: var(--naranja-txt); font-weight: 650; font-size: 0.9375rem; cursor: pointer; }
 .l-mas-c { display: grid; gap: 8px; padding-bottom: 4px; }
 .l-mas-c label { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--txt2); font-size: 0.875rem; }
 .l-mas-c :is(input, select) { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; max-width: 65%; }
@@ -1466,11 +1498,19 @@ html[data-letra] .l-mas-c :is(input, select) { max-width: 100%; flex: 1 1 8rem; 
 /* Alto contraste: texto de 7:1 o más, bordes de 3:1 o más. Lo pide la persona en «Tu cuenta» o el sistema (`prefers-contrast: more`). */
 html[data-contraste="alto"] {
   --txt: #fff8ea; --txt2: #e3e8f1; --txt3: #ccd4e2; --naranja-txt: #ffb877; --sube: #8ef0b8; --baja: #ffb3a8; --s3: #5f739b;
+  --campo-filo: var(--txt2);
 }
 html[data-contraste="alto"][data-tema="claro"] {
   --txt: #000; --txt2: #2b251d; --txt3: #3d352a; --naranja-txt: #7a3500; --sube: #0b4f2a; --baja: #8a1d12; --s3: #8a7656;
+  --campo-filo: var(--txt2);
 }
 html[data-contraste="alto"] :is(.fila, .lista li + li) { border-color: var(--s3); }
+/* (Campamento 63) Los campos rellenos y sin borde (la hoja, el buscador y las fechas de la lista, la nota en la lista, el enlace de la hoja
+   de cálculo) llevan su filo por dentro: una sombra, que no cambia medidas. `:where` lo deja sin peso, para que el foco o un aviso que pongan
+   su propia sombra ganen siempre. Los campos con borde (diálogos, entrada) usan el mismo tono en el borde. «Sats», que es una raya, no. */
+:where(.h-fecha input, .h-usd input, .h-wallet :is(input, select), .h-nota-campo input, .l-busca input, .l-mas-c :is(input, select), .f-notaed input, .en-form input, .en-url) {
+  box-shadow: inset 0 0 0 1.5px var(--campo-filo);
+}
 /* (Campamento 62) Con alto contraste, --s3 es un color de borde: la fila de «Tu cuenta» al pasar el ratón se marca con su filo, no con ese
    fondo (la tinta suave del valor quedaba a 3.5:1 sobre él). */
 html[data-contraste="alto"] .dc-lista button:hover { background: var(--s2); box-shadow: inset 0 0 0 2px var(--s3); }
@@ -1783,7 +1823,7 @@ html[data-tv]:not([data-tv-activo]) { cursor: none; }
 .guia-muestra { flex: none; width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--s3); }
 .guia-col b { display: block; font-size: 0.875rem; }
 .guia-col small { display: block; font-size: 0.75rem; color: var(--txt2); }
-.guia-ok { color: var(--sube); }
+.guia-ok, .guia-ok-filo { color: var(--sube); }
 .guia-mal { color: var(--baja); font-weight: 700; }
 .guia-fr { margin: 0; font: 400 2rem var(--serif); }
 .guia-cifra { margin: 0; font: 600 2rem var(--sans); font-variant-numeric: tabular-nums; }
@@ -1794,6 +1834,7 @@ html[data-tv]:not([data-tv-activo]) { cursor: none; }
 .guia-iconos small { font-size: 0.75rem; color: var(--txt2); }
 .anotar-ej { min-height: 52px; padding: 0 26px; border: 0; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font: 700 1.0625rem var(--sans); cursor: pointer; }
 .pag-guia .guia-ctl, .pag-guia .l-chips { margin: 0; }
+.pag-guia .guia-campo { flex: 1 1 16rem; max-width: 24rem; }
 
 /* Pantallas muy anchas (idea 88): a 2400 px o más la página tenía mucho espacio vacío y letra pequeña. Se agranda la raíz (1.25 desde 2400,
    1.5 desde 3200; se compone con «Tamaño de letra») y el marco de contenido y de la montaña crece con ella (`--medio-ancho` es la mitad del
@@ -2612,6 +2653,8 @@ html[data-pestanas] .indice { display: none; }
   .cuerpo[data-pestana="historia"] { grid-template-columns: minmax(0, 1fr); }
   .cuerpo[data-pestana="historia"] :is(.col-principal, .col-lateral) { display: none; }
 }
+/* En una ventana baja la barra no se pega (como antes, campamento 14): ocuparía demasiado. «Anotar» va con ella. */
+@media (min-width: 1100px) and (max-height: 559px) { html[data-pestanas] .barra { position: relative; top: auto; } }
 @media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; row-gap: 0; } .cuerpo[data-pestana="resumen"] .caida .enlace { margin-bottom: -8px; } } /* «Ocultar hoy» pegado al texto (su zona de toque de 48 px sigue entera) */
 
 .historia-pg[hidden] { display: none; }
@@ -2826,7 +2869,7 @@ html:not([data-efectos="ninguno"]) .d-carta.abriendo .carta-papel { transform-or
 .d-mensaje .msg-ayuda { margin: 0 0 6px; font-size: 1rem; line-height: 1.5; }
 .d-mensaje .msg-ayuda:empty { display: none; }
 #cap-texto, #msg-texto {
-  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--campo-filo); border-radius: 14px;
   background: var(--s2); color: var(--txt); font: 400 1.0625rem/1.55 var(--serif);
 }
 #cap-texto { min-height: 9.5em; resize: vertical; }
@@ -2844,7 +2887,7 @@ html:not([data-efectos="ninguno"]) .d-carta.abriendo .carta-papel { transform-or
 .cap-op input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 3px; }
 @media (forced-colors: active) { .cap-op input { appearance: auto; } }
 #cap-fecha, #cap-etapa {
-  width: calc(100% - 36px); min-height: var(--toque); margin: 0 0 6px 36px; padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px;
+  width: calc(100% - 36px); min-height: var(--toque); margin: 0 0 6px 36px; padding: 0 12px; border: 1.5px solid var(--campo-filo); border-radius: 12px;
   background: var(--s1); color: var(--txt); font: 400 1rem var(--sans); min-width: 0;
 }
 :is(#cap-fecha, #cap-etapa):disabled { opacity: 0.45; }
@@ -3011,7 +3054,7 @@ html[data-efectos="todos"] .fc-fiesta { animation: fc-flota 4.6s ease-in-out inf
 .cu-campos { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-rows: auto auto; grid-auto-flow: column; gap: 6px 12px; margin: 4px 0 6px; }
 .cu-campos label { font: 650 1rem var(--sans); color: var(--txt); }
 .cu-campos select {
-  appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; min-height: 56px; padding: 0 40px 0 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; min-height: 56px; padding: 0 40px 0 14px; border: 1.5px solid var(--campo-filo); border-radius: 14px;
   background: var(--s2) linear-gradient(45deg, transparent 50%, var(--txt2) 50%) calc(100% - 22px) 50% / 7px 7px no-repeat;
   background-image: linear-gradient(45deg, transparent 50%, var(--txt2) 50%), linear-gradient(-45deg, transparent 50%, var(--txt2) 50%);
   background-position: calc(100% - 25px) 50%, calc(100% - 18px) 50%; background-size: 7px 7px, 7px 7px; background-repeat: no-repeat;
@@ -3482,7 +3525,7 @@ html[data-contraste="alto"] .fi-papel { --fi-tinta: #17100a; --fi-tinta2: #3d322
 .fi-campos[hidden], .fi-cerrado[hidden] { display: none; }
 .fi-campos label { font: 650 1rem var(--sans); color: var(--txt); }
 #fi-texto {
-  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--campo-filo); border-radius: 14px;
   background: var(--s1); color: var(--txt); font: italic 400 1.0625rem/1.55 var(--serif);
 }
 #fi-texto::placeholder { color: var(--txt3); opacity: 1; }
@@ -3511,7 +3554,7 @@ html[data-tv] .tv-nombre:not([hidden]) { display: block; flex-basis: 100%; margi
 #f-montana h2 { margin-bottom: 6px; }
 #f-montana > label { margin-top: 4px; font: 650 1rem var(--sans); color: var(--txt); }
 #mo-nombre {
-  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--campo-filo); border-radius: 14px;
   background: var(--s2); color: var(--txt); font: italic 400 1.0625rem/1.55 var(--serif);
 }
 #mo-nombre::placeholder { color: var(--txt3); opacity: 1; }

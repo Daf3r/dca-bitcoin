@@ -8,6 +8,9 @@ import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// (Campamento 63) En el teléfono los tipos y «Fechas y orden» de la lista van bajo «Filtros»: se abren antes de tocarlos (en escritorio no hace falta).
+const abrirFiltros = async (p) => { if (await p.locator('#l-filtros').isVisible() && (await p.getAttribute('#l-filtros', 'aria-expanded')) !== 'true') await p.click('#l-filtros'); };
+const abrirFechas = async (p) => { await abrirFiltros(p); if ((await p.getAttribute('#l-mas', 'aria-expanded')) !== 'true') await p.click('#l-mas'); };
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require('playwright');
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
@@ -146,9 +149,9 @@ try {
       await auditar(p, `mini-cabecera a la vista ${esquema}`);
       // La lista: controles de búsqueda y filtros abiertos, con una búsqueda activa
       await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await p.click('#l-mas summary'); await p.fill('#l-buscar', '2'); await p.click('#l-chips button[data-f="compra"]'); await p.waitForTimeout(300);
+      await abrirFechas(p); await p.fill('#l-buscar', '2'); await abrirFiltros(p); await p.click('#l-chips button[data-f="compra"]'); await p.waitForTimeout(300);
       await auditar(p, `lista con búsqueda y filtros ${esquema}`);
-      await p.click('#l-limpiar'); await p.click('#l-mas summary');
+      await p.click('#l-limpiar'); await p.click('#l-mas');
       // El gráfico: con una compra fijada (tarjeta con Editar y Cerrar), con la escala logarítmica y a pantalla completa
       await p.evaluate(() => document.getElementById('lienzo').scrollIntoView({ block: 'center' }));
       await p.waitForTimeout(700);
@@ -282,7 +285,7 @@ try {
       const m = await nuevo(mil, ADMIN, conPush);
       await cerrarOferta(m.p);
       await m.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await m.p.click('#l-mas summary'); await m.p.selectOption('#l-etq', 'bono'); await m.p.waitForTimeout(300);
+      await abrirFechas(m.p); await m.p.selectOption('#l-etq', 'bono'); await m.p.waitForTimeout(300);
       await auditar(m.p, `lista con una etiqueta elegida ${esquema}`);
       await m.p.click('#anotar'); await m.p.waitForTimeout(500);
       await m.p.click('#h-avanzado summary'); await m.p.fill('#h-etq', 'regalo, bono'); await m.p.waitForTimeout(200);
@@ -723,7 +726,7 @@ try {
         await entrar(q, mil.url, cuenta);
         for (let k = 0; k < 3 && await q.locator('dialog[open]').count(); k++) { await q.keyboard.press('Escape'); await q.waitForTimeout(300); }
         await q.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-        await q.click('#l-mas summary'); await q.selectOption('#l-etq', 'bono'); await q.waitForTimeout(400);
+        await abrirFechas(q); await q.selectOption('#l-etq', 'bono'); await q.waitForTimeout(400);
         await auditar(q, `24 lista con la suma de una etiqueta (${cuenta === ADMIN ? 'dueño, 320 px, letra muy grande' : 'quien solo mira'}) ${esquema}`);
         await ctx2.close();
       }
