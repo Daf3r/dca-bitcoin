@@ -22,6 +22,20 @@ function ordenGuardado() {
 }
 const F = { texto: '', filtro: 'todos', desde: '', hasta: '', etiqueta: '', orden: ordenGuardado(), limite: INICIAL };
 const hayFiltros = () => !!(F.texto.trim() || F.filtro !== 'todos' || F.desde || F.hasta || F.etiqueta);
+// (Campamento 63) En el teléfono los tipos y «Fechas y orden» van plegados bajo «Filtros». Lo abierto lo decide quien toca: nada lo cierra
+// solo (tampoco quitar los filtros), y cerrado, el botón dice qué filtro hay («Filtros: compras»). La búsqueda se ve en su campo.
+let filtrosAbiertos = false;
+let fechasAbiertas = false;
+const NOMBRE_FILTRO = { compra: 'compras', venta: 'ventas', traslado: 'traslados', extra: 'extra', txid: 'con TXID' };
+function pintarControles() {
+  const puestos = [F.filtro !== 'todos' ? NOMBRE_FILTRO[F.filtro] : '', F.desde || F.hasta ? 'fechas' : '', F.etiqueta ? 'etiqueta' : ''].filter(Boolean);
+  const b = $('l-filtros');
+  b.textContent = !puestos.length ? 'Filtros' : puestos.length === 1 ? `Filtros: ${puestos[0]}` : `Filtros: ${puestos.length}`;
+  b.setAttribute('aria-expanded', String(filtrosAbiertos));
+  $('l-ctl').dataset.filtros = filtrosAbiertos ? '1' : '';
+  $('l-mas').setAttribute('aria-expanded', String(fechasAbiertas));
+  $('l-mas-c').hidden = !fechasAbiertas;
+}
 function quitarFiltros() {
   Object.assign(F, { texto: '', filtro: 'todos', desde: '', hasta: '', etiqueta: '', limite: INICIAL });
   $('l-buscar').value = ''; $('l-desde').value = ''; $('l-hasta').value = ''; $('l-etq').value = '';
@@ -222,6 +236,7 @@ export function pintarLista() {
   // con «310,000 sats» sin partirse. Sin filtros queda vacío de verdad (`.l-res:empty` no ocupa sitio).
   pegado($('l-res'), hayFiltros() ? textoResultadosLista(vistos.length, todos.length, F.etiqueta ? vistos : null) : '');
   $('l-limpiar').hidden = !hayFiltros();
+  pintarControles();
   const vt = $('ver-todas');
   const faltan = vistos.length - filas.length;
   vt.hidden = faltan <= 0;
@@ -346,6 +361,8 @@ $('l-orden').addEventListener('change', (e) => {
   try { if (F.orden === 'recientes') localStorage.removeItem(CLAVE_ORDEN); else localStorage.setItem(CLAVE_ORDEN, F.orden); } catch { /* vale solo para esta visita */ }
   reiniciar();
 });
+$('l-filtros').addEventListener('click', () => { filtrosAbiertos = !filtrosAbiertos; pintarControles(); });
+$('l-mas').addEventListener('click', () => { fechasAbiertas = !fechasAbiertas; pintarControles(); });
 $('l-limpiar').addEventListener('click', () => { quitarFiltros(); pintarLista(); $('l-buscar').focus(); });
 $('ver-todas').addEventListener('click', () => {
   const antes = F.limite;

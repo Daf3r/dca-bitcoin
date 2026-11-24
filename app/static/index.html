@@ -363,21 +363,26 @@
         <button type="button" class="enlace" id="l-tabla" hidden>Ver como tabla</button>
       </p>
     </div>
-    <!-- Buscar, filtrar y ordenar (sale cuando hay más movimientos de los que caben en la primera pantalla). Solo cambia lo que se ve en la lista: los totales son siempre los de todo. -->
+    <!-- Buscar, filtrar y ordenar (sale cuando hay más movimientos de los que caben en la primera pantalla). Solo cambia lo que se ve en la lista: los totales son siempre los de todo.
+         (Campamento 63) En una fila: en el teléfono, el buscador y «Filtros», que abre los tipos y «Fechas y orden» (y dice qué filtro hay:
+         «Filtros: compras»); donde caben (la lista de escritorio), todo en la misma fila y sin «Filtros». «Fechas y orden» abre su panel debajo. -->
     <div class="l-ctl" id="l-ctl" hidden>
-      <label class="l-busca"><span class="sr" data-libro="Buscar en los movimientos">Buscar en tus movimientos</span><input type="search" id="l-buscar" placeholder="Buscar: nota, mes, monto, TXID…" autocomplete="off" autocapitalize="none" enterkeyhint="search"></label>
-      <div class="l-chips" id="l-chips" role="group" aria-label="Filtrar por tipo">
-        <button type="button" data-f="todos" aria-pressed="true">Todo</button><button type="button" data-f="compra" aria-pressed="false">Compras</button><button type="button" data-f="venta" aria-pressed="false">Ventas</button><button type="button" data-f="traslado" aria-pressed="false">Traslados</button><button type="button" data-f="extra" aria-pressed="false">Extra</button><button type="button" data-f="txid" aria-pressed="false">Con TXID</button>
-      </div>
-      <details class="l-mas" id="l-mas">
-        <summary>Fechas y orden</summary>
-        <div class="l-mas-c">
-          <label>Desde <input type="date" id="l-desde"></label>
-          <label>Hasta <input type="date" id="l-hasta"></label>
-          <label id="l-etq-l" hidden>Etiqueta <select id="l-etq"><option value="">Todas</option></select></label>
-          <label>Orden <select id="l-orden"><option value="recientes">Más recientes primero</option><option value="antiguas">Más antiguas primero</option><option value="monto">Mayor monto primero</option><option value="sats">Más sats primero</option></select></label>
+      <div class="l-fila">
+        <label class="l-busca"><span class="sr" data-libro="Buscar en los movimientos">Buscar en tus movimientos</span><input type="search" id="l-buscar" placeholder="Buscar: nota, mes, monto, TXID…" autocomplete="off" autocapitalize="none" enterkeyhint="search"></label>
+        <button type="button" class="l-filtros" id="l-filtros" aria-expanded="false" aria-controls="l-filtrar">Filtros</button>
+        <div class="l-filtrar" id="l-filtrar">
+          <div class="l-chips" id="l-chips" role="group" aria-label="Filtrar por tipo">
+            <button type="button" data-f="todos" aria-pressed="true">Todo</button><button type="button" data-f="compra" aria-pressed="false">Compras</button><button type="button" data-f="venta" aria-pressed="false">Ventas</button><button type="button" data-f="traslado" aria-pressed="false">Traslados</button><button type="button" data-f="extra" aria-pressed="false">Extra</button><button type="button" data-f="txid" aria-pressed="false">Con TXID</button>
+          </div>
+          <button type="button" class="l-mas" id="l-mas" aria-expanded="false" aria-controls="l-mas-c">Fechas y orden</button>
         </div>
-      </details>
+      </div>
+      <div class="l-mas-c" id="l-mas-c" role="group" aria-label="Fechas y orden" hidden>
+        <label>Desde <input type="date" id="l-desde"></label>
+        <label>Hasta <input type="date" id="l-hasta"></label>
+        <label id="l-etq-l" hidden>Etiqueta <select id="l-etq"><option value="">Todas</option></select></label>
+        <label>Orden <select id="l-orden"><option value="recientes">Más recientes primero</option><option value="antiguas">Más antiguas primero</option><option value="monto">Mayor monto primero</option><option value="sats">Más sats primero</option></select></label>
+      </div>
       <p class="l-res" id="l-res" role="status"></p>
       <button type="button" class="enlace" id="l-limpiar" hidden>Quitar filtros</button>
     </div>

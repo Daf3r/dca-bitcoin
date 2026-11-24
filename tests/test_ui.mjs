@@ -65,6 +65,9 @@ async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
 const editarFila = async (p, fila) => { await (typeof fila === 'string' ? p.locator(fila) : fila).click(); await p.waitForTimeout(300); await p.click('#cp-editar'); };
 /** La fecha de la hoja de anotar: «Otro día» enseña el calendario (campamento 18) y ahí se escribe. */
 const ponerFecha = async (p, f) => { await p.click('#h-dia-otro'); await p.fill('#h-fecha', f); };
+// (Campamento 63) En el teléfono los tipos y «Fechas y orden» de la lista van bajo «Filtros»: se abren antes de tocarlos (en escritorio no hace falta).
+const abrirFiltros = async (p) => { if (await p.locator('#l-filtros').isVisible() && (await p.getAttribute('#l-filtros', 'aria-expanded')) !== 'true') await p.click('#l-filtros'); };
+const abrirFechas = async (p) => { await abrirFiltros(p); if ((await p.getAttribute('#l-mas', 'aria-expanded')) !== 'true') await p.click('#l-mas'); };
 const verVista = async (p, v) => { await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(400); };
 const datos = (p, ruta) => p.evaluate((r) => fetch(r).then((x) => x.json()), ruta);
 const saldo = (p) => p.evaluate(() => {
@@ -1261,18 +1264,18 @@ try {
       eq(await p.locator('#lista .fila:not(:has(.f-extra))').count(), 0, 'búsqueda: todas son compras extra');
       await p.click('#l-limpiar');
       eq([await p.inputValue('#l-buscar'), await res()], ['', ''], 'filtros: «Quitar filtros» limpia todo');
-      await p.click('#l-chips button[data-f="venta"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="venta"]');
       eq(await filas(), compras.filter((c) => c.tipo === 'venta').length, 'filtro: ventas y gastos');
-      await p.click('#l-chips button[data-f="traslado"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="traslado"]');
       eq([await filas(), await p.evaluate(() => document.querySelector('#l-chips [data-f="traslado"]').getAttribute('aria-pressed'))], [traslados.length, 'true'], 'filtro: traslados');
-      await p.click('#l-chips button[data-f="txid"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="txid"]');
       eq(await filas(), 0, 'filtro: «Con TXID» sin ninguno dice que nada coincide');
       ok((await p.textContent('#lista .vacio')).includes('Nada coincide'), 'filtro: mensaje de que nada coincide');
       await quitar();
 
       // Rango de fechas y totales intactos
       const desde = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
-      await p.click('#l-mas summary');
+      await abrirFechas(p);
       await p.fill('#l-desde', desde);
       await p.waitForTimeout(150);
       const esperadas = compras.filter((c) => c.fecha >= desde).length + traslados.filter((t) => t.fecha >= desde).length;
@@ -1298,7 +1301,7 @@ try {
       await p.reload({ waitUntil: 'networkidle' });
       await p.waitForTimeout(2500);
       eq(await p.inputValue('#l-orden'), 'monto', 'orden: se recuerda en el dispositivo');
-      await p.click('#l-mas summary');
+      await abrirFechas(p);
       await p.selectOption('#l-orden', 'recientes');
       ok(await p.evaluate(() => localStorage.getItem('libro.lista.orden')) === null, 'orden: el de siempre borra la preferencia');
 
@@ -1961,10 +1964,10 @@ try {
       await p.reload({ waitUntil: 'networkidle' });
       await p.waitForTimeout(2500);
       // Las últimas 8 filas no traen de todo: se filtra por cada tipo para ver sus iconos
-      const contar = async (f, sel) => { await p.click(`#l-chips button[data-f="${f}"]`); await p.waitForTimeout(300); return p.locator(`#lista ${sel}`).count(); };
+      const contar = async (f, sel) => { await abrirFiltros(p); await p.click(`#l-chips button[data-f="${f}"]`); await p.waitForTimeout(300); return p.locator(`#lista ${sel}`).count(); };
       const nTras = await contar('traslado', '.f-sats .ico'), nExtra = await contar('extra', '.f-extra .ico'), nTx = await contar('txid', '.f-copiar .ico');
       const nExt = await p.locator('#lista .f-tx .ico').count(); // (queda filtrado por «Con TXID»)
-      await p.click('#l-chips button[data-f="todos"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="todos"]');
       const info = await p.evaluate(() => ({
         simbolos: ['traslado', 'externo', 'rayo', 'copiar', 'campana', 'lapiz', 'sube', 'baja'].map((n) => !!document.getElementById(`i-${n}`)),
         texto: document.getElementById('lista').innerText,
@@ -2634,7 +2637,7 @@ try {
       ok(conBono > conCumple && conCumple > 0, `el escenario trae etiquetas (bono ${conBono}, cumpleaños ${conCumple})`);
       // El filtro de la lista
       await r.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await r.p.click('#l-mas summary');
+      await abrirFechas(r.p);
       ok(await r.p.locator('#l-etq-l').isVisible(), 'con etiquetas sale el selector «Etiqueta»');
       const opciones = await r.p.$$eval('#l-etq option', (os) => os.map((o) => o.textContent));
       eq(opciones, ['Todas', `bono (${conBono})`, `cumpleaños (${conCumple})`], 'el selector lista las etiquetas de más a menos usadas, con su cuenta');
@@ -4315,12 +4318,12 @@ try {
     try {
       const { ctx, p, consola } = await entrar(navegador, mil18, ADMIN);
       await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' })); await p.waitForTimeout(300);
-      await p.click('#l-chips button[data-f="venta"]'); await p.waitForTimeout(400);
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="venta"]'); await p.waitForTimeout(400);
       await p.locator('#lista .fila[data-tipo="venta"]').first().click(); await p.waitForTimeout(500);
       const v = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, sats: document.getElementById('cp-sats').textContent, dts: [...document.querySelectorAll('#cp-datos dt')].map((x) => x.textContent), sello: document.getElementById('cp-sello').hidden, alt: document.getElementById('cp-alt').hidden, nota: document.getElementById('cp-nota').textContent }));
       ok(/^Venta o gasto n\.º \d+$/.test(v.t) && /^−[\d,]+ sats$/.test(v.sats) && v.dts.join('|') === 'Recibiste|Precio de BTC en la venta|Altitud antes|Altitud después|Ganancia realizada' && v.sello && v.alt && v.nota === '«Gasto»', `18·comprobante: una venta dice lo que salió y su ganancia realizada, sin sello («${v.t}»)`);
       await p.click('#cp-cerrar'); await p.waitForTimeout(200);
-      await p.click('#l-chips button[data-f="traslado"]'); await p.waitForTimeout(400);
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="traslado"]'); await p.waitForTimeout(400);
       await p.locator('#lista .fila[data-tipo="traslado"]').first().click(); await p.waitForTimeout(500);
       const t = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, filas: [...document.querySelectorAll('#cp-datos .cp-fila')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), editar: document.getElementById('cp-editar').textContent }));
       eq([t.t, t.filas, t.editar], ['Traslado', ['Salieron de: el exchange', 'Llegaron a: tu wallet', 'El saldo: no cambia'], 'Anular'], '18·comprobante: un traslado dice de dónde a dónde y ofrece anularlo');
@@ -5969,7 +5972,7 @@ try {
       ok(bonoV === 4321 && bonoC > 100_000, `24c: «bono» tiene compras y la venta (${bonoC} y ${bonoV} sats)`);
       await a.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
       eq(await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('l-res').offsetHeight]), ['', 0], '24c: sin filtros, el renglón de resultados está vacío y no ocupa sitio');
-      await a.p.click('#l-mas summary'); await a.p.selectOption('#l-etq', 'bono'); await a.p.waitForTimeout(300);
+      await abrirFechas(a.p); await a.p.selectOption('#l-etq', 'bono'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), esperaBono, '24c: con la etiqueta «bono», cuántos y su suma, con el neto y cada parte aparte');
       const pegada = await a.p.$$eval('#l-res .nw', (xs) => xs.map((x) => ({ t: x.textContent, r: x.getClientRects().length })));
       ok(pegada.some((x) => x.t === `+${nf(neto)} sats`) && pegada.every((x) => x.r === 1), `24c: «+${nf(neto)} sats» va pegado y no se parte (${JSON.stringify(pegada)})`);
@@ -5977,13 +5980,13 @@ try {
       ok(await a.p.locator('#ver-todas').isVisible(), '24c: hay más de lo que cabe en el primer tramo');
       await a.p.click('#ver-todas'); await a.p.waitForTimeout(300);
       eq(await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('lista').getBoundingClientRect().top + scrollY]), antes, '24c: «Ver más» no cambia la suma (es de todo lo filtrado) ni mueve la lista');
-      await a.p.click('#l-chips button[data-f="compra"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="compra"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `${con('bono', 'compra').length} de ${total} movimientos · ${nf(bonoC)} sats comprados`, '24c: con otro filtro encima, solo lo que se ve (solo compras: «comprados»)');
-      await a.p.click('#l-chips button[data-f="venta"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="venta"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `1 de ${total} movimientos · ${nf(bonoV)} sats vendidos`, '24c: solo la venta: «vendidos»');
-      await a.p.click('#l-chips button[data-f="traslado"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="traslado"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `0 de ${total} movimientos`, '24c: los traslados no llevan etiquetas: nada que sumar');
-      await a.p.click('#l-chips button[data-f="todos"]');
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="todos"]');
       await a.p.selectOption('#l-etq', 'cumpleaños'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `${con('cumpleaños').length} de ${total} movimientos · ${nf(suma(con('cumpleaños', 'compra')))} sats comprados`, '24c: otra etiqueta, otra suma');
       await a.p.selectOption('#l-etq', ''); await a.p.fill('#l-buscar', 'caída'); await a.p.waitForTimeout(300);
@@ -5998,7 +6001,7 @@ try {
       const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, conPushQuieto);
       await cerrar(l.p);
       await l.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await l.p.click('#l-mas summary'); await l.p.selectOption('#l-etq', 'bono'); await l.p.waitForTimeout(300);
+      await abrirFechas(l.p); await l.p.selectOption('#l-etq', 'bono'); await l.p.waitForTimeout(300);
       eq((await l.p.textContent('#l-res')).trim(), esperaBono, '24c: quien solo mira lee la misma suma');
       await l.p.evaluate(() => scrollTo(0, 0));
       await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(250);
@@ -6020,7 +6023,7 @@ try {
       }), { dlg: true, pag: true, fila: true, toque: true }, '24c: a 320 px con letra muy grande, «Estado del sistema» con la revisión no se desborda');
       await ch.p.keyboard.press('Escape'); await ch.p.waitForTimeout(300);
       await ch.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await ch.p.click('#l-mas summary'); await ch.p.selectOption('#l-etq', 'bono'); await ch.p.waitForTimeout(300);
+      await abrirFechas(ch.p); await ch.p.selectOption('#l-etq', 'bono'); await ch.p.waitForTimeout(300);
       eq(await ch.p.evaluate(() => {
         const r = document.getElementById('l-res');
         return { pag: document.documentElement.scrollWidth <= innerWidth, res: r.scrollWidth <= r.clientWidth + 1, pegadas: [...r.querySelectorAll('.nw')].every((x) => x.getClientRects().length === 1), texto: r.textContent.includes(' sats (') };

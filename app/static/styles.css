@@ -1351,14 +1351,37 @@ html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efe
 
 /* ======================================================= Campamento 4 (2/4): la lista */
 /* Buscar, filtrar y ordenar. */
-.l-ctl { display: grid; gap: 8px; margin: 0 0 10px; }
+.l-ctl { display: grid; gap: 8px; margin: 0 0 10px; container-type: inline-size; }
 .l-ctl[hidden] { display: none; }
+/* (Campamento 63) Buscar y filtrar en una fila. En el teléfono, el buscador y «Filtros» (los tipos y «Fechas y orden» se abren con él);
+   donde caben (54rem de lista: el escritorio, y con letra grande no), todo en la misma fila y sin «Filtros». */
+.l-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.l-fila .l-busca { flex: 1 1 9rem; min-width: 0; }
+.l-filtrar { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+:is(.l-filtros, .l-mas) { display: inline-flex; align-items: center; gap: 10px; min-height: var(--toque); cursor: pointer; touch-action: manipulation; font-weight: 650; font-size: 0.9375rem; }
+.l-filtros { flex: none; max-width: 100%; padding: 0 16px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; color: var(--txt); }
+.l-mas { padding: 0 4px; border: 0; background: none; color: var(--naranja-txt); }
+:is(.l-filtros, .l-mas)::after { content: ""; flex: none; width: 7px; height: 7px; margin-top: -4px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+:is(.l-filtros, .l-mas)[aria-expanded="true"]::after { margin-top: 4px; transform: rotate(-135deg); }
+:is(.l-filtros, .l-mas):focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .l-filtros:hover { background: var(--s2); } .l-mas:hover { text-decoration: underline; text-underline-offset: 4px; } }
+@container not (min-width: 54rem) {
+  .l-ctl:not([data-filtros="1"]) :is(.l-filtrar, .l-mas-c) { display: none; }
+}
+@container (min-width: 54rem) {
+  .l-filtros { display: none; }
+  .l-fila { flex-wrap: nowrap; }
+  .l-fila .l-busca { flex: 1 1 12rem; }
+  .l-filtrar { flex: none; flex-wrap: nowrap; gap: 8px; }
+  .l-filtrar .l-chips { flex-wrap: nowrap; }
+  .l-filtrar .l-chips button { padding: 0 12px; }
+  .l-mas-c { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); column-gap: 20px; }
+}
 .l-busca input { width: 100%; min-height: var(--toque); padding: 0 14px; border: 0; border-radius: 14px; background: var(--s2); color: var(--txt); font-size: 1rem; }
 .l-busca input:focus-visible, .l-mas-c :is(input, select):focus-visible, .f-notaed input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
 .l-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .l-chips button { min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 999px; background: none; color: var(--txt2); font-weight: 650; font-size: 0.9375rem; cursor: pointer; touch-action: manipulation; }
 .l-chips button[aria-pressed="true"] { background: var(--txt); border-color: var(--txt); color: var(--fondo); }
-.l-mas summary { display: flex; align-items: center; min-height: var(--toque); color: var(--naranja-txt); font-weight: 650; font-size: 0.9375rem; cursor: pointer; }
 .l-mas-c { display: grid; gap: 8px; padding-bottom: 4px; }
 .l-mas-c label { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--txt2); font-size: 0.875rem; }
 .l-mas-c :is(input, select) { min-height: var(--toque); padding: 0 12px; border: 0; border-radius: 12px; background: var(--s2); color: var(--txt); font-size: 1rem; max-width: 65%; }
