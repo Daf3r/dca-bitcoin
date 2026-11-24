@@ -101,7 +101,7 @@ const correr = (n) => new Promise((ok) => {
 const t0 = Date.now();
 const juntas = pedidas.filter((n) => !T[n].sola).sort((a, b) => T[b].dura - T[a].dura);
 const solas = pedidas.filter((n) => T[n].sola);
-console.log(`${juntas.length} tareas de ${J} en ${J}${solas.length ? `, y después solas: ${solas.join(', ')}` : ''}. Registros en ${REGISTROS}`);
+console.log(`${juntas.length} tareas, ${Math.min(J, juntas.length)} a la vez${solas.length ? `, y después solas: ${solas.join(', ')}` : ''}. Registros en ${REGISTROS}`);
 {
   const cola = [...juntas];
   await Promise.all(Array.from({ length: Math.min(J, cola.length) }, async () => { while (cola.length) await correr(cola.shift()); }));
