@@ -276,8 +276,10 @@ function pintarHojaTraslado() {
     : falla ? (aWallet ? `No tienes tantos sats: tu saldo es ${entero(R.sats)} y ya tienes ${entero(todas)} en tus wallets.` : `No tienes tantos sats en ${nombreW}: tienes ${entero(neto)}.`)
       : id === 0 && !S.wallets.length ? `Quedarán ${entero(enWallet)} sats en tu wallet y ${entero(Math.max(0, R.sats - enWallet))} en el exchange.`
         : `Quedarán ${entero(enTodas)} sats en tus wallets${parte} y ${entero(Math.max(0, R.sats - enTodas))} en el exchange.`;
-  $('guardar').disabled = !d || falla || H.guardando || (nuevaAbierta && sinNombre);
-  $('guardar').textContent = H.guardando ? 'Guardando…' : 'Guardar traslado';
+  // (Campamento 63) Apagado, «Guardar» dice qué falta (y va en contorno, no en naranja); «Guardando…» sigue en naranja.
+  const falta = H.guardando ? '' : !d && nuevaAbierta && sinNombre ? 'Escribe los sats y la wallet' : !d ? 'Escribe los sats para guardar'
+    : nuevaAbierta && sinNombre ? 'Escribe el nombre de la wallet' : falla ? 'Revisa los sats para guardar' : '';
+  pintarGuardar(!d || falla || H.guardando || (nuevaAbierta && sinNombre), falta || (H.guardando ? 'Guardando…' : 'Guardar traslado'), falta);
 }
 function pintarHoja() {
   const d = datosHoja();
@@ -344,8 +346,17 @@ function pintarHoja() {
   if (nueva && !precioFuera) linea('hc-precio', `${d.origen === 'precio' ? 'Precio que escribiste' : d.exacto ? 'Precio que pagaste' : 'Precio de ahora'}: ${precioTxt}.`);
   $('hc-lineas').replaceChildren(...lineas);
   $('h-cambia').hidden = !nueva;
-  $('guardar').disabled = !d || d.sinPrecio || d.precioMal || sinSaldo || H.guardando;
-  $('guardar').textContent = H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar';
+  const falta = H.guardando ? '' : !d ? 'Escribe los sats para guardar' : d.precioMal ? 'Revisa el precio para guardar'
+    : d.sinPrecio ? 'Escribe los dólares o el precio' : sinSaldo ? 'Revisa los sats para guardar' : '';
+  pintarGuardar(!d || d.sinPrecio || d.precioMal || sinSaldo || H.guardando,
+    falta || (H.guardando ? 'Guardando…' : confirmando() ? 'Sí, guardar así' : H.editando ? 'Guardar cambios' : venta ? 'Guardar venta' : 'Guardar'), falta);
+}
+/** «Guardar»: encendido, el naranja de la acción; apagado porque falta algo, un contorno que dice qué (`data-falta`). */
+function pintarGuardar(apagado, texto, falta) {
+  const g = $('guardar');
+  g.disabled = apagado;
+  g.textContent = texto;
+  g.dataset.falta = falta ? '1' : '';
 }
 // «Qué cambia con esta compra»: se abre con un toque y el dispositivo recuerda cómo lo dejaste; si nunca lo tocaste, va cerrado en el
 // teléfono (lo que importa es el renglón de arriba y que «Guardar» quede a la vista) y abierto donde sobra sitio.
