@@ -2924,7 +2924,7 @@ try {
       ok(pos.mad, 'madrugada: a las 23:00 el velo está puesto');
       for (let i = 0; i < 3; i++) { await c3.p.mouse.click(pos.x, pos.y); await c3.p.waitForTimeout(100); }
       ok(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda')), 'luna-moneda: tres toques seguidos la convierten en moneda');
-      await c3.p.waitForTimeout(2000);
+      await c3.p.waitForTimeout(3000); // (39b) la moneda gira en 2.6 s
       ok(!(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda'))), 'luna-moneda: vuelve a ser luna');
       // Modo madrugada (20): se apaga desde «Tu cuenta» y de día no existe.
       await c3.p.click('#cuenta-btn'); await c3.p.waitForTimeout(300);
