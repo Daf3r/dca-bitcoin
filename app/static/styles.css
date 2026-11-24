@@ -1354,7 +1354,8 @@ html.tema-fundido:not([data-efectos="ninguno"]), html.tema-fundido:not([data-efe
 .l-ctl { display: grid; gap: 8px; margin: 0 0 10px; container-type: inline-size; }
 .l-ctl[hidden] { display: none; }
 /* (Campamento 63) Buscar y filtrar en una fila. En el teléfono, el buscador y «Filtros» (los tipos y «Fechas y orden» se abren con él);
-   donde caben (54rem de lista: el escritorio, y con letra grande no), todo en la misma fila y sin «Filtros». */
+   donde caben (54rem de lista: la pestaña «Movimientos» en escritorio; no la columna estrecha de «todo junto»), todo en la misma fila y
+   sin «Filtros». */
 .l-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .l-fila .l-busca { flex: 1 1 9rem; min-width: 0; }
 .l-filtrar { flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
