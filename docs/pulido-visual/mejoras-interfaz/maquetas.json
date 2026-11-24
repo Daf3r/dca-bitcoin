@@ -1,0 +1,399 @@
+{
+ "306": {
+  "fondo": [
+   112,
+   72,
+   41
+  ],
+  "texto": [
+   26,
+   22,
+   27
+  ],
+  "contraste": 2.26
+ },
+ "308": {
+  "fila": 896,
+  "hueco": null
+ },
+ "301-390": {
+  "antes": [
+   1611,
+   812
+  ],
+  "despues": [
+   1210,
+   812
+  ]
+ },
+ "301-1440": {
+  "antes": [
+   1659,
+   868
+  ],
+  "despues": [
+   918,
+   868
+  ]
+ },
+ "302-390": {
+  "dosRenglonesAntes": 3,
+  "despues": [
+   "Nombre de la montaña: sin nomb"
+  ]
+ },
+ "302-320": {
+  "dosRenglonesAntes": 11,
+  "despues": [
+   "Nombre de la montaña: sin nomb",
+   "Mi cumpleaños: sin poner",
+   " Avisos en este dispositivo",
+   "Colores de ganancia: neutros",
+   "La tele duerme de noche: sí",
+   "Título de la pestaña: saldo y ",
+   "Tus datos: descargar e importa",
+   "Enlace para tu hoja de cálculo",
+   "Salir en todos los dispositivo"
+  ]
+ },
+ "303-antes": [
+  [
+   "Resumen",
+   53,
+   53,
+   "visible",
+   "clip"
+  ],
+  [
+   "Gráficos",
+   47,
+   47,
+   "visible",
+   "clip"
+  ],
+  [
+   "Historia",
+   44,
+   44,
+   "visible",
+   "clip"
+  ],
+  [
+   "Movimientos",
+   67,
+   74,
+   "visible",
+   "clip"
+  ]
+ ],
+ "303-rejilla": [
+  "grid",
+  "69px 69px 78px 69px 69px",
+  "5px",
+  "2px"
+ ],
+ "303-despues": [
+  [
+   "Resumen",
+   69,
+   53
+  ],
+  [
+   "Gráficos",
+   69,
+   47
+  ],
+  [
+   "Historia",
+   61,
+   44
+  ],
+  [
+   "Movimientos",
+   78,
+   74
+  ]
+ ],
+ "305-390": {
+  "antes": [
+   1274,
+   844
+  ],
+  "palabrasAntes": [
+   "Opcional. Queda como nota de la compra: la ve toda la familia y, dentro de un año, el Diario la recuerda.",
+   "Escribe los dólares o el precio: el otro se calcula. Si no escribes ninguno, se calculan con el precio de ese día.",
+   "Sirve para comprobar la transacción en la cadena. Una compra dentro del exchange o por Lightning no tiene.",
+   "Las extra se muestran aparte: no son tu ritmo habitual ni cubren la compra de la semana.",
+   "Hasta 5, separadas por comas. Sirven para filtrar la lista."
+  ],
+  "despues": [
+   1235,
+   844
+  ],
+  "palabrasDespues": [
+   "≈ $23.28 · quedas en 1,241,769 sats",
+   "La ve la familia; en un año el Diario la recuerda.",
+   "Escribe uno y el otro se calcula. Vacíos: el precio de ese día.",
+   "Para comprobarla en la cadena. Lightning o dentro del exchange: no hay.",
+   "Va aparte: no cuenta para el ritmo ni cubre la semana.",
+   "Hasta 5, con comas. Filtran la lista."
+  ]
+ },
+ "305-1440": {
+  "antes": [
+   1370,
+   900
+  ],
+  "palabrasAntes": [
+   "Quedarías al 97 % del camino a 1.25M sats.Tu costo promedio baja de $82,517 a $82,399 (−0.1%).Precio de ahora: 1 BTC a $77,598.",
+   "Opcional. Queda como nota de la compra: la ve toda la familia y, dentro de un año, el Diario la recuerda.",
+   "Escribe los dólares o el precio: el otro se calcula. Si no escribes ninguno, se calculan con el precio de ese día.",
+   "Sirve para comprobar la transacción en la cadena. Una compra dentro del exchange o por Lightning no tiene.",
+   "Las extra se muestran aparte: no son tu ritmo habitual ni cubren la compra de la semana.",
+   "Hasta 5, separadas por comas. Sirven para filtrar la lista."
+  ],
+  "despues": [
+   1312,
+   900
+  ],
+  "palabrasDespues": [
+   "≈ $23.28 · quedas en 1,241,769 sats",
+   "Quedarías al 97 % del camino a 1.25M sats.Tu costo promedio baja de $82,517 a $82,399 (−0.1%).Precio de ahora: 1 BTC a $77,598.",
+   "La ve la familia; en un año el Diario la recuerda.",
+   "Escribe uno y el otro se calcula. Vacíos: el precio de ese día.",
+   "Para comprobarla en la cadena. Lightning o dentro del exchange: no hay.",
+   "Va aparte: no cuenta para el ritmo ni cubre la semana.",
+   "Hasta 5, con comas. Filtran la lista."
+  ]
+ },
+ "307-390": {
+  "tituloAFilaAntes": 331,
+  "despues": 165
+ },
+ "307-1440": {
+  "tituloAFilaAntes": 276,
+  "despues": 164
+ },
+ "311-390": {
+  "antes": 3388,
+  "despues": 3349
+ },
+ "311-1440": {
+  "antes": 2700,
+  "despues": 2665
+ },
+ "312-390": {
+  "antes": 267,
+  "tarjetas": [
+   [
+    "toca",
+    103
+   ],
+   [
+    "caida",
+    144
+   ],
+   [
+    "tramo",
+    278
+   ],
+   [
+    "diario",
+    326
+   ],
+   [
+    "res-medallas",
+    463
+   ],
+   [
+    "",
+    390
+   ],
+   [
+    "ubicacion",
+    267
+   ],
+   [
+    "capsulas",
+    295
+   ]
+  ],
+  "total": 3388,
+  "despues": 60
+ },
+ "312-1440": {
+  "antes": 244,
+  "tarjetas": [
+   [
+    "toca",
+    80
+   ],
+   [
+    "caida",
+    85
+   ],
+   [
+    "tramo",
+    222
+   ],
+   [
+    "diario",
+    634
+   ],
+   [
+    "res-medallas",
+    485
+   ],
+   [
+    "",
+    485
+   ],
+   [
+    "ubicacion",
+    244
+   ],
+   [
+    "capsulas",
+    238
+   ]
+  ],
+  "total": 2700,
+  "despues": 60
+ },
+ "313-390": {
+  "selectorAGraficoAntes": 277,
+  "despues": 223,
+  "desborde": 0
+ },
+ "313-320": {
+  "selectorAGraficoAntes": 277,
+  "despues": 223,
+  "desborde": 0
+ },
+ "314-oscuro": {
+  "antes": {
+   "campo": "rgb(24, 33, 54)",
+   "panel": "color(srgb 0.0627451 0.0901961 0.164706 / 0.94)",
+   "borde": "0px",
+   "sombra": "none",
+   "campoVsPanel": 1.11
+  },
+  "filo": {
+   "filo": "color(srgb 0.461176 0.501176 0.585098)",
+   "vsS1": 4.48,
+   "vsS2": 4.03
+  }
+ },
+ "314-claro": {
+  "antes": {
+   "campo": "rgb(242, 231, 213)",
+   "panel": "color(srgb 1 0.980392 0.945098 / 0.94)",
+   "borde": "0px",
+   "sombra": "none",
+   "campoVsPanel": 1.18
+  },
+  "filo": {
+   "filo": "color(srgb 0.538824 0.484706 0.427451)",
+   "vsS1": 3.92,
+   "vsS2": 3.33
+  }
+ },
+ "315-390x844": {
+  "entrarFin": 875,
+  "alto": 844,
+  "codigoFin": 933,
+  "desliza": 174,
+  "despues": {
+   "entrarFin": 756,
+   "desliza": 55
+  }
+ },
+ "315-390x664": {
+  "entrarFin": 777,
+  "alto": 664,
+  "codigoFin": 835,
+  "desliza": 256,
+  "despues": {
+   "entrarFin": 684,
+   "desliza": 163
+  }
+ },
+ "315-360x640": {
+  "entrarFin": 764,
+  "alto": 640,
+  "codigoFin": 822,
+  "desliza": 267,
+  "despues": {
+   "entrarFin": 675,
+   "desliza": 178
+  }
+ },
+ "315-320x568": {
+  "entrarFin": 726,
+  "alto": 568,
+  "codigoFin": 784,
+  "desliza": 301,
+  "despues": {
+   "entrarFin": 646,
+   "desliza": 221
+  }
+ },
+ "315-1440x900": {
+  "entrarFin": 596,
+  "alto": 900,
+  "codigoFin": 654,
+  "desliza": 0
+ },
+ "302-1440": {
+  "dosRenglonesAntes": 0,
+  "despues": []
+ },
+ "303-centro": {
+  "anotar": 195,
+  "dock": 195,
+  "huecoIzq": 153,
+  "huecoDer": 235
+ },
+ "314-oscuro-390": {
+  "antes": {
+   "campo": "rgb(24, 33, 54)",
+   "panel": "color(srgb 0.0627451 0.0901961 0.164706 / 0.94)",
+   "borde": "0px",
+   "sombra": "none",
+   "campoVsPanel": 1.11
+  },
+  "filo": {
+   "filo": "color(srgb 0.461176 0.501176 0.585098)",
+   "vsS1": 4.48,
+   "vsS2": 4.03
+  }
+ },
+ "314-claro-390": {
+  "antes": {
+   "campo": "rgb(242, 231, 213)",
+   "panel": "color(srgb 1 0.980392 0.945098 / 0.94)",
+   "borde": "0px",
+   "sombra": "none",
+   "campoVsPanel": 1.18
+  },
+  "filo": {
+   "filo": "color(srgb 0.538824 0.484706 0.427451)",
+   "vsS1": 3.92,
+   "vsS2": 3.33
+  }
+ },
+ "314-oscuro-1440": {
+  "antes": {
+   "campo": "rgb(24, 33, 54)",
+   "panel": "color(srgb 0.0627451 0.0901961 0.164706 / 0.94)",
+   "borde": "0px",
+   "sombra": "none",
+   "campoVsPanel": 1.11
+  },
+  "filo": {
+   "filo": "color(srgb 0.461176 0.501176 0.585098)",
+   "vsS1": 4.48,
+   "vsS2": 4.03
+  }
+ }
+}
