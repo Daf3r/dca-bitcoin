@@ -237,20 +237,43 @@ try {
       await auditar(p, `alto contraste: cuenta ${esquema}`);
       await ctx.close();
     }
+    { // (Campamento 62) «Tu cuenta»: la cabecera pegada, el plegado abierto, una vista de dentro con «‹ Tu cuenta»; en escritorio, las dos
+      // columnas y «Anotar compra» al final de la barra (por pestañas), también al bajar.
+      const { ctx, p } = await nuevo(anio, ADMIN, conPush);
+      await cerrarOferta(p);
+      await p.click('#cuenta-btn'); await p.waitForTimeout(300);
+      await auditar(p, `62 cuenta con el plegado cerrado ${esquema}`);
+      await p.click('#dc-mas > summary'); await p.evaluate(() => { document.getElementById('d-cuenta').scrollTop = 500; }); await p.waitForTimeout(300);
+      await auditar(p, `62 cuenta con el plegado abierto, a media bajada ${esquema}`);
+      await p.click('#dc-sesiones-btn'); await p.waitForTimeout(600);
+      await auditar(p, `62 vista de dentro con «‹ Tu cuenta» ${esquema}`);
+      await ctx.close();
+      const ctx2 = await navegador.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: esquema, bypassCSP: true });
+      const e = await ctx2.newPage();
+      await e.addInitScript((h) => { try { localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }, esquema === 'light' ? 12 : 22);
+      await entrar(e, anio.url, ADMIN);
+      for (let k = 0; k < 3 && await e.locator('dialog[open]').count(); k++) { await e.keyboard.press('Escape'); await e.waitForTimeout(300); }
+      await e.click('#pestanas [data-pestana="movimientos"]'); await e.waitForTimeout(500);
+      await e.evaluate(() => scrollTo(0, document.getElementById('compras').getBoundingClientRect().top + scrollY + 600)); await e.waitForTimeout(400);
+      await auditar(e, `62 escritorio: «Anotar» en la barra, bajando por la lista ${esquema}`);
+      await e.click('#cuenta-btn'); await e.waitForTimeout(400);
+      await auditar(e, `62 escritorio: «Tu cuenta» en dos columnas ${esquema}`);
+      await ctx2.close();
+    }
     { // «Tus datos» (descargas e importar traslados) y la lista con una etiqueta elegida (escenario con etiquetas)
       const { ctx, p } = await nuevo(anio, ADMIN, conPush);
       await cerrarOferta(p);
       await p.click('#cuenta-btn'); await p.waitForTimeout(300);
       await p.click('#dc-datos-btn'); await p.waitForTimeout(700);
       await auditar(p, `tus datos ${esquema}`);
-      await p.click('#dc-datos [data-cuenta="volver"]'); await p.waitForTimeout(400);
+      await p.click('#dc-volver'); await p.waitForTimeout(400);
       await p.evaluate(() => { setTimeout(() => { throw new Error('error de prueba'); }, 10); }); await p.waitForTimeout(900); // para que la vista tenga un error que mostrar
       await p.click('#dc-sistema-btn'); await p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent)); await p.waitForTimeout(500);
       await auditar(p, `estado del sistema ${esquema}`);
-      await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(400);
+      await p.click('#dc-volver'); await p.waitForTimeout(400);
       await p.click('#dc-sesiones-btn'); await p.waitForSelector('#ses-lista .sis-fila'); await p.waitForTimeout(400);
       await auditar(p, `sesiones abiertas ${esquema}`);
-      await p.click('#dc-sesiones [data-cuenta="volver"]'); await p.waitForTimeout(400);
+      await p.click('#dc-volver'); await p.waitForTimeout(400);
       await p.click('#dc-enlaces-btn'); await p.waitForTimeout(500);
       await auditar(p, `enlace para la hoja de cálculo ${esquema}`);
       await p.fill('#en-nombre', 'Mi hoja'); await p.click('#en-crear'); await p.waitForSelector('#en-nuevo:not([hidden])'); await p.waitForTimeout(500);
@@ -679,11 +702,11 @@ try {
         j.resguardo = { revisado: '2026-01-05', dias: 320, cada: 180, al_dia: false, encendido: true, proximo: '2027-05-10', toca: false };
         await route.fulfill({ response: r, json: j });
       });
-      await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(300);
+      await p.click('#dc-volver'); await p.waitForTimeout(300);
       await sistema();
       await auditar(p, `24 revisión del respaldo pasados 180 días ${esquema}`);
       await p.unroute('**/api/sistema');
-      await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(300);
+      await p.click('#dc-volver'); await p.waitForTimeout(300);
       await p.click('#dc-avisos-btn'); await p.waitForTimeout(500);
       await p.click('#av-interruptor'); await p.waitForTimeout(900);
       await p.click('#av-lista input[data-cat="resguardo"]'); await p.waitForTimeout(400);

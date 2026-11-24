@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 62) Los menús; resume también el director del valle (2026-12-j), que sale casi a la vez.
+    id: '2026-12-k',
+    items: [
+      '«Tu cuenta» se cierra desde arriba y es más corta.',
+      'Los ajustes que casi no se tocan van en «Más ajustes de este aparato».',
+      'En la computadora, «Anotar compra» queda junto a las pestañas.',
+      'En la barra de abajo, «Movimientos» ya cabe en su sitio.',
+      'En el pueblo sale humo de una chimenea y el cayuco se mece en el lago.',
+    ],
+  },
+  {
     // (Campamento 51) El director del valle; resume también el tempo (2026-12-i) y la Navidad (2026-12-h), que salen casi a la vez.
     id: '2026-12-j',
     items: [

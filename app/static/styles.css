@@ -1006,11 +1006,58 @@ div.fila:hover { background: none; }
   font: 600 0.8125rem var(--sans); cursor: pointer;
   text-decoration: underline; text-decoration-color: var(--naranja); text-decoration-thickness: 1.5px; text-underline-offset: 4px;
 }
-.d-cuenta { width: min(26rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.d-cuenta { width: min(26rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; padding-top: 0; scroll-padding-top: calc(var(--toque) + 34px); }
+/* (Campamento 62 · 300) La cabecera de «Tu cuenta» queda pegada arriba mientras bajas: el título (o, en las vistas de dentro,
+   «‹ Tu cuenta») y «Cerrar». Fondo opaco, sin desenfoque. `scroll-padding-top` del diálogo: lo que recibe el foco no queda debajo. */
+.dc-cab {
+  position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  margin: 0 -22px 6px; padding: 14px 22px 10px; background: var(--s1); box-shadow: 0 1px 0 var(--s3);
+}
+.dc-cab h2 { flex: 1 1 auto; min-width: 0; margin: 0; }
+.dc-cab .cerrar { flex: none; margin-left: auto; color: var(--txt); }
+.dc-volver { display: inline-flex; align-items: center; min-height: var(--toque); padding: 0 16px 0 12px; border: 0; border-radius: 999px; background: var(--s2); color: var(--txt); font-weight: 600; cursor: pointer; }
+.dc-volver[hidden], .dc-cab h2[hidden] { display: none; }
+.dc-volver > span[aria-hidden] { margin-right: 4px; font-size: 1.25rem; line-height: 1; }
+@media (hover: hover) and (pointer: fine) { .dc-volver:hover { background: var(--s3); } }
+/* Con letra grande en menos de 360 px, el título y «Cerrar» (o «‹ Tu cuenta» y «Cerrar») siguen cabiendo en un renglón. */
+@media (max-width: 359px) {
+  html[data-letra] .dc-cab h2 { font-size: 1.25rem; }
+  html[data-letra] :is(.dc-cab .cerrar, .dc-volver) { padding-inline: 12px; }
+}
+/* Una fila de botones que se queda sin ninguno a la vista (el historial sin «Ver más») no deja su hueco. */
+.d-cuenta .d-bot:not(:has(> :not([hidden]))) { display: none; }
 .dc-quien { margin: 4px 0 14px; }
 .dc-lista { display: grid; gap: 6px; }
 .dc-grupo { margin: 14px 4px 2px; font: 600 0.8125rem var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt3); }
-.dc-lista > .dc-grupo:first-child { margin-top: 2px; }
+.dc-lista > .dc-grupo:first-child, .dc-sec:first-child > .dc-grupo { margin-top: 2px; }
+/* (Campamento 62 · 301) Cada grupo de «Tu cuenta» en su caja (para las dos columnas de escritorio) y, en «Este dispositivo», un plegado:
+   «Más ajustes de este aparato» (siete ajustes que se tocan una vez en la vida). El resumen es un control nativo de 48 px con su estado. */
+.dc-sec { display: grid; gap: 6px; min-width: 0; }
+.dc-mas-lista { display: grid; gap: 6px; margin-top: 6px; }
+.dc-mas > summary {
+  display: flex; align-items: center; gap: 10px; min-height: var(--toque); padding: 10px 16px; border-radius: 16px;
+  box-shadow: inset 0 0 0 1.5px var(--s3); color: var(--txt2); font-weight: 600; list-style: none; cursor: pointer;
+}
+.dc-mas > summary::-webkit-details-marker { display: none; }
+.dc-mas > summary small { color: var(--txt2); font-size: 0.875rem; font-weight: 600; }
+.dc-mas > summary::after { content: ""; flex: none; width: 8px; height: 8px; margin: -4px 4px 0 auto; border: solid var(--txt3); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.dc-mas[open] > summary::after { margin-top: 4px; transform: rotate(-135deg); }
+.dc-mas > summary:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .dc-mas > summary:hover { background: var(--s2); color: var(--txt); } }
+@media (forced-colors: active) { .dc-mas > summary { border: 1px solid ButtonText; } }
+/* Escritorio: «Tu cuenta» se ensancha a dos columnas y no se pliega nada (cuenta.js deja el plegado abierto y aquí se esconde su resumen).
+   El documento sigue en su orden (libro, este dispositivo, administrar, salir): solo cambia dónde se pinta cada caja. */
+@media (min-width: 1100px) {
+  .d-cuenta:has(> #dc-menu:not([hidden])) { width: min(54rem, calc(100vw - 32px)); }
+  #dc-menu .dc-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto 1fr; column-gap: 28px; align-items: start; }
+  #dc-sec-libro { grid-column: 1; grid-row: 1; }
+  #dc-sec-admin { grid-column: 1; grid-row: 2; }
+  #dc-sec-salir { grid-column: 1; grid-row: 3; }
+  #dc-sec-disp { grid-column: 2; grid-row: 1 / span 3; }
+  #dc-sec-disp > .dc-grupo { margin-top: 2px; }
+  .dc-mas > summary { display: none; }
+  .dc-mas-lista { margin-top: 0; }
+}
 /* Salir va aparte, al final (campamento 20): sin título (diría «Salir» dos veces), con una raya y aire encima. */
 .dc-lista .dc-salir { margin-top: 18px; position: relative; }
 .dc-lista .dc-salir::before { content: ""; position: absolute; left: 4px; right: 4px; top: -12px; border-top: 1px solid var(--s3); }
@@ -1019,7 +1066,6 @@ div.fila:hover { background: none; }
   text-align: left; font-weight: 600; cursor: pointer;
 }
 .dc-lista button:hover { background: var(--s3); }
-.dc-lista button[data-cuenta="cerrar"] { background: none; color: var(--txt2); }
 .dc-datos p { margin: 6px 0 12px; color: var(--txt2); font-size: 0.9375rem; line-height: 1.4; }
 .dc-datos .dc-nota { margin-top: 12px; font-size: 0.8125rem; color: var(--txt3); }
 .dd-wallets { margin-top: 14px; }
@@ -1272,6 +1318,7 @@ html[data-efectos="todos"] dialog[open]::backdrop, html[data-efectos="esenciales
 /* Transiciones nativas (View Transitions): el gráfico que cambia de vista y el cuerpo de «Tu cuenta» se funden y se acomodan. */
 #mercado, #valor, #costo-prom, #sats-acum { view-transition-name: grafico; }
 .d-cuenta > * { view-transition-name: dc-cuerpo; }
+.d-cuenta > .dc-cab { view-transition-name: none; } /* (62) la cabecera no se funde: es la misma en todas las vistas */
 ::view-transition-group(grafico), ::view-transition-group(dc-cuerpo) { animation-duration: 0.28s; animation-timing-function: cubic-bezier(0.2, 0.9, 0.2, 1); }
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 ::view-transition-group(indice), ::view-transition-old(indice), ::view-transition-new(indice) { animation: none; }
@@ -1424,6 +1471,9 @@ html[data-contraste="alto"][data-tema="claro"] {
   --txt: #000; --txt2: #2b251d; --txt3: #3d352a; --naranja-txt: #7a3500; --sube: #0b4f2a; --baja: #8a1d12; --s3: #8a7656;
 }
 html[data-contraste="alto"] :is(.fila, .lista li + li) { border-color: var(--s3); }
+/* (Campamento 62) Con alto contraste, --s3 es un color de borde: la fila de «Tu cuenta» al pasar el ratón se marca con su filo, no con ese
+   fondo (la tinta suave del valor quedaba a 3.5:1 sobre él). */
+html[data-contraste="alto"] .dc-lista button:hover { background: var(--s2); box-shadow: inset 0 0 0 2px var(--s3); }
 html[data-contraste="alto"] :is(button, summary, a, input, select, [tabindex="0"]):focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
 
 /* Enlace para saltar al contenido: solo se ve al enfocarlo con el teclado. */
@@ -2545,16 +2595,22 @@ html[data-pestanas] .indice { display: none; }
   .historia-pg .dh-objeto figcaption { margin-top: 0; font-size: 0.9375rem; }
 }
 
-/* --- Escritorio: cada pestaña usa las dos columnas de siempre; Movimientos e Historia, una (con «Anotar» al lado en Historia). */
+/* --- Escritorio: cada pestaña usa las dos columnas de siempre; Movimientos e Historia, una.
+   (Campamento 62 · 304) «Anotar compra» ya no va en la columna derecha: va al final de la barra de pestañas (`#barra`, pestanas.js:
+   colocarAnotar), siempre en el mismo sitio y pegado con ella al bajar. Antes cambiaba de sitio según la pestaña (x = 862, 1082 y 272
+   a 1440 px) y, al bajar por la lista, tapaba una fila. La caja es pegajosa (no la barra) y, mientras se ve la mini-cabecera, lleva el
+   color del fondo detrás: lo que pasa por debajo no asoma entre la barra y el botón. Historia ya no necesita su columna para «Anotar». */
+.barra { display: contents; }
 @media (min-width: 1100px) {
-  html[data-pestanas] .anotar { top: calc(var(--pe-top) + var(--pe-alto) + 16px); }
+  html[data-pestanas] .barra { display: flex; align-items: center; gap: 16px; grid-column: 1 / -1; position: sticky; top: var(--pe-top); z-index: 7; border-radius: 22px; }
+  html[data-pestanas] .barra > .pestanas { flex: 1 1 auto; min-width: 0; position: relative; top: auto; }
+  html[data-pestanas] .barra > .anotar { flex: none; position: relative; top: auto; justify-self: auto; }
+  html[data-pestanas][data-minicab] .barra { background-color: var(--fondo); box-shadow: 0 -12px 0 0 var(--fondo), 0 10px 0 0 var(--fondo); }
   .cuerpo[data-pestana="movimientos"] { grid-template-columns: minmax(0, 1fr); }
   .cuerpo[data-pestana="movimientos"] .col-principal { display: none; }
   .cuerpo[data-pestana="movimientos"] .col-lateral { max-width: 56rem; width: 100%; margin-inline: auto; }
-  .cuerpo[data-pestana="historia"] { grid-template-columns: minmax(0, 1fr) max-content; grid-auto-flow: dense; }
-  .cuerpo[data-pestana="historia"] .col-principal { display: none; }
-  .cuerpo[data-pestana="historia"] .historia-pg { grid-column: 1; }
-  .cuerpo[data-pestana="historia"] .col-lateral { grid-column: 2; }
+  .cuerpo[data-pestana="historia"] { grid-template-columns: minmax(0, 1fr); }
+  .cuerpo[data-pestana="historia"] :is(.col-principal, .col-lateral) { display: none; }
 }
 @media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; row-gap: 0; } .cuerpo[data-pestana="resumen"] .caida .enlace { margin-bottom: -8px; } } /* «Ocultar hoy» pegado al texto (su zona de toque de 48 px sigue entera) */
 
@@ -3164,18 +3220,19 @@ html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cie
 
 /* ---------------------------------------------------------------- Rediseño (Fable) · «Tu cuenta»
    Las filas se leen como una lista de ajustes: las que abren otra vista llevan una flechita; las que cambian un valor al tocarlas
-   lo enseñan a la derecha, resaltado (cuenta.js: vestirAjuste). */
+   lo enseñan a la derecha (cuenta.js: vestirAjuste).
+   (Campamento 62 · 302, aprobado por el dueño; deshace el «valor resaltado» de este rediseño) El valor va en tinta suave, sin píldora:
+   el naranja es para la acción y para lo tuyo, y aquí eran doce píldoras de color que no hacían nada. Va siempre en el renglón de su
+   nombre: el nombre se parte si no cabe; el valor ocupa lo que mide (hasta la mitad de la fila; un nombre de montaña largo se parte
+   dentro de esa mitad) y nunca cae solo al renglón de abajo. */
 .d-cuenta .dc-lista button { display: flex; align-items: center; gap: 4px 12px; border-radius: 16px; }
-.d-cuenta .dc-lista button:has(.dc-v) { flex-wrap: wrap; }
 .d-cuenta .dc-lista button .ico { flex: none; }
 .dc-k { flex: 1 1 auto; min-width: 0; }
 .dc-dp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.dc-v { flex: 0 1 auto; margin-left: auto; max-width: 100%; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--naranja) 14%, transparent); color: var(--naranja-txt); font-weight: 650; font-size: 0.875rem; text-align: right; }
-html[data-tema="claro"] .dc-v { color: var(--txt); background: color-mix(in srgb, var(--naranja) 22%, transparent); }
+.dc-v { flex: 0 0 auto; max-width: 50%; margin-left: auto; color: var(--txt2); font-weight: 600; font-size: 0.875rem; text-align: right; overflow-wrap: anywhere; }
 .d-cuenta .dc-lista button:is([data-cuenta="clave"], [data-cuenta="historia"], [data-cuenta="historial"], [data-cuenta="datos"], [data-cuenta="enlaces"], [data-cuenta="sistema"], [data-cuenta="sesiones"], [data-cuenta="avisos"], [data-cuenta="cumple"], [data-cuenta="montana"], [data-cuenta="tv"])::after {
   content: ""; flex: none; width: 8px; height: 8px; margin-left: auto; margin-right: 4px; border: solid var(--txt3); border-width: 2px 2px 0 0; transform: rotate(45deg);
 }
-.d-cuenta .dc-lista button[data-cuenta="cerrar"] { justify-content: center; }
 /* Una fila que abre otra cosa Y enseña un valor (el cumpleaños, el nombre de la montaña): la flechita va fija a la derecha, centrada; si el
    valor no cabe junto al nombre baja a su renglón, pero la flechita nunca se queda sola en uno (campamento 19). */
 .d-cuenta .dc-lista button:is([data-cuenta="cumple"], [data-cuenta="montana"]):has(.dc-v) { position: relative; padding-right: 40px; }
@@ -3536,6 +3593,11 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
   /* La escena termina donde empieza el dock: la montaña y el sendero se ven enteros. */
   html[data-pestanas]:not([data-tv]) .escena { height: calc(100vh - var(--dock-total)); height: calc(100svh - var(--dock-total)); min-height: 440px; --pie: 46; }
   html[data-pestanas]:not([data-tv]) .cuerpo { padding-top: 22px; padding-bottom: calc(var(--dock-total) + 40px); }
+  /* (Campamento 62 · 303) «Movimientos» es la palabra más larga del dock y no cabía en su casilla (74 px de texto en 67 a 390 px; 67 en 60
+     a 360): se salía de su píldora. Con «Anotar», su casilla toma un poco de la de «Historia», su vecina (44 px de texto, le sobra sitio);
+     los dos lados del hueco siguen sumando lo mismo (2fr y 2fr): «Anotar», centrado en la pantalla, queda justo sobre el hueco. Quien solo
+     mira conserva sus cuatro pestañas parejas (campamento 20); a menos de 360 px su letra baja un punto. El modo compacto (letra grande,
+     menos de 360 px) tiene sus propias columnas (`:has`, más abajo). */
   /* La barra: fija abajo, con su margen. Sin la píldora que se desliza (con el hueco del centro las columnas no son iguales): la activa se
      pinta sola, con su fondo tintado, la letra gruesa, el dibujo en naranja y la rayita. */
   html[data-pestanas]:not([data-tv]) .pestanas {
@@ -3546,6 +3608,7 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
     border-radius: 26px; background-color: var(--dock-fondo); border: 1px solid var(--s3);
     box-shadow: inset 0 1px 0 var(--filo), 0 -6px 26px -14px rgb(0 0 0 / 0.55), 0 16px 32px -18px rgb(0 0 0 / 0.8);
   }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas { grid-template-columns: 1fr 1fr var(--dock-hueco) 0.84fr 1.16fr; }
   html[data-pestanas]:not([data-tv]) .pestanas [data-pestana="historia"] { grid-column: 4; }
   html[data-pestanas]:not([data-tv]) .pestanas [data-pestana="movimientos"] { grid-column: 5; }
   html[data-pestanas]:not([data-tv]) .pestanas::before { display: none; }
@@ -3577,10 +3640,12 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
 }
 /* Menos de 390 px: la letra de las pestañas baja un punto para que «Movimientos» quepa junto al hueco. */
 @media (min-width: 360px) and (max-width: 389px) { html[data-pestanas][data-boton]:not([data-tv]) .pestanas button { font-size: 0.6875rem; } }
+@media (max-width: 359px) { html[data-pestanas]:not([data-boton]):not([data-tv]) .pestanas button { padding-inline: 0; font-size: 0.6875rem; } } /* (62) quien solo mira, a 320 */
 /* Compacto: donde las palabras no caben (menos de 360 px con el hueco de «Anotar», o letra grande o muy grande en el teléfono) solo la pestaña activa lleva su nombre
    a la vista y su columna es más ancha (en menos de 360 px, menos: ver abajo); las demás, su dibujo (el nombre sigue ahí para los lectores de pantalla). */
 @media (max-width: 359px) {
-  html[data-pestanas][data-boton]:not([data-tv]) .pestanas button { padding-inline: 2px; font-size: 0.75rem; }
+  /* (62) Con la letra de 360–389 px y sin relleno a los lados, «Movimientos» (la activa) cabe en su casilla de 71 px. */
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas button { padding-inline: 0; font-size: 0.6875rem; }
   html[data-pestanas][data-boton]:not([data-tv]) .pestanas button:not([aria-current="true"]) .pe-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   html[data-pestanas][data-boton]:not([data-tv]) .pestanas button:not([aria-current="true"]) { justify-content: center; }
   html[data-pestanas][data-boton]:not([data-tv]) .pestanas .pe-txt { white-space: nowrap; }

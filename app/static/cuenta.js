@@ -25,7 +25,13 @@ let avisosOfrecidos = false; // la oferta de avisos sale una sola vez por visita
 // ------------------------------------------------------------------ cuenta
 const dfAudit = new Intl.DateTimeFormat('es-SV', { timeZone: 'America/El_Salvador', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 export const dCuenta = $('d-cuenta');
+let filaQueAbrio = null; // (Campamento 62) la fila del menú que abrió una vista: al volver, el foco regresa a ella
 function vistaCuenta(cual) {
+  // (Campamento 62) La cabecera pegada arriba: el título en el menú; en las vistas de dentro, «‹ Tu cuenta». «Cerrar», siempre.
+  // Aquí y no en `irA`: `abrirSistema()` entra directo en una vista. Cada vista empieza desde arriba.
+  $('dc-t').hidden = cual !== 'menu';
+  $('dc-volver').hidden = cual === 'menu';
+  dCuenta.scrollTop = 0;
   $('dc-menu').hidden = cual !== 'menu';
   $('f-clave').hidden = cual !== 'clave';
   $('dc-hist').hidden = cual !== 'historial';
@@ -36,7 +42,13 @@ function vistaCuenta(cual) {
   $('dc-enlaces').hidden = cual !== 'enlaces';
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
-const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
+// (Campamento 62) Al entrar en una vista sin un campo que pida el foco, el foco va a «‹ Tu cuenta» (la fila que se tocó ya no se ve).
+const irA = (cual, despues) => conTransicion(() => {
+  vistaCuenta(cual);
+  despues?.();
+  const f = document.activeElement; // la fila tocada sigue «enfocada» hasta que el navegador note que se escondió
+  if (cual !== 'menu' && (!f || !dCuenta.contains(f) || f.closest('[hidden]'))) $('dc-volver').focus();
+});
 /** (Campamento 24) «Ver en Estado del sistema» tras medir este aparato: «Tu cuenta» abierta directo en esa vista. */
 export function abrirSistema() {
   $('cuenta-btn').click();
@@ -140,11 +152,12 @@ function fundirTema() {
   clearTimeout(fundidoTimer);
   fundidoTimer = setTimeout(() => raiz.classList.remove('tema-fundido'), 450);
 }
-const etiquetaMadrugada = () => { $('dc-madrugada').textContent = `Modo madrugada (22:00 a 5:00): ${window.libroCielo?.madrugadaPref() ? 'automático' : 'apagado'}`; };
+// (Campamento 62) Las horas van en el valor cuando está encendido: la etiqueta corta cabe en su renglón.
+const etiquetaMadrugada = () => { $('dc-madrugada').textContent = `Modo madrugada: ${window.libroCielo?.madrugadaPref() ? 'de 22:00 a 5:00' : 'apagado'}`; };
 const etiquetaSonido = () => { $('dc-sonido').textContent = `Sonido al guardar: ${sonidoActivo() ? 'encendido' : 'apagado'}`; };
 // (Campamento 21B) La tele duerme de 23:00 a 5:00; por dispositivo se puede dejar despierta toda la noche.
 const etiquetaTeleDuerme = () => { $('dc-tv-duerme').textContent = `La tele duerme de noche: ${teleDuermeActiva() ? 'sí' : 'no'}`; };
-const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'con saldo y precio' : 'sin saldo'}`; };
+const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'saldo y precio' : 'sin saldo'}`; };
 // Tamaño de letra (normal → grande → muy grande) y contraste (automático → alto → normal): `accesibilidad.js` los aplica antes de pintar.
 const NOMBRE_LETRA = { '': 'normal', grande: 'grande', 'muy-grande': 'muy grande' };
 const SIGUIENTE_LETRA = { '': 'grande', grande: 'muy-grande', 'muy-grande': '' };
@@ -176,7 +189,22 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaTeleDuerme(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetaMontana(); etiquetasAccesibilidad(); dCuenta.showModal(); });
+// (Campamento 62 · 301) «Más ajustes de este aparato»: plegado en el teléfono y la tablet (recuerda si lo dejaste abierto, por
+// dispositivo); en escritorio, abierto y sin resumen (dos columnas: cabe todo). El estado forzado del escritorio no se recuerda.
+const CLAVE_MAS = 'libro.cuenta.mas';
+const ANCHO_CUENTA = window.matchMedia('(min-width: 1100px)');
+function ajustarMas() {
+  let pref = false;
+  try { pref = localStorage.getItem(CLAVE_MAS) === '1'; } catch { /* sin almacenamiento: plegado */ }
+  $('dc-mas').open = ANCHO_CUENTA.matches || pref;
+}
+$('dc-mas').addEventListener('toggle', () => {
+  if (ANCHO_CUENTA.matches) return;
+  try { if ($('dc-mas').open) localStorage.setItem(CLAVE_MAS, '1'); else localStorage.removeItem(CLAVE_MAS); } catch { /* vale esta visita */ }
+});
+ANCHO_CUENTA.addEventListener('change', ajustarMas);
+ajustarMas();
+$('cuenta-btn').addEventListener('click', () => { ajustarMas(); vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaTeleDuerme(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetaMontana(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -279,6 +307,7 @@ dCuenta.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-cuenta]');
   if (!b) return;
   const accion = b.dataset.cuenta;
+  if (b.closest('#dc-menu')) filaQueAbrio = b;
   if (accion === 'cerrar') dCuenta.close();
   else if (accion === 'letra') { window.libroAcc?.fijarLetra(SIGUIENTE_LETRA[window.libroAcc.letra()]); etiquetasAccesibilidad(); }
   else if (accion === 'contraste') { window.libroAcc?.fijarContraste(SIGUIENTE_CONTRASTE[window.libroAcc.contraste()]); etiquetasAccesibilidad(); }
@@ -291,7 +320,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'titulo') { fijarTituloConSaldo(!tituloConSaldo()); etiquetaTitulo(); }
   else if (accion === 'tema') { fundirTema(); window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
   else if (accion === 'efectos') { window.libroEfectos?.fijar(SIGUIENTE_EFECTOS[window.libroEfectos.preferencia()]); etiquetaEfectos(); }
-  else if (accion === 'volver') irA('menu');
+  else if (accion === 'volver') { const f = filaQueAbrio; filaQueAbrio = null; irA('menu', () => f?.focus()); }
   else if (accion === 'clave') irA('clave', () => { $('fc-error').textContent = ''; $('fc-actual').focus(); });
   else if (accion === 'historial') irA('historial', cargarHistorial);
   else if (accion === 'historia') { dCuenta.close(); setTimeout(verHistoria, 120); } // «Tu historia» ahora es una pestaña de la página

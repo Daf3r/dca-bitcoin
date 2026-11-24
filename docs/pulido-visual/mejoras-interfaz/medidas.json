@@ -1,0 +1,1034 @@
+{
+ "320": {
+  "letras": {
+   "resumen": {
+    "11": 1,
+    "12": 6,
+    "13": 6,
+    "14": 6,
+    "15": 28,
+    "16": 11,
+    "17": 8,
+    "18": 2,
+    "20": 1,
+    "22": 1,
+    "24": 4,
+    "26": 1,
+    "48": 1
+   },
+   "graficos": {
+    "12": 6,
+    "13": 16,
+    "14": 4,
+    "15": 18,
+    "16": 5,
+    "18": 1,
+    "22": 1,
+    "24": 1,
+    "28": 2,
+    "32": 1,
+    "25.6": 2
+   },
+   "historia": {
+    "12": 7,
+    "13": 9,
+    "14": 5,
+    "15": 2,
+    "16": 2,
+    "17": 4,
+    "20": 1,
+    "24": 2
+   },
+   "movimientos": {
+    "11": 1,
+    "12": 14,
+    "13": 20,
+    "15": 15,
+    "16": 11,
+    "17": 8,
+    "18": 2,
+    "24": 1,
+    "13.3": 8
+   }
+  },
+  "huecos": {
+   "resumen": [],
+   "graficos": [],
+   "historia": [
+    "22 (historia→pie)"
+   ],
+   "movimientos": []
+  },
+  "pequenas": {
+   "resumen": [
+    "11.0 #const-de «de 52»"
+   ],
+   "graficos": [],
+   "historia": [],
+   "movimientos": [
+    "11.0 #l-col «desde entonces»"
+   ]
+  },
+  "alto_resumen": 3413,
+  "anotar_resumen": [
+   128,
+   481,
+   64,
+   74
+  ],
+  "alto_graficos": 2108,
+  "anotar_graficos": [
+   128,
+   915,
+   64,
+   74
+  ],
+  "graficos": {
+   "vistas": [
+    20,
+    512,
+    280,
+    56,
+    "16px"
+   ],
+   "titulo": [
+    20,
+    594,
+    259,
+    28,
+    "24px"
+   ],
+   "rangos": [
+    20,
+    630,
+    237,
+    56,
+    "16px"
+   ],
+   "lectura": [
+    20,
+    698,
+    280,
+    45,
+    "15px"
+   ],
+   "ampliar": [
+    228,
+    745,
+    72,
+    48,
+    "13px"
+   ],
+   "lienzo": [
+    0,
+    789,
+    320,
+    250,
+    "16px"
+   ],
+   "log": [
+    0,
+    434,
+    0,
+    0,
+    "13px"
+   ]
+  },
+  "alto_historia": 2018,
+  "anotar_historia": [
+   128,
+   915,
+   64,
+   74
+  ],
+  "alto_movimientos": 1680,
+  "anotar_movimientos": [
+   128,
+   915,
+   64,
+   74
+  ],
+  "lista": {
+   "tituloAFila": 331,
+   "anchoLista": 280,
+   "izq": 20,
+   "chips": [
+    [
+     "Todo",
+     65,
+     48
+    ],
+    [
+     "Compras",
+     95,
+     48
+    ],
+    [
+     "Ventas",
+     80,
+     48
+    ],
+    [
+     "Traslados",
+     100,
+     48
+    ],
+    [
+     "Extra",
+     68,
+     48
+    ],
+    [
+     "Con TXID",
+     95,
+     48
+    ]
+   ]
+  },
+  "dock": [
+   {
+    "n": "Resumen",
+    "w": 51,
+    "h": 54,
+    "txt": 1,
+    "sw": 52,
+    "fs": "12px",
+    "visible": true,
+    "izq": 37,
+    "der": 38
+   },
+   {
+    "n": "Gráficos",
+    "w": 51,
+    "h": 54,
+    "txt": 1,
+    "sw": 47,
+    "fs": "12px",
+    "visible": true,
+    "izq": 90,
+    "der": 91
+   },
+   {
+    "n": "Historia",
+    "w": 51,
+    "h": 54,
+    "txt": 1,
+    "sw": 43,
+    "fs": "12px",
+    "visible": true,
+    "izq": 209,
+    "der": 210
+   },
+   {
+    "n": "Movimientos",
+    "w": 71,
+    "h": 54,
+    "txt": 67,
+    "sw": 73,
+    "fs": "12px",
+    "visible": true,
+    "izq": 239,
+    "der": 306
+   }
+  ],
+  "dockCaja": [
+   6,
+   496,
+   308,
+   66,
+   "fixed"
+  ],
+  "cuenta": {
+   "filas": 24,
+   "altos": [
+    48,
+    73,
+    68,
+    97
+   ],
+   "dosRenglones": [
+    "Nombre de la montaña: sin nombre",
+    "Mi cumpleaños: sin poner",
+    "Avisos en este dispositivo",
+    "Colores de ganancia: neutros",
+    "Modo madrugada (22:00 a 5:00): apagado",
+    "La tele duerme de noche: sí",
+    "Título de la pestaña: con saldo y precio",
+    "Sonido al guardar: apagado",
+    "Tus datos: descargar e importar",
+    "Enlace para tu hoja de cálculo",
+    "Salir en todos los dispositivos"
+   ],
+   "alto": 536,
+   "ancho": 282,
+   "contenido": 1815,
+   "visible": 536,
+   "pildora": {
+    "color": "rgb(255, 178, 96)",
+    "fondo": "color(srgb 1 0.572549 0.156863 / 0.14)",
+    "fs": "14px"
+   },
+   "cerrarTop": [
+    1761
+   ],
+   "vh": 568,
+   "grupos": [
+    [
+     "El libro",
+     3
+    ],
+    [
+     "Este dispositivo",
+     12
+    ],
+    [
+     "Administrar",
+     6
+    ]
+   ]
+  },
+  "cuentaCierraFuera": false,
+  "hoja": {
+   "contenido": 748,
+   "visible": 568,
+   "guardar": {
+    "dis": true,
+    "color": "rgb(42, 20, 5)",
+    "fondo": "rgb(255, 146, 40)",
+    "op": "0.4",
+    "top": 494
+   },
+   "finNota": 534,
+   "finFecha": 451,
+   "finSats": 227,
+   "ayudas": [
+    "Escribe los sats que recibiste; los dólares se cal",
+    "Opcional. Queda como nota de la compra: la ve toda"
+   ],
+   "vh": 568
+  },
+  "hojaAbierta": {
+   "contenido": 1333,
+   "visible": 568,
+   "ayudas": 6,
+   "palabras": 108
+  }
+ },
+ "390": {
+  "letras": {
+   "resumen": {
+    "11": 1,
+    "12": 6,
+    "13": 6,
+    "14": 6,
+    "15": 28,
+    "16": 11,
+    "17": 8,
+    "18": 2,
+    "20": 1,
+    "22": 1,
+    "24": 2,
+    "26": 1,
+    "28.1": 1,
+    "36.1": 1,
+    "54.6": 1
+   },
+   "graficos": {
+    "12": 6,
+    "13": 16,
+    "14": 4,
+    "15": 18,
+    "16": 5,
+    "18": 1,
+    "22": 1,
+    "24": 1,
+    "28": 2,
+    "25.6": 2,
+    "35.1": 1
+   },
+   "historia": {
+    "12": 7,
+    "13": 9,
+    "14": 5,
+    "15": 2,
+    "16": 2,
+    "17": 4,
+    "20": 1,
+    "24": 2
+   },
+   "movimientos": {
+    "11": 1,
+    "12": 14,
+    "13": 20,
+    "15": 15,
+    "16": 11,
+    "17": 8,
+    "18": 2,
+    "24": 1,
+    "13.3": 8
+   }
+  },
+  "huecos": {
+   "resumen": [],
+   "graficos": [],
+   "historia": [
+    "22 (historia→pie)"
+   ],
+   "movimientos": []
+  },
+  "pequenas": {
+   "resumen": [
+    "11.2 .avatar «D»",
+    "11.0 #const-de «de 52»"
+   ],
+   "graficos": [
+    "11.2 .avatar «D»"
+   ],
+   "historia": [
+    "11.2 .avatar «D»"
+   ],
+   "movimientos": [
+    "11.2 .avatar «D»",
+    "11.0 #l-col «desde entonces»"
+   ]
+  },
+  "alto_resumen": 3388,
+  "anotar_resumen": [
+   156,
+   755,
+   78,
+   74
+  ],
+  "alto_graficos": 2315,
+  "anotar_graficos": [
+   156,
+   1463,
+   78,
+   74
+  ],
+  "graficos": {
+   "vistas": [
+    20,
+    786,
+    350,
+    56,
+    "16px"
+   ],
+   "titulo": [
+    20,
+    868,
+    259,
+    28,
+    "24px"
+   ],
+   "rangos": [
+    20,
+    904,
+    237,
+    56,
+    "16px"
+   ],
+   "lectura": [
+    20,
+    972,
+    350,
+    45,
+    "15px"
+   ],
+   "ampliar": [
+    298,
+    1019,
+    72,
+    48,
+    "13px"
+   ],
+   "lienzo": [
+    0,
+    1063,
+    390,
+    250,
+    "16px"
+   ],
+   "log": [
+    0,
+    708,
+    0,
+    0,
+    "13px"
+   ]
+  },
+  "alto_historia": 2206,
+  "anotar_historia": [
+   156,
+   1463,
+   78,
+   74
+  ],
+  "alto_movimientos": 1937,
+  "anotar_movimientos": [
+   156,
+   1463,
+   78,
+   74
+  ],
+  "lista": {
+   "tituloAFila": 331,
+   "anchoLista": 350,
+   "izq": 20,
+   "chips": [
+    [
+     "Todo",
+     65,
+     48
+    ],
+    [
+     "Compras",
+     95,
+     48
+    ],
+    [
+     "Ventas",
+     80,
+     48
+    ],
+    [
+     "Traslados",
+     100,
+     48
+    ],
+    [
+     "Extra",
+     68,
+     48
+    ],
+    [
+     "Con TXID",
+     95,
+     48
+    ]
+   ]
+  },
+  "dock": [
+   {
+    "n": "Resumen",
+    "w": 69,
+    "h": 54,
+    "txt": 53,
+    "sw": 53,
+    "fs": "12px",
+    "visible": true,
+    "izq": 22,
+    "der": 75
+   },
+   {
+    "n": "Gráficos",
+    "w": 69,
+    "h": 54,
+    "txt": 47,
+    "sw": 47,
+    "fs": "12px",
+    "visible": true,
+    "izq": 96,
+    "der": 143
+   },
+   {
+    "n": "Historia",
+    "w": 69,
+    "h": 54,
+    "txt": 44,
+    "sw": 44,
+    "fs": "12px",
+    "visible": true,
+    "izq": 249,
+    "der": 292
+   },
+   {
+    "n": "Movimientos",
+    "w": 69,
+    "h": 54,
+    "txt": 67,
+    "sw": 74,
+    "fs": "12px",
+    "visible": true,
+    "izq": 308,
+    "der": 375
+   }
+  ],
+  "dockCaja": [
+   8,
+   770,
+   374,
+   66,
+   "fixed"
+  ],
+  "cuenta": {
+   "filas": 24,
+   "altos": [
+    48,
+    73
+   ],
+   "dosRenglones": [
+    "Nombre de la montaña: sin nombre",
+    "Modo madrugada (22:00 a 5:00): apagado",
+    "Título de la pestaña: con saldo y precio"
+   ],
+   "alto": 812,
+   "ancho": 352,
+   "contenido": 1611,
+   "visible": 812,
+   "pildora": {
+    "color": "rgb(255, 178, 96)",
+    "fondo": "color(srgb 1 0.572549 0.156863 / 0.14)",
+    "fs": "14px"
+   },
+   "cerrarTop": [
+    1557
+   ],
+   "vh": 844,
+   "grupos": [
+    [
+     "El libro",
+     3
+    ],
+    [
+     "Este dispositivo",
+     12
+    ],
+    [
+     "Administrar",
+     6
+    ]
+   ]
+  },
+  "cuentaCierraFuera": false,
+  "hoja": {
+   "guardar": {
+    "dis": true,
+    "color": "rgb(42, 20, 5)",
+    "fondo": "rgb(255, 146, 40)",
+    "op": "0.4",
+    "top": 770
+   },
+   "finNota": 649,
+   "finFecha": 566,
+   "finSats": 363,
+   "ayudas": [
+    "Escribe los sats que recibiste; los dólares se cal",
+    "Opcional. Queda como nota de la compra: la ve toda"
+   ],
+   "vh": 844
+  },
+  "hojaAbierta": {
+   "contenido": 1243,
+   "visible": 844,
+   "ayudas": 6,
+   "palabras": 108
+  }
+ },
+ "1440": {
+  "letras": {
+   "resumen": {
+    "11": 1,
+    "13": 6,
+    "14": 6,
+    "15": 32,
+    "16": 21,
+    "17": 10,
+    "18": 2,
+    "20": 1,
+    "22": 1,
+    "24": 2,
+    "36": 2,
+    "52.8": 1,
+    "67.2": 1
+   },
+   "graficos": {
+    "13": 23,
+    "14": 4,
+    "15": 22,
+    "16": 5,
+    "17": 2,
+    "18": 1,
+    "22": 1,
+    "28": 2,
+    "25.6": 2,
+    "30.4": 1,
+    "44.8": 1
+   },
+   "historia": {
+    "12": 1,
+    "13": 2,
+    "14": 12,
+    "15": 6,
+    "16": 2,
+    "17": 6,
+    "20": 1,
+    "24": 1,
+    "30.4": 1
+   },
+   "movimientos": {
+    "11": 1,
+    "12": 8,
+    "13": 20,
+    "14": 1,
+    "15": 19,
+    "16": 11,
+    "17": 10,
+    "18": 2,
+    "13.3": 8,
+    "30.4": 1
+   }
+  },
+  "huecos": {
+   "resumen": [],
+   "graficos": [],
+   "historia": [],
+   "movimientos": []
+  },
+  "pequenas": {
+   "resumen": [
+    "11.2 .avatar «D»",
+    "11.0 #const-de «de 52»"
+   ],
+   "graficos": [
+    "11.2 .avatar «D»"
+   ],
+   "historia": [
+    "11.2 .avatar «D»"
+   ],
+   "movimientos": [
+    "11.2 .avatar «D»",
+    "11.0 #l-col «desde entonces»"
+   ]
+  },
+  "alto_resumen": 2700,
+  "anotar_resumen": [
+   862,
+   904,
+   210,
+   56
+  ],
+  "alto_graficos": 2171,
+  "anotar_graficos": [
+   862,
+   904,
+   210,
+   56
+  ],
+  "graficos": {
+   "vistas": [
+    148,
+    904,
+    666,
+    56,
+    "16px"
+   ],
+   "titulo": [
+    148,
+    1001,
+    327,
+    35,
+    "30.4px"
+   ],
+   "rangos": [
+    577,
+    996,
+    237,
+    56,
+    "16px"
+   ],
+   "lectura": [
+    148,
+    1064,
+    666,
+    45,
+    "15px"
+   ],
+   "ampliar": [
+    742,
+    1111,
+    72,
+    48,
+    "13px"
+   ],
+   "lienzo": [
+    148,
+    1155,
+    666,
+    300,
+    "16px"
+   ],
+   "log": [
+    0,
+    415,
+    0,
+    0,
+    "13px"
+   ]
+  },
+  "alto_historia": 1830,
+  "anotar_historia": [
+   1082,
+   904,
+   210,
+   56
+  ],
+  "alto_movimientos": 2071,
+  "anotar_movimientos": [
+   272,
+   904,
+   210,
+   56
+  ],
+  "lista": {
+   "tituloAFila": 276,
+   "anchoLista": 896,
+   "izq": 272,
+   "chips": [
+    [
+     "Todo",
+     65,
+     48
+    ],
+    [
+     "Compras",
+     95,
+     48
+    ],
+    [
+     "Ventas",
+     80,
+     48
+    ],
+    [
+     "Traslados",
+     100,
+     48
+    ],
+    [
+     "Extra",
+     68,
+     48
+    ],
+    [
+     "Con TXID",
+     95,
+     48
+    ]
+   ]
+  },
+  "dock": [
+   {
+    "n": "Resumen",
+    "w": 282,
+    "h": 56,
+    "txt": 66,
+    "sw": 66,
+    "fs": "15px",
+    "visible": true,
+    "izq": 278,
+    "der": 344
+   },
+   {
+    "n": "Gráficos",
+    "w": 282,
+    "h": 56,
+    "txt": 59,
+    "sw": 59,
+    "fs": "15px",
+    "visible": true,
+    "izq": 565,
+    "der": 624
+   },
+   {
+    "n": "Historia",
+    "w": 282,
+    "h": 56,
+    "txt": 55,
+    "sw": 55,
+    "fs": "15px",
+    "visible": true,
+    "izq": 848,
+    "der": 903
+   },
+   {
+    "n": "Movimientos",
+    "w": 282,
+    "h": 56,
+    "txt": 93,
+    "sw": 93,
+    "fs": "15px",
+    "visible": true,
+    "izq": 1115,
+    "der": 1208
+   }
+  ],
+  "dockCaja": [
+   148,
+   399,
+   1144,
+   68,
+   "sticky"
+  ],
+  "cuenta": {
+   "filas": 25,
+   "altos": [
+    48
+   ],
+   "dosRenglones": [],
+   "alto": 868,
+   "ancho": 416,
+   "contenido": 1659,
+   "visible": 868,
+   "pildora": {
+    "color": "rgb(255, 178, 96)",
+    "fondo": "color(srgb 1 0.572549 0.156863 / 0.14)",
+    "fs": "14px"
+   },
+   "cerrarTop": [
+    1536
+   ],
+   "vh": 900,
+   "grupos": [
+    [
+     "El libro",
+     3
+    ],
+    [
+     "Este dispositivo",
+     13
+    ],
+    [
+     "Administrar",
+     6
+    ]
+   ]
+  },
+  "cuentaCierraFuera": false,
+  "hoja": {
+   "guardar": {
+    "dis": true,
+    "color": "rgb(42, 20, 5)",
+    "fondo": "rgb(255, 146, 40)",
+    "op": "0.4",
+    "top": 732
+   },
+   "finNota": 611,
+   "finFecha": 528,
+   "finSats": 325,
+   "ayudas": [
+    "Escribe los sats que recibiste; los dólares se cal",
+    "Opcional. Queda como nota de la compra: la ve toda"
+   ],
+   "vh": 900
+  },
+  "hojaAbierta": {
+   "contenido": 1238,
+   "visible": 900,
+   "ayudas": 6,
+   "palabras": 108
+  }
+ },
+ "botones": [
+  {
+   "k": "rgba(0, 0, 0, 0) | 0px rgb(246, 238, 224) | 0px | rgb(246, 238, 224) | underline | 14px | 600 | 48",
+   "n": 1,
+   "ej": [
+    "#caida-ocultar «Ocultar hoy»"
+   ]
+  },
+  {
+   "k": "color(srgb 0.208322 0.215589 0.252759) | 1px color(srgb 0.964706 0.933333 0.878431 / 0.42) | 12px | rgb(179, 188, 203) | none | 15px | 400 | 67",
+   "n": 1,
+   "ej": [
+    "#dia-abrir «Leer el Diario de hoy »"
+   ]
+  },
+  {
+   "k": "color(srgb 0.175216 0.148078 0.163765) | 2px rgb(255, 146, 40) | 999px | rgb(246, 238, 224) | none | 16px | 700 | 52",
+   "n": 1,
+   "ej": [
+    "#res-historia «Ver todas mis medallas»"
+   ]
+  },
+  {
+   "k": "rgba(0, 0, 0, 0) | 0px rgb(179, 188, 203) | 99px | rgb(179, 188, 203) | none | 13px | 600 | 48",
+   "n": 1,
+   "ej": [
+    "#g-ampliar «Ampliar»"
+   ]
+  },
+  {
+   "k": "rgb(255, 146, 40) | 0px rgb(42, 20, 5) | 999px | rgb(42, 20, 5) | none | 17px | 750 | 56",
+   "n": 1,
+   "ej": [
+    "#anotar «Anotar compra»"
+   ]
+  },
+  {
+   "k": "rgba(0, 0, 0, 0) | 1px rgb(38, 49, 73) | 999px | rgb(246, 238, 224) | none | 16px | 600 | 48",
+   "n": 1,
+   "ej": [
+    "#ver-todas «Ver 25 más · quedan 44»"
+   ]
+  },
+  {
+   "k": "rgba(0, 0, 0, 0) | 1px rgb(255, 146, 40) | 999px | rgb(246, 238, 224) | none | 16px | 650 | 48",
+   "n": 1,
+   "ej": [
+    "#ub-anotar «Anotar un traslado»"
+   ]
+  },
+  {
+   "k": "rgba(0, 0, 0, 0) | 0px rgb(246, 238, 224) | 0px | rgb(246, 238, 224) | underline | 16px | 600 | 48",
+   "n": 1,
+   "ej": [
+    "#cap-nueva «Escribir una carta»"
+   ]
+  },
+  {
+   "k": "color(srgb 0.175216 0.148078 0.163765) | 2px rgb(255, 146, 40) | 999px | rgb(246, 238, 224) | none | 16px | 700 | 48",
+   "n": 1,
+   "ej": [
+    "enlace «Leer la carta»"
+   ]
+  }
+ ],
+ "radios": {
+  "radio 24px · relleno 18px/20px": [
+   "tramo",
+   "ubicacion"
+  ],
+  "radio 8px · relleno 18px/18px": [
+   "diario"
+  ],
+  "radio 24px · relleno 20px/20px": [
+   "res-medallas",
+   "rep",
+   "rep-curiosas",
+   "capsulas"
+  ],
+  "radio 18px · relleno 14px/16px": [
+   "spd"
+  ],
+  "radio 0px · relleno 16px/0px": [
+   "rep",
+   "rep-anios"
+  ]
+ },
+ "titulos": [
+  "H2 26px 700 Fraunces «Un paso más: la montaña su»",
+  "H2 24px 600 Fraunces «Tus medallas»",
+  "H2 24px 600 Fraunces «El precio y tus compras»",
+  "H3 22px 600 Fraunces «Constancia»",
+  "H3 22px 600 Fraunces «Cifras curiosas»",
+  "H3 22px 600 Fraunces «Etapas»",
+  "H3 18px 500 Fraunces «Tu mejor y tu peor precio»",
+  "H2 24px 600 Fraunces «Movimientos»",
+  "H3 18px 600 Fraunces «Noviembre 2026 · 3 compras»",
+  "H3 18px 600 Fraunces «Octubre 2026 · 5 compras»",
+  "H2 20px 600 Fraunces «Dónde están tus sats»",
+  "H2 24px 600 Fraunces «Cartas para el futuro»",
+  "H3 22px 600 Fraunces «Año por año»"
+ ]
+}
