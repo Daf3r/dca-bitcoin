@@ -590,8 +590,14 @@
 </div>
 
 <dialog id="d-cuenta" class="d-cuenta" aria-labelledby="dc-t">
-  <div class="dc-menu" id="dc-menu">
+  <!-- (Campamento 62) La cabecera queda pegada arriba mientras bajas: «Cerrar» siempre a mano (antes estaba al final, dos pantallas
+       más abajo en un teléfono). En las vistas de dentro, «‹ Tu cuenta» ocupa el sitio del título (antes, «Volver» al final). -->
+  <div class="dc-cab" id="dc-cab">
     <h2 id="dc-t">Tu cuenta</h2>
+    <button type="button" class="dc-volver" data-cuenta="volver" id="dc-volver" hidden><span aria-hidden="true">‹ </span><span class="sr">Volver a </span>Tu cuenta</button>
+    <button type="button" class="cerrar" data-cuenta="cerrar" id="dc-cerrar">Cerrar</button>
+  </div>
+  <div class="dc-menu" id="dc-menu">
     <p class="dc-quien" id="dc-quien"></p>
     <!-- «Tu cuenta» por para qué sirve (campamento 20): lo que es del libro (y de la familia), lo que vale solo en este dispositivo y lo
          que se administra (la cuenta de cada quien y, para quien anota, el libro y el servidor). Al final, salir. Los ids no cambian. -->
@@ -623,7 +629,6 @@
       <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
       <button type="button" class="dc-salir" data-cuenta="salir">Salir</button>
       <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
-      <button type="button" data-cuenta="cerrar">Cerrar</button>
     </div>
     <p class="dc-atajos" id="dc-atajos-lista">Atajos con el teclado: <kbd>A</kbd> anotar · <kbd>T</kbd> tema · <kbd>U</kbd> unidad del saldo · <kbd>/</kbd> buscar en la lista.</p>
   </div>
@@ -638,7 +643,7 @@
     <input id="fc-nueva2" type="password" autocomplete="new-password" minlength="12" required>
     <p class="hoja-error" id="fc-error" role="alert"></p>
     <p class="dc-nota">Al cambiarla se cierran tus otras sesiones.</p>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button><button type="submit" class="primario">Guardar</button></div>
+    <div class="d-bot"><button type="submit" class="primario">Guardar</button></div>
   </form>
   <div class="dc-avisos" id="dc-avisos" hidden>
     <h2>Avisos</h2>
@@ -665,7 +670,6 @@
       <p class="dc-nota" id="av-prueba-res" role="status"></p>
     </div>
     <p class="hoja-error" id="av-error" role="alert"></p>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-datos" id="dc-datos" hidden>
     <h2>Tus datos</h2>
@@ -685,7 +689,6 @@
       <p class="dc-nota">Además de «Mi wallet». Una wallet nueva se crea al anotar un traslado. Archivarla la saca de las opciones, pero sus traslados se conservan.</p>
       <ul class="sis-lista" id="dd-wallets-lista"></ul>
     </div>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-enlaces" id="dc-enlaces" hidden>
     <h2>Enlace para tu hoja de cálculo</h2>
@@ -700,7 +703,6 @@
     <div class="en-nuevo" id="en-nuevo" role="status" hidden></div>
     <ul class="sis-lista" id="en-lista"></ul>
     <p class="hoja-error" id="en-error" role="alert"></p>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-sesiones" id="dc-sesiones" hidden>
     <h2>Sesiones abiertas</h2>
@@ -721,7 +723,6 @@
       <p class="dc-nota tc-estado" id="tc-estado" role="status"></p>
       <p class="hoja-error" id="tc-error" role="alert"></p>
     </section>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-sistema" id="dc-sistema" hidden>
     <h2>Estado del sistema</h2>
@@ -762,12 +763,11 @@
       <button type="button" data-previa="epico">1 BTC</button>
       <button type="button" data-previa="constancia">Constancia</button>
     </div>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-historial" id="dc-hist" hidden>
     <h2>Historial</h2>
     <ol class="hist" id="hist-lista"></ol>
-    <div class="d-bot"><button type="button" id="hist-mas" hidden>Ver más</button><button type="button" data-cuenta="volver">Volver</button></div>
+    <div class="d-bot"><button type="button" id="hist-mas" hidden>Ver más</button></div>
   </div>
 </dialog>
 

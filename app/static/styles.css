@@ -1006,7 +1006,26 @@ div.fila:hover { background: none; }
   font: 600 0.8125rem var(--sans); cursor: pointer;
   text-decoration: underline; text-decoration-color: var(--naranja); text-decoration-thickness: 1.5px; text-underline-offset: 4px;
 }
-.d-cuenta { width: min(26rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+.d-cuenta { width: min(26rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; padding-top: 0; scroll-padding-top: calc(var(--toque) + 34px); }
+/* (Campamento 62 · 300) La cabecera de «Tu cuenta» queda pegada arriba mientras bajas: el título (o, en las vistas de dentro,
+   «‹ Tu cuenta») y «Cerrar». Fondo opaco, sin desenfoque. `scroll-padding-top` del diálogo: lo que recibe el foco no queda debajo. */
+.dc-cab {
+  position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  margin: 0 -22px 6px; padding: 14px 22px 10px; background: var(--s1); box-shadow: 0 1px 0 var(--s3);
+}
+.dc-cab h2 { flex: 1 1 auto; min-width: 0; margin: 0; }
+.dc-cab .cerrar { flex: none; margin-left: auto; color: var(--txt); }
+.dc-volver { display: inline-flex; align-items: center; min-height: var(--toque); padding: 0 16px 0 12px; border: 0; border-radius: 999px; background: var(--s2); color: var(--txt); font-weight: 600; cursor: pointer; }
+.dc-volver[hidden], .dc-cab h2[hidden] { display: none; }
+.dc-volver > span[aria-hidden] { margin-right: 4px; font-size: 1.25rem; line-height: 1; }
+@media (hover: hover) and (pointer: fine) { .dc-volver:hover { background: var(--s3); } }
+/* Con letra grande en menos de 360 px, el título y «Cerrar» (o «‹ Tu cuenta» y «Cerrar») siguen cabiendo en un renglón. */
+@media (max-width: 359px) {
+  html[data-letra] .dc-cab h2 { font-size: 1.25rem; }
+  html[data-letra] :is(.dc-cab .cerrar, .dc-volver) { padding-inline: 12px; }
+}
+/* Una fila de botones que se queda sin ninguno a la vista (el historial sin «Ver más») no deja su hueco. */
+.d-cuenta .d-bot:not(:has(> :not([hidden]))) { display: none; }
 .dc-quien { margin: 4px 0 14px; }
 .dc-lista { display: grid; gap: 6px; }
 .dc-grupo { margin: 14px 4px 2px; font: 600 0.8125rem var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt3); }
@@ -1019,7 +1038,6 @@ div.fila:hover { background: none; }
   text-align: left; font-weight: 600; cursor: pointer;
 }
 .dc-lista button:hover { background: var(--s3); }
-.dc-lista button[data-cuenta="cerrar"] { background: none; color: var(--txt2); }
 .dc-datos p { margin: 6px 0 12px; color: var(--txt2); font-size: 0.9375rem; line-height: 1.4; }
 .dc-datos .dc-nota { margin-top: 12px; font-size: 0.8125rem; color: var(--txt3); }
 .dd-wallets { margin-top: 14px; }
@@ -1272,6 +1290,7 @@ html[data-efectos="todos"] dialog[open]::backdrop, html[data-efectos="esenciales
 /* Transiciones nativas (View Transitions): el gráfico que cambia de vista y el cuerpo de «Tu cuenta» se funden y se acomodan. */
 #mercado, #valor, #costo-prom, #sats-acum { view-transition-name: grafico; }
 .d-cuenta > * { view-transition-name: dc-cuerpo; }
+.d-cuenta > .dc-cab { view-transition-name: none; } /* (62) la cabecera no se funde: es la misma en todas las vistas */
 ::view-transition-group(grafico), ::view-transition-group(dc-cuerpo) { animation-duration: 0.28s; animation-timing-function: cubic-bezier(0.2, 0.9, 0.2, 1); }
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 ::view-transition-group(indice), ::view-transition-old(indice), ::view-transition-new(indice) { animation: none; }
@@ -3177,7 +3196,6 @@ html[data-cielo="dia"] .reloj, html[data-cielo="amanecer"] .reloj, html[data-cie
 .d-cuenta .dc-lista button:is([data-cuenta="clave"], [data-cuenta="historia"], [data-cuenta="historial"], [data-cuenta="datos"], [data-cuenta="enlaces"], [data-cuenta="sistema"], [data-cuenta="sesiones"], [data-cuenta="avisos"], [data-cuenta="cumple"], [data-cuenta="montana"], [data-cuenta="tv"])::after {
   content: ""; flex: none; width: 8px; height: 8px; margin-left: auto; margin-right: 4px; border: solid var(--txt3); border-width: 2px 2px 0 0; transform: rotate(45deg);
 }
-.d-cuenta .dc-lista button[data-cuenta="cerrar"] { justify-content: center; }
 /* Una fila que abre otra cosa Y enseña un valor (el cumpleaños, el nombre de la montaña): la flechita va fija a la derecha, centrada; si el
    valor no cabe junto al nombre baja a su renglón, pero la flechita nunca se queda sola en uno (campamento 19). */
 .d-cuenta .dc-lista button:is([data-cuenta="cumple"], [data-cuenta="montana"]):has(.dc-v) { position: relative; padding-right: 40px; }

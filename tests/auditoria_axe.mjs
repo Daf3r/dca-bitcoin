@@ -243,14 +243,14 @@ try {
       await p.click('#cuenta-btn'); await p.waitForTimeout(300);
       await p.click('#dc-datos-btn'); await p.waitForTimeout(700);
       await auditar(p, `tus datos ${esquema}`);
-      await p.click('#dc-datos [data-cuenta="volver"]'); await p.waitForTimeout(400);
+      await p.click('#dc-volver'); await p.waitForTimeout(400);
       await p.evaluate(() => { setTimeout(() => { throw new Error('error de prueba'); }, 10); }); await p.waitForTimeout(900); // para que la vista tenga un error que mostrar
       await p.click('#dc-sistema-btn'); await p.waitForFunction(() => !/Cargando/.test(document.getElementById('sis-res').textContent)); await p.waitForTimeout(500);
       await auditar(p, `estado del sistema ${esquema}`);
-      await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(400);
+      await p.click('#dc-volver'); await p.waitForTimeout(400);
       await p.click('#dc-sesiones-btn'); await p.waitForSelector('#ses-lista .sis-fila'); await p.waitForTimeout(400);
       await auditar(p, `sesiones abiertas ${esquema}`);
-      await p.click('#dc-sesiones [data-cuenta="volver"]'); await p.waitForTimeout(400);
+      await p.click('#dc-volver'); await p.waitForTimeout(400);
       await p.click('#dc-enlaces-btn'); await p.waitForTimeout(500);
       await auditar(p, `enlace para la hoja de cálculo ${esquema}`);
       await p.fill('#en-nombre', 'Mi hoja'); await p.click('#en-crear'); await p.waitForSelector('#en-nuevo:not([hidden])'); await p.waitForTimeout(500);
@@ -679,11 +679,11 @@ try {
         j.resguardo = { revisado: '2026-01-05', dias: 320, cada: 180, al_dia: false, encendido: true, proximo: '2027-05-10', toca: false };
         await route.fulfill({ response: r, json: j });
       });
-      await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(300);
+      await p.click('#dc-volver'); await p.waitForTimeout(300);
       await sistema();
       await auditar(p, `24 revisión del respaldo pasados 180 días ${esquema}`);
       await p.unroute('**/api/sistema');
-      await p.click('#dc-sistema [data-cuenta="volver"]'); await p.waitForTimeout(300);
+      await p.click('#dc-volver'); await p.waitForTimeout(300);
       await p.click('#dc-avisos-btn'); await p.waitForTimeout(500);
       await p.click('#av-interruptor'); await p.waitForTimeout(900);
       await p.click('#av-lista input[data-cat="resguardo"]'); await p.waitForTimeout(400);

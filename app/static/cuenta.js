@@ -25,7 +25,13 @@ let avisosOfrecidos = false; // la oferta de avisos sale una sola vez por visita
 // ------------------------------------------------------------------ cuenta
 const dfAudit = new Intl.DateTimeFormat('es-SV', { timeZone: 'America/El_Salvador', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 export const dCuenta = $('d-cuenta');
+let filaQueAbrio = null; // (Campamento 62) la fila del menú que abrió una vista: al volver, el foco regresa a ella
 function vistaCuenta(cual) {
+  // (Campamento 62) La cabecera pegada arriba: el título en el menú; en las vistas de dentro, «‹ Tu cuenta». «Cerrar», siempre.
+  // Aquí y no en `irA`: `abrirSistema()` entra directo en una vista. Cada vista empieza desde arriba.
+  $('dc-t').hidden = cual !== 'menu';
+  $('dc-volver').hidden = cual === 'menu';
+  dCuenta.scrollTop = 0;
   $('dc-menu').hidden = cual !== 'menu';
   $('f-clave').hidden = cual !== 'clave';
   $('dc-hist').hidden = cual !== 'historial';
@@ -36,7 +42,12 @@ function vistaCuenta(cual) {
   $('dc-enlaces').hidden = cual !== 'enlaces';
 }
 /** Cambia de vista dentro de «Tu cuenta» con la transición nativa; `despues` corre cuando la vista ya está a la vista. */
-const irA = (cual, despues) => conTransicion(() => { vistaCuenta(cual); despues?.(); });
+// (Campamento 62) Al entrar en una vista sin un campo que pida el foco, el foco va a «‹ Tu cuenta» (la fila que se tocó ya no se ve).
+const irA = (cual, despues) => conTransicion(() => {
+  vistaCuenta(cual);
+  despues?.();
+  if (cual !== 'menu' && !dCuenta.querySelector(':focus')) $('dc-volver').focus();
+});
 /** (Campamento 24) «Ver en Estado del sistema» tras medir este aparato: «Tu cuenta» abierta directo en esa vista. */
 export function abrirSistema() {
   $('cuenta-btn').click();
@@ -280,6 +291,7 @@ dCuenta.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-cuenta]');
   if (!b) return;
   const accion = b.dataset.cuenta;
+  if (b.closest('#dc-menu')) filaQueAbrio = b;
   if (accion === 'cerrar') dCuenta.close();
   else if (accion === 'letra') { window.libroAcc?.fijarLetra(SIGUIENTE_LETRA[window.libroAcc.letra()]); etiquetasAccesibilidad(); }
   else if (accion === 'contraste') { window.libroAcc?.fijarContraste(SIGUIENTE_CONTRASTE[window.libroAcc.contraste()]); etiquetasAccesibilidad(); }
@@ -292,7 +304,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'titulo') { fijarTituloConSaldo(!tituloConSaldo()); etiquetaTitulo(); }
   else if (accion === 'tema') { fundirTema(); window.libroTema?.fijar(SIGUIENTE_TEMA[window.libroTema.preferencia()]); etiquetaTema(); }
   else if (accion === 'efectos') { window.libroEfectos?.fijar(SIGUIENTE_EFECTOS[window.libroEfectos.preferencia()]); etiquetaEfectos(); }
-  else if (accion === 'volver') irA('menu');
+  else if (accion === 'volver') { const f = filaQueAbrio; filaQueAbrio = null; irA('menu', () => f?.focus()); }
   else if (accion === 'clave') irA('clave', () => { $('fc-error').textContent = ''; $('fc-actual').focus(); });
   else if (accion === 'historial') irA('historial', cargarHistorial);
   else if (accion === 'historia') { dCuenta.close(); setTimeout(verHistoria, 120); } // «Tu historia» ahora es una pestaña de la página

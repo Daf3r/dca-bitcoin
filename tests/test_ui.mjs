@@ -575,7 +575,7 @@ try {
         const antes = await p.isChecked(`#av-lista input[data-cat="${cat}"]`);
         await p.click(`#av-lista input[data-cat="${cat}"]`);
         await p.waitForTimeout(400);
-        await p.click('#dc-avisos [data-cuenta="volver"]');
+        await p.click('#dc-volver');
         await p.click('#dc-avisos-btn');
         await p.waitForTimeout(500);
         eq(await p.isChecked(`#av-lista input[data-cat="${cat}"]`), !antes, `${quien}: la preferencia se guardó`);
@@ -585,7 +585,7 @@ try {
         eq(await p.locator('#av-rec-l').isVisible(), quien === 'admin', `${quien}: el recordatorio de compra solo lo ve el admin`);
         await p.selectOption('#av-desde', '6');
         await p.waitForTimeout(400);
-        await p.click('#dc-avisos [data-cuenta="volver"]');
+        await p.click('#dc-volver');
         await p.click('#dc-avisos-btn');
         await p.waitForTimeout(500);
         eq(await p.inputValue('#av-desde'), '6', `${quien}: el horario se guardó y se recuerda`);
@@ -621,7 +621,7 @@ try {
           await p.press('#av-w-monto', 'Tab');
           await p.waitForTimeout(300);
           ok((await p.textContent('#av-error')).includes('solo números') && (await p.inputValue('#av-w-monto')) === '1,500,000', 'admin: un monto que no es número se rechaza y vuelve a lo guardado');
-          await p.click('#dc-avisos [data-cuenta="volver"]');
+          await p.click('#dc-volver');
           await p.click('#dc-avisos-btn');
           await p.waitForTimeout(500);
           eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se recuerda');
@@ -727,7 +727,7 @@ try {
           await p.evaluate(async ({ sats, id }) => {
             await fetch('/api/traslados', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), sats, sentido: 'a_exchange', wallet_id: id }) });
           }, { sats: parte, id: ws[0].id });
-          await p.click('#dc-datos [data-cuenta="volver"]');
+          await p.click('#dc-volver');
           await p.click('#dc-datos-btn').catch(() => {});
           await p.reload({ waitUntil: 'networkidle' });
           await p.waitForTimeout(3200);
@@ -4928,7 +4928,7 @@ try {
         eq(m.map((g) => g.grupo), ['El libro', 'Este dispositivo', 'Administrar'], '20·cuenta: tres grupos, en orden');
         eq(m[0].items, ['historia', 'montana', 'cumple'], '20·cuenta: «El libro» (historia y medallas, nombre de la montaña, cumpleaños)');
         ok(m[1].items[0] === 'avisos' && ['tema', 'letra', 'contraste', 'ganancia', 'efectos', 'madrugada', 'pestanas', 'tv', 'titulo', 'sonido'].every((x) => m[1].items.includes(x)), `20·cuenta: «Este dispositivo» (${m[1].items.join(', ')})`);
-        eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas', 'cerrar'], '20·cuenta: «Administrar» y, al final, salir');
+        eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas'], '20·cuenta: «Administrar» y, al final, salir («Cerrar» va arriba desde el campamento 62)');
         ok(await a.p.locator('#dc-menu [data-previa]').count() === 0, '20·cuenta: la vista previa ya no está en el menú');
         await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(600);
         ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 6 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus seis botones (campamento 21: etapa y etapa con sello)');
@@ -4944,7 +4944,7 @@ try {
           const out = []; for (const e of document.querySelector('#d-cuenta .dc-lista').children) { if (e.matches('h3.dc-grupo')) out.push({ g: e.textContent.trim(), i: [] }); else if (!e.hidden) out.at(-1).i.push(e.dataset.cuenta); }
           return out;
         });
-        eq([ml[0].i, ml[2].i], [['historia', 'cumple'], ['clave', 'sesiones', 'salir', 'salir-todas', 'cerrar']], '20·cuenta: una lectora, sin lo de administrar el libro');
+        eq([ml[0].i, ml[2].i], [['historia', 'cumple'], ['clave', 'sesiones', 'salir', 'salir-todas']], '20·cuenta: una lectora, sin lo de administrar el libro');
         eq((await l.p.textContent('#dc-historia-btn')).trim(), 'Historia y medallas del libro', '20·cuenta: a quien solo mira, la historia se le nombra del libro');
         await l.ctx.close();
       }
@@ -5618,12 +5618,12 @@ try {
       ok(await a.p.evaluate(() => document.getElementById('tc-codigo').hidden), '21B·43 el teléfono del dueño dice «Listo» y retira el código');
       // Otro código; al salir de la vista y volver ya no se enseña (se muestra una sola vez)
       await a.p.click('#tc-crear'); await a.p.waitForTimeout(500);
-      await a.p.click('#dc-sesiones [data-cuenta="volver"]'); await a.p.waitForTimeout(1500);
+      await a.p.click('#dc-volver'); await a.p.waitForTimeout(1500);
       await a.p.click('#dc-sesiones-btn'); await a.p.waitForTimeout(900);
       const otra = await a.p.evaluate(() => ({ oculto: document.getElementById('tc-codigo').hidden, est: document.getElementById('tc-estado').textContent }));
       ok(otra.oculto && /^Hay un código vivo para Ana .* no se vuelve a mostrar/.test(otra.est), `21B·43 al volver a la vista el código no se vuelve a enseñar («${otra.est}»)`);
       // El Historial lo cuenta, sin el código
-      await a.p.click('#dc-sesiones [data-cuenta="volver"]'); await a.p.waitForTimeout(400);
+      await a.p.click('#dc-volver'); await a.p.waitForTimeout(400);
       await a.p.click('#dc-historial'); await a.p.waitForTimeout(900);
       const hist = await a.p.textContent('#hist-lista');
       ok(hist.includes('creó un código para conectar una tele con la cuenta de Ana') && hist.includes('entró en una tele con un código') && !hist.includes(cod.g), '21B·43 el Historial lo cuenta, sin el código');
@@ -5775,7 +5775,7 @@ try {
       const sembrar = (cambios) => a.p.evaluate((c) => fetch('/api/medidas', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' },
         body: JSON.stringify({ saldo_ms: 900, red_ms: 80, fps: 59, fps_escena: 58, fps_peor: 50, fps_p5: 55, tirones: 1, hz: 60, duracion_ms: 7000, recorrido: 2400, efectos: 'todos', ligero: false, tema: 'oscuro', ancho: 390, alto: 844, dpr: 3, memoria: null, nucleos: 6, instalada: true, carga: 'navegar', ...c }) }).then((r) => r.status), cambios);
       for (const c of [{ fps: 56, fps_escena: 47.4 }, { fps: 30, fps_escena: 30, hz: 30 }, { fps: 53, fps_escena: 54 }, { fps: 59.6 }, { fps: 58 }, { fps: 57 }]) eq(await sembrar(c), 201, '24: se guarda una medida sembrada');
-      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-sistema-btn');
+      await a.p.click('#dc-volver'); await a.p.click('#dc-sistema-btn');
       await a.p.waitForFunction(() => document.querySelectorAll('#sis-med .sis-fila, #sis-med-resto .sis-fila').length === 7, null, { timeout: 5000 });
       const filas = await a.p.$$eval('#sis-med .sis-fila', (fs) => fs.map((f) => ({ e: f.dataset.estado, v: f.dataset.veredicto, p: f.querySelector('.sis-palabra').textContent.trim(), i: f.querySelector('.sis-ico').textContent, d: f.querySelector('small').textContent })));
       eq(filas.length, 5, '24: se ven las cinco más recientes');
@@ -5918,10 +5918,10 @@ try {
       await a.p.click('#sis-revisado');
       await a.p.waitForFunction(() => /^Ya estaba anotado/.test(document.getElementById('sis-rg-res').textContent), null, { timeout: 5000 });
       eq((await datos(a.p, '/api/auditoria')).filter((x) => x.accion === 'resguardo_revisado').length, 1, '24c: tocarlo dos veces el mismo día deja una sola fila en la auditoría');
-      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-historial');
+      await a.p.click('#dc-volver'); await a.p.click('#dc-historial');
       await a.p.waitForSelector('#hist-lista li', { timeout: 5000 });
       ok((await a.p.textContent('#hist-lista')).includes('Daf3r anotó que revisó el respaldo de su wallet y la nota para su familia'), '24c: el Historial lo cuenta en español');
-      await a.p.click('#dc-hist [data-cuenta="volver"]');
+      await a.p.click('#dc-volver');
       // Pasados 180 días (la API no puede volver atrás en el tiempo: se simula su respuesta) sigue siendo tranquila
       await a.p.route('**/api/sistema', async (route) => {
         const r = await route.fetch(); const j = await r.json();
@@ -5936,7 +5936,7 @@ try {
       eq(s7[0], s7[1], '24c: tampoco cuenta como «cosa por revisar» cuando toca');
       await a.p.unroute('**/api/sistema');
       // La vista de avisos: la categoría sale al admin, apagada, junto a «Fallo del respaldo»; al encenderla, el estado dice cuándo llega
-      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-avisos-btn'); await a.p.waitForTimeout(500);
+      await a.p.click('#dc-volver'); await a.p.click('#dc-avisos-btn'); await a.p.waitForTimeout(500);
       await a.p.click('#av-interruptor'); await a.p.waitForTimeout(900);
       const cats = await a.p.$$eval('#av-lista input', (xs) => xs.map((x) => x.dataset.cat));
       eq(cats.indexOf('resguardo'), cats.indexOf('respaldo') + 1, '24c: «Revisión tranquila del respaldo» va junto a «Fallo del respaldo»');
@@ -5944,7 +5944,7 @@ try {
       ok(!cat.on && /Revisión tranquila del respaldo/.test(cat.t) && /180 días/.test(cat.t) && /no guarda nada/.test(cat.t), `24c: apagada por defecto y explica qué hace («${cat.t.replace(/\s+/g, ' ')}»)`);
       ok(cat.alto >= 47.5, `24c: su fila se toca bien (${cat.alto} px)`);
       await a.p.click('#av-lista input[data-cat="resguardo"]'); await a.p.waitForTimeout(500);
-      await a.p.click('#dc-avisos [data-cuenta="volver"]');
+      await a.p.click('#dc-volver');
       await abrirSistema(a.p);
       f = await filaRg(a.p);
       const r2 = (await datos(a.p, '/api/sistema')).resguardo;
