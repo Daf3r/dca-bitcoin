@@ -40,6 +40,9 @@
   /* Hora dorada (pulido visual): neutros con un tinte azul tinta, texto crema y un ámbar algo más cálido. */
   --fondo: #070b15; --s1: #10172a; --s2: #182136; --s3: #263149;
   --txt: #f6eee0; --txt2: #b3bccb; --txt3: #8f9ab0;
+  /* (Campamento 63) El filo de los campos donde se escribe: el relleno solo queda a 1.1:1 del panel; el filo, a 3:1 o más de los dos
+     (4.48:1 del panel en oscuro, 3.92:1 en claro). Se calcula aquí, en la raíz, con la tinta y el panel de cada tema. */
+  --campo-filo: color-mix(in srgb, var(--txt3) 80%, var(--s1));
   --naranja: #ff9228; --naranja-txt: #ffb260; --naranja-osc: #2a1405;
   --linea: #ecdcc0;
   --compra-borde: #070b15;
@@ -1128,7 +1131,7 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .dc-clave { display: grid; gap: 6px; }
 .dc-clave label, .login-caja .campo-l { margin-top: 6px; font-size: 0.875rem; color: var(--txt2); font-weight: 600; }
 .dc-clave input, .login-caja input:not([type="checkbox"]) {
-  min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--s3); border-radius: 12px;
+  min-height: var(--toque); padding: 0 14px; border: 1.5px solid var(--campo-filo); border-radius: 12px;
   background: var(--s2); color: var(--txt); font: 400 1rem var(--sans);
 }
 .dc-clave input:focus-visible, .login-caja input:not([type="checkbox"]):focus-visible { outline: 2px solid var(--naranja); outline-offset: 1px; border-color: transparent; }
@@ -1146,9 +1149,9 @@ body[data-mant="1"] .anotar, body[data-mant="1"] #com-anotar, body[data-mant="1"
 .av-horario h3 { margin: 0; font: 650 1rem var(--sans); }
 .av-horario label { display: grid; grid-template-columns: 1fr 9.5rem; align-items: center; gap: 12px; color: var(--txt2); font-size: 0.9375rem; font-weight: 600; }
 .av-horario label[hidden] { display: none; }
-.av-horario select { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
+.av-horario select { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--campo-filo); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
 .av-horario select:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
-.av-horario input { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
+.av-horario input { width: 100%; min-height: var(--toque); padding: 0 12px; border: 1.5px solid var(--campo-filo); border-radius: 12px; background: var(--fondo); color: var(--txt); font: inherit; }
 .av-horario input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 2px; }
 .av-horario > label[for] { display: block; }
 .av-prueba { display: grid; gap: 6px; margin: 10px 0 0; }
@@ -1466,11 +1469,19 @@ html[data-letra] .l-mas-c :is(input, select) { max-width: 100%; flex: 1 1 8rem; 
 /* Alto contraste: texto de 7:1 o más, bordes de 3:1 o más. Lo pide la persona en «Tu cuenta» o el sistema (`prefers-contrast: more`). */
 html[data-contraste="alto"] {
   --txt: #fff8ea; --txt2: #e3e8f1; --txt3: #ccd4e2; --naranja-txt: #ffb877; --sube: #8ef0b8; --baja: #ffb3a8; --s3: #5f739b;
+  --campo-filo: var(--txt2);
 }
 html[data-contraste="alto"][data-tema="claro"] {
   --txt: #000; --txt2: #2b251d; --txt3: #3d352a; --naranja-txt: #7a3500; --sube: #0b4f2a; --baja: #8a1d12; --s3: #8a7656;
+  --campo-filo: var(--txt2);
 }
 html[data-contraste="alto"] :is(.fila, .lista li + li) { border-color: var(--s3); }
+/* (Campamento 63) Los campos rellenos y sin borde (la hoja, el buscador y las fechas de la lista, la nota en la lista, el enlace de la hoja
+   de cálculo) llevan su filo por dentro: una sombra, que no cambia medidas. `:where` lo deja sin peso, para que el foco o un aviso que pongan
+   su propia sombra ganen siempre. Los campos con borde (diálogos, entrada) usan el mismo tono en el borde. «Sats», que es una raya, no. */
+:where(.h-fecha input, .h-usd input, .h-wallet :is(input, select), .h-nota-campo input, .l-busca input, .l-mas-c :is(input, select), .f-notaed input, .en-form input, .en-url) {
+  box-shadow: inset 0 0 0 1.5px var(--campo-filo);
+}
 /* (Campamento 62) Con alto contraste, --s3 es un color de borde: la fila de «Tu cuenta» al pasar el ratón se marca con su filo, no con ese
    fondo (la tinta suave del valor quedaba a 3.5:1 sobre él). */
 html[data-contraste="alto"] .dc-lista button:hover { background: var(--s2); box-shadow: inset 0 0 0 2px var(--s3); }
@@ -1783,7 +1794,7 @@ html[data-tv]:not([data-tv-activo]) { cursor: none; }
 .guia-muestra { flex: none; width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--s3); }
 .guia-col b { display: block; font-size: 0.875rem; }
 .guia-col small { display: block; font-size: 0.75rem; color: var(--txt2); }
-.guia-ok { color: var(--sube); }
+.guia-ok, .guia-ok-filo { color: var(--sube); }
 .guia-mal { color: var(--baja); font-weight: 700; }
 .guia-fr { margin: 0; font: 400 2rem var(--serif); }
 .guia-cifra { margin: 0; font: 600 2rem var(--sans); font-variant-numeric: tabular-nums; }
@@ -1794,6 +1805,7 @@ html[data-tv]:not([data-tv-activo]) { cursor: none; }
 .guia-iconos small { font-size: 0.75rem; color: var(--txt2); }
 .anotar-ej { min-height: 52px; padding: 0 26px; border: 0; border-radius: 999px; background: var(--naranja); color: var(--naranja-osc); font: 700 1.0625rem var(--sans); cursor: pointer; }
 .pag-guia .guia-ctl, .pag-guia .l-chips { margin: 0; }
+.pag-guia .guia-campo { flex: 1 1 16rem; max-width: 24rem; }
 
 /* Pantallas muy anchas (idea 88): a 2400 px o más la página tenía mucho espacio vacío y letra pequeña. Se agranda la raíz (1.25 desde 2400,
    1.5 desde 3200; se compone con «Tamaño de letra») y el marco de contenido y de la montaña crece con ella (`--medio-ancho` es la mitad del
@@ -2826,7 +2838,7 @@ html:not([data-efectos="ninguno"]) .d-carta.abriendo .carta-papel { transform-or
 .d-mensaje .msg-ayuda { margin: 0 0 6px; font-size: 1rem; line-height: 1.5; }
 .d-mensaje .msg-ayuda:empty { display: none; }
 #cap-texto, #msg-texto {
-  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--campo-filo); border-radius: 14px;
   background: var(--s2); color: var(--txt); font: 400 1.0625rem/1.55 var(--serif);
 }
 #cap-texto { min-height: 9.5em; resize: vertical; }
@@ -2844,7 +2856,7 @@ html:not([data-efectos="ninguno"]) .d-carta.abriendo .carta-papel { transform-or
 .cap-op input:focus-visible { outline: 2px solid var(--naranja); outline-offset: 3px; }
 @media (forced-colors: active) { .cap-op input { appearance: auto; } }
 #cap-fecha, #cap-etapa {
-  width: calc(100% - 36px); min-height: var(--toque); margin: 0 0 6px 36px; padding: 0 12px; border: 1.5px solid var(--s3); border-radius: 12px;
+  width: calc(100% - 36px); min-height: var(--toque); margin: 0 0 6px 36px; padding: 0 12px; border: 1.5px solid var(--campo-filo); border-radius: 12px;
   background: var(--s1); color: var(--txt); font: 400 1rem var(--sans); min-width: 0;
 }
 :is(#cap-fecha, #cap-etapa):disabled { opacity: 0.45; }
@@ -3011,7 +3023,7 @@ html[data-efectos="todos"] .fc-fiesta { animation: fc-flota 4.6s ease-in-out inf
 .cu-campos { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-rows: auto auto; grid-auto-flow: column; gap: 6px 12px; margin: 4px 0 6px; }
 .cu-campos label { font: 650 1rem var(--sans); color: var(--txt); }
 .cu-campos select {
-  appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; min-height: 56px; padding: 0 40px 0 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  appearance: none; -webkit-appearance: none; width: 100%; min-width: 0; min-height: 56px; padding: 0 40px 0 14px; border: 1.5px solid var(--campo-filo); border-radius: 14px;
   background: var(--s2) linear-gradient(45deg, transparent 50%, var(--txt2) 50%) calc(100% - 22px) 50% / 7px 7px no-repeat;
   background-image: linear-gradient(45deg, transparent 50%, var(--txt2) 50%), linear-gradient(-45deg, transparent 50%, var(--txt2) 50%);
   background-position: calc(100% - 25px) 50%, calc(100% - 18px) 50%; background-size: 7px 7px, 7px 7px; background-repeat: no-repeat;
@@ -3482,7 +3494,7 @@ html[data-contraste="alto"] .fi-papel { --fi-tinta: #17100a; --fi-tinta2: #3d322
 .fi-campos[hidden], .fi-cerrado[hidden] { display: none; }
 .fi-campos label { font: 650 1rem var(--sans); color: var(--txt); }
 #fi-texto {
-  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--campo-filo); border-radius: 14px;
   background: var(--s1); color: var(--txt); font: italic 400 1.0625rem/1.55 var(--serif);
 }
 #fi-texto::placeholder { color: var(--txt3); opacity: 1; }
@@ -3511,7 +3523,7 @@ html[data-tv] .tv-nombre:not([hidden]) { display: block; flex-basis: 100%; margi
 #f-montana h2 { margin-bottom: 6px; }
 #f-montana > label { margin-top: 4px; font: 650 1rem var(--sans); color: var(--txt); }
 #mo-nombre {
-  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--s3); border-radius: 14px;
+  width: 100%; min-height: var(--toque); padding: 12px 14px; border: 1.5px solid var(--campo-filo); border-radius: 14px;
   background: var(--s2); color: var(--txt); font: italic 400 1.0625rem/1.55 var(--serif);
 }
 #mo-nombre::placeholder { color: var(--txt3); opacity: 1; }
