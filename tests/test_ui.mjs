@@ -7592,7 +7592,7 @@ try {
       const t = await entrar(navegador, mil, ADMIN, { hora: 21, viewport: { width: 390, height: 664 } }, conLs('2026-12-24', 'esenciales'));
       await cerrar(t.p);
       const r = await pieza(t.p);
-      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 905, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
+      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 908, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030; desde el 51, +3 de las capas ambientales), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
       // A las 23:45 (cielo.js avisa con «libro:cohetes») se ponen; pasada la medianoche, el día cambia y se redibuja con ellos; a las 0:45, fuera.
       const paso = (d, h) => t.p.evaluate(async ([dd, hh]) => { localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400)); }, [d, h]);
       await paso('2026-12-24', 23.75);
