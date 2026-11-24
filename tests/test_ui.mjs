@@ -62,7 +62,7 @@ async function entrar(...a) {
   try { return await entrarYa(...a); } finally { gasto.entrar += Date.now() - t0; gasto.entradas++; }
 }
 async function entrarYa(browser, srv, [usuario, clave], opts = {}, init = null) {
-  const { hora = 22, pestanas = false, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
+  const { hora = 22, pestanas = false, espera = true, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
   const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opcionesContexto });
   const p = await ctx.newPage();
   await p.addInitScript(([h, pes]) => { try { localStorage.setItem('libro.hora', String(h)); if (!pes) localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, [hora, pestanas]);
@@ -70,11 +70,18 @@ async function entrarYa(browser, srv, [usuario, clave], opts = {}, init = null) 
   const consola = [];
   p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
   p.on('pageerror', (e) => consola.push(`pageerror ${e.message}`));
-  await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+  // (Campamento 61) La entrada está lista cuando cargó y respondió su única llamada (/api/estado): lo mismo que «networkidle», sin
+  // sus 500 ms de silencio de propina en cada una de las ~400 entradas de una corrida.
+  await Promise.all([p.waitForResponse((r) => new URL(r.url()).pathname === '/api/estado'), p.goto(`${srv.url}/login`, { waitUntil: 'load' })]);
   await p.fill('input[autocomplete="username"]', usuario);
   await p.fill('input[autocomplete="current-password"]', clave);
   await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+  // (Campamento 61) `espera: false`: quien va a recargar la página enseguida (la tele, con #tv) no espera a la subida de esta primera
+  // carga, que nadie mira: basta con que acaben sus llamadas. Lo que se comprueba se mide después de la recarga, con su propia espera.
+  if (!espera) { await p.waitForLoadState('networkidle'); return { ctx, p, consola }; }
   await p.waitForTimeout(2800);
+  // (Campamento 61) …y, si con la máquina cargada la subida de «Tú» (2.4 s) o el odómetro del saldo aún no acabaron, se espera a que acaben.
+  await p.waitForFunction(() => !document.querySelector('#m-yo.anda') && !document.getAnimations().some((a) => a.playState === 'running' && a.effect?.target?.classList?.contains('od-col')), null, { timeout: 10_000 });
   return { ctx, p, consola };
 }
 /** Tocar una fila abre su comprobante (campamento 18); «Editar» (o «Anular», en un traslado) queda dentro, para quien anota. */
@@ -5389,7 +5396,7 @@ try {
     const fijo = { isMobile: false, hasTouch: false, deviceScaleFactor: 1 };
     /** Entra y abre la tele (la dirección con #tv), sin diálogos. */
     const tele = async (srv, cuenta, { w = 1920, h = 1080, hora = 22, pares = [], marco = false, pestanas = false } = {}) => {
-      const r = await entrar(navegador, srv, cuenta, { hora, pestanas, viewport: { width: w, height: h }, ...fijo }, conLocal(pares, marco));
+      const r = await entrar(navegador, srv, cuenta, { hora, pestanas, espera: false, viewport: { width: w, height: h }, ...fijo }, conLocal(pares, marco));
       await r.p.evaluate(() => { location.hash = '#tv'; });
       await r.p.reload({ waitUntil: 'networkidle' });
       await r.p.waitForTimeout(2500);
@@ -6873,7 +6880,7 @@ try {
 
       // ---- La tele: las tarjetas (último movimiento, reloj, sismógrafo) nunca tapan a los osos.
       for (const [w, h] of [[1920, 1080], [1366, 768], [1080, 1920], [3840, 2160]]) {
-        const tv = await entrar(navegador, srv, LECTOR, { hora: 12, viewport: { width: w, height: h }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, conLs({ 'libro.efectos': 'esenciales' }));
+        const tv = await entrar(navegador, srv, LECTOR, { hora: 12, espera: false, viewport: { width: w, height: h }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, conLs({ 'libro.efectos': 'esenciales' }));
         await tv.p.evaluate(() => { location.hash = '#tv'; });
         await tv.p.reload({ waitUntil: 'networkidle' }); await tv.p.waitForTimeout(2500); await cerrar(tv.p);
         const r = await tv.p.evaluate(() => {
@@ -7104,7 +7111,7 @@ try {
       }
       // La tele dormida (23:30): los tres durmiendo bajo la hora, tenues, dentro de la caja que se corre con la hora.
       {
-        const t = await entrar(navegador, anio, LECTOR, { hora: 23.5, viewport: { width: 1920, height: 1080 } }, conLs());
+        const t = await entrar(navegador, anio, LECTOR, { hora: 23.5, espera: false, viewport: { width: 1920, height: 1080 } }, conLs());
         await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.reload({ waitUntil: 'networkidle' }); await t.p.waitForTimeout(4500);
         const r = await t.p.evaluate(() => {
           const caja = document.getElementById('tvn-caja'), s = caja.querySelector(':scope > svg.oso-pose-duermen');
