@@ -84,8 +84,8 @@ El dueño probó el campamento 41 con ChatGPT en la rama `chatgpt/campamento-41`
 
 **Cuándo se arranca**: cuando el dueño lo diga («arranca»), por tener poco límite ahora; el orden sigue siendo 39 → 41 → 40 → resto.
 
-## CI sin minutos (21 nov 2026)
-El dueño avisa: **ya no hay minutos de CI** en GitHub (el CI completo de un PR suma más de 100 minutos: tres partes de Playwright de ~22 min, Lighthouse y banco, axe, etc.). Consecuencias para implementar esta ronda:
+## CI con minutos justos (21 nov 2026; el 24 nov sí corrió)
+El dueño avisó el 21 de que **casi no quedaban minutos de CI** en GitHub; el 24 nov el CI sí corrió, así que se usa con medida (un PR por campamento, cada job fallido se repite una sola vez). Lo que sigue vale igual (el CI completo de un PR suma más de 100 minutos: tres partes de Playwright de ~22 min, Lighthouse y banco, axe, etc.). Consecuencias para implementar esta ronda:
 - **La verificación es 100 % local y es la que cuenta**: `test_lib`, `test_api` (con el disco simulado si el sandbox tiene poco libre), `test_ui` **entero en sus tres partes** (nunca solo bloques sueltos), axe, barrido normal y por pestañas, Lighthouse y banco (A/B contra `main` en el mismo sandbox), tsc, Biome, ruff, mypy, recorte y regresión visual. Se pega el resultado real en el informe; sin CI que lo respalde, **no se dice «listo» si algo no corrió**.
 - **Un solo PR y un solo push** (como en 26–38): sin CI no hay red de seguridad remota, así que cada commit de campamento debe dejar la rama verde por sí solo y localmente comprobado.
 - Una prueba no puede depender del día de la semana ni de la hora real (usar `FECHA_PRUEBA` y `libro.hora`/`libro.dia`); el sandbox local ya mostró dos casos (jueves, saldo del día).
