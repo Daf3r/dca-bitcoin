@@ -4668,3 +4668,29 @@ html[data-efectos="todos"][data-mueve="barre"] .montana svg.v-actor-barre { anim
 @keyframes vo-barre { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
 html[data-efectos="todos"][data-mueve="pelota"] .montana svg.v-actor-pelota { animation: vo-bota 1.2s steps(1) infinite; }
 @keyframes vo-bota { 0%, 100% { transform: none; } 50% { transform: translateY(var(--bote)); } }
+
+/* ---------------------------------------------------------------- Campamento 41 · La Navidad entera (24, 25, 31, 1 y 6)
+   El pueblo sigue su guion por turnos (cielo.js: turnoFiesta; arte-vecinos.js: reparto) y lo que se mueve, su franja de fiesta
+   (cielo.js: mueveFiesta): la noche del 24 y del 31 brinda uno en la cena y a las doce chispea un volcancito (las luciérnagas descansan).
+   Todo lo demás son estados, no animaciones: con «ninguno», el mismo dibujo quieto. */
+.v-vo-perro { fill: color-mix(in oklab, #b07a45 var(--v-luz), var(--monte-sombra)); }
+/* El que brinda: alza el vaso a saltos (como la que barre). El volcancito: chispea (su brillo sube y baja, a saltos). */
+html[data-efectos="todos"][data-mueve="brinda"] .montana svg.v-actor-brinda { animation: vo-brinda 1.6s steps(1) infinite; }
+@keyframes vo-brinda { 0%, 100% { transform: none; } 50% { transform: rotate(-4deg) translateY(calc(var(--bote) * 0.3)); } }
+html[data-efectos="todos"][data-mueve="chispea"] .montana svg.v-actor-chispea { animation: vo-chispea 0.9s steps(1) infinite; }
+@keyframes vo-chispea { 0%, 100% { opacity: 1; } 34% { opacity: 0.55; } 67% { opacity: 0.85; } }
+/* (218) Con los cohetes (y en la espera del 31) el perro se esconde bajo el árbol de la plaza y las gallinas no salen; el 25 a mediodía
+   el perro está bajo la mesa del recalentado. Es el mismo perro: el de siempre no se ve esos ratos. */
+html:is([data-turno="nb-doce"], [data-turno="f31-espera"], [data-turno="f31-doce"], [data-turno="n25-recalentado"]) #m-v-pie .v-animal,
+html:is([data-turno="nb-doce"], [data-turno="f31-espera"], [data-turno="f31-doce"]) #m-v-pie .v-gallina { display: none; }
+/* (216) A las doce, los de la cumbre levantan los brazos (los de estirarse; si con ellos alguno quedara contra el cielo, no) y (217)
+   «Tú» también: de pie, con los brazos arriba, mirando los cohetes. */
+html:is([data-turno="nb-doce"], [data-turno="f31-doce"]) .osos:not([data-sin-estirar]) .oso-brazos,
+html:is([data-turno="nb-doce"], [data-turno="f31-doce"]) #m-yo .tu-festeja { display: inline; }
+/* (186, dentro de la 216) Los regalos de la cumbre: desde las 23:40 del 24 y todo el 25; se esconden con los osos. */
+.c-regalo { display: none; pointer-events: none; }
+html:is([data-turno="nb-doce"], [data-festivo="navidad"]) .c-regalo { display: inline; }
+.c-regalo-rojo { fill: color-mix(in oklab, var(--oso-cinta) 86%, var(--monte-sombra)); }
+.c-regalo-verde { fill: color-mix(in oklab, var(--vo-verde, #2e8b62) 82%, var(--monte-sombra)); }
+.osos.sin-nieve ~ .c-regalo { opacity: 0; }
+.osos[visibility="hidden"] ~ .c-regalo { visibility: hidden; }

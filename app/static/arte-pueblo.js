@@ -160,7 +160,7 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
  */
 export function lugaresPueblo(sit) {
   const { u, yg, piezas, sol } = sit;
-  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [] }, delante = [];
+  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [], forma: sit.forma }, delante = []; // (41) `forma`: en el teléfono, la mesa corta
   for (const q of piezas) {
     const k = u * q.s;
     if (q.tipo === 'iglesia') {

@@ -266,6 +266,7 @@ export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
     lluviosa ? '.v-q-hilo' : '.v-q-llena',
     fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
     md !== '05-03' && '.v-cruz-mayo', // (34) el Día de la Cruz
+    md !== '12-24' && md !== '12-25' && '.c-regalo', // (41) los regalos de la cumbre
   ].filter(Boolean);
 }
 
@@ -860,6 +861,7 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
   g.setAttribute('aria-hidden', 'true');
   g.dataset.zona = sitio.zona; // dónde se sentaron: «nieve» (la de siempre), «nieveHoy» o «cumbre» (lo leen las pruebas)
   g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora, cumple });
+  regalosCumbre(g, sitio.lista, ec * 1.1 * K_OSO, silueta);
   // (Campamento 33) ¿Caben estirados? Las puntas de los brazos alzados, con 2 px de aire, dentro de la montaña; si no, no se estiran.
   const caben = sitio.lista.every(({ x, y, s = 1 }) => PUNTAS_ESTIRA.every(([px, py]) => { const e = ec * 1.1 * s * K_OSO, X = x + px * e, Y = y + py * e; return [[0, 0], [2, 0], [-2, 0], [0, -2]].every(([dx, dy]) => dentroDe(silueta, X + dx, Y + dy)); }));
   if (!caben) g.dataset.sinEstirar = '1';
@@ -873,6 +875,28 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
     nieve = b;
   }
   return { cajas: sitio.cajas, n: sitio.lista.length, zona: sitio.zona, nieve };
+}
+
+/**
+ * (Campamento 41, ideas 186 y 216) Los regalos de la cumbre: desde la medianoche del 24 y todo el 25, dos cajitas en la nieve delante de
+ * los osos (el rojo de su cinta y el verde del pueblo), cada una con su lazo hecho de un hueco: dos nodos, fuera del grupo de los osos
+ * (no gastan su tope), justo después de él (se esconden con ellos si un rótulo los pisa o si la nieve todavía no llegó). Solo si caben
+ * en la montaña con aire; si no, no salen. El CSS los enseña (`data-festivo="navidad"` o el turno `nb-doce`); el resto del año ni se dibujan.
+ */
+function regalosCumbre(g, lista, e, silueta) {
+  for (const x of g.parentNode?.querySelectorAll(':scope > .c-regalo') ?? []) x.remove();
+  const md = (window.libroCielo?.dia?.() ?? '').slice(5);
+  if ((md !== '12-24' && md !== '12-25') || !lista.length) return;
+  const frente = [...lista].sort((a, b) => b.y - a.y)[0], s = frente.s ?? 1, u = e * s;
+  // Cada caja con su cinta en cruz (dos huecos: donde se cruzan vuelve a llenarse, y queda el nudo).
+  const caja = (x0, w, h, y) => { const lz = Math.max(0.6, 0.16 * w), lh = Math.max(0.6, 0.16 * h); return `M${f1(x0)} ${f1(y)}h${f1(w)}v${f1(-h)}h${f1(-w)}Z` + `M${f1(x0 + w / 2 - lz / 2)} ${f1(y)}v${f1(-h)}h${f1(lz)}v${f1(h)}Z` + `M${f1(x0)} ${f1(y - h * 0.58)}h${f1(w)}v${f1(-lh)}h${f1(-w)}Z`; };
+  for (const dx of [0, -9, 9]) {
+    const x = frente.x + dx * u, y = frente.y + 3.4 * u, a = [x - 6.4 * u, 5.4 * u, 4.4 * u], b = [x - 0.4 * u, 4.4 * u, 3.4 * u];
+    const esquinas = [[a[0] - 2, y + 2], [a[0] - 2, y - a[2] - 2], [b[0] + b[1] + 2, y + 2], [b[0] + b[1] + 2, y - b[2] - 2]];
+    if (!esquinas.every(([px, py]) => Number.isFinite(px + py) && dentroDe(silueta, px, py))) continue;
+    g.insertAdjacentHTML('afterend', `<path class="c-regalo c-regalo-rojo" fill-rule="evenodd" aria-hidden="true" d="${caja(a[0], a[1], a[2], y)}"/><path class="c-regalo c-regalo-verde" fill-rule="evenodd" aria-hidden="true" d="${caja(b[0], b[1], b[2], y)}"/>`);
+    return;
+  }
 }
 
 /**

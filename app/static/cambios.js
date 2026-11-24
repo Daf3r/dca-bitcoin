@@ -9,6 +9,15 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    id: '2026-12-h',
+    items: [
+      'En Navidad, el pueblo vive el día entero: el 24 hay pan de madrugada, tamales, cena en la calle, misa de gallo y abrazos a las doce.',
+      'El 25 los oseznos estrenan juguetes; el 31, a las once, todo el pueblo espera las doce mirando la torre.',
+      'El 1 de enero el pueblo duerme hasta tarde y el 6 se guarda la Navidad.',
+      'A medianoche aparecen regalos junto a los osos de la cumbre y «Tú» levanta los brazos para ver los cohetes.',
+    ],
+  },
+  {
     id: '2026-12-g',
     items: [
       'El punto naranja del sendero es ahora un osito con mochila: anda al subir, festeja y deja huellas.',

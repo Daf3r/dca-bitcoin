@@ -139,6 +139,8 @@
    * Si no toca nada, ''.
    */
   function mueve(f, h) {
+    const fi = mueveFiesta(f, h); // (Campamento 41) la Navidad entera tiene sus propias franjas
+    if (fi !== null) return fi;
     if (h >= 5 && h < 7) return 'torogoz';
     if (zompopos(f) && h >= 7.5 && h < 10) return 'zompopos';
     if (azacuanes(f) && h >= 8 && h < 16) return 'azacuanes';
@@ -153,6 +155,40 @@
     return '';
   }
   /**
+   * (Campamento 41, idea 210) La franja de lo que se mueve en las fiestas de Navidad: la noche del 24 y del 31 es de la fiesta (las
+   * luciérnagas descansan): de 17:45 brinda uno en la cena (hasta las 21:00 del 24, que se va a misa, y las 23:00 del 31, que se espera
+   * quieto), y de 23:40 a 1:00 (el 31, desde las 0:00) chispea un volcancito en la plaza; los cohetes son ambiente, como siempre. El 25,
+   * de 9:00 a 12:00, la pelota nueva de los oseznos. `null`: lo de un día cualquiera.
+   */
+  function mueveFiesta(f, h) {
+    const md = f.slice(5);
+    if ((md === '12-24' || md === '12-31') && h >= 17.75) {
+      if (h < (md === '12-24' ? 21 : 23)) return 'brinda';
+      return md === '12-24' && h >= 23 + 40 / 60 ? 'chispea' : 'fiesta';
+    }
+    if ((md === '12-25' || md === '01-01') && h < 1) return 'chispea';
+    if (md === '12-25' && h >= 9 && h < 12) return 'pelota';
+    return null;
+  }
+  /**
+   * (Campamento 41, ideas 210–215) La Navidad entera: cada fecha, su guion por turnos, de la madrugada a la medianoche (el de un día
+   * cualquiera no corre ese día). Nochebuena (24): el pan de madrugada, las compras y los adornos, los tamales, la cena con su brindis,
+   * la misa de gallo y, de 23:40 a 1:00, los abrazos y los regalos. Navidad (25): nadie hasta las 7:00, la pólvora y la que barre, los
+   * estrenos, el recalentado, el paseo y la fresca. El 31: la limpieza, el estreno, la cena, la espera (de 23:00, todos de espaldas
+   * mirando la torre) y el abrazo de las doce (162). El 1: nadie hasta las 9:00, la que barre, las visitas y la fresca. El 6, de 14:00 a
+   * 17:45, se guarda la Navidad. '' si no es uno de esos ratos.
+   */
+  function turnoFiesta(md, h) {
+    if (md === '12-24') return h >= 23 + 40 / 60 ? 'nb-doce' : h >= 21 ? 'nb-misa' : h >= 17.75 ? 'nb-cena' : h >= 11.5 ? 'nb-tamales' : h >= 7 ? 'nb-compras' : h >= 4.5 ? 'nb-madruga' : 'duerme';
+    if (md === '12-25') return h < 1 ? 'nb-doce' : h < 7 ? 'duerme' : h < 9 ? 'n25-polvora' : h < 12 ? 'n25-estrena' : h < 14 ? 'n25-recalentado' : h < 17.75 ? 'n25-paseo' : h < 22 ? 'n25-fresca' : 'duerme';
+    if (md === '12-31') return h < 5 ? 'duerme' : h < 11.5 ? 'f31-limpia' : h < 17.75 ? 'f31-estreno' : h < 23 ? 'f31-cena' : 'f31-espera';
+    if (md === '01-01') return h < 1 ? 'f31-doce' : h < 9 ? 'e1-polvora' : h < 12 ? 'e1-barre' : h < 17.75 ? 'e1-visitas' : h < 22 ? 'e1-fresca' : 'duerme';
+    if (md === '01-06' && h >= 14 && h < 17.75) return 'e6-guarda';
+    return '';
+  }
+  /** (Campamento 41) El día de fiesta de la Navidad entera ('' si no lo es): `html[data-festivo]`, para lo que dura el día entero (los regalos del 25). */
+  const festivo = (f) => ({ '12-24': 'nochebuena', '12-25': 'navidad', '12-31': 'fin', '01-01': 'anio', '01-06': 'reyes' })[f.slice(5)] ?? '';
+  /**
    * (Campamento 35, idea 102) El turno del Pueblo de los Osos: quién está en la calle según la hora y el día (El Salvador). Amanece
    * (5:00–7:00: el que se estira, el panadero, la que barre), mañana (hasta las 11:30; entre semana los oseznos están en la escuela,
    * salvo en vacaciones, del 15 de noviembre al 15 de enero), siesta (hasta las 14:00), tarde (hasta las 17:45: los oseznos en la
@@ -165,7 +201,10 @@
     // frente al nacimiento al anochecer (1 dic – 6 ene).
     const md = f.slice(5);
     if (md === '09-15' && h >= 7 && h < 12) return 'desfile';
-    if (((md === '12-24' || md === '12-31') && h >= 18) || ((md === '12-25' || md === '01-01') && h < 1)) return 'nochebuena';
+    // (Campamento 41) La Navidad entera: el 24, 25, 31 y 1 el día entero es de la fiesta; el 6, su tarde (antes, del 24 y el 31 solo había
+    // una estampa de 18:00 a 1:00, `nochebuena`).
+    const fi = turnoFiesta(md, h);
+    if (fi) return fi;
     if (h >= 22 || h < 5) return 'duerme';
     if (h < 7) return 'amanece';
     const sem = new Date(`${f}T12:00:00Z`).getUTCDay();
@@ -291,6 +330,8 @@
     // (Campamento 35) El turno del pueblo: si cambió con la página abierta, montana.js rehace solo sus vecinos (`libro:turno`).
     const tu = turno(d, h);
     raiz.dataset.turno = tu;
+    const fe = festivo(d);
+    if (fe) raiz.dataset.festivo = fe; else delete raiz.dataset.festivo;
     if (turnoAplicado !== null && tu !== turnoAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:turno'));
     turnoAplicado = tu;
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
@@ -315,5 +356,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, turno, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, turno, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

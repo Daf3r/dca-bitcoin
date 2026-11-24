@@ -213,8 +213,9 @@ const PESOS = [
   ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
   ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
   ['campamento 38: lo que cambia de la app', 25], // 3 comprobaciones
-  ['pulido integral: el movimiento (nada co', 90], // 16 comprobaciones
-  ['campamento 39: hacer sitio 2', 60], // 6 comprobaciones
+  ['pulido integral: el movimiento (nada co', 115], // 16 comprobaciones
+  ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
+  ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -7464,7 +7465,7 @@ try {
           ['2026-10-17', 9, 'mercado', (r) => r.vecinos >= 5],
           ['2026-09-15', 9, 'desfile', (r) => r.azul >= 2 && r.vecinos >= 5],
           ['2026-12-10', 19, 'posada', (r) => r.portal && r.sobrePortal === 0 && r.vecinos >= 4],
-          ['2026-12-24', 20, 'nochebuena', (r) => r.brasa >= 3],
+          ['2026-12-24', 20, 'nb-cena', (r) => r.brasa >= 3], // (41) la cena de Nochebuena, con los oseznos y su estrellita
         ]) {
           const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia));
           await cerrar(t.p);
@@ -7558,7 +7559,7 @@ try {
     const anio = await servidor('anio');
     try {
       for (const [w, h] of [[390, 844], [1440, 900]]) {
-        for (const [dia, hora, ef] of [['2026-09-16', 7.5, 'todos'], ['2026-09-16', 12, 'todos'], ['2026-09-16', 15.5, 'todos'], ['2026-09-16', 21, 'todos'], ['2026-12-24', 21, 'todos'], ['2026-07-10', 15, 'todos'], ['2026-09-16', 12, 'esenciales'], ['2026-12-24', 21, 'esenciales']]) {
+        for (const [dia, hora, ef] of [['2026-09-16', 7.5, 'todos'], ['2026-09-16', 12, 'todos'], ['2026-09-16', 15.5, 'todos'], ['2026-09-16', 21, 'todos'], ['2026-12-24', 21, 'todos'], ['2026-12-24', 19, 'todos'], ['2026-12-24', 23.84, 'todos'], ['2026-07-10', 15, 'todos'], ['2026-09-16', 12, 'esenciales'], ['2026-12-24', 21, 'esenciales']]) { // (41) la cena con su brindis y las doce con su volcancito
           const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h }, reducedMotion: 'no-preference' }, conLs(dia, ef));
           await cerrar(t.p);
           await t.p.waitForTimeout(1500);
@@ -7640,6 +7641,69 @@ try {
       await g.ctx.close();
     } finally {
       mil.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 41: la Navidad entera (24, 25, 31, 1 y 6: cada fecha, su guion por turnos, su franja de fiesta y ningún NaN)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-12-24'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } }, null];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // [día, hora, turno, lo que se mueve, el actor en su capa ('' si nadie)]: las cinco fechas, de la madrugada a la medianoche.
+    const GUION = [
+      ['2026-12-24', 6, 'nb-madruga', 'torogoz', ''], ['2026-12-24', 7.75, 'nb-compras', 'barre', 'barre'], ['2026-12-24', 15.5, 'nb-tamales', 'pelota', 'pelota'],
+      ['2026-12-24', 19, 'nb-cena', 'brinda', 'brinda'], ['2026-12-24', 22, 'nb-misa', 'fiesta', ''], ['2026-12-24', 23.84, 'nb-doce', 'chispea', 'chispea'],
+      ['2026-12-25', 3, 'duerme', 'luciernagas', ''], ['2026-12-25', 7.5, 'n25-polvora', 'barre', 'barre'], ['2026-12-25', 9.5, 'n25-estrena', 'pelota', 'pelota'],
+      ['2026-12-25', 13, 'n25-recalentado', '', ''], ['2026-12-25', 15, 'n25-paseo', 'pelota', ''], ['2026-12-25', 19, 'n25-fresca', 'luciernagas', ''],
+      ['2026-12-31', 7.5, 'f31-limpia', 'barre', 'barre'], ['2026-12-31', 15.5, 'f31-estreno', 'pelota', 'pelota'], ['2026-12-31', 20, 'f31-cena', 'brinda', 'brinda'],
+      ['2026-12-31', 23.58, 'f31-espera', 'fiesta', ''], ['2027-01-01', 0.5, 'f31-doce', 'chispea', 'chispea'], ['2027-01-01', 6, 'e1-polvora', 'torogoz', ''],
+      ['2027-01-01', 10, 'e1-barre', 'teleferico', ''], ['2027-01-01', 15.5, 'e1-visitas', 'pelota', 'pelota'], ['2027-01-01', 19, 'e1-fresca', 'luciernagas', ''],
+      ['2027-01-06', 15.2, 'e6-guarda', 'pelota', ''],
+    ];
+    const mira = (p, d, h) => p.evaluate(async ([dd, hh]) => {
+      localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar();
+      await new Promise((res) => setTimeout(res, 500));
+      const host = document.getElementById('montana'), raiz = document.documentElement, capa = host.querySelector(':scope > svg.v-capa-vecino');
+      const malos = [...host.querySelectorAll('[d], [transform], [points]')].filter((e) => /NaN|undefined|Infinity/.test(`${e.getAttribute('d') ?? ''}${e.getAttribute('transform') ?? ''}${e.getAttribute('points') ?? ''}`)).length
+        + [...host.querySelectorAll('svg')].filter((x) => /NaN|undefined/.test(`${x.getAttribute('viewBox')}${x.style.cssText}`)).length;
+      const vis = (sel) => { const e = host.querySelector(sel); return Boolean(e) && getComputedStyle(e).display !== 'none'; };
+      const pies = (host.querySelector('.v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').split(/(?=M)/).filter(Boolean).length;
+      return { perroV: Boolean(host.querySelector('.v-vecinos .v-vo-perro')), turno: raiz.dataset.turno, mueve: raiz.dataset.mueve ?? '', actor: capa ? [...capa.classList].find((c) => c.startsWith('v-actor-'))?.slice(8) : '', malos, pies, perro: vis('#m-v-pie .v-animal'), regalos: vis('.c-regalo'), tuArriba: vis('#m-yo .tu-festeja'), luciernagas: vis('.luciernagas'), nodos: host.querySelectorAll('*').length };
+    }, [d, h]);
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 4.6, viewport: { width: w, height: alto } }, conLs);
+        await cerrar(t.p);
+        const fallos = [];
+        let maxNodos = 0;
+        for (const [d, h, turno, mueve, actor] of GUION) {
+          const r = await mira(t.p, d, h);
+          maxNodos = Math.max(maxNodos, r.nodos);
+          if (r.turno !== turno || r.mueve !== mueve || (r.actor ?? '') !== actor || r.malos) fallos.push(`${d} ${h}: ${JSON.stringify(r)}`);
+          // Las noches de la fiesta las luciérnagas descansan; con los cohetes (y en la espera del 31) el perro se esconde; a las doce
+          // «Tú» levanta los brazos; los regalos de la cumbre, desde las doce del 24 y todo el 25.
+          if (['nb-cena', 'nb-misa', 'f31-cena', 'f31-espera'].includes(turno) && r.luciernagas) fallos.push(`${turno}: luciérnagas`);
+          if (['nb-doce', 'f31-espera', 'f31-doce', 'n25-recalentado'].includes(turno) === r.perro || ['nb-doce', 'f31-espera', 'f31-doce', 'n25-recalentado'].includes(turno) !== r.perroV) fallos.push(`${turno}: el perro de siempre ${r.perro}, el escondido ${r.perroV}`);
+          if (['nb-doce', 'f31-doce'].includes(turno) !== r.tuArriba) fallos.push(`${turno}: «Tú» con los brazos ${r.tuArriba}`);
+          if (((d === '2026-12-25' && turno !== 'nb-doce') || turno === 'nb-doce' && d === '2026-12-24') && !r.regalos) fallos.push(`${d} ${turno}: sin regalos`);
+          if (turno !== 'duerme' && turno !== 'e1-polvora' && turno !== 'n25-polvora' && r.pies < (turno === 'e1-barre' ? 2 : 3)) fallos.push(`${turno}: ${r.pies} vecinos`);
+        }
+        eq(fallos, [], `41 a ${w} px: las cinco fechas de la Navidad, cada turno con su gente, su actor y ningún NaN en los trazos (hasta ${maxNodos} nodos)`);
+        ok(maxNodos <= 1000 && t.consola.length === 0, `41 a ${w} px: la escena, como mucho ${maxNodos} nodos, y la consola limpia (${t.consola.slice(0, 2)})`);
+        await t.ctx.close();
+      }
+      // (216) A las doce, los de la cumbre levantan los brazos cuando caben con ellos (a 768 px, con este saldo, caben; a 390 y 1440, no).
+      const b = await entrar(navegador, anio, ADMIN, { hora: 23.84, viewport: { width: 768, height: 1024 } }, conLs);
+      await cerrar(b.p);
+      const br = await b.p.evaluate(async () => {
+        localStorage.setItem('libro.dia', '2026-12-24'); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400));
+        const os = document.querySelector('#m-osos'), brazos = [...document.querySelectorAll('#m-osos .oso-brazos')];
+        return { sin: os?.dataset.sinEstirar ?? null, arriba: brazos.filter((e) => getComputedStyle(e).display !== 'none').length, n: brazos.length };
+      });
+      ok(br.sin === null && br.n > 0 && br.arriba === br.n, `41 a 768 px a las doce: los de la cumbre, con los brazos arriba (${JSON.stringify(br)})`);
+      await b.ctx.close();
+    } finally {
+      anio.parar();
     }
   });
 
