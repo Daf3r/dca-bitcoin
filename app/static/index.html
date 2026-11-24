@@ -557,36 +557,36 @@
     <label class="h-nota-campo" id="h-nota-l"><span id="h-nota-t">¿Qué pasó esta semana en casa?</span>
       <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: Sofi perdió su primer diente" aria-describedby="h-nota-ay">
     </label>
-    <p class="h-nota h-nota-ay" id="h-nota-ay">Opcional. Queda como nota de la compra: la ve toda la familia y, dentro de un año, el Diario la recuerda.</p>
+    <p class="h-nota h-nota-ay" id="h-nota-ay">La ve la familia; en un año el Diario la recuerda.</p>
     <details class="h-avanzado" id="h-avanzado">
-      <summary id="h-av-t">Más detalles: dólares o precio, TXID y compra extra</summary>
+      <summary id="h-av-t">Más detalles (todo opcional): dólares o precio, TXID y compra extra</summary>
       <!-- Los dólares y el precio de BTC van ligados: el que escribes manda y el otro se calcula («calculado»). Vacíos, se estiman con el
            precio de ese día, como siempre. Lo que se guarda son los sats y los dólares; el precio se deriva (ver hoja.js: datosHoja). -->
       <label class="h-usd" data-no-traslado><span><span id="h-usd-t">Pagaste (USD)</span><span class="h-calc" id="h-usd-c" hidden> · calculado</span></span>
         <input id="h-usd" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00" aria-describedby="h-dinero-ay">
       </label>
-      <label class="h-usd" data-no-traslado><span><span id="h-precio-t">Precio de BTC al que compraste (opcional)</span><span class="h-calc" id="h-precio-c" hidden> · calculado</span></span>
+      <label class="h-usd" data-no-traslado><span><span id="h-precio-t">Precio de BTC al que compraste</span><span class="h-calc" id="h-precio-c" hidden> · calculado</span></span>
         <input id="h-precio" type="text" inputmode="decimal" maxlength="16" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: 62,500" aria-describedby="h-dinero-ay">
       </label>
-      <p class="h-nota" id="h-dinero-ay" data-no-traslado>Escribe los dólares o el precio: el otro se calcula. Si no escribes ninguno, se calculan con el precio de ese día.</p>
-      <label class="h-usd">TXID (opcional)
+      <p class="h-nota" id="h-dinero-ay" data-no-traslado>Escribe uno y el otro se calcula. Vacíos: el precio de ese día.</p>
+      <label class="h-usd">TXID
         <input id="h-txid" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="64 caracteres, o pega el enlace de mempool.space">
       </label>
-      <p class="h-nota">Sirve para comprobar la transacción en la cadena. Una compra dentro del exchange o por Lightning no tiene.</p>
+      <p class="h-nota">Para comprobarla en la cadena. Lightning o dentro del exchange: no hay.</p>
       <!-- Solo en un traslado a tu wallet: la comisión de red, que se anota también como un gasto. -->
-      <label class="h-usd" data-solo-traslado hidden>Comisión de red pagada (sats, opcional)
+      <label class="h-usd" data-solo-traslado hidden>Comisión de red pagada (sats)
         <input id="h-comision" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0">
       </label>
       <p class="h-nota" data-solo-traslado hidden>Si la pagaste, se anota también como un gasto («Comisión de retiro») y baja tu saldo.</p>
       <!-- Solo para compras: la marca de extra (su nota es la de arriba, como en cualquier compra). -->
       <label class="h-extra" data-solo-compra><input type="checkbox" id="h-extra"> <span>Compra extra (por una caída)</span></label>
-      <p class="h-nota" data-solo-compra>Las extra se muestran aparte: no son tu ritmo habitual ni cubren la compra de la semana.</p>
+      <p class="h-nota" data-solo-compra>Va aparte: no cuenta para el ritmo ni cubre la semana.</p>
       <!-- Etiquetas (idea 56): hasta 5, separadas por comas; las que ya usaste salen como sugerencia. Compras y ventas, no traslados. -->
-      <label class="h-usd" data-no-traslado>Etiquetas (opcional)
+      <label class="h-usd" data-no-traslado>Etiquetas
         <input id="h-etq" type="text" list="h-etq-lista" maxlength="140" autocomplete="off" autocapitalize="none" enterkeyhint="done" placeholder="cumpleaños, bono">
       </label>
       <datalist id="h-etq-lista"></datalist>
-      <p class="h-nota" data-no-traslado>Hasta 5, separadas por comas. Sirven para filtrar la lista.</p>
+      <p class="h-nota" data-no-traslado>Hasta 5, con comas. Filtran la lista.</p>
     </details>
     <div class="hoja-bot">
       <button type="button" class="borrar" id="h-borrar" hidden>Anular</button>

@@ -4197,7 +4197,7 @@ try {
           dentro: !!document.getElementById('h-nota').closest('details'), viejo: !!document.getElementById('h-nota-c') }));
         let c = await campo();
         eq([c.t, c.ay, c.max, c.dentro, c.viejo], ['¿Qué pasó esta semana en casa?', true, 120, false, false], '18·semana: en una compra la nota es la pregunta de la semana, a la vista y con 120 caracteres');
-        ok(c.vis >= 47.5 && /la ve toda la familia/.test(await p.textContent('#h-nota-ay')), '18·semana: el campo mide 48 px y dice que la ve toda la familia');
+        ok(c.vis >= 47.5 && /la ve la familia/i.test(await p.textContent('#h-nota-ay')), '18·semana: el campo mide 48 px y dice que la ve la familia');
         await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
         c = await campo();
         eq([c.t, c.ay], ['Nota (opcional)', false], '18·semana: en una venta sigue siendo «Nota»');
@@ -4359,9 +4359,9 @@ try {
       await p.fill('#h-sats', '77320'); await p.waitForTimeout(150);
       await p.click('#h-avanzado summary'); await p.waitForTimeout(200);
       const campo = await p.evaluate(() => { const i = document.getElementById('h-precio'); const r = i.getBoundingClientRect(); return { modo: i.inputMode, alto: Math.round(r.height), etiqueta: i.labels[0]?.innerText.replace(/\s+/g, ' ').trim(), ayuda: i.getAttribute('aria-describedby') }; });
-      ok(await p.locator('#h-precio').isVisible() && campo.modo === 'decimal' && campo.alto >= 47.5 && campo.etiqueta === 'Precio de BTC al que compraste (opcional)' && campo.ayuda === 'h-dinero-ay', `precio: el campo está en «Más detalles», con su rótulo, teclado decimal y 48 px (${JSON.stringify(campo)})`);
+      ok(await p.locator('#h-precio').isVisible() && campo.modo === 'decimal' && campo.alto >= 47.5 && campo.etiqueta === 'Precio de BTC al que compraste' && campo.ayuda === 'h-dinero-ay', `precio: el campo está en «Más detalles», con su rótulo, teclado decimal y 48 px (${JSON.stringify(campo)})`);
       let h = await campos(p);
-      ok(h.resumen === 'Más detalles: dólares o precio, TXID y compra extra' && /^Escribe los dólares o el precio: el otro se calcula/.test(h.ay) && h.usd === '' && h.precio === '' && /^≈ \$/.test(h.uno), `precio: vacíos, como siempre: se estima con el precio del día («${h.uno}»)`);
+      ok(h.resumen === 'Más detalles (todo opcional): dólares o precio, TXID y compra extra' && h.ay === 'Escribe uno y el otro se calcula. Vacíos: el precio de ese día.' && h.usd === '' && h.precio === '' && /^≈ \$/.test(h.uno), `precio: vacíos, como siempre: se estima con el precio del día («${h.uno}»)`);
       // ---- Escribir el precio (con «$» y coma de miles, tecla por tecla) calcula los dólares
       await p.click('#h-precio'); await p.keyboard.type('$62,500'); await p.waitForTimeout(200);
       h = await campos(p);
@@ -4466,7 +4466,7 @@ try {
       // ---- En una venta el rótulo dice «al que vendiste»; en un traslado no hay precio
       await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
       h = await campos(p);
-      ok(h.tPrecio === 'Precio de BTC al que vendiste (opcional)' && h.resumen === 'Más detalles: dólares o precio y TXID' && /por la venta/.test(h.uno), `precio: en una venta, «al que vendiste» («${h.uno}»)`);
+      ok(h.tPrecio === 'Precio de BTC al que vendiste' && h.resumen === 'Más detalles (todo opcional): dólares o precio y TXID' && /por la venta/.test(h.uno), `precio: en una venta, «al que vendiste» («${h.uno}»)`);
       await p.click('#h-tipo button[data-tipo="traslado"]'); await p.waitForTimeout(200);
       ok(!(await p.locator('#h-precio').isVisible()) && !(await p.locator('#h-usd').isVisible()), 'precio: un traslado no lleva dólares ni precio');
       await p.click('#h-tipo button[data-tipo="compra"]'); await p.waitForTimeout(200);
