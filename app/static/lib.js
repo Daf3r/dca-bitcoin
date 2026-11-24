@@ -1146,26 +1146,56 @@ export function aniosTronco(items, hoy = hoyISO()) {
 
 const ANGULO_AUREO = Math.PI * (3 - Math.sqrt(5));
 /**
+ * (Campamento 57) Más de la mitad: la marca de «compra extra» de una pieza que junta varias compras. Con muchas extras, marcar «alguna
+ * fue extra» lo marcaría todo y dejaría de decir nada; los textos siguen contando la cifra real.
+ */
+export const mayoriaExtra = (nExtra, n) => nExtra * 2 > n;
+
+/** (Campamento 58) Hasta cuántas compras la constelación lleva una estrella por compra; con más, una por semana. */
+export const ESTRELLAS_POR_COMPRA = 600;
+/**
  * La constelación: una estrella por compra, en una espiral de girasol (ángulo áureo) para que el dibujo crezca hacia afuera con los
  * años. `x` e `y` van de 0 a 1 (dentro del círculo unidad); `mag` (0.15 a 1) es el brillo según sus sats frente a la mediana. La
  * escala es `sqrt(max(n, minEscala))`: con pocas compras la espiral ocupa poco y se va abriendo; pasadas `minEscala`, todo se ajusta.
+ * (Campamento 58) Con más de `max` compras, una estrella por semana con compras (de lunes a domingo, como la manta): `n` y `nExtra`
+ * cuentan las suyas, `extra` va por mayoría y `semanal` lo dice; `desde` y `hasta` son su semana (o su día, con una por compra).
  */
-export function estrellasConstelacion(items, minEscala = 120) {
+export function estrellasConstelacion(items, minEscala = 120, max = ESTRELLAS_POR_COMPRA) {
   const compras = items.filter((c) => c.tipo !== 'venta').sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.id ?? 0) - (b.id ?? 0)));
-  const n = compras.length;
-  if (!n) return [];
+  if (!compras.length) return [];
+  const semanal = compras.length > max;
+  /** @type {{ fecha: string, desde: string, hasta: string, sats: number, n: number, nExtra: number }[]} */
+  let unidades = compras.map((c) => ({ fecha: c.fecha, desde: c.fecha, hasta: c.fecha, sats: c.sats, n: 1, nExtra: c.extra ? 1 : 0 }));
+  if (semanal) {
+    const por = new Map();
+    for (const c of compras) {
+      const s = semana(c.fecha);
+      const u = por.get(s) ?? { fecha: c.fecha, desde: diaDeSemana(s, 0), hasta: diaDeSemana(s, 6), sats: 0, n: 0, nExtra: 0 };
+      u.sats += c.sats; u.n++; if (c.extra) u.nExtra++;
+      por.set(s, u);
+    }
+    unidades = [...por.values()];
+  }
+  const n = unidades.length;
   const esc = Math.sqrt(Math.max(n, minEscala));
-  const orden = compras.map((c) => c.sats).sort((a, b) => a - b);
+  const orden = unidades.map((c) => c.sats).sort((a, b) => a - b);
   const mediana = orden[Math.floor(orden.length / 2)] || 1;
-  return compras.map((c, i) => {
+  return unidades.map((c, i) => {
     const r = Math.sqrt(i + 0.5) / esc, a = i * ANGULO_AUREO;
-    return { i, fecha: c.fecha, anio: Number(c.fecha.slice(0, 4)), sats: c.sats, extra: Boolean(c.extra), x: 0.5 + 0.5 * r * Math.cos(a), y: 0.5 + 0.5 * r * Math.sin(a), mag: Math.min(1, Math.max(0.15, Math.sqrt(c.sats / mediana) / 2)) };
+    return { i, fecha: c.fecha, desde: c.desde, hasta: c.hasta, anio: Number(c.fecha.slice(0, 4)), sats: c.sats, n: c.n, nExtra: c.nExtra, extra: mayoriaExtra(c.nExtra, c.n), semanal,
+      x: 0.5 + 0.5 * r * Math.cos(a), y: 0.5 + 0.5 * r * Math.sin(a), mag: Math.min(1, Math.max(0.15, Math.sqrt(c.sats / mediana) / 2)) };
   });
+}
+/** Lo que se lee al tocar una estrella: su compra o, con una por semana, su semana. */
+export function textoEstrella(s) {
+  if (!s.semanal) return `${fechaLarga(s.fecha)} · +${entero(s.sats)} sats${s.extra ? ' · compra extra' : ''}`;
+  return `Semana del ${nombreSemana(s.desde, s.hasta)} · ${s.n} ${s.n === 1 ? 'compra' : 'compras'}${s.nExtra ? ` (${s.nExtra} extra)` : ''} · +${entero(s.sats)} sats`;
 }
 
 /**
  * La torre de piedras: una piedra por compra, de la más vieja (abajo) a la más nueva (arriba). Con más de `max` compras cada piedra junta varias
- * seguidas (`n`), como en el bosque. `tam` (0.35 a 1) es su tamaño según los sats frente a la piedra más grande.
+ * seguidas (`n`), como en el bosque. `tam` (0.35 a 1) es su tamaño según los sats frente a la piedra más grande. `extra` dice si alguna fue
+ * extra y `nExtra` cuántas (campamento 57: la veta de cobre se enciende según la proporción).
  */
 export function piedrasTorre(items, max = 40) {
   const compras = items.filter((c) => c.tipo !== 'venta').sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : (a.id ?? 0) - (b.id ?? 0)));
@@ -1174,7 +1204,8 @@ export function piedrasTorre(items, max = 40) {
   const piedras = [];
   for (let k = 0; k < compras.length; k += por) {
     const g = compras.slice(k, k + por);
-    piedras.push({ i: piedras.length, desde: g[0].fecha, hasta: g.at(-1).fecha, n: g.length, sats: g.reduce((a, c) => a + c.sats, 0), extra: g.some((c) => c.extra), tam: 0 });
+    const nExtra = g.filter((c) => c.extra).length;
+    piedras.push({ i: piedras.length, desde: g[0].fecha, hasta: g.at(-1).fecha, n: g.length, sats: g.reduce((a, c) => a + c.sats, 0), extra: nExtra > 0, nExtra, tam: 0 });
   }
   const mayor = Math.max(...piedras.map((p) => p.sats)) || 1;
   for (const p of piedras) p.tam = Math.min(1, Math.max(0.35, p.sats / mayor));
@@ -1185,13 +1216,22 @@ export function piedrasTorre(items, max = 40) {
 export function textoTronco(anios, libro = false) {
   if (!anios.length) return libro ? 'El tronco del libro empieza con su primera compra.' : 'Tu tronco empieza con tu primera compra.';
   const mejor = anios.reduce((m, y) => (y.comprados > m.comprados ? y : m), anios[0]);
-  const nudos = anios.reduce((a, y) => a + y.nExtras, 0);
+  const extras = anios.reduce((a, y) => a + y.nExtras, 0);
+  // (Campamento 57) El dibujo lleva un nudo por mes con compras extra (como mucho doce por anillo): si son menos que las compras
+  // extra, el texto dice las dos cifras.
+  const nudos = anios.reduce((a, y) => a + new Set(y.extras.map((e) => Math.min(11, Math.floor(e.frac * 12)))).size, 0);
+  const txt = !extras ? '' : nudos === extras ? ` Hay ${nudos} ${nudos === 1 ? 'nudo' : 'nudos'}: las compras extra.`
+    : ` Hay ${entero(nudos)} ${nudos === 1 ? 'nudo' : 'nudos'}, uno por cada mes con compras extra (${entero(extras)} en total).`;
   return `${libro ? 'El tronco del libro' : 'Tu tronco'} tiene ${anios.length} ${anios.length === 1 ? 'anillo' : 'anillos'}, uno por año, de ${anios[0].anio} a ${anios.at(-1).anio}. `
-    + `El más ancho es ${mejor.anio}, con ${entero(mejor.comprados)} sats.${nudos ? ` Hay ${nudos} ${nudos === 1 ? 'nudo' : 'nudos'}: las compras extra.` : ''}`;
+    + `El más ancho es ${mejor.anio}, con ${entero(mejor.comprados)} sats.${txt}`;
 }
 export function textoConstelacion(estrellas, libro = false) {
   if (!estrellas.length) return libro ? 'La constelación del libro empieza con su primera compra.' : 'Tu constelación empieza con tu primera compra.';
   const ult = estrellas.at(-1);
+  if (ult.semanal) {
+    const n = estrellas.reduce((a, e) => a + e.n, 0);
+    return `${libro ? 'La constelación del libro' : 'Tu constelación'} tiene ${entero(estrellas.length)} estrellas, una por semana con compras (${entero(n)} compras). La más reciente es la semana del ${nombreSemana(ult.desde, ult.hasta)}.`;
+  }
   return `${libro ? 'La constelación del libro' : 'Tu constelación'} tiene ${estrellas.length} ${estrellas.length === 1 ? 'estrella' : 'estrellas'}, una por compra. La más reciente es la del ${fechaLarga(ult.fecha)}.`;
 }
 export function textoTorre(piedras, libro = false) {
@@ -1199,6 +1239,11 @@ export function textoTorre(piedras, libro = false) {
   const n = piedras.reduce((a, p) => a + p.n, 0);
   const junta = piedras.some((p) => p.n > 1);
   return `${libro ? 'La torre de piedras del libro' : 'Tu torre de piedras'} tiene ${piedras.length} ${piedras.length === 1 ? 'piedra' : 'piedras'}${junta ? `, que juntan ${n} compras` : ', una por compra'}; las más grandes son las de más sats.`;
+}
+/** Una piedra de la torre, para leerla al tocarla. */
+export function textoPiedra(s) {
+  const extra = !s.nExtra ? '' : s.n === 1 ? ' · compra extra' : ` · ${s.nExtra} extra`;
+  return `${s.n === 1 ? fechaLarga(s.desde) : `${fechaLarga(s.desde)} a ${fechaLarga(s.hasta)}`} · ${s.n} ${s.n === 1 ? 'compra' : 'compras'} · +${entero(s.sats)} sats${extra}`;
 }
 /** Resumen de un año del tronco, para leerlo al tocar su anillo. */
 export function textoAnio(y, libro = false) {
@@ -1220,7 +1265,7 @@ const diaDeSemana = (idx, k) => new Date(SEMANA0 + (idx * 7 + k) * 864e5).toISOS
 /**
  * La manta: una fila por año y una celda por semana (lunes a domingo; cada semana va en el año de su jueves, como las semanas ISO).
  * Cada celda trae sus `sats` (compras de esa semana; las ventas no se cuentan), cuántas compras fueron (`n`), si alguna fue extra
- * y su `tono` de añil (0 = semana sin compras, algodón crudo; 1 a 4 = de más claro a más oscuro, por cuartiles de las semanas con
+ * (`extra`; `nExtra`, cuántas: la puntada se borda solo si son más de la mitad, campamento 57) y su `tono` de añil (0 = semana sin compras, algodón crudo; 1 a 4 = de más claro a más oscuro, por cuartiles de las semanas con
  * compra). `antes` marca las celdas anteriores a tu primera semana y `futura` las que aún no llegan (los flecos del año en curso).
  * `celdas` es la lista plana de las semanas reales (de la primera a hoy), en orden, para recorrerlas con el teclado.
  */
@@ -1232,8 +1277,8 @@ export function semanasManta(items, hoy = hoyISO()) {
   const porSemana = new Map();
   for (const c of compras) {
     const s = semana(c.fecha);
-    const o = porSemana.get(s) ?? { sats: 0, n: 0, extra: false };
-    o.sats += c.sats; o.n++; if (c.extra) o.extra = true;
+    const o = porSemana.get(s) ?? { sats: 0, n: 0, extra: false, nExtra: 0 };
+    o.sats += c.sats; o.n++; if (c.extra) { o.extra = true; o.nExtra++; }
     porSemana.set(s, o);
   }
   const orden = [...porSemana.values()].map((o) => o.sats).sort((a, b) => a - b);
@@ -1258,7 +1303,7 @@ export function semanasManta(items, hoy = hoyISO()) {
     let satsAnio = 0, nAnio = 0, conCompra = 0;
     for (let idx = desde; idx <= hasta; idx++) {
       const o = porSemana.get(idx);
-      const celda = { idx, col: colDe(idx), desde: diaDeSemana(idx, 0), hasta: diaDeSemana(idx, 6), sats: o?.sats ?? 0, n: o?.n ?? 0, extra: Boolean(o?.extra), tono: tonoDe(o?.sats ?? 0), antes: idx < primera, futura: idx > actual, anio: a };
+      const celda = { idx, col: colDe(idx), desde: diaDeSemana(idx, 0), hasta: diaDeSemana(idx, 6), sats: o?.sats ?? 0, n: o?.n ?? 0, extra: Boolean(o?.extra), nExtra: o?.nExtra ?? 0, tono: tonoDe(o?.sats ?? 0), antes: idx < primera, futura: idx > actual, anio: a };
       semanas.push(celda);
       if (!celda.antes && !celda.futura) { celdas.push(celda); satsAnio += celda.sats; nAnio += celda.n; if (celda.n) conCompra++; }
     }
@@ -1278,7 +1323,8 @@ export function textoManta(m, libro = false) {
 export function textoSemanaManta(c) {
   const rango = `${fechaLarga(c.desde)} al ${fechaLarga(c.hasta)}`;
   if (!c.n) return `Semana del ${rango}: sin compras.`;
-  return `Semana del ${rango}: ${c.n} ${c.n === 1 ? 'compra' : 'compras'}, +${entero(c.sats)} sats${c.extra ? ', con una compra extra' : ''}.`;
+  const extra = !c.extra ? '' : (c.nExtra ?? 1) <= 1 ? ', con una compra extra' : `, ${c.nExtra} de ellas extra`;
+  return `Semana del ${rango}: ${c.n} ${c.n === 1 ? 'compra' : 'compras'}, +${entero(c.sats)} sats${extra}.`;
 }
 
 const UNI = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve'];
@@ -1440,11 +1486,94 @@ export function partitura(items) {
   });
   return [...por.values()];
 }
-export const textoPartitura = (anios, libro = false) => (anios.length
-  ? `${libro ? 'La partitura del libro' : 'Tu partitura'} tiene ${anios.length} ${anios.length === 1 ? 'pauta' : 'pautas'}, una por año, y una nota por compra: cuanto más caro estaba BTC ese día, más aguda la nota.`
+export const textoPartitura = (anios, libro = false, max = NOTAS_POR_DIA) => (anios.length
+  ? `${libro ? 'La partitura del libro' : 'Tu partitura'} tiene ${anios.length} ${anios.length === 1 ? 'pauta' : 'pautas'}, una por año, y una nota por compra`
+    + `${anios.some((a) => a.notas.length > max) ? ' (en un año de muchas compras, una figura por semana)' : ''}: cuanto más caro estaba BTC ese día, más aguda la nota.`
   : libro ? 'La partitura del libro empieza con su primera compra.' : 'Tu partitura empieza con tu primera compra.');
-export const textoAnioPartitura = (y, libro = false) => `${y.anio}: ${y.notas.length} ${y.notas.length === 1 ? 'nota' : 'notas'}; BTC entre $${entero(y.min)} y $${entero(y.max)} en ${libro ? 'las compras' : 'tus compras'}`;
+/**
+ * Un año de la partitura, en palabras; con `fig` (de `figurasPartitura`), dice también si va por semanas.
+ * @param {{ anio: number, notas: unknown[], min: number, max: number }} y
+ * @param {boolean} [libro]
+ * @param {{ modo: string, figuras: unknown[] } | null} [fig]
+ */
+export const textoAnioPartitura = (y, libro = false, fig = null) => `${y.anio}: ${entero(y.notas.length)} ${y.notas.length === 1 ? 'nota' : 'notas'}`
+  + `${fig?.modo === 'semana' ? ` en ${fig.figuras.length} semanas` : ''}; BTC entre $${entero(y.min)} y $${entero(y.max)} en ${libro ? 'las compras' : 'tus compras'}`;
 export const textoNota = (n) => `${fechaLarga(n.fecha)} · BTC a $${entero(n.precio)} · +${entero(n.sats)} sats${n.extra ? ' · compra extra' : ''}`;
+
+/** (Campamento 57) Hasta cuántas notas un año de la partitura va por días de compra; con más, por semanas. */
+export const NOTAS_POR_DIA = 60;
+/**
+ * Una figura de la partitura: lo que junta (un día, una semana o un mes) con su cantidad (`n`), sus extra (`nExtra`; `extra` por
+ * mayoría), su nota (`paso`, la mediana baja: la que suena), su rango (`pasoMin`, `pasoMax`, y los precios `min` y `max`), sus `sats`,
+ * su mes (0 a 11, el del primer día), su lugar (`col`) y sus notas. Con una sola compra trae también `fecha` y `precio`: se lee como una nota.
+ * @param {{ fecha: string, precio: number, sats: number, extra: boolean, paso: number }[]} g
+ * @param {number} i
+ * @param {number} col
+ * @param {'dia' | 'semana' | 'mes'} tipo
+ * @param {number} anio
+ * @param {string} desde
+ * @param {string} hasta
+ */
+function figuraDe(g, i, col, tipo, anio, desde, hasta) {
+  const pasos = g.map((x) => x.paso).sort((a, b) => a - b), precios = g.map((x) => x.precio);
+  const nExtra = g.filter((x) => x.extra).length;
+  /** @type {Record<string, any>} */
+  const f = { i, col, tipo, anio, desde, hasta, n: g.length, nExtra, extra: mayoriaExtra(nExtra, g.length), paso: pasos[Math.floor((pasos.length - 1) / 2)], pasoMin: pasos[0], pasoMax: pasos[pasos.length - 1],
+    min: Math.min(...precios), max: Math.max(...precios), sats: g.reduce((a, x) => a + x.sats, 0), mes: Number(g[0].fecha.slice(5, 7)) - 1, notas: g };
+  if (g.length === 1) { f.fecha = g[0].fecha; f.precio = g[0].precio; }
+  return f;
+}
+/**
+ * (Campamento 57) Las figuras de un año de la partitura (`y`, un elemento de `partitura`). Hasta `max` notas, una figura por día de
+ * compra (`modo: 'dia'`: varias el mismo día son un acorde con su cantidad), repartidas por cantidad y no por calendario. Con más, una
+ * por semana de lunes a domingo (`modo: 'semana'`, la misma semana que la manta y el pasaporte, cortada al año: como mucho 54), y su
+ * `col` es su semana en el año (0 = la del 1 de enero). Nunca hay más figuras que semanas, por muchas compras que haya.
+ * @param {{ anio: number, notas: { fecha: string, precio: number, sats: number, extra: boolean, paso: number }[] } | null | undefined} y
+ */
+export function figurasPartitura(y, max = NOTAS_POR_DIA) {
+  const notas = y?.notas ?? [];
+  const anio = y?.anio ?? 0;
+  if (!notas.length) return { anio, modo: 'dia', figuras: [] };
+  const modo = notas.length <= max ? 'dia' : 'semana';
+  const s0 = semana(`${anio}-01-01`), ini = `${anio}-01-01`, fin = `${anio}-12-31`;
+  /** @type {Map<string | number, typeof notas>} */
+  const grupos = new Map();
+  for (const nt of notas) { const k = modo === 'dia' ? nt.fecha : semana(nt.fecha); const g = grupos.get(k) ?? []; g.push(nt); grupos.set(k, g); }
+  const figuras = [...grupos.entries()].map(([k, g], i) => {
+    if (typeof k === 'string') return figuraDe(g, i, i, 'dia', anio, k, k);
+    const d = diaDeSemana(k, 0), h = diaDeSemana(k, 6);
+    return figuraDe(g, i, k - s0, 'semana', anio, d < ini ? ini : d, h > fin ? fin : h);
+  });
+  return { anio, modo, figuras };
+}
+/**
+ * (Campamento 58) Todos los años de un vistazo: una pauta por año (`fila`) y una figura por mes con compras (`col` = el mes). `figuras`
+ * es la lista plana, de la más vieja a la más nueva, para recorrerla con el teclado y tocarla.
+ * @param {{ anio: number, notas: { fecha: string, precio: number, sats: number, extra: boolean, paso: number }[] }[]} anios
+ */
+export function figurasTodos(anios) {
+  /** @type {Record<string, any>[]} */
+  const figuras = [];
+  anios.forEach((y, fila) => {
+    /** @type {Map<number, typeof y.notas>} */
+    const por = new Map();
+    for (const nt of y.notas) { const m = Number(nt.fecha.slice(5, 7)) - 1; const g = por.get(m) ?? []; g.push(nt); por.set(m, g); }
+    for (const [m, g] of por) figuras.push(Object.assign(figuraDe(g, figuras.length, m, 'mes', y.anio, `${y.anio}-${String(m + 1).padStart(2, '0')}-01`, g[g.length - 1].fecha), { fila }));
+  });
+  return { modo: 'todos', anios: anios.map((y) => y.anio), figuras };
+}
+/** Lo que se lee al tocar una figura: con una sola compra, su nota; si no, cuándo, cuántas (y cuántas extra), los sats y el rango de BTC. */
+export function textoFigura(f) {
+  if (f.n === 1 && f.fecha) return textoNota(f);
+  const cuando = f.tipo === 'mes' ? `${MESES[f.mes]} ${f.anio}` : f.tipo === 'semana' ? `Semana del ${nombreSemana(f.desde, f.hasta)}` : fechaLarga(f.desde);
+  const btc = f.min === f.max ? `BTC a $${entero(f.min)}` : `BTC entre $${entero(f.min)} y $${entero(f.max)}`;
+  return `${cuando} · ${f.n} ${f.n === 1 ? 'compra' : 'compras'}${f.nExtra ? ` (${f.nExtra} extra)` : ''} · +${entero(f.sats)} sats · ${btc}`;
+}
+/** Todos los años, en palabras. */
+export const textoTodos = (anios, libro = false) => {
+  const n = anios.reduce((a, y) => a + y.notas.length, 0);
+  return `De ${anios[0].anio} a ${anios[anios.length - 1].anio}: ${entero(n)} ${n === 1 ? 'nota' : 'notas'}, una figura por mes en ${libro ? 'las compras del libro' : 'tus compras'}`;
+};
 
 // ---------------------------------------------------------------------------------------------
 // Campamento 15A · el Diario del Libro, mensajes en la bandera y cartas selladas: solo datos y textos (la pantalla vive en `diario.js`,

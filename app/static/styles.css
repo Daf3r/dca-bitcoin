@@ -2146,6 +2146,10 @@ html[data-efectos="todos"] .hc-titila.tw3 { animation-duration: 8.8s; animation-
 .hm-luz { fill: #fff6e6; opacity: 0.34; } .hm-media { fill: #fff6e6; opacity: 0.13; } .hm-sombra { fill: #120c08; opacity: 0.34; }
 .hm-filo { fill: none; stroke: #fff3dc; stroke-width: 1; stroke-linecap: round; opacity: 0.7; }
 .hm-veta { fill: var(--naranja); opacity: 0.5; }
+/* (Campamento 57) Con varias compras en una piedra, la veta se enciende según la parte extra: hasta un tercio, dos tercios o más. */
+.hm-veta.hm-v1 { opacity: 0.2; } .hm-veta.hm-v2 { opacity: 0.36; }
+/* (Campamento 58) La constelación por semanas: un solo vigía, invisible, recibe el toque de todo el cielo. */
+.hc-vigia { fill: transparent; cursor: pointer; }
 .hm-guijarro-luz { fill: #fff6e6; opacity: 0.3; } .hm-guijarro-sombra { fill: #120c08; opacity: 0.3; }
 
 /* Campamento 13B · sellos de lacre, certificado y manta (el dibujo vive en arte-sellos.js y arte-historia.js). */
@@ -2302,7 +2306,7 @@ html[data-efectos="todos"] .he-vivo-luz { animation: ht-late 3.6s ease-in-out in
 /* La partitura: papel de música cálido (algo más tenue en el tema oscuro) con tinta sepia; lo tuyo en un naranja tostado que se lee en el papel. */
 .h-partitura { --hp-p0: #f2e6cc; --hp-p1: #eadbbc; --hp-p2: #dcc8a2; --hp-tinta: #2a2016; --hp-naranja: color-mix(in oklab, var(--naranja) 62%, #4a1a00); }
 :root[data-tema="claro"] .h-partitura { --hp-p0: #fbf4e4; --hp-p1: #f5ead2; --hp-p2: #ead9b6; }
-.dh-lienzo :is(.hp-sombra, .hp-papel, .hp-linea, .hp-barra, .hp-fin, .hp-final, .hp-clave, .hp-clave-nieve, .hp-clave-sendero, .hp-clave-sol, .hp-adicional, .hp-plica, .hp-viga, .hp-cabeza, .hp-aro) { pointer-events: none; }
+.dh-lienzo :is(.hp-sombra, .hp-papel, .hp-linea, .hp-barra, .hp-fin, .hp-final, .hp-clave, .hp-clave-nieve, .hp-clave-sendero, .hp-clave-sol, .hp-adicional, .hp-plica, .hp-viga, .hp-cabeza) { pointer-events: none; }
 .hp-p0 { stop-color: var(--hp-p0); } .hp-p1 { stop-color: var(--hp-p1); } .hp-p2 { stop-color: var(--hp-p2); }
 .hp-papel { fill: url(#h-p-papel); stroke: color-mix(in oklab, var(--hp-p2) 70%, var(--hp-tinta)); stroke-width: 0.6; }
 .hp-sombra { fill: rgb(0 0 0 / 0.3); }
@@ -2320,12 +2324,37 @@ html[data-efectos="todos"] .he-vivo-luz { animation: ht-late 3.6s ease-in-out in
 .hp-viga { fill: var(--hp-tinta); }
 .hp-cabeza { fill: var(--hp-tinta); }
 .hp-cabeza.hp-extra { fill: var(--hp-naranja); }
-.hp-aro { fill: none; stroke: var(--hp-naranja); stroke-width: 1; }
 .hp-toque { fill: transparent; transform-box: fill-box; transform-origin: center; }
 .hp-toque.sel { fill: color-mix(in oklab, var(--naranja) 18%, transparent); stroke: var(--hp-naranja); stroke-width: 1.4; }
 .hp-toque.sonando { fill: color-mix(in oklab, var(--naranja) 50%, transparent); stroke: var(--hp-naranja); stroke-width: 2.2; }
 html:not([data-efectos="ninguno"]) .hp-toque.sonando { animation: hp-suena 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 @keyframes hp-suena { 0% { transform: scale(0.4); opacity: 0.2; } 60% { transform: scale(1.18); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+/* (Campamentos 57 y 58) Las figuras por semana y por mes: la barra del rango, la cantidad debajo, el nombre del mes o del año, las rayitas
+   de silencio y la semana elegida abierta abajo (con su lazo). Nada de esto recibe el toque: lo recibe la columna (`.hp-col`). */
+.dh-lienzo :is(.hp-rango, .hp-sil, .hp-eti, .hp-num, .hp-semana, .hp-lazo) { pointer-events: none; }
+.hp-rango { fill: none; stroke: var(--hp-tinta); stroke-width: 1.6; stroke-linecap: round; opacity: 0.42; }
+.hp-sil { fill: none; stroke: var(--hp-tinta); stroke-width: 1.4; stroke-linecap: round; opacity: 0.5; }
+.hp-eti { font: 600 8px var(--sans, system-ui, sans-serif); fill: var(--hp-tinta); opacity: 0.78; }
+.hp-num { font: 700 7.5px var(--sans, system-ui, sans-serif); font-variant-numeric: tabular-nums; fill: var(--hp-tinta); }
+.hp-dia { font-weight: 500; }
+.hp-corte { fill: none; stroke: var(--hp-tinta); stroke-width: 0.6; stroke-dasharray: 2 2.4; opacity: 0.4; }
+.hp-vacia .hp-linea { opacity: 0.28; }
+/* «Ver estas compras» (campamento 57) lleva a «Movimientos»: el título queda bajo la mini-cabecera, no tapado por ella. */
+#t-compras { scroll-margin-top: 72px; }
+.dh-ver[hidden] { display: none; }
+.hp-lazo { fill: none; stroke: var(--hp-naranja); stroke-width: 1; stroke-dasharray: 1.6 2; opacity: 0.8; }
+.hp-col.sel { fill: color-mix(in oklab, var(--naranja) 14%, transparent); }
+
+/* (Campamento 57) La fila de «Tocar» y de ‹ ›: dos pasos de 48 px del mismo lenguaje que «Tocar» (borde y fondo suaves), para mover lo
+   elegido cuando las figuras son más pequeñas que un dedo. */
+.dh-mandos { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.dh-pasos { display: flex; gap: 6px; margin: 0 0 4px; }
+.dh-pasos[hidden] { display: none; }
+.dh-paso { display: grid; place-items: center; width: var(--toque, 48px); height: var(--toque, 48px); padding: 0; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); color: var(--txt); cursor: pointer; }
+.dh-paso::before { content: ""; width: 0.55rem; height: 0.9rem; background: var(--txt); clip-path: polygon(62% 0, 100% 12%, 40% 50%, 100% 88%, 62% 100%, 0 50%); }
+.dh-paso.sig::before { clip-path: polygon(38% 0, 100% 50%, 38% 100%, 0 88%, 60% 50%, 0 12%); }
+.dh-paso:disabled { cursor: default; opacity: 0.45; }
+@media (hover: hover) and (pointer: fine) { .dh-paso:not(:disabled):hover { border-color: var(--naranja); } }
 
 /* «Tocar este año»: un botón secundario con su icono (triángulo; mientras suena, un cuadrado). */
 .dh-tocar { gap: 10px; min-height: var(--toque, 48px); margin: 0 0 4px; padding: 0 16px 0 12px; border: 1px solid var(--s3); border-radius: 12px; background: var(--s1); text-decoration: none; }
