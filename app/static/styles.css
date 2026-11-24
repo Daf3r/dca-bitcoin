@@ -1471,6 +1471,9 @@ html[data-contraste="alto"][data-tema="claro"] {
   --txt: #000; --txt2: #2b251d; --txt3: #3d352a; --naranja-txt: #7a3500; --sube: #0b4f2a; --baja: #8a1d12; --s3: #8a7656;
 }
 html[data-contraste="alto"] :is(.fila, .lista li + li) { border-color: var(--s3); }
+/* (Campamento 62) Con alto contraste, --s3 es un color de borde: la fila de «Tu cuenta» al pasar el ratón se marca con su filo, no con ese
+   fondo (la tinta suave del valor quedaba a 3.5:1 sobre él). */
+html[data-contraste="alto"] .dc-lista button:hover { background: var(--s2); box-shadow: inset 0 0 0 2px var(--s3); }
 html[data-contraste="alto"] :is(button, summary, a, input, select, [tabindex="0"]):focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
 
 /* Enlace para saltar al contenido: solo se ve al enfocarlo con el teclado. */
