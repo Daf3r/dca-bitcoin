@@ -7,6 +7,8 @@ import { pose, teleferico } from './arte-osos-poses.js';
 import { cumpleDeHoy } from './pintar.js';
 import { $, R, S, esAdmin, reducido, vozLibro } from './estado.js';
 import { abrirPelicula, hayPelicula } from './pelicula.js';
+import { verComprasEntre } from './lista.js';
+import { irAPestana } from './pestanas.js';
 
 // «Tu historia» (ideas 37 y 38): en «Tu cuenta», las medallas de constancia y la línea de tiempo de cómo llegaste hasta aquí.
 // Todo sale de datos que ya existen (ver `lib.historia` y `lib.medallas`). El texto de las compras (notas) entra con `textContent`.
@@ -68,6 +70,7 @@ function pintarObjeto() {
   $('dh-tocar').hidden = vista !== 'partitura';
   $('dh-tocar').textContent = 'Tocar este año';
   $('dh-pasos').hidden = true;
+  $('dh-ver').hidden = true;
   fig.hidden = esLinea;
   for (const b of $('dh-vistas').children) b.setAttribute('aria-pressed', String(b.dataset.vh === vista));
   if (esLinea) return;
@@ -114,6 +117,9 @@ function pintarObjeto() {
     $('dh-sig').disabled = seleccion === d.lista.length - 1;
     const pista = { dia: 'Toca una nota para ver esa compra.', semana: 'Toca una semana para verla de cerca.', todos: 'Toca un mes para ver cómo fue.' }[modo];
     $('dh-detalle').textContent = !d.lista.length ? '' : s ? textoFigura(s) : `${d.todos ? textoTodos(d.anios, lb) : textoAnioPartitura(d.anio, lb, d.fig)}. ${pista}`;
+    // (Campamento 57) «Ver estas compras»: lleva a «Movimientos» con solo las compras de esa figura (su día, su semana o su mes).
+    $('dh-ver').hidden = !s;
+    if (s) $('dh-ver').textContent = s.n === 1 ? 'Ver esta compra' : 'Ver estas compras';
   } else if (d.tipo === 'manta') {
     $('dh-detalle').textContent = s ? textoSemanaManta(s) : 'Toca una semana (o usa las flechas) para ver qué pasó.';
   } else {
@@ -157,6 +163,14 @@ const moverSel = (d) => {
   const ult = datos.lista.length - 1;
   elegir(seleccion == null ? (d < 0 ? ult : 0) : Math.max(0, Math.min(ult, seleccion + d)));
 };
+$('dh-ver').addEventListener('click', () => {
+  const s = seleccion != null ? datos?.lista[seleccion] : null;
+  if (!s) return;
+  verComprasEntre(s.desde, s.hasta);
+  irAPestana('movimientos');
+  const t = $('t-compras');
+  requestAnimationFrame(() => { t.scrollIntoView({ block: 'start', behavior: reducido() ? 'auto' : 'smooth' }); t.focus({ preventScroll: true }); });
+});
 $('dh-ant').addEventListener('click', () => moverSel(-1));
 $('dh-sig').addEventListener('click', () => moverSel(1));
 /** (Campamento 58) La constelación por semanas tiene un solo vigía: el toque elige la estrella más cercana (a 16 del dibujo como mucho). */

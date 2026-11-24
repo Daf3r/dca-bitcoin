@@ -2338,6 +2338,10 @@ html:not([data-efectos="ninguno"]) .hp-toque.sonando { animation: hp-suena 0.42s
 .hp-num { font: 700 7.5px var(--sans, system-ui, sans-serif); font-variant-numeric: tabular-nums; fill: var(--hp-tinta); }
 .hp-dia { font-weight: 500; }
 .hp-corte { fill: none; stroke: var(--hp-tinta); stroke-width: 0.6; stroke-dasharray: 2 2.4; opacity: 0.4; }
+.hp-vacia .hp-linea { opacity: 0.28; }
+/* «Ver estas compras» (campamento 57) lleva a «Movimientos»: el título queda bajo la mini-cabecera, no tapado por ella. */
+#t-compras { scroll-margin-top: 72px; }
+.dh-ver[hidden] { display: none; }
 .hp-lazo { fill: none; stroke: var(--hp-naranja); stroke-width: 1; stroke-dasharray: 1.6 2; opacity: 0.8; }
 .hp-col.sel { fill: color-mix(in oklab, var(--naranja) 14%, transparent); }
 

@@ -344,6 +344,19 @@ function editarNota(btn) {
 
 // Buscar, filtrar y ordenar
 const reiniciar = () => { F.limite = INICIAL; pintarLista(); };
+/**
+ * (Campamento 57) «Ver estas compras» de la partitura: la lista con solo las compras de esas fechas (los demás filtros se quitan; el orden
+ * se queda). «Fechas y orden» queda abierto para que se vea qué filtro hay y se pueda quitar.
+ */
+export function verComprasEntre(desde, hasta) {
+  quitarFiltros();
+  Object.assign(F, { filtro: 'compra', desde, hasta });
+  $('l-desde').value = desde; $('l-hasta').value = hasta;
+  document.querySelectorAll('#l-chips button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === 'compra')));
+  fechasAbiertas = true;
+  pintarControles();
+  reiniciar();
+}
 $('l-buscar').addEventListener('input', (e) => { F.texto = e.target.value; reiniciar(); });
 $('l-chips').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-f]');

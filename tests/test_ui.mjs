@@ -8214,8 +8214,11 @@ try {
       ok(new RegExp(`^${y.anio}: [\\d,]+ notas en ${fig.figuras.length} semanas; BTC entre`).test(await p.innerText('#dh-detalle')), `57: el año dice que va por semanas (${await p.innerText('#dh-detalle')})`);
       const pasos = await p.evaluate(() => [...document.querySelectorAll('#dh-pasos button')].map((b) => { const r = b.getBoundingClientRect(); return { w: r.width, h: r.height, l: b.getAttribute('aria-label') }; }));
       ok(await p.locator('#dh-pasos').isVisible() && pasos.length === 2 && pasos.every((b) => b.w >= 47.5 && b.h >= 47.5) && pasos[0].l === 'Semana anterior' && pasos[1].l === 'Semana siguiente', `57: ‹ › de 48 px, con su nombre (${JSON.stringify(pasos)})`);
+      const arriba = async () => p.evaluate(() => Math.round(document.getElementById('dh-sig').getBoundingClientRect().top + window.scrollY));
+      const antes = await arriba();
       await p.click('#dh-ant'); await p.waitForTimeout(200);
       eq(await p.getAttribute('#dh-lienzo .pieza.sel', 'data-i'), String(fig.figuras.length - 1), '57: ‹ sin nada elegido lleva a la última semana');
+      eq(await arriba(), antes, '57: elegir una semana no mueve ‹ › (el sitio de la semana abierta ya estaba guardado)');
       ok(await p.locator('#dh-sig').isDisabled() && /^(Semana del .+ · \d+ compras|.+ · BTC a \$)/.test(await p.innerText('#dh-detalle')), `57: la semana se lee (${await p.innerText('#dh-detalle')})`);
       await p.click('#dh-ant'); await p.waitForTimeout(200);
       eq(await p.getAttribute('#dh-lienzo .pieza.sel', 'data-i'), String(fig.figuras.length - 2), '57: ‹ va a la semana anterior');
@@ -8223,6 +8226,14 @@ try {
       const grande = fig.figuras.reduce((m, f) => (f.n > m.n ? f : m), fig.figuras[0]);
       await p.locator(`#dh-lienzo .pieza[data-i="${grande.i}"]`).click({ force: true }); await p.waitForTimeout(200);
       eq(await p.innerText('#dh-detalle'), L.textoFigura(grande), '57: tocar la columna de una semana la lee con su cantidad, sus extra y el rango de BTC');
+      // «Ver estas compras»: «Movimientos» con solo las compras de esa semana
+      ok((await p.innerText('#dh-ver')).trim() === 'Ver estas compras', '57: «Ver estas compras» sale con una semana elegida');
+      await p.click('#dh-ver');
+      await p.waitForFunction(() => { const t = document.getElementById('t-compras').getBoundingClientRect().top; return t >= 0 && t < 400; }, null, { timeout: 6000 }).catch(() => {});
+      const lst = await p.evaluate(() => ({ desde: document.getElementById('l-desde').value, hasta: document.getElementById('l-hasta').value, chip: document.querySelector('#l-chips [aria-pressed="true"]')?.dataset.f, top: Math.round(document.getElementById('t-compras').getBoundingClientRect().top) }));
+      eq([lst.desde, lst.hasta, lst.chip], [grande.desde, grande.hasta, 'compra'], '57: la lista queda filtrada por las fechas de la semana y por compras');
+      ok(lst.top >= 0 && lst.top < 400, `57: y se ve el título de «Movimientos» (${lst.top})`);
+      await p.locator('#dh-lienzo').scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
       await p.focus('#dh-lienzo'); await p.keyboard.press('Home'); await p.waitForTimeout(150);
       eq(await p.getAttribute('#dh-lienzo .pieza.sel', 'data-i'), '0', '57: las flechas del teclado siguen moviendo lo elegido');
       ok(await p.locator('#dh-ant').isDisabled(), '57: en la primera, ‹ se apaga');

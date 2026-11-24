@@ -929,7 +929,8 @@ function resumen(fig, sel) {
   const S = todos ? Math.max(1, fig.anios.length) : 4;
   const slots = todos ? 12 : POR_SISTEMA;
   const elegida = !todos && sel != null ? figuras[sel] : null;
-  const H = 20 + S * SISTEMA_C + (elegida ? SISTEMA_C + 22 : 0);
+  // Por semanas, el sitio de la semana abierta se guarda siempre (vacío hasta elegir una): elegir no mueve lo de debajo, ni ‹ ›.
+  const H = 20 + S * SISTEMA_C + (todos ? 0 : SISTEMA_C + 22);
   const yc = (j) => 14 + SISTEMA_C / 2 + j * SISTEMA_C + (j >= S ? 12 : 0);
   const yN = (j, p) => yc(j) - (p - 6) * PASO_C;
   const ancho = (X1P - X0C - 10) / slots;
@@ -962,7 +963,13 @@ function resumen(fig, sel) {
     figuraResumen(f, x, yN, j, todos ? 6 : 5.4, acc, todos ? 1 : 2);
     toques += `<rect class="pieza hp-toque hp-col${f.i === sel ? ' sel' : ''}" data-i="${f.i}" x="${f1(x - ancho / 2)}" y="${f1(yN(j, 14))}" width="${f1(ancho)}" height="${f1(18 * PASO_C)}" rx="4"/>`;
   }
-  // La semana elegida, abierta día por día (solo se mira: el detalle se lee en el texto de debajo).
+  // La semana elegida, abierta día por día (solo se mira: el detalle se lee en el texto de debajo). Sin elegir, su pauta vacía y una pista.
+  if (!todos && !elegida) {
+    let lineas = '';
+    for (const p of [2, 4, 6, 8, 10]) lineas += `M12 ${f1(yN(S, p))}H${X1P}`;
+    s += `<g class="hp-semana hp-vacia"><path class="hp-corte" d="M20 ${f1(yc(S) - SISTEMA_C / 2 - 2)}H${X1P - 8}"/><path class="hp-linea" d="${lineas}"/>`
+      + `<text class="hp-eti" x="${f1((X0C + X1P) / 2)}" y="${f1(yN(S, -5.4))}" text-anchor="middle">toca una semana para verla día por día</text></g>`;
+  }
   if (elegida) {
     const j = S, dias = (Date.UTC(...ymd(elegida.hasta)) - Date.UTC(...ymd(elegida.desde))) / 864e5 + 1;
     const anchoD = (X1P - X0C - 10) / 7, d0 = new Date(Date.UTC(...ymd(elegida.desde)));
