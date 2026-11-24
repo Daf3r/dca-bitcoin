@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 51) El director del valle; resume también el tempo (2026-12-i) y la Navidad (2026-12-h), que salen casi a la vez.
+    id: '2026-12-j',
+    items: [
+      'De día sale humo de una chimenea del pueblo y el cayuco del pescador se mece en el lago.',
+      'El valle va con más calma: las piscuchas se mecen despacio y la que barre descansa entre pasadas.',
+      'Un día de fiesta, de luna llena o cuando llegan los azacuanes, un aviso corto lo cuenta.',
+      'En Navidad el pueblo vive el día entero, del pan de madrugada a los abrazos de las doce.',
+      'La celebración de una etapa dura un poco más; un toque la cierra.',
+    ],
+  },
+  {
     id: '2026-12-i',
     items: [
       'El valle va con más calma: el humo sale en bocanadas y las piscuchas se mecen despacio.',
