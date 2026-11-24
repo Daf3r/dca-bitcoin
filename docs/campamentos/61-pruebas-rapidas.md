@@ -19,8 +19,8 @@ Chromium tarda 30 s), axe 22 min, Lighthouse + banco 7, lo demás menos de 2. El
 
 **Dentro de `test_ui`** (nuevo: `ESPERAS=1` dice por bloque cuánto se fue en esperas fijas, en `entrar` y en arrancar servidores):
 72 bloques, 2,450 comprobaciones, 4,185 s sumando bloques (las tres partes a la vez). **El 58 % es espera fija** (`waitForTimeout`: 1,702
-esperas, 2,425 s) y **557 entradas** (`entrar`) se llevan 2,421 s, de los que 1,560 son sus 2.8 s fijos. Arrancar los 138 servidores de
-prueba, 96 s. En el texto hay 726 `waitForTimeout` (527 s escritos), pero los bucles los multiplican por tres.
+esperas, 2,425 s) y **557 entradas** (`entrar`) se llevan 2,421 s, de los que 1,560 son sus 2.8 s fijos. Arrancar los 153 servidores de
+prueba que se levantan en una corrida, 96 s. En el texto hay 726 `waitForTimeout` (527 s escritos); los bucles los llevan a 1,702 (×2.3).
 
 | Bloque | s | comprobaciones | esperas fijas (s / nº) | `entrar` (s / nº) |
 |---|--:|--:|--:|--:|
@@ -72,11 +72,28 @@ máquina cargada.
     más**, nunca menos (con la máquina cargada la subida puede no haber acabado a los 2.8 s).
   - `entrar(…, { espera: false })` para la tele (21B, 25 y 29), que recarga enseguida con `#tv`: esa primera carga nadie la mira; basta
     con que acaben sus llamadas. Lo que se comprueba se mide después de la recarga, con su espera de siempre. 21B: **361 → 306 s**.
-  - Dos esperas que con la máquina cargada se quedaban cortas, con su espera fija **más** una condición: el índice lateral tras cambiar
+  - Tres esperas que con la máquina cargada se quedaban cortas (la tercera, el aviso de prueba: ver «Riesgos»), con su espera fija **más** una condición: el índice lateral tras cambiar
     de tema (`sinTransiciones`: falló una vez con 1.1:1 de contraste porque el color aún iba de camino) y la fiesta de la tele
-    (`entradas`: falló una vez «tv-fiesta sin ver» a 3840×2160 porque su animación de entrada no había acabado).
+    (`entradas`: falló una vez «tv-fiesta sin ver» a 3840×2160 porque su animación de entrada no había acabado). La primera versión de
+    `entradas` miraba todas las animaciones de las tarjetas y **se colgó en serie**: contaba el marco de la historia (40 s, que sale o no
+    según la hora real) y las brasas de la fiesta grande (tres vueltas, ~8.6 s). Ahora mira solo la entrada de `#tv-fiesta`. Lección:
+    una condición nueva espera a algo concreto, nunca a «todo lo que se mueve».
   - `PESOS` medidos otra vez (las tres partes en serie, 24 nov 2026; con 39b y 51, que contaban 60 s por no tener medida). Las dos últimas
     líneas no se tocaron (otra rama añade allí su bloque).
+
+### Lo que se miró y no se hizo (con sus números)
+
+- **Cambiar los 2.8 s de `entrar` por una condición**: ~0.2 s por entrada (≈ 110 s de 4,185), y obligaría a demostrar otra vez cada prueba
+  que mira el final de la subida. Se dejó la espera fija y se le añadió la condición (solo espera más).
+- **Reutilizar la sesión (`storageState`)**: lo que cuesta entrar **aparte** de sus 2.8 s fijos son ~860 s de los 2,421 (la página de
+  entrada, el formulario y la primera carga). Es el techo de lo que se ganaría, pero saltarse `/login` dejaría sin mirar la consola de la
+  entrada en cada `eq(consola, [])`, y varias pruebas dependen de lo que hace la primera carga (la bienvenida, «visto», «Qué hay de
+  nuevo»). No compensa el riesgo; con todo a la vez, esos 860 s se reparten entre seis.
+- **Duplicados entre barrido, axe y `test_ui`**: recorren tamaños y estados parecidos, pero cada uno mira otra cosa (el barrido:
+  desbordes y toques de 48 px en 112/448 combinaciones; axe: reglas WCAG en 336 estados; `test_ui`: el comportamiento). Unir dos
+  exigiría probar la misma cobertura combinación por combinación; con todo a la vez, el barrido entero dura 6 min de reloj. No se unió nada.
+- **Datos de prueba más pequeños**: arrancar los 153 servidores (incluido `mil`, con mil compras) suma 96 s en toda la corrida (2 %).
+  No vale la pena.
 
 ## Antes y después
 
@@ -84,33 +101,37 @@ Todo con la misma máquina compartida (ver arriba): con la otra sesión corriend
 
 | | Antes | Después |
 |---|--:|--:|
-| Verificación local completa, **en serie** | ≈ 122 min (campamento 51) | SERIE_DESPUES |
-| Verificación local completa, **a la vez** (`node tests/verificar_todo.mjs --visual DIR`, 4 a la vez) | — | **38.5 min** (32 de lo paralelo + 6.5 de banco y Lighthouse solos) |
+| Verificación local completa, **en serie** | ≈ 122 min (campamento 51) | ≈ 118 min (`test_ui` 61.8 min en sus tres partes en vez de 66; lo demás, igual) |
+| Verificación local completa, **a la vez** (`node tests/verificar_todo.mjs --visual DIR`, 4 a la vez) | — | **36.7 min** (≈ 31 de lo paralelo + 6 de banco y Lighthouse solos) |
 | `test_ui`, comprobaciones | 2,450 (72 bloques) | **2,450** (72 bloques; cada bloque, las mismas que antes) |
 | axe, estados | 336 | **336**, los mismos nombres (ver abajo) |
 | Barrido rápido / por pestañas, combinaciones | 112 / 448 | **112 / 448**, sin repetidas (32 + 40 + 40 y 128 + 160 + 160) |
-| CI: Playwright 1/3, 2/3, 3/3 | ≈ 22 min cada uno | ≈ 13–14 min (proyectado) |
+| CI: Playwright 1/3, 2/3, 3/3 | ≈ 22 min cada uno | ≈ 11–12 min (proyectado: el par, 10 min 16 s aquí) |
 | CI: axe | ≈ 22 min | ≈ 12–14 min (proyectado) |
-| CI: lo que espera un PR | ≈ 22–23 min | ≈ 13–14 min (proyectado) |
+| CI: lo que espera un PR | ≈ 22–23 min | ≈ 12–14 min (proyectado; lo marca axe) |
 
-- **El par del CI, medido aquí**: `node tests/verificar_todo.mjs ui:1/6 ui:2/6` (lo que hace «Navegador (Playwright) 1/3»), solo, con
-  la otra sesión cargando la máquina: **13 min 21 s** (las dos sextas, 801 y 703 s). En el runner, sin vecinos, debería quedar en
-  11–13 min de pruebas más ~1 de preparación. axe en claro y oscuro a la vez tardó 14.5 min **con otras dos pruebas de navegador y la
-  otra sesión a la vez** (carga 12–17); en serie, los dos esquemas, 24.6 min con la misma carga. El CI real lo dirá el PR.
+- **El par del CI, medido aquí**: `node tests/verificar_todo.mjs ui:5/6 ui:6/6` (lo que hace «Navegador (Playwright) 3/3»), solo y con la
+  máquina ya sin la otra sesión: **10 min 16 s** (610 y 616 s). Con la otra sesión cargando (carga 6–9), el par 1/6 + 2/6 tardó 13 min
+  21 s. En el runner: ~10–11 min de pruebas más ~1 de preparación. axe en claro y oscuro a la vez tardó 15 min con otras dos pruebas
+  de navegador al lado y la máquina cargada; en serie, los dos esquemas, 24.6 min con la misma carga. El CI real lo dirá el PR.
+- **En serie, después** (las tres partes una tras otra, con la máquina cargada como en el «antes»): 1,250 + 1,208 + 1,252 s = **61.8 min**
+  (antes 66); sumando bloques, 3,708 s frente a 3,970. Las esperas fijas medidas a la vez bajaron de 2,425 a 2,338 s; casi todo lo
+  ganado es la tele (21B: 361 → 299 s) y la entrada.
 - **Misma cobertura, demostrada**: cada uno de los 72 bloques de `test_ui` dio las mismas comprobaciones que antes (2,450 en total). axe:
   la lista de estados (`ESTADOS`) de una corrida entera y la de claro + oscuro por separado tienen **los mismos 336 nombres**; lo
   único distinto es **a favor**: en la corrida entera, la bienvenida de la lectora en oscuro se revisaba **sin** su diálogo (la de
   claro ya la había marcado como vista en el mismo servidor), y por separado se revisa con él. Barridos: 112 y 448 combinaciones
   distintas, como antes.
-- **Todo en verde** en la corrida a la vez (`test_lib` 1,006, `test_api` 1,314, push 19, aleatorio 8,862, `tsc`, Biome 0 avisos,
-  recorte 70 archivos, ruff, mypy, axe sin violaciones, barridos en orden, banco dentro de topes y presupuesto, regresión visual
-  0.00 % en las 15 capturas) salvo **Lighthouse local** (la app, mediana 66 de 66 · 66 · 59; mínimo 70), que ya salía por debajo
-  aquí antes de este campamento (67 en la verificación del 51) con la máquina cargada; la app no cambió, y en el CI (sin vecinos) pasa.
-  La parte 1/6 falló una vez (la fiesta de la tele, arreglada arriba) y pasó al repetirla.
+- **Todo en verde** en la corrida final a la vez (36 min 42 s; `test_lib` 1,006, `test_api` 1,314, push 19, aleatorio 8,862, `tsc`,
+  Biome 0 avisos, recorte 70 archivos, ruff, mypy, axe sin violaciones, barridos en orden, banco dentro de topes y presupuesto,
+  regresión visual 0.00 % en las 15 capturas, **Lighthouse** de la app mediana 74 de 76 · 74 · 72) salvo la parte 6/6, que falló una vez
+  (el aviso de prueba, arreglado: ver «Riesgos») y pasó al repetirla con la 5/6 al lado. En una corrida anterior, con la máquina muy
+  cargada, Lighthouse local dio 66 (la base del A/B del 51 ya daba 69 aquí): la app no cambió (`git diff origin/main -- app/` vacío).
 
 ## Riesgos y lo que no se pudo probar aquí
 
-- **Esperas que se quedan cortas a la vez**: dos aparecieron con la máquina muy cargada (carga 12–17 en 4 núcleos) y se arreglaron con
+- **Esperas que se quedan cortas a la vez**: tres aparecieron (el índice lateral, la fiesta de la tele y el aviso de prueba de
+  «Avisos», cuyo texto llega antes de que el botón se reactive: `avisos.js` aún espera a `refrescar()`); las tres con la máquina muy cargada (carga 12–17 en 4 núcleos) y se arreglaron con
   una condición **además** de la espera fija. Puede haber más que no salieron en estas corridas. En el CI cada trabajo corre solo dos
   procesos en 4 núcleos (mucho menos cargado que aquí). Si un check falla y al repetirlo pasa, la regla es la de siempre: se busca qué
   espera se quedó corta y se le añade su condición; nunca se acorta ni se quita. Como último recurso, `-j 1` en el paso del CI vuelve
@@ -118,5 +139,9 @@ Todo con la misma máquina compartida (ver arriba): con la otra sesión corriend
 - **Los registros del CI** ya no salen línea a línea mientras corre la parte: cada sexta deja el suyo entero al acabar, plegado.
 - **PESOS**: si otra rama añade un bloque (la de `vida-62` lo hace), al mezclar puede chocar con las líneas medidas; basta con quedarse
   con ambas. Un bloque sin peso cuenta 60 s.
+- **La meta de ~12 min por trabajo no está confirmada en el CI**: aquí el par tardó 10 min 16 s con la máquina libre (13 min 21 s
+  cargada). axe, ~12–15 min, es ahora el trabajo más largo. Si el primer PR enseña más de ~14 min, la palanca siguiente es **nueve
+  partes, tres por trabajo** (`ui:1/9 ui:2/9 ui:3/9` y `UI_PARTES=9`) y axe en cuatro (claro y oscuro, cada uno en dos mitades), con
+  los mismos nombres de los checks; se decide con esa corrida delante.
 - **Sin probar aquí**: el CI real (lo corre el PR; los tiempos de arriba son una proyección), y el runner de GitHub con dos sextas a la
   vez.
