@@ -121,8 +121,12 @@ export const FECHAS_ALMANAQUE = [
   ['Nochebuena', '2026-12-24'], ['Navidad', '2026-12-25'], ['31 de diciembre', '2026-12-31'], ['1 de enero', '2027-01-01'], ['6 de enero', '2027-01-06'],
 ];
 const hhmm = (h) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
-/** Los tramos de un día: cada vez que cambia el turno del pueblo o lo que se mueve, de cinco en cinco minutos (el 41 cambia a las 23:40). */
+/**
+ * Los tramos de un día: cada vez que cambia el turno del pueblo o lo que se mueve, de cinco en cinco minutos (el 41 cambia a las 23:40).
+ * (Campamento 51, idea 225) Con el director, el mapa del día (`mapaDelDia`): también el foco, los ambientales y lo que pesa cada tramo.
+ */
 export function tramosDelDia(C, dia) {
+  if (C.mapaDelDia) return C.mapaDelDia(dia, window.innerWidth >= 1100);
   const t = [];
   for (let q = 0; q < 288; q++) {
     const h = q / 12, clave = `${C.turno(dia, h)}|${C.mueve(dia, h)}`;
@@ -141,7 +145,10 @@ function pintarAlmanaque() {
     for (const tr of tramosDelDia(C, dia)) {
       const li = document.createElement('li');
       const txt = document.createElement('span');
-      txt.textContent = `${hhmm(tr.desde)}–${hhmm(tr.hasta)} · ${tr.turno}${tr.mueve ? ` · se mueve: ${tr.mueve}` : ''}`;
+      const foco = tr.foco ? ` · foco: ${tr.foco === 'rutina' ? `rutina (${tr.rutina})` : tr.foco}` : '';
+      const amb = tr.ambiente?.length ? ` · ambiente: ${tr.ambiente.join(', ')}` : '';
+      const peso = tr.capas != null ? ` · capas pequeñas: ${tr.capas} (hasta ${tr.anim} animaciones por capa)` : '';
+      txt.textContent = `${hhmm(tr.desde)}–${hhmm(tr.hasta)} · ${tr.turno}${tr.mueve ? ` · se mueve: ${tr.mueve}` : ''}${foco}${amb}${peso}`;
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'enlace';

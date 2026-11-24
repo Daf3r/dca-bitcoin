@@ -139,11 +139,18 @@
    * Si no toca nada, ''.
    */
   function mueve(f, h) {
-    const fi = mueveFiesta(f, h); // (Campamento 41) la Navidad entera tiene sus propias franjas
-    if (fi !== null) return fi;
+    // (Campamento 51, idea 226) El movimiento tiene un solo dueño: si el foco del momento trae a alguien que se mueve (la fiesta de
+    // Navidad: campamento 41; los zompopos y los azacuanes), es ese; si no, el de la rutina de siempre, que cede su franja.
+    // El primero de la tabla (`FOCOS`, por orden de rareza) que está y trae a alguien que se mueve; un foco quieto (la misa) no la quita.
+    for (const fo of FOCOS) {
+      const m = fo.mueve && fo.cuando(f, h) ? fo.mueve(f, h) : null;
+      if (m !== null) return m;
+    }
+    return mueveRutina(f, h);
+  }
+  /** (Campamento 51) Lo que se mueve un día cualquiera, franja por franja (la rutina): el reparto de siempre, sin los focos. */
+  function mueveRutina(f, h) {
     if (h >= 5 && h < 7) return 'torogoz';
-    if (zompopos(f) && h >= 7.5 && h < 10) return 'zompopos';
-    if (azacuanes(f) && h >= 8 && h < 16) return 'azacuanes';
     if (h >= 7 && h < 8) return 'barre'; // (37) la que barre su acera (las gallinas, desde las 8:00)
     if (h >= 8 && h < 10) return 'gallinas';
     if (h >= 10 && h < 13) return 'teleferico';
@@ -215,6 +222,138 @@
     if (h < 17.75) return 'tarde';
     return md >= '12-01' || md <= '01-06' ? 'posada' : 'pupusas';
   }
+  // ---------------------------------------------------------------------------------------------------- (Campamento 51) el director
+  /**
+   * (Campamento 51, idea 224) La escalera de rareza: cada cuánto pasa algo. Lo de cada día es chico y callado; cuanto más raro, más
+   * grande puede ser. El director elige por este orden (lo más raro primero) y cada idea nueva del valle declara su peldaño.
+   */
+  const RAREZA = ['dia', 'semana', 'mes', 'anio', 'anios'];
+  /** El día de la semana (0 = domingo) de una fecha AAAA-MM-DD. */
+  const semana = (f) => new Date(`${f}T12:00:00Z`).getUTCDay();
+  /** (51) La luna de una noche: la de las 21:00 de El Salvador de esa fecha (las 3:00 UTC del día siguiente). */
+  const lunaDeLaNoche = (f) => lunaLlena(faseLunar(new Date(Date.parse(`${f}T00:00:00Z`) + 27 * 3600e3)));
+  const NAVIDAD_FRASE = {
+    '12-24': 'Es Nochebuena en el pueblo: por la tarde hay cena en la calle y, de noche, misa de gallo.',
+    '12-25': 'Es Navidad en el pueblo: por la mañana los oseznos estrenan.',
+    '12-31': 'Es el último día del año en el pueblo: de noche todos esperan las doce.',
+    '01-01': 'Es Año Nuevo en el pueblo: hasta media mañana nadie sale a la calle.',
+    '01-06': 'Es 6 de enero: por la tarde el pueblo guarda la Navidad.',
+  };
+  /**
+   * (Campamento 51, ideas 223 y 224) Los focos del valle, en una línea cada uno: cuándo está (`cuando`: fecha y hora; `delDia`: si
+   * ese día lo tiene en algún momento), su peldaño en la escalera, a quién trae que se mueva (`mueve`, si alguien: la franja de
+   * `data-mueve` que pasa delante de la de la rutina, idea 226) y lo que pesa (`pesa`: nodos y animaciones de más; un turno es otro
+   * reparto de los mismos trazos, 0). `frase`: lo que cuenta la línea de hoy (idea 228), solo en los raros (de mes o más raros) y,
+   * en lo que dura semanas (los zompopos, los azacuanes), solo el primer día: un aviso cada día dejaría de ser raro.
+   * El orden es el de mando: la fiesta del día, lo raro de temporada, lo del mes, las costumbres de la semana y, si no hay nada, la
+   * rutina (`rutinaDelDia`). Las visitas (55) y las historias de varios días (53) entrarán aquí, cada una con su línea.
+   */
+  const FOCOS = [
+    { id: 'navidad', rareza: 'anio', delDia: (f) => Boolean(festivo(f)), cuando: (f, h) => turnoFiesta(f.slice(5), h) !== '' || mueveFiesta(f, h) !== null, mueve: mueveFiesta, pesa: { nodos: 0, anim: 0 }, frase: (f) => NAVIDAD_FRASE[f.slice(5)] ?? null },
+    { id: 'desfile', rareza: 'anio', delDia: (f) => f.slice(5) === '09-15', cuando: (f, h) => f.slice(5) === '09-15' && h >= 7 && h < 12, pesa: { nodos: 0, anim: 0 }, frase: () => 'Es 15 de septiembre: por la mañana el pueblo tiene su desfile.' },
+    { id: 'cruz', rareza: 'anio', delDia: (f) => f.slice(5) === '05-03', cuando: (f) => f.slice(5) === '05-03', pesa: { nodos: 0, anim: 0 }, frase: () => 'Es Día de la Cruz: en el pueblo hay una cruz adornada con frutas.' },
+    { id: 'zompopos', rareza: 'anio', delDia: zompopos, cuando: (f, h) => zompopos(f) && h >= 7.5 && h < 10, mueve: () => 'zompopos', pesa: { nodos: 0, anim: 0 }, frase: (f) => (f.slice(5) === '05-15' ? 'Empieza la semana de los zompopos de mayo: por las mañanas salen en el valle.' : null) },
+    { id: 'azacuanes', rareza: 'anio', delDia: azacuanes, cuando: (f, h) => azacuanes(f) && h >= 8 && h < 16, mueve: () => 'azacuanes', pesa: { nodos: 0, anim: 0 }, frase: (f) => (['10-10', '04-01'].includes(f.slice(5)) ? 'Llegan los azacuanes: estos días pasan sobre el valle a mediodía.' : null) },
+    { id: 'posada', rareza: 'anio', delDia: (f) => navidad(f) && !['12-24', '12-25', '12-31', '01-01'].includes(f.slice(5)), cuando: (f, h) => turno(f, h) === 'posada', pesa: { nodos: 0, anim: 0 } },
+    { id: 'luna', rareza: 'mes', delDia: lunaDeLaNoche, cuando: (f, h) => (h >= 19 || h < 5) && lunaDeLaNoche(h < 5 ? diaAntes(f) : f), pesa: { nodos: 0, anim: 0 }, frase: (f) => (lunaDeLaNoche(diaAntes(f)) ? null : 'Esta noche hay luna llena sobre el valle.') },
+    { id: 'misa', rareza: 'semana', delDia: (f) => semana(f) === 0, cuando: (f, h) => turno(f, h) === 'misa', pesa: { nodos: 0, anim: 0 } },
+    { id: 'mercado', rareza: 'semana', delDia: (f) => semana(f) === 6, cuando: (f, h) => turno(f, h) === 'mercado', pesa: { nodos: 0, anim: 0 } },
+  ];
+  /**
+   * (Campamento 51) Choques declarados: los días en que dos focos raros (de mes o más) pueden estar a la vez, y quién manda (el primero
+   * de la tabla). La luna llena cae a veces en Navidad (el 24 de diciembre de 2026, por ejemplo), en una noche de posada o el Día de la
+   * Cruz: manda la fiesta.
+   * Los zompopos y los azacuanes son de día y la luna de noche: no se pisan. Una prueba recorre el año y falla con un choque no declarado.
+   */
+  const CHOQUES = [['navidad', 'luna'], ['posada', 'luna'], ['cruz', 'luna']];
+  function diaAntes(f) { return new Date(Date.parse(`${f}T12:00:00Z`) - 864e5).toISOString().slice(0, 10); }
+  /**
+   * (Campamento 51, idea 227) La rutina del día, cuando no hay nada raro: a quién se fija uno hoy en el pueblo. Una baraja fija de seis
+   * (`RUTINAS`) que gira cada semana: el día `i` de la semana `w` (desde un lunes) toca `RUTINAS[(i mod 6 + s_w) mod 6]`, con
+   * `s_w = (2w + b_w) mod 6` y `b_w` (0 o 1) de una semilla por semana. Así, sin guardar nada y igual en todos los aparatos: hoy no es
+   * ayer, tampoco el mismo día de la semana pasada, y cada semana tiene al menos seis distintas. Todas existen cada día (son la rutina
+   * de siempre: se cuenta la que toca, no se dibuja nada); la misa del domingo, el sábado de plaza y las fiestas no entran en la baraja.
+   */
+  const RUTINAS = ['barre', 'gallinas', 'pescador', 'perro', 'pelota', 'fogon'];
+  const FRASE_RUTINA = {
+    barre: 'Temprano, una vecina barre su acera en el pueblo.',
+    gallinas: 'Por la mañana, las gallinas picotean en la plaza del pueblo.',
+    pescador: 'En el lago, el pescador anda en su cayuco.',
+    perro: 'Por la tarde, el perro de la plaza la cruza y se echa en su esquina.',
+    pelota: 'Por la tarde, los oseznos juegan con su pelota en la plaza.',
+    fogon: 'De una chimenea del pueblo sale el humo del fogón.',
+  };
+  const LUNES0 = Date.UTC(2024, 0, 1); // un lunes
+  /** Una semilla de 0 o 1 por semana (un entero sin signo, revuelto): igual en todos los aparatos. */
+  const bitSemana = (w) => { let x = (w * 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul(x, 2246822519) >>> 0; x ^= x >>> 13; return x & 1; };
+  function rutinaDelDia(f) {
+    const d = Math.round((Date.parse(`${f}T00:00:00Z`) - LUNES0) / 864e5), w = Math.floor(d / 7), i = d - w * 7;
+    const s = (((2 * w + bitSemana(w)) % 6) + 6) % 6;
+    return RUTINAS[((i % 6) + s) % 6];
+  }
+  /**
+   * (Campamento 51, F3 del diseño) Los ambientales: hasta tres cosas lentas y baratas junto al actor principal (la excepción acotada a
+   * «uno en movimiento a la vez»). Cada uno, en su capa pequeña (montana.js: `ambientalesDelValle`), solo transform y opacidad, ciclo de
+   * 12 s o más, recorrido de 20 px o menos y sin cruzar la escena; solo con «todos» y solo a su hora (si el CSS no lo enseña, no corre):
+   *   humo     5:00–20:00: el fogón de una chimenea (dos en pantallas anchas) todo el día, no solo a la hora del café y de la cena
+   *   cayuco   5:00–16:30: el cayuco a la deriva en el lago también de día (al amanecer, además, el pescador rema)
+   * De noche, ninguno. `pesa`: las capas que pone cada uno (las del escritorio entre paréntesis) y sus animaciones por capa.
+   */
+  const AMBIENTALES = [
+    { id: 'humo', cuando: (_f, h) => h >= 5 && h < 20, pesa: { capas: 1, capasAncho: 2, anim: 3 } },
+    { id: 'cayuco', cuando: (_f, h) => h >= 5 && h < 16.5, pesa: { capas: 1, capasAncho: 1, anim: 2 } },
+  ];
+  const MAX_AMBIENTALES = 3;
+  /** (51) Los ambientales de ese momento (ids), como mucho tres capas. */
+  const ambiente = (f, h) => AMBIENTALES.filter((a) => a.cuando(f, h)).map((a) => a.id);
+  /** (51, idea 223) El foco del momento: el primero de la tabla que está; si no, la rutina del día. */
+  function foco(f, h) {
+    return FOCOS.find((fo) => fo.cuando(f, h)) ?? { id: 'rutina', rareza: 'dia', rutina: rutinaDelDia(f) };
+  }
+  /**
+   * (Campamento 51, idea 223) El director del valle: con la fecha y la hora, qué se ve. Pura y sin guardar nada (lo mismo en todos los
+   * aparatos). { foco, rareza, rutina, turno, mueve, ambiente }: el foco del momento (o 'rutina'), su peldaño, la rutina del día, el
+   * turno del pueblo (`turno`), lo que se mueve (`mueve`: uno, el del foco si trae a alguien) y los ambientales (hasta tres).
+   */
+  function director(f, h) {
+    const fo = foco(f, h);
+    return { foco: fo.id, rareza: fo.rareza, rutina: rutinaDelDia(f), turno: turno(f, h), mueve: mueve(f, h), ambiente: ambiente(f, h) };
+  }
+  /**
+   * (Campamento 51, idea 228) La frase del foco para la línea de hoy: solo si ese día tiene algo raro (de mes o más raro), la del
+   * primero de la tabla; si no, null (los días de rutina no hay aviso: lo común es callado). Sin «tú» y sin verbos de mandar.
+   */
+  function fraseDelFoco(f) {
+    for (const fo of FOCOS) if (RAREZA.indexOf(fo.rareza) >= 2 && fo.frase && fo.delDia(f)) { const t = fo.frase(f); if (t) return t; }
+    return null;
+  }
+  /**
+   * (Campamento 51, idea 225) Lo que pesa el que se mueve, si va en capas pequeñas (montana.js): cuántas capas y cuántas animaciones en
+   * cada una. Lo que se mueve en el dibujo grande o en el cielo (el torogoz, las bandadas, las luciérnagas, el relámpago) lo mide el
+   * banco por capa; aquí solo lo de las capas propias, que es lo que se reparte con los ambientales.
+   */
+  const PESO_MUEVE = {
+    barre: { capas: 1, anim: 1 }, pelota: { capas: 1, anim: 1 }, brinda: { capas: 1, anim: 1 }, chispea: { capas: 1, anim: 1 },
+    gallinas: { capas: 3, anim: 1 }, perro: { capas: 2, anim: 1 }, teleferico: { capas: 0, capasAncho: 1, anim: 1 },
+  };
+  /**
+   * (Campamento 51, idea 225) El mapa del día: cada tramo en que cambia algo (el turno, el foco, lo que se mueve o los ambientales), de
+   * cinco en cinco minutos, con lo que pesa en capas pequeñas: `capas` (las del actor y las de los ambientales) y `anim` (la capa más
+   * cargada). Lo enseña la guía (junto al almanaque) y lo lee el banco de rendimiento, que falla si un tramo se pasa.
+   */
+  function mapaDelDia(f, ancho = false) {
+    const t = [];
+    for (let q = 0; q < 288; q++) {
+      const h = q / 12, dr = director(f, h), clave = `${dr.turno}|${dr.foco}|${dr.mueve}|${dr.ambiente.join(' ')}`;
+      if (t.length && t.at(-1).clave === clave) continue;
+      const pm = PESO_MUEVE[dr.mueve], amb = dr.ambiente.map((id) => AMBIENTALES.find((a) => a.id === id).pesa);
+      const capasAmb = amb.reduce((s, p) => s + (ancho ? p.capasAncho : p.capas), 0), capasMueve = pm ? (ancho ? (pm.capasAncho ?? pm.capas) : pm.capas) : 0;
+      t.push({ clave, desde: h, ...dr, capasAmb, capas: capasAmb + capasMueve, anim: Math.max(0, ...amb.map((p) => p.anim), capasMueve ? pm.anim : 0) });
+    }
+    return t.map((x, i) => ({ ...x, hasta: t[i + 1]?.desde ?? 24 }));
+  }
+  /** (51, idea 228) La frase de la rutina del día, para la descripción de la montaña (lectores de pantalla). */
+  const fraseRutina = (f) => FRASE_RUTINA[rutinaDelDia(f)];
   /** La franja a la que pertenece la hora. */
   function franja(h) {
     if (h >= 19 || h < 5) return 'noche';
@@ -327,6 +466,11 @@
     const fl = flor(d), mv = mueve(d, h);
     if (fl) raiz.dataset.flor = fl; else delete raiz.dataset.flor;
     if (mv) raiz.dataset.mueve = mv; else delete raiz.dataset.mueve;
+    // (Campamento 51) El director: el foco del momento (`data-foco`, lo lee el CSS y la descripción) y los ambientales que van junto al
+    // actor (`data-ambiente`, hasta tres, separados por espacios: el CSS enseña cada capa con `~=`).
+    const fo = foco(d, h), amb = ambiente(d, h);
+    raiz.dataset.foco = fo.id === 'rutina' ? `rutina-${fo.rutina}` : fo.id;
+    if (amb.length) raiz.dataset.ambiente = amb.join(' '); else delete raiz.dataset.ambiente;
     // (Campamento 35) El turno del pueblo: si cambió con la página abierta, montana.js rehace solo sus vecinos (`libro:turno`).
     const tu = turno(d, h);
     raiz.dataset.turno = tu;
@@ -356,5 +500,6 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, turno, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, turno,
+    director, foco, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

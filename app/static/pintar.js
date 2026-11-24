@@ -234,6 +234,7 @@ function marcarSaldo() {
  * `localStorage` `libro.dia` = AAAA-MM-DD (como `libro.hora` con el cielo).
  */
 let delDiaHecho = false;
+const almanaqueActivo = () => { try { return localStorage.getItem('libro.almanaque') === '1'; } catch { return false; } };
 export const diaVista = () => { try { return localStorage.getItem('libro.dia') || hoyISO(); } catch { return hoyISO(); } };
 /** (Campamento 28) Si hoy cumple años alguien de la familia: el grande de los dibujos de la interfaz estrena su gorrito (no dice de quién). */
 export const cumpleDeHoy = () => cumpleHoy(S.cumples ?? [], diaVista()).length > 0;
@@ -250,6 +251,10 @@ function pintarDelDia() {
     const lluvia = lluviaEstrellas(hoy);
     txt = efemeride(hoy)?.texto ?? (lluvia ? `Noche de ${lluvia.nombre}: hoy se ven más estrellas fugaces.` : null);
   }
+  // (Campamento 51, idea 228) Si lo del día no tiene nada que decir, puede contar el foco del valle, solo si es raro (cielo.js:
+  // `fraseDelFoco`: una fiesta, el primer día de los zompopos o de los azacuanes, la luna llena). Los días de rutina, nada: lo común es
+  // callado. Tampoco si se entró desde el almanaque de la guía (ya lo dice su aviso). Nunca en la entrada ni en un aviso push.
+  if (!txt && !almanaqueActivo()) txt = window.libroCielo?.fraseDelFoco?.(hoy) ?? null;
   if (!txt) return;
   try { if (localStorage.getItem('libro.delDia') === hoy) return; localStorage.setItem('libro.delDia', hoy); } catch { /* sin almacenamiento: sale en cada visita */ }
   avisar(txt, null, true, { ms: 6000 });

@@ -358,10 +358,58 @@ function animalesDelPueblo(host) {
 }
 
 /**
+ * (Campamento 51, F3 del diseño) Los ambientales del valle: hasta tres cosas lentas junto al actor principal (cielo.js: `AMBIENTALES`,
+ * `data-ambiente`). Cada una pasa del dibujo grande a su propia capa pequeña (un <svg> encima del dibujo grande y debajo del frente,
+ * como las gallinas): se **mueven** sus nodos, no se copian (un nodo más por capa, el <svg>). Así lo que respira todo el día no repinta
+ * la montaña: solo transform y opacidad, solo con «todos» y solo a su hora (el CSS esconde la capa entera fuera de ella).
+ * - El humo: las tres bocanadas de cada chimenea con fogón (una en el teléfono, dos en pantallas anchas), cada chimenea en su capa.
+ * - El cayuco: el grupo entero (el pescador, el remo, la lámpara), con la transformación que tenía en el lago (en la seca el agua baja:
+ *   `.lago-nivel` se encoge), para que quede justo donde estaba.
+ * Devuelve las capas puestas.
+ */
+function ambientalesDelValle(host) {
+  const svg = host.querySelector(':scope > svg'), frente = host.querySelector(':scope > svg.frente');
+  if (!svg) return [];
+  const capas = [];
+  // El humo solo se ve con «todos» (`efecto-ambiente`); el cayuco se ve con cualquier nivel (quieto) y se mueve solo con «todos»: su
+  // capa no lleva `efecto-ambiente` y está en la lista de la pausa al deslizar (styles.css).
+  const capa = (clase, [x, y, w, h], nodos, matriz = null) => {
+    const s = document.createElementNS(NS, 'svg');
+    for (const [a, v] of [['class', `${clase.includes('humo') ? 'efecto-ambiente ' : ''}v-capa-amb ${clase}`], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
+    Object.assign(s.style, { left: `${f1(x)}px`, top: `${f1(y)}px`, width: `${f1(w)}px`, height: `${f1(h)}px` });
+    let dentro = s;
+    if (matriz) { dentro = document.createElementNS(NS, 'g'); dentro.setAttribute('transform', `matrix(${[matriz.a, matriz.b, matriz.c, matriz.d, matriz.e, matriz.f].map((n) => n.toFixed(4)).join(' ')})`); s.append(dentro); }
+    dentro.append(...nodos);
+    if (frente) frente.before(s); else host.append(s);
+    capas.push(s);
+  };
+  // El humo: los círculos de una chimenea comparten su centro; suben 16 px, se corren 5 y crecen hasta 2.2 veces (styles.css: v-humo).
+  const humos = [...svg.querySelectorAll('#m-v-pie .v-hu')];
+  for (const [i, chimenea] of [humos.filter((c) => !c.classList.contains('v-hu-b')), humos.filter((c) => c.classList.contains('v-hu-b'))].entries()) {
+    if (!chimenea.length) continue;
+    const cx = Number(chimenea[0].getAttribute('cx')), cy = Number(chimenea[0].getAttribute('cy')), r = Math.max(...chimenea.map((c) => Number(c.getAttribute('r')))) * 2.2 + 1;
+    capa(`v-amb-humo v-amb-humo-${i + 1}`, [cx - r, cy - 16 - r, 5 + 2 * r, 16 + 2 * r], chimenea);
+  }
+  // El cayuco: con su transformación en el dibujo (la del lago en la seca), medida en el sistema del <svg> principal.
+  const cay = svg.querySelector('.lago .v-cayuco');
+  if (cay) {
+    const m = cay.getCTM(), base = svg.getCTM(), b = cay.getBBox();
+    if (m && base) {
+      const t = base.inverse().multiply(m), pts = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]].map(([x, y]) => [t.a * x + t.c * y + t.e, t.b * x + t.d * y + t.f]);
+      const x0 = Math.min(...pts.map((q) => q[0])) - 8, x1 = Math.max(...pts.map((q) => q[0])) + 8, y0 = Math.min(...pts.map((q) => q[1])) - 2, y1 = Math.max(...pts.map((q) => q[1])) + 2;
+      capa('v-amb-cayuco', [x0, y0, x1 - x0, y1 - y0], [cay], t);
+    }
+  }
+  return capas;
+}
+
+/**
  * (Campamento 35) El Pueblo de los Osos: el turno de ahora (cielo.js, por la hora y el día de El Salvador) y lo que se dibuja de él. Al
  * cambiar de turno con la página abierta (`libro:turno`, unas seis veces al día) se rehace solo el grupo de los vecinos (`.v-vecinos`)
  * de cada escena viva: es la única excepción a «nada se redibuja al cambiar de hora» (idea 102), un repintado del dibujo grande.
  */
+/** (Campamento 51, idea 228) La frase del foco del día para la descripción: lo raro si lo hay; si no, la rutina del día (cielo.js). */
+const focoDelDia = () => { const C = window.libroCielo, d = C?.dia?.(); return d ? (C.fraseDelFoco?.(d) ?? C.fraseRutina?.(d) ?? '') : ''; };
 const turnoDelPueblo = () => window.libroCielo?.turno?.(window.libroCielo.dia(), window.libroCielo.hora()) ?? 'manana';
 const elipseV = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
 function htmlVecinos({ lug, sol, cometas, conCapa = false }, t) {
@@ -797,7 +845,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><ellipse class="eco-halo" rx="12" ry="4.2" cy="0.5"/>${(() => { const c = cajaTu(ec); return `<rect class="eco-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/>`; })()}<ellipse class="eco-punto" rx="5" ry="1.9" cy="0.5"/><g class="tu">${osoTu({ k: kTu(ec) * 0.92 })}</g></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa) } : null, osos: null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa), foco: focoDelDia() } : null, osos: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   // (Campamento 25) Los osos polares de peluche de la familia, en la nieve al sol bajo la cumbre (los tres, la pareja o uno: lo que quepa).
   // Se sientan esquivando los rótulos de «Tú» donde quedará al final de la subida (por eso se pone a «Tú» un momento ahí) y en la nieve
@@ -815,7 +863,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   } finally { delete host.dataset.colocando; }
   podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
   if (tocable && !pelicula) telefericoValle(host, W, pb.u, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
-  if (tocable && !pelicula) animalesDelPueblo(host); // (34)
+  if (tocable && !pelicula) { animalesDelPueblo(host); ambientalesDelValle(host); } // (34) y (51, F3)
   if (tocable || pelicula) vigilarTurno(host, infoV); // (35) los vecinos cambian de turno con la página abierta
   if (infoV.conCapa) capaVecino(host, infoV, infoV.turno); // (37) el vecino que se mueve, en su capa
   describir(sats, etapa);

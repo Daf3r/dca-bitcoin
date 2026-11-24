@@ -13,6 +13,7 @@ import { createRequire } from 'node:module';
 import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const { chromium, devices } = require('playwright');
@@ -25,6 +26,8 @@ export const TOPES = { escena: 1100, valle: 300, osos: 40 };
 /** (Campamento 39, idea 131) El tope de la escena en pantallas anchas (escritorio y tele), por ancho: lo «solo ancho» no baja al teléfono. */
 export const TOPES_ANCHO = { 1440: 1100, 2560: 1100 };
 export const PRESUPUESTO = { principal: 56, frente: 16, 'par-cielo': 44, 'par-lejos': 22, 'par-medio': 4, propia: 3, total: 110 };
+/** (Campamento 51, F3) Como mucho tres ambientales (`svg.v-capa-amb`) moviéndose a la vez junto al actor principal. */
+export const AMBIENTALES = 3;
 /**
  * Los momentos que se miden: el día y la noche de siempre, la noche más cargada (Nochebuena), la época lluviosa (la noche de lluvia es el
  * caso duro de las animaciones) y, desde el campamento 39 (idea 124), el pico del año: el 31 a las 23:55, con los cohetes. `declara`: lo
@@ -33,21 +36,30 @@ export const PRESUPUESTO = { principal: 56, frente: 16, 'par-cielo': 44, 'par-le
  * son los de un día fijo (`FECHA_PRUEBA`): nada depende de la fecha real.
  */
 const CASOS = [
-  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 830 },
-  { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 830 },
-  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 899 },
-  { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 825 },
-  { caso: 'noche de lluvia', dia: '2026-07-10', hora: 21, declara: 825 },
+  // (Campamento 51) Las capas de los ambientales suman tres nodos a cada fecha (las del humo y del cayuco, y el grupo que guarda la
+  // transformación del cayuco en el lago): de ahí que cada `declara` suba 3 desde el 39 y el 41.
+  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 832 },
+  // (Campamento 51) Las franjas del día en que se mueve alguien del pueblo (la que barre, las gallinas, el perro, la pelota) y el
+  // anochecer del fogón: con los ambientales (F3) junto al actor, que es lo que el director reparte.
+  { caso: 'día, barre', dia: '2026-11-25', hora: 7.5, declara: 832 },
+  { caso: 'día, gallinas', dia: '2026-11-25', hora: 8.5, declara: 832 },
+  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 832 },
+  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 832 },
+  { caso: 'anochecer, fogón', dia: '2026-11-25', hora: 19, declara: 832 },
+  { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 832 },
+  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 902 },
+  { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 826 },
+  { caso: 'noche de lluvia', dia: '2026-07-10', hora: 21, declara: 826 },
   // El pico del año: los cohetes (14 animaciones, en el frente) solo de 23:50 a 0:30 del 24 y del 31; esos 40 minutos el frente admite 28
   // (medido el 24 nov 2026: 26 en Nochebuena, con el papel picado de la fiesta; ya era así antes del 39, solo que el banco no lo medía).
-  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 938, frente: 28 },
-  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 905, frente: 28 },
+  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 941, frente: 28 },
+  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 907, frente: 28 },
   // (Campamento 41) La Navidad entera: un turno de cada fecha nueva (los demás pesan lo mismo: otro reparto de los mismos trazos).
-  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 907 },
-  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 900 },
-  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 870 },
-  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 908, frente: 28 },
-  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 867 },
+  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 910 },
+  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 903 },
+  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 873 },
+  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 911, frente: 28 },
+  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 870 },
 ];
 /** (Campamento 39, idea 131) Las pantallas anchas (escritorio 1440×900 y tele 2560×1440): solo los nodos, frente a `TOPES_ANCHO`. */
 const ANCHOS = [[1440, 900], [2560, 1440]].flatMap(([w, h]) => [
@@ -88,15 +100,21 @@ const medir = (p) => p.evaluate(() => {
   const valle = [...host.querySelectorAll('svg *')].filter((e) => !e.closest('defs') && (e.closest('[id^="m-v-"]') || [...e.classList].some((c) => c.startsWith('v-')) || e.matches('.lago-playa, .lago-nivel'))).length;
   const osos = host.querySelector('#m-osos') ? host.querySelector('#m-osos').querySelectorAll('*').length + 1 : 0;
   const escondido = (e) => { for (let x = e; x && x !== host; x = x.parentElement) if (getComputedStyle(x).display === 'none') return true; return false; };
-  const anim = {};
+  const anim = {}, ambientales = new Set();
+  // (Campamento 51) Cada capa propia (un <svg> pequeño, hermano del principal: la cabina, una gallina, el perro, el vecino del turno, un
+  // ambiental) cuenta por separado: el presupuesto es de 3 por capa, no de 3 entre todas. Su clave: `propia:` y su primera clase propia.
+  const GENERICAS = new Set(['', 'efecto-ambiente', 'v-capa-amb', 'v-capa-animal', 'v-capa-vecino']);
+  const propia = (svg) => `propia:${(svg?.getAttribute('class') ?? '?').split(/\s+/).filter((k) => !GENERICAS.has(k)).join('.') || '?'}`;
   for (const a of document.getAnimations()) {
     const t = a.effect?.target;
-    if (!t || !host.contains(t) || a.playState !== 'running' || escondido(t) || Number(getComputedStyle(t).opacity) === 0) continue;
+    if (!t || !host.contains(t) || a.playState !== 'running' || escondido(t)) continue;
     const svg = t.closest('svg'), c = svg?.getAttribute('class') ?? '';
-    const capa = !svg || svg.parentElement !== host ? 'propia' : /\bfrente\b/.test(c) ? 'frente' : (c.match(/par-\w+/)?.[0] ?? (svg === host.querySelector(':scope > svg') ? 'principal' : 'propia'));
+    if (svg?.classList.contains('v-capa-amb')) ambientales.add(svg); // (51) el humo, en la pausa de sus bocanadas, sigue siendo un ambiental
+    if (Number(getComputedStyle(t).opacity) === 0) continue;
+    const capa = !svg || svg.parentElement !== host ? propia(svg) : /\bfrente\b/.test(c) ? 'frente' : (c.match(/par-\w+/)?.[0] ?? (svg === host.querySelector(':scope > svg') ? 'principal' : propia(svg)));
     anim[capa] = (anim[capa] ?? 0) + 1;
   }
-  return { escena: host.querySelectorAll('*').length, valle, osos, anim };
+  return { escena: host.querySelectorAll('*').length, valle, osos, anim, ambientales: ambientales.size };
 });
 
 /** Lo blando: crear la escena (CPU 4×) y fotogramas en reposo con la montaña a la vista (CPU 4×), mediana de 3. */
@@ -115,9 +133,35 @@ async function blando(ctx, p) {
   return r;
 }
 
+/**
+ * (Campamento 51, idea 225) El mapa del día del director (cielo.js: `mapaDelDia`): lo que cada tramo declara que pone en capas pequeñas.
+ * Se lee para todo un año (teléfono y pantalla ancha) y falla si un tramo se pasa: más de tres ambientales o una capa con más animaciones
+ * que las de su presupuesto. En cada caso medido, los ambientales que se mueven deben ser los que el mapa declara a esa hora.
+ */
+function cargarCielo() {
+  const raiz = { dataset: {}, toggleAttribute() {}, style: { setProperty() {} } };
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: () => null, setItem() {}, removeItem() {} }, setInterval() {}, Intl, Date, Math, Number, Object };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(path.join(AQUI, '..', 'app', 'static', 'cielo.js'), 'utf8'), ctx);
+  return ctx.window.libroCielo;
+}
+const CIELO = cargarCielo();
+const fallosMapa = [];
+if (CIELO.mapaDelDia) {
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) {
+    const f = new Date(t).toISOString().slice(0, 10);
+    for (const ancho of [false, true]) for (const tr of CIELO.mapaDelDia(f, ancho)) {
+      if (tr.capasAmb > AMBIENTALES) fallosMapa.push(`mapa ${f} ${tr.desde.toFixed(2)} h${ancho ? ' (ancho)' : ''}: ${tr.capasAmb} ambientales > ${AMBIENTALES}`);
+      if (tr.anim > PRESUPUESTO.propia) fallosMapa.push(`mapa ${f} ${tr.desde.toFixed(2)} h: una capa con ${tr.anim} animaciones > ${PRESUPUESTO.propia}`);
+    }
+  }
+}
+/** Los ambientales que el mapa declara en el teléfono para ese momento. */
+const ambientalesDeclarados = (dia, hora) => (CIELO.mapaDelDia ? CIELO.mapaDelDia(dia).findLast((x) => x.desde <= hora)?.capasAmb ?? 0 : 0);
+
 const navegador = await chromium.launch();
 const srv = await servidor('mil');
-const filas = [], fallos = [];
+const filas = [], fallos = [...fallosMapa];
 try {
   for (const { caso: nombre, dia, hora, declara, frente } of CASOS) {
     const pres = { ...PRESUPUESTO, ...(frente ? { frente } : {}) };
@@ -129,10 +173,12 @@ try {
     const b = RAPIDO ? {} : await blando(ctx, p);
     await ctx.close();
     const total = Object.values(t.anim).reduce((a, x) => a + x, 0);
-    filas.push({ caso: nombre, escena: n.escena, valle: n.valle, osos: n.osos, escenaTodos: t.escena, animaciones: t.anim, total, ...b });
+    filas.push({ caso: nombre, escena: n.escena, valle: n.valle, osos: n.osos, escenaTodos: t.escena, animaciones: t.anim, ambientales: t.ambientales, total, ...b });
     for (const k of ['escena', 'valle', 'osos']) if (n[k] > TOPES[k]) fallos.push(`${nombre}: ${k} ${n[k]} > ${TOPES[k]}`);
     if (declara != null && n.escena > declara + 6) fallos.push(`${nombre}: la escena pesa ${n.escena} nodos y la fecha declara ${declara} (+6)`);
     for (const [capa, x] of Object.entries(t.anim)) if (x > (pres[capa] ?? pres.propia)) fallos.push(`${nombre}: ${x} animaciones a la vista en «${capa}» > ${pres[capa] ?? pres.propia}`);
+    if (t.ambientales > AMBIENTALES) fallos.push(`${nombre}: ${t.ambientales} ambientales moviéndose a la vez > ${AMBIENTALES}`);
+    if (t.ambientales !== ambientalesDeclarados(dia, hora)) fallos.push(`${nombre}: se mueven ${t.ambientales} ambientales y el mapa del día declara ${ambientalesDeclarados(dia, hora)}`);
     if (total > PRESUPUESTO.total) fallos.push(`${nombre}: ${total} animaciones a la vista > ${PRESUPUESTO.total}`);
   }
   for (const { caso: nombre, dia, hora, w, h } of ANCHOS) {
@@ -148,7 +194,7 @@ try {
 }
 console.log('caso               escena  valle  osos  (con «todos»)  animaciones a la vista por capa                     crear (4×)  fps (4×)');
 for (const f of filas) {
-  const capas = Object.entries(f.animaciones).map(([k, v]) => `${k} ${v}`).join(' · ');
+  const capas = Object.entries(f.animaciones).map(([k, v]) => `${k} ${v}`).join(' · ') + (f.ambientales ? ` (ambientales: ${f.ambientales})` : '');
   if (f.ancho) { console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)}   (pantalla ancha: solo nodos, tope ${TOPES_ANCHO[f.caso.split(' ').at(-1)]})`); continue; }
   console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)} ${String(f.escenaTodos).padStart(14)}  ${`${f.total}: ${capas}`.padEnd(50)} ${f.crearMs != null ? `${f.crearMs} ms`.padStart(10) : ''} ${f.fps != null ? String(f.fps).padStart(9) : ''}`);
 }
