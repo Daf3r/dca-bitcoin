@@ -80,8 +80,14 @@ Duraciones resueltas por el navegador; la prueba nueva fija cada fila. Entre par
 ## Para que no vuelva a pasar
 Bloque «campamento 39b: el tempo» de `test_ui`: fija las 61 duraciones de la tabla (resueltas en el navegador), comprueba 18 de la interfaz (y el paso de «Tú» al anotar) como estaban, que los tempos solo estén en esas reglas y en ninguna transición, que nada lleve `NaN`, que la subida al anotar dure lo de siempre (~1.4 s, sin el paso lento) y que la tarjeta se cierre con un toque. Al día: el humo y las piscuchas del 22 y el estirarse de 6 s del 33.
 
-## Verificado
-*(se completa al terminar la verificación)*
+## Verificado (24 nov 2026, en local, sin CI)
+- `test_ui` entero en sus tres partes, una tras otra: **754 + 743 + 934** comprobaciones (71 bloques). La primera corrida de la parte 3 cayó en «luna-moneda: vuelve a ser luna» (la prueba esperaba 2 s y la moneda gira ahora 2.6): se ajustó la espera a 3 s y la parte 3 entera volvió a pasar.
+- `test_lib` 992, `test_api` 1314 (con el disco simulado sano), `tsc`, Biome (0 avisos), recorte, ruff y mypy (los del CI): en verde.
+- axe: 336 estados, sin violaciones. Barrido `rapido` (112) y por pestañas (448): en orden.
+- **El banco**: los mismos nodos en los 16 casos (día 827, Nochebuena 899, con cohetes 938, 1440/2560 hasta 979) y las mismas animaciones a la vista por capa, salvo «Nochebuena, cena» (38 → 36 en la principal: las bocanadas de humo en su pausa tienen opacidad 0 en el instante medido y el banco no las cuenta; no es una animación menos). Dentro de los topes.
+- **Lighthouse móvil A/B**, alternando con `claude/vida-41` en el mismo momento: la app, medianas **71 · 74 · 73** contra **68 · 70 · 69**; la entrada, 97–98 contra 92–97. Accesibilidad y buenas prácticas, 100. La entrada más lenta no bajó la medida (ruido del sandbox; lo que manda es el CI).
+- Regresión visual contra `claude/vida-41`: las 15 capturas iguales (0.00 %, una 0.11 %): la fase de cada animación se conservó.
+- Capturas a 390 y 1440 px, a mediodía y a las 21:00: nada roto, ningún `NaN` en trazos ni estilos. «Qué hay de nuevo» (`2026-12-i`, resume también la Navidad del 41) cabe entero en 360×640.
 
 ## Sin probar aquí
 - **iPhone real**: si anotar se siente igual de ágil (debe: la subida no cambió) y si lo ambiental ya no se siente corto; la pelota y la que barre de cerca; «Medir este aparato» de día y de noche (las animaciones son las mismas: no debería cambiar).

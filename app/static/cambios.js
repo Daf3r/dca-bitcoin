@@ -11,11 +11,10 @@ export const CAMBIOS = [
   {
     id: '2026-12-i',
     items: [
-      'El valle va con más calma: el humo sale en bocanadas, las piscuchas se mecen despacio y las nubes se ve que pasan.',
-      'Los osos del pueblo se toman su tiempo: la pelota bota, rueda y vuelve, y la que barre descansa entre pasadas.',
-      'La celebración de una etapa dura un poco más; un toque en cualquier sitio la cierra.',
-      'En Navidad el pueblo vive el día entero: pan de madrugada, tamales, cena en la calle, misa de gallo y abrazos a las doce.',
-      'El 25 los oseznos estrenan juguetes, el 31 todos esperan las doce mirando la torre y el 6 se guarda la Navidad.',
+      'El valle va con más calma: el humo sale en bocanadas y las piscuchas se mecen despacio.',
+      'En el pueblo la pelota bota, rueda y vuelve, y la que barre descansa entre pasadas.',
+      'La celebración de una etapa dura un poco más; un toque la cierra.',
+      'En Navidad el pueblo vive el día entero, del pan de madrugada a los abrazos de las doce.',
     ],
   },
   {
