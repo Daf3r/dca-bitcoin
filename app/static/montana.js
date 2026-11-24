@@ -1769,7 +1769,7 @@ export function colocarReloj(host = document.querySelector('.montana')) {
   sombra.setAttribute('d', `M${sx.toFixed(1)} ${(gy - ancho).toFixed(1)}L${punta.toFixed(1)} ${gy.toFixed(1)}L${sx.toFixed(1)} ${(gy + ancho).toFixed(1)}Z`);
 }
 setInterval(() => { if (document.visibilityState === 'visible') colocarReloj(); }, 300_000);
-// (Campamento 33) De 7:00 a 8:00, cada cinco minutos, los osos de la cumbre se estiran: la clase `estira` dos segundos y medio (el CSS
+// (Campamento 33) De 7:00 a 8:00, cada cinco minutos, los osos de la cumbre se estiran: la clase `estira` seis segundos (39b; antes 2.6; el CSS
 // los enseña uno tras otro, solo con «todos»). Un cambio a saltos, no una animación que corra siempre.
 let estirados = -1;
 setInterval(() => {

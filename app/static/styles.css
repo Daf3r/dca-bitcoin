@@ -1846,9 +1846,9 @@ html[data-efectos="todos"][data-cohetes] .chispa { animation: chispa calc(var(--
 .sb-sube { opacity: 0; }
 @keyframes silba { 0% { transform: translate(0, 0); opacity: 0; } 4% { opacity: 1; } 22% { transform: translate(5px, calc(var(--sube) * -0.25)); } 42% { transform: translate(-5px, calc(var(--sube) * -0.5)); } 62% { transform: translate(5px, calc(var(--sube) * -0.75)); } 79% { transform: translate(0, calc(var(--sube) * -1)); opacity: 1; } 80%, 100% { transform: translate(0, calc(var(--sube) * -1)); opacity: 0; } }
 @keyframes estalla { 0%, 79% { opacity: 0; transform: scale(0.2); } 81% { opacity: 1; } 100% { opacity: 0; transform: scale(1.5); } }
-html[data-efectos="todos"][data-cohetes] .sb-sube { animation: silba calc(var(--t-accion) * 0.9) ease-in infinite; }
+html[data-efectos="todos"][data-cohetes] .sb-sube { animation: silba calc(var(--t-accion) * 11 / 12) ease-in infinite; }
 .sb-estallido { opacity: 0; transform-box: fill-box; transform-origin: center; }
-html[data-efectos="todos"][data-cohetes] .sb-estallido { animation: estalla calc(var(--t-accion) * 0.9) var(--t-sale) infinite; }
+html[data-efectos="todos"][data-cohetes] .sb-estallido { animation: estalla calc(var(--t-accion) * 11 / 12) var(--t-sale) infinite; }
 .sb-estallido path { fill: none; stroke: #ffd780; stroke-width: 1.6; stroke-linecap: round; }
 .sb-estallido circle { fill: none; stroke: #ff9fb0; stroke-width: 1.6; stroke-dasharray: 0.1 6; stroke-linecap: round; }
 .silbador:nth-child(4) .sb-estallido path { stroke: #9fe3ff; }
@@ -3942,6 +3942,8 @@ html[data-fogon][data-efectos="todos"] .v-humos { display: inline; }
 .v-hu { fill: color-mix(in oklab, #ebe5dc 62%, var(--c3)); opacity: 0; transform-box: fill-box; transform-origin: center; animation: v-humo var(--t-ambiente) var(--t-sale) infinite; }
 .v-hu-1 { animation-delay: -14s; } .v-hu-2 { animation-delay: -12s; }
 .v-hu-b { animation-duration: calc(var(--t-ambiente) * 1.125); }
+/* (39b) La segunda chimenea, con sus bocanadas a 2 s la una de la otra en su ciclo de 18 s. */
+.v-hu-b.v-hu-1 { animation-delay: -15.75s; } .v-hu-b.v-hu-2 { animation-delay: -13.5s; }
 @keyframes v-humo { 0% { transform: translate(0, 0) scale(0.6); opacity: 0; } 9% { opacity: 0.5; } 50%, 100% { transform: translate(5px, -16px) scale(2.2); opacity: 0; } }
 @media (max-width: 899px) { .v-hu { animation-timing-function: steps(60); } }
 
@@ -4613,7 +4615,7 @@ html[data-efectos="todos"][data-mueve="teleferico"] .tele-cabina { animation: te
 .tele-cabina .tc-colgador { fill: color-mix(in oklab, #2a2a33 80%, var(--monte)); }
 
 /* ---------------------------------------------------------------- Campamento 33 · Los de la cumbre se estiran por la mañana
-   De 7:00 a 8:00, cada cinco minutos, levantan los brazos dos segundos, uno tras otro (montana.js pone `estira-1`, `estira-2` y
+   De 7:00 a 8:00, cada cinco minutos, levantan los brazos seis segundos (39b), uno tras otro (montana.js pone `estira-1`, `estira-2` y
    `estira-3` en #m-osos; lib.js: estiranLosOsos). Los brazos van dibujados (un trazo por oso) y escondidos con display: none (no cuentan
    en la caja de los osos); si con ellos alguno quedara contra el cielo, ese día no se estiran (`data-sin-estirar`). A saltos y solo con
    «todos»: es ambiente. */

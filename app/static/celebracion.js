@@ -94,7 +94,7 @@ async function vistaPrevia(nivel) {
   if (!reducido()) setTimeout(() => destello(), MS_SUBIDA);
   celebrar({ sats: antes }, nivel === 'constancia' ? [{ tipo: 'compras', valor: R.constancia?.compras?.valor ?? 25 }] : []);
   // (39b) La espera cubre la subida y lo más largo de cada celebración al tempo nuevo (1 BTC: unos 9 s después de llegar).
-  await pausa(nivel === 'epico' ? 12_000 : nivel === 'hito' ? 7500 : nivel === 'paso' ? 4800 : 6000);
+  await pausa(nivel === 'epico' ? 12_000 : nivel === 'hito' ? 7500 : nivel === 'paso' ? 4800 : 7000);
   pintar({ montana: true }); // vuelve al estado real
   previaActiva = false;
 }

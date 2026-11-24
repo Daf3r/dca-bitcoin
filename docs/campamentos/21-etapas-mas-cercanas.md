@@ -1,5 +1,7 @@
 # Campamento 21 · Etapas más cercanas
 
+*(Campamento 39b: la tarjeta dura 2.6 s la ligera, 3.5 la de etapa y 4.5 la de hito, y un toque la cierra; lo que celebra la montaña, al tempo de la celebración.)*
+
 Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
 
 ## Campamento 21 · Etapas más cercanas

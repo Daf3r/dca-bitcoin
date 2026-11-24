@@ -7744,7 +7744,7 @@ try {
       ['.plantada', 'plantada-sale', '5s'], ['.anillo', 'anillo', '2.4s'], ['.alba.respira', 'cielo-respira', '4s'], ['.alba.amanece', 'cielo-amanece', '4.5s'], ['.luz-cima', 'luz-cima', '4.5s'],
       ['.campo.iza .farol-halo', 'farol-enciende', '2.2s'], ['.campo.alcanzado .humo', 'farol-respira', '9s'], ['.pino-nuevo', 'planta', '1.5s'],
       ['.lago-onda', 'onda-lago', '12s'], ['.lago-reflejo', 'brillo-lago', '9s'], ['.cometa-mueve', 'cometa', '3.2s'], ['.aurora-epica', 'aurora-epica', '9s'], ['.luz-gota', 'luz-gota', '3.2s'],
-      ['.pp-bandera', 'pp-ondea', '6.5s'], ['.pp-bandera:nth-child(2n)', '', '5.6s'], ['[data-cohetes] .chispa', 'chispa', '2.2s'], ['.volcancito:nth-child(2) .chispa', '', '2.5s'], ['.sb-sube', 'silba', '5.4s'], ['.sb-estallido', 'estalla', '5.4s'],
+      ['.pp-bandera', 'pp-ondea', '6.5s'], ['.pp-bandera:nth-child(2n)', '', '5.6s'], ['[data-cohetes] .chispa', 'chispa', '2.2s'], ['.volcancito:nth-child(2) .chispa', '', '2.5s'], ['.sb-sube', 'silba', '5.5s'], ['.sb-estallido', 'estalla', '5.5s'],
       ['.moneda-gira', 'moneda-gira', '2.6s'], ['.moneda-brillo', 'moneda-brillo', '2.6s'], ['.lago-moneda.hunde', 'moneda-hunde', '2.6s'],
       ['.v-hu', 'v-humo', '16s'], ['.v-hu-b', '', '18s'], ['.v-cy-remo', 'v-remo', '4.2s'], ['.v-pis', 'v-pis', '10s'], ['.v-pis-r2', '', '13s'], ['.v-pis-r3', '', '9s'],
       ['.osos.salta .oso', 'oso-salta', '1.8s'], ['.osos.salta .oso-pie', 'oso-pie', '1.8s'], ['.oso-saluda', 'oso-saluda', '3.2s'], ['[data-efectos="todos"] .oso-tu', 'tu-respira', '4.8s'], ['#m-yo.anda.sola .oso-tu', '', '0.55s'],

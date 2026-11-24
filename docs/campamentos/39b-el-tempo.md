@@ -18,7 +18,7 @@ El dueño sintió que la viveza era muy corta para el estilo de la app: 46 de 75
   - **El humo del fogón** sale en tres bocanadas seguidas (cada una 8 s, a 2 s la una de la otra) y para 4 s (ciclo de 16 s; antes una bocanada cada 6.6 s, sin pausa). En el teléfono sigue a pasos, al mismo ritmo de repintado (`steps(60)` en 16 s, antes `steps(30)` en 6.6 s).
   - **Los de la cumbre se estiran en 6 s** (uno tras otro cada 0.6 s; antes 2.6 s), en el mismo primer minuto de cada cinco de 7:00 a 8:00.
   - **La onda del lago** se abre en 7.8 s y descansa 4.2 s (ciclo de 12 s); **el saludo** de la bienvenida saluda, se detiene con el brazo arriba y vuelve a saludar (3.2 s); **el que brinda** alza el vaso y descansa (3.2 s).
-- **Los temporizadores de JS van a la par** (`montana.js: llegar`, `cometa`, `epico`, `brasas`, la moneda, el estirarse; `celebracion.js`; `pintar.js`): cada pieza se retira después de que acabe su animación al tempo nuevo; la tarjeta dura lo que su animación (`MS_TARJETA`); la escena no se redibuja en mitad de la celebración de 1 BTC (`ocupadaHasta`: 11 s después de llegar; antes 7); «Probar la celebración» espera lo que dura cada nivel (1 BTC 12 s, hito 7.5, etapa 6, intermedia 4.8).
+- **Los temporizadores de JS van a la par** (`montana.js: llegar`, `cometa`, `epico`, `brasas`, la moneda, el estirarse; `celebracion.js`; `pintar.js`): cada pieza se retira después de que acabe su animación al tempo nuevo; la tarjeta dura lo que su animación (`MS_TARJETA`); la escena no se redibuja en mitad de la celebración de 1 BTC (`ocupadaHasta`: 11 s después de llegar; antes 7); «Probar la celebración» espera lo que dura cada nivel (1 BTC 12 s, hito 7.5, etapa con sello 7, intermedia 4.8).
 - **La fase se conserva**: los retrasos negativos (nubes, piscuchas, papel picado, gallinas, el farol) se escalaron con su duración, para que al abrir cada cosa esté donde estaba.
 
 ### La tabla (antes → después)
@@ -33,7 +33,7 @@ Duraciones resueltas por el navegador; la prueba nueva fija cada fila. Entre par
 | La luz del farol respira | 5.2 s | 9 s |
 | Onda del lago · brillo de la luna en el lago | 7 · 5 s | 12 s (con pausa) · 9 s |
 | Piscuchas (tres ritmos) | 5.2 · 6.3 · 4.6 s | 10 · 13 · 9 s |
-| Humo del fogón (dos chimeneas) | 6.6 · 7.4 s | 16 · 18 s (tres bocanadas y pausa) |
+| Humo del fogón (dos chimeneas) | 6.6 · 7.4 s | 16 · 18 s (tres bocanadas a 2 s y pausa, cada una en su ciclo) |
 | Remo del pescador (amanecer) | 2.6 s | 4.2 s |
 | Papel picado (pares · impares) | 3.4 · 2.9 s | 6.5 · 5.6 s |
 | **Personajes (gesto y acción)** | | |
@@ -47,7 +47,7 @@ Duraciones resueltas por el navegador; la prueba nueva fija cada fila. Entre par
 | La pelota | 1.2 s en bucle | 9 s (una jugada) |
 | El que brinda · el volcancito que chispea (41) | 1.6 · 0.9 s | 3.2 · 1.8 s |
 | **Fiesta** | | |
-| Cohete: sube y estalla · chispa (y la del segundo volcancito) | 3.4 · 1.25 (1.4) s | 5.4 · 2.2 (2.5) s |
+| Cohete: sube y estalla · chispa (y la del segundo volcancito) | 3.4 · 1.25 (1.4) s | 5.5 · 2.2 (2.5) s |
 | **Celebración** | | |
 | Tarjeta del hito: ligera · etapa · hito grande | 1.7 · 2 · 2.6 s | 2.6 · 3.5 · 4.5 s (se cierra con un toque) |
 | Lacre que cae · su destello | 0.62 · 0.7 s | 1.1 · 1.4 s |
@@ -64,12 +64,16 @@ Duraciones resueltas por el navegador; la prueba nueva fija cada fila. Entre par
 
 **Igual** (ya están en su tempo o responden a tu dedo): estrellas (4.2–8.5 s), estrellas fugaces, niebla (80–110 s), torogoz (52 s y su aleteo de 1.9 s), llama del farol (1.1 s), aurora (18–29 s), llovizna y gotas, pétalos, luciérnagas, el pino de Navidad que parpadea, el cayuco a la deriva, las bandadas, los zompopos, el relámpago, la corona de «Tú», el teleférico (240 s), el perro (22 s), el paso de «Tú» al anotar (0.32 s) y la subida (1.4 s), el banderín que se agita al anotar (0.42 s × 4), el destello del anillo del tramo, la cifra bonita, los adornos de «Tu historia» y de la tele (la tele es del campamento D), el logo al abrir, la película (el bosque brota con el deslizador) y **toda la interfaz** (diálogos 0.22–0.24 s, filas 0.3–0.35 s, gráfico 0.28–0.35 s, tarjetas 0.5 s, semanas 0.45 s, «cargando», el comprobante, las cartas y las piedritas que caen).
 
-## Decidido (no se vuelve a preguntar)
-- La subida al anotar no se alarga (duda 3). El tempo largo es para lo ambiental, los personajes, las fiestas y la celebración.
+## Decidido por el dueño (no se vuelve a preguntar)
+- Se adopta F (F1 y F2 ahora; F3 en el 51) y **la subida al anotar no se alarga** (duda 3: ~1.2–1.4 s, no 2.4). El tempo largo es para lo ambiental, los personajes, las fiestas y la celebración; la interfaz conserva su tempo rápido.
+
+## Propuesto por quien implementa (lo revisa el dueño)
 - La interfaz no usa `--t-…`; una animación nueva de la escena elige su tempo con nombre.
-- La tarjeta del hito se cierra con cualquier toque o tecla; la celebración de la montaña no se corta.
+- **Un toque o una tecla en cualquier sitio cierra todas las tarjetas** de esa celebración (la de la etapa, la de constancia y la del sello); la celebración de la montaña no se corta.
+- «Deshacer» sigue saliendo a los 2.7 s de guardar (no espera a que acaben las brasas, que ahora viven hasta ~3.4 s): el comprobante y deshacer no esperan.
+- La subida al abrir sigue en 2.4 s (solo su paso es más tranquilo); la tarjeta de 1 BTC se queda 6 s.
 - Las acciones del pueblo siguen a saltos (`steps(1)`) en su capa; solo cambian sus fotogramas clave.
-- Diferencias con la tabla de Fable, a propósito: el cohete va a **5.4 s** (no 5.5; un factor exacto de `--t-accion`), la que barre a **7.2 s** por ciclo (tres pasadas de 1.44 s y su descanso: los 2.8 s de la tabla, leídos como una ida y vuelta), **la subida al anotar 1.4 s** (no 2.4, por la duda 3) y el paso de «Tú» al anotar, el de siempre.
+- La que barre a **7.2 s** por ciclo (tres pasadas de 1.44 s y su descanso: los 2.8 s de la tabla de Fable, leídos como una ida y vuelta). El paso de «Tú» al anotar, el de siempre (0.32 s).
 
 ## Lo que puede no verse bien (avisado)
 - **La pelota**: el osezno que «la recoge» no se mueve; la pelota sube un instante a sus manos y vuelve a su sitio a saltos. Si se lee raro, el siguiente paso es otra capa para el osezno (en el 49, con el director del 51).

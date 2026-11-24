@@ -1,5 +1,7 @@
 # Campamento 22B · El valle vivo, parte 2
 
+*(Campamento 39b: el humo del fogón sale en tres bocanadas y para, ciclo de 16 s; las piscuchas, 10, 13 y 9 s.)*
+
 Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
 
 ## Campamento 22B · El valle vivo, parte 2 (ideas 54, 55, 56, 58, 57, 61 y 60 de la ronda «mejoras»)
