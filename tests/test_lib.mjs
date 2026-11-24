@@ -1991,4 +1991,72 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   ok(['nb-cena', 'f31-cena'].every((t) => V.reparto(P.lugaresPueblo(P.sitiosPueblo({ ...FORMAS[4], sol: 1 })), t).find((v) => v.actor)?.actor === 'brinda') && V.reparto(P.lugaresPueblo(P.sitiosPueblo({ ...FORMAS[4], sol: 1 })), 'nb-doce').find((v) => v.actor)?.actor === 'chispea', 'fiesta 41: en la cena brinda uno y a las doce chispea un volcancito (cada uno, el actor de su franja)');
 }
 
+// Campamento 51 · El director del valle: el foco del momento (223), la escalera de rareza (224), el mapa del día (225), el movimiento con
+// un solo dueño (226), mañana no es igual que hoy (227), la frase del foco (228) y los ambientales (F3). Todo sale de la fecha y la hora.
+{
+  const raiz = { dataset: {}, atributos: new Set(), toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty() {} } };
+  const almacen = {};
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem: (k, v) => { almacen[k] = String(v); }, removeItem: (k) => { delete almacen[k]; } }, setInterval() {}, Intl, Date, Math, Number, Object };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo;
+  const dias = [];
+  for (let t = Date.UTC(2026, 0, 1); t <= Date.UTC(2027, 11, 31); t += 864e5) dias.push(new Date(t).toISOString().slice(0, 10));
+  // 224: cada foco declara su peldaño y lo que pesa; la tabla va de lo más raro a lo más común.
+  const pel = C.focos.map((f) => C.rareza.indexOf(f.rareza));
+  ok(C.focos.every((f) => f.id && C.rareza.includes(f.rareza) && typeof f.cuando === 'function' && typeof f.delDia === 'function' && f.pesa && f.pesa.nodos === 0) && pel.every((x, i) => !i || x <= pel[i - 1]), `director 224: cada foco con su peldaño, su cuándo y lo que pesa (0 nodos), de lo más raro a lo más común (${C.focos.map((f) => `${f.id}:${f.rareza}`).join(' ')})`);
+  // 223: un foco por momento; dos raros (de mes o más) a la vez solo si el choque está declarado (manda el primero de la tabla).
+  const choques = new Set(), noDecl = new Set();
+  let delDiaMal = 0;
+  for (const f of dias) {
+    for (let q = 0; q < 96; q++) {
+      const h = q / 4, raros = C.focos.filter((x) => C.rareza.indexOf(x.rareza) >= 2 && x.cuando(f, h)).map((x) => x.id);
+      for (let i = 0; i < raros.length; i++) for (let j = i + 1; j < raros.length; j++) { const par = `${raros[i]}+${raros[j]}`; choques.add(par); if (!C.choques.some(([a, b]) => a === raros[i] && b === raros[j])) noDecl.add(par); }
+      const fo = C.foco(f, h);
+      for (const x of C.focos) if (x.cuando(f, h) && !x.delDia(h < 5 && x.id === 'luna' ? new Date(Date.parse(`${f}T12:00:00Z`) - 864e5).toISOString().slice(0, 10) : f)) delDiaMal++;
+      if (fo.id !== (C.focos.find((x) => x.cuando(f, h))?.id ?? 'rutina')) delDiaMal++;
+    }
+  }
+  eq([...noDecl], [], `director 223: en dos años, cada cuarto de hora, nunca dos focos raros a la vez sin declarar (declarados y vistos: ${[...choques].join(', ')})`);
+  eq(delDiaMal, 0, 'director 223: el foco del momento es el primero de la tabla que está, y un foco que está a una hora lo está ese día');
+  const nb = C.director('2026-12-24', 19), dom = C.director('2026-11-29', 8.5), mie = C.director('2026-11-25', 12), cruz = C.director('2027-05-03', 12), luna = C.director('2026-12-23', 21);
+  eq([nb.foco, nb.mueve, nb.turno, dom.foco, dom.mueve, mie.foco, mie.rareza, cruz.foco], ['navidad', 'brinda', 'nb-cena', 'misa', 'gallinas', 'rutina', 'dia', 'cruz'], 'director 223: Nochebuena a las 19 es la fiesta (brinda uno), el domingo la misa (y las gallinas siguen: la misa no trae a nadie), un miércoles la rutina, el 3 de mayo la Cruz');
+  ok(['luna', 'posada'].includes(luna.foco) && C.director('2026-12-24', 21).foco === 'navidad', `director 223: la noche de luna llena del 23 de diciembre de 2026 (${luna.foco}) y, el 24, manda la fiesta aunque haya luna llena`);
+  // 226: el movimiento tiene un solo dueño (el foco que trae a alguien; si no, la rutina), y es lo mismo de antes en todas las franjas.
+  let mueveMal = 0;
+  for (const f of dias) for (let q = 0; q < 288; q++) {
+    const h = q / 12, quien = C.focos.find((x) => x.mueve && x.cuando(f, h) && x.mueve(f, h) !== null);
+    if (C.mueve(f, h) !== (quien ? quien.mueve(f, h) : C.mueveRutina(f, h))) mueveMal++;
+  }
+  eq(mueveMal, 0, 'director 226: lo que se mueve es del primer foco que trae a alguien; si ninguno, de la rutina (dos años, cada cinco minutos)');
+  eq([C.mueve('2027-05-18', 8), C.mueveRutina('2027-05-18', 8), C.mueve('2026-10-20', 14.5), C.mueveRutina('2026-10-20', 14.5), C.mueve('2026-12-25', 10), C.mueve('2026-12-25', 15.5)], ['zompopos', 'gallinas', 'azacuanes', 'perro', 'pelota', 'pelota'], 'director 226: los zompopos y los azacuanes relevan a las gallinas y al perro; el 25 la pelota nueva es de la fiesta');
+  // 227: mañana no es igual que hoy: ni ayer ni el mismo día de la semana pasada; cada semana (de lunes a domingo), al menos cuatro distintas.
+  const r = dias.map(C.rutinaDelDia);
+  let repite = 0, pocas = 0;
+  for (let i = 1; i < r.length; i++) if (r[i] === r[i - 1] || (i >= 7 && r[i] === r[i - 7])) repite++;
+  for (let i = dias.indexOf('2026-01-05'); i + 7 <= r.length; i += 7) if (new Set(r.slice(i, i + 7)).size < 4) pocas++;
+  ok(repite === 0 && pocas === 0 && C.rutinas.every((x) => r.filter((y) => y === x).length > 90) && r.every((x) => C.rutinas.includes(x)), `director 227: la rutina del día nunca repite la de ayer ni la del mismo día de la semana pasada, cada semana trae al menos cuatro y todas salen (${C.rutinas.map((x) => `${x} ${r.filter((y) => y === x).length}`).join(', ')})`);
+  ok(dias.map(C.rutinaDelDia).join() === r.join() && C.director('2026-11-29', 8.5).foco === 'misa' && C.director('2026-11-28', 9).foco === 'mercado', 'director 227: la rutina sale solo de la fecha (igual en cada llamada), y la misa y el sábado de plaza no entran en la baraja');
+  // 228: la frase del foco solo en lo raro y sin «tú» ni verbos de mandar; la de la rutina, para la descripción.
+  const frases = dias.map(C.fraseDelFoco).filter(Boolean), rutinas = C.rutinas.map((x) => C.fraseRutina(dias.find((f) => C.rutinaDelDia(f) === x)));
+  const mandar = /\b(tu|tus|tú|te|compra|compre|comprar|abre|mira|mire|ven|entra|no te pierdas|aprovecha)\b/i;
+  ok(frases.length >= 10 && frases.length <= 70 && [...frases, ...rutinas].every((t) => t.length < 110 && !mandar.test(t) && /\.$/.test(t)), `director 228: la línea de hoy cuenta lo raro (${frases.length} días en dos años) y nada manda ni tutea; seis frases de la rutina`);
+  eq([C.fraseDelFoco('2026-11-25'), Boolean(C.fraseDelFoco('2026-12-24')), Boolean(C.fraseDelFoco('2026-10-10')), C.fraseDelFoco('2026-10-11'), Boolean(C.fraseDelFoco('2026-09-15'))], [null, true, true, null, true], 'director 228: un miércoles cualquiera, nada; Nochebuena, el primer día de los azacuanes (no el segundo) y el 15 de septiembre, sí');
+  // F3: los ambientales, hasta tres; de noche ninguno; cada uno con lo que pesa, y el mapa del día lo reparte sin pasarse.
+  let ambMal = 0;
+  for (const f of dias.slice(0, 366)) for (const ancho of [false, true]) for (const tr of C.mapaDelDia(f, ancho)) {
+    if (tr.capasAmb > C.maxAmbientales || tr.anim > 3 || ((tr.desde >= 20 || tr.desde < 5) && tr.ambiente.length)) ambMal++;
+  }
+  eq([ambMal, C.ambiente('2026-11-25', 12).join(' '), C.ambiente('2026-11-25', 6).join(' '), C.ambiente('2026-11-25', 18).join(' '), C.ambiente('2026-11-25', 21).join(' '), C.ambiente('2026-11-25', 3).join(' ')], [0, 'humo cayuco', 'humo cayuco', 'humo', '', ''], 'director F3: humo de 5 a 20 y el cayuco de 5 a 16:30, ninguno de noche, y en el mapa de un año ningún tramo pasa de tres ambientales ni de tres animaciones por capa');
+  const mapa = C.mapaDelDia('2026-11-25'), mapaA = C.mapaDelDia('2026-11-25', true);
+  ok(mapa[0].desde === 0 && mapa.at(-1).hasta === 24 && mapa.every((t, i) => !i || t.desde === mapa[i - 1].hasta) && mapa.find((t) => t.desde <= 12 && t.hasta > 12).capasAmb === 2 && mapaA.find((t) => t.desde <= 12 && t.hasta > 12).capasAmb === 3, 'director 225: el mapa del día cubre las 24 horas sin huecos; a mediodía, dos ambientales en el teléfono y tres en pantalla ancha (dos chimeneas)');
+  // `aplicar` deja el foco y los ambientales en <html>.
+  almacen['libro.dia'] = '2026-12-24'; almacen['libro.hora'] = '19'; C.aplicar();
+  const a1 = { ...raiz.dataset };
+  almacen['libro.dia'] = '2026-11-18'; almacen['libro.hora'] = '23'; C.aplicar();
+  const a2 = { ...raiz.dataset };
+  delete almacen['libro.dia']; delete almacen['libro.hora'];
+  eq([a1.foco, a1.ambiente, a1.mueve, a2.foco, a2.ambiente], ['navidad', 'humo', 'brinda', `rutina-${C.rutinaDelDia('2026-11-18')}`, undefined], 'director: <html> lleva data-foco y data-ambiente (de noche, sin ambientales)');
+}
+
 console.log(`OK ${n} comprobaciones`);
