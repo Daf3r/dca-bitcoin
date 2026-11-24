@@ -3942,8 +3942,9 @@ html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .v-halo { opacity: 0.
    lo enseña (38b). */
 .v-humos { display: none; }
 html[data-ambiente~="humo"][data-efectos="todos"] .v-humos { display: inline; }
-.v-hu { fill: color-mix(in oklab, #ebe5dc 62%, var(--c3)); opacity: 0; transform-box: fill-box; transform-origin: center; }
-html[data-ambiente~="humo"][data-efectos="todos"] .v-hu { animation: v-humo var(--t-ambiente) var(--t-sale) infinite; }
+.v-hu { fill: color-mix(in oklab, #ebe5dc 62%, var(--c3)); opacity: 0; transform-box: fill-box; transform-origin: center; animation: v-humo var(--t-ambiente) var(--t-sale) infinite; }
+/* Fuera de su hora (o sin «todos») no corre: solo se quita el nombre, para no pisar los retrasos y el ritmo de cada bocanada. */
+html:not([data-ambiente~="humo"]) .v-hu, html:not([data-efectos="todos"]) .v-hu { animation-name: none; }
 .v-hu-1 { animation-delay: -14s; } .v-hu-2 { animation-delay: -12s; }
 .v-hu-b { animation-duration: calc(var(--t-ambiente) * 1.125); }
 /* (39b) La segunda chimenea, con sus bocanadas a 2 s la una de la otra en su ciclo de 18 s. */
