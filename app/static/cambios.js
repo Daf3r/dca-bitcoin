@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamentos 57 y 58) «Tu historia» a miles de compras; resume también anotar y buscar (2026-12-l), que sale casi a la vez.
+    id: '2026-12-m',
+    items: [
+      'Con muchas compras, la partitura de «Tu historia» va por semanas: toca una para verla día por día.',
+      'La partitura tiene «Todos»: cada año en una línea, una figura por mes.',
+      'Con cientos de compras, la constelación lleva una estrella por semana.',
+      'Las compras extra se marcan donde fueron más de la mitad.',
+      'En «Movimientos», buscar y filtrar van en una fila.',
+    ],
+  },
+  {
     // (Campamento 63) Anotar y buscar; resume también los menús (2026-12-k), que salen casi a la vez. Lo de la hoja de anotar («Guardar»
     // dice qué falta, ayudas más cortas) solo lo ve quien anota: no va aquí.
     id: '2026-12-l',
