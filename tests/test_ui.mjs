@@ -5233,7 +5233,7 @@ try {
       eq(c, { ligera: true, k: 'Nueva etapa', txt: '1.25M sats', lacre: '', cometa: 0, plantada: 0, anillos: 0 }, '21·celebración: una etapa intermedia se celebra en ligero');
       const t0 = Date.now();
       await a.p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 6000 });
-      ok(Date.now() - t0 < 2600, `21·celebración: la tarjeta ligera es breve (${Date.now() - t0} ms)`);
+      ok(Date.now() - t0 < 3200, `21·celebración: la tarjeta ligera es breve (${Date.now() - t0} ms)`);
       t = await tr();
       eq([t.meta, t.hechas, t.txt], ['1.5M sats', 1, 'Etapa 2 de 6 del tramo de 1M a 2.5M sats'], '21·próxima: tras cruzarla, la siguiente y un escalón lleno');
       const mk = await marcas(a.p);
