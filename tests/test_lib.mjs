@@ -1804,7 +1804,11 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   almacen['libro.hora'] = '13.5'; C.aplicar(); almacen['libro.hora'] = '14'; C.aplicar();
   ok(t0 === 'siesta' && raiz.dataset.turno === 'tarde' && avisos.filter((x) => x === 'libro:turno').length === 1, `pueblo 35: <html data-turno> y un solo aviso «libro:turno» al cambiar de turno (${JSON.stringify(avisos)})`);
   const V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
-  eq([2, 5, 6.9, 7, 11.4, 11.5, 13.9, 14, 17.7, 17.75, 21.9, 22].map((h) => C.turno('2026-10-14', h)), ['duerme', 'amanece', 'amanece', 'manana', 'manana', 'siesta', 'siesta', 'tarde', 'tarde', 'pupusas', 'pupusas', 'duerme'], 'pueblo 35: los turnos de un miércoles de octubre');
+  // (Campamento 40) El día entero: antes del alba, la tortillera, la salida de la escuela, la siesta desde las 12:30, la vuelta del cantón
+  // (16:00) y la fresca (20:00–22:00).
+  eq([2, 4.4, 4.5, 5, 6.9, 7, 11.4, 11.5, 11.9, 12, 12.4, 12.5, 13.9, 14, 15.9, 16, 17.7, 17.75, 19.9, 20, 21.9, 22].map((h) => C.turno('2026-10-14', h)),
+    ['duerme', 'duerme', 'alba', 'amanece', 'amanece', 'manana', 'manana', 'tortillas', 'tortillas', 'salida', 'salida', 'siesta', 'siesta', 'tarde', 'tarde', 'vuelta', 'vuelta', 'pupusas', 'pupusas', 'fresca', 'fresca', 'duerme'], 'pueblo 35 (40): los turnos de un miércoles de octubre');
+  eq([['2026-10-17', 12.2], ['2026-10-18', 12.2], ['2026-11-25', 12.2], ['2026-09-15', 12.2]].map(([f, h]) => C.turno(f, h)), ['tortillas', 'tortillas', 'tortillas', 'tortillas'], 'pueblo 40: sin escuela (sábado, domingo, vacaciones, el 15 de septiembre) no hay salida: sigue la tortillera');
   eq([['2026-10-18', 10.5], ['2026-11-16', 9], ['2027-01-15', 9], ['2027-01-18', 9]].map(([f, h]) => C.turno(f, h)), ['mananaLibre', 'mananaLibre', 'mananaLibre', 'manana'], 'pueblo 35: el domingo (después de misa) y las vacaciones (15 nov – 15 ene), los oseznos salen desde la mañana');
   let malos = 0;
   for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) {
@@ -1813,10 +1817,10 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
       const x = C.turno(f, h);
       const fi = C.turnoFiesta(f.slice(5), h); // (41) los días de la Navidad entera tienen su guion (y su medianoche)
       if (fi) { if (x !== fi) malos++; continue; }
-      if (!['duerme', 'amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas', 'misa', 'mercado', 'desfile', 'posada'].includes(x) || ((h >= 22 || h < 5) !== (x === 'duerme')) || (x === 'manana' && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
+      if (!['duerme', 'alba', 'amanece', 'manana', 'mananaLibre', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'misa', 'mercado', 'desfile', 'posada'].includes(x) || ((h >= 22 || h < 4.5) !== (x === 'duerme')) || ((h >= 4.5 && h < 5) !== (x === 'alba')) || (['manana', 'salida'].includes(x) && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
     }
   }
-  eq(malos, 0, 'pueblo 35: en cada cuarto de hora de un año, un turno válido; de noche nadie; la escuela solo entre semana fuera de vacaciones');
+  eq(malos, 0, 'pueblo 35 (40): en cada cuarto de hora de un año, un turno válido; de noche nadie (de 4:30 a 5:00, solo el panadero); la escuela solo entre semana fuera de vacaciones');
   const CONF = [
     { W: 320, H: 640, forma: 'tel', by: 505, bx: 45, pts: [[45, 505], [190, 455], [95, 395], [200, 275]], lago: { cx: 268, cy: 590, rx: 50, ry: 10 }, techo: 225 },
     { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
@@ -1826,7 +1830,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
     { W: 2560, H: 1440, forma: 'esc', by: 1318, bx: 900, pts: [[900, 1318], [1600, 1100], [980, 880], [1560, 230]], lago: null, techo: 600 },
   ];
   // (41) Con los turnos de la Navidad entera (y sin la estampa de antes, `nochebuena`).
-  const TURNOS = ['duerme', 'amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas', 'misa', 'mercado', 'desfile', 'posada', ...NAVIDAD41], fallos = [];
+  const TURNOS = ['duerme', 'alba', 'amanece', 'manana', 'mananaLibre', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'misa', 'mercado', 'desfile', 'posada', ...NAVIDAD41], fallos = [];
   for (const c of CONF) for (const sol of [1, -1]) {
     const lug = P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }));
     for (const t of TURNOS) for (const hilos of [0, 3, 6]) {
@@ -1890,7 +1894,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
   const C = ctx.window.libroCielo, V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
   eq([['2026-10-18', 7.4], ['2026-10-18', 8], ['2026-10-18', 10], ['2026-10-17', 7], ['2026-10-17', 11.9], ['2026-10-17', 12], ['2026-09-15', 9], ['2026-09-15', 12], ['2026-12-10', 19], ['2027-01-06', 19], ['2027-01-07', 19], ['2026-12-24', 18], ['2026-12-24', 23.5], ['2026-12-25', 0.5], ['2026-12-25', 1.5], ['2026-12-31', 20], ['2027-01-01', 0.9]].map(([f, h]) => C.turno(f, h)),
-    ['mananaLibre', 'misa', 'mananaLibre', 'mercado', 'mercado', 'siesta', 'desfile', 'siesta', 'posada', 'posada', 'pupusas', 'nb-cena', 'nb-misa', 'nb-doce', 'duerme', 'f31-cena', 'f31-doce'], 'pueblo 36: la misa del domingo, el sábado de plaza, el desfile, la posada de Navidad y (41) el guion de Nochebuena y del 31 (hasta la 1:00)');
+    ['mananaLibre', 'misa', 'mananaLibre', 'mercado', 'mercado', 'tortillas', 'desfile', 'tortillas', 'posada', 'posada', 'pupusas', 'nb-cena', 'nb-misa', 'nb-doce', 'duerme', 'f31-cena', 'f31-doce'], 'pueblo 36: la misa del domingo, el sábado de plaza, el desfile, la posada de Navidad y (41) el guion de Nochebuena y del 31 (hasta la 1:00)');
   const lug = P.lugaresPueblo(P.sitiosPueblo({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400, sol: 1 })), quien = (t) => V.reparto(lug, t).map((v) => v.t);
   ok(quien('misa').includes('cura') && quien('misa').filter((t) => t === 'espaldas').length === 2, `pueblo 36: el domingo dos vecinos de espaldas camino de la puerta y el padre en ella (${quien('misa')})`);
   ok(quien('mercado').filter((t) => t === 'vendedora').length === 2 && !quien('mercado').includes('minutero'), 'pueblo 36: el sábado, dos vendedoras con su canasto y más vecinos (sin puestos ni el de las minutas)');
@@ -2057,6 +2061,79 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   const a2 = { ...raiz.dataset };
   delete almacen['libro.dia']; delete almacen['libro.hora'];
   eq([a1.foco, a1.ambiente, a1.mueve, a2.foco, a2.ambiente], ['navidad', 'humo', 'brinda', `rutina-${C.rutinaDelDia('2026-11-18')}`, undefined], 'director: <html> lleva data-foco y data-ambiente (de noche, sin ambientales)');
+}
+
+// Campamento 40 · El día entero del pueblo: turnos nuevos (antes del alba, la tortillera, la salida de la escuela, la hamaca, la vuelta
+// del cantón, la fresca), la carta del día (141), la fila del fin de semana (142), la ropa tendida (143), el perro (145), las sombras
+// (146), las luces una a una (147) y la frase del turno (148). Nada se mueve: otro reparto de los mismos trazos.
+{
+  const raiz = { style: { setProperty() {} }, dataset: {}, toggleAttribute() {}, removeAttribute() {} }, almacen = {};
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem() {}, removeItem() {} }, setInterval() {}, Intl, Date, Math, Number, Object };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo, V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js'), L = await import('../app/static/lib.js');
+  // La escuela: entre semana fuera de vacaciones; el 15 de septiembre, no.
+  eq(['2027-02-10', '2027-02-13', '2027-02-14', '2026-11-25', '2026-09-15'].map(C.escuela), [true, false, false, false, false], 'pueblo 40: hay escuela entre semana fuera de vacaciones (y no el 15 de septiembre)');
+  // 146 y 147: las sombras y las luces, por turnos.
+  eq([4.9, 5, 6.9, 7, 11.4, 11.5, 13.9, 14, 15.9, 16, 17.7, 17.75, 21].map(C.sombraDelPueblo), ['', 'larga', 'larga', '', '', 'corta', 'corta', '', '', 'larga', 'larga', '', ''], 'pueblo 146: las sombras, largas al amanecer y al caer la tarde, cortas a mediodía');
+  eq([12, 16.4, 16.5, 17.7, 17.75, 17.99, 18, 18.2, 18.25, 21.9, 22, 22.9, 23, 3, 4.9, 5].map(C.lucesDelPueblo), ['', '', 'ninguna', 'ninguna', 'faroles', 'faroles', 'iglesia', 'iglesia', '', '', 'iglesia', 'iglesia', 'faroles', 'faroles', 'faroles', ''], 'pueblo 147: los faroles, la iglesia y las ventanas, una a una; de noche se apagan al revés');
+  // 141: la carta del día gira: nunca la de ayer ni la del mismo día de la semana pasada; sin fecha, la 0 (el reparto de antes).
+  let repite = 0;
+  for (const t of ['manana', 'tortillas', 'tarde', 'pupusas', 'fresca', 'siesta', 'amanece']) for (const nn of [2, 3]) {
+    const cs = Array.from({ length: 400 }, (_, i) => V.carta(new Date(Date.UTC(2026, 0, 1) + i * 864e5).toISOString().slice(0, 10), t, nn));
+    for (let i = 1; i < cs.length; i++) if (cs[i] === cs[i - 1] || (i >= 7 && cs[i] === cs[i - 7])) repite++;
+  }
+  ok(repite === 0 && V.carta('', 'manana', 3) === 0, 'pueblo 141: la carta del día nunca repite la de ayer ni la de hace una semana; sin fecha, la de siempre');
+  // En seis tamaños, con la luz de cada lado, cada turno del día, cada carta (dos semanas: todos los días de la semana) y con o sin escuela:
+  // ocho figuras como mucho, sin NaN ni estilos, uno por tono, el actor de siempre y nadie encima del perro.
+  const CONF = [
+    { W: 320, H: 640, forma: 'tel', by: 505, bx: 45, pts: [[45, 505], [190, 455], [95, 395], [200, 275]], lago: { cx: 268, cy: 590, rx: 50, ry: 10 }, techo: 225 },
+    { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 768, H: 900, forma: 'tab', by: 760, bx: 150, pts: [[150, 760], [520, 650], [260, 520], [470, 330]], lago: { cx: 640, cy: 830, rx: 100, ry: 14 }, techo: 300 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 844, H: 390, forma: 'acostado', by: 360, bx: 430, pts: [[430, 360], [700, 300], [520, 230], [590, 140]], lago: null, techo: 120 },
+    { W: 2560, H: 1440, forma: 'esc', by: 1318, bx: 900, pts: [[900, 1318], [1600, 1100], [980, 880], [1560, 230]], lago: null, techo: 600 },
+  ];
+  const ACTOR = { manana: 'barre', tarde: 'pelota', vuelta: 'pelota' }, fallos = [], vistos = { tendedero: 0, tendederoJueves: 0, hamaca: 0, tortillera: 0, oseznoBolson: 0, perro: 0, finde: 0 };
+  const dias = Array.from({ length: 14 }, (_, i) => new Date(Date.UTC(2027, 1, 7) + i * 864e5).toISOString().slice(0, 10)).concat(['2026-07-06', '2026-07-09', '2026-12-10']);
+  for (const c of CONF) for (const sol of [1, -1]) {
+    const lug = P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }));
+    for (const t of ['alba', 'amanece', 'manana', 'mananaLibre', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'posada', 'fresca']) for (const dia of dias) for (const escuela of [true, false]) {
+      const l = V.reparto(lug, t, { dia, escuela, hilos: 2 }), fig = l.filter((v) => !V.COSAS.has(v.t)), svg = V.svgVecinos(l, { sol });
+      const dd = `${c.W} ${sol} ${t} ${dia}`;
+      if (fig.length > V.MAX_VECINOS) fallos.push(`${dd}: ${fig.length} figuras`);
+      if (/style=|NaN|undefined/.test(svg) || (svg.match(/<path/g) || []).length > V.TONOS.length + 1) fallos.push(`${dd}: el SVG`);
+      if (l.some((v) => !V.PERSONAJES.includes(v.t) || !Number.isFinite(v.x + v.y + v.k))) fallos.push(`${dd}: alguien sin sitio`);
+      const act = l.filter((v) => v.actor).map((v) => v.actor);
+      if (act.join() !== (ACTOR[t] ?? '')) fallos.push(`${dd}: actor ${act}`);
+      const perros = l.filter((v) => v.t === 'perroEchado');
+      if (perros.length !== (V.PERRO_TURNOS.includes(t) && lug.perro.length ? 1 : 0)) fallos.push(`${dd}: ${perros.length} perros`);
+      // Nadie de pie encima del perro (bajo la hamaca va a propósito) ni de la ropa tendida.
+      for (const q of l.filter((v) => (v.t === 'perroEchado' || v.t.startsWith('tendedero')))) {
+        const a = V.cajaVecino(q), m = 0.35 * q.k;
+        if (fig.some((v) => v.t !== 'hamaca' && (() => { const b = V.cajaVecino(v); return a.x0 < b.x1 - m && a.x1 > b.x0 + m && a.y0 < b.y1 - m && a.y1 > b.y0 + m; })())) fallos.push(`${dd}: alguien encima de ${q.t}`);
+      }
+      for (const k of Object.keys(vistos)) if (l.some((v) => v.t === k)) vistos[k]++;
+      if (perros.length) vistos.perro++;
+      if (t === 'pupusas' && fig.length >= 7) vistos.finde++;
+    }
+  }
+  eq(fallos.slice(0, 8), [], 'pueblo 40: cada turno del día, cada carta, seis tamaños y la luz de cada lado: ocho como mucho, sin NaN, el actor de siempre y nadie encima del perro ni de la ropa');
+  ok(Object.values(vistos).every((x) => x > 0), `pueblo 40: salen la tortillera, los oseznos con su bolsón, la hamaca, el perro, la ropa del lunes y la del jueves y la fila del fin de semana (${JSON.stringify(vistos)})`);
+  // 143: la ropa, solo lunes y jueves; en la lluviosa se recoge al empezar la siesta.
+  const lug = P.lugaresPueblo(P.sitiosPueblo({ ...CONF[3], sol: 1 })), hay = (t, dia) => V.reparto(lug, t, { dia }).some((v) => v.t.startsWith('tendedero'));
+  eq([hay('manana', '2027-02-08'), hay('manana', '2027-02-11'), hay('manana', '2027-02-09'), hay('tarde', '2027-02-08'), hay('vuelta', '2027-02-08'), hay('siesta', '2026-07-06'), hay('tortillas', '2026-07-06')], [true, true, false, true, false, false, true], 'pueblo 143: la ropa tendida lunes y jueves hasta las 16:00 (en la lluviosa, hasta la siesta)');
+  // 142: el viernes hay más fila que el miércoles.
+  const fila = (dia) => V.reparto(lug, 'pupusas', { dia }).filter((v) => !V.COSAS.has(v.t)).length;
+  ok(fila('2027-02-12') > fila('2027-02-10'), `pueblo 142: el fin de semana, más fila en las pupusas (${fila('2027-02-10')} → ${fila('2027-02-12')})`);
+  // 144: la del cantón va donde se le diga (montana.js decide el sitio); sin sitio, no sale.
+  const canton = [100, 200, 3, -1];
+  ok(V.reparto(lug, 'amanece', { canton }).some((v) => v.canton && v.x === 100) && !V.reparto(lug, 'amanece', {}).some((v) => v.canton) && !V.reparto(lug, 'manana', { canton }).some((v) => v.canton), 'pueblo 144: la que baja del cantón, solo al amanecer y en la vuelta, y solo si tiene sitio en el camino');
+  // 138: en Navidad no hay hamaca (el pino y el nacimiento ocupan la plaza): la siesta de siempre en la banca.
+  ok(V.reparto(lug, 'siesta', { dia: '2027-02-10' }).some((v) => v.t === 'hamaca') && V.reparto(lug, 'siesta', { dia: '2026-12-10' }).some((v) => v.t === 'siesta'), 'pueblo 138: la hamaca, salvo en Navidad');
+  // 148: la frase de cada turno, sin tutear ni mandar; los de fiesta no llevan.
+  const mandar = /\b(tu|tus|tú|te|compra|compre|comprar|abre|mira|mire|ven|entra|aprovecha)\b/i, fr = Object.values(L.FRASE_TURNO);
+  ok(fr.length >= 14 && fr.every((t) => t.length < 100 && !mandar.test(t) && /\.$/.test(t)) && L.textoValle({ turno: 'pupusas' }).endsWith('En el pueblo es hora de pupusas.') && !/undefined/.test(L.textoValle({ turno: 'nb-cena' })), 'pueblo 148: la descripción cuenta el turno, sin tutear');
 }
 
 console.log(`OK ${n} comprobaciones`);

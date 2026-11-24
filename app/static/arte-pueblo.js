@@ -160,7 +160,7 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
  */
 export function lugaresPueblo(sit) {
   const { u, yg, piezas, sol } = sit;
-  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [], forma: sit.forma }, delante = []; // (41) `forma`: en el teléfono, la mesa corta
+  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [], perro: [], farol: [], forma: sit.forma }, delante = []; // (41) `forma`: en el teléfono, la mesa corta
   for (const q of piezas) {
     const k = u * q.s;
     if (q.tipo === 'iglesia') {
@@ -176,6 +176,10 @@ export function lugaresPueblo(sit) {
       // (Pulido) Lo que ya ocupa la plaza y nadie pisa: el perro echado y las gallinas (ver `pueblo`). Delante de la cruz de mayo sí
       // se para la gente (así se diseñó en el campamento 34).
       const xp = q.x - 1.8 * k, kd = K_PERRO * k, xg = cx + w * 0.36;
+      // (Campamento 40, idea 145) El sitio de siempre del perro (cuando el turno lo lleva a otro lado y ahí no cabe, vuelve a este) y,
+      // para la fresca (139), junto al pie de cada farol de la plaza.
+      lug.perro.push([xp, yg + 1.6 * k, k]);
+      lug.farol.push([q.x + 3.6 * k, yg + 1.2 * k, k], [q.x + w - 1 * k, yg + 1.2 * k, k]);
       lug.ocupado.push({ x0: xp - 1.0 * kd, x1: xp + 5.9 * kd, y0: yg + 1.6 * k - 3.6 * kd, y1: yg + 1.6 * k + 0.3 * k }, { x0: xg - 0.6 * k, x1: xg + 5.2 * k, y0: yg - 1.6 * k, y1: yg + 1.6 * k });
     } else if (q.tipo === 'casa') {
       const [w, , d, , , corredor] = CASAS[q.i % CASAS.length], ox = sol > 0 ? q.x : q.x + (w + d * 0.62) * k;
@@ -185,6 +189,7 @@ export function lugaresPueblo(sit) {
     }
   }
   for (const [x, y] of sit.ninos ?? []) lug.plaza.push([x, y, u]);
+  lug.borde = [sit.x0, sit.xFin]; // (40) de dónde a dónde llega la calle: la fila del fin de semana no se sale de ella (ni llega al sendero)
   lug.calle.push(...delante); // primero la calle junto a las casas sin corredor; después, delante de las que lo tienen
   return lug;
 }
@@ -338,7 +343,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   if (pz) {
     const k = pz.k, x = pz.cx - pz.w * 0.42 - 1.8 * k, y = yg + 1.6 * k, kd = K_PERRO * k;
     add('animal', `M${PERRO.map(([px, py]) => P([x + px * kd, y + py * kd])).join('L')}Z`);
-    add('sombra', elipse(x + 2.4 * kd - sol * 0.6 * k, y + 0.2 * k, 3.4 * kd, 0.5 * kd));
+    add('perro-sombra', elipse(x + 2.4 * kd - sol * 0.6 * k, y + 0.2 * k, 3.4 * kd, 0.5 * kd)); // (40) aparte: se esconde con él cuando se va a otro sitio
     for (const [gx, gy] of [[0.4, 0.8], [2.2, 1.4], [4.0, 0.6]]) {
       const cx = pz.cx + pz.w * 0.36 + gx * k, cy = yg + gy * k;
       add('gallina', `M${P([cx - 1 * k, cy])}q${f1(0.2 * k)} ${f1(-1.6 * k)} ${f1(1.4 * k)} ${f1(-1.5 * k)}l${f1(0.5 * k)} ${f1(-0.7 * k)}l${f1(0.3 * k)} ${f1(0.7 * k)}q${f1(0.2 * k)} ${f1(1.2 * k)} ${f1(-1.2 * k)} ${f1(1.5 * k)}Z`);
@@ -376,7 +381,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   const p = (clase, k, extra = '', X = A) => (X[k] ? `<path class="${clase}" d="${X[k]}"${extra}/>` : '');
   const frentes = COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`)).join('');
   // La fila de atrás, entera y en su orden (sombra, muro de la terraza, paredes, tejados, puertas y ventanas), antes que la iglesia.
-  const filaAtras = p('v-sombra', 'sombra', '', B) + p('v-terraza', 'terraza', '', B) + COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`, '', B)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`, '', B)).join('')
+  const filaAtras = p('v-sombra v-sombra-atras', 'sombra', '', B) + p('v-terraza', 'terraza', '', B) + COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`, '', B)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`, '', B)).join('')
     + p('v-alero', 'alero', '', B) + p('v-techo-l', 'techo-l', '', B) + p('v-techo-s', 'techo-s', '', B) + p('v-teja', 'teja', sw(0.6), B) + p('v-poste', 'poste', sw(0.55), B) + p('v-puerta', 'puerta', '', B) + p('v-ventana v-ventana-atras', 'ventana', '', B);
   // Los árboles de aquí, detrás de las casas (campamento 22B, idea 56, ahora en el pueblo): un maquilishuat junto a la iglesia (en
   // febrero, todo rosado) y un árbol de fuego al final de la calle (en abril, rojo). Con sus flores caídas cuando florecen.
@@ -395,7 +400,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   if (fuegoV) add('sombra', elipse(xFuego - sol * 1.6 * u, yg + 0.9 * u, 6 * u, 1.1 * u));
   // Los charcos de luz: dos trazos (el halo ancho y el centro), sin degradados (más baratos de pintar que una elipse con degradado cada uno).
   const luzSuelo = `<path class="v-charco" d="${charcos.map(([x, y, r]) => elipse(x, y, r, r * 0.32)).join('')}"/><path class="v-charco v-charco-c" d="${charcos.map(([x, y, r]) => elipse(x, y, r * 0.5, r * 0.16)).join('')}"/>`;
-  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${filaAtras}`
+  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${p('v-sombra v-sombra-perro', 'perro-sombra')}${filaAtras}`
     + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-relieve', 'ig-relieve')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-atrio', 'ig-atrio')}${p('v-ig-atrio-s', 'ig-atrio-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
     + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-chimenea', 'chimenea')}${p('v-poste', 'poste', sw(0.55))}`
     + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`
