@@ -188,7 +188,22 @@ function etiquetaEfectos() {
   }
   $('dc-efectos').textContent = `Efectos: ${txt}`;
 }
-$('cuenta-btn').addEventListener('click', () => { vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaTeleDuerme(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetaMontana(); etiquetasAccesibilidad(); dCuenta.showModal(); });
+// (Campamento 62 · 301) «Más ajustes de este aparato»: plegado en el teléfono y la tablet (recuerda si lo dejaste abierto, por
+// dispositivo); en escritorio, abierto y sin resumen (dos columnas: cabe todo). El estado forzado del escritorio no se recuerda.
+const CLAVE_MAS = 'libro.cuenta.mas';
+const ANCHO_CUENTA = window.matchMedia('(min-width: 1100px)');
+function ajustarMas() {
+  let pref = false;
+  try { pref = localStorage.getItem(CLAVE_MAS) === '1'; } catch { /* sin almacenamiento: plegado */ }
+  $('dc-mas').open = ANCHO_CUENTA.matches || pref;
+}
+$('dc-mas').addEventListener('toggle', () => {
+  if (ANCHO_CUENTA.matches) return;
+  try { if ($('dc-mas').open) localStorage.setItem(CLAVE_MAS, '1'); else localStorage.removeItem(CLAVE_MAS); } catch { /* vale esta visita */ }
+});
+ANCHO_CUENTA.addEventListener('change', ajustarMas);
+ajustarMas();
+$('cuenta-btn').addEventListener('click', () => { ajustarMas(); vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaTeleDuerme(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetaMontana(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */

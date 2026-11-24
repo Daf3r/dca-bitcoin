@@ -602,33 +602,49 @@
     <!-- «Tu cuenta» por para qué sirve (campamento 20): lo que es del libro (y de la familia), lo que vale solo en este dispositivo y lo
          que se administra (la cuenta de cada quien y, para quien anota, el libro y el servidor). Al final, salir. Los ids no cambian. -->
     <div class="dc-lista">
-      <h3 class="dc-grupo" id="dc-g-libro">El libro</h3>
-      <button type="button" data-cuenta="historia" id="dc-historia-btn" data-libro="Historia y medallas del libro">Tu historia y medallas</button>
-      <button type="button" data-cuenta="montana" id="dc-montana" hidden>Nombre de la montaña: sin nombre</button>
-      <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
-      <h3 class="dc-grupo" id="dc-g-disp">Este dispositivo</h3>
-      <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
-      <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
-      <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
-      <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
-      <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
-      <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
-      <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: de 22:00 a 5:00</button>
-      <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
-      <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
-      <button type="button" data-cuenta="tv-duerme" id="dc-tv-duerme">La tele duerme de noche: sí</button>
-      <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: saldo y precio</button>
-      <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
-      <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
-      <h3 class="dc-grupo" id="dc-g-admin">Administrar</h3>
-      <button type="button" data-cuenta="clave">Cambiar contraseña</button>
-      <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
-      <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
-      <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
-      <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
-      <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
-      <button type="button" class="dc-salir" data-cuenta="salir">Salir</button>
-      <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
+      <!-- (Campamento 62) Cada grupo en su caja: en escritorio, «El libro» y «Administrar» a la izquierda y «Este dispositivo» a la
+           derecha (el orden del documento, y del tabulador, no cambia). En el teléfono, siete ajustes que se tocan una vez en la vida
+           van bajo «Más ajustes de este aparato» (recuerda si lo dejaste abierto). «Atajos de teclado» no se pliega (WCAG 2.1.4). -->
+      <div class="dc-sec" id="dc-sec-libro">
+        <h3 class="dc-grupo" id="dc-g-libro">El libro</h3>
+        <button type="button" data-cuenta="historia" id="dc-historia-btn" data-libro="Historia y medallas del libro">Tu historia y medallas</button>
+        <button type="button" data-cuenta="montana" id="dc-montana" hidden>Nombre de la montaña: sin nombre</button>
+        <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
+      </div>
+      <div class="dc-sec" id="dc-sec-disp">
+        <h3 class="dc-grupo" id="dc-g-disp">Este dispositivo</h3>
+        <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
+        <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
+        <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
+        <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
+        <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
+        <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
+        <details class="dc-mas" id="dc-mas">
+          <summary id="dc-mas-t">Más ajustes de este aparato <small aria-hidden="true">7</small></summary>
+          <div class="dc-mas-lista">
+            <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
+            <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
+            <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: de 22:00 a 5:00</button>
+            <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
+            <button type="button" data-cuenta="tv-duerme" id="dc-tv-duerme">La tele duerme de noche: sí</button>
+            <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: saldo y precio</button>
+            <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
+          </div>
+        </details>
+      </div>
+      <div class="dc-sec" id="dc-sec-admin">
+        <h3 class="dc-grupo" id="dc-g-admin">Administrar</h3>
+        <button type="button" data-cuenta="clave">Cambiar contraseña</button>
+        <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
+        <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
+        <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
+        <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
+        <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
+      </div>
+      <div class="dc-sec dc-sec-salir" id="dc-sec-salir">
+        <button type="button" class="dc-salir" data-cuenta="salir">Salir</button>
+        <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
+      </div>
     </div>
     <p class="dc-atajos" id="dc-atajos-lista">Atajos con el teclado: <kbd>A</kbd> anotar · <kbd>T</kbd> tema · <kbd>U</kbd> unidad del saldo · <kbd>/</kbd> buscar en la lista.</p>
   </div>

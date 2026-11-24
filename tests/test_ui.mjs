@@ -44,10 +44,12 @@ async function servidor(escenario, env = {}) {
 
 /** Abre una página, entra con la cuenta dada y espera a que cargue. Recoge errores de consola. */
 async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
-  const { hora = 22, pestanas = false, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
+  // (Campamento 62) `masAjustes`: «Más ajustes de este aparato» (Tu cuenta) abierto, como lo dejaría quien lo abrió una vez; las pruebas
+  // viejas tocan esos siete ajustes sin abrirlo (como «todo junto»). La prueba del 62 lo mira cerrado.
+  const { hora = 22, pestanas = false, masAjustes = true, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
   const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opcionesContexto });
   const p = await ctx.newPage();
-  await p.addInitScript(([h, pes]) => { try { localStorage.setItem('libro.hora', String(h)); if (!pes) localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, [hora, pestanas]);
+  await p.addInitScript(([h, pes, mas]) => { try { localStorage.setItem('libro.hora', String(h)); if (!pes) localStorage.setItem('libro.pestanas', 'todo'); if (mas) localStorage.setItem('libro.cuenta.mas', '1'); } catch { /* sin almacenamiento */ } }, [hora, pestanas, masAjustes]);
   if (init) await (Array.isArray(init) ? p.addInitScript(init[0], init[1]) : p.addInitScript(init));
   const consola = [];
   p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
@@ -4916,7 +4918,7 @@ try {
         await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(400);
         const menu = () => a.p.evaluate(() => {
           const out = []; let grupo = null;
-          for (const e of document.querySelector('#d-cuenta .dc-lista').children) {
+          for (const e of document.querySelectorAll('#d-cuenta #dc-menu .dc-lista :is(h3.dc-grupo, button[data-cuenta])')) { /* (62) cada grupo en su caja; siete ajustes en un plegado */
             if (e.matches('h3.dc-grupo')) { grupo = e.textContent.trim(); out.push({ grupo, items: [] }); continue; }
             if (e.hidden || getComputedStyle(e).display === 'none') continue;
             if (!out.length) out.push({ grupo: null, items: [] });
@@ -4941,7 +4943,7 @@ try {
         const l = await ent(s20, LECTOR);
         await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(400);
         const ml = await l.p.evaluate(() => {
-          const out = []; for (const e of document.querySelector('#d-cuenta .dc-lista').children) { if (e.matches('h3.dc-grupo')) out.push({ g: e.textContent.trim(), i: [] }); else if (!e.hidden) out.at(-1).i.push(e.dataset.cuenta); }
+          const out = []; for (const e of document.querySelectorAll('#d-cuenta #dc-menu .dc-lista :is(h3.dc-grupo, button[data-cuenta])')) { if (e.matches('h3.dc-grupo')) out.push({ g: e.textContent.trim(), i: [] }); else if (!e.hidden) out.at(-1).i.push(e.dataset.cuenta); }
           return out;
         });
         eq([ml[0].i, ml[2].i], [['historia', 'cumple'], ['clave', 'sesiones', 'salir', 'salir-todas']], '20·cuenta: una lectora, sin lo de administrar el libro');
@@ -5497,7 +5499,7 @@ try {
         const c = await entrar(navegador, sAnio, LECTOR, { hora: 23.5, viewport: { width: 1280, height: 800 }, ...fijo }, conLocal([]));
         for (let k = 0; k < 3 && await c.p.locator('dialog[open]').count(); k++) { await c.p.keyboard.press('Escape'); await c.p.waitForTimeout(300); }
         await c.p.click('#cuenta-btn'); await c.p.waitForTimeout(300);
-        const enGrupo = await c.p.evaluate(() => { const b = document.getElementById('dc-tv-duerme'); let e = b.previousElementSibling; while (e && !e.classList.contains('dc-grupo')) e = e.previousElementSibling; return e?.textContent; });
+        const enGrupo = await c.p.evaluate(() => { return document.getElementById('dc-tv-duerme').closest('.dc-sec')?.querySelector('.dc-grupo')?.textContent; /* (62) cada grupo en su caja */ });
         eq([(await c.p.textContent('#dc-tv-duerme')).trim(), enGrupo], ['La tele duerme de noche: sí', 'Este dispositivo'], '21B·42 el interruptor, en «Este dispositivo», encendido por defecto');
         await c.p.click('#dc-tv-duerme');
         ok((await c.p.textContent('#dc-tv-duerme')).trim() === 'La tele duerme de noche: no' && await c.p.evaluate(() => localStorage.getItem('libro.tv.duerme')) === '0', '21B·42 se apaga y se recuerda en el dispositivo');

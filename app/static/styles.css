@@ -1029,7 +1029,35 @@ div.fila:hover { background: none; }
 .dc-quien { margin: 4px 0 14px; }
 .dc-lista { display: grid; gap: 6px; }
 .dc-grupo { margin: 14px 4px 2px; font: 600 0.8125rem var(--sans); letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt3); }
-.dc-lista > .dc-grupo:first-child { margin-top: 2px; }
+.dc-lista > .dc-grupo:first-child, .dc-sec:first-child > .dc-grupo { margin-top: 2px; }
+/* (Campamento 62 · 301) Cada grupo de «Tu cuenta» en su caja (para las dos columnas de escritorio) y, en «Este dispositivo», un plegado:
+   «Más ajustes de este aparato» (siete ajustes que se tocan una vez en la vida). El resumen es un control nativo de 48 px con su estado. */
+.dc-sec { display: grid; gap: 6px; min-width: 0; }
+.dc-mas-lista { display: grid; gap: 6px; margin-top: 6px; }
+.dc-mas > summary {
+  display: flex; align-items: center; gap: 10px; min-height: var(--toque); padding: 10px 16px; border-radius: 16px;
+  box-shadow: inset 0 0 0 1.5px var(--s3); color: var(--txt2); font-weight: 600; list-style: none; cursor: pointer;
+}
+.dc-mas > summary::-webkit-details-marker { display: none; }
+.dc-mas > summary small { color: var(--txt2); font-size: 0.875rem; font-weight: 600; }
+.dc-mas > summary::after { content: ""; flex: none; width: 8px; height: 8px; margin: -4px 4px 0 auto; border: solid var(--txt3); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.dc-mas[open] > summary::after { margin-top: 4px; transform: rotate(-135deg); }
+.dc-mas > summary:focus-visible { outline: 3px solid var(--naranja-txt); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .dc-mas > summary:hover { background: var(--s2); color: var(--txt); } }
+@media (forced-colors: active) { .dc-mas > summary { border: 1px solid ButtonText; } }
+/* Escritorio: «Tu cuenta» se ensancha a dos columnas y no se pliega nada (cuenta.js deja el plegado abierto y aquí se esconde su resumen).
+   El documento sigue en su orden (libro, este dispositivo, administrar, salir): solo cambia dónde se pinta cada caja. */
+@media (min-width: 1100px) {
+  .d-cuenta:has(> #dc-menu:not([hidden])) { width: min(54rem, calc(100vw - 32px)); }
+  #dc-menu .dc-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto auto 1fr; column-gap: 28px; align-items: start; }
+  #dc-sec-libro { grid-column: 1; grid-row: 1; }
+  #dc-sec-admin { grid-column: 1; grid-row: 2; }
+  #dc-sec-salir { grid-column: 1; grid-row: 3; }
+  #dc-sec-disp { grid-column: 2; grid-row: 1 / span 3; }
+  #dc-sec-disp > .dc-grupo { margin-top: 2px; }
+  .dc-mas > summary { display: none; }
+  .dc-mas-lista { margin-top: 0; }
+}
 /* Salir va aparte, al final (campamento 20): sin título (diría «Salir» dos veces), con una raya y aire encima. */
 .dc-lista .dc-salir { margin-top: 18px; position: relative; }
 .dc-lista .dc-salir::before { content: ""; position: absolute; left: 4px; right: 4px; top: -12px; border-top: 1px solid var(--s3); }
