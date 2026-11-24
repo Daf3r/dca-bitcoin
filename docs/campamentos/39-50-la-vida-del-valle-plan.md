@@ -1,6 +1,6 @@
 # Campamentos 39–50 · La vida del valle (plan aprobado, en curso)
 
-**Hecho**: el **39 · Hacer sitio 2** (24 nov 2026, [39-hacer-sitio-2.md](39-hacer-sitio-2.md)) y el **41 · La Navidad entera** (24 nov 2026, [41-la-navidad-entera.md](41-la-navidad-entera.md)).
+**Hecho**: el **39 · Hacer sitio 2** (24 nov 2026, [39-hacer-sitio-2.md](39-hacer-sitio-2.md)), el **41 · La Navidad entera** (24 nov 2026, [41-la-navidad-entera.md](41-la-navidad-entera.md)), el **39b · El tempo** ([39b-el-tempo.md](39b-el-tempo.md)) y el **51 · El director del valle** (24 nov 2026, ids 223–228 y F3; [51-el-director-del-valle.md](51-el-director-del-valle.md)).
 
 **Estado (19 nov 2026): definido y APROBADO POR EL DUEÑO («todo aprobado»), no hecho.** Es la siguiente ronda de ideas para dar más vida al paisaje, al valle, al pueblo de osos, a los osos de la cumbre y a «Tú», según la hora, el día y la fecha. Se implementa **otro día**, cuando el dueño marque lo que quiere. Nada de esto está en el código; lo implementado hasta hoy son los campamentos 26–38 (PR #97, en producción).
 
