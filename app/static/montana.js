@@ -1,12 +1,15 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
-import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
+import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { reparto, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
 import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
 import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
+/** (Campamento 39) Un círculo como subtrazo, redondeado como el `<circle>` de antes (centro y radio a una décima): para juntar muchos en un trazo. */
+const circuloD = (cx, cy, r) => { const x = Number(f1(cx)), y = Number(f1(cy)), q = Number(f1(r)); return `M${f1(x - q)} ${f1(y)}a${f1(q)} ${f1(q)} 0 1 0 ${f1(2 * q)} 0a${f1(q)} ${f1(q)} 0 1 0 ${f1(-2 * q)} 0Z`; };
+const elipseD = (cx, cy, rx, ry) => { const x = Number(f1(cx)), y = Number(f1(cy)), a = Number(f1(rx)), b = Number(f1(ry)); return `M${f1(x - a)} ${f1(y)}a${f1(a)} ${f1(b)} 0 1 0 ${f1(2 * a)} 0a${f1(a)} ${f1(b)} 0 1 0 ${f1(-2 * a)} 0Z`; };
 
 function azar(s) {
   return () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
@@ -53,10 +56,11 @@ export function luna(cx, cy, r, fase) {
   const luz = `M${f1(cx)} ${f1(cy - r)}A${f1(r)} ${f1(r)} 0 0 1 ${f1(cx)} ${f1(cy + r)}A${f1(rx)} ${f1(r)} 0 0 ${barrido} ${f1(cx)} ${f1(cy - r)}Z`;
   // Los mares (rediseño Fable): unas manchas tenues, fijas, que solo se ven en la parte iluminada (se recortan con ella) y un
   // borde algo más apagado (el limbo): la luna deja de ser un disco plano.
-  const mar = (dx, dy, rx2, ry2) => `<ellipse cx="${f1(cx + dx * r)}" cy="${f1(cy + dy * r)}" rx="${f1(rx2 * r)}" ry="${f1(ry2 * r)}"/>`;
+  // (Campamento 39, idea 128) Los siete mares, del mismo tono, en un solo trazo.
+  const mar = (dx, dy, rx2, ry2) => elipseD(cx + dx * r, cy + dy * r, rx2 * r, ry2 * r);
   const mares = mar(-0.4, -0.16, 0.3, 0.42) + mar(-0.06, -0.5, 0.32, 0.18) + mar(0.3, -0.3, 0.21, 0.17) + mar(0.44, 0.0, 0.16, 0.21) + mar(0.2, 0.22, 0.13, 0.1) + mar(-0.3, 0.5, 0.17, 0.1) + mar(0.62, -0.38, 0.07, 0.09);
   return `<circle class="luna-sombra" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}"/><defs><clipPath id="m-luna-luz"><path d="${luz}"${espejo}/></clipPath></defs><path class="astro" d="${luz}"${espejo}/>`
-    + `<g class="luna-mares" clip-path="url(#m-luna-luz)">${mares}<circle class="luna-limbo" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.97)}"/></g>`;
+    + `<g class="luna-mares" clip-path="url(#m-luna-luz)"><path d="${mares}"/><circle class="luna-limbo" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.97)}"/></g>`;
 }
 
 /**
@@ -241,7 +245,8 @@ function lago(c, W, H, ventas = 0, kv = 1) {
 /**
  * (Campamento 30, idea 19) Lo de otra temporada no se queda en la escena. La escena se calcula y se arma igual (la forma no cambia: el
  * mismo `rnd()` en el mismo orden) y, al ponerla, se quitan las piezas que el calendario de hoy esconde en todo el día: la Navidad
- * fuera del 1 dic – 6 ene, los cohetes fuera del 24–25 y 31 dic – 1 ene, el papel picado y las banderas fuera de las fiestas, las
+ * fuera del 1 dic – 6 ene, los cohetes fuera del 24–25 y 31 dic – 1 ene (y esos días, su grupo va vacío salvo de 23:40 a 0:40: campamento
+ * 39, idea 125, `libro:cohetes`), el papel picado y las banderas fuera de las fiestas, las
  * piscuchas fuera de octubre y noviembre, los zompopos fuera del 15–21 de mayo, las otras etapas de la milpa, la quebrada de la otra
  * época y las flores de otro mes. **Lo de la hora no se toca** (luna, estrellas, luciérnagas, el mar de niebla, la luz del lago): eso
  * sigue dibujado y lo enseña el CSS. Al cambiar de día con la app abierta, cielo.js avisa (`libro:dia`) y la escena se vuelve a dibujar.
@@ -386,6 +391,16 @@ function capaVecino(host, info, t) {
   const frente = host.querySelector(':scope > svg.frente');
   if (frente) frente.before(s); else host.append(s);
 }
+/** (Campamento 39, idea 125) A las 23:40 y a las 0:40 (`libro:cohetes`, cielo.js) se ponen o se quitan los cohetes de cada escena viva. */
+let oyeCohetes = false;
+function vigilarCohetes() {
+  if (oyeCohetes) return;
+  oyeCohetes = true;
+  window.addEventListener('libro:cohetes', () => {
+    const C = window.libroCielo, puestos = Boolean(C?.cohetesPuestos?.(C.dia(), C.hora()));
+    for (const g of document.querySelectorAll('g.cohetes')) if (puestos !== Boolean(g.firstElementChild)) rehacerCohetes(g, puestos);
+  });
+}
 const vecinosVivos = new Map(); // escena → { lug, sol, cometas, turno, conCapa }
 let oyeTurno = false;
 function vigilarTurno(host, info) {
@@ -472,13 +487,17 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-aire', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ai-0'], [0.62, 'ai-1'], [1, 'ai-0']])
     + grad('m-v-loma', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vlo-0'], [0.55, 'vlo-1'], [1, 'vlo-2']])
     + '<radialGradient id="m-v-rayo" cx="0.48" cy="0.55" r="0.62"><stop offset="0" class="ry-0"/><stop offset="0.45" class="ry-1"/><stop offset="1" class="ry-2"/></radialGradient>';
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><radialGradient id="m-farol"><stop offset="0" class="fa-0"/><stop offset="0.42" class="fa-1"/><stop offset="1" class="fa-2"/></radialGradient><linearGradient id="m-bano" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ba-0"/><stop offset="1" class="ba-1"/></linearGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><radialGradient id="m-lu"><stop offset="0" class="lu-g0"/><stop offset="0.193" class="lu-g0"/><stop offset="0.193" class="lu-g1"/><stop offset="1" class="lu-g2"/></radialGradient><radialGradient id="m-farol"><stop offset="0" class="fa-0"/><stop offset="0.42" class="fa-1"/><stop offset="1" class="fa-2"/></radialGradient><linearGradient id="m-bano" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ba-0"/><stop offset="1" class="ba-1"/></linearGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
   // Capa del cielo (parallax): cielo, estrellas, fugaz, sol, luna, nubes y aves.
   s += '<g class="par par-cielo">';
   // Un solo rectángulo con el degradado de las cinco capas (antes eran cinco franjas de bordes duros) y el resplandor del horizonte bajo el astro.
   s += `<rect class="cielo-0" x="0" y="0" width="${W}" height="${H}" fill="url(#m-cielo)"/><rect class="resplandor" x="0" y="0" width="${W}" height="${H}" fill="url(#m-resplandor)"/>`;
-  for (let i = 0; i < 46; i++) s += `<circle class="estrella t${i % 5}" cx="${f1(rnd() * W)}" cy="${f1(rnd() * H * 0.5)}" r="${f1(0.5 + rnd() * 1.1)}"/>`;
+  // (Campamento 39, idea 126) Las 46 estrellas, en cinco trazos: uno por ritmo (las de un mismo ritmo ya titilaban a la vez); el mismo
+  // `rnd()` en el mismo orden, y cada estrella, un círculo dentro de su trazo. 41 nodos y 32 animaciones menos, y se ve igual.
+  const ritmos = ['', '', '', '', ''];
+  for (let i = 0; i < 46; i++) { const x = rnd() * W, y = rnd() * H * 0.5, r = 0.5 + rnd() * 1.1; ritmos[i % 5] += circuloD(x, y, r); }
+  s += ritmos.map((d, i) => `<path class="estrella t${i}" d="${d}"/>`).join('');
   // Estrella fugaz (muy esporádica, solo de noche y con todos los efectos): una raya corta que cruza el cielo alto.
   s += `<line class="fugaz" x1="${f1(W * 0.16)}" y1="${f1(H * 0.1)}" x2="${f1(W * 0.16 + 46)}" y2="${f1(H * 0.1 + 20)}"/>`;
   // Lluvia de estrellas real (idea 43): esa noche cruzan más (dos de más a los lados del máximo, cuatro la noche del máximo).
@@ -688,7 +707,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   if (sitio) s += papelPicado(sitio[0], sitio[1], sitio[2], anio, sitio[3], sitio[4]); // (acostado y sin sitio libre: mejor sin tira que encima de algo)
   const altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
-  s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
+  // (Campamento 39, idea 125) Los cohetes, solo en su hora (23:40–0:40): el resto de sus cuatro días, el grupo va vacío y se llena al llegar.
+  const Cc = window.libroCielo;
+  s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete, Cc?.cohetesPuestos ? Cc.cohetesPuestos(Cc.dia(), Cc.hora()) : true);
+  vigilarCohetes();
   // (30, idea 19) Se arma en una plantilla (inerte: sin estilos ni medidas), se le quita lo de otra temporada y entra ya podada.
   const plantilla = document.createElement('template');
   plantilla.innerHTML = s + '</g></svg>';

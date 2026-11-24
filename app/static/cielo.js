@@ -75,6 +75,14 @@
     const md = f.slice(5);
     return ((md === '12-24' || md === '12-31') && h >= 23 + 50 / 60) || ((md === '12-25' || md === '01-01') && h < 0.5);
   }
+  /**
+   * (Campamento 39, idea 125) Los cohetes se dibujan solo en su hora: se ponen a las 23:40 del 24 y del 31 y se quitan a las 0:40 del 25 y
+   * del 1 (diez minutos antes y después de que se vean, en un momento quieto). El resto de esos cuatro días, su grupo va vacío.
+   */
+  function cohetesPuestos(f, h) {
+    const md = f.slice(5);
+    return ((md === '12-24' || md === '12-31') && h >= 23 + 40 / 60) || ((md === '12-25' || md === '01-01') && h < 40 / 60);
+  }
   // Campamento 22 · el valle vivo. Lo que sigue al calendario de aquí; la escena lo dibuja siempre y el CSS enseña lo que toca.
   /** Navidad en el valle: del 1 de diciembre al 6 de enero (luces en los ranchos, el nacimiento y el pino con luces). */
   const navidad = (f) => f.slice(5) >= '12-01' || f.slice(5) <= '01-06';
@@ -247,6 +255,7 @@
 
   let diaAplicado = null; // (Campamento 30) para avisar del cambio de día
   let turnoAplicado = null; // (Campamento 35) para avisar del cambio de turno del pueblo
+  let cohetesAplicados = null; // (Campamento 39) para poner o quitar los cohetes en su hora
   function aplicar() {
     const h = hora();
     for (const [k, v] of Object.entries(colores(h))) raiz.style.setProperty(k, v);
@@ -260,6 +269,10 @@
     if (fi) raiz.dataset.fiesta = fi; else delete raiz.dataset.fiesta;
     raiz.dataset.epoca = epoca(d);
     raiz.toggleAttribute('data-cohetes', cohetes(d, h));
+    // (Campamento 39) A las 23:40 y a las 0:40, montana.js pone o quita lo de dentro de los cohetes (`libro:cohetes`).
+    const cp = cohetesPuestos(d, h);
+    if (cohetesAplicados !== null && cp !== cohetesAplicados && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:cohetes'));
+    cohetesAplicados = cp;
     // El valle vivo (campamento 22): la milpa, la Navidad, las piscuchas, el humo del fogón y la noche de luna llena.
     raiz.dataset.milpa = milpa(d);
     raiz.toggleAttribute('data-navidad', navidad(d));
@@ -302,5 +315,5 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, turno, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, turno, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

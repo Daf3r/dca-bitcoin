@@ -1,4 +1,6 @@
-# Campamentos 39–50 · La vida del valle (plan definido, sin implementar)
+# Campamentos 39–50 · La vida del valle (plan aprobado, en curso)
+
+**Hecho**: el **39 · Hacer sitio 2** (24 nov 2026, [39-hacer-sitio-2.md](39-hacer-sitio-2.md)).
 
 **Estado (19 nov 2026): definido y APROBADO POR EL DUEÑO («todo aprobado»), no hecho.** Es la siguiente ronda de ideas para dar más vida al paisaje, al valle, al pueblo de osos, a los osos de la cumbre y a «Tú», según la hora, el día y la fecha. Se implementa **otro día**, cuando el dueño marque lo que quiere. Nada de esto está en el código; lo implementado hasta hoy son los campamentos 26–38 (PR #97, en producción).
 
@@ -51,7 +53,7 @@ El 19 nov 2026 el dueño dijo **«todo aprobado»**: todas las ideas del artifac
 - Medida real del dueño en iPhone (430×873, app instalada, efectos «todos»): **59 fps** al deslizar, 0.83 s hasta ver el saldo.
 
 ## Orden recomendado (una sola rama, un commit por campamento, un solo PR; el CI de GitHub es limitado)
-1. **39 · Hacer sitio 2** (ids 124–135). Primero: libera unos 131 nodos a las 21:00 de Nochebuena y unos 96 en el pico (23:50–0:30), y unas 44 animaciones de noche. Sin cambio visible. La 125 (cohetes solo en su hora) cambia una regla chica.
+1. **39 · Hacer sitio 2** (ids 124–135) — **hecho** (24 nov 2026; 124–128, 131 y 135; 129, 130 y 132–134 siguen «después»). Primero: libera unos 131 nodos a las 21:00 de Nochebuena y unos 96 en el pico (23:50–0:30), y unas 44 animaciones de noche. Sin cambio visible. La 125 (cohetes solo en su hora) cambia una regla chica.
 2. **41 · Fiestas: la Navidad entera** (24, 25, 31, 1 y 6 de enero; ids 210–218 y 162). **Tiene fecha**: la ventana navideña empieza el 1 de diciembre. La 210 es la pieza que lo permite: el día de fiesta cambia los turnos, y la noche del 24 y del 31 las luciérnagas descansan para que se mueva un actor de la fiesta.
 3. **40 · El día entero del pueblo** (136–148).
 4. **42 · Fiestas: el resto del año** (149–151, 153, 156–160, 219–222): 10 de mayo, Día del Padre, 14–15 de septiembre, Día del Niño, Difuntos, Semana Santa y los dos cumpleaños.

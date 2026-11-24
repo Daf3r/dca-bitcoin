@@ -1868,7 +1868,8 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(cmL.milpa && (!cmE.milpa || cmE.milpa.x + cmE.milpa.w < 20 || cmE.milpa.x > 620 || cmE.milpa.y + cmE.milpa.h < 610) && cmE.svg === cmL.svg, `pulido: la milpa no cae detrás ni debajo del pueblo, y los campos se ven igual (${JSON.stringify(cmE.milpa && [cmE.milpa.x, cmE.milpa.y].map(Math.round))})`);
   // El reloj de sol (campamento 16) no pone sus piedritas en la calle del pueblo.
   const A = await import('../app/static/arte.js');
-  const rel = A.relojDeSol(890, 716, 1440, [20, 620]), xs = [...rel.matchAll(/cx="([\d.]+)"/g)].map((m) => Number(m[1]));
+  // (Campamento 39) Las piedritas van en dos trazos: el centro de cada una es su «M x y» más su radio «a».
+  const rel = A.relojDeSol(890, 716, 1440, [20, 620]), xs = [...rel.matchAll(/M([\d.]+) [\d.]+a([\d.]+)/g)].map((m) => Number(m[1]) + Number(m[2]));
   ok(xs.length >= 6 && xs.every((x) => x < 16 || x > 624), `pulido: el reloj de sol se estrecha y no pisa la calle del pueblo (${xs.length} piedritas)`);
 }
 
@@ -1912,6 +1913,29 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(/En el pueblo, los vecinos son osos polares\./.test(tv) && !/\b(tu|tus|tú)\b/i.test(tv) && /con su milpa/.test(tv) && !/milpa/.test(sin), 'pueblo 38: la descripción de la montaña dice que los vecinos son osos polares (sin tutear) y nombra la milpa solo si está');
   const vl = A.vidaLago({ cx: 300, cy: 600, rx: 80, ry: 12, k: 1.4 });
   ok(/class="v-cy-cuerpo v-cy-oso"/.test(vl) && /class="v-cy-cuerpo v-cy-sombrero"/.test(vl) && !/style=|NaN/.test(vl), 'pueblo 38: el pescador del cayuco es un oso con su sombrero (y de noche, como siempre, se esconde con el cayuco)');
+}
+
+// Campamento 39 · Hacer sitio 2: los cohetes solo en su hora (125), las luciérnagas más livianas (127) y el reloj de sol en dos trazos (128).
+{
+  const almacen = {};
+  const raiz = { dataset: {}, atributos: new Set(), toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty() {} } };
+  const avisos = [];
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem() {}, removeItem() {} }, setInterval() {}, Intl, Date, Math, Number, Object, Event: class { constructor(t) { this.type = t; } }, dispatchEvent: (ev) => avisos.push(ev.type) };
+  ctx.window = ctx;
+  almacen['libro.dia'] = '2026-12-24'; almacen['libro.hora'] = '21';
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo;
+  eq([['2026-12-24', 23.6], ['2026-12-24', 23.67], ['2026-12-25', 0.2], ['2026-12-25', 0.66], ['2026-12-25', 0.67], ['2026-12-31', 23.7], ['2027-01-01', 0.5], ['2026-12-30', 23.9], ['2026-12-25', 23.9]].map(([f, h]) => C.cohetesPuestos(f, h)),
+    [false, true, true, true, false, true, true, false, false], 'sitio 39: los cohetes se ponen a las 23:40 del 24 y del 31 y se quitan a las 0:40');
+  for (const [d, h] of [['2026-12-24', 23.5], ['2026-12-24', 23.75], ['2026-12-24', 23.9], ['2026-12-25', 0.5], ['2026-12-25', 0.75]]) { almacen['libro.dia'] = d; almacen['libro.hora'] = String(h); C.aplicar(); }
+  eq(avisos.filter((x) => x === 'libro:cohetes').length, 2, 'sitio 39: un aviso «libro:cohetes» al ponerlos (23:45) y otro al quitarlos (0:45), ninguno más');
+  const A = await import('../app/static/arte.js');
+  const co = A.cohetes(390, 500, 1.25, 120), vacio = A.cohetes(390, 500, 1.25, 120, false);
+  ok((co.match(/<(path|circle)/g) ?? []).length > 20 && !/<(path|circle)/.test(vacio) && /data-cw="390" data-cs="500" data-ck="1.25" data-ca="120"/.test(vacio), 'sitio 39: fuera de su hora el grupo de los cohetes va vacío, con sus medidas para ponerlos');
+  const lu = A.luciernagas({ W: 390, H: 664 });
+  ok((lu.match(/<(g|circle|path)/g) ?? []).length === 25 && (lu.match(/fill="url\(#m-lu\)"/g) ?? []).length === 12 && !/NaN|style=/.test(lu), 'sitio 39: doce luciérnagas, dos nodos cada una (el grupo que brilla y el círculo que vuela)');
+  const rel = A.relojDeSol(200, 500, 390);
+  ok((rel.match(/class="reloj-piedra"/g) ?? []).length === 1 && (rel.match(/class="reloj-piedra reloj-medio"/g) ?? []).length === 1 && (rel.match(/M/g) ?? []).length === 11 + 1, 'sitio 39: el reloj de sol, sus once piedritas en dos trazos');
 }
 
 console.log(`OK ${n} comprobaciones`);

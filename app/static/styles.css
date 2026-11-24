@@ -978,7 +978,7 @@ html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, ht
    para que la regla de abajo pueda dejar correr en la película lo que cruza de paso. */
 :is(.escena[data-desliza], .pe-montana[data-corre]) :where(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
   .eco-fantasma, .yo-halo, #m-yo:not(.anda) .oso-tu, .tele-cabina, .v-capa-vecino, .yo-nav, .llama, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
-  .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
+  .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
   .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }
 /* En la película son 15 s, no un instante: lo que cruza de paso (una estrella fugaz, el torogoz, los cohetes, la llovizna, los pétalos,
    las bandadas, los zompopos, el relámpago) se quedaría colgado a medio camino. Eso sigue: va y viene, y pesa poco. */
@@ -2972,26 +2972,26 @@ html[data-mueve="luciernagas"] .luciernagas { display: inline; }
 html[data-cielo="atardecer"] .luciernagas { opacity: 0.75; }
 .luciernagas .lu:nth-child(n+9) { display: none; }
 html[data-epoca="lluviosa"] .luciernagas .lu:nth-child(n+9) { display: inline; }
-.lu-halo { opacity: 0.6; }
-.lu-luz { fill: #efffa8; }
-.lu-cola circle { fill: #dcf08c; opacity: 0.4; }
-/* (Pulido integral) Solo corren cuando se ven («todos» y su franja): escondidas seguían corriendo todo el día (unas 50 animaciones). */
-.lu-v { opacity: 0.05; }
-html[data-efectos="todos"][data-mueve="luciernagas"] .lu-v { animation: lu-a var(--d, 9s) ease-in-out var(--r, 0s) infinite alternate, lu-brilla var(--b, 6s) linear var(--r, 0s) infinite; }
-.lu-cola { animation-delay: calc(var(--r, 0s) + 0.45s), calc(var(--r, 0s) + 0.3s); }
+/* (Campamento 39, idea 127) La luz (r 1.35 de 7) y el halo (el de `#m-luz` a 0.6) en un solo degradado (`#m-lu`): un círculo por luciérnaga. */
+.lu-g0 { stop-color: #efffa8; stop-opacity: 1; } .lu-g1 { stop-color: var(--luz); stop-opacity: 0.46; } .lu-g2 { stop-color: var(--luz); stop-opacity: 0; }
+/* (Pulido integral) Solo corren cuando se ven («todos» y su franja): escondidas seguían corriendo todo el día (unas 50 animaciones).
+   (39) El brillo, en el grupo de cada una (`.lu`); el vuelo, en su círculo (`.lu-v`): dos animaciones por luciérnaga. */
+.lu { opacity: 0.05; }
+html[data-efectos="todos"][data-mueve="luciernagas"] .lu { animation: lu-brilla var(--b, 6s) linear var(--r, 0s) infinite; }
+html[data-efectos="todos"][data-mueve="luciernagas"] .lu-v { animation: lu-a var(--d, 9s) ease-in-out var(--r, 0s) infinite alternate; }
 .lu-1 { --d: 9.5s; --b: 6.4s; --r: -1.3s; } .lu-2 { --d: 11s; --b: 7.9s; --r: -4.1s; } .lu-3 { --d: 8.2s; --b: 5.3s; --r: -2.6s; }
 .lu-4 { --d: 12.4s; --b: 9.1s; --r: -6.2s; } .lu-5 { --d: 10.1s; --b: 6.9s; --r: -0.4s; } .lu-6 { --d: 13s; --b: 8.3s; --r: -7.7s; }
 .lu-7 { --d: 9s; --b: 7.2s; --r: -3.4s; } .lu-8 { --d: 11.7s; --b: 5.9s; --r: -5.1s; } .lu-9 { --d: 10.6s; --b: 8.8s; --r: -2.2s; }
 .lu-10 { --d: 8.7s; --b: 6.6s; --r: -6.9s; } .lu-11 { --d: 12s; --b: 7.5s; --r: -1.8s; } .lu-12 { --d: 9.8s; --b: 9.6s; --r: -4.6s; }
-html[data-efectos="todos"][data-mueve="luciernagas"] .lu:nth-child(3n+2) .lu-v { animation-name: lu-b, lu-brilla; }
-html[data-efectos="todos"][data-mueve="luciernagas"] .lu:nth-child(3n) .lu-v { animation-name: lu-c, lu-brilla; }
-html[data-efectos="todos"][data-mueve="luciernagas"]:not([data-epoca="lluviosa"]) .lu:nth-child(n+9) .lu-v { animation: none; } /* las de la lluviosa, escondidas en la seca */
+html[data-efectos="todos"][data-mueve="luciernagas"] .lu:nth-child(3n+2) .lu-v { animation-name: lu-b; }
+html[data-efectos="todos"][data-mueve="luciernagas"] .lu:nth-child(3n) .lu-v { animation-name: lu-c; }
+html[data-efectos="todos"][data-mueve="luciernagas"]:not([data-epoca="lluviosa"]) :is(.lu:nth-child(n+9), .lu:nth-child(n+9) .lu-v) { animation: none; } /* las de la lluviosa, escondidas en la seca */
 @keyframes lu-a { 0% { transform: translate(0, 0); } 30% { transform: translate(7px, -5px); } 65% { transform: translate(3px, -11px); } 100% { transform: translate(-6px, -4px); } }
 @keyframes lu-b { 0% { transform: translate(0, 0); } 35% { transform: translate(-8px, -4px); } 70% { transform: translate(-2px, -9px); } 100% { transform: translate(6px, -2px); } }
 @keyframes lu-c { 0% { transform: translate(0, 0); } 40% { transform: translate(4px, 5px); } 75% { transform: translate(10px, -3px); } 100% { transform: translate(2px, -8px); } }
 /* Destellos irregulares: dos encendidos de distinto largo por ciclo y casi apagadas el resto. */
 @keyframes lu-brilla { 0%, 100% { opacity: 0.05; } 9% { opacity: 1; } 17% { opacity: 0.85; } 24% { opacity: 0.06; } 55% { opacity: 0.05; } 60% { opacity: 0.9; } 66% { opacity: 0.06; } }
-@media (max-width: 899px) { html[data-efectos="todos"][data-mueve="luciernagas"] .lu-v { animation-timing-function: steps(36), steps(20); } }
+@media (max-width: 899px) { html[data-efectos="todos"][data-mueve="luciernagas"] .lu-v { animation-timing-function: steps(36); } html[data-efectos="todos"][data-mueve="luciernagas"] .lu { animation-timing-function: steps(20); } }
 
 /* --- La tele: la fiesta y el sismógrafo. Fuera del modo pantalla grande no existen. */
 html:not([data-tv]) :is(.tv-fiesta, .tv-sismo) { display: none !important; }
@@ -4560,6 +4560,13 @@ html[data-epoca="lluviosa"][data-tarde] .oso-ilu .v-lluvia, html[data-fiesta="pa
 .guia-osos { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px; margin: 10px 0; padding: 0; list-style: none; }
 .guia-osos li { display: grid; justify-items: center; align-content: end; gap: 6px; padding: 12px 8px 10px; border-radius: 12px; background: var(--s1); }
 .guia-osos small { font-size: 0.8125rem; color: var(--txt2); }
+/* (Campamento 39, idea 135) El almanaque del valle (solo en /guia): cada fecha plegada, con sus tramos y su «Ver». */
+.guia-almanaque { display: grid; gap: 6px; }
+.guia-almanaque details { padding: 4px 12px; border-radius: 12px; background: var(--s1); }
+.guia-almanaque summary { min-height: var(--toque); display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+.guia-almanaque ul { margin: 0 0 8px; padding: 0; list-style: none; display: grid; gap: 2px; }
+.guia-almanaque li { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 0.9375rem; color: var(--txt2); }
+.guia-almanaque li button { min-height: var(--toque); min-width: var(--toque); }
 
 /* ---------------------------------------------------------------- Campamento 31 · «Tú» sube como oso
    El punto naranja de «Tú» (y de «Vamos aquí») es un osito: blanco como el grande pero sin su ropa (no se confunde con el de la cumbre),

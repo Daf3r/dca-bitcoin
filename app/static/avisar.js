@@ -35,3 +35,18 @@ window.addEventListener('libro:red', (e) => {
     if ($('aviso').hidden) { avisar('Reconectando…'); reconectando = true; }
   } else if (reconectando) avisar('');
 });
+
+/**
+ * (Campamento 39, idea 135) Si se entró desde el almanaque de la guía (`libro.almanaque`), un aviso dice qué día y hora se está viendo y
+ * ofrece volver a hoy (quita el día, la hora y la marca). Las pruebas fijan `libro.hora` y `libro.dia` sin la marca: a ellas no les sale.
+ */
+function avisoAlmanaque() {
+  let dia = null, hora = null;
+  try { if (localStorage.getItem('libro.almanaque') !== '1') return; dia = localStorage.getItem('libro.dia'); hora = Number.parseFloat(localStorage.getItem('libro.hora')); } catch { return; }
+  const h = Number.isFinite(hora) ? ` a las ${Math.floor(hora)}:${String(Math.round((hora % 1) * 60)).padStart(2, '0')}` : '';
+  avisar(`Estás viendo otro día: ${dia ?? 'hoy'}${h}.`, () => {
+    try { for (const k of ['libro.dia', 'libro.hora', 'libro.almanaque']) localStorage.removeItem(k); } catch { /* sin almacenamiento */ }
+    location.reload();
+  }, false, { etiqueta: 'Volver a hoy' });
+}
+if (document.getElementById('aviso')) setTimeout(avisoAlmanaque, 1200);

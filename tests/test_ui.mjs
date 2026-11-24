@@ -214,6 +214,7 @@ const PESOS = [
   ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
   ['campamento 38: lo que cambia de la app', 25], // 3 comprobaciones
   ['pulido integral: el movimiento (nada co', 90], // 16 comprobaciones
+  ['campamento 39: hacer sitio 2', 60], // 6 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -3666,7 +3667,7 @@ try {
       const m = await entrar(navegador, sMil, ADMIN, { hora: 9 }, con('2026-08-20')); await cerrar(m.p); await m.p.waitForTimeout(800);
       const sm = await sombra(m.p);
       ok(sm.visible && sm.punta !== null && sm.punta < sm.sx, '16A reloj de sol: de mañana la sombra cae hacia la izquierda');
-      ok(await m.p.locator('.reloj .reloj-piedra').count() === 11, '16A reloj de sol: once piedritas, de las 7 a las 17');
+      ok(await m.p.evaluate(() => [...document.querySelectorAll('.reloj .reloj-piedra')].reduce((n, e) => n + (e.getAttribute('d').match(/M/g) ?? []).length, 0)) === 11, '16A reloj de sol: once piedritas, de las 7 a las 17 (campamento 39: en dos trazos, una por subtrazo)');
       await m.ctx.close();
       const t = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20')); await cerrar(t.p);
       const st = await sombra(t.p);
@@ -7306,7 +7307,9 @@ try {
       // Las bases: cada árbol del pueblo, cada farol, el perro y las gallinas, con su pie dentro de la calle o la plaza.
       const pies = [...g.querySelectorAll('.v-ar-tronco, .v-pz-tronco, .v-farol-poste, .v-animal, .v-gallina')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => { const b = bb(e); return { c: e.getAttribute('class'), y: b.y1, x: (b.x0 + b.x1) / 2 }; });
       const sueltos = pies.filter((q) => q.y < suelo.y0 - 1.5 || q.y > suelo.y1 + 1.5 || q.x < suelo.x0 - 2 || q.x > suelo.x1 + 40).map((q) => q.c);
-      const piedras = [...h.querySelectorAll('.reloj-piedra')].map(bb).filter((b) => cruza(b, una('.v-pueblo .v-calle'), 0)).length;
+      // (Campamento 39) Las piedritas del reloj van en dos trazos: se mide cada una (cada subtrazo «M…Z») por separado.
+      const subtrazos = [...h.querySelectorAll('.reloj-piedra')].flatMap((e) => e.getAttribute('d').split(/(?=M)/).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); e.parentNode.append(t); const b = bb(t); t.remove(); return b; }));
+      const piedras = subtrazos.filter((b) => cruza(b, una('.v-pueblo .v-calle'), 0)).length;
       return { atrio: Boolean(atrio && Math.abs(atrio.y0 - fachada.y1) < 1.5 && atrio.x0 <= fachada.x0 + 1 && atrio.x1 >= fachada.x1 - 1), sueltos, piedras, milpa: cruza(una('.v-campos .v-mp'), pueblo, 1), camino: Boolean(h.querySelector('.v-cm')), chimeneas: h.querySelectorAll('.v-pueblo .v-chimenea').length };
     });
     const anio = await servidor('anio');
@@ -7566,6 +7569,77 @@ try {
       }
     } finally {
       anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 39: hacer sitio 2 (estrellas y luciérnagas más livianas, el reloj y la luna en menos trazos, los cohetes en su hora, el almanaque)
+  await bloque(async () => {
+    const conLs = (dia, ef) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } }, { dia, ef }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const pieza = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), sub = (sel) => [...h.querySelectorAll(sel)].reduce((n, e) => n + (e.getAttribute('d')?.match(/M/g) ?? []).length, 0);
+      const co = h.querySelector('g.cohetes');
+      return { total: h.querySelectorAll('*').length, estrellas: h.querySelectorAll('.estrella').length, subEstrellas: sub('.estrella'), lu: h.querySelectorAll('.lu').length, luHijos: [...h.querySelectorAll('.lu')].every((g) => g.children.length === 1), mares: h.querySelectorAll('.luna-mares ellipse').length, subMares: sub('.luna-mares path'), cohetes: co ? co.querySelectorAll('*').length : -1, nan: [...h.querySelectorAll('[d]')].filter((e) => /NaN/.test(e.getAttribute('d'))).length };
+    });
+    const mil = await servidor('mil', { FECHA_PRUEBA: '2026-11-20' }); // (los datos de un día fijo: el total de nodos no depende de hoy)
+    try {
+      // Nochebuena a las 21:00 en el teléfono: los mismos 46 astros en cinco trazos, doce luciérnagas de un círculo, los mares en un trazo y
+      // los cohetes sin dibujar (su grupo, vacío, hasta las 23:40).
+      const t = await entrar(navegador, mil, ADMIN, { hora: 21, viewport: { width: 390, height: 664 } }, conLs('2026-12-24', 'esenciales'));
+      await cerrar(t.p);
+      const r = await pieza(t.p);
+      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 905, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
+      // A las 23:45 (cielo.js avisa con «libro:cohetes») se ponen; pasada la medianoche, el día cambia y se redibuja con ellos; a las 0:45, fuera.
+      const paso = (d, h) => t.p.evaluate(async ([dd, hh]) => { localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400)); }, [d, h]);
+      await paso('2026-12-24', 23.75);
+      const c1 = (await pieza(t.p)).cohetes;
+      await paso('2026-12-25', 0.2);
+      const c2 = (await pieza(t.p)).cohetes;
+      await paso('2026-12-25', 0.75);
+      const c3 = (await pieza(t.p)).cohetes;
+      ok(c1 >= 30 && c2 === c1 && c3 === 0, `39 los cohetes se ponen a las 23:40 y se quitan a las 0:40, también tras el redibujo de medianoche (${c1}, ${c2}, ${c3} piezas)`);
+      ok(t.consola.length === 0, `39 consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+      // Con «todos», de noche: dos animaciones por luciérnaga que se ve (el brillo en su grupo, el vuelo en su círculo) y una por ritmo de estrellas.
+      for (const [dia, lus] of [['2026-11-25', 8], ['2026-07-10', 12]]) {
+        const n = await entrar(navegador, mil, ADMIN, { hora: 20, viewport: { width: 390, height: 664 } }, conLs(dia, 'todos'));
+        await cerrar(n.p);
+        const a = await n.p.evaluate(() => {
+          const vivas = document.getAnimations().filter((x) => x.playState === 'running' && x.effect?.target);
+          const de = (sel) => vivas.filter((x) => x.effect.target.matches(sel));
+          return { brillo: de('.lu').length, vuelo: de('.lu-v').length, estrellas: de('.estrella').length, nombres: [...new Set(de('.lu, .lu-v').map((x) => x.animationName))].sort() };
+        });
+        eq(a, { brillo: lus, vuelo: lus, estrellas: 4, nombres: ['lu-a', 'lu-b', 'lu-brilla', 'lu-c'] }, `39 ${dia} a las 20:00: ${lus} luciérnagas con su brillo y su vuelo; las estrellas titilan en cuatro ritmos`);
+        await n.ctx.close();
+      }
+      // Desde el almanaque de la guía (solo el admin), «Ver» abre la montaña ese día y a esa hora, con un aviso y su «Volver a hoy».
+      // (Sin `entrar`: su `libro.hora`, puesto en cada carga, taparía lo que pone el almanaque.)
+      const g = { ctx: await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 } }) };
+      g.p = await g.ctx.newPage();
+      await g.p.addInitScript(() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } });
+      await g.p.goto(`${mil.url}/login`, { waitUntil: 'networkidle' });
+      await g.p.fill('input[autocomplete="username"]', ADMIN[0]);
+      await g.p.fill('input[autocomplete="current-password"]', ADMIN[1]);
+      await Promise.all([g.p.waitForURL('**/'), g.p.click('button[type=submit], .guardar')]);
+      await g.p.waitForTimeout(1500);
+      await cerrar(g.p);
+      await g.p.goto(`${mil.url}/guia`, { waitUntil: 'networkidle' });
+      const fechas = await g.p.locator('#guia-almanaque details').count();
+      const nb = g.p.locator('#guia-almanaque details', { has: g.p.locator('summary', { hasText: 'Nochebuena · 2026-12-24' }) });
+      await nb.locator('summary').click();
+      const tramos = await nb.locator('li').count();
+      await Promise.all([g.p.waitForURL('**/'), nb.locator('li button').last().click()]);
+      await g.p.waitForTimeout(2500);
+      await cerrar(g.p);
+      const av = await g.p.evaluate(() => ({ dia: localStorage.getItem('libro.dia'), aviso: document.getElementById('aviso-txt').textContent, boton: document.getElementById('aviso-btn').textContent, visible: !document.getElementById('aviso').hidden }));
+      ok(fechas >= 15 && tramos >= 5 && av.dia === '2026-12-24' && av.visible && /Estás viendo otro día: 2026-12-24/.test(av.aviso) && av.boton === 'Volver a hoy', `39 almanaque: ${fechas} fechas, Nochebuena en ${tramos} tramos; «Ver» abre ese día con su aviso (${JSON.stringify(av)})`);
+      await Promise.all([g.p.waitForLoadState('load'), g.p.click('#aviso-btn')]);
+      await g.p.waitForTimeout(1800);
+      const fuera = await g.p.evaluate(() => ({ dia: localStorage.getItem('libro.dia'), hora: localStorage.getItem('libro.hora'), marca: localStorage.getItem('libro.almanaque'), aviso: document.getElementById('aviso').hidden }));
+      ok(fuera.dia === null && fuera.hora === null && fuera.marca === null && fuera.aviso, `39 almanaque: «Volver a hoy» quita el día, la hora y el aviso (${JSON.stringify(fuera)})`);
+      await g.ctx.close();
+    } finally {
+      mil.parar();
     }
   });
 

@@ -142,14 +142,22 @@ export function papelPicado(x1, x2, y, anio, k = 1, estacas = true, id = 'm-pp')
 /**
  * Cohetes del 31 de diciembre a medianoche: dos volcancitos (fuentes de chispas que saltan del suelo) y dos silbadores que
  * suben en zigzag y revientan arriba. Cada pieza es una forma fija; el CSS la mueve (solo transform y opacity) y le da su
- * retraso con `:nth-child`. Solo con `html[data-cohetes]` y todos los efectos.
+ * retraso con `:nth-child`. Solo con `html[data-cohetes]` y todos los efectos. (Campamento 39, idea 125) `puestos`: falso fuera de su
+ * hora (de 23:40 a 0:40, cielo.js: `cohetesPuestos`): queda solo el grupo, vacío, con sus medidas para ponerlos (`rehacerCohetes`).
  */
-export function cohetes(W, suelo, k = 1, alto = 140) {
+export function cohetes(W, suelo, k = 1, alto = 140, puestos = true) {
   const volcancito = (x) => `<g class="volcancito" transform="translate(${f1(x)} ${f1(suelo)}) scale(${f1(k)})"><path class="vc-cono" d="M-3.4 0L-1.5 -7H1.5L3.4 0Z"/><path class="vc-banda" d="M-2.6 -3H2.6"/>`
     + `<g class="vc-chispas" transform="translate(0 -7)">${'<circle class="chispa" r="1.3"/>'.repeat(5)}</g></g>`;
   const silbador = (x, a) => `<g class="silbador" transform="translate(${f1(x)} ${f1(suelo)})"><g class="sb-sube"><path class="sb-estela" d="M0 0V12"/><circle class="sb-cabeza" r="1.8"/></g>`
     + `<g transform="translate(0 ${f1(-a)}) scale(${f1(k)})"><g class="sb-estallido"><path d="M0 -15V-6M0 6V15M-15 0H-6M6 0H15M-10.6 -10.6L-4.3 -4.3M4.3 4.3L10.6 10.6M-10.6 10.6L-4.3 4.3M4.3 -4.3L10.6 -10.6"/><circle r="19"/></g></g></g>`;
-  return `<g class="efecto-ambiente cohetes" aria-hidden="true">${volcancito(W * 0.3)}${volcancito(W * 0.66)}${silbador(W * 0.12, alto)}${silbador(W * 0.88, alto * 0.82)}</g>`;
+  const dentro = puestos ? `${volcancito(W * 0.3)}${volcancito(W * 0.66)}${silbador(W * 0.12, alto)}${silbador(W * 0.88, alto * 0.82)}` : '';
+  return `<g class="efecto-ambiente cohetes" data-cw="${W}" data-cs="${suelo}" data-ck="${k}" data-ca="${alto}" aria-hidden="true">${dentro}</g>`;
+}
+/** (Campamento 39, idea 125) Pone o quita lo de dentro de un grupo `.cohetes` ya dibujado (a las 23:40 y a las 0:40), con sus medidas. */
+export function rehacerCohetes(g, puestos) {
+  const n = (k) => Number(g.getAttribute(`data-${k}`));
+  const nuevo = puestos ? cohetes(n('cw'), n('cs'), n('ck'), n('ca')) : '';
+  g.innerHTML = puestos ? nuevo.slice(nuevo.indexOf('>') + 1, -'</g>'.length) : '';
 }
 
 // ---------------------------------------------------------------- clima
@@ -515,12 +523,15 @@ export function farolCumple({ inicial = '?', x = 0, y = 0, k = 1 } = {}) {
 // últimas solo salen en la época de lluvias.
 const LUCIERNAGAS = [[0.07, 0.84], [0.19, 0.77], [0.29, 0.89], [0.4, 0.81], [0.55, 0.9], [0.63, 0.79], [0.76, 0.86], [0.9, 0.8],
   [0.13, 0.92], [0.47, 0.75], [0.7, 0.93], [0.95, 0.9]];
-/** Luciérnagas en el valle (ambiente: lleva `efecto-ambiente`; el CSS las muestra al atardecer y de noche). */
+/**
+ * Luciérnagas en el valle (ambiente: lleva `efecto-ambiente`; el CSS las muestra al atardecer y de noche). (Campamento 39, idea 127)
+ * Más livianas: cada una es su grupo (que se enciende y se apaga: el brillo) y un solo círculo que vuela, con el halo y la luz en un
+ * degradado (`#m-lu`, montana.js). La «estela» de antes no se veía (volaba a la par, bajo la luz) y ya no está.
+ */
 export function luciernagas({ W = 300, H = 400 } = {}) {
   const r = Math.max(1, Math.min(1.5, W / 700));
   const s = LUCIERNAGAS.map(([fx, fy], i) => `<g class="lu lu-${i + 1}" transform="translate(${f1(fx * W)} ${f1(fy * H)}) scale(${r.toFixed(2)})">`
-    + '<g class="lu-v lu-cola"><circle r="1"/></g>'
-    + '<g class="lu-v"><circle class="lu-halo" r="7" fill="url(#m-luz)"/><circle class="lu-luz" r="1.35"/></g></g>').join('');
+    + '<circle class="lu-v" r="7" fill="url(#m-lu)"/></g>').join('');
   return `<g class="luciernagas efecto-ambiente" aria-hidden="true">${s}</g>`;
 }
 /**
@@ -586,14 +597,18 @@ export function relojDeSol(sx, gy, W, evitar = null) {
     const hueco = evitar[1] < sx ? sx - evitar[1] - 8 : evitar[0] > sx ? evitar[0] - sx - 8 : 0;
     if (hueco >= 30) alcance = Math.min(alcance, hueco);
   }
-  let piedras = '';
-  // Once piedritas planas (en perspectiva: elipses), algo mayores a las 9, 12 y 15, y un gnomon corto en el centro.
+  let piedras = '', medio = '';
+  // Once piedritas planas (en perspectiva: elipses), algo mayores a las 9, 12 y 15, y un gnomon corto en el centro. (Campamento 39,
+  // idea 128) Del mismo color: las diez en un trazo y la de las 12 (algo más viva) en otro; cada piedra, un subtrazo «M…Z».
   for (let h = 7; h <= 17; h++) {
     const g = h === 12 ? 1.5 : h % 3 === 0 ? 1.2 : 1, px = sx + ((h - 12) / 5) * alcance;
     if (evitar && px > evitar[0] - 4 && px < evitar[1] + 4) continue;
-    piedras += `<ellipse class="reloj-piedra${h === 12 ? ' reloj-medio' : ''}" cx="${f1(px)}" cy="${f1(gy)}" rx="${f1(2.3 * g)}" ry="${f1(1.1 * g)}"/>`;
+    const x = Number(f1(px)), y = Number(f1(gy)), a = Number(f1(2.3 * g)), b = Number(f1(1.1 * g));
+    const d = `M${f1(x - a)} ${f1(y)}a${f1(a)} ${f1(b)} 0 1 0 ${f1(2 * a)} 0a${f1(a)} ${f1(b)} 0 1 0 ${f1(-2 * a)} 0Z`;
+    if (h === 12) medio = d; else piedras += d;
   }
-  return `<g class="efecto-ambiente reloj" data-sx="${f1(sx)}" data-gy="${f1(gy)}" data-alcance="${f1(alcance)}" aria-hidden="true"><path class="reloj-sombra" d=""/>${piedras}<path class="reloj-gnomon" d="M${f1(sx)} ${f1(gy)}v-7"/></g>`;
+  const trazo = (d, c) => (d ? `<path class="${c}" d="${d}"/>` : '');
+  return `<g class="efecto-ambiente reloj" data-sx="${f1(sx)}" data-gy="${f1(gy)}" data-alcance="${f1(alcance)}" aria-hidden="true"><path class="reloj-sombra" d=""/>${trazo(piedras, 'reloj-piedra')}${trazo(medio, 'reloj-piedra reloj-medio')}<path class="reloj-gnomon" d="M${f1(sx)} ${f1(gy)}v-7"/></g>`;
 }
 
 /** La monedita que queda brillando en el fondo del lago por cada venta (idea 40; hasta 5). */
