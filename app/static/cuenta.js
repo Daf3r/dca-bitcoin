@@ -46,7 +46,8 @@ function vistaCuenta(cual) {
 const irA = (cual, despues) => conTransicion(() => {
   vistaCuenta(cual);
   despues?.();
-  if (cual !== 'menu' && !dCuenta.querySelector(':focus')) $('dc-volver').focus();
+  const f = document.activeElement; // la fila tocada sigue «enfocada» hasta que el navegador note que se escondió
+  if (cual !== 'menu' && (!f || !dCuenta.contains(f) || f.closest('[hidden]'))) $('dc-volver').focus();
 });
 /** (Campamento 24) «Ver en Estado del sistema» tras medir este aparato: «Tu cuenta» abierta directo en esa vista. */
 export function abrirSistema() {
