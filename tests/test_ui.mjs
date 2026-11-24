@@ -7581,7 +7581,7 @@ try {
       const co = h.querySelector('g.cohetes');
       return { total: h.querySelectorAll('*').length, estrellas: h.querySelectorAll('.estrella').length, subEstrellas: sub('.estrella'), lu: h.querySelectorAll('.lu').length, luHijos: [...h.querySelectorAll('.lu')].every((g) => g.children.length === 1), mares: h.querySelectorAll('.luna-mares ellipse').length, subMares: sub('.luna-mares path'), cohetes: co ? co.querySelectorAll('*').length : -1, nan: [...h.querySelectorAll('[d]')].filter((e) => /NaN/.test(e.getAttribute('d'))).length };
     });
-    const mil = await servidor('mil');
+    const mil = await servidor('mil', { FECHA_PRUEBA: '2026-11-20' }); // (los datos de un día fijo: el total de nodos no depende de hoy)
     try {
       // Nochebuena a las 21:00 en el teléfono: los mismos 46 astros en cinco trazos, doce luciérnagas de un círculo, los mares en un trazo y
       // los cohetes sin dibujar (su grupo, vacío, hasta las 23:40).
