@@ -251,6 +251,7 @@ const PESOS = [
   ['pulido integral: el movimiento (nada co', 113], // 20 comprobaciones
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
+  ['campamento 40: el día entero del pueblo', 90], // 41 comprobaciones (estimado)
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
@@ -7451,7 +7452,8 @@ try {
       const g = document.querySelector('#montana .v-vecinos'); if (!g) return null;
       const svg = g.ownerSVGElement, pie = g.querySelector('.v-vo-pie');
       const cajas = (pie?.getAttribute('d') || '').split(/(?=M)/).filter(Boolean).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); svg.append(t); const b = t.getBBox(); t.remove(); return b; });
-      const calle = [...document.querySelectorAll('#montana .v-pueblo :is(.v-calle, .v-plaza)')].map((e) => e.getBBox()).reduce((u, b) => ({ x0: Math.min(u.x0, b.x), x1: Math.max(u.x1, b.x + b.width), y0: Math.min(u.y0, b.y), y1: Math.max(u.y1, b.y + b.height) }), { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 });
+      // (Campamento 40, idea 144) La que baja del cantón va por el camino real: también cuenta como calle.
+      const calle = [...document.querySelectorAll('#montana .v-pueblo :is(.v-calle, .v-plaza), #montana .v-cm')].map((e) => e.getBBox()).reduce((u, b) => ({ x0: Math.min(u.x0, b.x), x1: Math.max(u.x1, b.x + b.width), y0: Math.min(u.y0, b.y), y1: Math.max(u.y1, b.y + b.height) }), { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9 });
       const fuera = cajas.filter((b) => { const cx = b.x + b.width / 2, cy = b.y + b.height / 2; return cx < calle.x0 || cx > calle.x1 || cy < calle.y0 - 2 || cy > calle.y1 + 2; }).length;
       const encima = cajas.filter((a, i) => cajas.slice(i + 1).some((b) => Math.abs(a.x + a.width / 2 - (b.x + b.width / 2)) < Math.min(a.width, b.width) * 0.5 && Math.abs(a.y - b.y) < a.height * 2)).length;
       const hilos = [...(g.querySelector('.v-pis-hilo')?.getAttribute('d') ?? '').matchAll(/ ([\d.]+) ([\d.]+)(?=M|$)/g)].map((m) => `${m[1]},${m[2]}`);
@@ -7461,7 +7463,8 @@ try {
     try {
       for (const [w, h] of [[390, 844], [1440, 900]]) {
         // Un miércoles de octubre (escuela): por la mañana sin oseznos; por la tarde, los cinco con su pelota; de noche, nadie.
-        for (const [hora, turno, min, max] of [[6, 'amanece', 2, 3], [9, 'manana', 3, 5], [12.5, 'siesta', 2, 3], [15, 'tarde', 6, 8], [19, 'pupusas', 3, 5], [23, 'duerme', 0, 0]]) {
+        // (40) Al amanecer, en el teléfono, puede bajar además la del cantón por el camino real (144): hasta cuatro.
+        for (const [hora, turno, min, max] of [[6, 'amanece', 2, 4], [9, 'manana', 3, 5], [12.5, 'siesta', 2, 3], [15, 'tarde', 6, 8], [19, 'pupusas', 3, 5], [23, 'duerme', 0, 0]]) {
           const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs('2026-10-14', { 'libro.efectos': 'esenciales' }));
           await cerrar(t.p);
           const r = await pueblo(t.p);
@@ -7581,7 +7584,7 @@ try {
       await pg.goto(`${anio.url}/login`, { waitUntil: 'networkidle' });
       await pg.waitForTimeout(800);
       const e = await pg.evaluate(() => ({ vecinos: document.querySelectorAll('.v-vecinos path').length, luces: (document.querySelector('.v-pueblo .v-luz')?.getAttribute('d') ?? '').length, turno: document.documentElement.dataset.turno }));
-      ok(e.vecinos > 0 && e.luces === 0 && e.turno === 'pupusas', `38 la entrada: los vecinos osos de su turno y ninguna ventana encendida (${JSON.stringify(e)})`);
+      ok(e.vecinos > 0 && e.luces === 0 && e.turno === 'fresca', `38 la entrada: los vecinos osos de su turno y ninguna ventana encendida (${JSON.stringify(e)})`);
       await ctx.close();
     } finally {
       anio.parar();
@@ -7946,6 +7949,78 @@ try {
       const mapa = await n.p.evaluate(() => [...document.querySelectorAll('#guia-almanaque li span')].map((s) => s.textContent).join('\n'));
       ok(/foco: rutina \(/.test(mapa) && /ambiente: humo, cayuco/.test(mapa) && /foco: navidad/.test(mapa) && /capas pequeñas: \d+ \(hasta \d animaciones por capa\)/.test(mapa), '51 la guía enseña el mapa del día: el foco de cada tramo, sus ambientales y lo que pesa');
       await n.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 40: el día entero del pueblo (turnos nuevos, la carta del día, el perro, las sombras, las luces una a una, la descripción y nadie con algo encima)
+  await bloque(async () => {
+    const conLs = (dia, ef = 'esenciales') => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } }, { dia, ef }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Lo que se mira: el turno, las luces y las sombras de <html>, los vecinos (uno por subtrazo de su sombra de pie), el perro con ellos o
+    // en su sitio, ningún NaN, la descripción y (pedido del dueño) que nada pintado después de los vecinos les quede encima: el árbol del
+    // primer día (tronco y copa), las torres del teleférico, el perro y las gallinas de siempre.
+    const mira = (p) => p.evaluate(() => {
+      const d = document.documentElement.dataset, g = document.querySelector('#montana .v-vecinos'), pie = g?.querySelector('.v-vo-pie');
+      const vis = (e) => { for (let x = e; x && x.tagName !== 'svg'; x = x.parentElement) if (getComputedStyle(x).display === 'none') return false; return true; };
+      const m = pie?.getScreenCTM(), sp = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
+      const figs = (pie?.getAttribute('d') || '').split('M').filter(Boolean).map((t) => { const n = t.match(/-?[\d.]+/g).map(Number), kk = (n[2] - n[0]) / 4.4, x = (n[0] + n[2]) / 2, a = sp(x - 2.4 * kk, n[1] - 9.6 * kk), b = sp(x + 2.4 * kk, n[1]); return { x0: a[0], y0: a[1], x1: b[0], y1: b[1] }; });
+      const cajas = (e) => (e.getAttribute('d') || '').split(/(?=M)/).filter(Boolean).map((t) => { const q = e.cloneNode(); q.setAttribute('d', t); e.parentNode.append(q); const r = q.getBoundingClientRect(); q.remove(); return { c: e.getAttribute('class'), x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }; });
+      const cosas = [...document.querySelectorAll('#montana :is(.v-arbol .v-ar-tronco, .v-arbol .v-ar-copa, .v-arbol .v-ar-tallo, .v-tele-torre, .v-pueblo > .v-animal, .v-pueblo > .v-gallina)')].filter(vis).flatMap((e) => (e.matches('.v-tele-torre, .v-gallina') ? cajas(e) : [(() => { const r = e.getBoundingClientRect(); return { c: e.getAttribute('class'), x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }; })()]));
+      const encima = figs.flatMap((f) => cosas.filter((c) => Math.min(f.x1, c.x1) - Math.max(f.x0, c.x0) > 1 && Math.min(f.y1, c.y1) - Math.max(f.y0, c.y0) > 1).map((c) => c.c));
+      const malos = [...document.querySelectorAll('#montana svg [d], #montana svg [transform]')].filter((e) => /NaN|undefined/.test((e.getAttribute('d') || '') + (e.getAttribute('transform') || ''))).length;
+      const animal = document.querySelector('#montana .v-pueblo > .v-animal');
+      return { turno: d.turno, luces: d.luces ?? '', sombra: d.sombra ?? '', vecinos: figs.length, perroVecino: Boolean(g?.querySelector('.v-vo-perro')), perroSiempre: animal ? getComputedStyle(animal).display !== 'none' : null,
+        tipos: [...(g?.querySelectorAll('path') ?? [])].map((e) => e.getAttribute('class')).join(' '), malos, encima, desc: document.getElementById('m-desc')?.textContent ?? '',
+        farol: getComputedStyle(document.querySelector('#montana .v-pueblo .v-farol-luz') ?? document.body).display, ventana: getComputedStyle(document.querySelector('#montana .v-pueblo .v-luz') ?? document.body).fill,
+        sombraT: getComputedStyle(document.querySelector('#montana .v-pueblo > .v-sombra') ?? document.body).transform };
+    });
+    const anio = await servidor('anio');
+    try {
+      // Un miércoles de escuela de la seca (10 de febrero de 2027), un lunes de ropa tendida y un viernes de pupusas.
+      const MOMENTOS = [
+        ['2027-02-10', 4.75, (r) => r.turno === 'alba' && r.vecinos === 1 && r.luces === 'faroles' && /aún es de noche/.test(r.desc)],
+        ['2027-02-10', 6.2, (r) => r.turno === 'amanece' && r.sombra === 'larga' && r.sombraT !== 'none'],
+        ['2027-02-10', 11.75, (r) => r.turno === 'tortillas' && r.sombra === 'corta' && /tortillas en su comal/.test(r.desc) && r.perroVecino && r.perroSiempre === false],
+        ['2027-02-10', 12.25, (r) => r.turno === 'salida' && r.vecinos >= 6 && /salen de la escuela/.test(r.desc)],
+        ['2027-02-10', 13, (r) => r.turno === 'siesta' && r.perroVecino],
+        ['2027-02-10', 15, (r) => r.turno === 'tarde' && !r.perroVecino && r.perroSiempre === true && r.sombraT === 'none'],
+        ['2027-02-10', 17, (r) => r.turno === 'vuelta' && r.luces === 'ninguna' && r.farol === 'none'],
+        ['2027-02-10', 17.9, (r) => r.turno === 'pupusas' && r.luces === 'faroles' && r.farol !== 'none' && !/255, 197, 107/.test(r.ventana)],
+        ['2027-02-10', 19, (r) => r.turno === 'pupusas' && r.luces === '' && /255, 197, 107/.test(r.ventana)],
+        ['2027-02-10', 21, (r) => r.turno === 'fresca' && /tomar el fresco/.test(r.desc) && r.vecinos >= 4],
+        ['2027-02-10', 22.5, (r) => r.turno === 'duerme' && r.luces === 'iglesia' && !/255, 197, 107/.test(r.ventana)],
+        ['2027-02-08', 9, (r) => r.turno === 'manana' && /v-vo-r[0-2]/.test(r.tipos)],
+        ['2027-02-12', 19, (r) => r.turno === 'pupusas' && r.vecinos >= 6],
+        ['2026-12-10', 19, (r) => r.turno === 'posada'],
+      ];
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        for (const [dia, hora, prueba] of MOMENTOS) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia));
+          await cerrar(t.p);
+          const r = await mira(t.p);
+          ok(prueba(r) && r.malos === 0 && r.encima.length === 0 && !/\b(tu|tus|tú)\b/i.test(r.desc.split('osos polares.').pop()) && !t.consola.length, `40 a ${w} px, ${dia} a las ${hora}: ${r.turno} (${JSON.stringify({ ...r, desc: r.desc.slice(-160), tipos: undefined })}${t.consola.join(' | ')})`);
+          await t.ctx.close();
+        }
+      }
+      // Con la página abierta, al pasar a la fresca se rehacen los vecinos y la descripción cuenta el turno nuevo (el dibujo grande es el mismo).
+      const t = await entrar(navegador, anio, ADMIN, { hora: 19.95, viewport: { width: 390, height: 844 } }, conLs('2027-02-10'));
+      await cerrar(t.p);
+      const antes = await t.p.evaluateHandle(() => document.querySelector('#montana > svg'));
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '20.05'); window.libroCielo.aplicar(); });
+      await t.p.waitForTimeout(200);
+      const r = await mira(t.p), mismo = await t.p.evaluate((x) => x === document.querySelector('#montana > svg'), antes);
+      ok(r.turno === 'fresca' && /tomar el fresco/.test(r.desc) && mismo, `40: al pasar a la fresca con la página abierta, la descripción cuenta el turno nuevo sin redibujar la escena («${r.desc.slice(-90)}»)`);
+      await t.ctx.close();
+      // En pantallas de otro ancho (320, 768 y 2560) y con «todos», en los turnos más llenos, nada encima de nadie.
+      for (const [w, h] of [[320, 640], [768, 1024], [2560, 1440]]) for (const [dia, hora] of [['2027-02-12', 19], ['2027-02-10', 12.25], ['2027-02-10', 21], ['2026-12-24', 19]]) {
+        const x = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia, 'todos'));
+        await cerrar(x.p);
+        const q = await mira(x.p);
+        ok(q.encima.length === 0 && q.malos === 0, `40 a ${w} px, ${dia} a las ${hora} con «todos»: nada pintado encima de un vecino (${q.encima.join(', ')})`);
+        await x.ctx.close();
+      }
     } finally {
       anio.parar();
     }

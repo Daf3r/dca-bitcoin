@@ -5,7 +5,7 @@ import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHo
 import { reparto, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
 import { sitiosPueblo, lugaresPueblo, TERRAZA, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
-import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
+import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, cajasArbol, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 /** (Campamento 39) Un círculo como subtrazo, redondeado como el `<circle>` de antes (centro y radio a una décima): para juntar muchos en un trazo. */
 const circuloD = (cx, cy, r) => { const x = Number(f1(cx)), y = Number(f1(cy)), q = Number(f1(r)); return `M${f1(x - q)} ${f1(y)}a${f1(q)} ${f1(q)} 0 1 0 ${f1(2 * q)} 0a${f1(q)} ${f1(q)} 0 1 0 ${f1(-2 * q)} 0Z`; };
@@ -437,6 +437,14 @@ function sitioCanton(cm, t, h) {
   }
   return null;
 }
+/**
+ * (Campamento 40, pedido del dueño) El árbol del primer día se pinta después del pueblo: con sus cajas en lo ocupado, ningún vecino queda
+ * bajo su tronco ni su copa (antes, con la fila de las pupusas de un viernes a 1440 px, el tronco le cruzaba el cuerpo a una vecina).
+ */
+function conArbol(lug, arbol) {
+  if (arbol) for (const [x0, y0, x1, y1] of cajasArbol(arbol)) lug.ocupado.push({ x0, y0, x1, y1 });
+  return lug;
+}
 /** (Campamento 40) Lo que el reparto necesita del día y la hora (la carta del día, la escuela, la del cantón): lo mismo para el grupo y la capa. */
 function opcionesReparto(info, t) {
   const C = window.libroCielo, dia = C?.dia?.() ?? '';
@@ -730,7 +738,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 35) Los vecinos osos del turno de ahora; sus hilos llevan las piscuchas a la manita de un osezno (o al poste del farol si
   // no hay oseznos en la plaza) y se rehacen con ellos al cambiar de turno (`libro:turno`).
   const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q) => ({ ...q, k: kp, hilo: null }));
-  const C = window.libroCielo, infoV = { lug: lugaresPueblo(pb), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula,
+  const C = window.libroCielo, infoV = { lug: conArbol(lugaresPueblo(pb), arbolV), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula,
     camino: conCamino && pb.plaza ? { ...valle.camino, u: pb.u, pts, arbol: arbolV, caja: [pb.caja[0], pb.yg - 16 * pb.u, pb.caja[2]] } : null };
   // (Campamento 40, idea 146) Las sombras del pueblo se alargan y se acortan desde su base (el suelo de la calle y el de la terraza):
   // el CSS las tuerce y estira según `data-sombra`, sin redibujarlas.
