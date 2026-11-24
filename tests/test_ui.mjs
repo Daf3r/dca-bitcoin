@@ -222,7 +222,7 @@ const PESOS = [
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
-  ['campamento 63: anotar y buscar', 60], // 30 comprobaciones (estimado)
+  ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
