@@ -25,6 +25,9 @@ Auditoría hecha leyendo el plan (`39-50-la-vida-del-valle-plan.md`), `CLAUDE.md
 - **Confirmar** con la familia lo sensible ya aprobado en bloque (misa de gallo, padre, Viernes Santo, Difuntos, inditos, tecolote) por si algo no cuadra al verlo.
 - **El nodo**: dar la URL interna de su mempool.space cuando corra, y el acceso por WireGuard desde el Vultr.
 
+## Observación del dueño (24 nov 2026): «las animaciones y la viveza son muy cortas»
+Lo que hay hoy **funciona en producción** (sin CI no se puede comprobar de otra forma), pero el dueño siente que la viveza y las animaciones **duran poco o se notan poco**. Hipótesis a confirmar con medidas: (1) la regla **«uno en movimiento a la vez»** (`data-mueve`) y las franjas de una hora o menos dejan el valle quieto casi todo el día; (2) varias piezas solo existen desde 1100 px (el teleférico) o con efectos «todos»; (3) lo continuo es tan sutil que no se nota; (4) los presupuestos (nodos y animaciones por capa) y «solo corre lo que se ve» limitan; (5) la pausa al deslizar. **Fable la audita y propone una base de viveza continua y barata** (sección F del artifact de diseño: tabla de lo que se mueve hoy, porcentaje del día con algo en movimiento en teléfono y escritorio, diagnóstico y propuesta: movimientos largos y lentos con un solo transform por grupo, acciones de 3–10 s, una excepción acotada a «uno a la vez», versión propia para el teléfono). **Opus la implementa** dentro del campamento 51 (el director del valle) y el 39 (que libera presupuesto), sin bajar de 55 fps en el iPhone del dueño (hoy 59).
+
 ## Reglas que cambian con este plan (para no olvidarlas en `CLAUDE.md`)
 - 39: **cohetes solo en su hora** (125) y los topes del banco; 41: la Navidad entera (cada fecha todo el día); más reglas «cambia una regla» de la v5 (119, 129, 132, 134, 204, 207, 229, 275) solo si el dueño las aprobó y se implementan.
 - **Sin CI**: la verificación local completa es la compuerta.
