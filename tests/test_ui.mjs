@@ -5409,7 +5409,9 @@ try {
     /** Dos precios nuevos: el sismógrafo ya tiene su tira (sin esperar un minuto). */
     const asentadas = (p) => p.waitForFunction(() => [...document.querySelectorAll('.tv-tarjeta')].every((e) => e.hidden || e.dataset.sitio === '1' || e.dataset.sitio === '0'), null, { timeout: 5000 });
     const conSismo = async (p) => { await tvMod(p, 'for (const k of [1, 2]) { est.S.precio = 77000 + k * 150; est.S.precioTs = Date.now() + k; tv.pintarTV(); }'); await asentadas(p); await p.waitForTimeout(300); };
-    const fiesta = async (p, grande) => { await tvMod(p, `tv.fiestaTV(${grande ? '990000, 1211769, 221769' : '1180000, 1211769, 31769'});`); await asentadas(p); await p.waitForTimeout(1400); };
+    // (61) …y, con la máquina cargada, a que la tarjeta acabe de entrar (su animación de entrada; las brasas, infinitas, no cuentan)
+    const entradas = (p) => p.waitForFunction(() => !document.getAnimations().some((a) => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity && a.effect?.target?.closest?.('.tv-tarjeta')), null, { timeout: 8000 });
+    const fiesta = async (p, grande) => { await tvMod(p, `tv.fiestaTV(${grande ? '990000, 1211769, 221769' : '1180000, 1211769, 31769'});`); await asentadas(p); await p.waitForTimeout(1400); await entradas(p); };
     const sAnio = await servidor('anio');
     try {
       // El nombre de la montaña: también ocupa sitio arriba
