@@ -1051,7 +1051,7 @@ try {
           primero: `${h.firstElementChild.tagName.toLowerCase()}|${h.firstElementChild.getAttribute('role')}`,
           capas: [...h.querySelectorAll(':scope > svg.capa')].map((s) => `${[...s.classList].find((c) => c.startsWith('par-'))}|${s.getAttribute('aria-hidden')}|${cs(s).zIndex}|${cs(s).willChange}|${cs(s).transform}`),
           grupos: h.querySelector('svg').querySelectorAll('.par').length,
-          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino')) x = x.previousElementSibling; // (32, 34, 37) entre los dos, solo las capas pequeñas de la cabina y de los animales del pueblo
+          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb')) x = x.previousElementSibling; // (32, 34, 37, 51) entre los dos, solo las capas pequeñas de la cabina, de los animales, del vecino y de los ambientales
           return f ? `${x === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
           alba: document.getElementById('m-alba').ownerSVGElement.classList.contains('par-cielo'),
           aislada: cs(h).isolation, velo: cs(document.querySelector('.escena-velo')).willChange,
@@ -6096,7 +6096,10 @@ try {
       ok(v.nodos <= 300 && v.total < 1100, `22 presupuesto: el valle en el teléfono son ${v.nodos} nodos (tope 300 desde el campamento 22C), la escena ${v.total} (tope 1100)`);
       ok(v.llena && !v.hilo && !v.playa && v.nivel === 'none', '22 quebrada y lago: en la lluviosa la quebrada baja llena y el lago cubre su playa');
       eq(v.milpa, ['jilote'], '22 milpa: el 10 de julio jilotea');
-      ok(v.garza && v.cuerpo && !v.lampara && !v.humo && !v.lucesVis && !v.pisVis && !v.navidad && !v.grabado, '22 de día: la garza y el cayuco con su pescador; sin humo (no es hora del fogón), sin luces, sin piscuchas ni Navidad');
+      // (Campamento 51, F3) Desde el director, el humo del fogón es un ambiental de 5:00 a 20:00 (no solo a la hora del café y de la cena):
+      // de día sale si los efectos son «todos».
+      const todosDia = await t.p.evaluate(() => document.documentElement.dataset.efectos === 'todos');
+      ok(v.garza && v.cuerpo && !v.lampara && v.humo === todosDia && !v.lucesVis && !v.pisVis && !v.navidad && !v.grabado, `22 de día: la garza y el cayuco con su pescador; el humo, solo con «todos» (51: ambiental de día; ${todosDia}), sin luces, sin piscuchas ni Navidad`);
       ok(v.camino && (v.arbol ?? '').includes(`v-${etapa('2026-07-10')}`) && v.arbolCaja && v.salida && v.arbolCaja.r < v.salida.x + 2, `22 camino real y árbol del primer día: llegan a la salida por el lado contrario al sendero (${v.arbol})`);
       ok(/Al pie de la montaña hay un pueblo con su iglesia/.test(v.desc) && /conacaste[^.]*, sembrado el [^.]*, el día de la primera compra/.test(v.desc), '22 descripción: la montaña cuenta el valle y el árbol para lectores de pantalla');
       ok(t.consola.length === 0, `22: consola limpia (${t.consola.slice(0, 2)})`);
@@ -7807,6 +7810,92 @@ try {
       const despues = await c.p.evaluate(() => document.getElementById('hito-cel').hidden);
       ok(antes && despues, `39b la tarjeta de la etapa se cierra con un toque (se veía: ${antes}; cerrada: ${despues})`);
       await c.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 51: el director del valle (el foco, los ambientales en su capa, la línea de hoy y el mapa del día)
+  await bloque(async () => {
+    const DIA = '2026-11-11'; // un miércoles cualquiera (ni fiesta, ni luna llena, ni efeméride ni lluvia de estrellas)
+    const conLs = (dia, ef) => [([d, e]) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', d); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, [dia, ef]];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const mira = (p, h) => p.evaluate(async (hh) => {
+      if (hh != null) { localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400)); }
+      const host = document.getElementById('montana'), raiz = document.documentElement, frente = host.querySelector(':scope > svg.frente');
+      const capas = [...host.querySelectorAll(':scope > svg.v-capa-amb')];
+      const corre = (e) => e.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length;
+      const humo = capas.filter((s) => s.classList.contains('v-amb-humo')), cay = capas.find((s) => s.classList.contains('v-amb-cayuco'));
+      // Entre el principal y el frente solo hay capas pequeñas; ninguna capa ambiental lleva estilos o trazos rotos.
+      let x = frente?.previousElementSibling, orden = true;
+      while (x && x !== host.querySelector(':scope > svg')) { if (!x.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb')) orden = false; x = x.previousElementSibling; }
+      const malos = capas.filter((s) => /NaN|undefined|Infinity/.test(`${s.getAttribute('viewBox')}${s.style.cssText}${s.innerHTML}`)).length;
+      return {
+        foco: raiz.dataset.foco, ambiente: raiz.dataset.ambiente ?? '', mueve: raiz.dataset.mueve ?? '',
+        humo: humo.length, humoVis: humo.filter((s) => getComputedStyle(s).display !== 'none').length, humoCorre: humo.reduce((n, s) => n + corre(s), 0),
+        humoEnPrincipal: host.querySelector(':scope > svg').querySelectorAll('.v-hu').length, cayEnPrincipal: host.querySelector(':scope > svg').querySelectorAll('.v-cayuco').length,
+        cay: Boolean(cay), cayVis: Boolean(cay) && getComputedStyle(cay).display !== 'none', cayCorre: cay ? corre(cay) : 0, cayAnim: cay ? getComputedStyle(cay).animationName : '',
+        moviendo: capas.filter((s) => corre(s) > 0).length, maxPorCapa: Math.max(0, ...capas.map(corre)), orden, malos, nodos: host.querySelectorAll('*').length,
+        desc: document.getElementById('m-desc').textContent,
+      };
+    }, h);
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      for (const [w, alto, chimeneas] of [[390, 844, 1], [1440, 900, 2]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: w, height: alto }, reducedMotion: 'no-preference' }, conLs(DIA, 'todos'));
+        await cerrar(t.p);
+        await t.p.evaluate(() => window.scrollTo(0, 0));
+        const rutina = await t.p.evaluate((d) => window.libroCielo.rutinaDelDia(d), DIA);
+        const dia = await mira(t.p, null);
+        // Una chimenea con fogón en el teléfono; en pantallas anchas, hasta dos (las que tenga la fila de delante con este saldo).
+        const ch = dia.humo;
+        ok(dia.foco === `rutina-${rutina}` && dia.ambiente === 'humo cayuco' && ch >= 1 && ch <= chimeneas && dia.humoVis === ch && dia.humoCorre === 3 * ch && dia.humoEnPrincipal === 0 && dia.cay && dia.cayVis && dia.cayEnPrincipal === 0 && dia.cayAnim === 'v-deriva' && dia.cayCorre === 1,
+          `51 a ${w} px, mediodía: el foco es la rutina del día (${rutina}) y junto al actor van el humo (${dia.humo} chimenea/s, cada una en su capa) y el cayuco a la deriva, fuera del dibujo grande (${JSON.stringify({ ...dia, desc: undefined })})`);
+        ok(dia.moviendo <= 3 && dia.maxPorCapa <= 3 && dia.orden && dia.malos === 0 && dia.nodos <= 1000, `51 a ${w} px: como mucho tres ambientales y tres animaciones por capa, entre el dibujo grande y el frente, sin NaN (${dia.moviendo} · ${dia.maxPorCapa} · ${dia.nodos} nodos)`);
+        const frase = await t.p.evaluate((d) => window.libroCielo.fraseRutina(d), DIA);
+        ok(dia.desc.includes(frase) && !/\b(tu|tus|tú)\b/i.test(frase), `51 descripción: la montaña cuenta la rutina del día para lectores de pantalla («${frase}»)`);
+        // Al deslizar, los ambientales se quedan quietos (la pausa de siempre).
+        const pausa = await t.p.evaluate(() => {
+          const esc = document.querySelector('.escena'); esc.setAttribute('data-desliza', '');
+          const r = [...document.querySelectorAll('#montana svg.v-amb-cayuco, #montana svg.v-amb-humo .v-hu')].map((e) => getComputedStyle(e).animationPlayState);
+          esc.removeAttribute('data-desliza');
+          return r;
+        });
+        ok(pausa.length === 1 + 3 * ch && pausa.every((x) => x === 'paused'), `51 al deslizar, el humo y el cayuco se pausan (${pausa.join(', ')})`);
+        // Al amanecer el pescador además rema (dos animaciones en la capa del cayuco); al atardecer solo el humo; de noche, nada.
+        const alba = await mira(t.p, 6), tarde = await mira(t.p, 17.5), noche = await mira(t.p, 21);
+        ok(alba.ambiente === 'humo cayuco' && alba.cayCorre === 2 && tarde.ambiente === 'humo' && tarde.cayCorre === 0 && tarde.humoCorre === 3 * ch && noche.ambiente === '' && noche.moviendo === 0 && noche.humoVis === 0 && noche.cayVis,
+          `51 a ${w} px: al amanecer el cayuco deriva y el pescador rema; al atardecer, solo el humo; de noche ningún ambiental (el cayuco quieto con su lámpara) (${[alba, tarde, noche].map((x) => `${x.ambiente || '—'}/${x.cayCorre}/${x.humoCorre}`).join(' · ')})`);
+        // 226: el movimiento tiene un solo dueño; con los ambientales al lado, el actor del momento sigue siendo uno (las gallinas a las 8:30).
+        const gallinas = await mira(t.p, 8.5);
+        ok(gallinas.mueve === 'gallinas' && gallinas.moviendo === 1 + ch, `51 a las 8:30: se mueven las gallinas y, junto a ellas, solo los ambientales (${gallinas.moviendo} capas ambientales)`);
+        ok(t.consola.length === 0, `51 a ${w} px: consola limpia (${t.consola.slice(0, 2)})`);
+        await t.ctx.close();
+      }
+      // Con «esenciales» el cayuco está (quieto) y el humo no: lo ambiental solo con «todos».
+      const e = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 } }, conLs(DIA, 'esenciales'));
+      await cerrar(e.p);
+      const es = await mira(e.p, null);
+      ok(es.cay && es.cayVis && es.cayCorre === 0 && es.humoVis === 0 && es.moviendo === 0, `51 con «esenciales»: el cayuco quieto en el lago, sin humo (${JSON.stringify({ ...es, desc: undefined })})`);
+      await e.ctx.close();
+      // 228: un día raro (el 15 de septiembre), la línea de hoy cuenta el foco, igual para quien solo mira; un día de rutina, nada.
+      for (const [quien, cuenta] of [['admin', ADMIN], ['lectora', LECTOR]]) {
+        const r = await entrar(navegador, anio, cuenta, { hora: 12, viewport: { width: 390, height: 844 } }, conLs('2026-09-15', 'esenciales'));
+        await cerrar(r.p);
+        await r.p.waitForTimeout(400);
+        const av = await r.p.evaluate(() => ({ txt: document.getElementById('aviso-txt')?.textContent ?? '', visible: !document.getElementById('aviso').hidden, foco: document.documentElement.dataset.foco }));
+        ok(av.visible && /15 de septiembre: por la mañana el pueblo tiene su desfile/.test(av.txt) && !/\b(tu|tus|tú)\b/i.test(av.txt) && av.foco === 'rutina-' + (await r.p.evaluate(() => window.libroCielo.rutinaDelDia('2026-09-15'))), `51 línea de hoy (${quien}): el 15 de septiembre la cuenta el aviso del día, sin tutear (${JSON.stringify(av)})`);
+        await r.ctx.close();
+      }
+      const n = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 } }, conLs(DIA, 'esenciales'));
+      await cerrar(n.p);
+      await n.p.waitForTimeout(400);
+      ok(await n.p.evaluate(() => document.getElementById('aviso').hidden), '51 línea de hoy: un día de rutina no hay aviso (lo común es callado)');
+      // 225: el mapa del día en la guía (junto al almanaque): el foco, los ambientales y lo que pesa cada tramo.
+      await n.p.goto(`${anio.url}/guia`, { waitUntil: 'networkidle' });
+      const mapa = await n.p.evaluate(() => [...document.querySelectorAll('#guia-almanaque li span')].map((s) => s.textContent).join('\n'));
+      ok(/foco: rutina \(/.test(mapa) && /ambiente: humo, cayuco/.test(mapa) && /foco: navidad/.test(mapa) && /capas pequeñas: \d+ \(hasta \d animaciones por capa\)/.test(mapa), '51 la guía enseña el mapa del día: el foco de cada tramo, sus ambientales y lo que pesa');
+      await n.ctx.close();
     } finally {
       anio.parar();
     }
