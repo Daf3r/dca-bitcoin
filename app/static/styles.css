@@ -2612,6 +2612,8 @@ html[data-pestanas] .indice { display: none; }
   .cuerpo[data-pestana="historia"] { grid-template-columns: minmax(0, 1fr); }
   .cuerpo[data-pestana="historia"] :is(.col-principal, .col-lateral) { display: none; }
 }
+/* En una ventana baja la barra no se pega (como antes, campamento 14): ocuparía demasiado. «Anotar» va con ella. */
+@media (min-width: 1100px) and (max-height: 559px) { html[data-pestanas] .barra { position: relative; top: auto; } }
 @media (max-width: 479px) { .cuerpo[data-pestana="resumen"] .caida { flex-wrap: wrap; row-gap: 0; } .cuerpo[data-pestana="resumen"] .caida .enlace { margin-bottom: -8px; } } /* «Ocultar hoy» pegado al texto (su zona de toque de 48 px sigue entera) */
 
 .historia-pg[hidden] { display: none; }
