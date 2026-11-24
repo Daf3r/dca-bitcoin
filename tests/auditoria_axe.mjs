@@ -1,7 +1,11 @@
 // Auditoría de accesibilidad con axe-core (WCAG 2.1 A y AA más buenas prácticas) sobre los estados principales de la app,
 // en claro y oscuro, contra el servidor de pruebas (sin red). Sale con error si hay alguna violación.
 // Uso: node tests/auditoria_axe.mjs   (PYTHON=ruta/python si Flask no está en python3)
+//      ESQUEMA=light (o dark) node tests/auditoria_axe.mjs   (solo uno de los dos esquemas: el CI y tests/verificar_todo.sh corren los
+//      dos a la vez, cada uno en su proceso; juntos revisan exactamente los mismos estados que sin ESQUEMA)
+//      ESTADOS=archivo   (escribe ahí cada estado revisado y sus diálogos abiertos, uno por línea: para comparar dos corridas)
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
@@ -23,14 +27,17 @@ const puertoLibre = () => new Promise((res) => {
   const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); });
 });
 async function servidor(escenario, env = {}) {
-  const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore', env: { ...process.env, ...env } });
-  const url = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i++) {
-    try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
-    await new Promise((r) => setTimeout(r, 200));
+  // (Campamento 61) Como en test_ui: si el puerto lo ocupó otra prueba que corre a la vez, otro puerto; y /healthz debe ser de este.
+  for (let intento = 0; intento < 3; intento++) {
+    const port = await puertoLibre(), id = randomUUID();
+    const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore', env: { ...process.env, ...env, PRUEBA_ID: id } });
+    const url = `http://127.0.0.1:${port}`;
+    for (let i = 0; i < 200 && hijo.exitCode === null; i++) {
+      try { const r = await fetch(`${url}/healthz`); if (r.ok && r.headers.get('x-prueba-id') === id) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    hijo.kill();
   }
-  hijo.kill();
   throw new Error(`no arrancó el escenario ${escenario}`);
 }
 
@@ -62,12 +69,18 @@ async function auditar(p, estado) {
     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'] }, resultTypes: ['violations'],
   }));
   estados++;
+  if (process.env.ESTADOS) { // el estado y qué diálogos tenía abiertos: así se ve que dos corridas revisaron lo mismo
+    const abiertos = await p.evaluate(() => [...document.querySelectorAll('dialog[open]')].map((d) => d.id).join(',')).catch(() => '?');
+    fs.appendFileSync(process.env.ESTADOS, `${estado}\t${abiertos}\n`);
+  }
   for (const v of r.violations) {
     hallazgos.push(`[${v.impact}] ${v.id} en «${estado}»: ${v.help} → ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`);
   }
 }
 const cerrarOferta = async (p) => { if (await p.locator('#d-avisos').isVisible()) { await p.click('#da-no'); await p.waitForTimeout(300); } };
 
+const ESQUEMAS = process.env.ESQUEMA ? [process.env.ESQUEMA] : ['light', 'dark'];
+if (!ESQUEMAS.every((e) => ['light', 'dark'].includes(e))) throw new Error(`ESQUEMA=${process.env.ESQUEMA}: se espera light o dark`);
 const navegador = await chromium.launch();
 const anio = await servidor('anio');
 const hoy = await servidor('hoy');
@@ -75,7 +88,7 @@ const ballena = await servidor('ballena');
 const mil = await servidor('mil'); // con etiquetas
 const taldia = await servidor('taldia'); // (campamento 23) hoy hace un año llegó al campamento 1M
 try {
-  for (const esquema of ['light', 'dark']) {
+  for (const esquema of ESQUEMAS) {
     const nuevo = async (srv, cuenta, init = null, hora = esquema === 'light' ? 12 : 22) => {
       const ctx = await navegador.newContext({ ...devices['iPhone 13'], colorScheme: esquema, bypassCSP: true });
       const p = await ctx.newPage();
@@ -853,7 +866,7 @@ try {
 } finally {
   anio.parar(); hoy.parar(); ballena.parar(); mil.parar(); taldia.parar(); await navegador.close();
 }
-console.log(`${estados} estados revisados con axe.`);
+console.log(`${estados} estados revisados con axe${process.env.ESQUEMA ? ` (solo ${process.env.ESQUEMA})` : ''}.`);
 if (hallazgos.length) {
   console.log(`\n${hallazgos.length} violaciones:`);
   for (const h of hallazgos) console.log(`  - ${h}`);

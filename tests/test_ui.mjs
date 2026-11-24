@@ -2,8 +2,10 @@
 // Uso: node tests/test_ui.mjs   (necesita `playwright` con Chromium instalado y Flask: PYTHON=ruta/python si no es python3)
 //      PARTE=1/3 node tests/test_ui.mjs   (solo una parte, como en el CI; PARTE=reparto dice qué bloque va en cuál)
 //      BLOQUE=texto node tests/test_ui.mjs   (solo los bloques cuyo título lleva ese texto; para probar uno a mano)
+//      ESPERAS=1 node tests/test_ui.mjs   (además, por bloque: cuánto se fue en esperas fijas, en entrar y en arrancar servidores)
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
@@ -21,6 +23,9 @@ const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
 const eq = (a, b, msg) => { assert.deepEqual(a, b, msg); n++; };
 const entero = (x) => Math.round(x).toLocaleString('en-US');
 // «Hoy» es el de El Salvador, como en la app (el día UTC cambia a las 18:00 allí).
+// (Campamento 61) Con `ESPERAS=1`, cada bloque dice también en qué se le fue el tiempo: esperas fijas (`waitForTimeout`), entradas y
+// servidores arrancados. Solo mide: no cambia ninguna prueba.
+const gasto = { espera: 0, esperas: 0, entrar: 0, entradas: 0, servidor: 0, servidores: 0 };
 const hoySV = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date());
 
 const puertoLibre = () => new Promise((res) => {
@@ -29,24 +34,37 @@ const puertoLibre = () => new Promise((res) => {
 
 /** Arranca el servidor de pruebas con un escenario y espera a que responda. */
 async function servidor(escenario, env = {}) {
-  const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, ...env } });
+  const t0 = Date.now();
+  try { return await arrancar(escenario, env); } finally { gasto.servidor += Date.now() - t0; gasto.servidores++; }
+}
+async function arrancar(escenario, env) {
+  // (Campamento 61) Con otras pruebas a la vez, el puerto libre puede ocuparlo otro antes que este servidor: entonces este no arranca
+  // (se vuelve a probar con otro puerto) y, para no hablar con el servidor de otro, /healthz debe traer el `PRUEBA_ID` de este.
   let err = '';
-  hijo.stderr.on('data', (d) => { err += d; });
-  const url = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i++) {
-    try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
-    await new Promise((r) => setTimeout(r, 200));
+  for (let intento = 0; intento < 3; intento++) {
+    const port = await puertoLibre(), id = randomUUID();
+    const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, ...env, PRUEBA_ID: id } });
+    err = '';
+    hijo.stderr.on('data', (d) => { err += d; });
+    const url = `http://127.0.0.1:${port}`;
+    for (let i = 0; i < 200 && hijo.exitCode === null; i++) {
+      try { const r = await fetch(`${url}/healthz`); if (r.ok && r.headers.get('x-prueba-id') === id) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    hijo.kill();
   }
-  hijo.kill();
   throw new Error(`El servidor de pruebas (${escenario}) no arrancó:\n${err.slice(-800)}`);
 }
 
 /** Abre una página, entra con la cuenta dada y espera a que cargue. Recoge errores de consola. */
-async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
+async function entrar(...a) {
+  const t0 = Date.now();
+  try { return await entrarYa(...a); } finally { gasto.entrar += Date.now() - t0; gasto.entradas++; }
+}
+async function entrarYa(browser, srv, [usuario, clave], opts = {}, init = null) {
   // (Campamento 62) `masAjustes`: «Más ajustes de este aparato» (Tu cuenta) abierto, como lo dejaría quien lo abrió una vez; las pruebas
   // viejas tocan esos siete ajustes sin abrirlo (como «todo junto»). La prueba del 62 lo mira cerrado.
-  const { hora = 22, pestanas = false, masAjustes = true, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
+  const { hora = 22, pestanas = false, espera = true, masAjustes = true, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
   const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opcionesContexto });
   const p = await ctx.newPage();
   await p.addInitScript(([h, pes, mas]) => { try { localStorage.setItem('libro.hora', String(h)); if (!pes) localStorage.setItem('libro.pestanas', 'todo'); if (mas) localStorage.setItem('libro.cuenta.mas', '1'); } catch { /* sin almacenamiento */ } }, [hora, pestanas, masAjustes]);
@@ -54,11 +72,18 @@ async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
   const consola = [];
   p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
   p.on('pageerror', (e) => consola.push(`pageerror ${e.message}`));
-  await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
+  // (Campamento 61) La entrada está lista cuando cargó y respondió su única llamada (/api/estado): lo mismo que «networkidle», sin
+  // sus 500 ms de silencio de propina en cada una de las ~400 entradas de una corrida.
+  await Promise.all([p.waitForResponse((r) => new URL(r.url()).pathname === '/api/estado'), p.goto(`${srv.url}/login`, { waitUntil: 'load' })]);
   await p.fill('input[autocomplete="username"]', usuario);
   await p.fill('input[autocomplete="current-password"]', clave);
   await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+  // (Campamento 61) `espera: false`: quien va a recargar la página enseguida (la tele, con #tv) no espera a la subida de esta primera
+  // carga, que nadie mira: basta con que acaben sus llamadas. Lo que se comprueba se mide después de la recarga, con su propia espera.
+  if (!espera) { await p.waitForLoadState('networkidle'); return { ctx, p, consola }; }
   await p.waitForTimeout(2800);
+  // (Campamento 61) …y, si con la máquina cargada la subida de «Tú» (2.4 s) o el odómetro del saldo aún no acabaron, se espera a que acaben.
+  await p.waitForFunction(() => !document.querySelector('#m-yo.anda') && !document.getAnimations().some((a) => a.playState === 'running' && a.effect?.target?.classList?.contains('od-col')), null, { timeout: 10_000 });
   return { ctx, p, consola };
 }
 /** Tocar una fila abre su comprobante (campamento 18); «Editar» (o «Anular», en un traslado) queda dentro, para quien anota. */
@@ -69,6 +94,9 @@ const ponerFecha = async (p, f) => { await p.click('#h-dia-otro'); await p.fill(
 const abrirFiltros = async (p) => { if (await p.locator('#l-filtros').isVisible() && (await p.getAttribute('#l-filtros', 'aria-expanded')) !== 'true') await p.click('#l-filtros'); };
 const abrirFechas = async (p) => { await abrirFiltros(p); if ((await p.getAttribute('#l-mas', 'aria-expanded')) !== 'true') await p.click('#l-mas'); };
 const verVista = async (p, v) => { await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(400); };
+/** (Campamento 61) Espera a que acaben las transiciones de CSS en curso (un cambio de tema…), en vez de una espera fija que con la
+ * máquina cargada se queda corta. Las animaciones de ambiente (infinitas) no cuentan. */
+const sinTransiciones = (p, timeout = 8000) => p.waitForFunction(() => document.getAnimations().every((a) => !(a instanceof CSSTransition) || a.playState !== 'running'), null, { timeout, polling: 'raf' });
 const datos = (p, ruta) => p.evaluate((r) => fetch(r).then((x) => x.json()), ruta);
 const saldo = (p) => p.evaluate(() => {
   const el = document.querySelector('#s-sats .od-num');
@@ -148,77 +176,79 @@ const TITULOS = FUENTE.map((l) => TITULO.exec(l)?.[1].trim()).filter(Boolean);
   const envoltorios = FUENTE.filter((l) => l === '  await bloque(async () => {').length;
   if (sin.length || envoltorios !== TITULOS.length) throw new Error(`Cada título lleva debajo su \`await bloque(async () => {\` (${TITULOS.length} títulos, ${envoltorios} envoltorios): ${sin.join(' · ')}`);
 }
-/** Segundos que tarda cada bloque (por el principio de su título): una corrida entera, de uno en uno, el 18 nov 2026 (4 núcleos;
- * 2,987 s y 2,106 comprobaciones). Basta con que sean proporcionales; si un bloque crece mucho, se vuelve a medir: cada bloque dice
- * cuánto tardó al final de su línea en el registro del CI. */
+/** Segundos que tarda cada bloque (por el principio de su título): las tres partes, una tras otra, el 24 nov 2026 (4 núcleos; 3,970 s
+ * y 2,450 comprobaciones; 21B, ya con la tele del campamento 61). Basta con que sean proporcionales; si un bloque crece mucho, se vuelve
+ * a medir: cada bloque dice cuánto tardó al final de su línea en el registro del CI. */
 const PESOS = [
   ['un año de compras', 93], // 146 comprobaciones
-  ['avisos push (el envío real a Apple o Goo', 155], // 108 comprobaciones
+  ['avisos push (el envío real a Apple o Goo', 158], // 108 comprobaciones
   ['efectos: sistema, modo ligero y pausa', 17], // 14 comprobaciones
   ['el cielo según la hora', 22], // 37 comprobaciones
-  ['atmósfera: parallax, nubes, niebla, aves', 20], // 15 comprobaciones
-  ['rendimiento iPhone: la escena en capas,', 9], // 16 comprobaciones
-  ['se siente como app: recargar al arrastra', 33], // 23 comprobaciones
+  ['atmósfera: parallax, nubes, niebla, aves', 21], // 15 comprobaciones
+  ['rendimiento iPhone: la escena en capas,', 10], // 16 comprobaciones
+  ['se siente como app: recargar al arrastra', 34], // 23 comprobaciones
   ['la lista: meses, «Ver más», buscar, filt', 47], // 48 comprobaciones
   ['anotar y datos vivos: compra de siempre,', 62], // 24 comprobaciones
-  ['accesibilidad y teclado: saltar al conte', 20], // 39 comprobaciones
-  ['la montaña viva: humo, fogata, huellas,', 30], // 13 comprobaciones
+  ['accesibilidad y teclado: saltar al conte', 21], // 39 comprobaciones
+  ['la montaña viva: humo, fogata, huellas,', 32], // 13 comprobaciones
   ['banderas con historia, iconos por etapa', 18], // 18 comprobaciones
-  ['aurora, lago, acento dorado, cometa y 1', 49], // 20 comprobaciones
+  ['aurora, lago, acento dorado, cometa y 1', 53], // 20 comprobaciones
   ['suelo, leyenda plegable, altímetro, favi', 9], // 9 comprobaciones
   ['identidad: iconos, avatares, estados vac', 22], // 15 comprobaciones
   ['la montaña sigue a la caja (también en a', 7], // 6 comprobaciones
   ['Tu historia, medallas y qué hay de nuevo', 28], // 16 comprobaciones
-  ['modo pantalla grande, sonido al guardar', 42], // 24 comprobaciones
+  ['modo pantalla grande, sonido al guardar', 44], // 24 comprobaciones
   ['mil compras (la app después de mucho uso', 24], // 49 comprobaciones
-  ['iPhone: arranque, insignia del icono e i', 11], // 34 comprobaciones
+  ['iPhone: arranque, insignia del icono e i', 12], // 34 comprobaciones
   ['teléfono acostado y pantallas muy anchas', 35], // 53 comprobaciones
   ['datos y etiquetas (campamento 8, 1/4)', 24], // 23 comprobaciones
-  ['estado del sistema (campamento 8, 2/4)', 12], // 20 comprobaciones
-  ['pulido final (cliente): Gráficos sin el', 24], // 10 comprobaciones
-  ['sesiones y operación (campamento 8, 3/4)', 17], // 16 comprobaciones
+  ['estado del sistema (campamento 8, 2/4)', 17], // 20 comprobaciones
+  ['pulido final (cliente): Gráficos sin el', 26], // 10 comprobaciones
+  ['sesiones y operación (campamento 8, 3/4)', 20], // 16 comprobaciones
   ['tu eco y tus números (campamento 11)', 70], // 26 comprobaciones
-  ['campamento 12: El Salvador en la escena', 47], // 24 comprobaciones
+  ['campamento 12: El Salvador en la escena', 49], // 24 comprobaciones
   ['Tu historia en objetos: tronco, constela', 35], // 25 comprobaciones
-  ['campamento 13C: estratos, partitura, pas', 48], // 42 comprobaciones
-  ['campamento 14: pestañas (Resumen · Gráfi', 40], // 79 comprobaciones
+  ['campamento 13C: estratos, partitura, pas', 50], // 42 comprobaciones
+  ['campamento 14: pestañas (Resumen · Gráfi', 39], // 79 comprobaciones
   ['campamento 15A: Diario, cartas selladas', 43], // 43 comprobaciones
-  ['campamento 15B: piedritas, cumpleaños y', 135], // 29 comprobaciones
-  ['una sola compra', 5], // 4 comprobaciones
+  ['campamento 15B: piedritas, cumpleaños y', 134], // 29 comprobaciones
+  ['una sola compra', 6], // 4 comprobaciones
   ['campamento 16: lago, reloj de sol, «Tú»', 24], // 13 comprobaciones
-  ['campamento 17: primera impresión', 179], // 137 comprobaciones
+  ['campamento 17: primera impresión', 187], // 137 comprobaciones
   ['campamento 18: el ritual de anotar', 77], // 75 comprobaciones
   ['campamento 18: el comprobante de una ven', 9], // 4 comprobaciones
-  ['el precio de la compra (escribir el prec', 33], // 38 comprobaciones (medido el 18 nov 2026, de uno en uno)
+  ['el precio de la compra (escribir el prec', 34], // 38 comprobaciones
   ['campamentos (arte) y campamento 21: hito', 13], // 29 comprobaciones
-  ['campamento 19: la familia (escuchar el D', 92], // 63 comprobaciones
-  ['campamento 20: cada cosa en su sitio', 291], // 156 comprobaciones
-  ['campamento 21: etapas más cercanas', 142], // 129 comprobaciones
-  ['campamento 21B: la tele de la sala (tarj', 332], // 113 comprobaciones
-  ['tele: el saldo contra la montaña (pulido', 222], // 87 comprobaciones
-  ['campamento 24: medir este aparato (idea', 60], // 58 comprobaciones
+  ['campamento 19: la familia (escuchar el D', 94], // 63 comprobaciones
+  ['campamento 20: cada cosa en su sitio', 297], // 157 comprobaciones
+  ['campamento 21: etapas más cercanas', 151], // 129 comprobaciones
+  ['campamento 21B: la tele de la sala (tarj', 306], // 113 comprobaciones
+  ['tele: el saldo contra la montaña (pulido', 229], // 87 comprobaciones
+  ['campamento 24: medir este aparato (idea', 58], // 58 comprobaciones
   ['campamento 24: confianza (la revisión tr', 42], // 43 comprobaciones
   ['campamento 22: el valle vivo', 58], // 27 comprobaciones
-  ['campamento 22B: el valle vivo, parte 2', 73], // 36 comprobaciones
+  ['campamento 22B: el valle vivo, parte 2', 75], // 36 comprobaciones
   ['campamento 22C: el valle, de verdad (el', 28], // 21 comprobaciones
-  ['campamento 23: tu camino, otra vez (tal', 87], // 52 comprobaciones
-  ['campamento 25: los osos polares de pel', 167], // 98 comprobaciones (medido en su parte, el 18 nov 2026)
-  ['campamento 26: los osos en la interfaz', 46], // 22 comprobaciones
-  ['campamento 27: cuando algo no va', 25], // 4 comprobaciones
-  ['campamento 28: según el momento', 40], // 9 comprobaciones
-  ['campamento 29: detalles con cariño', 45], // 7 comprobaciones
-  ['campamento 30: hacer sitio', 30], // 9 comprobaciones
-  ['campamento 31: «Tú» sube como oso', 45], // 12 comprobaciones
-  ['campamento 32: el teleférico del valle', 35], // 11 comprobaciones
-  ['campamento 33: más ositos en el paisaje', 35], // 3 comprobaciones
-  ['campamento 34: el pueblo vive', 35], // 10 comprobaciones
-  ['pulido del pueblo: las casas en su sit', 30], // 4 comprobaciones
-  ['pulido de la iglesia y el paisaje bajo', 45], // 6 comprobaciones
-  ['campamento 35: el pueblo de los osos', 90], // 16 comprobaciones
-  ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
-  ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
-  ['campamento 38: lo que cambia de la app', 25], // 3 comprobaciones
-  ['pulido integral: el movimiento (nada co', 115], // 16 comprobaciones
+  ['campamento 23: tu camino, otra vez (tal', 88], // 52 comprobaciones
+  ['campamento 25: los osos polares de pel', 169], // 103 comprobaciones
+  ['campamento 39b: el tempo (tres tempos co', 14], // 8 comprobaciones (campamento 61: medido el 24 nov 2026)
+  ['campamento 51: el director del valle (el', 30], // 19 comprobaciones (campamento 61: medido el 24 nov 2026)
+  ['campamento 26: los osos en la interfaz', 49], // 22 comprobaciones
+  ['campamento 27: cuando algo no va', 36], // 4 comprobaciones
+  ['campamento 28: según el momento', 41], // 9 comprobaciones
+  ['campamento 29: detalles con cariño', 39], // 7 comprobaciones
+  ['campamento 30: hacer sitio', 13], // 9 comprobaciones
+  ['campamento 31: «Tú» sube como oso', 28], // 12 comprobaciones
+  ['campamento 32: el teleférico del valle', 26], // 11 comprobaciones
+  ['campamento 33: más ositos en el paisaje', 32], // 3 comprobaciones
+  ['campamento 34: el pueblo vive', 33], // 10 comprobaciones
+  ['pulido del pueblo: las casas en su sit', 17], // 4 comprobaciones
+  ['pulido de la iglesia y el paisaje bajo', 25], // 6 comprobaciones
+  ['campamento 35: el pueblo de los osos', 63], // 15 comprobaciones
+  ['campamento 36: el calendario del pueblo', 42], // 10 comprobaciones
+  ['campamento 37: el pueblo se mueve', 41], // 10 comprobaciones
+  ['campamento 38: lo que cambia de la app', 10], // 3 comprobaciones
+  ['pulido integral: el movimiento (nada co', 113], // 20 comprobaciones
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
@@ -259,13 +289,20 @@ async function bloque(fn) {
   if (REPARTO && REPARTO.parte[i] !== PARTE.k) return;
   if (process.env.BLOQUE && !TITULOS[i].includes(process.env.BLOQUE)) return; // para probar un solo bloque a mano: BLOQUE=«campamento 21B»
   const t0 = Date.now(), n0 = n;
+  for (const k of Object.keys(gasto)) gasto[k] = 0;
   await fn();
   corridos++;
   console.log(`· ${TITULOS[i].slice(0, 90)} — ${n - n0} comprobaciones, ${Math.round((Date.now() - t0) / 1000)} s`);
+  if (process.env.ESPERAS) console.log(`  esperas fijas ${(gasto.espera / 1000).toFixed(1)} s (${gasto.esperas}) · entrar ${(gasto.entrar / 1000).toFixed(1)} s (${gasto.entradas}) · servidores ${(gasto.servidor / 1000).toFixed(1)} s (${gasto.servidores})`);
 }
 if (PARTE) console.log(`Parte ${PARTE.k}/${PARTE.de}: ${REPARTO.parte.filter((x) => x === PARTE.k).length} de ${TITULOS.length} bloques (~${Math.round(REPARTO.carga[PARTE.k - 1] / 60)} min según PESOS)`);
 
 const navegador = await chromium.launch();
+if (process.env.ESPERAS) { // cuenta cada `waitForTimeout` (de cualquier página): se envuelve el método de la clase una sola vez
+  const c = await navegador.newContext(), pg = await c.newPage(), proto = Object.getPrototypeOf(pg), orig = proto.waitForTimeout;
+  proto.waitForTimeout = function (ms) { gasto.espera += ms; gasto.esperas++; return orig.call(this, ms); };
+  await c.close();
+}
 try {
   // ---------------------------------------------------------------- un año de compras
   await bloque(async () => {
@@ -611,6 +648,8 @@ try {
         ok(await p.locator('#av-prueba-btn').isVisible(), `${quien}: con los avisos activados sale «Enviarme un aviso de prueba»`);
         await p.click('#av-prueba-btn');
         await p.waitForFunction(() => { const t = document.getElementById('av-prueba-res').textContent; return t && t !== 'Enviando…'; }, null, { timeout: 20000 });
+        // (61) el texto llega un instante antes de que el botón se reactive: con la máquina cargada, se espera también a eso (si no llega, falla abajo)
+        await p.waitForFunction(() => !document.getElementById('av-prueba-btn').disabled, null, { timeout: 5000 }).catch(() => {});
         const res1 = (await p.textContent('#av-prueba-res')).trim();
         ok(res1.length > 20 && !(await p.locator('#av-prueba-btn').isDisabled()), `${quien}: la prueba dice qué pasó («${res1.slice(0, 60)}…») y el botón vuelve`);
         await p.click('#av-prueba-btn');
@@ -2078,6 +2117,7 @@ try {
       for (const tema of ['oscuro', 'claro']) {
         await p.evaluate((t) => window.libroTema.fijar(t), tema);
         await p.waitForTimeout(600);
+        await sinTransiciones(p); // (61) con la máquina cargada, 600 ms no siempre bastan para que el color llegue al nuevo tema
         const ind = await p.evaluate(() => {
           const el = document.getElementById('indice'), cs = getComputedStyle(el);
           const lum = (c) => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
@@ -5367,7 +5407,7 @@ try {
     const fijo = { isMobile: false, hasTouch: false, deviceScaleFactor: 1 };
     /** Entra y abre la tele (la dirección con #tv), sin diálogos. */
     const tele = async (srv, cuenta, { w = 1920, h = 1080, hora = 22, pares = [], marco = false, pestanas = false } = {}) => {
-      const r = await entrar(navegador, srv, cuenta, { hora, pestanas, viewport: { width: w, height: h }, ...fijo }, conLocal(pares, marco));
+      const r = await entrar(navegador, srv, cuenta, { hora, pestanas, espera: false, viewport: { width: w, height: h }, ...fijo }, conLocal(pares, marco));
       await r.p.evaluate(() => { location.hash = '#tv'; });
       await r.p.reload({ waitUntil: 'networkidle' });
       await r.p.waitForTimeout(2500);
@@ -5378,7 +5418,10 @@ try {
     /** Dos precios nuevos: el sismógrafo ya tiene su tira (sin esperar un minuto). */
     const asentadas = (p) => p.waitForFunction(() => [...document.querySelectorAll('.tv-tarjeta')].every((e) => e.hidden || e.dataset.sitio === '1' || e.dataset.sitio === '0'), null, { timeout: 5000 });
     const conSismo = async (p) => { await tvMod(p, 'for (const k of [1, 2]) { est.S.precio = 77000 + k * 150; est.S.precioTs = Date.now() + k; tv.pintarTV(); }'); await asentadas(p); await p.waitForTimeout(300); };
-    const fiesta = async (p, grande) => { await tvMod(p, `tv.fiestaTV(${grande ? '990000, 1211769, 221769' : '1180000, 1211769, 31769'});`); await asentadas(p); await p.waitForTimeout(1400); };
+    // (61) …y, con la máquina cargada, a que la tarjeta de la fiesta acabe de entrar (sus animaciones de entrada, hasta 1.65 s). Ni las
+    // brasas (adorno: en la grande, tres vueltas, ~8.6 s) ni el marco de la historia (40 s, sale o no según la hora real) cuentan.
+    const entradas = (p) => p.waitForFunction(() => !document.getAnimations().some((a) => { const el = a.effect?.target; return a.playState === 'running' && el?.closest?.('#tv-fiesta') && !el.closest('.tvf-brasas'); }), null, { timeout: 8000 });
+    const fiesta = async (p, grande) => { await tvMod(p, `tv.fiestaTV(${grande ? '990000, 1211769, 221769' : '1180000, 1211769, 31769'});`); await asentadas(p); await p.waitForTimeout(1400); await entradas(p); };
     const sAnio = await servidor('anio');
     try {
       // El nombre de la montaña: también ocupa sitio arriba
@@ -6851,7 +6894,7 @@ try {
 
       // ---- La tele: las tarjetas (último movimiento, reloj, sismógrafo) nunca tapan a los osos.
       for (const [w, h] of [[1920, 1080], [1366, 768], [1080, 1920], [3840, 2160]]) {
-        const tv = await entrar(navegador, srv, LECTOR, { hora: 12, viewport: { width: w, height: h }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, conLs({ 'libro.efectos': 'esenciales' }));
+        const tv = await entrar(navegador, srv, LECTOR, { hora: 12, espera: false, viewport: { width: w, height: h }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, conLs({ 'libro.efectos': 'esenciales' }));
         await tv.p.evaluate(() => { location.hash = '#tv'; });
         await tv.p.reload({ waitUntil: 'networkidle' }); await tv.p.waitForTimeout(2500); await cerrar(tv.p);
         const r = await tv.p.evaluate(() => {
@@ -7082,7 +7125,7 @@ try {
       }
       // La tele dormida (23:30): los tres durmiendo bajo la hora, tenues, dentro de la caja que se corre con la hora.
       {
-        const t = await entrar(navegador, anio, LECTOR, { hora: 23.5, viewport: { width: 1920, height: 1080 } }, conLs());
+        const t = await entrar(navegador, anio, LECTOR, { hora: 23.5, espera: false, viewport: { width: 1920, height: 1080 } }, conLs());
         await t.p.evaluate(() => { location.hash = '#tv'; }); await t.p.reload({ waitUntil: 'networkidle' }); await t.p.waitForTimeout(4500);
         const r = await t.p.evaluate(() => {
           const caja = document.getElementById('tvn-caja'), s = caja.querySelector(':scope > svg.oso-pose-duermen');
