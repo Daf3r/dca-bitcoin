@@ -1104,7 +1104,7 @@ function instalarMoneda(host) {
     if (n < 3) return;
     n = 0;
     luna.classList.add('moneda');
-    setTimeout(() => luna.classList.remove('moneda'), sinMovimiento() ? 1400 : 1600);
+    setTimeout(() => luna.classList.remove('moneda'), sinMovimiento() ? 1400 : 2600); // (39b) 2.6 s, como su animación
   });
 }
 
@@ -1557,9 +1557,10 @@ function luminarias(l) {
 /**
  * Sube a "Tú" desde `desde` hasta `hasta` sats. Con movimiento reducido, salta al final.
  * `festejo` ({nivel: 'compra'|'etapa'|'hito', etapa, delta}) solo llega por una compra de esta
- * sesión: el tramo recién subido se enciende y, al llegar, la montaña celebra.
+ * sesión: el tramo recién subido se enciende y, al llegar, la montaña celebra. `sola`: «Tú» anda por su cuenta (al abrir), con el paso
+ * más tranquilo (39b); al anotar, el de siempre.
  */
-export function subir(desde, hasta, ms = 2000, festejo = null) {
+export function subir(desde, hasta, ms = 2000, festejo = null, sola = false) {
   if (!estado) return;
   estado.sats = hasta;
   if (sinMovimiento() || desde === hasta) { colocar(hasta, false); return; }
@@ -1573,6 +1574,7 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
   if (estela) estela.classList.add('viva');
   const yo = host.querySelector('#m-yo');
   yo.classList.add('anda'); // (31) el osito anda mientras sube; al llegar, quieto
+  yo.classList.toggle('sola', sola);
   const t0 = performance.now();
   const paso = (t) => {
     if (estado.host !== host || !host.isConnected) return; // la escena se redibujó (resize)
@@ -1582,7 +1584,7 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
     const p = colocar(k < 1 ? satsAhora : hasta, k < 1);
     if (estela) estela.style.strokeDasharray = `0 ${f1(l0)} ${f1(Math.max(0, enAltura(alt) - l0))} ${f1(L)}`;
     if (k < 1) requestAnimationFrame(paso);
-    else { yo.classList.remove('anda'); if (festejo) llegar(festejo, p, hasta); }
+    else { yo.classList.remove('anda', 'sola'); if (festejo) llegar(festejo, p, hasta); }
   };
   requestAnimationFrame(paso);
 }
@@ -1604,13 +1606,13 @@ export function fotograma(host, sats, { compras = null, quieto = false, rotulo =
     host.querySelectorAll('#m-etapas .etapa[visibility]').forEach((g) => g.removeAttribute('visibility'));
   }
   estado.enMarcha = !quieto;
-  host.querySelector('#m-yo')?.classList.toggle('anda', !quieto); // (31) en la película, el osito anda mientras avanza
+  for (const c of ['anda', 'sola']) host.querySelector('#m-yo')?.classList.toggle(c, !quieto); // (31) en la película anda mientras avanza (39b: con su paso tranquilo)
   const antes = estado.satsFoto;
   colocar(sats, !quieto);
   if (antes != null && sats > antes) {
     for (const g of host.querySelectorAll('.campo')) {
       const m = Number(g.dataset.m);
-      if (m > antes && m <= sats) { g.classList.add('iza'); setTimeout(() => g.classList.remove('iza'), 1800); }
+      if (m > antes && m <= sats) { g.classList.add('iza'); setTimeout(() => g.classList.remove('iza'), 2500); }
     }
   }
   estado.satsFoto = sats;
@@ -1641,9 +1643,9 @@ function brasas(fx, x, y, n, alcance, retraso = 0) {
     const dist = alcance * (0.45 + Math.random() * 0.55);
     c.style.setProperty('--dx', `${f1(Math.cos(ang) * dist)}px`);
     c.style.setProperty('--dy', `${f1(Math.sin(ang) * dist)}px`);
-    c.style.animationDuration = `${900 + Math.round(Math.random() * 700)}ms`;
-    c.style.animationDelay = `${retraso + i * 22}ms`;
-    retirar(g, retraso + 2000);
+    c.style.animationDuration = `${1500 + Math.round(Math.random() * 1200)}ms`; // (39b) el tempo de la celebración: 1.5–2.7 s
+    c.style.animationDelay = `${retraso + i * 36}ms`;
+    retirar(g, retraso + 3400);
   }
 }
 
@@ -1654,18 +1656,18 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
   if (!fx) return;
   estela.classList.remove('viva');
   estela.classList.add('apaga');
-  setTimeout(() => estela.classList.remove('apaga'), 1000);
+  setTimeout(() => estela.classList.remove('apaga'), 1600);
 
   // Cada compra: brasas desde tu punto, la cifra flotando y la siguiente bandera que se agita.
   brasas(fx, p.x, p.y, nivel === 'compra' ? 9 : 14, nivel === 'compra' ? 46 : 64);
   // (Campamento 31) Al cruzar una etapa o un campamento, el osito de «Tú» levanta los brazos un momento (un cambio a saltos, no una animación).
-  if (nivel !== 'compra') { const yo = host.querySelector('#m-yo'); yo?.classList.add('festeja'); setTimeout(() => yo?.classList.remove('festeja'), 1200); }
-  // (Campamento 25) Y los osos de la cumbre dan un saltito (0.9 s, solo transform; el CSS lo apaga con efectos «ninguno»).
+  if (nivel !== 'compra') { const yo = host.querySelector('#m-yo'); yo?.classList.add('festeja'); setTimeout(() => yo?.classList.remove('festeja'), 2000); }
+  // (Campamento 25) Y los osos de la cumbre dan un saltito (1.8 s desde el 39b, solo transform; el CSS lo apaga con efectos «ninguno»).
   const os = host.querySelector('#m-osos.osos');
   if (os) {
     if (os.classList.contains('salta')) { os.classList.remove('salta'); os.getBoundingClientRect(); } // otro saltito seguido: que empiece de nuevo
     os.classList.add('salta');
-    setTimeout(() => os.classList.remove('salta'), 1200);
+    setTimeout(() => os.classList.remove('salta'), 2000);
   }
   // «+N sats» donde no choque con las etiquetas (banderas y «Tú»): se prueban varios sitios.
   const t = nodo('text', { class: 'flota' }, fx);
@@ -1679,7 +1681,7 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
     t.setAttribute('x', f1(p.x + dx)); t.setAttribute('y', f1(p.y + dy)); t.setAttribute('text-anchor', ancla);
     if (!choca(t.getBBox())) break;
   }
-  retirar(t, 1800);
+  retirar(t, 2800);
   const siguiente = host.querySelector(`.campo[data-m="${campos.find((x) => x.m > hasta)?.m}"]`);
   if (siguiente) { siguiente.classList.add('agita'); setTimeout(() => siguiente.classList.remove('agita'), 1700); }
   if (nivel === 'compra') return;
@@ -1689,22 +1691,22 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
   alba.classList.remove('respira', 'amanece'); void alba.getBBox();
   const grande = nivel === 'hito' || nivel === 'epico';
   alba.classList.add(grande ? 'amanece' : 'respira');
-  setTimeout(() => alba.classList.remove('respira', 'amanece'), 3000);
+  setTimeout(() => alba.classList.remove('respira', 'amanece'), 4800);
   let bandera = host.querySelector(`.campo[data-m="${etapa}"]`);
   const pe = bandera ? campos.find((x) => x.m === etapa).p : camino.getPointAtLength(enAltura(altitud(etapa, esc)));
   if (bandera) {
     bandera.classList.add('iza');
-    setTimeout(() => bandera.classList.remove('iza'), 1800);
+    setTimeout(() => bandera.classList.remove('iza'), 2500);
   } else {
     bandera = nodo('g', { class: 'campo alcanzado iza plantada', transform: `translate(${f1(pe.x)} ${f1(pe.y)})` }, fx);
     nodo('line', { y2: '-24' }, bandera);
     nodo('path', { class: 'banderin', d: 'M0 -24L17 -19L0 -14Z' }, bandera);
-    retirar(bandera, 3200);
+    retirar(bandera, 5100);
   }
   for (const [i, r] of [[0, 12], [1, 12]]) {
     const a = nodo('circle', { class: 'anillo', cx: f1(pe.x), cy: f1(pe.y - 20), r }, fx);
-    a.style.animationDelay = `${i * 260}ms`;
-    retirar(a, 2000);
+    a.style.animationDelay = `${i * 450}ms`;
+    retirar(a, 3000);
   }
   cometa(fx, estado.H, c);
   if (!grande) return;
@@ -1712,7 +1714,7 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
   // Hito grande (1M, 10M, 1 BTC): amanecer completo con luz sobre la cumbre.
   const rl = Math.min(W, estado.H) * 0.22;
   const luz = nodo('circle', { class: 'luz-cima', cx: f1(c.sx), cy: f1(c.sy), r: f1(rl), fill: 'url(#m-luz)' }, fx);
-  retirar(luz, 3000);
+  retirar(luz, 4600);
   brasas(fx, c.sx, c.sy + 6, 10, rl * 0.9, 500);
   if (nivel === 'epico') epico(fx, c, W, estado.H);
 }
@@ -1727,7 +1729,7 @@ function cometa(fx, H, c) {
   const mover = nodo('g', { class: 'cometa-mueve' }, g);
   nodo('line', { class: 'cometa-cola', x1: -86, y1: -30, x2: 0, y2: 0 }, mover);
   nodo('circle', { class: 'cometa-cabeza', r: 3.2 }, mover);
-  retirar(g, 2400);
+  retirar(g, 3400);
 }
 
 /**
@@ -1740,9 +1742,9 @@ function epico(fx, c, W, H) {
   for (let i = 0; i < 34; i++) {
     const gota = nodo('circle', { class: 'luz-gota', cx: f1(c.sx + (Math.random() - 0.5) * W * 0.46), cy: f1(c.sy - H * (0.1 + Math.random() * 0.12)), r: f1(1.2 + Math.random() * 1.8) }, g);
     gota.style.setProperty('--cae', `${f1(H * (0.16 + Math.random() * 0.14))}px`);
-    gota.style.animationDelay = `${300 + Math.round(Math.random() * 2600)}ms`;
+    gota.style.animationDelay = `${500 + Math.round(Math.random() * 4300)}ms`;
   }
-  retirar(g, 6500);
+  retirar(g, 9200);
 }
 
 function describir(sats, meta) {
@@ -1777,8 +1779,8 @@ setInterval(() => {
   const os = estado?.host?.querySelector('#m-osos.osos');
   if (!os) return;
   // Uno tras otro: el grande, el chico y el del mameluco, con 0.3 s entre cada uno; a los 2.6 s, todos quietos.
-  [1, 2, 3].forEach((i) => setTimeout(() => os.classList.add(`estira-${i}`), (i - 1) * 300));
-  setTimeout(() => os.classList.remove('estira-1', 'estira-2', 'estira-3'), 2600);
+  [1, 2, 3].forEach((i) => setTimeout(() => os.classList.add(`estira-${i}`), (i - 1) * 600));
+  setTimeout(() => os.classList.remove('estira-1', 'estira-2', 'estira-3'), 6000); // (39b) se estiran en 6 s, no en 2.6
 }, 20_000);
 
 /** Tras una venta (idea 40): la última monedita del lago cae desde arriba y se queda brillando en el fondo. */
@@ -1786,5 +1788,5 @@ export function hundirMoneda() {
   const m = [...document.querySelectorAll('.lago-moneda')].at(-1);
   if (!m) return;
   m.classList.remove('hunde'); void m.getBoundingClientRect(); m.classList.add('hunde');
-  setTimeout(() => m.classList.remove('hunde'), 2200);
+  setTimeout(() => m.classList.remove('hunde'), 3100);
 }
