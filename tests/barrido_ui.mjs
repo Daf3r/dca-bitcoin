@@ -2,8 +2,9 @@
 // Recorre los escenarios del servidor de pruebas en varios tamaños, en claro y oscuro, y comprueba en cada uno:
 // consola limpia, sin scroll horizontal, saldo visible con su cifra, nada del contenido fuera de la pantalla y
 // zonas de toque de al menos 48 px. Además, en tres escenarios, repite con letra muy grande y alto contraste. Guarda capturas de lo que falla en tests/barrido/ (ignorado por git).
-// Uso: node tests/barrido_ui.mjs [rapido]   (SOLO=hoy,mil limita los escenarios)   (PYTHON=ruta/python si Flask no está en python3)
+// Uso: node tests/barrido_ui.mjs [rapido]   (SOLO=hoy,mil limita los escenarios; ESTADOS=archivo anota ahí cada combinación revisada)   (PYTHON=ruta/python si Flask no está en python3)
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
@@ -29,14 +30,17 @@ const puertoLibre = () => new Promise((res) => {
   const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); });
 });
 async function servidor(escenario) {
-  const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore' });
-  const url = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i++) {
-    try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
-    await new Promise((r) => setTimeout(r, 200));
+  // (Campamento 61) Como en test_ui: si el puerto lo ocupó otra prueba que corre a la vez, otro puerto; y /healthz debe ser de este.
+  for (let intento = 0; intento < 3; intento++) {
+    const port = await puertoLibre(), id = randomUUID();
+    const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore', env: { ...process.env, PRUEBA_ID: id } });
+    const url = `http://127.0.0.1:${port}`;
+    for (let i = 0; i < 200 && hijo.exitCode === null; i++) {
+      try { const r = await fetch(`${url}/healthz`); if (r.ok && r.headers.get('x-prueba-id') === id) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    hijo.kill();
   }
-  hijo.kill();
   throw new Error(`no arrancó el escenario ${escenario}`);
 }
 
@@ -100,6 +104,7 @@ try {
             if (m.fuera.length) problemas.push(`fuera de la pantalla: ${[...new Set(m.fuera)].slice(0, 4).join(', ')}`);
             if (m.toque.length) problemas.push(`zona de toque pequeña: ${[...new Set(m.toque)].slice(0, 4).join('; ')}`);
             revisados++;
+            if (process.env.ESTADOS) fs.appendFileSync(process.env.ESTADOS, `${etiqueta}\n`); // (campamento 61) para comparar dos corridas
             if (problemas.length) {
               fallos.push(`${etiqueta}: ${problemas.join(' | ')}`);
               await p.screenshot({ path: path.join(SALIDA, `${etiqueta.replace(/[ ×]/g, '_')}.png`), fullPage: false });

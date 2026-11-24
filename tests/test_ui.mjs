@@ -2,8 +2,10 @@
 // Uso: node tests/test_ui.mjs   (necesita `playwright` con Chromium instalado y Flask: PYTHON=ruta/python si no es python3)
 //      PARTE=1/3 node tests/test_ui.mjs   (solo una parte, como en el CI; PARTE=reparto dice qué bloque va en cuál)
 //      BLOQUE=texto node tests/test_ui.mjs   (solo los bloques cuyo título lleva ese texto; para probar uno a mano)
+//      ESPERAS=1 node tests/test_ui.mjs   (además, por bloque: cuánto se fue en esperas fijas, en entrar y en arrancar servidores)
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
@@ -21,6 +23,9 @@ const ok = (cond, msg) => { assert.ok(cond, msg); n++; };
 const eq = (a, b, msg) => { assert.deepEqual(a, b, msg); n++; };
 const entero = (x) => Math.round(x).toLocaleString('en-US');
 // «Hoy» es el de El Salvador, como en la app (el día UTC cambia a las 18:00 allí).
+// (Campamento 61) Con `ESPERAS=1`, cada bloque dice también en qué se le fue el tiempo: esperas fijas (`waitForTimeout`), entradas y
+// servidores arrancados. Solo mide: no cambia ninguna prueba.
+const gasto = { espera: 0, esperas: 0, entrar: 0, entradas: 0, servidor: 0, servidores: 0 };
 const hoySV = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/El_Salvador' }).format(new Date());
 
 const puertoLibre = () => new Promise((res) => {
@@ -29,21 +34,34 @@ const puertoLibre = () => new Promise((res) => {
 
 /** Arranca el servidor de pruebas con un escenario y espera a que responda. */
 async function servidor(escenario, env = {}) {
-  const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, ...env } });
+  const t0 = Date.now();
+  try { return await arrancar(escenario, env); } finally { gasto.servidor += Date.now() - t0; gasto.servidores++; }
+}
+async function arrancar(escenario, env) {
+  // (Campamento 61) Con otras pruebas a la vez, el puerto libre puede ocuparlo otro antes que este servidor: entonces este no arranca
+  // (se vuelve a probar con otro puerto) y, para no hablar con el servidor de otro, /healthz debe traer el `PRUEBA_ID` de este.
   let err = '';
-  hijo.stderr.on('data', (d) => { err += d; });
-  const url = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i++) {
-    try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
-    await new Promise((r) => setTimeout(r, 200));
+  for (let intento = 0; intento < 3; intento++) {
+    const port = await puertoLibre(), id = randomUUID();
+    const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, ...env, PRUEBA_ID: id } });
+    err = '';
+    hijo.stderr.on('data', (d) => { err += d; });
+    const url = `http://127.0.0.1:${port}`;
+    for (let i = 0; i < 200 && hijo.exitCode === null; i++) {
+      try { const r = await fetch(`${url}/healthz`); if (r.ok && r.headers.get('x-prueba-id') === id) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    hijo.kill();
   }
-  hijo.kill();
   throw new Error(`El servidor de pruebas (${escenario}) no arrancó:\n${err.slice(-800)}`);
 }
 
 /** Abre una página, entra con la cuenta dada y espera a que cargue. Recoge errores de consola. */
-async function entrar(browser, srv, [usuario, clave], opts = {}, init = null) {
+async function entrar(...a) {
+  const t0 = Date.now();
+  try { return await entrarYa(...a); } finally { gasto.entrar += Date.now() - t0; gasto.entradas++; }
+}
+async function entrarYa(browser, srv, [usuario, clave], opts = {}, init = null) {
   const { hora = 22, pestanas = false, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
   const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opcionesContexto });
   const p = await ctx.newPage();
@@ -64,6 +82,9 @@ const editarFila = async (p, fila) => { await (typeof fila === 'string' ? p.loca
 /** La fecha de la hoja de anotar: «Otro día» enseña el calendario (campamento 18) y ahí se escribe. */
 const ponerFecha = async (p, f) => { await p.click('#h-dia-otro'); await p.fill('#h-fecha', f); };
 const verVista = async (p, v) => { await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(400); };
+/** (Campamento 61) Espera a que acaben las transiciones de CSS en curso (un cambio de tema…), en vez de una espera fija que con la
+ * máquina cargada se queda corta. Las animaciones de ambiente (infinitas) no cuentan. */
+const sinTransiciones = (p, timeout = 8000) => p.waitForFunction(() => document.getAnimations().every((a) => !(a instanceof CSSTransition) || a.playState !== 'running'), null, { timeout, polling: 'raf' });
 const datos = (p, ruta) => p.evaluate((r) => fetch(r).then((x) => x.json()), ruta);
 const saldo = (p) => p.evaluate(() => {
   const el = document.querySelector('#s-sats .od-num');
@@ -252,13 +273,20 @@ async function bloque(fn) {
   if (REPARTO && REPARTO.parte[i] !== PARTE.k) return;
   if (process.env.BLOQUE && !TITULOS[i].includes(process.env.BLOQUE)) return; // para probar un solo bloque a mano: BLOQUE=«campamento 21B»
   const t0 = Date.now(), n0 = n;
+  for (const k of Object.keys(gasto)) gasto[k] = 0;
   await fn();
   corridos++;
   console.log(`· ${TITULOS[i].slice(0, 90)} — ${n - n0} comprobaciones, ${Math.round((Date.now() - t0) / 1000)} s`);
+  if (process.env.ESPERAS) console.log(`  esperas fijas ${(gasto.espera / 1000).toFixed(1)} s (${gasto.esperas}) · entrar ${(gasto.entrar / 1000).toFixed(1)} s (${gasto.entradas}) · servidores ${(gasto.servidor / 1000).toFixed(1)} s (${gasto.servidores})`);
 }
 if (PARTE) console.log(`Parte ${PARTE.k}/${PARTE.de}: ${REPARTO.parte.filter((x) => x === PARTE.k).length} de ${TITULOS.length} bloques (~${Math.round(REPARTO.carga[PARTE.k - 1] / 60)} min según PESOS)`);
 
 const navegador = await chromium.launch();
+if (process.env.ESPERAS) { // cuenta cada `waitForTimeout` (de cualquier página): se envuelve el método de la clase una sola vez
+  const c = await navegador.newContext(), pg = await c.newPage(), proto = Object.getPrototypeOf(pg), orig = proto.waitForTimeout;
+  proto.waitForTimeout = function (ms) { gasto.espera += ms; gasto.esperas++; return orig.call(this, ms); };
+  await c.close();
+}
 try {
   // ---------------------------------------------------------------- un año de compras
   await bloque(async () => {
@@ -2071,6 +2099,7 @@ try {
       for (const tema of ['oscuro', 'claro']) {
         await p.evaluate((t) => window.libroTema.fijar(t), tema);
         await p.waitForTimeout(600);
+        await sinTransiciones(p); // (61) con la máquina cargada, 600 ms no siempre bastan para que el color llegue al nuevo tema
         const ind = await p.evaluate(() => {
           const el = document.getElementById('indice'), cs = getComputedStyle(el);
           const lum = (c) => { const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };

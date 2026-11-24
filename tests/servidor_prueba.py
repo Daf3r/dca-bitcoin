@@ -186,4 +186,15 @@ if esc in ("anio", "largo"):  # una carta que ya se abrió (campamento 15A), par
                  ("Querida familia:\n\nSi leen esto, ya llegamos lejos.\nCon cariño, papá", (HOY - timedelta(days=20)).isoformat(), 1_700_000_000, "Daf3r"))
 conn.commit()
 conn.close()
+# (Campamento 61) Con varias pruebas a la vez, dos servidores podrían pedir el mismo puerto: el segundo no arranca y su prueba hablaría
+# con el del otro. Con `PRUEBA_ID`, cada respuesta dice de quién es, y quien lo arrancó lo comprueba en /healthz.
+if os.environ.get("PRUEBA_ID"):
+    _id = os.environ["PRUEBA_ID"]
+
+    @server.app.after_request
+    def _quien(r):  # type: ignore[no-untyped-def]
+        r.headers["X-Prueba-Id"] = _id
+        return r
+
+
 server.app.run(port=puerto, threaded=True)
