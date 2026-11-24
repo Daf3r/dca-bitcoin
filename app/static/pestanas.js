@@ -20,6 +20,25 @@ export const historiaVisible = () => (porPestanas ? actual === 'historia' : hist
 // desde «Tu cuenta → Tu historia y medallas».
 let historiaPedida = false;
 
+/** ¿La barra va en el dock de abajo? (teléfono y tablet, por pestañas; campamento 20). En escritorio va arriba, pegajosa. */
+const DOCK = window.matchMedia('(max-width: 1099px)');
+export const enDock = () => porPestanas && DOCK.matches;
+
+/**
+ * (Campamento 62 · 304) En escritorio, por pestañas, «Anotar compra» va al final de la barra (`#barra`, después de `<nav>`: el orden de
+ * tabulación es pestañas y enseguida la acción). Antes iba en la columna derecha y cambiaba de sitio según la pestaña (y, al bajar
+ * por la lista, tapaba una fila). En el teléfono, la tablet y «todo junto», en su sitio de siempre (antes de la lista). Si tenía el
+ * foco, lo conserva.
+ */
+function colocarAnotar() {
+  const a = $('anotar'), barra = $('barra'), lista = $('compras');
+  const enBarra = porPestanas && !DOCK.matches;
+  if (enBarra ? a.parentElement === barra : a.nextElementSibling === lista) return;
+  const conFoco = document.activeElement === a;
+  if (enBarra) barra.append(a); else lista.before(a);
+  if (conFoco) a.focus({ preventScroll: true });
+}
+
 function aplicar() {
   const cuerpo = $('principal');
   if (porPestanas) cuerpo.dataset.pestana = actual; else delete cuerpo.dataset.pestana;
@@ -29,6 +48,7 @@ function aplicar() {
   for (const b of $('pestanas').children) {
     if (b.dataset.pestana === actual) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
   }
+  colocarAnotar();
   if (historiaVisible()) refrescarHistoria();
 }
 
@@ -54,9 +74,7 @@ export function verPestanaUnRato(cual) {
   return () => { actual = antes; aplicar(); };
 }
 
-/** ¿La barra va en el dock de abajo? (teléfono y tablet, por pestañas; campamento 20). En escritorio va arriba, pegajosa. */
-const DOCK = window.matchMedia('(max-width: 1099px)');
-export const enDock = () => porPestanas && DOCK.matches;
+DOCK.addEventListener('change', colocarAnotar);
 
 /** La barra puede ser pegajosa (no sirve para saber hasta dónde se bajó): se compara con el inicio natural del cuerpo. */
 function subirAlInicio() {
