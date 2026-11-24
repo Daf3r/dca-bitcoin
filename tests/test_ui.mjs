@@ -218,6 +218,7 @@ const PESOS = [
   ['pulido integral: el movimiento (nada co', 115], // 16 comprobaciones
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
+  ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -7901,6 +7902,126 @@ try {
     } finally {
       anio.parar();
     }
+  });
+
+  // ---------------------------------------------------------------- campamento 62: menús («Tu cuenta» se cierra desde arriba, dos niveles, el valor en tinta, el dock y «Anotar» en la barra)
+  await bloque(async () => {
+    const anio = await servidor('anio');
+    const conLs = (pares = []) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    const cerrarTodo = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const escritorio = { isMobile: false, hasTouch: false };
+    const SIETE = ['dc-contraste', 'dc-ganancia', 'dc-madrugada', 'dc-tv', 'dc-tv-duerme', 'dc-titulo', 'dc-sonido'];
+    try {
+      // 300 · «Cerrar» arriba y pegado; «‹ Tu cuenta» en las vistas de dentro (teléfono, por pestañas)
+      {
+        const r = await entrar(navegador, anio, ADMIN, { pestanas: true, masAjustes: false, viewport: { width: 390, height: 844 } }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+        const cab = () => r.p.evaluate(() => { const d = document.getElementById('d-cuenta').getBoundingClientRect(), c = document.getElementById('dc-cerrar').getBoundingClientRect(); return { arriba: Math.round(c.top - d.top), dentro: c.top >= d.top && c.bottom <= d.bottom, alto: Math.round(c.height), foco: document.activeElement?.id }; });
+        const a = await cab();
+        ok(a.arriba < 30 && a.dentro && a.alto >= 47.5 && a.foco === 'dc-cerrar', `62·300 «Cerrar» arriba, de 48 px y con el foco al abrir (${JSON.stringify(a)})`);
+        await r.p.evaluate(() => { const d = document.getElementById('d-cuenta'); d.scrollTop = d.scrollHeight; }); await r.p.waitForTimeout(250);
+        const b = await cab();
+        ok(b.dentro && b.arriba < 30, `62·300 al bajar hasta el final, «Cerrar» sigue arriba (${JSON.stringify(b)})`);
+        eq(await r.p.evaluate(() => [...document.querySelectorAll('#d-cuenta button')].filter((x) => /^(Volver|Cerrar)$/.test(x.textContent.trim())).map((x) => x.id)), ['dc-cerrar'], '62·300 un solo «Cerrar» y ningún «Volver» al final');
+        await r.p.click('#dc-sesiones-btn'); await r.p.waitForTimeout(600);
+        const v = await r.p.evaluate(() => ({ volver: !document.getElementById('dc-volver').hidden, titulo: !document.getElementById('dc-t').hidden, foco: document.activeElement?.id, nombre: document.getElementById('dc-volver').textContent.replace(/\s+/g, ' ').trim() }));
+        ok(v.volver && !v.titulo && v.foco === 'dc-volver' && /Volver a Tu cuenta/.test(v.nombre), `62·300 en una vista de dentro, «‹ Tu cuenta» arriba con el foco (${JSON.stringify(v)})`);
+        await r.p.click('#dc-volver'); await r.p.waitForTimeout(600);
+        eq(await r.p.evaluate(() => [document.getElementById('dc-menu').hidden, document.activeElement?.id]), [false, 'dc-sesiones-btn'], '62·300 al volver, el foco regresa a la fila que abrió la vista');
+        await r.p.click('#dc-cerrar'); await r.p.waitForTimeout(300);
+        eq(await r.p.locator('#d-cuenta[open]').count(), 0, '62·300 «Cerrar» cierra «Tu cuenta»');
+        // 301 · siete ajustes plegados (no «Atajos de teclado»); recuerda si se dejó abierto
+        await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+        const m = await r.p.evaluate((siete) => ({ abierto: document.getElementById('dc-mas').open, dentro: siete.every((id) => document.getElementById(id).closest('#dc-mas')), atajos: !document.getElementById('dc-atajos').closest('#dc-mas'), alto: document.getElementById('d-cuenta').scrollHeight, resumen: Math.round(document.querySelector('#dc-mas > summary').getBoundingClientRect().height) }), SIETE);
+        ok(!m.abierto && m.dentro && m.atajos && m.alto < 1300 && m.resumen >= 47.5, `62·301 en el teléfono, siete ajustes plegados y «Atajos» fuera; el menú mide ${m.alto} px (antes 1611)`);
+        await r.p.click('#dc-mas > summary'); await r.p.waitForTimeout(200);
+        await r.p.click('#dc-sonido'); await r.p.waitForTimeout(200);
+        ok(/encendido/.test(await r.p.textContent('#dc-sonido')), '62·301 un ajuste plegado se toca como siempre');
+        await r.p.click('#dc-sonido');
+        await r.p.reload({ waitUntil: 'networkidle' }); await r.p.waitForTimeout(2000); await cerrarTodo(r.p);
+        await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+        ok(await r.p.evaluate(() => document.getElementById('dc-mas').open), '62·301 se acuerda de que lo dejaste abierto');
+        // 302 · el valor, en tinta (sin píldora) y en el renglón de su nombre
+        const t = await r.p.evaluate(() => {
+          const raiz = getComputedStyle(document.documentElement);
+          const txt2 = document.createElement('i'); txt2.style.color = raiz.getPropertyValue('--txt2'); document.body.append(txt2); const c2 = getComputedStyle(txt2).color; txt2.remove();
+          const vs = [...document.querySelectorAll('#dc-menu .dc-v')].filter((v) => v.checkVisibility());
+          return { n: vs.length, tinta: vs.every((v) => getComputedStyle(v).color === c2 && getComputedStyle(v).backgroundColor === 'rgba(0, 0, 0, 0)'), solos: vs.filter((v) => v.getBoundingClientRect().top > v.parentElement.querySelector('.dc-k').getBoundingClientRect().bottom - 2).map((v) => v.parentElement.id) };
+        });
+        ok(t.n >= 10 && t.tinta && !t.solos.length, `62·302 los valores van en tinta, sin píldora, y ninguno cae solo a otro renglón (${JSON.stringify(t)})`);
+        eq((await r.p.textContent('#dc-madrugada')).trim(), 'Modo madrugada: apagado', '62·302 la etiqueta de la madrugada, corta');
+        await r.ctx.close();
+      }
+      // 301 · escritorio: dos columnas, nada plegado
+      {
+        const r = await entrar(navegador, anio, ADMIN, { pestanas: true, masAjustes: false, viewport: { width: 1440, height: 900 }, ...escritorio }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+        const e = await r.p.evaluate(() => {
+          const x = (id) => Math.round(document.getElementById(id).getBoundingClientRect().left);
+          return { abierto: document.getElementById('dc-mas').open, resumen: document.querySelector('#dc-mas > summary').checkVisibility(), libro: x('dc-sec-libro'), admin: x('dc-sec-admin'), disp: x('dc-sec-disp'), alto: document.getElementById('d-cuenta').scrollHeight, foco: document.activeElement?.id };
+        });
+        ok(e.abierto && !e.resumen && e.libro === e.admin && e.disp > e.libro + 200 && e.alto < 1000 && e.foco === 'dc-cerrar', `62·301 escritorio: dos columnas, sin plegado; mide ${e.alto} px (antes 1659) (${JSON.stringify(e)})`);
+        await r.p.click('#dc-tv-duerme'); await r.p.waitForTimeout(200);
+        ok(/no$/.test((await r.p.textContent('#dc-tv-duerme')).trim()) && await r.p.evaluate(() => localStorage.getItem('libro.cuenta.mas')) === null, '62·301 escritorio: los siete se tocan sin abrir nada y lo abierto a la fuerza no se recuerda');
+        await r.p.click('#dc-tv-duerme');
+        await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(300);
+        // 304 · «Anotar compra» al final de la barra, en el mismo sitio en las cuatro pestañas
+        const sitios = [];
+        for (const t of ['resumen', 'graficos', 'historia', 'movimientos']) {
+          await r.p.click(`#pestanas button[data-pestana="${t}"]`); await r.p.waitForTimeout(500);
+          sitios.push(await r.p.evaluate(() => { const a = document.getElementById('anotar').getBoundingClientRect(), n = document.getElementById('pestanas').getBoundingClientRect(); return { x: Math.round(a.left), y: Math.round(a.top - n.top), alLado: a.left > n.right && Math.abs((a.top + a.bottom) / 2 - (n.top + n.bottom) / 2) < 2, padre: document.getElementById('anotar').parentElement.id }; }));
+        }
+        ok(sitios.every((s) => s.x === sitios[0].x && s.y === sitios[0].y && s.alLado && s.padre === 'barra'), `62·304 «Anotar compra» al final de la barra, en el mismo sitio en las cuatro pestañas (${JSON.stringify(sitios)})`);
+        // Al bajar por la lista, nada de una fila asoma junto al botón (la caja pegajosa lleva el fondo detrás).
+        for (let k = 0; k < 6 && await r.p.locator('#ver-todas').isVisible(); k++) { await r.p.click('#ver-todas'); await r.p.waitForTimeout(300); }
+        const tapa = await r.p.evaluate(async () => {
+          const a0 = document.getElementById('compras').getBoundingClientRect().top + scrollY;
+          let malas = 0, pos = 0, fijo = true; const y0 = document.getElementById('anotar').getBoundingClientRect().top;
+          for (let y = a0; y < a0 + 2400; y += 37) {
+            scrollTo(0, y); await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res))); pos++;
+            const a = document.getElementById('anotar').getBoundingClientRect();
+            if (pos > 3 && Math.abs(a.top - y0) > 400) fijo = false;
+            for (const [px, py] of [[a.left - 6, a.top + a.height / 2], [a.left + a.width / 2, a.top - 4], [a.left + a.width / 2, a.bottom + 4]]) { const el = document.elementFromPoint(px, py); if (el?.closest('#lista .fila')) malas++; }
+          }
+          return { pos, malas, fijo };
+        });
+        ok(tapa.pos > 20 && tapa.malas === 0, `62·304 al bajar por la lista, ninguna fila asoma junto a «Anotar compra» (${JSON.stringify(tapa)})`);
+        await r.p.evaluate(() => scrollTo(0, 0)); await r.p.waitForTimeout(300);
+        // Orden de tabulación: la última pestaña y, enseguida, «Anotar compra»; el atajo A sigue abriendo la hoja.
+        await r.p.focus('#pestanas button[data-pestana="movimientos"]'); await r.p.keyboard.press('Tab');
+        eq(await r.p.evaluate(() => document.activeElement?.id), 'anotar', '62·304 tras las pestañas, el tabulador llega a «Anotar compra»');
+        await r.p.evaluate(() => document.activeElement?.blur());
+        await r.p.keyboard.press('a'); await r.p.waitForTimeout(500);
+        ok(await r.p.evaluate(() => !document.getElementById('hoja').hidden), '62·304 el atajo A abre la hoja');
+        await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400);
+        // Al pasar a «todo junto», vuelve a su sitio de siempre (antes de la lista)
+        await r.p.evaluate(() => localStorage.setItem('libro.pestanas', 'todo')); await r.p.reload({ waitUntil: 'networkidle' }); await r.p.waitForTimeout(2000); await cerrarTodo(r.p);
+        eq(await r.p.evaluate(() => [document.getElementById('anotar').parentElement.className, document.getElementById('anotar').nextElementSibling?.id]), ['col-lateral', 'compras'], '62·304 en «todo junto», «Anotar» vuelve a la columna derecha');
+        await r.ctx.close();
+      }
+      // 303 · el dock: cada palabra cabe en su casilla y «Anotar» queda sobre el hueco
+      for (const [w, h, cuenta] of [[390, 844, ADMIN], [360, 640, ADMIN], [320, 568, ADMIN], [320, 568, LECTOR]]) {
+        const r = await entrar(navegador, anio, cuenta, { pestanas: true, viewport: { width: w, height: h } }, conLs());
+        await cerrarTodo(r.p);
+        const fallos = [];
+        for (const t of ['resumen', 'graficos', 'historia', 'movimientos']) {
+          await r.p.click(`#pestanas button[data-pestana="${t}"]`); await r.p.waitForTimeout(350);
+          fallos.push(...await r.p.evaluate((tt) => {
+            const f = [], bs = [...document.querySelectorAll('#pestanas button')];
+            for (const x of bs) { const s = x.querySelector('.pe-txt'); if (getComputedStyle(s).position !== 'absolute' && s.scrollWidth > x.clientWidth) f.push(`${tt}: ${s.textContent} ${s.scrollWidth} en ${x.clientWidth}`); if (x.getBoundingClientRect().width < 47.5) f.push(`${tt}: ${s.textContent} de ${x.getBoundingClientRect().width} px`); }
+            return f;
+          }, t));
+        }
+        if (cuenta === ADMIN && w >= 360) {
+          const c = await r.p.evaluate(() => { const a = document.getElementById('anotar').getBoundingClientRect(), bs = [...document.querySelectorAll('#pestanas button')]; return [Math.round(a.left + a.width / 2), Math.round((bs[1].getBoundingClientRect().right + bs[2].getBoundingClientRect().left) / 2)]; });
+          if (Math.abs(c[0] - c[1]) > 1) fallos.push(`«Anotar» en ${c[0]} y el hueco en ${c[1]}`);
+        }
+        eq(fallos, [], `62·303 el dock a ${w} px (${cuenta === ADMIN ? 'dueño' : 'lectora'}): cada palabra cabe en su casilla, de 48 px o más`);
+        await r.ctx.close();
+      }
+    } finally { anio.parar(); }
   });
 
   // ---------------------------------------------------------------- sin histórico de precios
