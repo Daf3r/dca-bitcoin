@@ -1,4 +1,4 @@
-import { aniosTronco, datosCertificado, entero, nombreHito, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, historia, hoyISO, medallas, mantaPrimerAnio, mesesTronco, objetoDeHoy, partitura, piedrasTorre, primerAnio, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoManta, textoMantaPrimer, textoMesTronco, textoNota, textoPartitura, textoPasaporte, textoSello, textoSelloSemana, textoSemanaManta, textoTorre, textoTronco, textoTroncoPrimer } from './lib.js';
+import { aniosTronco, datosCertificado, entero, nombreHito, estratosMes, firmasDe, textoFirmantes, estrellasConstelacion, fechaLarga, figurasPartitura, figurasTodos, historia, hoyISO, medallas, mantaPrimerAnio, mesesTronco, objetoDeHoy, partitura, piedrasTorre, primerAnio, sellos, sellosSemana, semanasManta, textoAnio, textoAnioPartitura, textoCertificado, textoConstelacion, textoEstrato, textoEstratos, textoEstrella, textoFigura, textoManta, textoMantaPrimer, textoMesTronco, textoPartitura, textoPasaporte, textoPiedra, textoSello, textoSelloSemana, textoSemanaManta, textoTodos, textoTorre, textoTronco, textoTroncoPrimer } from './lib.js';
 import { constelacion, estratos, manta, mantaPrimer, partitura as dibujarPartitura, torre, tronco } from './arte-historia.js';
 import { certificado, lacre, selloSemana } from './arte-sellos.js';
 import { tocarPasos } from './sonido.js';
@@ -17,7 +17,7 @@ const VISTAS = ['linea', 'tronco', 'constelacion', 'torre', 'manta', 'estratos',
 let vista = (() => { try { const v = localStorage.getItem(CLAVE_VISTA); return VISTAS.includes(v) ? v : 'linea'; } catch { return 'linea'; } })();
 let seleccion = null; // año (tronco) o índice (constelación y torre) que se está leyendo
 let datos = null; // lo que se dibujó, para leer una pieza al tocarla o recorrerla con el teclado
-let anioPartitura = null; // el año de la partitura que se ve (null = el último)
+let anioPartitura = null; // el año de la partitura que se ve (null = el último; 'todos' = todos los años, campamento 58)
 let pararMusica = null; // detiene la partitura que está sonando
 const parar = () => { pararMusica?.(); pararMusica = null; };
 
@@ -26,6 +26,8 @@ const parar = () => { pararMusica?.(); pararMusica = null; };
  * pieza al tocarla o con el teclado. (Campamento 20) En el primer año del libro, el tronco y la manta tienen su forma propia
  * (`lib.primerAnio`): el tronco por meses y la manta como una pieza de cuatro hileras.
  * (Campamento 21B) La tele lo usa para su marco: pide la voz del libro y el último año de la partitura, sin mirar lo elegido aquí.
+ * (Campamentos 57 y 58) La partitura dibuja figuras (`lib.figurasPartitura`: por días hasta 60 notas, si no por semanas; con
+ * `anio: 'todos'`, `lib.figurasTodos`): `lista` son esas figuras, las que se tocan, se leen y suenan.
  */
 export function dibujoDe(vh, sel = null, { libro = vozLibro(), anio = anioPartitura } = {}) {
   const hoy = hoyISO(), items = R.items, lb = libro;
@@ -41,8 +43,13 @@ export function dibujoDe(vh, sel = null, { libro = vozLibro(), anio = anioPartit
   if (vh === 'estratos') { const e = estratosMes(items, hoy); return { tipo: vh, lista: e, svg: estratos(e, { sel }), desc: textoEstratos(e, lb) }; }
   if (vh === 'partitura') {
     const as = partitura(items);
+    if (anio === 'todos' && as.length > 1) {
+      const fig = figurasTodos(as);
+      return { tipo: vh, lista: fig.figuras, anios: as, anio: null, todos: true, fig, svg: dibujarPartitura(fig, { sel }), desc: textoPartitura(as, lb) };
+    }
     const y = as.find((x) => x.anio === anio) ?? as.at(-1);
-    return { tipo: vh, lista: y?.notas ?? [], anios: as, anio: y, svg: y ? dibujarPartitura(y, { sel }) : '', desc: textoPartitura(as, lb) };
+    const fig = figurasPartitura(y);
+    return { tipo: vh, lista: fig.figuras, anios: as, anio: y, todos: false, fig, svg: y ? dibujarPartitura(fig, { sel }) : '', desc: textoPartitura(as, lb) };
   }
   if (vh === 'manta') {
     if (primerAnio(items, hoy)) { const m = mantaPrimerAnio(items, hoy); return { tipo: 'manta', cols: m.cols, lista: m.celdas, svg: mantaPrimer(m, { sel }), desc: textoMantaPrimer(m, lb) }; }
@@ -60,6 +67,7 @@ function pintarObjeto() {
   $('dh-v-linea').hidden = !esLinea;
   $('dh-tocar').hidden = vista !== 'partitura';
   $('dh-tocar').textContent = 'Tocar este año';
+  $('dh-pasos').hidden = true;
   fig.hidden = esLinea;
   for (const b of $('dh-vistas').children) b.setAttribute('aria-pressed', String(b.dataset.vh === vista));
   if (esLinea) return;
@@ -73,7 +81,7 @@ function pintarObjeto() {
   anios.textContent = '';
   const boton = (anio, elegido) => {
     const li = nodo('li');
-    const b = nodo('button', elegido ? 'sel' : '', `${anio}`);
+    const b = nodo('button', elegido ? 'sel' : '', anio === 'todos' ? 'Todos' : `${anio}`);
     b.type = 'button';
     b.dataset.anio = anio;
     b.setAttribute('aria-pressed', String(elegido));
@@ -87,18 +95,29 @@ function pintarObjeto() {
   } else if (d.tipo === 'tronco-mes') {
     $('dh-detalle').textContent = s ? textoMesTronco(s, lb) : 'Toca una banda (o usa las flechas) para ver ese mes.';
   } else if (d.tipo === 'constelacion') {
-    $('dh-detalle').textContent = s ? `${fechaLarga(s.fecha)} · +${entero(s.sats)} sats${s.extra ? ' · compra extra' : ''}` : 'Toca una estrella (o usa las flechas) para ver esa compra.';
+    $('dh-detalle').textContent = s ? textoEstrella(s) : `Toca una estrella (o usa las flechas) para ver esa ${d.lista[0]?.semanal ? 'semana' : 'compra'}.`;
   } else if (d.tipo === 'estratos') {
     $('dh-detalle').textContent = s ? textoEstrato(s, lb) : 'Toca una capa (o usa las flechas) para ver ese mes.';
   } else if (d.tipo === 'partitura') {
-    anioPartitura = d.anio?.anio ?? null;
+    anioPartitura = d.todos ? 'todos' : d.anio?.anio ?? null;
+    // (Campamento 58) «Todos» primero (con más de un año) y después cada año, del más nuevo al más viejo.
+    if (d.anios.length > 1) boton('todos', d.todos);
     for (const a of [...d.anios].reverse()) boton(a.anio, a.anio === anioPartitura);
-    $('dh-tocar').hidden = !d.anio;
-    $('dh-detalle').textContent = d.anio ? (s ? textoNota(s) : `${textoAnioPartitura(d.anio, lb)}. Toca una nota para ver esa compra.`) : '';
+    $('dh-tocar').hidden = !d.lista.length;
+    $('dh-tocar').textContent = tocarTexto();
+    const modo = d.fig.modo, que = { dia: 'nota', semana: 'semana', todos: 'mes' }[modo] ?? 'nota';
+    // (Campamento 57) Con figuras pequeñas, la selección también se mueve con dos botones de 48 px (y con las flechas del teclado).
+    $('dh-pasos').hidden = !d.lista.length;
+    $('dh-ant').setAttribute('aria-label', `${que[0].toUpperCase()}${que.slice(1)} anterior`);
+    $('dh-sig').setAttribute('aria-label', `${que[0].toUpperCase()}${que.slice(1)} siguiente`);
+    $('dh-ant').disabled = seleccion === 0;
+    $('dh-sig').disabled = seleccion === d.lista.length - 1;
+    const pista = { dia: 'Toca una nota para ver esa compra.', semana: 'Toca una semana para verla de cerca.', todos: 'Toca un mes para ver cómo fue.' }[modo];
+    $('dh-detalle').textContent = !d.lista.length ? '' : s ? textoFigura(s) : `${d.todos ? textoTodos(d.anios, lb) : textoAnioPartitura(d.anio, lb, d.fig)}. ${pista}`;
   } else if (d.tipo === 'manta') {
     $('dh-detalle').textContent = s ? textoSemanaManta(s) : 'Toca una semana (o usa las flechas) para ver qué pasó.';
   } else {
-    $('dh-detalle').textContent = s ? `${s.n === 1 ? fechaLarga(s.desde) : `${fechaLarga(s.desde)} a ${fechaLarga(s.hasta)}`} · ${s.n} ${s.n === 1 ? 'compra' : 'compras'} · +${entero(s.sats)} sats${s.extra ? ' · incluye extra' : ''}` : 'Toca una piedra (o usa las flechas) para ver esa compra.';
+    $('dh-detalle').textContent = s ? textoPiedra(s) : 'Toca una piedra (o usa las flechas) para ver esa compra.';
   }
 }
 function elegir(valor) {
@@ -116,10 +135,12 @@ $('dh-vistas').addEventListener('click', (e) => {
 $('dh-anios').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-anio]');
   if (!b) return;
-  if (vista === 'partitura') { anioPartitura = Number(b.dataset.anio); elegir(null); return; } // otro año = otra pauta
+  if (vista === 'partitura') { anioPartitura = b.dataset.anio === 'todos' ? 'todos' : Number(b.dataset.anio); elegir(null); return; } // otro año = otra pauta
   elegir(Number(b.dataset.anio) === seleccion ? null : Number(b.dataset.anio));
 });
-// «Tocar este año» (campamento 13C): suena como respuesta a este toque aunque el sonido al guardar esté apagado.
+// «Tocar este año» (campamento 13C): suena como respuesta a este toque aunque el sonido al guardar esté apagado. Suena una nota por
+// figura (campamento 57): con un año por semanas, 54 como mucho, no una por compra (con miles, duraría minutos).
+const tocarTexto = () => (datos?.todos ? 'Tocar todos los años' : 'Tocar este año');
 $('dh-tocar').addEventListener('click', () => {
   if (pararMusica) { parar(); return; }
   const b = $('dh-tocar');
@@ -127,10 +148,28 @@ $('dh-tocar').addEventListener('click', () => {
   let previa = null;
   pararMusica = tocarPasos(datos.lista.map((n) => n.paso), {
     alNota: (k) => { previa?.classList.remove('sonando'); previa = $('dh-lienzo').querySelector(`.pieza[data-i="${k}"]`); previa?.classList.add('sonando'); },
-    alFin: () => { previa?.classList.remove('sonando'); pararMusica = null; b.textContent = 'Tocar este año'; },
+    alFin: () => { previa?.classList.remove('sonando'); pararMusica = null; b.textContent = tocarTexto(); },
   });
 });
+// ‹ › (campamento 57): sin nada elegido, ‹ lleva a la última figura y › a la primera.
+const moverSel = (d) => {
+  if (!datos?.lista.length) return;
+  const ult = datos.lista.length - 1;
+  elegir(seleccion == null ? (d < 0 ? ult : 0) : Math.max(0, Math.min(ult, seleccion + d)));
+};
+$('dh-ant').addEventListener('click', () => moverSel(-1));
+$('dh-sig').addEventListener('click', () => moverSel(1));
+/** (Campamento 58) La constelación por semanas tiene un solo vigía: el toque elige la estrella más cercana (a 16 del dibujo como mucho). */
+function estrellaCercana(e) {
+  const svg = e.target.ownerSVGElement, m = svg?.getScreenCTM?.();
+  if (!m) return null;
+  const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+  let mejor = null, dm = 16;
+  for (const s of datos.lista) { const d = Math.hypot(160 + (s.x - 0.5) * 268 - q.x, 160 + (s.y - 0.5) * 268 - q.y); if (d < dm) { dm = d; mejor = s.i; } }
+  return mejor;
+}
 $('dh-lienzo').addEventListener('click', (e) => {
+  if (datos?.tipo === 'constelacion' && e.target.closest?.('.hc-vigia')) { const i = estrellaCercana(e); if (i != null) elegir(i === seleccion ? null : i); return; }
   const p = e.target.closest?.('.pieza');
   if (!p || !datos) return;
   const v = p.dataset.anio != null ? Number(p.dataset.anio) : Number(p.dataset.i);
