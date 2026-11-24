@@ -79,8 +79,9 @@ jobs:
   navegador:
     # test_ui entero tarda ~66 min en serie. Va en tres trabajos (los mismos checks de siempre: 1/3, 2/3 y 3/3) y cada uno corre dos
     # sextas partes A LA VEZ (campamento 61: las pruebas esperan sobre todo a las animaciones, no a la CPU, y el runner tiene 4 núcleos):
-    # ~11 min de pruebas por trabajo en vez de ~21. El reparto lo hace el propio test_ui con lo que tarda cada bloque (PESOS), y cada
-    # parte comprueba que todos los bloques tienen la suya (PARTE=reparto/6 lo enseña). Cada sexta parte, con su servidor y su registro.
+    # ~11–13 min de pruebas por trabajo en vez de ~21 (proyectado en el sandbox; lo confirma la primera corrida real). El reparto lo hace
+    # el propio test_ui con lo que tarda cada bloque (PESOS), y cada parte comprueba que todos los bloques tienen la suya (PARTE=reparto/6
+    # lo enseña). Cada sexta parte, con su servidor y su registro (si falla, verificar_todo enseña su final; entero, en los artefactos).
     name: Navegador (Playwright) ${{ matrix.parte }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -110,9 +111,18 @@ jobs:
       - run: npm ci --prefix tests
       - run: npx --prefix tests playwright install --with-deps chromium
       - name: Pruebas de navegador contra el servidor de pruebas (parte ${{ matrix.parte }}, en dos sextas partes a la vez)
+        # (por debajo del límite del trabajo: si algo se cuelga, el paso siguiente aún sube los registros de cada sexta)
+        timeout-minutes: 34
         run: node tests/verificar_todo.mjs ${{ matrix.sextas }}
         env:
           UI_PARTES: "6"
+      - name: Subir los registros de cada sexta parte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registros-navegador-${{ strategy.job-index }}
+          path: tests/registros/
+          if-no-files-found: ignore
 
   accesibilidad:
     name: Accesibilidad (axe)
@@ -135,7 +145,15 @@ jobs:
       - run: npx --prefix tests playwright install --with-deps chromium
       # (Campamento 61) Claro y oscuro a la vez, cada uno en su proceso (ESQUEMA): los mismos estados que en uno solo, en la mitad del tiempo.
       - name: Auditoría con axe-core en los estados principales, en claro y oscuro
+        timeout-minutes: 25
         run: node tests/verificar_todo.mjs axe
+      - name: Subir los registros de axe
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registros-axe
+          path: tests/registros/
+          if-no-files-found: ignore
 
   rendimiento:
     name: Rendimiento (Lighthouse y banco de la escena)

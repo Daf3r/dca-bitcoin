@@ -115,7 +115,7 @@ const comprobaciones = resultados.map((r) => /^OK (\d+) comprobaciones de navega
 if (comprobaciones.length) console.log(`test_ui: ${comprobaciones.reduce((a, b) => a + b, 0)} comprobaciones en ${comprobaciones.length} partes.`);
 if (malas.length) {
   console.log(`\n${malas.length} con fallos (lo último de cada registro):`);
-  for (const r of malas) console.log(`\n--- ${r.n} (salida ${r.codigo}; ${archivo(r.n)})\n${fs.readFileSync(archivo(r.n), 'utf8').trimEnd().split('\n').slice(-15).join('\n')}`);
+  for (const r of malas) console.log(`\n--- ${r.n} (salida ${r.codigo}; ${archivo(r.n)})\n${fs.readFileSync(archivo(r.n), 'utf8').trimEnd().split('\n').slice(-40).join('\n')}`);
   process.exit(1);
 }
 console.log('Todo en verde.');

@@ -7,6 +7,7 @@
 // En el CI la referencia se genera en main y se guarda en la caché; en un PR se compara con ella. Los cambios visuales
 // que son a propósito aparecen como diferencias: esa es la información, no un fallo.
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import net from 'node:net';
@@ -32,14 +33,17 @@ const puertoLibre = () => new Promise((res) => {
   const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); });
 });
 async function servidor(escenario) {
-  const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore' });
-  const url = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i++) {
-    try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
-    await new Promise((r) => setTimeout(r, 200));
+  // (Campamento 61) Como en test_ui: si el puerto lo ocupó otra prueba que corre a la vez, otro puerto; y /healthz debe ser de este.
+  for (let intento = 0; intento < 3; intento++) {
+    const port = await puertoLibre(), id = randomUUID();
+    const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore', env: { ...process.env, PRUEBA_ID: id } });
+    const url = `http://127.0.0.1:${port}`;
+    for (let i = 0; i < 200 && hijo.exitCode === null; i++) {
+      try { const r = await fetch(`${url}/healthz`); if (r.ok && r.headers.get('x-prueba-id') === id) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    hijo.kill();
   }
-  hijo.kill();
   throw new Error(`no arrancó el escenario ${escenario}`);
 }
 
