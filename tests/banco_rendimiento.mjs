@@ -3,6 +3,7 @@
 //   Lo duro (hace fallar): los nodos de la escena (tope 1100), del valle (300) y de los osos (40), con efectos «esenciales» como la
 //   prueba de siempre; y las animaciones que corren A LA VISTA en cada capa, con efectos «todos», frente al presupuesto escrito en
 //   docs/rendimiento.md («Presupuesto»). Lo que cuenta Chromium bajo display: none no se cuenta (WebKit lo para).
+//   (Campamento 39) Cada fecha declara lo que pesa (`declara`, falla si pasa) y las pantallas anchas (1440 y 2560) tienen su tope de nodos.
 //   Lo blando (solo informa, mediana de 3): el tiempo de crear la escena con la CPU 4× más lenta y los fotogramas por segundo en
 //   reposo con la montaña a la vista (Chromium, CPU 4×). Varían de máquina a máquina: el iPhone de verdad lo mide «Medir este aparato».
 // Uso: node tests/banco_rendimiento.mjs [--rapido]   (PYTHON=ruta/python si Flask no está en python3; BANCO_JSON=ruta guarda la tabla)
@@ -21,17 +22,43 @@ const RAPIDO = process.argv.includes('--rapido');
 
 /** Los topes de nodos (CLAUDE.md, «Escena y arte») y el presupuesto de animaciones a la vista por capa (docs/rendimiento.md). */
 export const TOPES = { escena: 1100, valle: 300, osos: 40 };
+/** (Campamento 39, idea 131) El tope de la escena en pantallas anchas (escritorio y tele), por ancho: lo «solo ancho» no baja al teléfono. */
+export const TOPES_ANCHO = { 1440: 1100, 2560: 1100 };
 export const PRESUPUESTO = { principal: 56, frente: 16, 'par-cielo': 44, 'par-lejos': 22, 'par-medio': 4, propia: 3, total: 110 };
-/** Los momentos que se miden: el día y la noche de siempre, la noche más cargada (Nochebuena) y la época lluviosa. */
+/**
+ * Los momentos que se miden: el día y la noche de siempre, la noche más cargada (Nochebuena), la época lluviosa (la noche de lluvia es el
+ * caso duro de las animaciones) y, desde el campamento 39 (idea 124), el pico del año: el 31 a las 23:55, con los cohetes. `declara`: lo
+ * que esa fecha dice que pesa (nodos de la escena con «esenciales», en el teléfono); el banco falla si pesa más de lo declarado (con 6 de
+ * aire, lo que varía de una carga a otra). Una fecha nueva del calendario se añade aquí con lo suyo declarado. Los datos del escenario
+ * son los de un día fijo (`FECHA_PRUEBA`): nada depende de la fecha real.
+ */
 const CASOS = [
-  ['día normal', '2026-11-25', 12], ['noche normal', '2026-11-25', 21], ['Nochebuena', '2026-12-24', 21],
-  ['tarde de lluvia', '2026-07-10', 15], ['noche de lluvia', '2026-07-10', 21],
+  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 830 },
+  { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 830 },
+  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 899 },
+  { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 825 },
+  { caso: 'noche de lluvia', dia: '2026-07-10', hora: 21, declara: 825 },
+  // El pico del año: los cohetes (14 animaciones, en el frente) solo de 23:50 a 0:30 del 24 y del 31; esos 40 minutos el frente admite 28
+  // (medido el 24 nov 2026: 26 en Nochebuena, con el papel picado de la fiesta; ya era así antes del 39, solo que el banco no lo medía).
+  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 938, frente: 28 },
+  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 905, frente: 28 },
+  // (Campamento 41) La Navidad entera: un turno de cada fecha nueva (los demás pesan lo mismo: otro reparto de los mismos trazos).
+  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 907 },
+  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 900 },
+  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 870 },
+  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 908, frente: 28 },
+  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 867 },
 ];
+/** (Campamento 39, idea 131) Las pantallas anchas (escritorio 1440×900 y tele 2560×1440): solo los nodos, frente a `TOPES_ANCHO`. */
+const ANCHOS = [[1440, 900], [2560, 1440]].flatMap(([w, h]) => [
+  { caso: `Nochebuena ${w}`, dia: '2026-12-24', hora: 21, w, h },
+  { caso: `31 dic ${w}`, dia: '2026-12-31', hora: 23.92, w, h },
+]);
 
 const puertoLibre = () => new Promise((res) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); }); });
 async function servidor(escenario) {
   const port = await puertoLibre();
-  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore' });
+  const hijo = spawn(PYTHON, [path.join(AQUI, 'servidor_prueba.py'), String(port), escenario], { stdio: 'ignore', env: { ...process.env, FECHA_PRUEBA: process.env.FECHA_PRUEBA || '2026-11-20' } });
   const url = `http://127.0.0.1:${port}`;
   for (let i = 0; i < 100; i++) {
     try { if ((await fetch(`${url}/healthz`)).ok) return { url, parar: () => hijo.kill() }; } catch { /* aún no */ }
@@ -41,8 +68,8 @@ async function servidor(escenario) {
   throw new Error(`no arrancó el escenario ${escenario}`);
 }
 
-async function abrir(navegador, srv, dia, hora, efectos) {
-  const ctx = await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 664 } });
+async function abrir(navegador, srv, dia, hora, efectos, ancho = null) {
+  const ctx = ancho ? await navegador.newContext({ viewport: { width: ancho[0], height: ancho[1] } }) : await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 664 } });
   const p = await ctx.newPage();
   await p.addInitScript(([d, h, e]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.efectos', e); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.madrugada', '0'); } catch { /* sin almacenamiento */ } }, [dia, hora, efectos]);
   await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
@@ -92,7 +119,8 @@ const navegador = await chromium.launch();
 const srv = await servidor('mil');
 const filas = [], fallos = [];
 try {
-  for (const [nombre, dia, hora] of CASOS) {
+  for (const { caso: nombre, dia, hora, declara, frente } of CASOS) {
+    const pres = { ...PRESUPUESTO, ...(frente ? { frente } : {}) };
     let { ctx, p } = await abrir(navegador, srv, dia, hora, 'esenciales');
     const n = await medir(p);
     await ctx.close();
@@ -103,8 +131,16 @@ try {
     const total = Object.values(t.anim).reduce((a, x) => a + x, 0);
     filas.push({ caso: nombre, escena: n.escena, valle: n.valle, osos: n.osos, escenaTodos: t.escena, animaciones: t.anim, total, ...b });
     for (const k of ['escena', 'valle', 'osos']) if (n[k] > TOPES[k]) fallos.push(`${nombre}: ${k} ${n[k]} > ${TOPES[k]}`);
-    for (const [capa, x] of Object.entries(t.anim)) if (x > (PRESUPUESTO[capa] ?? PRESUPUESTO.propia)) fallos.push(`${nombre}: ${x} animaciones a la vista en «${capa}» > ${PRESUPUESTO[capa] ?? PRESUPUESTO.propia}`);
+    if (declara != null && n.escena > declara + 6) fallos.push(`${nombre}: la escena pesa ${n.escena} nodos y la fecha declara ${declara} (+6)`);
+    for (const [capa, x] of Object.entries(t.anim)) if (x > (pres[capa] ?? pres.propia)) fallos.push(`${nombre}: ${x} animaciones a la vista en «${capa}» > ${pres[capa] ?? pres.propia}`);
     if (total > PRESUPUESTO.total) fallos.push(`${nombre}: ${total} animaciones a la vista > ${PRESUPUESTO.total}`);
+  }
+  for (const { caso: nombre, dia, hora, w, h } of ANCHOS) {
+    const { ctx, p } = await abrir(navegador, srv, dia, hora, 'esenciales', [w, h]);
+    const n = await medir(p);
+    await ctx.close();
+    filas.push({ caso: nombre, escena: n.escena, valle: n.valle, osos: n.osos, animaciones: {}, total: 0, ancho: true });
+    if (n.escena > TOPES_ANCHO[w]) fallos.push(`${nombre}: escena ${n.escena} > ${TOPES_ANCHO[w]} (tope de pantallas anchas)`);
   }
 } finally {
   srv.parar();
@@ -113,6 +149,7 @@ try {
 console.log('caso               escena  valle  osos  (con «todos»)  animaciones a la vista por capa                     crear (4×)  fps (4×)');
 for (const f of filas) {
   const capas = Object.entries(f.animaciones).map(([k, v]) => `${k} ${v}`).join(' · ');
+  if (f.ancho) { console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)}   (pantalla ancha: solo nodos, tope ${TOPES_ANCHO[f.caso.split(' ').at(-1)]})`); continue; }
   console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)} ${String(f.escenaTodos).padStart(14)}  ${`${f.total}: ${capas}`.padEnd(50)} ${f.crearMs != null ? `${f.crearMs} ms`.padStart(10) : ''} ${f.fps != null ? String(f.fps).padStart(9) : ''}`);
 }
 if (process.env.BANCO_JSON) fs.writeFileSync(process.env.BANCO_JSON, JSON.stringify(filas, null, 1));

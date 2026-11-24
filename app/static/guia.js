@@ -112,7 +112,55 @@ function pintarOsos() {
   }
 }
 
+// --- (Campamento 39, idea 135) El almanaque del valle: cada fecha con sus turnos (cielo.js: `turno` y `mueve`), cada uno con su «Ver», que
+// pone ese día y esa hora (`libro.dia`, `libro.hora`) y abre la montaña. `libro.almanaque` hace que la app avise y ofrezca volver a hoy.
+export const FECHAS_ALMANAQUE = [
+  ['Un miércoles cualquiera', '2026-11-25'], ['Un sábado (de plaza)', '2026-11-28'], ['Un domingo (de misa)', '2026-11-29'],
+  ['Un día de lluvia (julio)', '2026-07-10'], ['Zompopos de mayo', '2027-05-18'], ['Día de la Cruz', '2027-05-03'], ['Agostinas', '2027-08-05'],
+  ['15 de septiembre', '2027-09-15'], ['Azacuanes y piscuchas (octubre)', '2026-10-20'], ['Navidad en el pueblo (1 dic)', '2026-12-01'],
+  ['Nochebuena', '2026-12-24'], ['Navidad', '2026-12-25'], ['31 de diciembre', '2026-12-31'], ['1 de enero', '2027-01-01'], ['6 de enero', '2027-01-06'],
+];
+const hhmm = (h) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+/** Los tramos de un día: cada vez que cambia el turno del pueblo o lo que se mueve, de cinco en cinco minutos (el 41 cambia a las 23:40). */
+export function tramosDelDia(C, dia) {
+  const t = [];
+  for (let q = 0; q < 288; q++) {
+    const h = q / 12, clave = `${C.turno(dia, h)}|${C.mueve(dia, h)}`;
+    if (!t.length || t.at(-1).clave !== clave) t.push({ clave, desde: h, turno: C.turno(dia, h), mueve: C.mueve(dia, h) });
+  }
+  return t.map((x, i) => ({ ...x, hasta: t[i + 1]?.desde ?? 24 }));
+}
+function pintarAlmanaque() {
+  const caja = $('guia-almanaque'), C = window.libroCielo;
+  if (!caja || !C?.turno) return;
+  for (const [nombre, dia] of FECHAS_ALMANAQUE) {
+    const det = document.createElement('details');
+    const sum = document.createElement('summary');
+    sum.textContent = `${nombre} · ${dia}`;
+    const ul = document.createElement('ul');
+    for (const tr of tramosDelDia(C, dia)) {
+      const li = document.createElement('li');
+      const txt = document.createElement('span');
+      txt.textContent = `${hhmm(tr.desde)}–${hhmm(tr.hasta)} · ${tr.turno}${tr.mueve ? ` · se mueve: ${tr.mueve}` : ''}`;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'enlace';
+      b.textContent = 'Ver';
+      b.setAttribute('aria-label', `Ver ${nombre} a las ${hhmm(tr.desde + Math.min(0.5, (tr.hasta - tr.desde) / 2))}`);
+      b.addEventListener('click', () => {
+        try { localStorage.setItem('libro.dia', dia); localStorage.setItem('libro.hora', String(tr.desde + Math.min(0.5, (tr.hasta - tr.desde) / 2))); localStorage.setItem('libro.almanaque', '1'); } catch { /* sin almacenamiento */ }
+        location.href = '/';
+      });
+      li.append(txt, b);
+      ul.append(li);
+    }
+    det.append(sum, ul);
+    caja.append(det);
+  }
+}
+
 pintarControles();
+pintarAlmanaque();
 pintarColores();
 pintarIconos();
 pintarOsos();

@@ -213,7 +213,9 @@ const PESOS = [
   ['campamento 36: el calendario del pueblo', 60], // 10 comprobaciones
   ['campamento 37: el pueblo se mueve', 60], // 10 comprobaciones
   ['campamento 38: lo que cambia de la app', 25], // 3 comprobaciones
-  ['pulido integral: el movimiento (nada co', 90], // 16 comprobaciones
+  ['pulido integral: el movimiento (nada co', 115], // 16 comprobaciones
+  ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
+  ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -2922,7 +2924,7 @@ try {
       ok(pos.mad, 'madrugada: a las 23:00 el velo está puesto');
       for (let i = 0; i < 3; i++) { await c3.p.mouse.click(pos.x, pos.y); await c3.p.waitForTimeout(100); }
       ok(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda')), 'luna-moneda: tres toques seguidos la convierten en moneda');
-      await c3.p.waitForTimeout(2000);
+      await c3.p.waitForTimeout(3000); // (39b) la moneda gira en 2.6 s
       ok(!(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda'))), 'luna-moneda: vuelve a ser luna');
       // Modo madrugada (20): se apaga desde «Tu cuenta» y de día no existe.
       await c3.p.click('#cuenta-btn'); await c3.p.waitForTimeout(300);
@@ -3666,7 +3668,7 @@ try {
       const m = await entrar(navegador, sMil, ADMIN, { hora: 9 }, con('2026-08-20')); await cerrar(m.p); await m.p.waitForTimeout(800);
       const sm = await sombra(m.p);
       ok(sm.visible && sm.punta !== null && sm.punta < sm.sx, '16A reloj de sol: de mañana la sombra cae hacia la izquierda');
-      ok(await m.p.locator('.reloj .reloj-piedra').count() === 11, '16A reloj de sol: once piedritas, de las 7 a las 17');
+      ok(await m.p.evaluate(() => [...document.querySelectorAll('.reloj .reloj-piedra')].reduce((n, e) => n + (e.getAttribute('d').match(/M/g) ?? []).length, 0)) === 11, '16A reloj de sol: once piedritas, de las 7 a las 17 (campamento 39: en dos trazos, una por subtrazo)');
       await m.ctx.close();
       const t = await entrar(navegador, sMil, ADMIN, { hora: 15 }, con('2026-08-20')); await cerrar(t.p);
       const st = await sombra(t.p);
@@ -5231,7 +5233,7 @@ try {
       eq(c, { ligera: true, k: 'Nueva etapa', txt: '1.25M sats', lacre: '', cometa: 0, plantada: 0, anillos: 0 }, '21·celebración: una etapa intermedia se celebra en ligero');
       const t0 = Date.now();
       await a.p.waitForFunction(() => document.getElementById('hito-cel').hidden, null, { timeout: 6000 });
-      ok(Date.now() - t0 < 2600, `21·celebración: la tarjeta ligera es breve (${Date.now() - t0} ms)`);
+      ok(Date.now() - t0 < 3200, `21·celebración: la tarjeta ligera es breve (${Date.now() - t0} ms)`);
       t = await tr();
       eq([t.meta, t.hechas, t.txt], ['1.5M sats', 1, 'Etapa 2 de 6 del tramo de 1M a 2.5M sats'], '21·próxima: tras cruzarla, la siguiente y un escalón lleno');
       const mk = await marcas(a.p);
@@ -6110,7 +6112,7 @@ try {
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'todos' })); await cerrar(t.p);
       v = await valle(t.p);
       ok(v.humo, '22 fogón: humo a la hora del café con «todos»');
-      eq(v.ritmoHumo, ['6.6s/0s', '6.6s/-2.2s', '6.6s/-4.4s'], '22 fogón: las tres bocanadas, a destiempo como siempre (22B: por clase)');
+      eq(v.ritmoHumo, ['16s/0s', '16s/-14s', '16s/-12s'], '22 fogón: las tres bocanadas, una tras otra y su pausa (22B: por clase; 39b: al tempo de ambiente)');
       await t.ctx.close();
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
       ok(!(await valle(t.p)).humo, '22 fogón: con «esenciales» no hay humo (es ambiente)');
@@ -6125,7 +6127,7 @@ try {
       t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'todos' })); await cerrar(t.p);
       v = await valle(t.p);
       ok(v.pisVis && v.pis === fam.familia.personas && v.pisCaja && v.pisCaja.y > v.saldoAbajo, `22 piscuchas: ${v.pis} en el cielo del valle, por debajo del saldo`);
-      eq(v.ritmoPis, ['6.3s/-2s', '4.6s/-3.1s', '6.3s/-2s', '5.2s/0s', '4.6s/-3.1s', '5.2s/0s'].slice(0, v.pis), '22 piscuchas: cada una con su ritmo de siempre (22B: por clase)');
+      eq(v.ritmoPis, ['13s/-4s', '9s/-6s', '13s/-4s', '10s/0s', '9s/-6s', '10s/0s'].slice(0, v.pis), '22 piscuchas: cada una con su ritmo (22B: por clase; 39b: el doble de lento)');
       eq(v.milpa, ['doblada'], '22 milpa: en octubre, doblada');
       await t.ctx.close();
       t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
@@ -7246,9 +7248,9 @@ try {
       await t.p.waitForFunction(() => document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 25000 });
       const r = await t.p.evaluate(() => ({ sin: document.querySelector('#m-osos.osos').hasAttribute('data-sin-estirar'), ve: [...document.querySelectorAll('#m-osos .oso .oso-brazos')].map((b) => getComputedStyle(b).display) }));
       ok(r.sin || r.ve[0] === 'inline', `33 a las 7:00 los de la cumbre se estiran, uno tras otro (${JSON.stringify(r)})`);
-      await t.p.waitForFunction(() => !document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 5000 });
+      await t.p.waitForFunction(() => !document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 9000 });
       const q = await t.p.evaluate(() => [...document.querySelectorAll('#m-osos .oso .oso-brazos')].every((b) => getComputedStyle(b).display === 'none'));
-      ok(q, '33 a los dos segundos y medio, otra vez quietos');
+      ok(q, '33 a los seis segundos (39b), otra vez quietos');
       await t.ctx.close();
       // Con «esenciales» no (es ambiente); y a mediodía el reloj no los pone.
       const e = await entrar(navegador, anio, ADMIN, { hora: 7, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'esenciales' }));
@@ -7306,7 +7308,9 @@ try {
       // Las bases: cada árbol del pueblo, cada farol, el perro y las gallinas, con su pie dentro de la calle o la plaza.
       const pies = [...g.querySelectorAll('.v-ar-tronco, .v-pz-tronco, .v-farol-poste, .v-animal, .v-gallina')].filter((e) => getComputedStyle(e).display !== 'none').map((e) => { const b = bb(e); return { c: e.getAttribute('class'), y: b.y1, x: (b.x0 + b.x1) / 2 }; });
       const sueltos = pies.filter((q) => q.y < suelo.y0 - 1.5 || q.y > suelo.y1 + 1.5 || q.x < suelo.x0 - 2 || q.x > suelo.x1 + 40).map((q) => q.c);
-      const piedras = [...h.querySelectorAll('.reloj-piedra')].map(bb).filter((b) => cruza(b, una('.v-pueblo .v-calle'), 0)).length;
+      // (Campamento 39) Las piedritas del reloj van en dos trazos: se mide cada una (cada subtrazo «M…Z») por separado.
+      const subtrazos = [...h.querySelectorAll('.reloj-piedra')].flatMap((e) => e.getAttribute('d').split(/(?=M)/).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); e.parentNode.append(t); const b = bb(t); t.remove(); return b; }));
+      const piedras = subtrazos.filter((b) => cruza(b, una('.v-pueblo .v-calle'), 0)).length;
       return { atrio: Boolean(atrio && Math.abs(atrio.y0 - fachada.y1) < 1.5 && atrio.x0 <= fachada.x0 + 1 && atrio.x1 >= fachada.x1 - 1), sueltos, piedras, milpa: cruza(una('.v-campos .v-mp'), pueblo, 1), camino: Boolean(h.querySelector('.v-cm')), chimeneas: h.querySelectorAll('.v-pueblo .v-chimenea').length };
     });
     const anio = await servidor('anio');
@@ -7461,7 +7465,7 @@ try {
           ['2026-10-17', 9, 'mercado', (r) => r.vecinos >= 5],
           ['2026-09-15', 9, 'desfile', (r) => r.azul >= 2 && r.vecinos >= 5],
           ['2026-12-10', 19, 'posada', (r) => r.portal && r.sobrePortal === 0 && r.vecinos >= 4],
-          ['2026-12-24', 20, 'nochebuena', (r) => r.brasa >= 3],
+          ['2026-12-24', 20, 'nb-cena', (r) => r.brasa >= 3], // (41) la cena de Nochebuena, con los oseznos y su estrellita
         ]) {
           const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia));
           await cerrar(t.p);
@@ -7555,7 +7559,7 @@ try {
     const anio = await servidor('anio');
     try {
       for (const [w, h] of [[390, 844], [1440, 900]]) {
-        for (const [dia, hora, ef] of [['2026-09-16', 7.5, 'todos'], ['2026-09-16', 12, 'todos'], ['2026-09-16', 15.5, 'todos'], ['2026-09-16', 21, 'todos'], ['2026-12-24', 21, 'todos'], ['2026-07-10', 15, 'todos'], ['2026-09-16', 12, 'esenciales'], ['2026-12-24', 21, 'esenciales']]) {
+        for (const [dia, hora, ef] of [['2026-09-16', 7.5, 'todos'], ['2026-09-16', 12, 'todos'], ['2026-09-16', 15.5, 'todos'], ['2026-09-16', 21, 'todos'], ['2026-12-24', 21, 'todos'], ['2026-12-24', 19, 'todos'], ['2026-12-24', 23.84, 'todos'], ['2026-07-10', 15, 'todos'], ['2026-09-16', 12, 'esenciales'], ['2026-12-24', 21, 'esenciales']]) { // (41) la cena con su brindis y las doce con su volcancito
           const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h }, reducedMotion: 'no-preference' }, conLs(dia, ef));
           await cerrar(t.p);
           await t.p.waitForTimeout(1500);
@@ -7564,6 +7568,245 @@ try {
           await t.ctx.close();
         }
       }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 39: hacer sitio 2 (estrellas y luciérnagas más livianas, el reloj y la luna en menos trazos, los cohetes en su hora, el almanaque)
+  await bloque(async () => {
+    const conLs = (dia, ef) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } }, { dia, ef }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const pieza = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), sub = (sel) => [...h.querySelectorAll(sel)].reduce((n, e) => n + (e.getAttribute('d')?.match(/M/g) ?? []).length, 0);
+      const co = h.querySelector('g.cohetes');
+      return { total: h.querySelectorAll('*').length, estrellas: h.querySelectorAll('.estrella').length, subEstrellas: sub('.estrella'), lu: h.querySelectorAll('.lu').length, luHijos: [...h.querySelectorAll('.lu')].every((g) => g.children.length === 1), mares: h.querySelectorAll('.luna-mares ellipse').length, subMares: sub('.luna-mares path'), cohetes: co ? co.querySelectorAll('*').length : -1, nan: [...h.querySelectorAll('[d]')].filter((e) => /NaN/.test(e.getAttribute('d'))).length };
+    });
+    const mil = await servidor('mil', { FECHA_PRUEBA: '2026-11-20' }); // (los datos de un día fijo: el total de nodos no depende de hoy)
+    try {
+      // Nochebuena a las 21:00 en el teléfono: los mismos 46 astros en cinco trazos, doce luciérnagas de un círculo, los mares en un trazo y
+      // los cohetes sin dibujar (su grupo, vacío, hasta las 23:40).
+      const t = await entrar(navegador, mil, ADMIN, { hora: 21, viewport: { width: 390, height: 664 } }, conLs('2026-12-24', 'esenciales'));
+      await cerrar(t.p);
+      const r = await pieza(t.p);
+      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 905, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
+      // A las 23:45 (cielo.js avisa con «libro:cohetes») se ponen; pasada la medianoche, el día cambia y se redibuja con ellos; a las 0:45, fuera.
+      const paso = (d, h) => t.p.evaluate(async ([dd, hh]) => { localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400)); }, [d, h]);
+      await paso('2026-12-24', 23.75);
+      const c1 = (await pieza(t.p)).cohetes;
+      await paso('2026-12-25', 0.2);
+      const c2 = (await pieza(t.p)).cohetes;
+      await paso('2026-12-25', 0.75);
+      const c3 = (await pieza(t.p)).cohetes;
+      ok(c1 >= 30 && c2 === c1 && c3 === 0, `39 los cohetes se ponen a las 23:40 y se quitan a las 0:40, también tras el redibujo de medianoche (${c1}, ${c2}, ${c3} piezas)`);
+      ok(t.consola.length === 0, `39 consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+      // Con «todos», de noche: dos animaciones por luciérnaga que se ve (el brillo en su grupo, el vuelo en su círculo) y una por ritmo de estrellas.
+      for (const [dia, lus] of [['2026-11-25', 8], ['2026-07-10', 12]]) {
+        const n = await entrar(navegador, mil, ADMIN, { hora: 20, viewport: { width: 390, height: 664 } }, conLs(dia, 'todos'));
+        await cerrar(n.p);
+        const a = await n.p.evaluate(() => {
+          const vivas = document.getAnimations().filter((x) => x.playState === 'running' && x.effect?.target);
+          const de = (sel) => vivas.filter((x) => x.effect.target.matches(sel));
+          return { brillo: de('.lu').length, vuelo: de('.lu-v').length, estrellas: de('.estrella').length, nombres: [...new Set(de('.lu, .lu-v').map((x) => x.animationName))].sort() };
+        });
+        eq(a, { brillo: lus, vuelo: lus, estrellas: 4, nombres: ['lu-a', 'lu-b', 'lu-brilla', 'lu-c'] }, `39 ${dia} a las 20:00: ${lus} luciérnagas con su brillo y su vuelo; las estrellas titilan en cuatro ritmos`);
+        await n.ctx.close();
+      }
+      // Desde el almanaque de la guía (solo el admin), «Ver» abre la montaña ese día y a esa hora, con un aviso y su «Volver a hoy».
+      // (Sin `entrar`: su `libro.hora`, puesto en cada carga, taparía lo que pone el almanaque.)
+      const g = { ctx: await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 844 } }) };
+      g.p = await g.ctx.newPage();
+      await g.p.addInitScript(() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.efectos', 'esenciales'); } catch { /* sin almacenamiento */ } });
+      await g.p.goto(`${mil.url}/login`, { waitUntil: 'networkidle' });
+      await g.p.fill('input[autocomplete="username"]', ADMIN[0]);
+      await g.p.fill('input[autocomplete="current-password"]', ADMIN[1]);
+      await Promise.all([g.p.waitForURL('**/'), g.p.click('button[type=submit], .guardar')]);
+      await g.p.waitForTimeout(1500);
+      await cerrar(g.p);
+      await g.p.goto(`${mil.url}/guia`, { waitUntil: 'networkidle' });
+      const fechas = await g.p.locator('#guia-almanaque details').count();
+      const nb = g.p.locator('#guia-almanaque details', { has: g.p.locator('summary', { hasText: 'Nochebuena · 2026-12-24' }) });
+      await nb.locator('summary').click();
+      const tramos = await nb.locator('li').count();
+      await Promise.all([g.p.waitForURL('**/'), nb.locator('li button').last().click()]);
+      await g.p.waitForTimeout(2500);
+      await cerrar(g.p);
+      const av = await g.p.evaluate(() => ({ dia: localStorage.getItem('libro.dia'), aviso: document.getElementById('aviso-txt').textContent, boton: document.getElementById('aviso-btn').textContent, visible: !document.getElementById('aviso').hidden }));
+      ok(fechas >= 15 && tramos >= 5 && av.dia === '2026-12-24' && av.visible && /Estás viendo otro día: 2026-12-24/.test(av.aviso) && av.boton === 'Volver a hoy', `39 almanaque: ${fechas} fechas, Nochebuena en ${tramos} tramos; «Ver» abre ese día con su aviso (${JSON.stringify(av)})`);
+      await Promise.all([g.p.waitForLoadState('load'), g.p.click('#aviso-btn')]);
+      await g.p.waitForTimeout(1800);
+      const fuera = await g.p.evaluate(() => ({ dia: localStorage.getItem('libro.dia'), hora: localStorage.getItem('libro.hora'), marca: localStorage.getItem('libro.almanaque'), aviso: document.getElementById('aviso').hidden }));
+      ok(fuera.dia === null && fuera.hora === null && fuera.marca === null && fuera.aviso, `39 almanaque: «Volver a hoy» quita el día, la hora y el aviso (${JSON.stringify(fuera)})`);
+      await g.ctx.close();
+    } finally {
+      mil.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 41: la Navidad entera (24, 25, 31, 1 y 6: cada fecha, su guion por turnos, su franja de fiesta y ningún NaN)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-12-24'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } }, null];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // [día, hora, turno, lo que se mueve, el actor en su capa ('' si nadie)]: las cinco fechas, de la madrugada a la medianoche.
+    const GUION = [
+      ['2026-12-24', 6, 'nb-madruga', 'torogoz', ''], ['2026-12-24', 7.75, 'nb-compras', 'barre', 'barre'], ['2026-12-24', 15.5, 'nb-tamales', 'pelota', 'pelota'],
+      ['2026-12-24', 19, 'nb-cena', 'brinda', 'brinda'], ['2026-12-24', 22, 'nb-misa', 'fiesta', ''], ['2026-12-24', 23.84, 'nb-doce', 'chispea', 'chispea'],
+      ['2026-12-25', 3, 'duerme', 'luciernagas', ''], ['2026-12-25', 7.5, 'n25-polvora', 'barre', 'barre'], ['2026-12-25', 9.5, 'n25-estrena', 'pelota', 'pelota'],
+      ['2026-12-25', 13, 'n25-recalentado', '', ''], ['2026-12-25', 15, 'n25-paseo', 'pelota', ''], ['2026-12-25', 19, 'n25-fresca', 'luciernagas', ''],
+      ['2026-12-31', 7.5, 'f31-limpia', 'barre', 'barre'], ['2026-12-31', 15.5, 'f31-estreno', 'pelota', 'pelota'], ['2026-12-31', 20, 'f31-cena', 'brinda', 'brinda'],
+      ['2026-12-31', 23.58, 'f31-espera', 'fiesta', ''], ['2027-01-01', 0.5, 'f31-doce', 'chispea', 'chispea'], ['2027-01-01', 6, 'e1-polvora', 'torogoz', ''],
+      ['2027-01-01', 10, 'e1-barre', 'teleferico', ''], ['2027-01-01', 15.5, 'e1-visitas', 'pelota', 'pelota'], ['2027-01-01', 19, 'e1-fresca', 'luciernagas', ''],
+      ['2027-01-06', 15.2, 'e6-guarda', 'pelota', ''],
+    ];
+    const mira = (p, d, h) => p.evaluate(async ([dd, hh]) => {
+      localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar();
+      await new Promise((res) => setTimeout(res, 500));
+      const host = document.getElementById('montana'), raiz = document.documentElement, capa = host.querySelector(':scope > svg.v-capa-vecino');
+      const malos = [...host.querySelectorAll('[d], [transform], [points]')].filter((e) => /NaN|undefined|Infinity/.test(`${e.getAttribute('d') ?? ''}${e.getAttribute('transform') ?? ''}${e.getAttribute('points') ?? ''}`)).length
+        + [...host.querySelectorAll('svg')].filter((x) => /NaN|undefined/.test(`${x.getAttribute('viewBox')}${x.style.cssText}`)).length;
+      const vis = (sel) => { const e = host.querySelector(sel); return Boolean(e) && getComputedStyle(e).display !== 'none'; };
+      const pies = (host.querySelector('.v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').split(/(?=M)/).filter(Boolean).length;
+      return { perroV: Boolean(host.querySelector('.v-vecinos .v-vo-perro')), turno: raiz.dataset.turno, mueve: raiz.dataset.mueve ?? '', actor: capa ? [...capa.classList].find((c) => c.startsWith('v-actor-'))?.slice(8) : '', malos, pies, perro: vis('#m-v-pie .v-animal'), regalos: vis('.c-regalo'), tuArriba: vis('#m-yo .tu-festeja'), luciernagas: vis('.luciernagas'), nodos: host.querySelectorAll('*').length };
+    }, [d, h]);
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 4.6, viewport: { width: w, height: alto } }, conLs);
+        await cerrar(t.p);
+        const fallos = [];
+        let maxNodos = 0;
+        for (const [d, h, turno, mueve, actor] of GUION) {
+          const r = await mira(t.p, d, h);
+          maxNodos = Math.max(maxNodos, r.nodos);
+          if (r.turno !== turno || r.mueve !== mueve || (r.actor ?? '') !== actor || r.malos) fallos.push(`${d} ${h}: ${JSON.stringify(r)}`);
+          // Las noches de la fiesta las luciérnagas descansan; con los cohetes (y en la espera del 31) el perro se esconde; a las doce
+          // «Tú» levanta los brazos; los regalos de la cumbre, desde las doce del 24 y todo el 25.
+          if (['nb-cena', 'nb-misa', 'f31-cena', 'f31-espera'].includes(turno) && r.luciernagas) fallos.push(`${turno}: luciérnagas`);
+          if (['nb-doce', 'f31-espera', 'f31-doce', 'n25-recalentado'].includes(turno) === r.perro || ['nb-doce', 'f31-espera', 'f31-doce', 'n25-recalentado'].includes(turno) !== r.perroV) fallos.push(`${turno}: el perro de siempre ${r.perro}, el escondido ${r.perroV}`);
+          if (['nb-doce', 'f31-doce'].includes(turno) !== r.tuArriba) fallos.push(`${turno}: «Tú» con los brazos ${r.tuArriba}`);
+          if (((d === '2026-12-25' && turno !== 'nb-doce') || turno === 'nb-doce' && d === '2026-12-24') && !r.regalos) fallos.push(`${d} ${turno}: sin regalos`);
+          if (turno !== 'duerme' && turno !== 'e1-polvora' && turno !== 'n25-polvora' && r.pies < (turno === 'e1-barre' ? 2 : 3)) fallos.push(`${turno}: ${r.pies} vecinos`);
+        }
+        eq(fallos, [], `41 a ${w} px: las cinco fechas de la Navidad, cada turno con su gente, su actor y ningún NaN en los trazos (hasta ${maxNodos} nodos)`);
+        ok(maxNodos <= 1000 && t.consola.length === 0, `41 a ${w} px: la escena, como mucho ${maxNodos} nodos, y la consola limpia (${t.consola.slice(0, 2)})`);
+        await t.ctx.close();
+      }
+      // (216) A las doce, los de la cumbre levantan los brazos cuando caben con ellos (a 768 px, con este saldo, caben; a 390 y 1440, no).
+      const b = await entrar(navegador, anio, ADMIN, { hora: 23.84, viewport: { width: 768, height: 1024 } }, conLs);
+      await cerrar(b.p);
+      const br = await b.p.evaluate(async () => {
+        localStorage.setItem('libro.dia', '2026-12-24'); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400));
+        const os = document.querySelector('#m-osos'), brazos = [...document.querySelectorAll('#m-osos .oso-brazos')];
+        return { sin: os?.dataset.sinEstirar ?? null, arriba: brazos.filter((e) => getComputedStyle(e).display !== 'none').length, n: brazos.length };
+      });
+      ok(br.sin === null && br.n > 0 && br.arriba === br.n, `41 a 768 px a las doce: los de la cumbre, con los brazos arriba (${JSON.stringify(br)})`);
+      await b.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 39b: el tempo (tres tempos con nombre; lo ambiental, los personajes y las fiestas, más despacio; la interfaz y la subida al anotar, como siempre)
+  await bloque(async () => {
+    const conLs = (o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } };
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Cada regla del CSS con animación, resuelta: el valor de la regla en un elemento de prueba (las variables de :root se heredan).
+    const duraciones = (p) => p.evaluate(() => {
+      const prueba = document.createElement('i');
+      document.body.append(prueba);
+      const r = [];
+      const recorre = (reglas) => { for (const x of reglas) {
+        if (x.cssRules && !(x instanceof CSSKeyframesRule)) recorre(x.cssRules);
+        if (!(x instanceof CSSStyleRule)) continue;
+        const a = x.style.getPropertyValue('animation'), d = x.style.getPropertyValue('animation-duration');
+        if (!a && !d) continue;
+        prueba.style.animation = ''; prueba.style.animationDuration = '';
+        if (a) prueba.style.animation = a; else prueba.style.animationDuration = d;
+        const cs = getComputedStyle(prueba);
+        r.push({ sel: x.selectorText, nombre: a ? cs.animationName : x.style.getPropertyValue('animation-name'), dur: cs.animationDuration, tempo: /--t-/.test(a || d) });
+      } };
+      for (const h of document.styleSheets) { try { recorre(h.cssRules); } catch { /* otra hoja */ } }
+      const tr = [];
+      for (const h of document.styleSheets) { try { const mira = (rs) => { for (const x of rs) { if (x.cssRules) mira(x.cssRules); if (x instanceof CSSStyleRule && /--t-/.test(x.style.getPropertyValue('transition'))) tr.push(x.selectorText); } }; mira(h.cssRules); } catch { /* otra hoja */ } }
+      prueba.remove();
+      return { r, tr };
+    });
+    // La tabla del tempo (campamento 39b): [un trozo único del selector, la animación, su duración]. Si alguien la vuelve a acortar, esto falla.
+    const TABLA = [
+      ['.nube.n1', 'nube', '110s'], ['.nube.n2', 'nube', '150s'], ['.nube.n3', 'nube', '130s'],
+      ['.par-lejos', 'asienta', '2s'], ['.par-medio', 'asienta', '2s'], ['.escena-abre[data-efectos="todos"] .resplandor', 'enciende', '2.6s'], ['.escena-abre[data-efectos="todos"] #m-yo', 'aparece-yo', '1s'],
+      ['.escena', 'escena-fundido', '0.9s'],
+      ['.eco-fantasma', 'eco-respira', '8s'], ['.campo.alcanzado .banderin', 'ondea', '5.2s'], ['.pag-login .campo .banderin', 'ondea', '5.2s'],
+      ['.hito-cel.va p', 'hito', '3.5s'], ['.hito-cel.grande.va p', '', '4.5s'], ['.hito-cel.ligera.va p', '', '2.6s'],
+      ['.hc-lacre .lacre', 'lacre-cae', '1.1s'], ['.hc-lacre .lc-destello', 'lacre-destello', '1.4s'], ['.sello-sem-ico.nuevo', 'ss-estampa', '0.9s'], ['.sello-sem-ico.nuevo .ss-golpe', 'ss-golpe', '1s'],
+      ['.estela.apaga', 'estela-apaga', '1.5s'], ['.brasa', 'brasa', '2s'], ['.flota', 'flota', '2.6s'], ['.campo.iza line', 'iza-mastil', '1.2s'], ['.campo.iza .banderin', 'iza-banderin', '1.6s'],
+      ['.plantada', 'plantada-sale', '5s'], ['.anillo', 'anillo', '2.4s'], ['.alba.respira', 'cielo-respira', '4s'], ['.alba.amanece', 'cielo-amanece', '4.5s'], ['.luz-cima', 'luz-cima', '4.5s'],
+      ['.campo.iza .farol-halo', 'farol-enciende', '2.2s'], ['.campo.alcanzado .humo', 'farol-respira', '9s'], ['.pino-nuevo', 'planta', '1.5s'],
+      ['.lago-onda', 'onda-lago', '12s'], ['.lago-reflejo', 'brillo-lago', '9s'], ['.cometa-mueve', 'cometa', '3.2s'], ['.aurora-epica', 'aurora-epica', '9s'], ['.luz-gota', 'luz-gota', '3.2s'],
+      ['.pp-bandera', 'pp-ondea', '6.5s'], ['.pp-bandera:nth-child(2n)', '', '5.6s'], ['[data-cohetes] .chispa', 'chispa', '2.2s'], ['.volcancito:nth-child(2) .chispa', '', '2.5s'], ['.sb-sube', 'silba', '5.5s'], ['.sb-estallido', 'estalla', '5.5s'],
+      ['.moneda-gira', 'moneda-gira', '2.6s'], ['.moneda-brillo', 'moneda-brillo', '2.6s'], ['.lago-moneda.hunde', 'moneda-hunde', '2.6s'],
+      ['.v-hu', 'v-humo', '16s'], ['.v-hu-b', '', '18s'], ['.v-cy-remo', 'v-remo', '4.2s'], ['.v-pis', 'v-pis', '10s'], ['.v-pis-r2', '', '13s'], ['.v-pis-r3', '', '9s'],
+      ['.osos.salta .oso', 'oso-salta', '1.8s'], ['.osos.salta .oso-pie', 'oso-pie', '1.8s'], ['.oso-saluda', 'oso-saluda', '3.2s'], ['[data-efectos="todos"] .oso-tu', 'tu-respira', '4.8s'], ['#m-yo.anda.sola .oso-tu', '', '0.55s'],
+      ['svg.v-capa-gallina', 'gallina-pica', '3.6s'], ['svg.v-actor-barre', 'vo-barre', '7.2s'], ['svg.v-actor-pelota', 'vo-bota', '9s'], ['svg.v-actor-brinda', 'vo-brinda', '3.2s'], ['svg.v-actor-chispea', 'vo-chispea', '1.8s'],
+    ];
+    // Lo que no se alarga: la interfaz, que responde a tu dedo, y el paso de «Tú» al anotar (decisión del dueño: la subida sigue en 1.4 s).
+    const INTERFAZ = [
+      ['dialog[open]', 'dlg-entra', '0.24s'], ['.m-tarjeta:not([hidden])', 'dlg-entra', '0.22s'], ['.lista li.entra', 'fila-entra', '0.35s'], ['.lista li.sale', 'fila-sale', '0.3s'], ['.lista li.resalte', 'fila-resalte', '2.4s'],
+      ['.g-entra', 'g-entra', '0.35s'], ['.g-sale', 'g-sale', '0.35s'], ['::view-transition-group(grafico)', '', '0.28s'], ['.cuerpo.entra >', 'tarjeta-entra', '0.5s'], ['.semanas.entra i', 'sem-entra', '0.45s'],
+      ['.campo.agita .banderin', 'agita', '0.42s'], ['.hp-toque.sonando', 'hp-suena', '0.42s'], ['.recarga[data-estado="cargando"] i', 'recarga-late', '0.9s'], ['.lienzo.esqueleto::after', 'esq', '1.4s'],
+      ['.d-comp[open] .cp-papel', 'cp-sale', '0.42s'], ['.d-pelicula[open]', 'pe-entra', '0.3s'], ['.tr-anillo.destello', 'anillo-destello', '0.9s'], ['#m-yo.anda .oso-tu', 'tu-anda', '0.32s'],
+    ];
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' }, [conLs, { ef: 'todos' }]);
+      await cerrar(t.p);
+      const { r, tr } = await duraciones(t.p);
+      const busca = (sel, nombre) => r.filter((x) => x.sel.includes(sel) && (!nombre || x.nombre === nombre) && (nombre || !x.nombre));
+      const exacta = (sel, nombre) => { const c = busca(sel, nombre); return c.length > 1 ? (c.filter((x) => x.sel.endsWith(sel)).length === 1 ? c.filter((x) => x.sel.endsWith(sel)) : c) : c; };
+      const mal = (lista) => lista.map(([sel, nombre, dur]) => { const c = exacta(sel, nombre); return c.length === 1 && c[0].dur === dur ? null : `${sel} ${nombre}: ${c.length === 1 ? c[0].dur : `${c.length} reglas`} (se esperaba ${dur})`; }).filter(Boolean);
+      eq(mal(TABLA), [], `39b la tabla del tempo: las ${TABLA.length} duraciones de lo ambiental, los personajes, las fiestas y la celebración, como se decidió`);
+      eq(mal(INTERFAZ), [], `39b la interfaz conserva su tempo: diálogos, filas, gráfico, pestañas, «cargando», el banderín que se agita y el paso de «Tú» al anotar (${INTERFAZ.length})`);
+      const conTempo = r.filter((x) => x.tempo).length;
+      ok(conTempo === TABLA.length && tr.length === 0, `39b los tres tempos (--t-gesto, --t-accion, --t-ambiente) solo en las ${TABLA.length} reglas de la tabla (${conTempo}) y en ninguna transición (${tr.join(', ')})`);
+      ok(r.every((x) => !/NaN/.test(x.dur)) && await t.p.evaluate(() => ![...document.querySelectorAll('#montana [d]')].some((e) => /NaN/.test(e.getAttribute('d')))), '39b ninguna duración ni ningún trazo con NaN');
+      // Al abrir, «Tú» anda por su cuenta con el paso tranquilo (`sola`); al anotar, la subida dura lo de siempre (1.4 s) y con el paso de siempre.
+      ok(await t.p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-gesto').trim() === '1.6s'), '39b --t-gesto es 1.6 s');
+      await t.p.evaluate(() => {
+        const yo = () => document.querySelector('#montana #m-yo');
+        window.__sube = { t0: 0, t1: 0, sola: false };
+        new MutationObserver(() => { const y = yo(); if (!y) return; if (y.classList.contains('anda') && !window.__sube.t0) { window.__sube.t0 = performance.now(); window.__sube.sola = y.classList.contains('sola'); } if (window.__sube.t0 && !window.__sube.t1 && !y.classList.contains('anda')) window.__sube.t1 = performance.now(); })
+          .observe(document.getElementById('montana'), { attributes: true, attributeFilter: ['class'], subtree: true });
+      });
+      await t.p.evaluate(() => window.scrollTo(0, 0));
+      await t.p.click('#anotar'); await t.p.waitForTimeout(400);
+      await t.p.fill('#h-sats', '40000');
+      await t.p.click('#guardar'); await t.p.waitForTimeout(500);
+      if (/Sí/.test((await t.p.textContent('#guardar').catch(() => '')) || '')) await t.p.click('#guardar');
+      await t.p.waitForFunction(() => window.__sube.t1 > 0, null, { timeout: 8000 });
+      const sube = await t.p.evaluate(() => window.__sube);
+      const ms = sube.t1 - sube.t0;
+      ok(ms > 1100 && ms < 1900 && !sube.sola, `39b al anotar, «Tú» sube en lo de siempre (${Math.round(ms)} ms; decidido: 1.2–1.4 s, no 2.4) y con su paso de siempre (sola: ${sube.sola})`);
+      ok(t.consola.length === 0, `39b consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+      // La tarjeta de la celebración dura más, pero se cierra con un toque en cualquier sitio (y no tapa nada: no recibe toques).
+      const c = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' }, [conLs, { ef: 'todos' }]);
+      await cerrar(c.p);
+      await c.p.evaluate(() => window.scrollTo(0, 0));
+      await c.p.click('#anotar'); await c.p.waitForTimeout(400);
+      // Lo bastante para cruzar la siguiente etapa: así sale su tarjeta.
+      const falta = await c.p.evaluate(() => { const t = document.getElementById('t-falta')?.innerText ?? ''; return Number(t.replace(/[^\d]/g, '')) || 0; });
+      await c.p.fill('#h-sats', String(Math.max(1000, falta + 1000)));
+      await c.p.click('#guardar'); await c.p.waitForTimeout(500);
+      if (/Sí/.test((await c.p.textContent('#guardar').catch(() => '')) || '')) await c.p.click('#guardar');
+      await c.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 8000 });
+      await c.p.waitForTimeout(600);
+      const antes = await c.p.evaluate(() => !document.getElementById('hito-cel').hidden);
+      await c.p.mouse.click(20, 700);
+      await c.p.waitForTimeout(150);
+      const despues = await c.p.evaluate(() => document.getElementById('hito-cel').hidden);
+      ok(antes && despues, `39b la tarjeta de la etapa se cierra con un toque (se veía: ${antes}; cerrada: ${despues})`);
+      await c.ctx.close();
     } finally {
       anio.parar();
     }

@@ -12,7 +12,7 @@ El movimiento que pidió el dueño, donde es barato: una sola figura chica en su
   - Se rehace con el turno (`libro:turno`). Va en la lista de la pausa al deslizar.
   - En la película no hay capa: el actor va con los demás.
   - Son 2 a 10 nodos, según el actor.
-- **La que barre** (115): de **7:00 a 8:00**, franja nueva `barre`. La osa de la escoba de la mañana de entre semana se mece dos grados y medio a un lado y al otro desde sus pies, cada 0.6 s.
+- **La que barre** (115): de **7:00 a 8:00**, franja nueva `barre`. La osa de la escoba de la mañana de entre semana se mece dos grados y medio a un lado y al otro desde sus pies, cada 0.6 s. *(Campamento 39b: la que barre da tres pasadas y descansa, ciclo de 7.2 s; la pelota hace una jugada de 9 s: tres botes, rueda, sube y espera.)*
   - Como propuso el v3, las gallinas empiezan ahora a las **8:00**.
   - Los fines de semana y en vacaciones no hay escoba en ese turno, así que no hay capa.
 - **La pelota de los oseznos** (117): de **15:00 a 16:30**, franja nueva `pelota`. La pelota bota entre los oseznos de la tarde, un bote cada 1.2 s; los oseznos no se mueven.

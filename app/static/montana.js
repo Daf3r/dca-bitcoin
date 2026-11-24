@@ -1,12 +1,15 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
-import { volcanes, torogoz, papelPicado, cohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
+import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { reparto, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
 import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
 import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
+/** (Campamento 39) Un círculo como subtrazo, redondeado como el `<circle>` de antes (centro y radio a una décima): para juntar muchos en un trazo. */
+const circuloD = (cx, cy, r) => { const x = Number(f1(cx)), y = Number(f1(cy)), q = Number(f1(r)); return `M${f1(x - q)} ${f1(y)}a${f1(q)} ${f1(q)} 0 1 0 ${f1(2 * q)} 0a${f1(q)} ${f1(q)} 0 1 0 ${f1(-2 * q)} 0Z`; };
+const elipseD = (cx, cy, rx, ry) => { const x = Number(f1(cx)), y = Number(f1(cy)), a = Number(f1(rx)), b = Number(f1(ry)); return `M${f1(x - a)} ${f1(y)}a${f1(a)} ${f1(b)} 0 1 0 ${f1(2 * a)} 0a${f1(a)} ${f1(b)} 0 1 0 ${f1(-2 * a)} 0Z`; };
 
 function azar(s) {
   return () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
@@ -53,10 +56,11 @@ export function luna(cx, cy, r, fase) {
   const luz = `M${f1(cx)} ${f1(cy - r)}A${f1(r)} ${f1(r)} 0 0 1 ${f1(cx)} ${f1(cy + r)}A${f1(rx)} ${f1(r)} 0 0 ${barrido} ${f1(cx)} ${f1(cy - r)}Z`;
   // Los mares (rediseño Fable): unas manchas tenues, fijas, que solo se ven en la parte iluminada (se recortan con ella) y un
   // borde algo más apagado (el limbo): la luna deja de ser un disco plano.
-  const mar = (dx, dy, rx2, ry2) => `<ellipse cx="${f1(cx + dx * r)}" cy="${f1(cy + dy * r)}" rx="${f1(rx2 * r)}" ry="${f1(ry2 * r)}"/>`;
+  // (Campamento 39, idea 128) Los siete mares, del mismo tono, en un solo trazo.
+  const mar = (dx, dy, rx2, ry2) => elipseD(cx + dx * r, cy + dy * r, rx2 * r, ry2 * r);
   const mares = mar(-0.4, -0.16, 0.3, 0.42) + mar(-0.06, -0.5, 0.32, 0.18) + mar(0.3, -0.3, 0.21, 0.17) + mar(0.44, 0.0, 0.16, 0.21) + mar(0.2, 0.22, 0.13, 0.1) + mar(-0.3, 0.5, 0.17, 0.1) + mar(0.62, -0.38, 0.07, 0.09);
   return `<circle class="luna-sombra" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}"/><defs><clipPath id="m-luna-luz"><path d="${luz}"${espejo}/></clipPath></defs><path class="astro" d="${luz}"${espejo}/>`
-    + `<g class="luna-mares" clip-path="url(#m-luna-luz)">${mares}<circle class="luna-limbo" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.97)}"/></g>`;
+    + `<g class="luna-mares" clip-path="url(#m-luna-luz)"><path d="${mares}"/><circle class="luna-limbo" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.97)}"/></g>`;
 }
 
 /**
@@ -241,7 +245,8 @@ function lago(c, W, H, ventas = 0, kv = 1) {
 /**
  * (Campamento 30, idea 19) Lo de otra temporada no se queda en la escena. La escena se calcula y se arma igual (la forma no cambia: el
  * mismo `rnd()` en el mismo orden) y, al ponerla, se quitan las piezas que el calendario de hoy esconde en todo el día: la Navidad
- * fuera del 1 dic – 6 ene, los cohetes fuera del 24–25 y 31 dic – 1 ene, el papel picado y las banderas fuera de las fiestas, las
+ * fuera del 1 dic – 6 ene, los cohetes fuera del 24–25 y 31 dic – 1 ene (y esos días, su grupo va vacío salvo de 23:40 a 0:40: campamento
+ * 39, idea 125, `libro:cohetes`), el papel picado y las banderas fuera de las fiestas, las
  * piscuchas fuera de octubre y noviembre, los zompopos fuera del 15–21 de mayo, las otras etapas de la milpa, la quebrada de la otra
  * época y las flores de otro mes. **Lo de la hora no se toca** (luna, estrellas, luciérnagas, el mar de niebla, la luz del lago): eso
  * sigue dibujado y lo enseña el CSS. Al cambiar de día con la app abierta, cielo.js avisa (`libro:dia`) y la escena se vuelve a dibujar.
@@ -261,6 +266,7 @@ export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
     lluviosa ? '.v-q-hilo' : '.v-q-llena',
     fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
     md !== '05-03' && '.v-cruz-mayo', // (34) el Día de la Cruz
+    md !== '12-24' && md !== '12-25' && '.c-regalo', // (41) los regalos de la cumbre
   ].filter(Boolean);
 }
 
@@ -386,6 +392,16 @@ function capaVecino(host, info, t) {
   const frente = host.querySelector(':scope > svg.frente');
   if (frente) frente.before(s); else host.append(s);
 }
+/** (Campamento 39, idea 125) A las 23:40 y a las 0:40 (`libro:cohetes`, cielo.js) se ponen o se quitan los cohetes de cada escena viva. */
+let oyeCohetes = false;
+function vigilarCohetes() {
+  if (oyeCohetes) return;
+  oyeCohetes = true;
+  window.addEventListener('libro:cohetes', () => {
+    const C = window.libroCielo, puestos = Boolean(C?.cohetesPuestos?.(C.dia(), C.hora()));
+    for (const g of document.querySelectorAll('g.cohetes')) if (puestos !== Boolean(g.firstElementChild)) rehacerCohetes(g, puestos);
+  });
+}
 const vecinosVivos = new Map(); // escena → { lug, sol, cometas, turno, conCapa }
 let oyeTurno = false;
 function vigilarTurno(host, info) {
@@ -472,13 +488,17 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-aire', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ai-0'], [0.62, 'ai-1'], [1, 'ai-0']])
     + grad('m-v-loma', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vlo-0'], [0.55, 'vlo-1'], [1, 'vlo-2']])
     + '<radialGradient id="m-v-rayo" cx="0.48" cy="0.55" r="0.62"><stop offset="0" class="ry-0"/><stop offset="0.45" class="ry-1"/><stop offset="1" class="ry-2"/></radialGradient>';
-  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><radialGradient id="m-farol"><stop offset="0" class="fa-0"/><stop offset="0.42" class="fa-1"/><stop offset="1" class="fa-2"/></radialGradient><linearGradient id="m-bano" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ba-0"/><stop offset="1" class="ba-1"/></linearGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><radialGradient id="m-lu"><stop offset="0" class="lu-g0"/><stop offset="0.193" class="lu-g0"/><stop offset="0.193" class="lu-g1"/><stop offset="1" class="lu-g2"/></radialGradient><radialGradient id="m-farol"><stop offset="0" class="fa-0"/><stop offset="0.42" class="fa-1"/><stop offset="1" class="fa-2"/></radialGradient><linearGradient id="m-bano" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ba-0"/><stop offset="1" class="ba-1"/></linearGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
   // Capa del cielo (parallax): cielo, estrellas, fugaz, sol, luna, nubes y aves.
   s += '<g class="par par-cielo">';
   // Un solo rectángulo con el degradado de las cinco capas (antes eran cinco franjas de bordes duros) y el resplandor del horizonte bajo el astro.
   s += `<rect class="cielo-0" x="0" y="0" width="${W}" height="${H}" fill="url(#m-cielo)"/><rect class="resplandor" x="0" y="0" width="${W}" height="${H}" fill="url(#m-resplandor)"/>`;
-  for (let i = 0; i < 46; i++) s += `<circle class="estrella t${i % 5}" cx="${f1(rnd() * W)}" cy="${f1(rnd() * H * 0.5)}" r="${f1(0.5 + rnd() * 1.1)}"/>`;
+  // (Campamento 39, idea 126) Las 46 estrellas, en cinco trazos: uno por ritmo (las de un mismo ritmo ya titilaban a la vez); el mismo
+  // `rnd()` en el mismo orden, y cada estrella, un círculo dentro de su trazo. 41 nodos y 32 animaciones menos, y se ve igual.
+  const ritmos = ['', '', '', '', ''];
+  for (let i = 0; i < 46; i++) { const x = rnd() * W, y = rnd() * H * 0.5, r = 0.5 + rnd() * 1.1; ritmos[i % 5] += circuloD(x, y, r); }
+  s += ritmos.map((d, i) => `<path class="estrella t${i}" d="${d}"/>`).join('');
   // Estrella fugaz (muy esporádica, solo de noche y con todos los efectos): una raya corta que cruza el cielo alto.
   s += `<line class="fugaz" x1="${f1(W * 0.16)}" y1="${f1(H * 0.1)}" x2="${f1(W * 0.16 + 46)}" y2="${f1(H * 0.1 + 20)}"/>`;
   // Lluvia de estrellas real (idea 43): esa noche cruzan más (dos de más a los lados del máximo, cuatro la noche del máximo).
@@ -688,7 +708,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   if (sitio) s += papelPicado(sitio[0], sitio[1], sitio[2], anio, sitio[3], sitio[4]); // (acostado y sin sitio libre: mejor sin tira que encima de algo)
   const altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
-  s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete);
+  // (Campamento 39, idea 125) Los cohetes, solo en su hora (23:40–0:40): el resto de sus cuatro días, el grupo va vacío y se llena al llegar.
+  const Cc = window.libroCielo;
+  s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete, Cc?.cohetesPuestos ? Cc.cohetesPuestos(Cc.dia(), Cc.hora()) : true);
+  vigilarCohetes();
   // (30, idea 19) Se arma en una plantilla (inerte: sin estilos ni medidas), se le quita lo de otra temporada y entra ya podada.
   const plantilla = document.createElement('template');
   plantilla.innerHTML = s + '</g></svg>';
@@ -838,6 +861,7 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
   g.setAttribute('aria-hidden', 'true');
   g.dataset.zona = sitio.zona; // dónde se sentaron: «nieve» (la de siempre), «nieveHoy» o «cumbre» (lo leen las pruebas)
   g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora, cumple });
+  regalosCumbre(g, sitio.lista, ec * 1.1 * K_OSO, silueta);
   // (Campamento 33) ¿Caben estirados? Las puntas de los brazos alzados, con 2 px de aire, dentro de la montaña; si no, no se estiran.
   const caben = sitio.lista.every(({ x, y, s = 1 }) => PUNTAS_ESTIRA.every(([px, py]) => { const e = ec * 1.1 * s * K_OSO, X = x + px * e, Y = y + py * e; return [[0, 0], [2, 0], [-2, 0], [0, -2]].every(([dx, dy]) => dentroDe(silueta, X + dx, Y + dy)); }));
   if (!caben) g.dataset.sinEstirar = '1';
@@ -851,6 +875,28 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
     nieve = b;
   }
   return { cajas: sitio.cajas, n: sitio.lista.length, zona: sitio.zona, nieve };
+}
+
+/**
+ * (Campamento 41, ideas 186 y 216) Los regalos de la cumbre: desde la medianoche del 24 y todo el 25, dos cajitas en la nieve delante de
+ * los osos (el rojo de su cinta y el verde del pueblo), cada una con su lazo hecho de un hueco: dos nodos, fuera del grupo de los osos
+ * (no gastan su tope), justo después de él (se esconden con ellos si un rótulo los pisa o si la nieve todavía no llegó). Solo si caben
+ * en la montaña con aire; si no, no salen. El CSS los enseña (`data-festivo="navidad"` o el turno `nb-doce`); el resto del año ni se dibujan.
+ */
+function regalosCumbre(g, lista, e, silueta) {
+  for (const x of g.parentNode?.querySelectorAll(':scope > .c-regalo') ?? []) x.remove();
+  const md = (window.libroCielo?.dia?.() ?? '').slice(5);
+  if ((md !== '12-24' && md !== '12-25') || !lista.length) return;
+  const frente = [...lista].sort((a, b) => b.y - a.y)[0], s = frente.s ?? 1, u = e * s;
+  // Cada caja con su cinta en cruz (dos huecos: donde se cruzan vuelve a llenarse, y queda el nudo).
+  const caja = (x0, w, h, y) => { const lz = Math.max(0.6, 0.16 * w), lh = Math.max(0.6, 0.16 * h); return `M${f1(x0)} ${f1(y)}h${f1(w)}v${f1(-h)}h${f1(-w)}Z` + `M${f1(x0 + w / 2 - lz / 2)} ${f1(y)}v${f1(-h)}h${f1(lz)}v${f1(h)}Z` + `M${f1(x0)} ${f1(y - h * 0.58)}h${f1(w)}v${f1(-lh)}h${f1(-w)}Z`; };
+  for (const dx of [0, -9, 9]) {
+    const x = frente.x + dx * u, y = frente.y + 3.4 * u, a = [x - 6.4 * u, 5.4 * u, 4.4 * u], b = [x - 0.4 * u, 4.4 * u, 3.4 * u];
+    const esquinas = [[a[0] - 2, y + 2], [a[0] - 2, y - a[2] - 2], [b[0] + b[1] + 2, y + 2], [b[0] + b[1] + 2, y - b[2] - 2]];
+    if (!esquinas.every(([px, py]) => Number.isFinite(px + py) && dentroDe(silueta, px, py))) continue;
+    g.insertAdjacentHTML('afterend', `<path class="c-regalo c-regalo-rojo" fill-rule="evenodd" aria-hidden="true" d="${caja(a[0], a[1], a[2], y)}"/><path class="c-regalo c-regalo-verde" fill-rule="evenodd" aria-hidden="true" d="${caja(b[0], b[1], b[2], y)}"/>`);
+    return;
+  }
 }
 
 /**
@@ -1058,7 +1104,7 @@ function instalarMoneda(host) {
     if (n < 3) return;
     n = 0;
     luna.classList.add('moneda');
-    setTimeout(() => luna.classList.remove('moneda'), sinMovimiento() ? 1400 : 1600);
+    setTimeout(() => luna.classList.remove('moneda'), sinMovimiento() ? 1400 : 2600); // (39b) 2.6 s, como su animación
   });
 }
 
@@ -1511,9 +1557,10 @@ function luminarias(l) {
 /**
  * Sube a "Tú" desde `desde` hasta `hasta` sats. Con movimiento reducido, salta al final.
  * `festejo` ({nivel: 'compra'|'etapa'|'hito', etapa, delta}) solo llega por una compra de esta
- * sesión: el tramo recién subido se enciende y, al llegar, la montaña celebra.
+ * sesión: el tramo recién subido se enciende y, al llegar, la montaña celebra. `sola`: «Tú» anda por su cuenta (al abrir), con el paso
+ * más tranquilo (39b); al anotar, el de siempre.
  */
-export function subir(desde, hasta, ms = 2000, festejo = null) {
+export function subir(desde, hasta, ms = 2000, festejo = null, sola = false) {
   if (!estado) return;
   estado.sats = hasta;
   if (sinMovimiento() || desde === hasta) { colocar(hasta, false); return; }
@@ -1527,6 +1574,7 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
   if (estela) estela.classList.add('viva');
   const yo = host.querySelector('#m-yo');
   yo.classList.add('anda'); // (31) el osito anda mientras sube; al llegar, quieto
+  yo.classList.toggle('sola', sola);
   const t0 = performance.now();
   const paso = (t) => {
     if (estado.host !== host || !host.isConnected) return; // la escena se redibujó (resize)
@@ -1536,7 +1584,7 @@ export function subir(desde, hasta, ms = 2000, festejo = null) {
     const p = colocar(k < 1 ? satsAhora : hasta, k < 1);
     if (estela) estela.style.strokeDasharray = `0 ${f1(l0)} ${f1(Math.max(0, enAltura(alt) - l0))} ${f1(L)}`;
     if (k < 1) requestAnimationFrame(paso);
-    else { yo.classList.remove('anda'); if (festejo) llegar(festejo, p, hasta); }
+    else { yo.classList.remove('anda', 'sola'); if (festejo) llegar(festejo, p, hasta); }
   };
   requestAnimationFrame(paso);
 }
@@ -1558,13 +1606,13 @@ export function fotograma(host, sats, { compras = null, quieto = false, rotulo =
     host.querySelectorAll('#m-etapas .etapa[visibility]').forEach((g) => g.removeAttribute('visibility'));
   }
   estado.enMarcha = !quieto;
-  host.querySelector('#m-yo')?.classList.toggle('anda', !quieto); // (31) en la película, el osito anda mientras avanza
+  for (const c of ['anda', 'sola']) host.querySelector('#m-yo')?.classList.toggle(c, !quieto); // (31) en la película anda mientras avanza (39b: con su paso tranquilo)
   const antes = estado.satsFoto;
   colocar(sats, !quieto);
   if (antes != null && sats > antes) {
     for (const g of host.querySelectorAll('.campo')) {
       const m = Number(g.dataset.m);
-      if (m > antes && m <= sats) { g.classList.add('iza'); setTimeout(() => g.classList.remove('iza'), 1800); }
+      if (m > antes && m <= sats) { g.classList.add('iza'); setTimeout(() => g.classList.remove('iza'), 2500); }
     }
   }
   estado.satsFoto = sats;
@@ -1595,9 +1643,9 @@ function brasas(fx, x, y, n, alcance, retraso = 0) {
     const dist = alcance * (0.45 + Math.random() * 0.55);
     c.style.setProperty('--dx', `${f1(Math.cos(ang) * dist)}px`);
     c.style.setProperty('--dy', `${f1(Math.sin(ang) * dist)}px`);
-    c.style.animationDuration = `${900 + Math.round(Math.random() * 700)}ms`;
-    c.style.animationDelay = `${retraso + i * 22}ms`;
-    retirar(g, retraso + 2000);
+    c.style.animationDuration = `${1500 + Math.round(Math.random() * 1200)}ms`; // (39b) el tempo de la celebración: 1.5–2.7 s
+    c.style.animationDelay = `${retraso + i * 36}ms`;
+    retirar(g, retraso + 3400);
   }
 }
 
@@ -1608,18 +1656,18 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
   if (!fx) return;
   estela.classList.remove('viva');
   estela.classList.add('apaga');
-  setTimeout(() => estela.classList.remove('apaga'), 1000);
+  setTimeout(() => estela.classList.remove('apaga'), 1600);
 
   // Cada compra: brasas desde tu punto, la cifra flotando y la siguiente bandera que se agita.
   brasas(fx, p.x, p.y, nivel === 'compra' ? 9 : 14, nivel === 'compra' ? 46 : 64);
   // (Campamento 31) Al cruzar una etapa o un campamento, el osito de «Tú» levanta los brazos un momento (un cambio a saltos, no una animación).
-  if (nivel !== 'compra') { const yo = host.querySelector('#m-yo'); yo?.classList.add('festeja'); setTimeout(() => yo?.classList.remove('festeja'), 1200); }
-  // (Campamento 25) Y los osos de la cumbre dan un saltito (0.9 s, solo transform; el CSS lo apaga con efectos «ninguno»).
+  if (nivel !== 'compra') { const yo = host.querySelector('#m-yo'); yo?.classList.add('festeja'); setTimeout(() => yo?.classList.remove('festeja'), 2000); }
+  // (Campamento 25) Y los osos de la cumbre dan un saltito (1.8 s desde el 39b, solo transform; el CSS lo apaga con efectos «ninguno»).
   const os = host.querySelector('#m-osos.osos');
   if (os) {
     if (os.classList.contains('salta')) { os.classList.remove('salta'); os.getBoundingClientRect(); } // otro saltito seguido: que empiece de nuevo
     os.classList.add('salta');
-    setTimeout(() => os.classList.remove('salta'), 1200);
+    setTimeout(() => os.classList.remove('salta'), 2000);
   }
   // «+N sats» donde no choque con las etiquetas (banderas y «Tú»): se prueban varios sitios.
   const t = nodo('text', { class: 'flota' }, fx);
@@ -1633,7 +1681,7 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
     t.setAttribute('x', f1(p.x + dx)); t.setAttribute('y', f1(p.y + dy)); t.setAttribute('text-anchor', ancla);
     if (!choca(t.getBBox())) break;
   }
-  retirar(t, 1800);
+  retirar(t, 2800);
   const siguiente = host.querySelector(`.campo[data-m="${campos.find((x) => x.m > hasta)?.m}"]`);
   if (siguiente) { siguiente.classList.add('agita'); setTimeout(() => siguiente.classList.remove('agita'), 1700); }
   if (nivel === 'compra') return;
@@ -1643,22 +1691,22 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
   alba.classList.remove('respira', 'amanece'); void alba.getBBox();
   const grande = nivel === 'hito' || nivel === 'epico';
   alba.classList.add(grande ? 'amanece' : 'respira');
-  setTimeout(() => alba.classList.remove('respira', 'amanece'), 3000);
+  setTimeout(() => alba.classList.remove('respira', 'amanece'), 4800);
   let bandera = host.querySelector(`.campo[data-m="${etapa}"]`);
   const pe = bandera ? campos.find((x) => x.m === etapa).p : camino.getPointAtLength(enAltura(altitud(etapa, esc)));
   if (bandera) {
     bandera.classList.add('iza');
-    setTimeout(() => bandera.classList.remove('iza'), 1800);
+    setTimeout(() => bandera.classList.remove('iza'), 2500);
   } else {
     bandera = nodo('g', { class: 'campo alcanzado iza plantada', transform: `translate(${f1(pe.x)} ${f1(pe.y)})` }, fx);
     nodo('line', { y2: '-24' }, bandera);
     nodo('path', { class: 'banderin', d: 'M0 -24L17 -19L0 -14Z' }, bandera);
-    retirar(bandera, 3200);
+    retirar(bandera, 5100);
   }
   for (const [i, r] of [[0, 12], [1, 12]]) {
     const a = nodo('circle', { class: 'anillo', cx: f1(pe.x), cy: f1(pe.y - 20), r }, fx);
-    a.style.animationDelay = `${i * 260}ms`;
-    retirar(a, 2000);
+    a.style.animationDelay = `${i * 450}ms`;
+    retirar(a, 3000);
   }
   cometa(fx, estado.H, c);
   if (!grande) return;
@@ -1666,7 +1714,7 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
   // Hito grande (1M, 10M, 1 BTC): amanecer completo con luz sobre la cumbre.
   const rl = Math.min(W, estado.H) * 0.22;
   const luz = nodo('circle', { class: 'luz-cima', cx: f1(c.sx), cy: f1(c.sy), r: f1(rl), fill: 'url(#m-luz)' }, fx);
-  retirar(luz, 3000);
+  retirar(luz, 4600);
   brasas(fx, c.sx, c.sy + 6, 10, rl * 0.9, 500);
   if (nivel === 'epico') epico(fx, c, W, estado.H);
 }
@@ -1681,7 +1729,7 @@ function cometa(fx, H, c) {
   const mover = nodo('g', { class: 'cometa-mueve' }, g);
   nodo('line', { class: 'cometa-cola', x1: -86, y1: -30, x2: 0, y2: 0 }, mover);
   nodo('circle', { class: 'cometa-cabeza', r: 3.2 }, mover);
-  retirar(g, 2400);
+  retirar(g, 3400);
 }
 
 /**
@@ -1694,9 +1742,9 @@ function epico(fx, c, W, H) {
   for (let i = 0; i < 34; i++) {
     const gota = nodo('circle', { class: 'luz-gota', cx: f1(c.sx + (Math.random() - 0.5) * W * 0.46), cy: f1(c.sy - H * (0.1 + Math.random() * 0.12)), r: f1(1.2 + Math.random() * 1.8) }, g);
     gota.style.setProperty('--cae', `${f1(H * (0.16 + Math.random() * 0.14))}px`);
-    gota.style.animationDelay = `${300 + Math.round(Math.random() * 2600)}ms`;
+    gota.style.animationDelay = `${500 + Math.round(Math.random() * 4300)}ms`;
   }
-  retirar(g, 6500);
+  retirar(g, 9200);
 }
 
 function describir(sats, meta) {
@@ -1721,7 +1769,7 @@ export function colocarReloj(host = document.querySelector('.montana')) {
   sombra.setAttribute('d', `M${sx.toFixed(1)} ${(gy - ancho).toFixed(1)}L${punta.toFixed(1)} ${gy.toFixed(1)}L${sx.toFixed(1)} ${(gy + ancho).toFixed(1)}Z`);
 }
 setInterval(() => { if (document.visibilityState === 'visible') colocarReloj(); }, 300_000);
-// (Campamento 33) De 7:00 a 8:00, cada cinco minutos, los osos de la cumbre se estiran: la clase `estira` dos segundos y medio (el CSS
+// (Campamento 33) De 7:00 a 8:00, cada cinco minutos, los osos de la cumbre se estiran: la clase `estira` seis segundos (39b; antes 2.6; el CSS
 // los enseña uno tras otro, solo con «todos»). Un cambio a saltos, no una animación que corra siempre.
 let estirados = -1;
 setInterval(() => {
@@ -1731,8 +1779,8 @@ setInterval(() => {
   const os = estado?.host?.querySelector('#m-osos.osos');
   if (!os) return;
   // Uno tras otro: el grande, el chico y el del mameluco, con 0.3 s entre cada uno; a los 2.6 s, todos quietos.
-  [1, 2, 3].forEach((i) => setTimeout(() => os.classList.add(`estira-${i}`), (i - 1) * 300));
-  setTimeout(() => os.classList.remove('estira-1', 'estira-2', 'estira-3'), 2600);
+  [1, 2, 3].forEach((i) => setTimeout(() => os.classList.add(`estira-${i}`), (i - 1) * 600));
+  setTimeout(() => os.classList.remove('estira-1', 'estira-2', 'estira-3'), 6000); // (39b) se estiran en 6 s, no en 2.6
 }, 20_000);
 
 /** Tras una venta (idea 40): la última monedita del lago cae desde arriba y se queda brillando en el fondo. */
@@ -1740,5 +1788,5 @@ export function hundirMoneda() {
   const m = [...document.querySelectorAll('.lago-moneda')].at(-1);
   if (!m) return;
   m.classList.remove('hunde'); void m.getBoundingClientRect(); m.classList.add('hunde');
-  setTimeout(() => m.classList.remove('hunde'), 2200);
+  setTimeout(() => m.classList.remove('hunde'), 3100);
 }

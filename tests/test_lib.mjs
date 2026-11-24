@@ -1369,7 +1369,7 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
     const f = new Date(t).toISOString().slice(0, 10);
     for (let h = 0; h < 24; h += 0.5) {
       const m = C.mueve(f, h);
-      if ((m === 'zompopos' && !C.zompopos(f)) || (m === 'azacuanes' && !C.azacuanes(f)) || (m === 'relampagos' && C.epoca(f) !== 'lluviosa') || (m === 'torogoz' && C.franja(h) !== 'amanecer') || (m === 'gallinas' && (h < 8 || h >= 10)) || (m === 'perro' && (h < 14 || h >= 15)) || (m === 'barre' && (h < 7 || h >= 8)) || (m === 'pelota' && (h < 15 || h >= 16.5))) malos++;
+      if ((m === 'zompopos' && !C.zompopos(f)) || (m === 'azacuanes' && !C.azacuanes(f)) || (m === 'relampagos' && C.epoca(f) !== 'lluviosa') || (m === 'torogoz' && C.franja(h) !== 'amanecer') || (m === 'gallinas' && (h < 8 || h >= 10)) || (m === 'perro' && (h < 14 || h >= 15)) || (m === 'barre' && (h < 7 || h >= 8)) || (m === 'pelota' && (h < 15 || h >= 16.5) && !(f.slice(5) === '12-25' && h >= 9 && h < 12)) || (['brinda', 'chispea', 'fiesta'].includes(m) && !['12-24', '12-25', '12-31', '01-01'].includes(f.slice(5)))) malos++; // (41) el 25 la pelota nueva, de 9:00 a 12:00; la fiesta, solo esas noches
     }
   }
   eq(malos, 0, 'valle 22B: lo que se mueve respeta sus fechas y horas en todo el año (el torogoz, siempre en la franja del amanecer)');
@@ -1788,6 +1788,8 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(sin.includes('copa v-fuego') && !evita.includes('copa v-fuego'), 'pulido del pueblo: si el árbol del primer día está al final de la calle, el árbol de fuego no se pone (los dos troncos parecían una persona)');
 }
 
+/** (Campamento 41) Los turnos de la Navidad entera (cielo.js: turnoFiesta). */
+const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa', 'nb-doce', 'n25-polvora', 'n25-estrena', 'n25-recalentado', 'n25-paseo', 'n25-fresca', 'f31-limpia', 'f31-estreno', 'f31-cena', 'f31-espera', 'f31-doce', 'e1-polvora', 'e1-barre', 'e1-visitas', 'e1-fresca', 'e6-guarda'];
 // Campamento 35 · El Pueblo de los Osos: los turnos (cielo.js), el reparto y el dibujo de los vecinos (arte-vecinos.js).
 {
   const almacen = {};
@@ -1809,7 +1811,9 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
     const f = new Date(t).toISOString().slice(0, 10), sem = new Date(t).getUTCDay();
     for (let h = 0; h < 24; h += 0.25) {
       const x = C.turno(f, h);
-      if (!['duerme', 'amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas', 'misa', 'mercado', 'desfile', 'posada', 'nochebuena'].includes(x) || (x !== 'nochebuena' && (h >= 22 || h < 5) !== (x === 'duerme')) || (x === 'manana' && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
+      const fi = C.turnoFiesta(f.slice(5), h); // (41) los días de la Navidad entera tienen su guion (y su medianoche)
+      if (fi) { if (x !== fi) malos++; continue; }
+      if (!['duerme', 'amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas', 'misa', 'mercado', 'desfile', 'posada'].includes(x) || ((h >= 22 || h < 5) !== (x === 'duerme')) || (x === 'manana' && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
     }
   }
   eq(malos, 0, 'pueblo 35: en cada cuarto de hora de un año, un turno válido; de noche nadie; la escuela solo entre semana fuera de vacaciones');
@@ -1818,12 +1822,15 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
     { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
     { W: 768, H: 900, forma: 'tab', by: 760, bx: 150, pts: [[150, 760], [520, 650], [260, 520], [470, 330]], lago: { cx: 640, cy: 830, rx: 100, ry: 14 }, techo: 300 },
     { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 844, H: 390, forma: 'acostado', by: 360, bx: 430, pts: [[430, 360], [700, 300], [520, 230], [590, 140]], lago: null, techo: 120 },
+    { W: 2560, H: 1440, forma: 'esc', by: 1318, bx: 900, pts: [[900, 1318], [1600, 1100], [980, 880], [1560, 230]], lago: null, techo: 600 },
   ];
-  const TURNOS = ['duerme', 'amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas', 'misa', 'mercado', 'desfile', 'posada', 'nochebuena'], fallos = [];
+  // (41) Con los turnos de la Navidad entera (y sin la estampa de antes, `nochebuena`).
+  const TURNOS = ['duerme', 'amanece', 'manana', 'mananaLibre', 'siesta', 'tarde', 'pupusas', 'misa', 'mercado', 'desfile', 'posada', ...NAVIDAD41], fallos = [];
   for (const c of CONF) for (const sol of [1, -1]) {
     const lug = P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }));
     for (const t of TURNOS) for (const hilos of [0, 3, 6]) {
-      const l = V.reparto(lug, t, { hilos }), fig = l.filter((v) => v.t !== 'pelota'), svg = V.svgVecinos(l, { sol });
+      const l = V.reparto(lug, t, { hilos }), fig = l.filter((v) => !V.COSAS.has(v.t)), svg = V.svgVecinos(l, { sol });
       if (fig.length > V.MAX_VECINOS) fallos.push(`${c.W} ${t}: ${fig.length} figuras`);
       if (/style=|NaN/.test(svg) || !(svg.match(/class="([^"]+)"/g) || []).every((x) => /^class="v-vo-[a-z0-9]+"$/.test(x)) || (svg.match(/<path/g) || []).length > V.TONOS.length + 1) fallos.push(`${c.W} ${t}: el SVG`);
       if (l.some((v) => !V.PERSONAJES.includes(v.t) || !Number.isFinite(v.x + v.y + v.k))) fallos.push(`${c.W} ${t}: alguien sin sitio`);
@@ -1868,7 +1875,8 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(cmL.milpa && (!cmE.milpa || cmE.milpa.x + cmE.milpa.w < 20 || cmE.milpa.x > 620 || cmE.milpa.y + cmE.milpa.h < 610) && cmE.svg === cmL.svg, `pulido: la milpa no cae detrás ni debajo del pueblo, y los campos se ven igual (${JSON.stringify(cmE.milpa && [cmE.milpa.x, cmE.milpa.y].map(Math.round))})`);
   // El reloj de sol (campamento 16) no pone sus piedritas en la calle del pueblo.
   const A = await import('../app/static/arte.js');
-  const rel = A.relojDeSol(890, 716, 1440, [20, 620]), xs = [...rel.matchAll(/cx="([\d.]+)"/g)].map((m) => Number(m[1]));
+  // (Campamento 39) Las piedritas van en dos trazos: el centro de cada una es su «M x y» más su radio «a».
+  const rel = A.relojDeSol(890, 716, 1440, [20, 620]), xs = [...rel.matchAll(/M([\d.]+) [\d.]+a([\d.]+)/g)].map((m) => Number(m[1]) + Number(m[2]));
   ok(xs.length >= 6 && xs.every((x) => x < 16 || x > 624), `pulido: el reloj de sol se estrecha y no pisa la calle del pueblo (${xs.length} piedritas)`);
 }
 
@@ -1882,12 +1890,12 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
   const C = ctx.window.libroCielo, V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
   eq([['2026-10-18', 7.4], ['2026-10-18', 8], ['2026-10-18', 10], ['2026-10-17', 7], ['2026-10-17', 11.9], ['2026-10-17', 12], ['2026-09-15', 9], ['2026-09-15', 12], ['2026-12-10', 19], ['2027-01-06', 19], ['2027-01-07', 19], ['2026-12-24', 18], ['2026-12-24', 23.5], ['2026-12-25', 0.5], ['2026-12-25', 1.5], ['2026-12-31', 20], ['2027-01-01', 0.9]].map(([f, h]) => C.turno(f, h)),
-    ['mananaLibre', 'misa', 'mananaLibre', 'mercado', 'mercado', 'siesta', 'desfile', 'siesta', 'posada', 'posada', 'pupusas', 'nochebuena', 'nochebuena', 'nochebuena', 'duerme', 'nochebuena', 'nochebuena'], 'pueblo 36: la misa del domingo, el sábado de plaza, el desfile, la posada de Navidad y las estrellitas de Nochebuena y del 31 (hasta la 1:00)');
+    ['mananaLibre', 'misa', 'mananaLibre', 'mercado', 'mercado', 'siesta', 'desfile', 'siesta', 'posada', 'posada', 'pupusas', 'nb-cena', 'nb-misa', 'nb-doce', 'duerme', 'f31-cena', 'f31-doce'], 'pueblo 36: la misa del domingo, el sábado de plaza, el desfile, la posada de Navidad y (41) el guion de Nochebuena y del 31 (hasta la 1:00)');
   const lug = P.lugaresPueblo(P.sitiosPueblo({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400, sol: 1 })), quien = (t) => V.reparto(lug, t).map((v) => v.t);
   ok(quien('misa').includes('cura') && quien('misa').filter((t) => t === 'espaldas').length === 2, `pueblo 36: el domingo dos vecinos de espaldas camino de la puerta y el padre en ella (${quien('misa')})`);
   ok(quien('mercado').filter((t) => t === 'vendedora').length === 2 && !quien('mercado').includes('minutero'), 'pueblo 36: el sábado, dos vendedoras con su canasto y más vecinos (sin puestos ni el de las minutas)');
   ok(quien('desfile').includes('abanderado') && quien('desfile').includes('bombo') && /v-vo-azul/.test(V.svgVecinos(V.reparto(lug, 'desfile'))) && !/v-vo-azul/.test(V.svgVecinos(V.reparto(lug, 'tarde'))), 'pueblo 36: el 15 de septiembre, el abanderado con la azul y blanco y el del bombo (el azul, solo ese día)');
-  ok(quien('nochebuena').filter((t) => t === 'oseznoLuz').length === 3 && (V.svgVecinos(V.reparto(lug, 'nochebuena')).match(/v-vo-brasa" d="([^"]*)"/)?.[1].match(/M/g) || []).length === 3, 'pueblo 36: en Nochebuena, tres oseznos con su estrellita');
+  ok(quien('nb-cena').filter((t) => t === 'oseznoLuz').length === 3 && (V.svgVecinos(V.reparto(lug, 'nb-cena')).match(/v-vo-brasa" d="([^"]*)"/)?.[1].match(/M/g) || []).length >= 3, 'pueblo 36 (41): en la cena de Nochebuena, tres oseznos con su estrellita');
   // Frente al nacimiento, con aire: la osa de espaldas no toca el portal (su techo mide 8.6 unidades a cada lado de su centro).
   for (const sol of [1, -1]) {
     const sp = P.sitiosPueblo({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400, sol }), pz = sp.piezas.find((q) => q.tipo === 'plaza');
@@ -1912,6 +1920,75 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(/En el pueblo, los vecinos son osos polares\./.test(tv) && !/\b(tu|tus|tú)\b/i.test(tv) && /con su milpa/.test(tv) && !/milpa/.test(sin), 'pueblo 38: la descripción de la montaña dice que los vecinos son osos polares (sin tutear) y nombra la milpa solo si está');
   const vl = A.vidaLago({ cx: 300, cy: 600, rx: 80, ry: 12, k: 1.4 });
   ok(/class="v-cy-cuerpo v-cy-oso"/.test(vl) && /class="v-cy-cuerpo v-cy-sombrero"/.test(vl) && !/style=|NaN/.test(vl), 'pueblo 38: el pescador del cayuco es un oso con su sombrero (y de noche, como siempre, se esconde con el cayuco)');
+}
+
+// Campamento 39 · Hacer sitio 2: los cohetes solo en su hora (125), las luciérnagas más livianas (127) y el reloj de sol en dos trazos (128).
+{
+  const almacen = {};
+  const raiz = { dataset: {}, atributos: new Set(), toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty() {} } };
+  const avisos = [];
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem() {}, removeItem() {} }, setInterval() {}, Intl, Date, Math, Number, Object, Event: class { constructor(t) { this.type = t; } }, dispatchEvent: (ev) => avisos.push(ev.type) };
+  ctx.window = ctx;
+  almacen['libro.dia'] = '2026-12-24'; almacen['libro.hora'] = '21';
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo;
+  eq([['2026-12-24', 23.6], ['2026-12-24', 23.67], ['2026-12-25', 0.2], ['2026-12-25', 0.66], ['2026-12-25', 0.67], ['2026-12-31', 23.7], ['2027-01-01', 0.5], ['2026-12-30', 23.9], ['2026-12-25', 23.9]].map(([f, h]) => C.cohetesPuestos(f, h)),
+    [false, true, true, true, false, true, true, false, false], 'sitio 39: los cohetes se ponen a las 23:40 del 24 y del 31 y se quitan a las 0:40');
+  for (const [d, h] of [['2026-12-24', 23.5], ['2026-12-24', 23.75], ['2026-12-24', 23.9], ['2026-12-25', 0.5], ['2026-12-25', 0.75]]) { almacen['libro.dia'] = d; almacen['libro.hora'] = String(h); C.aplicar(); }
+  eq(avisos.filter((x) => x === 'libro:cohetes').length, 2, 'sitio 39: un aviso «libro:cohetes» al ponerlos (23:45) y otro al quitarlos (0:45), ninguno más');
+  const A = await import('../app/static/arte.js');
+  const co = A.cohetes(390, 500, 1.25, 120), vacio = A.cohetes(390, 500, 1.25, 120, false);
+  ok((co.match(/<(path|circle)/g) ?? []).length > 20 && !/<(path|circle)/.test(vacio) && /data-cw="390" data-cs="500" data-ck="1.25" data-ca="120"/.test(vacio), 'sitio 39: fuera de su hora el grupo de los cohetes va vacío, con sus medidas para ponerlos');
+  const lu = A.luciernagas({ W: 390, H: 664 });
+  ok((lu.match(/<(g|circle|path)/g) ?? []).length === 25 && (lu.match(/fill="url\(#m-lu\)"/g) ?? []).length === 12 && !/NaN|style=/.test(lu), 'sitio 39: doce luciérnagas, dos nodos cada una (el grupo que brilla y el círculo que vuela)');
+  const rel = A.relojDeSol(200, 500, 390);
+  ok((rel.match(/class="reloj-piedra"/g) ?? []).length === 1 && (rel.match(/class="reloj-piedra reloj-medio"/g) ?? []).length === 1 && (rel.match(/M/g) ?? []).length === 11 + 1, 'sitio 39: el reloj de sol, sus once piedritas en dos trazos');
+}
+
+// Campamento 41 · La Navidad entera: cada fecha, su guion por turnos, su franja de fiesta y su reparto (sin NaN, en cada tamaño y luz).
+{
+  const almacen = {};
+  const raiz = { dataset: {}, atributos: new Set(), toggleAttribute() {}, style: { setProperty() {} } };
+  const avisos = [];
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem() {}, removeItem() {} }, setInterval() {}, Intl, Date, Math, Number, Object, Event: class { constructor(t) { this.type = t; } }, dispatchEvent: (ev) => avisos.push(ev.type) };
+  ctx.window = ctx;
+  almacen['libro.dia'] = '2026-12-24'; almacen['libro.hora'] = '12';
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo;
+  const dia = (f, hs) => hs.map((h) => C.turno(f, h));
+  eq(dia('2026-12-24', [3, 4.5, 6.9, 7, 11.4, 11.5, 17.7, 17.75, 20.9, 21, 23.6, 23.67]), ['duerme', 'nb-madruga', 'nb-madruga', 'nb-compras', 'nb-compras', 'nb-tamales', 'nb-tamales', 'nb-cena', 'nb-cena', 'nb-misa', 'nb-misa', 'nb-doce'], 'fiesta 41: Nochebuena, el día entero (pan, compras, tamales, cena, misa de gallo y las doce desde las 23:40)');
+  eq(dia('2026-12-25', [0.9, 1, 6.9, 7, 9, 12, 14, 17.75, 21.9, 22]), ['nb-doce', 'duerme', 'duerme', 'n25-polvora', 'n25-estrena', 'n25-recalentado', 'n25-paseo', 'n25-fresca', 'n25-fresca', 'duerme'], 'fiesta 41: Navidad (nadie hasta las 7:00; estrenos, recalentado, paseo y la fresca)');
+  eq(dia('2026-12-31', [4.9, 5, 11.5, 17.75, 22.9, 23, 23.99]).concat(dia('2027-01-01', [0.5, 1, 8.9, 9, 12, 17.75, 22])), ['duerme', 'f31-limpia', 'f31-estreno', 'f31-cena', 'f31-cena', 'f31-espera', 'f31-espera', 'f31-doce', 'e1-polvora', 'e1-polvora', 'e1-barre', 'e1-visitas', 'e1-fresca', 'duerme'], 'fiesta 41: el 31 (la espera desde las 23:00) y el 1 (el abrazo de las doce y nadie hasta las 9:00)');
+  eq(dia('2027-01-06', [13.9, 14, 17.7, 17.75]).concat(dia('2027-01-07', [15])), ['siesta', 'e6-guarda', 'e6-guarda', 'posada', 'tarde'], 'fiesta 41: el 6 por la tarde se guarda la Navidad; el 7 ya es un día cualquiera');
+  // Que no dependa del día de la semana: un 24 y un 31 en domingo (2028) y un 24 en sábado (2033) siguen su guion, no la misa ni la plaza.
+  eq([['2028-12-24', 8], ['2028-12-31', 8], ['2033-12-24', 9], ['2028-12-24', 9.5]].map(([f, h]) => C.turno(f, h)), ['nb-compras', 'f31-limpia', 'nb-compras', 'nb-compras'], 'fiesta 41: un domingo o un sábado de fiesta sigue el guion de la fiesta');
+  eq([17.7, 17.75, 20.9, 21, 23.6, 23.7].map((h) => C.mueve('2026-12-24', h)).concat([0.9, 1].map((h) => C.mueve('2026-12-25', h)), [9, 11.9, 12].map((h) => C.mueve('2026-12-25', h)), [17.75, 22.9, 23].map((h) => C.mueve('2026-12-31', h)), [0.5, 1.5].map((h) => C.mueve('2027-01-01', h))),
+    ['pericos', 'brinda', 'brinda', 'fiesta', 'fiesta', 'chispea', 'chispea', 'luciernagas', 'pelota', 'pelota', 'teleferico', 'brinda', 'brinda', 'fiesta', 'chispea', 'luciernagas'], 'fiesta 41 (210): la noche del 24 y del 31 es de la fiesta (brinda uno, la misa y la espera quietas, a las doce chispea un volcancito) y las luciérnagas descansan; el 25, la pelota nueva por la mañana');
+  eq(['2026-12-24', '2026-12-25', '2026-12-31', '2027-01-01', '2027-01-06', '2026-12-26'].map(C.festivo), ['nochebuena', 'navidad', 'fin', 'anio', 'reyes', ''], 'fiesta 41: html[data-festivo] el día entero');
+  // El reparto: en cada tamaño (teléfono, acostado, tablet, escritorio, tele) y con la luz de cada lado, la figura clave de cada turno sale.
+  const V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
+  const CLAVE = { 'nb-madruga': 'panadero', 'nb-compras': 'escalera', 'nb-tamales': 'tamales', 'nb-cena': 'brindis', 'nb-misa': 'cura', 'nb-doce': 'abrazo', 'n25-polvora': 'polvora', 'n25-estrena': 'oseznoJuguete', 'n25-recalentado': 'sentado', 'n25-paseo': 'hombros', 'n25-fresca': 'pupusera', 'f31-limpia': 'tendedero', 'f31-estreno': 'volcancitoApagado', 'f31-cena': 'brindis', 'f31-espera': 'espaldas', 'f31-doce': 'abrazo', 'e1-polvora': 'polvora', 'e1-barre': 'escoba', 'e1-visitas': 'vecina', 'e1-fresca': 'sentado', 'e6-guarda': 'escalera' };
+  const FORMAS = [
+    { W: 320, H: 640, forma: 'tel', by: 505, bx: 45, pts: [[45, 505], [190, 455], [95, 395], [200, 275]], lago: { cx: 268, cy: 590, rx: 50, ry: 10 }, techo: 225 },
+    { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 844, H: 390, forma: 'acostado', by: 360, bx: 430, pts: [[430, 360], [700, 300], [520, 230], [590, 140]], lago: null, techo: 120 },
+    { W: 768, H: 900, forma: 'tab', by: 760, bx: 150, pts: [[150, 760], [520, 650], [260, 520], [470, 330]], lago: { cx: 640, cy: 830, rx: 100, ry: 14 }, techo: 300 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 2560, H: 1440, forma: 'esc', by: 1318, bx: 900, pts: [[900, 1318], [1600, 1100], [980, 880], [1560, 230]], lago: null, techo: 600 },
+  ];
+  const fallos = [];
+  for (const c of FORMAS) for (const sol of [1, -1]) {
+    const lug = P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }));
+    for (const [t, clave] of Object.entries(CLAVE)) {
+      const l = V.reparto(lug, t), svg = V.svgVecinos(l, { sol }), actores = l.filter((v) => v.actor);
+      if (!l.some((v) => v.t === clave)) fallos.push(`${c.W}/${c.forma} ${t}: falta ${clave}`);
+      if (/NaN|undefined|Infinity|style=/.test(svg)) fallos.push(`${c.W} ${t}: el SVG`);
+      if (actores.length > 1) fallos.push(`${c.W} ${t}: ${actores.length} actores`);
+      if ((t === 'nb-cena' || t === 'f31-cena') && !l.some((v) => v.t === (c.forma === 'tel' || c.forma === 'acostado' ? 'mesaCorta' : 'mesa'))) fallos.push(`${c.W} ${t}: la mesa`);
+    }
+  }
+  eq(fallos, [], 'fiesta 41: en cada tamaño y luz, cada turno de la Navidad con su figura clave, un solo actor y ningún NaN en sus trazos (la mesa corta en el teléfono)');
+  ok(['nb-cena', 'f31-cena'].every((t) => V.reparto(P.lugaresPueblo(P.sitiosPueblo({ ...FORMAS[4], sol: 1 })), t).find((v) => v.actor)?.actor === 'brinda') && V.reparto(P.lugaresPueblo(P.sitiosPueblo({ ...FORMAS[4], sol: 1 })), 'nb-doce').find((v) => v.actor)?.actor === 'chispea', 'fiesta 41: en la cena brinda uno y a las doce chispea un volcancito (cada uno, el actor de su franja)');
 }
 
 console.log(`OK ${n} comprobaciones`);
