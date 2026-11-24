@@ -1,5 +1,7 @@
 # Campamento 34 · El pueblo vive
 
+*(Campamento 39b: las gallinas pican dos veces, levantan la cabeza y descansan, en 3.6 s.)*
+
 Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md). El presupuesto y el banco: [30-hacer-sitio.md](30-hacer-sitio.md), [docs/rendimiento.md](../rendimiento.md). El pueblo: [22c-valle-de-verdad.md](22c-valle-de-verdad.md); uno a la vez: [22b-valle-vivo-parte-2.md](22b-valle-vivo-parte-2.md).
 
 ## Campamento 34 · El pueblo vive (ideas 49, 50 y 51)

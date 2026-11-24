@@ -403,6 +403,7 @@ export function pintarAcento() {
 }
 // Una etapa que sea potencia de 10 desde 1M (1M, 10M, 1 BTC…) es un hito grande.
 export const esHito = (m) => m >= 1e6 && Math.abs(Math.log10(m) - Math.round(Math.log10(m))) < 1e-9;
+// (39b · El tempo) La subida al anotar responde a tu dedo: sigue en 1.4 s (decidido con el dueño, no 2.4); lo que la acompaña se alargó.
 export const MS_SUBIDA = 1400;
 
 export function pintarMontana(animar, desde, festejo = null) {
@@ -429,11 +430,12 @@ export function pintarMontana(animar, desde, festejo = null) {
     const m = etapaCelebrada(festejo.antes, R.sats);
     f = { delta: festejo.delta, etapa: m, nivel: cruzo1Btc(festejo.antes, R.sats) ? 'epico' : !m || rangoEtapa(m) === 'intermedia' ? 'compra' : esHito(m) ? 'hito' : 'etapa' };
     // El acento dorado llega cuando acaba la celebración de 1 BTC, no antes.
-    if (f.nivel === 'epico') { acentoRetenido = true; setTimeout(() => { acentoRetenido = false; pintarAcento(); }, reducido() ? 0 : MS_SUBIDA + 1800); }
+    if (f.nivel === 'epico') { acentoRetenido = true; setTimeout(() => { acentoRetenido = false; pintarAcento(); }, reducido() ? 0 : MS_SUBIDA + 3000); }
   }
   const ms = animar ? 2400 : f ? MS_SUBIDA : 1600;
-  ocupadaHasta = performance.now() + (inicio !== R.sats ? ms : 0) + (f ? 7000 : 0); // la subida y su celebración no se cortan
-  if (inicio !== R.sats) subir(inicio, R.sats, ms, f);
+  // La subida y su celebración no se cortan (39b: la de 1 BTC dura unos 9 s después de llegar).
+  ocupadaHasta = performance.now() + (inicio !== R.sats ? ms : 0) + (f?.nivel === 'epico' ? 11_000 : f ? 7000 : 0);
+  if (inicio !== R.sats) subir(inicio, R.sats, ms, f, animar);
 }
 // (Campamento 20) Si el bloque del saldo crece después de dibujar la montaña (llega el precio y «ya realizaste» baja a su renglón, otra
 // letra…), la cumbre quedaría bajo el texto: se redibuja, cuando acaba la subida si estaba subiendo. Si encoge no hace falta.

@@ -26,7 +26,8 @@ export function celebrar(antes, constancia = [], sello = null) {
   const el = $('hito-cel');
   clearTimeout(celebrar.t);
   const mostrar = (i) => {
-    if (i >= tarjetas.length) return;
+    if (i >= tarjetas.length) { cerrarConUnToque.quitar?.(); return; }
+    if (i === 0) cerrarConUnToque(el);
     const t = tarjetas[i];
     $('hc-k').textContent = t.k;
     $('hc-txt').textContent = t.txt;
@@ -43,10 +44,23 @@ export function celebrar(antes, constancia = [], sello = null) {
     else { el.style.removeProperty('justify-items'); el.style.removeProperty('padding-left'); }
     el.hidden = false;
     el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
-    celebrar.t = setTimeout(() => { el.hidden = true; celebrar.t = setTimeout(() => mostrar(i + 1), 250); }, t.larga ? 4200 : t.grande ? 2600 : t.ligera ? 1700 : 2000);
+    celebrar.t = setTimeout(() => { el.hidden = true; celebrar.t = setTimeout(() => mostrar(i + 1), 250); }, MS_TARJETA[t.larga ? 'larga' : t.grande ? 'grande' : t.ligera ? 'ligera' : 'normal']);
   };
   // La primera aparece cuando tu punto llega a la bandera, no antes.
   celebrar.t = setTimeout(() => mostrar(0), reducido() ? 0 : MS_SUBIDA);
+}
+/** (39b · El tempo) Cuánto se queda cada tarjeta: lo que dura su animación en el CSS (`.hito-cel`: 2.6, 3.5 y 4.5 s; la de 1 BTC, un rato más). */
+export const MS_TARJETA = { ligera: 2600, normal: 3500, grande: 4500, larga: 6000 };
+/**
+ * (39b) Las tarjetas duran más que antes, así que no bloquean: el primer toque o tecla en cualquier sitio las cierra todas (y ese toque
+ * sigue a lo suyo: la tarjeta no recibe toques). Lo que celebra la montaña se retira solo.
+ */
+function cerrarConUnToque(el) {
+  cerrarConUnToque.quitar?.();
+  const cerrar = () => { clearTimeout(celebrar.t); el.hidden = true; quitar(); };
+  const quitar = () => { cerrarConUnToque.quitar = null; for (const ev of ['pointerdown', 'keydown']) removeEventListener(ev, cerrar, true); };
+  cerrarConUnToque.quitar = quitar;
+  for (const ev of ['pointerdown', 'keydown']) addEventListener(ev, cerrar, { capture: true, passive: true });
 }
 
 /** El anillo del tramo da un destello cuando tu punto llega. */
@@ -79,7 +93,8 @@ async function vistaPrevia(nivel) {
   pintarMontana(false, antes, { antes, delta: despues - antes });
   if (!reducido()) setTimeout(() => destello(), MS_SUBIDA);
   celebrar({ sats: antes }, nivel === 'constancia' ? [{ tipo: 'compras', valor: R.constancia?.compras?.valor ?? 25 }] : []);
-  await pausa(nivel === 'epico' ? 9000 : nivel === 'hito' ? 6500 : nivel === 'paso' ? 4200 : 5200);
+  // (39b) La espera cubre la subida y lo más largo de cada celebración al tempo nuevo (1 BTC: unos 9 s después de llegar).
+  await pausa(nivel === 'epico' ? 12_000 : nivel === 'hito' ? 7500 : nivel === 'paso' ? 4800 : 7000);
   pintar({ montana: true }); // vuelve al estado real
   previaActiva = false;
 }

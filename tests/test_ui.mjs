@@ -2924,7 +2924,7 @@ try {
       ok(pos.mad, 'madrugada: a las 23:00 el velo está puesto');
       for (let i = 0; i < 3; i++) { await c3.p.mouse.click(pos.x, pos.y); await c3.p.waitForTimeout(100); }
       ok(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda')), 'luna-moneda: tres toques seguidos la convierten en moneda');
-      await c3.p.waitForTimeout(2000);
+      await c3.p.waitForTimeout(3000); // (39b) la moneda gira en 2.6 s
       ok(!(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda'))), 'luna-moneda: vuelve a ser luna');
       // Modo madrugada (20): se apaga desde «Tu cuenta» y de día no existe.
       await c3.p.click('#cuenta-btn'); await c3.p.waitForTimeout(300);
@@ -6112,7 +6112,7 @@ try {
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'todos' })); await cerrar(t.p);
       v = await valle(t.p);
       ok(v.humo, '22 fogón: humo a la hora del café con «todos»');
-      eq(v.ritmoHumo, ['6.6s/0s', '6.6s/-2.2s', '6.6s/-4.4s'], '22 fogón: las tres bocanadas, a destiempo como siempre (22B: por clase)');
+      eq(v.ritmoHumo, ['16s/0s', '16s/-14s', '16s/-12s'], '22 fogón: las tres bocanadas, una tras otra y su pausa (22B: por clase; 39b: al tempo de ambiente)');
       await t.ctx.close();
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-07-10', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
       ok(!(await valle(t.p)).humo, '22 fogón: con «esenciales» no hay humo (es ambiente)');
@@ -6127,7 +6127,7 @@ try {
       t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'todos' })); await cerrar(t.p);
       v = await valle(t.p);
       ok(v.pisVis && v.pis === fam.familia.personas && v.pisCaja && v.pisCaja.y > v.saldoAbajo, `22 piscuchas: ${v.pis} en el cielo del valle, por debajo del saldo`);
-      eq(v.ritmoPis, ['6.3s/-2s', '4.6s/-3.1s', '6.3s/-2s', '5.2s/0s', '4.6s/-3.1s', '5.2s/0s'].slice(0, v.pis), '22 piscuchas: cada una con su ritmo de siempre (22B: por clase)');
+      eq(v.ritmoPis, ['13s/-4s', '9s/-6s', '13s/-4s', '10s/0s', '9s/-6s', '10s/0s'].slice(0, v.pis), '22 piscuchas: cada una con su ritmo (22B: por clase; 39b: el doble de lento)');
       eq(v.milpa, ['doblada'], '22 milpa: en octubre, doblada');
       await t.ctx.close();
       t = await entrar(navegador, srv, ADMIN, { hora: 15 }, conDia('2026-10-20', { 'libro.efectos': 'esenciales' })); await cerrar(t.p);
@@ -7248,9 +7248,9 @@ try {
       await t.p.waitForFunction(() => document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 25000 });
       const r = await t.p.evaluate(() => ({ sin: document.querySelector('#m-osos.osos').hasAttribute('data-sin-estirar'), ve: [...document.querySelectorAll('#m-osos .oso .oso-brazos')].map((b) => getComputedStyle(b).display) }));
       ok(r.sin || r.ve[0] === 'inline', `33 a las 7:00 los de la cumbre se estiran, uno tras otro (${JSON.stringify(r)})`);
-      await t.p.waitForFunction(() => !document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 5000 });
+      await t.p.waitForFunction(() => !document.querySelector('#m-osos.osos')?.classList.contains('estira-1'), null, { timeout: 9000 });
       const q = await t.p.evaluate(() => [...document.querySelectorAll('#m-osos .oso .oso-brazos')].every((b) => getComputedStyle(b).display === 'none'));
-      ok(q, '33 a los dos segundos y medio, otra vez quietos');
+      ok(q, '33 a los seis segundos (39b), otra vez quietos');
       await t.ctx.close();
       // Con «esenciales» no (es ambiente); y a mediodía el reloj no los pone.
       const e = await entrar(navegador, anio, ADMIN, { hora: 7, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'esenciales' }));
@@ -7702,6 +7702,111 @@ try {
       });
       ok(br.sin === null && br.n > 0 && br.arriba === br.n, `41 a 768 px a las doce: los de la cumbre, con los brazos arriba (${JSON.stringify(br)})`);
       await b.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 39b: el tempo (tres tempos con nombre; lo ambiental, los personajes y las fiestas, más despacio; la interfaz y la subida al anotar, como siempre)
+  await bloque(async () => {
+    const conLs = (o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } };
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Cada regla del CSS con animación, resuelta: el valor de la regla en un elemento de prueba (las variables de :root se heredan).
+    const duraciones = (p) => p.evaluate(() => {
+      const prueba = document.createElement('i');
+      document.body.append(prueba);
+      const r = [];
+      const recorre = (reglas) => { for (const x of reglas) {
+        if (x.cssRules && !(x instanceof CSSKeyframesRule)) recorre(x.cssRules);
+        if (!(x instanceof CSSStyleRule)) continue;
+        const a = x.style.getPropertyValue('animation'), d = x.style.getPropertyValue('animation-duration');
+        if (!a && !d) continue;
+        prueba.style.animation = ''; prueba.style.animationDuration = '';
+        if (a) prueba.style.animation = a; else prueba.style.animationDuration = d;
+        const cs = getComputedStyle(prueba);
+        r.push({ sel: x.selectorText, nombre: a ? cs.animationName : x.style.getPropertyValue('animation-name'), dur: cs.animationDuration, tempo: /--t-/.test(a || d) });
+      } };
+      for (const h of document.styleSheets) { try { recorre(h.cssRules); } catch { /* otra hoja */ } }
+      const tr = [];
+      for (const h of document.styleSheets) { try { const mira = (rs) => { for (const x of rs) { if (x.cssRules) mira(x.cssRules); if (x instanceof CSSStyleRule && /--t-/.test(x.style.getPropertyValue('transition'))) tr.push(x.selectorText); } }; mira(h.cssRules); } catch { /* otra hoja */ } }
+      prueba.remove();
+      return { r, tr };
+    });
+    // La tabla del tempo (campamento 39b): [un trozo único del selector, la animación, su duración]. Si alguien la vuelve a acortar, esto falla.
+    const TABLA = [
+      ['.nube.n1', 'nube', '110s'], ['.nube.n2', 'nube', '150s'], ['.nube.n3', 'nube', '130s'],
+      ['.par-lejos', 'asienta', '2s'], ['.par-medio', 'asienta', '2s'], ['.escena-abre[data-efectos="todos"] .resplandor', 'enciende', '2.6s'], ['.escena-abre[data-efectos="todos"] #m-yo', 'aparece-yo', '1s'],
+      ['.escena', 'escena-fundido', '0.9s'],
+      ['.eco-fantasma', 'eco-respira', '8s'], ['.campo.alcanzado .banderin', 'ondea', '5.2s'], ['.pag-login .campo .banderin', 'ondea', '5.2s'],
+      ['.hito-cel.va p', 'hito', '3.5s'], ['.hito-cel.grande.va p', '', '4.5s'], ['.hito-cel.ligera.va p', '', '2.6s'],
+      ['.hc-lacre .lacre', 'lacre-cae', '1.1s'], ['.hc-lacre .lc-destello', 'lacre-destello', '1.4s'], ['.sello-sem-ico.nuevo', 'ss-estampa', '0.9s'], ['.sello-sem-ico.nuevo .ss-golpe', 'ss-golpe', '1s'],
+      ['.estela.apaga', 'estela-apaga', '1.5s'], ['.brasa', 'brasa', '2s'], ['.flota', 'flota', '2.6s'], ['.campo.iza line', 'iza-mastil', '1.2s'], ['.campo.iza .banderin', 'iza-banderin', '1.6s'],
+      ['.plantada', 'plantada-sale', '5s'], ['.anillo', 'anillo', '2.4s'], ['.alba.respira', 'cielo-respira', '4s'], ['.alba.amanece', 'cielo-amanece', '4.5s'], ['.luz-cima', 'luz-cima', '4.5s'],
+      ['.campo.iza .farol-halo', 'farol-enciende', '2.2s'], ['.campo.alcanzado .humo', 'farol-respira', '9s'], ['.pino-nuevo', 'planta', '1.5s'],
+      ['.lago-onda', 'onda-lago', '12s'], ['.lago-reflejo', 'brillo-lago', '9s'], ['.cometa-mueve', 'cometa', '3.2s'], ['.aurora-epica', 'aurora-epica', '9s'], ['.luz-gota', 'luz-gota', '3.2s'],
+      ['.pp-bandera', 'pp-ondea', '6.5s'], ['.pp-bandera:nth-child(2n)', '', '5.6s'], ['[data-cohetes] .chispa', 'chispa', '2.2s'], ['.volcancito:nth-child(2) .chispa', '', '2.5s'], ['.sb-sube', 'silba', '5.5s'], ['.sb-estallido', 'estalla', '5.5s'],
+      ['.moneda-gira', 'moneda-gira', '2.6s'], ['.moneda-brillo', 'moneda-brillo', '2.6s'], ['.lago-moneda.hunde', 'moneda-hunde', '2.6s'],
+      ['.v-hu', 'v-humo', '16s'], ['.v-hu-b', '', '18s'], ['.v-cy-remo', 'v-remo', '4.2s'], ['.v-pis', 'v-pis', '10s'], ['.v-pis-r2', '', '13s'], ['.v-pis-r3', '', '9s'],
+      ['.osos.salta .oso', 'oso-salta', '1.8s'], ['.osos.salta .oso-pie', 'oso-pie', '1.8s'], ['.oso-saluda', 'oso-saluda', '3.2s'], ['[data-efectos="todos"] .oso-tu', 'tu-respira', '4.8s'], ['#m-yo.anda.sola .oso-tu', '', '0.55s'],
+      ['svg.v-capa-gallina', 'gallina-pica', '3.6s'], ['svg.v-actor-barre', 'vo-barre', '7.2s'], ['svg.v-actor-pelota', 'vo-bota', '9s'], ['svg.v-actor-brinda', 'vo-brinda', '3.2s'], ['svg.v-actor-chispea', 'vo-chispea', '1.8s'],
+    ];
+    // Lo que no se alarga: la interfaz, que responde a tu dedo, y el paso de «Tú» al anotar (decisión del dueño: la subida sigue en 1.4 s).
+    const INTERFAZ = [
+      ['dialog[open]', 'dlg-entra', '0.24s'], ['.m-tarjeta:not([hidden])', 'dlg-entra', '0.22s'], ['.lista li.entra', 'fila-entra', '0.35s'], ['.lista li.sale', 'fila-sale', '0.3s'], ['.lista li.resalte', 'fila-resalte', '2.4s'],
+      ['.g-entra', 'g-entra', '0.35s'], ['.g-sale', 'g-sale', '0.35s'], ['::view-transition-group(grafico)', '', '0.28s'], ['.cuerpo.entra >', 'tarjeta-entra', '0.5s'], ['.semanas.entra i', 'sem-entra', '0.45s'],
+      ['.campo.agita .banderin', 'agita', '0.42s'], ['.hp-toque.sonando', 'hp-suena', '0.42s'], ['.recarga[data-estado="cargando"] i', 'recarga-late', '0.9s'], ['.lienzo.esqueleto::after', 'esq', '1.4s'],
+      ['.d-comp[open] .cp-papel', 'cp-sale', '0.42s'], ['.d-pelicula[open]', 'pe-entra', '0.3s'], ['.tr-anillo.destello', 'anillo-destello', '0.9s'], ['#m-yo.anda .oso-tu', 'tu-anda', '0.32s'],
+    ];
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' }, [conLs, { ef: 'todos' }]);
+      await cerrar(t.p);
+      const { r, tr } = await duraciones(t.p);
+      const busca = (sel, nombre) => r.filter((x) => x.sel.includes(sel) && (!nombre || x.nombre === nombre) && (nombre || !x.nombre));
+      const exacta = (sel, nombre) => { const c = busca(sel, nombre); return c.length > 1 ? (c.filter((x) => x.sel.endsWith(sel)).length === 1 ? c.filter((x) => x.sel.endsWith(sel)) : c) : c; };
+      const mal = (lista) => lista.map(([sel, nombre, dur]) => { const c = exacta(sel, nombre); return c.length === 1 && c[0].dur === dur ? null : `${sel} ${nombre}: ${c.length === 1 ? c[0].dur : `${c.length} reglas`} (se esperaba ${dur})`; }).filter(Boolean);
+      eq(mal(TABLA), [], `39b la tabla del tempo: las ${TABLA.length} duraciones de lo ambiental, los personajes, las fiestas y la celebración, como se decidió`);
+      eq(mal(INTERFAZ), [], `39b la interfaz conserva su tempo: diálogos, filas, gráfico, pestañas, «cargando», el banderín que se agita y el paso de «Tú» al anotar (${INTERFAZ.length})`);
+      const conTempo = r.filter((x) => x.tempo).length;
+      ok(conTempo === TABLA.length && tr.length === 0, `39b los tres tempos (--t-gesto, --t-accion, --t-ambiente) solo en las ${TABLA.length} reglas de la tabla (${conTempo}) y en ninguna transición (${tr.join(', ')})`);
+      ok(r.every((x) => !/NaN/.test(x.dur)) && await t.p.evaluate(() => ![...document.querySelectorAll('#montana [d]')].some((e) => /NaN/.test(e.getAttribute('d')))), '39b ninguna duración ni ningún trazo con NaN');
+      // Al abrir, «Tú» anda por su cuenta con el paso tranquilo (`sola`); al anotar, la subida dura lo de siempre (1.4 s) y con el paso de siempre.
+      ok(await t.p.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--t-gesto').trim() === '1.6s'), '39b --t-gesto es 1.6 s');
+      await t.p.evaluate(() => {
+        const yo = () => document.querySelector('#montana #m-yo');
+        window.__sube = { t0: 0, t1: 0, sola: false };
+        new MutationObserver(() => { const y = yo(); if (!y) return; if (y.classList.contains('anda') && !window.__sube.t0) { window.__sube.t0 = performance.now(); window.__sube.sola = y.classList.contains('sola'); } if (window.__sube.t0 && !window.__sube.t1 && !y.classList.contains('anda')) window.__sube.t1 = performance.now(); })
+          .observe(document.getElementById('montana'), { attributes: true, attributeFilter: ['class'], subtree: true });
+      });
+      await t.p.evaluate(() => window.scrollTo(0, 0));
+      await t.p.click('#anotar'); await t.p.waitForTimeout(400);
+      await t.p.fill('#h-sats', '40000');
+      await t.p.click('#guardar'); await t.p.waitForTimeout(500);
+      if (/Sí/.test((await t.p.textContent('#guardar').catch(() => '')) || '')) await t.p.click('#guardar');
+      await t.p.waitForFunction(() => window.__sube.t1 > 0, null, { timeout: 8000 });
+      const sube = await t.p.evaluate(() => window.__sube);
+      const ms = sube.t1 - sube.t0;
+      ok(ms > 1100 && ms < 1900 && !sube.sola, `39b al anotar, «Tú» sube en lo de siempre (${Math.round(ms)} ms; decidido: 1.2–1.4 s, no 2.4) y con su paso de siempre (sola: ${sube.sola})`);
+      ok(t.consola.length === 0, `39b consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
+      // La tarjeta de la celebración dura más, pero se cierra con un toque en cualquier sitio (y no tapa nada: no recibe toques).
+      const c = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' }, [conLs, { ef: 'todos' }]);
+      await cerrar(c.p);
+      await c.p.evaluate(() => window.scrollTo(0, 0));
+      await c.p.click('#anotar'); await c.p.waitForTimeout(400);
+      // Lo bastante para cruzar la siguiente etapa: así sale su tarjeta.
+      const falta = await c.p.evaluate(() => { const t = document.getElementById('t-falta')?.innerText ?? ''; return Number(t.replace(/[^\d]/g, '')) || 0; });
+      await c.p.fill('#h-sats', String(Math.max(1000, falta + 1000)));
+      await c.p.click('#guardar'); await c.p.waitForTimeout(500);
+      if (/Sí/.test((await c.p.textContent('#guardar').catch(() => '')) || '')) await c.p.click('#guardar');
+      await c.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 8000 });
+      await c.p.waitForTimeout(600);
+      const antes = await c.p.evaluate(() => !document.getElementById('hito-cel').hidden);
+      await c.p.mouse.click(20, 700);
+      await c.p.waitForTimeout(150);
+      const despues = await c.p.evaluate(() => document.getElementById('hito-cel').hidden);
+      ok(antes && despues, `39b la tarjeta de la etapa se cierra con un toque (se veía: ${antes}; cerrada: ${despues})`);
+      await c.ctx.close();
     } finally {
       anio.parar();
     }
