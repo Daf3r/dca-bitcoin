@@ -9,6 +9,18 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 63) Anotar y buscar; resume también los menús (2026-12-k), que salen casi a la vez. Lo de la hoja de anotar («Guardar»
+    // dice qué falta, ayudas más cortas) solo lo ve quien anota: no va aquí.
+    id: '2026-12-l',
+    items: [
+      'En «Movimientos», buscar y filtrar van en una fila.',
+      'En el teléfono, los filtros se abren con «Filtros», que dice cuál está puesto.',
+      'Los campos donde se escribe se distinguen mejor, también con sol.',
+      '«Tu cuenta» se cierra desde arriba y es más corta.',
+      'En el pueblo sale humo de una chimenea y el cayuco se mece en el lago.',
+    ],
+  },
+  {
     // (Campamento 62) Los menús; resume también el director del valle (2026-12-j), que sale casi a la vez.
     id: '2026-12-k',
     items: [
