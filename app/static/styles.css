@@ -3557,19 +3557,21 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
   html[data-pestanas]:not([data-tv]) .escena { height: calc(100vh - var(--dock-total)); height: calc(100svh - var(--dock-total)); min-height: 440px; --pie: 46; }
   html[data-pestanas]:not([data-tv]) .cuerpo { padding-top: 22px; padding-bottom: calc(var(--dock-total) + 40px); }
   /* (Campamento 62 · 303) «Movimientos» es la palabra más larga del dock y no cabía en su casilla (74 px de texto en 67 a 390 px; 67 en 60
-     a 360; 73 en 69 para quien solo mira a 320): se salía de su píldora. Su casilla toma un poco de la de «Historia», su vecina (44 px de
-     texto, le sobra sitio). Los dos lados del hueco siguen sumando lo mismo (2fr y 2fr): «Anotar», centrado en la pantalla, queda justo
-     sobre el hueco. El modo compacto (letra grande, menos de 360 px) tiene sus propias columnas (`:has`, más abajo). */
+     a 360): se salía de su píldora. Con «Anotar», su casilla toma un poco de la de «Historia», su vecina (44 px de texto, le sobra sitio);
+     los dos lados del hueco siguen sumando lo mismo (2fr y 2fr): «Anotar», centrado en la pantalla, queda justo sobre el hueco. Quien solo
+     mira conserva sus cuatro pestañas parejas (campamento 20); a menos de 360 px su letra baja un punto. El modo compacto (letra grande,
+     menos de 360 px) tiene sus propias columnas (`:has`, más abajo). */
   /* La barra: fija abajo, con su margen. Sin la píldora que se desliza (con el hueco del centro las columnas no son iguales): la activa se
      pinta sola, con su fondo tintado, la letra gruesa, el dibujo en naranja y la rayita. */
   html[data-pestanas]:not([data-tv]) .pestanas {
     position: fixed; z-index: 7; top: auto; bottom: var(--dock-abajo);
     left: max(var(--dock-m), env(safe-area-inset-left)); right: max(var(--dock-m), env(safe-area-inset-right));
     max-width: 34rem; margin: 0 auto; min-height: var(--dock-h);
-    grid-template-columns: 1fr 1fr var(--dock-hueco) 0.84fr 1.16fr; gap: 2px; padding: 5px;
+    grid-template-columns: 1fr 1fr var(--dock-hueco) 1fr 1fr; gap: 2px; padding: 5px;
     border-radius: 26px; background-color: var(--dock-fondo); border: 1px solid var(--s3);
     box-shadow: inset 0 1px 0 var(--filo), 0 -6px 26px -14px rgb(0 0 0 / 0.55), 0 16px 32px -18px rgb(0 0 0 / 0.8);
   }
+  html[data-pestanas][data-boton]:not([data-tv]) .pestanas { grid-template-columns: 1fr 1fr var(--dock-hueco) 0.84fr 1.16fr; }
   html[data-pestanas]:not([data-tv]) .pestanas [data-pestana="historia"] { grid-column: 4; }
   html[data-pestanas]:not([data-tv]) .pestanas [data-pestana="movimientos"] { grid-column: 5; }
   html[data-pestanas]:not([data-tv]) .pestanas::before { display: none; }
@@ -3601,6 +3603,7 @@ html[data-efectos="ninguno"] .dh-sec > summary::after { transition: none; }
 }
 /* Menos de 390 px: la letra de las pestañas baja un punto para que «Movimientos» quepa junto al hueco. */
 @media (min-width: 360px) and (max-width: 389px) { html[data-pestanas][data-boton]:not([data-tv]) .pestanas button { font-size: 0.6875rem; } }
+@media (max-width: 359px) { html[data-pestanas]:not([data-boton]):not([data-tv]) .pestanas button { padding-inline: 0; font-size: 0.6875rem; } } /* (62) quien solo mira, a 320 */
 /* Compacto: donde las palabras no caben (menos de 360 px con el hueco de «Anotar», o letra grande o muy grande en el teléfono) solo la pestaña activa lleva su nombre
    a la vista y su columna es más ancha (en menos de 360 px, menos: ver abajo); las demás, su dibujo (el nombre sigue ahí para los lectores de pantalla). */
 @media (max-width: 359px) {
