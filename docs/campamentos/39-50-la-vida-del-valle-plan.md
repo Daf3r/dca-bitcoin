@@ -1,6 +1,6 @@
 # Campamentos 39–50 · La vida del valle (plan aprobado, en curso)
 
-**Hecho**: el **39 · Hacer sitio 2** (24 nov 2026, [39-hacer-sitio-2.md](39-hacer-sitio-2.md)).
+**Hecho**: el **39 · Hacer sitio 2** (24 nov 2026, [39-hacer-sitio-2.md](39-hacer-sitio-2.md)) y el **41 · La Navidad entera** (24 nov 2026, [41-la-navidad-entera.md](41-la-navidad-entera.md)).
 
 **Estado (19 nov 2026): definido y APROBADO POR EL DUEÑO («todo aprobado»), no hecho.** Es la siguiente ronda de ideas para dar más vida al paisaje, al valle, al pueblo de osos, a los osos de la cumbre y a «Tú», según la hora, el día y la fecha. Se implementa **otro día**, cuando el dueño marque lo que quiere. Nada de esto está en el código; lo implementado hasta hoy son los campamentos 26–38 (PR #97, en producción).
 
@@ -54,7 +54,7 @@ El 19 nov 2026 el dueño dijo **«todo aprobado»**: todas las ideas del artifac
 
 ## Orden recomendado (una sola rama, un commit por campamento, un solo PR; el CI de GitHub es limitado)
 1. **39 · Hacer sitio 2** (ids 124–135) — **hecho** (24 nov 2026; 124–128, 131 y 135; 129, 130 y 132–134 siguen «después»). Primero: libera unos 131 nodos a las 21:00 de Nochebuena y unos 96 en el pico (23:50–0:30), y unas 44 animaciones de noche. Sin cambio visible. La 125 (cohetes solo en su hora) cambia una regla chica.
-2. **41 · Fiestas: la Navidad entera** (24, 25, 31, 1 y 6 de enero; ids 210–218 y 162). **Tiene fecha**: la ventana navideña empieza el 1 de diciembre. La 210 es la pieza que lo permite: el día de fiesta cambia los turnos, y la noche del 24 y del 31 las luciérnagas descansan para que se mueva un actor de la fiesta.
+2. **41 · Fiestas: la Navidad entera** (24, 25, 31, 1 y 6 de enero; ids 210–218 y 162) — **hecho** (24 nov 2026; lo que depende de ideas de campamentos posteriores —dormirse, la carpa, el oso de nieve, de espaldas al atardecer, el gallo, el tecolote, la hamaca— queda para ellos). **Tiene fecha**: la ventana navideña empieza el 1 de diciembre. La 210 es la pieza que lo permite: el día de fiesta cambia los turnos, y la noche del 24 y del 31 las luciérnagas descansan para que se mueva un actor de la fiesta.
 3. **40 · El día entero del pueblo** (136–148).
 4. **42 · Fiestas: el resto del año** (149–151, 153, 156–160, 219–222): 10 de mayo, Día del Padre, 14–15 de septiembre, Día del Niño, Difuntos, Semana Santa y los dos cumpleaños.
 5. **43 · Temporadas del pueblo** (152, 154, 155, 161, 163, 164) · **44 · Lluvia y verano** (165–171) · **45 · Animales de aquí** (172–178 y 54) · **46 · Luna y estrellas** (179–183) · **47 · Los osos de la cumbre** (184–190, 24, 26, 45) · **48 · «Tú» con más gestos** (191–198, 40, 41) · **49 · El pueblo se mueve 2** (199–204, 116, 25, 118, 119) · **50 · Cambios grandes al paisaje** (205–209 y 123).

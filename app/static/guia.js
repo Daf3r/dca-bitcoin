@@ -120,12 +120,12 @@ export const FECHAS_ALMANAQUE = [
   ['15 de septiembre', '2027-09-15'], ['Azacuanes y piscuchas (octubre)', '2026-10-20'], ['Navidad en el pueblo (1 dic)', '2026-12-01'],
   ['Nochebuena', '2026-12-24'], ['Navidad', '2026-12-25'], ['31 de diciembre', '2026-12-31'], ['1 de enero', '2027-01-01'], ['6 de enero', '2027-01-06'],
 ];
-const hhmm = (h) => `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
-/** Los tramos de un día: cada vez que cambia el turno del pueblo o lo que se mueve, de cuarto en cuarto de hora. */
+const hhmm = (h) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+/** Los tramos de un día: cada vez que cambia el turno del pueblo o lo que se mueve, de cinco en cinco minutos (el 41 cambia a las 23:40). */
 export function tramosDelDia(C, dia) {
   const t = [];
-  for (let q = 0; q < 96; q++) {
-    const h = q / 4, clave = `${C.turno(dia, h)}|${C.mueve(dia, h)}`;
+  for (let q = 0; q < 288; q++) {
+    const h = q / 12, clave = `${C.turno(dia, h)}|${C.mueve(dia, h)}`;
     if (!t.length || t.at(-1).clave !== clave) t.push({ clave, desde: h, turno: C.turno(dia, h), mueve: C.mueve(dia, h) });
   }
   return t.map((x, i) => ({ ...x, hasta: t[i + 1]?.desde ?? 24 }));

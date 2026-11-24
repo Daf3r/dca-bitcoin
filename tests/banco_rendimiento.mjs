@@ -35,13 +35,19 @@ export const PRESUPUESTO = { principal: 56, frente: 16, 'par-cielo': 44, 'par-le
 const CASOS = [
   { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 830 },
   { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 830 },
-  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 900 },
+  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 899 },
   { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 825 },
   { caso: 'noche de lluvia', dia: '2026-07-10', hora: 21, declara: 825 },
   // El pico del año: los cohetes (14 animaciones, en el frente) solo de 23:50 a 0:30 del 24 y del 31; esos 40 minutos el frente admite 28
   // (medido el 24 nov 2026: 26 en Nochebuena, con el papel picado de la fiesta; ya era así antes del 39, solo que el banco no lo medía).
-  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 931, frente: 28 },
+  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 938, frente: 28 },
   { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 905, frente: 28 },
+  // (Campamento 41) La Navidad entera: un turno de cada fecha nueva (los demás pesan lo mismo: otro reparto de los mismos trazos).
+  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 907 },
+  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 900 },
+  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 870 },
+  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 908, frente: 28 },
+  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 867 },
 ];
 /** (Campamento 39, idea 131) Las pantallas anchas (escritorio 1440×900 y tele 2560×1440): solo los nodos, frente a `TOPES_ANCHO`. */
 const ANCHOS = [[1440, 900], [2560, 1440]].flatMap(([w, h]) => [
