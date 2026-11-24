@@ -245,13 +245,13 @@ html[data-sin~="velo"] .escena-velo { will-change: auto; } /* (para medir en el 
 @keyframes asienta { from { translate: 0 18px; opacity: 0.4; } to { translate: none; opacity: 1; } }
 @keyframes enciende { from { opacity: 0; } to { opacity: 1; } }
 @keyframes aparece-yo { from { opacity: 0; } to { opacity: 1; } }
-html.escena-abre[data-efectos="todos"] .par-lejos { animation: asienta 1.2s var(--resorte) both; }
-html.escena-abre[data-efectos="todos"] .par-medio { animation: asienta 1.2s var(--resorte) 0.12s both; }
-html.escena-abre[data-efectos="todos"] .resplandor { animation: enciende 1.6s ease-out both; }
-html.escena-abre[data-efectos="todos"] #m-yo { animation: aparece-yo 0.6s ease-out 0.5s both; }
+html.escena-abre[data-efectos="todos"] .par-lejos { animation: asienta calc(var(--t-gesto) * 1.25) var(--resorte) both; }
+html.escena-abre[data-efectos="todos"] .par-medio { animation: asienta calc(var(--t-gesto) * 1.25) var(--resorte) 0.2s both; }
+html.escena-abre[data-efectos="todos"] .resplandor { animation: enciende calc(var(--t-gesto) * 1.625) var(--t-sale) both; }
+html.escena-abre[data-efectos="todos"] #m-yo { animation: aparece-yo calc(var(--t-gesto) * 0.625) var(--t-sale) 0.8s both; }
 /* App instalada (iPhone): tras la imagen de arranque la escena entra con un fundido corto, para que no haya un corte seco. */
 @media (display-mode: standalone) {
-  html:not([data-tv]):is([data-efectos="todos"], [data-efectos="esenciales"]) .escena { animation: escena-fundido 0.45s ease-out both; }
+  html:not([data-tv]):is([data-efectos="todos"], [data-efectos="esenciales"]) .escena { animation: escena-fundido calc(var(--t-gesto) * 0.5625) var(--t-sale) both; }
 }
 @keyframes escena-fundido { from { opacity: 0.55; } to { opacity: 1; } }
 /* El logo entra al abrir (solo una vez, ~0.6 s): la montañita se dibuja y la marca aparece. Nunca retrasa el saldo. */
