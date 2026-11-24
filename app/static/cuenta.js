@@ -140,11 +140,12 @@ function fundirTema() {
   clearTimeout(fundidoTimer);
   fundidoTimer = setTimeout(() => raiz.classList.remove('tema-fundido'), 450);
 }
-const etiquetaMadrugada = () => { $('dc-madrugada').textContent = `Modo madrugada (22:00 a 5:00): ${window.libroCielo?.madrugadaPref() ? 'automático' : 'apagado'}`; };
+// (Campamento 62) Las horas van en el valor cuando está encendido: la etiqueta corta cabe en su renglón.
+const etiquetaMadrugada = () => { $('dc-madrugada').textContent = `Modo madrugada: ${window.libroCielo?.madrugadaPref() ? 'de 22:00 a 5:00' : 'apagado'}`; };
 const etiquetaSonido = () => { $('dc-sonido').textContent = `Sonido al guardar: ${sonidoActivo() ? 'encendido' : 'apagado'}`; };
 // (Campamento 21B) La tele duerme de 23:00 a 5:00; por dispositivo se puede dejar despierta toda la noche.
 const etiquetaTeleDuerme = () => { $('dc-tv-duerme').textContent = `La tele duerme de noche: ${teleDuermeActiva() ? 'sí' : 'no'}`; };
-const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'con saldo y precio' : 'sin saldo'}`; };
+const etiquetaTitulo = () => { $('dc-titulo').textContent = `Título de la pestaña: ${tituloConSaldo() ? 'saldo y precio' : 'sin saldo'}`; };
 // Tamaño de letra (normal → grande → muy grande) y contraste (automático → alto → normal): `accesibilidad.js` los aplica antes de pintar.
 const NOMBRE_LETRA = { '': 'normal', grande: 'grande', 'muy-grande': 'muy grande' };
 const SIGUIENTE_LETRA = { '': 'grande', grande: 'muy-grande', 'muy-grande': '' };

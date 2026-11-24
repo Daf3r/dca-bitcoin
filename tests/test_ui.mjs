@@ -2928,7 +2928,7 @@ try {
       ok(!(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda'))), 'luna-moneda: vuelve a ser luna');
       // Modo madrugada (20): se apaga desde «Tu cuenta» y de día no existe.
       await c3.p.click('#cuenta-btn'); await c3.p.waitForTimeout(300);
-      ok(/automático/.test(await c3.p.textContent('#dc-madrugada')), 'madrugada: el botón dice automático');
+      ok(/22:00 a 5:00/.test(await c3.p.textContent('#dc-madrugada')), 'madrugada: el botón dice sus horas (encendido)');
       await c3.p.click('#dc-madrugada'); await c3.p.waitForTimeout(200);
       ok(/apagado/.test(await c3.p.textContent('#dc-madrugada')) && !(await c3.p.evaluate(() => document.documentElement.hasAttribute('data-madrugada'))), 'madrugada: apagarlo quita el velo');
       await c3.ctx.close();
