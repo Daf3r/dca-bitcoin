@@ -984,7 +984,7 @@ html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, ht
    para que la regla de abajo pueda dejar correr en la película lo que cruza de paso. */
 :is(.escena[data-desliza], .pe-montana[data-corre]) :where(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
   .eco-fantasma, .yo-halo, #m-yo:not(.anda) .oso-tu, .tele-cabina, .v-capa-vecino, .yo-nav, .llama, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
-  .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
+  .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-amb-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
   .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }
 /* En la película son 15 s, no un instante: lo que cruza de paso (una estrella fugaz, el torogoz, los cohetes, la llovizna, los pétalos,
    las bandadas, los zompopos, el relámpago) se quedaría colgado a medio camino. Eso sigue: va y viene, y pesa poco. */
@@ -3937,9 +3937,13 @@ html[data-cielo="noche"] .v-halo { opacity: 0.2; }
 html:is([data-cielo="amanecer"], [data-cielo="atardecer"]) .v-halo { opacity: 0.1; }
 
 /* El humo del fogón (ambiente): a la hora del café y de la cena, tres bocanadas que suben y se deshacen. */
+/* (Campamento 51, F3) Desde el director, el humo es un ambiental: de 5:00 a 20:00 (`data-ambiente~="humo"`), no solo a la hora del café y
+   de la cena; en la escena de la app va en su capa pequeña (montana.js: ambientalesDelValle) y la animación, bajo la misma condición que
+   lo enseña (38b). */
 .v-humos { display: none; }
-html[data-fogon][data-efectos="todos"] .v-humos { display: inline; }
-.v-hu { fill: color-mix(in oklab, #ebe5dc 62%, var(--c3)); opacity: 0; transform-box: fill-box; transform-origin: center; animation: v-humo var(--t-ambiente) var(--t-sale) infinite; }
+html[data-ambiente~="humo"][data-efectos="todos"] .v-humos { display: inline; }
+.v-hu { fill: color-mix(in oklab, #ebe5dc 62%, var(--c3)); opacity: 0; transform-box: fill-box; transform-origin: center; }
+html[data-ambiente~="humo"][data-efectos="todos"] .v-hu { animation: v-humo var(--t-ambiente) var(--t-sale) infinite; }
 .v-hu-1 { animation-delay: -14s; } .v-hu-2 { animation-delay: -12s; }
 .v-hu-b { animation-duration: calc(var(--t-ambiente) * 1.125); }
 /* (39b) La segunda chimenea, con sus bocanadas a 2 s la una de la otra en su ciclo de 18 s. */
@@ -4054,6 +4058,10 @@ html[data-cielo="atardecer"] .v-cy-halo { opacity: 0.6; }
 @keyframes v-deriva { from { transform: translateX(4px); } to { transform: translateX(-7px); } }
 html[data-efectos="todos"][data-cielo="amanecer"] .v-cy-remo { animation: v-remo calc(var(--t-accion) * 0.7) var(--t-suave) infinite; }
 html[data-efectos="todos"][data-cielo="amanecer"] .v-cayuco { animation: v-deriva 26s ease-in-out infinite alternate; }
+/* (Campamento 51, F3) En la escena de la app el cayuco va en su capa pequeña: a la deriva al amanecer y también de día (5:00–16:30,
+   `data-ambiente~="cayuco"`); lo que se mueve es la capa entera (un elemento HTML), no un grupo del dibujo. De noche, quieto como siempre. */
+.montana svg.v-amb-cayuco .v-cayuco { animation: none; }
+html[data-efectos="todos"][data-ambiente~="cayuco"] .montana svg.v-amb-cayuco { animation: v-deriva 26s ease-in-out infinite alternate; }
 
 /* Las luces del valle: quietas y cálidas, solo de noche (con cualquier nivel de efectos). */
 .v-luces { display: none; }
@@ -4631,6 +4639,12 @@ html[data-efectos="todos"] .osos.estira-3:not([data-sin-estirar]) > .oso:nth-of-
    grande se esconden (un cambio al empezar y otro al acabar la franja). El perro cruza una vez y se queda echado.
    El Día de la Cruz (3 de mayo): la cruz de palo con frutas y su cadena de papel, quieta (se poda los demás días). */
 .montana svg.v-capa-animal { display: none; position: absolute; pointer-events: none; overflow: visible; will-change: transform; }
+/* (Campamento 51, F3) Las capas de los ambientales (el humo, el cayuco): como las de los animales, encima del dibujo grande y debajo del
+   frente. El humo se esconde entero fuera de su hora; el cayuco se ve siempre (de noche, solo su lámpara) y se mueve solo a su hora. */
+.montana svg.v-capa-amb { position: absolute; pointer-events: none; overflow: visible; }
+.montana svg.v-amb-humo { display: none; }
+html[data-ambiente~="humo"][data-efectos="todos"] .montana svg.v-amb-humo { display: block; }
+html[data-ambiente~="cayuco"][data-efectos="todos"] .montana svg.v-amb-cayuco { will-change: transform; }
 html[data-efectos="todos"][data-mueve="gallinas"] svg.v-capa-gallina, html[data-efectos="todos"][data-mueve="perro"] svg.v-capa-perro { display: block; }
 html[data-efectos="todos"][data-mueve="gallinas"] #m-v-pie .v-gallina, html[data-efectos="todos"][data-mueve="perro"] #m-v-pie .v-animal { visibility: hidden; }
 .v-capa-gallina path { fill: color-mix(in oklab, #b8643a var(--v-luz), var(--monte-sombra)); }
