@@ -62,10 +62,12 @@ async function entrar(...a) {
   try { return await entrarYa(...a); } finally { gasto.entrar += Date.now() - t0; gasto.entradas++; }
 }
 async function entrarYa(browser, srv, [usuario, clave], opts = {}, init = null) {
-  const { hora = 22, pestanas = false, espera = true, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
+  // (Campamento 62) `masAjustes`: «Más ajustes de este aparato» (Tu cuenta) abierto, como lo dejaría quien lo abrió una vez; las pruebas
+  // viejas tocan esos siete ajustes sin abrirlo (como «todo junto»). La prueba del 62 lo mira cerrado.
+  const { hora = 22, pestanas = false, espera = true, masAjustes = true, ...opcionesContexto } = opts; // el cielo depende de la hora: las pruebas fijan una (por defecto, de noche); la mayoría prueba «Todo junto» (la página larga de siempre) y el bloque de pestañas pide `pestanas: true`
   const ctx = await browser.newContext({ ...devices['iPhone 13'], ...opcionesContexto });
   const p = await ctx.newPage();
-  await p.addInitScript(([h, pes]) => { try { localStorage.setItem('libro.hora', String(h)); if (!pes) localStorage.setItem('libro.pestanas', 'todo'); } catch { /* sin almacenamiento */ } }, [hora, pestanas]);
+  await p.addInitScript(([h, pes, mas]) => { try { localStorage.setItem('libro.hora', String(h)); if (!pes) localStorage.setItem('libro.pestanas', 'todo'); if (mas) localStorage.setItem('libro.cuenta.mas', '1'); } catch { /* sin almacenamiento */ } }, [hora, pestanas, masAjustes]);
   if (init) await (Array.isArray(init) ? p.addInitScript(init[0], init[1]) : p.addInitScript(init));
   const consola = [];
   p.on('console', (m) => ['error', 'warning'].includes(m.type()) && consola.push(m.text()));
@@ -88,6 +90,9 @@ async function entrarYa(browser, srv, [usuario, clave], opts = {}, init = null) 
 const editarFila = async (p, fila) => { await (typeof fila === 'string' ? p.locator(fila) : fila).click(); await p.waitForTimeout(300); await p.click('#cp-editar'); };
 /** La fecha de la hoja de anotar: «Otro día» enseña el calendario (campamento 18) y ahí se escribe. */
 const ponerFecha = async (p, f) => { await p.click('#h-dia-otro'); await p.fill('#h-fecha', f); };
+// (Campamento 63) En el teléfono los tipos y «Fechas y orden» de la lista van bajo «Filtros»: se abren antes de tocarlos (en escritorio no hace falta).
+const abrirFiltros = async (p) => { if (await p.locator('#l-filtros').isVisible() && (await p.getAttribute('#l-filtros', 'aria-expanded')) !== 'true') await p.click('#l-filtros'); };
+const abrirFechas = async (p) => { await abrirFiltros(p); if ((await p.getAttribute('#l-mas', 'aria-expanded')) !== 'true') await p.click('#l-mas'); };
 const verVista = async (p, v) => { await p.click(`#vistas button[data-vista="${v}"]`); await p.waitForTimeout(400); };
 /** (Campamento 61) Espera a que acaben las transiciones de CSS en curso (un cambio de tema…), en vez de una espera fija que con la
  * máquina cargada se queda corta. Las animaciones de ambiente (infinitas) no cuentan. */
@@ -246,6 +251,8 @@ const PESOS = [
   ['pulido integral: el movimiento (nada co', 113], // 20 comprobaciones
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
+  ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
+  ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -612,7 +619,7 @@ try {
         const antes = await p.isChecked(`#av-lista input[data-cat="${cat}"]`);
         await p.click(`#av-lista input[data-cat="${cat}"]`);
         await p.waitForTimeout(400);
-        await p.click('#dc-avisos [data-cuenta="volver"]');
+        await p.click('#dc-volver');
         await p.click('#dc-avisos-btn');
         await p.waitForTimeout(500);
         eq(await p.isChecked(`#av-lista input[data-cat="${cat}"]`), !antes, `${quien}: la preferencia se guardó`);
@@ -622,7 +629,7 @@ try {
         eq(await p.locator('#av-rec-l').isVisible(), quien === 'admin', `${quien}: el recordatorio de compra solo lo ve el admin`);
         await p.selectOption('#av-desde', '6');
         await p.waitForTimeout(400);
-        await p.click('#dc-avisos [data-cuenta="volver"]');
+        await p.click('#dc-volver');
         await p.click('#dc-avisos-btn');
         await p.waitForTimeout(500);
         eq(await p.inputValue('#av-desde'), '6', `${quien}: el horario se guardó y se recuerda`);
@@ -660,7 +667,7 @@ try {
           await p.press('#av-w-monto', 'Tab');
           await p.waitForTimeout(300);
           ok((await p.textContent('#av-error')).includes('solo números') && (await p.inputValue('#av-w-monto')) === '1,500,000', 'admin: un monto que no es número se rechaza y vuelve a lo guardado');
-          await p.click('#dc-avisos [data-cuenta="volver"]');
+          await p.click('#dc-volver');
           await p.click('#dc-avisos-btn');
           await p.waitForTimeout(500);
           eq(await p.inputValue('#av-w-monto'), '1,500,000', 'admin: el monto se recuerda');
@@ -766,7 +773,7 @@ try {
           await p.evaluate(async ({ sats, id }) => {
             await fetch('/api/traslados', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify({ fecha: new Date().toISOString().slice(0, 10), sats, sentido: 'a_exchange', wallet_id: id }) });
           }, { sats: parte, id: ws[0].id });
-          await p.click('#dc-datos [data-cuenta="volver"]');
+          await p.click('#dc-volver');
           await p.click('#dc-datos-btn').catch(() => {});
           await p.reload({ waitUntil: 'networkidle' });
           await p.waitForTimeout(3200);
@@ -1297,18 +1304,18 @@ try {
       eq(await p.locator('#lista .fila:not(:has(.f-extra))').count(), 0, 'búsqueda: todas son compras extra');
       await p.click('#l-limpiar');
       eq([await p.inputValue('#l-buscar'), await res()], ['', ''], 'filtros: «Quitar filtros» limpia todo');
-      await p.click('#l-chips button[data-f="venta"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="venta"]');
       eq(await filas(), compras.filter((c) => c.tipo === 'venta').length, 'filtro: ventas y gastos');
-      await p.click('#l-chips button[data-f="traslado"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="traslado"]');
       eq([await filas(), await p.evaluate(() => document.querySelector('#l-chips [data-f="traslado"]').getAttribute('aria-pressed'))], [traslados.length, 'true'], 'filtro: traslados');
-      await p.click('#l-chips button[data-f="txid"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="txid"]');
       eq(await filas(), 0, 'filtro: «Con TXID» sin ninguno dice que nada coincide');
       ok((await p.textContent('#lista .vacio')).includes('Nada coincide'), 'filtro: mensaje de que nada coincide');
       await quitar();
 
       // Rango de fechas y totales intactos
       const desde = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
-      await p.click('#l-mas summary');
+      await abrirFechas(p);
       await p.fill('#l-desde', desde);
       await p.waitForTimeout(150);
       const esperadas = compras.filter((c) => c.fecha >= desde).length + traslados.filter((t) => t.fecha >= desde).length;
@@ -1334,7 +1341,7 @@ try {
       await p.reload({ waitUntil: 'networkidle' });
       await p.waitForTimeout(2500);
       eq(await p.inputValue('#l-orden'), 'monto', 'orden: se recuerda en el dispositivo');
-      await p.click('#l-mas summary');
+      await abrirFechas(p);
       await p.selectOption('#l-orden', 'recientes');
       ok(await p.evaluate(() => localStorage.getItem('libro.lista.orden')) === null, 'orden: el de siempre borra la preferencia');
 
@@ -1997,10 +2004,10 @@ try {
       await p.reload({ waitUntil: 'networkidle' });
       await p.waitForTimeout(2500);
       // Las últimas 8 filas no traen de todo: se filtra por cada tipo para ver sus iconos
-      const contar = async (f, sel) => { await p.click(`#l-chips button[data-f="${f}"]`); await p.waitForTimeout(300); return p.locator(`#lista ${sel}`).count(); };
+      const contar = async (f, sel) => { await abrirFiltros(p); await p.click(`#l-chips button[data-f="${f}"]`); await p.waitForTimeout(300); return p.locator(`#lista ${sel}`).count(); };
       const nTras = await contar('traslado', '.f-sats .ico'), nExtra = await contar('extra', '.f-extra .ico'), nTx = await contar('txid', '.f-copiar .ico');
       const nExt = await p.locator('#lista .f-tx .ico').count(); // (queda filtrado por «Con TXID»)
-      await p.click('#l-chips button[data-f="todos"]');
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="todos"]');
       const info = await p.evaluate(() => ({
         simbolos: ['traslado', 'externo', 'rayo', 'copiar', 'campana', 'lapiz', 'sube', 'baja'].map((n) => !!document.getElementById(`i-${n}`)),
         texto: document.getElementById('lista').innerText,
@@ -2671,7 +2678,7 @@ try {
       ok(conBono > conCumple && conCumple > 0, `el escenario trae etiquetas (bono ${conBono}, cumpleaños ${conCumple})`);
       // El filtro de la lista
       await r.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await r.p.click('#l-mas summary');
+      await abrirFechas(r.p);
       ok(await r.p.locator('#l-etq-l').isVisible(), 'con etiquetas sale el selector «Etiqueta»');
       const opciones = await r.p.$$eval('#l-etq option', (os) => os.map((o) => o.textContent));
       eq(opciones, ['Todas', `bono (${conBono})`, `cumpleaños (${conCumple})`], 'el selector lista las etiquetas de más a menos usadas, con su cuenta');
@@ -2968,7 +2975,7 @@ try {
       ok(!(await c3.p.evaluate(() => document.querySelector('.luna').classList.contains('moneda'))), 'luna-moneda: vuelve a ser luna');
       // Modo madrugada (20): se apaga desde «Tu cuenta» y de día no existe.
       await c3.p.click('#cuenta-btn'); await c3.p.waitForTimeout(300);
-      ok(/automático/.test(await c3.p.textContent('#dc-madrugada')), 'madrugada: el botón dice automático');
+      ok(/22:00 a 5:00/.test(await c3.p.textContent('#dc-madrugada')), 'madrugada: el botón dice sus horas (encendido)');
       await c3.p.click('#dc-madrugada'); await c3.p.waitForTimeout(200);
       ok(/apagado/.test(await c3.p.textContent('#dc-madrugada')) && !(await c3.p.evaluate(() => document.documentElement.hasAttribute('data-madrugada'))), 'madrugada: apagarlo quita el velo');
       await c3.ctx.close();
@@ -4234,7 +4241,7 @@ try {
           dentro: !!document.getElementById('h-nota').closest('details'), viejo: !!document.getElementById('h-nota-c') }));
         let c = await campo();
         eq([c.t, c.ay, c.max, c.dentro, c.viejo], ['¿Qué pasó esta semana en casa?', true, 120, false, false], '18·semana: en una compra la nota es la pregunta de la semana, a la vista y con 120 caracteres');
-        ok(c.vis >= 47.5 && /la ve toda la familia/.test(await p.textContent('#h-nota-ay')), '18·semana: el campo mide 48 px y dice que la ve toda la familia');
+        ok(c.vis >= 47.5 && /la ve la familia/i.test(await p.textContent('#h-nota-ay')), '18·semana: el campo mide 48 px y dice que la ve la familia');
         await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
         c = await campo();
         eq([c.t, c.ay], ['Nota (opcional)', false], '18·semana: en una venta sigue siendo «Nota»');
@@ -4352,12 +4359,12 @@ try {
     try {
       const { ctx, p, consola } = await entrar(navegador, mil18, ADMIN);
       await p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' })); await p.waitForTimeout(300);
-      await p.click('#l-chips button[data-f="venta"]'); await p.waitForTimeout(400);
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="venta"]'); await p.waitForTimeout(400);
       await p.locator('#lista .fila[data-tipo="venta"]').first().click(); await p.waitForTimeout(500);
       const v = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, sats: document.getElementById('cp-sats').textContent, dts: [...document.querySelectorAll('#cp-datos dt')].map((x) => x.textContent), sello: document.getElementById('cp-sello').hidden, alt: document.getElementById('cp-alt').hidden, nota: document.getElementById('cp-nota').textContent }));
       ok(/^Venta o gasto n\.º \d+$/.test(v.t) && /^−[\d,]+ sats$/.test(v.sats) && v.dts.join('|') === 'Recibiste|Precio de BTC en la venta|Altitud antes|Altitud después|Ganancia realizada' && v.sello && v.alt && v.nota === '«Gasto»', `18·comprobante: una venta dice lo que salió y su ganancia realizada, sin sello («${v.t}»)`);
       await p.click('#cp-cerrar'); await p.waitForTimeout(200);
-      await p.click('#l-chips button[data-f="traslado"]'); await p.waitForTimeout(400);
+      await abrirFiltros(p); await p.click('#l-chips button[data-f="traslado"]'); await p.waitForTimeout(400);
       await p.locator('#lista .fila[data-tipo="traslado"]').first().click(); await p.waitForTimeout(500);
       const t = await p.evaluate(() => ({ t: document.getElementById('cp-t').textContent, filas: [...document.querySelectorAll('#cp-datos .cp-fila')].map((f) => `${f.querySelector('dt').textContent}: ${f.querySelector('dd').textContent}`), editar: document.getElementById('cp-editar').textContent }));
       eq([t.t, t.filas, t.editar], ['Traslado', ['Salieron de: el exchange', 'Llegaron a: tu wallet', 'El saldo: no cambia'], 'Anular'], '18·comprobante: un traslado dice de dónde a dónde y ofrece anularlo');
@@ -4396,9 +4403,9 @@ try {
       await p.fill('#h-sats', '77320'); await p.waitForTimeout(150);
       await p.click('#h-avanzado summary'); await p.waitForTimeout(200);
       const campo = await p.evaluate(() => { const i = document.getElementById('h-precio'); const r = i.getBoundingClientRect(); return { modo: i.inputMode, alto: Math.round(r.height), etiqueta: i.labels[0]?.innerText.replace(/\s+/g, ' ').trim(), ayuda: i.getAttribute('aria-describedby') }; });
-      ok(await p.locator('#h-precio').isVisible() && campo.modo === 'decimal' && campo.alto >= 47.5 && campo.etiqueta === 'Precio de BTC al que compraste (opcional)' && campo.ayuda === 'h-dinero-ay', `precio: el campo está en «Más detalles», con su rótulo, teclado decimal y 48 px (${JSON.stringify(campo)})`);
+      ok(await p.locator('#h-precio').isVisible() && campo.modo === 'decimal' && campo.alto >= 47.5 && campo.etiqueta === 'Precio de BTC al que compraste' && campo.ayuda === 'h-dinero-ay', `precio: el campo está en «Más detalles», con su rótulo, teclado decimal y 48 px (${JSON.stringify(campo)})`);
       let h = await campos(p);
-      ok(h.resumen === 'Más detalles: dólares o precio, TXID y compra extra' && /^Escribe los dólares o el precio: el otro se calcula/.test(h.ay) && h.usd === '' && h.precio === '' && /^≈ \$/.test(h.uno), `precio: vacíos, como siempre: se estima con el precio del día («${h.uno}»)`);
+      ok(h.resumen === 'Más detalles (todo opcional): dólares o precio, TXID y compra extra' && h.ay === 'Escribe uno y el otro se calcula. Vacíos: el precio de ese día.' && h.usd === '' && h.precio === '' && /^≈ \$/.test(h.uno), `precio: vacíos, como siempre: se estima con el precio del día («${h.uno}»)`);
       // ---- Escribir el precio (con «$» y coma de miles, tecla por tecla) calcula los dólares
       await p.click('#h-precio'); await p.keyboard.type('$62,500'); await p.waitForTimeout(200);
       h = await campos(p);
@@ -4503,7 +4510,7 @@ try {
       // ---- En una venta el rótulo dice «al que vendiste»; en un traslado no hay precio
       await p.click('#h-tipo button[data-tipo="venta"]'); await p.waitForTimeout(200);
       h = await campos(p);
-      ok(h.tPrecio === 'Precio de BTC al que vendiste (opcional)' && h.resumen === 'Más detalles: dólares o precio y TXID' && /por la venta/.test(h.uno), `precio: en una venta, «al que vendiste» («${h.uno}»)`);
+      ok(h.tPrecio === 'Precio de BTC al que vendiste' && h.resumen === 'Más detalles (todo opcional): dólares o precio y TXID' && /por la venta/.test(h.uno), `precio: en una venta, «al que vendiste» («${h.uno}»)`);
       await p.click('#h-tipo button[data-tipo="traslado"]'); await p.waitForTimeout(200);
       ok(!(await p.locator('#h-precio').isVisible()) && !(await p.locator('#h-usd').isVisible()), 'precio: un traslado no lleva dólares ni precio');
       await p.click('#h-tipo button[data-tipo="compra"]'); await p.waitForTimeout(200);
@@ -4956,7 +4963,7 @@ try {
         await a.p.click('#cuenta-btn'); await a.p.waitForTimeout(400);
         const menu = () => a.p.evaluate(() => {
           const out = []; let grupo = null;
-          for (const e of document.querySelector('#d-cuenta .dc-lista').children) {
+          for (const e of document.querySelectorAll('#d-cuenta #dc-menu .dc-lista :is(h3.dc-grupo, button[data-cuenta])')) { /* (62) cada grupo en su caja; siete ajustes en un plegado */
             if (e.matches('h3.dc-grupo')) { grupo = e.textContent.trim(); out.push({ grupo, items: [] }); continue; }
             if (e.hidden || getComputedStyle(e).display === 'none') continue;
             if (!out.length) out.push({ grupo: null, items: [] });
@@ -4968,7 +4975,7 @@ try {
         eq(m.map((g) => g.grupo), ['El libro', 'Este dispositivo', 'Administrar'], '20·cuenta: tres grupos, en orden');
         eq(m[0].items, ['historia', 'montana', 'cumple'], '20·cuenta: «El libro» (historia y medallas, nombre de la montaña, cumpleaños)');
         ok(m[1].items[0] === 'avisos' && ['tema', 'letra', 'contraste', 'ganancia', 'efectos', 'madrugada', 'pestanas', 'tv', 'titulo', 'sonido'].every((x) => m[1].items.includes(x)), `20·cuenta: «Este dispositivo» (${m[1].items.join(', ')})`);
-        eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas', 'cerrar'], '20·cuenta: «Administrar» y, al final, salir');
+        eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas'], '20·cuenta: «Administrar» y, al final, salir («Cerrar» va arriba desde el campamento 62)');
         ok(await a.p.locator('#dc-menu [data-previa]').count() === 0, '20·cuenta: la vista previa ya no está en el menú');
         await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(600);
         ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 6 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus seis botones (campamento 21: etapa y etapa con sello)');
@@ -4981,10 +4988,10 @@ try {
         const l = await ent(s20, LECTOR);
         await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(400);
         const ml = await l.p.evaluate(() => {
-          const out = []; for (const e of document.querySelector('#d-cuenta .dc-lista').children) { if (e.matches('h3.dc-grupo')) out.push({ g: e.textContent.trim(), i: [] }); else if (!e.hidden) out.at(-1).i.push(e.dataset.cuenta); }
+          const out = []; for (const e of document.querySelectorAll('#d-cuenta #dc-menu .dc-lista :is(h3.dc-grupo, button[data-cuenta])')) { if (e.matches('h3.dc-grupo')) out.push({ g: e.textContent.trim(), i: [] }); else if (!e.hidden) out.at(-1).i.push(e.dataset.cuenta); }
           return out;
         });
-        eq([ml[0].i, ml[2].i], [['historia', 'cumple'], ['clave', 'sesiones', 'salir', 'salir-todas', 'cerrar']], '20·cuenta: una lectora, sin lo de administrar el libro');
+        eq([ml[0].i, ml[2].i], [['historia', 'cumple'], ['clave', 'sesiones', 'salir', 'salir-todas']], '20·cuenta: una lectora, sin lo de administrar el libro');
         eq((await l.p.textContent('#dc-historia-btn')).trim(), 'Historia y medallas del libro', '20·cuenta: a quien solo mira, la historia se le nombra del libro');
         await l.ctx.close();
       }
@@ -5540,7 +5547,7 @@ try {
         const c = await entrar(navegador, sAnio, LECTOR, { hora: 23.5, viewport: { width: 1280, height: 800 }, ...fijo }, conLocal([]));
         for (let k = 0; k < 3 && await c.p.locator('dialog[open]').count(); k++) { await c.p.keyboard.press('Escape'); await c.p.waitForTimeout(300); }
         await c.p.click('#cuenta-btn'); await c.p.waitForTimeout(300);
-        const enGrupo = await c.p.evaluate(() => { const b = document.getElementById('dc-tv-duerme'); let e = b.previousElementSibling; while (e && !e.classList.contains('dc-grupo')) e = e.previousElementSibling; return e?.textContent; });
+        const enGrupo = await c.p.evaluate(() => { return document.getElementById('dc-tv-duerme').closest('.dc-sec')?.querySelector('.dc-grupo')?.textContent; /* (62) cada grupo en su caja */ });
         eq([(await c.p.textContent('#dc-tv-duerme')).trim(), enGrupo], ['La tele duerme de noche: sí', 'Este dispositivo'], '21B·42 el interruptor, en «Este dispositivo», encendido por defecto');
         await c.p.click('#dc-tv-duerme');
         ok((await c.p.textContent('#dc-tv-duerme')).trim() === 'La tele duerme de noche: no' && await c.p.evaluate(() => localStorage.getItem('libro.tv.duerme')) === '0', '21B·42 se apaga y se recuerda en el dispositivo');
@@ -5661,12 +5668,12 @@ try {
       ok(await a.p.evaluate(() => document.getElementById('tc-codigo').hidden), '21B·43 el teléfono del dueño dice «Listo» y retira el código');
       // Otro código; al salir de la vista y volver ya no se enseña (se muestra una sola vez)
       await a.p.click('#tc-crear'); await a.p.waitForTimeout(500);
-      await a.p.click('#dc-sesiones [data-cuenta="volver"]'); await a.p.waitForTimeout(1500);
+      await a.p.click('#dc-volver'); await a.p.waitForTimeout(1500);
       await a.p.click('#dc-sesiones-btn'); await a.p.waitForTimeout(900);
       const otra = await a.p.evaluate(() => ({ oculto: document.getElementById('tc-codigo').hidden, est: document.getElementById('tc-estado').textContent }));
       ok(otra.oculto && /^Hay un código vivo para Ana .* no se vuelve a mostrar/.test(otra.est), `21B·43 al volver a la vista el código no se vuelve a enseñar («${otra.est}»)`);
       // El Historial lo cuenta, sin el código
-      await a.p.click('#dc-sesiones [data-cuenta="volver"]'); await a.p.waitForTimeout(400);
+      await a.p.click('#dc-volver'); await a.p.waitForTimeout(400);
       await a.p.click('#dc-historial'); await a.p.waitForTimeout(900);
       const hist = await a.p.textContent('#hist-lista');
       ok(hist.includes('creó un código para conectar una tele con la cuenta de Ana') && hist.includes('entró en una tele con un código') && !hist.includes(cod.g), '21B·43 el Historial lo cuenta, sin el código');
@@ -5818,7 +5825,7 @@ try {
       const sembrar = (cambios) => a.p.evaluate((c) => fetch('/api/medidas', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' },
         body: JSON.stringify({ saldo_ms: 900, red_ms: 80, fps: 59, fps_escena: 58, fps_peor: 50, fps_p5: 55, tirones: 1, hz: 60, duracion_ms: 7000, recorrido: 2400, efectos: 'todos', ligero: false, tema: 'oscuro', ancho: 390, alto: 844, dpr: 3, memoria: null, nucleos: 6, instalada: true, carga: 'navegar', ...c }) }).then((r) => r.status), cambios);
       for (const c of [{ fps: 56, fps_escena: 47.4 }, { fps: 30, fps_escena: 30, hz: 30 }, { fps: 53, fps_escena: 54 }, { fps: 59.6 }, { fps: 58 }, { fps: 57 }]) eq(await sembrar(c), 201, '24: se guarda una medida sembrada');
-      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-sistema-btn');
+      await a.p.click('#dc-volver'); await a.p.click('#dc-sistema-btn');
       await a.p.waitForFunction(() => document.querySelectorAll('#sis-med .sis-fila, #sis-med-resto .sis-fila').length === 7, null, { timeout: 5000 });
       const filas = await a.p.$$eval('#sis-med .sis-fila', (fs) => fs.map((f) => ({ e: f.dataset.estado, v: f.dataset.veredicto, p: f.querySelector('.sis-palabra').textContent.trim(), i: f.querySelector('.sis-ico').textContent, d: f.querySelector('small').textContent })));
       eq(filas.length, 5, '24: se ven las cinco más recientes');
@@ -5961,10 +5968,10 @@ try {
       await a.p.click('#sis-revisado');
       await a.p.waitForFunction(() => /^Ya estaba anotado/.test(document.getElementById('sis-rg-res').textContent), null, { timeout: 5000 });
       eq((await datos(a.p, '/api/auditoria')).filter((x) => x.accion === 'resguardo_revisado').length, 1, '24c: tocarlo dos veces el mismo día deja una sola fila en la auditoría');
-      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-historial');
+      await a.p.click('#dc-volver'); await a.p.click('#dc-historial');
       await a.p.waitForSelector('#hist-lista li', { timeout: 5000 });
       ok((await a.p.textContent('#hist-lista')).includes('Daf3r anotó que revisó el respaldo de su wallet y la nota para su familia'), '24c: el Historial lo cuenta en español');
-      await a.p.click('#dc-hist [data-cuenta="volver"]');
+      await a.p.click('#dc-volver');
       // Pasados 180 días (la API no puede volver atrás en el tiempo: se simula su respuesta) sigue siendo tranquila
       await a.p.route('**/api/sistema', async (route) => {
         const r = await route.fetch(); const j = await r.json();
@@ -5979,7 +5986,7 @@ try {
       eq(s7[0], s7[1], '24c: tampoco cuenta como «cosa por revisar» cuando toca');
       await a.p.unroute('**/api/sistema');
       // La vista de avisos: la categoría sale al admin, apagada, junto a «Fallo del respaldo»; al encenderla, el estado dice cuándo llega
-      await a.p.click('#dc-sistema [data-cuenta="volver"]'); await a.p.click('#dc-avisos-btn'); await a.p.waitForTimeout(500);
+      await a.p.click('#dc-volver'); await a.p.click('#dc-avisos-btn'); await a.p.waitForTimeout(500);
       await a.p.click('#av-interruptor'); await a.p.waitForTimeout(900);
       const cats = await a.p.$$eval('#av-lista input', (xs) => xs.map((x) => x.dataset.cat));
       eq(cats.indexOf('resguardo'), cats.indexOf('respaldo') + 1, '24c: «Revisión tranquila del respaldo» va junto a «Fallo del respaldo»');
@@ -5987,7 +5994,7 @@ try {
       ok(!cat.on && /Revisión tranquila del respaldo/.test(cat.t) && /180 días/.test(cat.t) && /no guarda nada/.test(cat.t), `24c: apagada por defecto y explica qué hace («${cat.t.replace(/\s+/g, ' ')}»)`);
       ok(cat.alto >= 47.5, `24c: su fila se toca bien (${cat.alto} px)`);
       await a.p.click('#av-lista input[data-cat="resguardo"]'); await a.p.waitForTimeout(500);
-      await a.p.click('#dc-avisos [data-cuenta="volver"]');
+      await a.p.click('#dc-volver');
       await abrirSistema(a.p);
       f = await filaRg(a.p);
       const r2 = (await datos(a.p, '/api/sistema')).resguardo;
@@ -6009,7 +6016,7 @@ try {
       ok(bonoV === 4321 && bonoC > 100_000, `24c: «bono» tiene compras y la venta (${bonoC} y ${bonoV} sats)`);
       await a.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
       eq(await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('l-res').offsetHeight]), ['', 0], '24c: sin filtros, el renglón de resultados está vacío y no ocupa sitio');
-      await a.p.click('#l-mas summary'); await a.p.selectOption('#l-etq', 'bono'); await a.p.waitForTimeout(300);
+      await abrirFechas(a.p); await a.p.selectOption('#l-etq', 'bono'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), esperaBono, '24c: con la etiqueta «bono», cuántos y su suma, con el neto y cada parte aparte');
       const pegada = await a.p.$$eval('#l-res .nw', (xs) => xs.map((x) => ({ t: x.textContent, r: x.getClientRects().length })));
       ok(pegada.some((x) => x.t === `+${nf(neto)} sats`) && pegada.every((x) => x.r === 1), `24c: «+${nf(neto)} sats» va pegado y no se parte (${JSON.stringify(pegada)})`);
@@ -6017,13 +6024,13 @@ try {
       ok(await a.p.locator('#ver-todas').isVisible(), '24c: hay más de lo que cabe en el primer tramo');
       await a.p.click('#ver-todas'); await a.p.waitForTimeout(300);
       eq(await a.p.evaluate(() => [document.getElementById('l-res').textContent, document.getElementById('lista').getBoundingClientRect().top + scrollY]), antes, '24c: «Ver más» no cambia la suma (es de todo lo filtrado) ni mueve la lista');
-      await a.p.click('#l-chips button[data-f="compra"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="compra"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `${con('bono', 'compra').length} de ${total} movimientos · ${nf(bonoC)} sats comprados`, '24c: con otro filtro encima, solo lo que se ve (solo compras: «comprados»)');
-      await a.p.click('#l-chips button[data-f="venta"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="venta"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `1 de ${total} movimientos · ${nf(bonoV)} sats vendidos`, '24c: solo la venta: «vendidos»');
-      await a.p.click('#l-chips button[data-f="traslado"]'); await a.p.waitForTimeout(300);
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="traslado"]'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `0 de ${total} movimientos`, '24c: los traslados no llevan etiquetas: nada que sumar');
-      await a.p.click('#l-chips button[data-f="todos"]');
+      await abrirFiltros(a.p); await a.p.click('#l-chips button[data-f="todos"]');
       await a.p.selectOption('#l-etq', 'cumpleaños'); await a.p.waitForTimeout(300);
       eq((await a.p.textContent('#l-res')).trim(), `${con('cumpleaños').length} de ${total} movimientos · ${nf(suma(con('cumpleaños', 'compra')))} sats comprados`, '24c: otra etiqueta, otra suma');
       await a.p.selectOption('#l-etq', ''); await a.p.fill('#l-buscar', 'caída'); await a.p.waitForTimeout(300);
@@ -6038,7 +6045,7 @@ try {
       const l = await entrar(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, conPushQuieto);
       await cerrar(l.p);
       await l.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await l.p.click('#l-mas summary'); await l.p.selectOption('#l-etq', 'bono'); await l.p.waitForTimeout(300);
+      await abrirFechas(l.p); await l.p.selectOption('#l-etq', 'bono'); await l.p.waitForTimeout(300);
       eq((await l.p.textContent('#l-res')).trim(), esperaBono, '24c: quien solo mira lee la misma suma');
       await l.p.evaluate(() => scrollTo(0, 0));
       await l.p.click('#cuenta-btn'); await l.p.waitForTimeout(250);
@@ -6060,7 +6067,7 @@ try {
       }), { dlg: true, pag: true, fila: true, toque: true }, '24c: a 320 px con letra muy grande, «Estado del sistema» con la revisión no se desborda');
       await ch.p.keyboard.press('Escape'); await ch.p.waitForTimeout(300);
       await ch.p.evaluate(() => document.getElementById('lista').scrollIntoView({ block: 'start' }));
-      await ch.p.click('#l-mas summary'); await ch.p.selectOption('#l-etq', 'bono'); await ch.p.waitForTimeout(300);
+      await abrirFechas(ch.p); await ch.p.selectOption('#l-etq', 'bono'); await ch.p.waitForTimeout(300);
       eq(await ch.p.evaluate(() => {
         const r = document.getElementById('l-res');
         return { pag: document.documentElement.scrollWidth <= innerWidth, res: r.scrollWidth <= r.clientWidth + 1, pegadas: [...r.querySelectorAll('.nw')].every((x) => x.getClientRects().length === 1), texto: r.textContent.includes(' sats (') };
@@ -7942,6 +7949,279 @@ try {
     } finally {
       anio.parar();
     }
+  });
+
+  // ---------------------------------------------------------------- campamento 62: menús («Tu cuenta» se cierra desde arriba, dos niveles, el valor en tinta, el dock y «Anotar» en la barra)
+  await bloque(async () => {
+    const anio = await servidor('anio');
+    const conLs = (pares = []) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    const cerrarTodo = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const escritorio = { isMobile: false, hasTouch: false };
+    const SIETE = ['dc-contraste', 'dc-ganancia', 'dc-madrugada', 'dc-tv', 'dc-tv-duerme', 'dc-titulo', 'dc-sonido'];
+    try {
+      // 300 · «Cerrar» arriba y pegado; «‹ Tu cuenta» en las vistas de dentro (teléfono, por pestañas)
+      {
+        const r = await entrar(navegador, anio, ADMIN, { pestanas: true, masAjustes: false, viewport: { width: 390, height: 844 } }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+        const cab = () => r.p.evaluate(() => { const d = document.getElementById('d-cuenta').getBoundingClientRect(), c = document.getElementById('dc-cerrar').getBoundingClientRect(); return { arriba: Math.round(c.top - d.top), dentro: c.top >= d.top && c.bottom <= d.bottom, alto: Math.round(c.height), foco: document.activeElement?.id }; });
+        const a = await cab();
+        ok(a.arriba < 30 && a.dentro && a.alto >= 47.5 && a.foco === 'dc-cerrar', `62·300 «Cerrar» arriba, de 48 px y con el foco al abrir (${JSON.stringify(a)})`);
+        await r.p.evaluate(() => { const d = document.getElementById('d-cuenta'); d.scrollTop = d.scrollHeight; }); await r.p.waitForTimeout(250);
+        const b = await cab();
+        ok(b.dentro && b.arriba < 30, `62·300 al bajar hasta el final, «Cerrar» sigue arriba (${JSON.stringify(b)})`);
+        eq(await r.p.evaluate(() => [...document.querySelectorAll('#d-cuenta button')].filter((x) => /^(Volver|Cerrar)$/.test(x.textContent.trim())).map((x) => x.id)), ['dc-cerrar'], '62·300 un solo «Cerrar» y ningún «Volver» al final');
+        await r.p.click('#dc-sesiones-btn'); await r.p.waitForTimeout(600);
+        const v = await r.p.evaluate(() => ({ volver: !document.getElementById('dc-volver').hidden, titulo: !document.getElementById('dc-t').hidden, foco: document.activeElement?.id, nombre: document.getElementById('dc-volver').textContent.replace(/\s+/g, ' ').trim() }));
+        ok(v.volver && !v.titulo && v.foco === 'dc-volver' && /Volver a Tu cuenta/.test(v.nombre), `62·300 en una vista de dentro, «‹ Tu cuenta» arriba con el foco (${JSON.stringify(v)})`);
+        await r.p.click('#dc-volver'); await r.p.waitForTimeout(600);
+        eq(await r.p.evaluate(() => [document.getElementById('dc-menu').hidden, document.activeElement?.id]), [false, 'dc-sesiones-btn'], '62·300 al volver, el foco regresa a la fila que abrió la vista');
+        await r.p.click('#dc-cerrar'); await r.p.waitForTimeout(300);
+        eq(await r.p.locator('#d-cuenta[open]').count(), 0, '62·300 «Cerrar» cierra «Tu cuenta»');
+        // 301 · siete ajustes plegados (no «Atajos de teclado»); recuerda si se dejó abierto
+        await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+        const m = await r.p.evaluate((siete) => ({ abierto: document.getElementById('dc-mas').open, dentro: siete.every((id) => document.getElementById(id).closest('#dc-mas')), atajos: !document.getElementById('dc-atajos').closest('#dc-mas'), alto: document.getElementById('d-cuenta').scrollHeight, resumen: Math.round(document.querySelector('#dc-mas > summary').getBoundingClientRect().height) }), SIETE);
+        ok(!m.abierto && m.dentro && m.atajos && m.alto < 1300 && m.resumen >= 47.5, `62·301 en el teléfono, siete ajustes plegados y «Atajos» fuera; el menú mide ${m.alto} px (antes 1611)`);
+        await r.p.click('#dc-mas > summary'); await r.p.waitForTimeout(200);
+        await r.p.click('#dc-sonido'); await r.p.waitForTimeout(200);
+        ok(/encendido/.test(await r.p.textContent('#dc-sonido')), '62·301 un ajuste plegado se toca como siempre');
+        await r.p.click('#dc-sonido');
+        await r.p.reload({ waitUntil: 'networkidle' }); await r.p.waitForTimeout(2000); await cerrarTodo(r.p);
+        await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+        ok(await r.p.evaluate(() => document.getElementById('dc-mas').open), '62·301 se acuerda de que lo dejaste abierto');
+        // 302 · el valor, en tinta (sin píldora) y en el renglón de su nombre
+        const t = await r.p.evaluate(() => {
+          const raiz = getComputedStyle(document.documentElement);
+          const txt2 = document.createElement('i'); txt2.style.color = raiz.getPropertyValue('--txt2'); document.body.append(txt2); const c2 = getComputedStyle(txt2).color; txt2.remove();
+          const vs = [...document.querySelectorAll('#dc-menu .dc-v')].filter((v) => v.checkVisibility());
+          return { n: vs.length, tinta: vs.every((v) => getComputedStyle(v).color === c2 && getComputedStyle(v).backgroundColor === 'rgba(0, 0, 0, 0)'), solos: vs.filter((v) => v.getBoundingClientRect().top > v.parentElement.querySelector('.dc-k').getBoundingClientRect().bottom - 2).map((v) => v.parentElement.id) };
+        });
+        ok(t.n >= 10 && t.tinta && !t.solos.length, `62·302 los valores van en tinta, sin píldora, y ninguno cae solo a otro renglón (${JSON.stringify(t)})`);
+        eq((await r.p.textContent('#dc-madrugada')).trim(), 'Modo madrugada: apagado', '62·302 la etiqueta de la madrugada, corta');
+        await r.ctx.close();
+      }
+      // 301 · escritorio: dos columnas, nada plegado
+      {
+        const r = await entrar(navegador, anio, ADMIN, { pestanas: true, masAjustes: false, viewport: { width: 1440, height: 900 }, ...escritorio }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+        const e = await r.p.evaluate(() => {
+          const x = (id) => Math.round(document.getElementById(id).getBoundingClientRect().left);
+          return { abierto: document.getElementById('dc-mas').open, resumen: document.querySelector('#dc-mas > summary').checkVisibility(), libro: x('dc-sec-libro'), admin: x('dc-sec-admin'), disp: x('dc-sec-disp'), alto: document.getElementById('d-cuenta').scrollHeight, foco: document.activeElement?.id };
+        });
+        ok(e.abierto && !e.resumen && e.libro === e.admin && e.disp > e.libro + 200 && e.alto < 1000 && e.foco === 'dc-cerrar', `62·301 escritorio: dos columnas, sin plegado; mide ${e.alto} px (antes 1659) (${JSON.stringify(e)})`);
+        await r.p.click('#dc-tv-duerme'); await r.p.waitForTimeout(200);
+        ok(/no$/.test((await r.p.textContent('#dc-tv-duerme')).trim()) && await r.p.evaluate(() => localStorage.getItem('libro.cuenta.mas')) === null, '62·301 escritorio: los siete se tocan sin abrir nada y lo abierto a la fuerza no se recuerda');
+        await r.p.click('#dc-tv-duerme');
+        await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(300);
+        // 304 · «Anotar compra» al final de la barra, en el mismo sitio en las cuatro pestañas
+        const sitios = [];
+        for (const t of ['resumen', 'graficos', 'historia', 'movimientos']) {
+          await r.p.click(`#pestanas button[data-pestana="${t}"]`); await r.p.waitForTimeout(500);
+          sitios.push(await r.p.evaluate(() => { const a = document.getElementById('anotar').getBoundingClientRect(), n = document.getElementById('pestanas').getBoundingClientRect(); return { x: Math.round(a.left), y: Math.round(a.top - n.top), alLado: a.left > n.right && Math.abs((a.top + a.bottom) / 2 - (n.top + n.bottom) / 2) < 2, padre: document.getElementById('anotar').parentElement.id }; }));
+        }
+        ok(sitios.every((s) => s.x === sitios[0].x && s.y === sitios[0].y && s.alLado && s.padre === 'barra'), `62·304 «Anotar compra» al final de la barra, en el mismo sitio en las cuatro pestañas (${JSON.stringify(sitios)})`);
+        // Al bajar por la lista, nada de una fila asoma junto al botón (la caja pegajosa lleva el fondo detrás).
+        for (let k = 0; k < 6 && await r.p.locator('#ver-todas').isVisible(); k++) { await r.p.click('#ver-todas'); await r.p.waitForTimeout(300); }
+        const tapa = await r.p.evaluate(async () => {
+          const a0 = document.getElementById('compras').getBoundingClientRect().top + scrollY;
+          let malas = 0, pos = 0, fijo = true; const y0 = document.getElementById('anotar').getBoundingClientRect().top;
+          for (let y = a0; y < a0 + 2400; y += 37) {
+            scrollTo(0, y); await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res))); pos++;
+            const a = document.getElementById('anotar').getBoundingClientRect();
+            if (pos > 3 && Math.abs(a.top - y0) > 400) fijo = false;
+            for (const [px, py] of [[a.left - 6, a.top + a.height / 2], [a.left + a.width / 2, a.top - 4], [a.left + a.width / 2, a.bottom + 4]]) { const el = document.elementFromPoint(px, py); if (el?.closest('#lista .fila')) malas++; }
+          }
+          return { pos, malas, fijo };
+        });
+        ok(tapa.pos > 20 && tapa.malas === 0, `62·304 al bajar por la lista, ninguna fila asoma junto a «Anotar compra» (${JSON.stringify(tapa)})`);
+        await r.p.evaluate(() => scrollTo(0, 0)); await r.p.waitForTimeout(300);
+        // Orden de tabulación: la última pestaña y, enseguida, «Anotar compra»; el atajo A sigue abriendo la hoja.
+        await r.p.focus('#pestanas button[data-pestana="movimientos"]'); await r.p.keyboard.press('Tab');
+        eq(await r.p.evaluate(() => document.activeElement?.id), 'anotar', '62·304 tras las pestañas, el tabulador llega a «Anotar compra»');
+        await r.p.evaluate(() => document.activeElement?.blur());
+        await r.p.keyboard.press('a'); await r.p.waitForTimeout(500);
+        ok(await r.p.evaluate(() => !document.getElementById('hoja').hidden), '62·304 el atajo A abre la hoja');
+        await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400);
+        // Al pasar a «todo junto», vuelve a su sitio de siempre (antes de la lista)
+        await r.p.evaluate(() => localStorage.setItem('libro.pestanas', 'todo')); await r.p.reload({ waitUntil: 'networkidle' }); await r.p.waitForTimeout(2000); await cerrarTodo(r.p);
+        eq(await r.p.evaluate(() => [document.getElementById('anotar').parentElement.className, document.getElementById('anotar').nextElementSibling?.id]), ['col-lateral', 'compras'], '62·304 en «todo junto», «Anotar» vuelve a la columna derecha');
+        await r.ctx.close();
+      }
+      // 303 · el dock: cada palabra cabe en su casilla y «Anotar» queda sobre el hueco
+      for (const [w, h, cuenta] of [[390, 844, ADMIN], [360, 640, ADMIN], [320, 568, ADMIN], [320, 568, LECTOR]]) {
+        const r = await entrar(navegador, anio, cuenta, { pestanas: true, viewport: { width: w, height: h } }, conLs());
+        await cerrarTodo(r.p);
+        const fallos = [];
+        for (const t of ['resumen', 'graficos', 'historia', 'movimientos']) {
+          await r.p.click(`#pestanas button[data-pestana="${t}"]`); await r.p.waitForTimeout(350);
+          fallos.push(...await r.p.evaluate((tt) => {
+            const f = [], bs = [...document.querySelectorAll('#pestanas button')];
+            for (const x of bs) { const s = x.querySelector('.pe-txt'); if (getComputedStyle(s).position !== 'absolute' && s.scrollWidth > x.clientWidth) f.push(`${tt}: ${s.textContent} ${s.scrollWidth} en ${x.clientWidth}`); if (x.getBoundingClientRect().width < 47.5) f.push(`${tt}: ${s.textContent} de ${x.getBoundingClientRect().width} px`); }
+            return f;
+          }, t));
+        }
+        if (cuenta === ADMIN && w >= 360) {
+          const c = await r.p.evaluate(() => { const a = document.getElementById('anotar').getBoundingClientRect(), bs = [...document.querySelectorAll('#pestanas button')]; return [Math.round(a.left + a.width / 2), Math.round((bs[1].getBoundingClientRect().right + bs[2].getBoundingClientRect().left) / 2)]; });
+          if (Math.abs(c[0] - c[1]) > 1) fallos.push(`«Anotar» en ${c[0]} y el hueco en ${c[1]}`);
+        }
+        eq(fallos, [], `62·303 el dock a ${w} px (${cuenta === ADMIN ? 'dueño' : 'lectora'}): cada palabra cabe en su casilla, de 48 px o más`);
+        await r.ctx.close();
+      }
+    } finally { anio.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamento 63: anotar y buscar (el filo de los campos, «Guardar» dice qué falta, ayudas de un renglón y la lista en una fila)
+  await bloque(async () => {
+    const anio = await servidor('anio');
+    const sinp = await servidor('sinprecio');
+    const conLs = (pares = []) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    const cerrarTodo = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const escritorio = { isMobile: false, hasTouch: false };
+    // El filo contra el panel (--s1), el relleno (--s2) y el fondo; y el texto de «Guardar» contra el panel
+    const contrastes = (p) => p.evaluate(() => {
+      const col = (c) => { const d = document.createElement('i'); d.style.color = c; document.body.append(d); const v = getComputedStyle(d).color; d.remove(); return v; };
+      const rgb = (c) => { const m = c.match(/[\d.]+/g).map(Number); const sr = c.startsWith('color('); return m.slice(0, 3).map((x) => (sr ? x * 255 : x)); };
+      const lum = (v) => { const f = (x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(v[0]) + 0.7152 * f(v[1]) + 0.0722 * f(v[2]); };
+      const c = (a, b) => { const x = lum(a), y = lum(b); return +((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)).toFixed(2); };
+      const filo = rgb(col('var(--campo-filo)'));
+      const g = document.getElementById('guardar'), gs = getComputedStyle(g);
+      return { panel: c(filo, rgb(col('var(--s1)'))), campo: c(filo, rgb(col('var(--s2)'))), fondo: c(filo, rgb(col('var(--fondo)'))), guardar: c(rgb(gs.color), rgb(col('var(--s1)'))), opGuardar: gs.opacity };
+    });
+    const sombra = (p, id) => p.evaluate((i) => getComputedStyle(document.getElementById(i)).boxShadow, id);
+    try {
+      // 314 y 306 · la hoja en el teléfono, en los dos temas y con alto contraste
+      for (const [tema, alto] of [['oscuro', false], ['claro', false], ['oscuro', true], ['claro', true]]) {
+        const r = await entrar(navegador, anio, ADMIN, { viewport: { width: 390, height: 844 } }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.evaluate(([t, a]) => { window.libroTema.fijar(t); window.libroAcc.fijarContraste(a ? 'alto' : 'normal'); }, [tema, alto]);
+        await r.p.waitForTimeout(300);
+        await r.p.click('#anotar'); await r.p.waitForTimeout(500);
+        const k = `${tema}${alto ? ', alto contraste' : ''}`;
+        const c = await contrastes(r.p);
+        ok(c.panel >= 3 && c.campo >= 3 && c.fondo >= 3, `63·314 el filo de los campos, a 3:1 o más del panel, del relleno y del fondo (${k}: ${JSON.stringify(c)})`);
+        const g = await r.p.evaluate(() => { const b = document.getElementById('guardar'); return { t: b.innerText, dis: b.disabled, falta: b.dataset.falta }; });
+        ok(g.dis && g.falta === '1' && g.t === 'Escribe los sats para guardar' && c.guardar >= 4.5 && c.opGuardar === '1', `63·306 «Guardar» apagado dice qué falta, con su texto a 4.5:1 o más (${k}: ${JSON.stringify(g)}, ${c.guardar}:1)`);
+        if (tema === 'oscuro' && !alto) {
+          const s = { nota: await sombra(r.p, 'h-nota'), sats: await sombra(r.p, 'h-sats') };
+          ok(/inset/.test(s.nota) && !/inset/.test(s.sats), `63·314 la nota lleva el filo por dentro; «Sats» (una raya, con su propio foco) no (${JSON.stringify(s)})`);
+          await r.p.focus('#h-nota');
+          const f = await r.p.evaluate(() => { const cs = getComputedStyle(document.getElementById('h-nota')); return [cs.outlineStyle, cs.outlineWidth]; });
+          eq(f, ['solid', '2px'], '63·314 el foco de un campo sigue siendo su contorno naranja');
+          // 306 · con sats, el naranja de siempre
+          await r.p.fill('#h-sats', '30000'); await r.p.waitForTimeout(200);
+          const e = await r.p.evaluate(() => { const b = document.getElementById('guardar'); return { t: b.innerText, dis: b.disabled, falta: b.dataset.falta, op: getComputedStyle(b).opacity }; });
+          eq(e, { t: 'Guardar', dis: false, falta: '', op: '1' }, '63·306 con los sats escritos, «Guardar» se enciende');
+          // 306 · un precio que no se entiende
+          await r.p.click('#h-avanzado summary'); await r.p.waitForTimeout(200);
+          await r.p.fill('#h-precio', '62.500'); await r.p.waitForTimeout(200);
+          eq(await r.p.evaluate(() => [document.getElementById('guardar').innerText, document.getElementById('guardar').disabled]), ['Revisa el precio para guardar', true], '63·306 con un precio que no se entiende, dice que lo revises');
+          await r.p.fill('#h-precio', ''); await r.p.waitForTimeout(200);
+          // 305 · «(opcional)» una vez, en el plegado; cada ayuda en un renglón
+          const h = await r.p.evaluate(() => {
+            const vis = [...document.querySelectorAll('#hoja .h-nota')].filter((e) => e.checkVisibility());
+            return {
+              resumen: document.getElementById('h-av-t').innerText,
+              opc: [...document.querySelectorAll('#h-avanzado label')].filter((l) => l.checkVisibility() && /opcional/i.test(l.innerText)).length,
+              renglones: vis.map((e) => Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight))),
+              palabras: vis.reduce((n, e) => n + e.innerText.split(/\s+/).filter(Boolean).length, 0),
+            };
+          });
+          ok(h.resumen === 'Más detalles (todo opcional): dólares o precio, TXID y compra extra' && h.opc === 0, `63·305 «(opcional)» se dice una vez, en el plegado (${h.resumen})`);
+          ok(h.renglones.length === 5 && h.renglones.every((x) => x <= 2) && h.renglones.reduce((x, y) => x + y) <= 7 && h.palabras <= 60, `63·305 a 390 px, las ayudas son ${h.palabras} palabras (antes 88) en ${h.renglones.reduce((x, y) => x + y)} renglones (antes 9): ${h.renglones}`);
+          eq(await r.p.evaluate(() => [...document.querySelectorAll('#h-avanzado .h-nota')].filter((e) => e.checkVisibility()).map((e) => e.innerText)),
+            ['Escribe uno y el otro se calcula. Vacíos: el precio de ese día.', 'Para comprobarla en la cadena. Lightning o dentro del exchange: no hay.', 'Va aparte: no cuenta para el ritmo ni cubre la semana.', 'Hasta 5, con comas. Filtran la lista.'], '63·305 las ayudas de «Más detalles», con las frases decididas');
+          // 306 · traslado a una wallet nueva: lo que falta, por partes
+          await r.p.click('#h-tipo button[data-tipo="traslado"]'); await r.p.fill('#h-sats', ''); await r.p.waitForTimeout(200);
+          if (await r.p.locator('#h-wallet-mas').isVisible()) await r.p.click('#h-wallet-mas');
+          else await r.p.selectOption('#h-wallet', 'nueva');
+          await r.p.waitForTimeout(200);
+          const t1 = await r.p.innerText('#guardar');
+          await r.p.fill('#h-sats', '1000'); await r.p.waitForTimeout(200);
+          const t2 = await r.p.innerText('#guardar');
+          await r.p.fill('#h-wallet-nueva', 'Ledger'); await r.p.waitForTimeout(200);
+          const t3 = await r.p.innerText('#guardar');
+          eq([t1, t2, t3], ['Escribe los sats y la wallet', 'Escribe el nombre de la wallet', 'Guardar traslado'], '63·306 en un traslado a una wallet nueva, dice qué falta en cada paso');
+          eq(r.consola, [], `63 consola limpia (hoja): ${r.consola.join(' | ')}`);
+        }
+        await r.ctx.close();
+      }
+      // 305 · sin precio del día, los dólares o el precio hacen falta: el plegado no dice «todo opcional»
+      {
+        const r = await entrar(navegador, sinp, ADMIN, { viewport: { width: 390, height: 844 } }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.click('#anotar'); await r.p.waitForTimeout(500);
+        await r.p.fill('#h-sats', '30000'); await r.p.waitForTimeout(200);
+        const s = await r.p.evaluate(() => ({ uno: document.getElementById('hc-uno').innerText, resumen: document.getElementById('h-av-t').innerText, guardar: document.getElementById('guardar').innerText }));
+        eq(s, { uno: 'Sin precio disponible ahora: abre «Más detalles» y escribe los dólares o el precio.', resumen: 'Más detalles: dólares o precio, TXID y compra extra', guardar: 'Escribe los dólares o el precio' }, '63·305 sin precio, «Más detalles» no dice «todo opcional» y «Guardar» pide los dólares o el precio');
+        await r.ctx.close();
+      }
+      // 306 · a 320 px con letra muy grande, el texto cabe en la píldora, también junto a «Anular»
+      {
+        const r = await entrar(navegador, anio, ADMIN, { viewport: { width: 320, height: 568 } }, conLs([['libro.letra', 'muy-grande']]));
+        await cerrarTodo(r.p);
+        await r.p.click('#anotar'); await r.p.waitForTimeout(500);
+        const cabe = () => r.p.evaluate(() => { const b = document.getElementById('guardar'), q = b.getBoundingClientRect(); return { cabe: b.scrollWidth <= b.clientWidth + 1 && q.height >= 47.5 && q.right <= innerWidth, pag: document.documentElement.scrollWidth <= innerWidth, t: b.innerText }; });
+        eq(await cabe(), { cabe: true, pag: true, t: 'Escribe los sats para guardar' }, '63·306 a 320 px con letra muy grande, «Escribe los sats para guardar» cabe en su píldora');
+        await r.p.click('#hoja .cerrar'); await r.p.waitForTimeout(300);
+        await editarFila(r.p, r.p.locator('#lista .fila').first()); await r.p.waitForTimeout(400);
+        await r.p.fill('#h-sats', ''); await r.p.waitForTimeout(200);
+        ok(await r.p.locator('#h-borrar').isVisible(), '63·306 al editar está «Anular»');
+        eq(await cabe(), { cabe: true, pag: true, t: 'Escribe los sats para guardar' }, '63·306 y junto a «Anular», también cabe');
+        await r.ctx.close();
+      }
+      // 307 · la lista en el teléfono: buscador y «Filtros» en una fila
+      {
+        const r = await entrar(navegador, anio, ADMIN, { viewport: { width: 390, height: 844 } }, conLs());
+        await cerrarTodo(r.p);
+        await r.p.evaluate(() => document.getElementById('t-compras').scrollIntoView({ block: 'start' })); await r.p.waitForTimeout(300);
+        const fila = () => r.p.evaluate(() => {
+          const t = document.getElementById('t-compras').getBoundingClientRect(), f = document.querySelector('#lista li[data-clave]').getBoundingClientRect(), b = document.getElementById('l-filtros'), q = b.getBoundingClientRect(), bus = document.getElementById('l-buscar').getBoundingClientRect();
+          return { alto: Math.round(f.top - t.top), filtros: b.checkVisibility() ? b.innerText : null, exp: b.getAttribute('aria-expanded'), toque: q.height >= 47.5, juntos: Math.abs(q.top - bus.top) < 4, chips: document.getElementById('l-chips').checkVisibility(), pag: document.documentElement.scrollWidth <= innerWidth };
+        });
+        const a = await fila();
+        ok(a.alto <= 180 && a.filtros === 'Filtros' && a.exp === 'false' && a.toque && a.juntos && !a.chips && a.pag, `63·307 en el teléfono, el buscador y «Filtros» en una fila; los tipos plegados (${JSON.stringify(a)}; antes 331 px de título a primera fila)`);
+        await r.p.click('#l-filtros'); await r.p.waitForTimeout(200);
+        const b = await fila();
+        ok(b.exp === 'true' && b.chips && await r.p.locator('#l-mas').isVisible(), `63·307 «Filtros» abre los tipos y «Fechas y orden» (${JSON.stringify(b)})`);
+        await r.p.click('#l-chips button[data-f="compra"]'); await r.p.waitForTimeout(300);
+        await r.p.click('#l-filtros'); await r.p.waitForTimeout(200);
+        const c = await fila();
+        ok(c.filtros === 'Filtros: compras' && c.exp === 'false' && !c.chips && await r.p.locator('#l-limpiar').isVisible(), `63·307 cerrado, «Filtros» dice qué filtro hay y «Quitar filtros» sigue a la vista (${JSON.stringify(c)})`);
+        await abrirFechas(r.p);
+        ok(await r.p.locator('#l-desde').isVisible() && (await r.p.getAttribute('#l-mas', 'aria-expanded')) === 'true', '63·307 «Fechas y orden» abre su panel');
+        await r.p.fill('#l-desde', '2026-01-01'); await r.p.waitForTimeout(300);
+        eq(await r.p.innerText('#l-filtros'), 'Filtros: 2', '63·307 con dos filtros, «Filtros: 2»');
+        await r.p.click('#l-limpiar'); await r.p.waitForTimeout(300);
+        const d = await fila();
+        ok(d.filtros === 'Filtros' && d.exp === 'true', `63·307 «Quitar filtros» limpia el rótulo y no cierra lo que abriste (${JSON.stringify(d)})`);
+        eq(r.consola, [], `63 consola limpia (lista): ${r.consola.join(' | ')}`);
+        await r.ctx.close();
+      }
+      // 307 · en escritorio (pestaña «Movimientos»), todo en una fila y sin «Filtros»; en la columna estrecha de «todo junto», plegado como en
+      // el teléfono (lo decide el ancho de la lista, no el de la ventana); con letra grande, sin desbordes
+      for (const [w, letra, junto] of [[1100, '', false], [1440, '', false], [2560, '', false], [1440, 'grande', false], [1440, 'muy-grande', false], [1440, '', true]]) {
+        const r = await entrar(navegador, anio, ADMIN, { viewport: { width: w, height: 900 }, pestanas: !junto, ...escritorio }, conLs(letra ? [['libro.letra', letra]] : []));
+        await cerrarTodo(r.p);
+        if (!junto) { await r.p.click('#pestanas button[data-pestana="movimientos"]'); await r.p.waitForTimeout(600); }
+        await r.p.evaluate(() => document.getElementById('t-compras').scrollIntoView({ block: 'start' })); await r.p.waitForTimeout(300);
+        const e = await r.p.evaluate(() => {
+          const t = document.getElementById('t-compras').getBoundingClientRect(), f = document.querySelector('#lista li[data-clave]').getBoundingClientRect(), bus = document.getElementById('l-buscar').getBoundingClientRect(), m = document.getElementById('l-mas').getBoundingClientRect();
+          const chips = [...document.querySelectorAll('#l-chips button')].map((b) => b.getBoundingClientRect());
+          const ctl = document.getElementById('l-ctl');
+          return { alto: Math.round(f.top - t.top), filtros: document.getElementById('l-filtros').checkVisibility(), unaFila: chips.every((c) => Math.abs(c.top - bus.top) < 4) && Math.abs(m.top - bus.top) < 4, pag: document.documentElement.scrollWidth <= innerWidth, ctl: ctl.scrollWidth <= ctl.clientWidth + 1 };
+        });
+        if (junto) ok(e.filtros && e.pag && e.ctl, `63·307 a ${w} px en «todo junto» (la lista en su columna), plegado bajo «Filtros» y sin desbordes (${JSON.stringify(e)})`);
+        else if (letra) ok((e.filtros || e.unaFila) && e.pag && e.ctl, `63·307 a ${w} px con letra ${letra}: en una fila si cabe, plegado si no, y sin desbordes (${JSON.stringify(e)})`);
+        else ok(!e.filtros && e.unaFila && e.alto <= 200 && e.pag && e.ctl, `63·307 a ${w} px, buscador, tipos y «Fechas y orden» en una fila (${JSON.stringify(e)}; antes 276 px a 1100–1440 y 293 a 2560)`);
+        if (w === 1440 && !letra && !junto) {
+          await r.p.click('#l-mas'); await r.p.waitForTimeout(200);
+          const m = await r.p.evaluate(() => { const c = document.getElementById('l-mas-c').getBoundingClientRect(), b = document.getElementById('l-buscar').getBoundingClientRect(); return { debajo: c.top >= b.bottom, ancho: c.width > 600 }; });
+          eq(m, { debajo: true, ancho: true }, '63·307 en escritorio, «Fechas y orden» abre su panel debajo de la fila, a lo ancho');
+        }
+        await r.ctx.close();
+      }
+    } finally { anio.parar(); sinp.parar(); }
   });
 
   // ---------------------------------------------------------------- sin histórico de precios

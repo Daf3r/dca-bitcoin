@@ -182,12 +182,17 @@
 <main class="cuerpo" id="principal" tabindex="-1" data-pestana="resumen">
   <p class="mant" id="mant" role="status" hidden><span>Mantenimiento: por ahora solo se puede mirar, no anotar. Vuelve en un rato.</span></p>
   <!-- Pestañas (campamento 14): una sola vista a la vez. En «Todo junto» (Tu cuenta) se esconden y todo va en una página larga. -->
+  <!-- (Campamento 62 · 304) La barra: en escritorio, por pestañas, «Anotar compra» se muda aquí, al final de las pestañas (pestanas.js:
+       colocarAnotar), siempre en el mismo sitio y pegado con ellas al bajar: el dock del teléfono, en horizontal. Fuera del escritorio
+       esta caja no cuenta (display: contents). -->
+  <div class="barra" id="barra">
   <nav class="pestanas" id="pestanas" aria-label="Secciones del libro">
     <button type="button" data-pestana="resumen" aria-current="true"><i class="pe-ico pe-resumen" aria-hidden="true"></i><span class="pe-txt">Resumen</span></button>
     <button type="button" data-pestana="graficos"><i class="pe-ico pe-graficos" aria-hidden="true"></i><span class="pe-txt">Gráficos</span></button>
     <button type="button" data-pestana="historia"><i class="pe-ico pe-historia" aria-hidden="true"></i><span class="pe-txt">Historia</span></button>
     <button type="button" data-pestana="movimientos"><i class="pe-ico pe-movimientos" aria-hidden="true"></i><span class="pe-txt">Movimientos</span></button>
   </nav>
+  </div>
   <!-- Dos columnas en escritorio; en móvil y tablet los contenedores no cuentan (display: contents)
        y el orden visual es el del documento, igual que el de tabulación. -->
   <div class="col-principal">
@@ -346,7 +351,8 @@
 
   <div class="col-lateral">
   <!-- (Campamento 20) En el teléfono y la tablet, por pestañas, «Anotar» es la acción del centro del dock de abajo (con la barra de
-       pestañas, un solo conjunto); ahí se lee «Anotar» y el nombre accesible sigue siendo «Anotar compra». En escritorio va aquí, pegajoso. -->
+       pestañas, un solo conjunto); ahí se lee «Anotar» y el nombre accesible sigue siendo «Anotar compra». En escritorio por pestañas se muda al
+       final de la barra (campamento 62, `#barra`); en escritorio «todo junto», va aquí, pegajoso. -->
   <button class="anotar" type="button" id="anotar"><span class="an-txt"><span class="an-t">Anotar</span><span class="an-c"> compra</span></span></button>
 
   <section class="compras" id="compras" aria-labelledby="t-compras" data-p="movimientos">
@@ -357,21 +363,26 @@
         <button type="button" class="enlace" id="l-tabla" hidden>Ver como tabla</button>
       </p>
     </div>
-    <!-- Buscar, filtrar y ordenar (sale cuando hay más movimientos de los que caben en la primera pantalla). Solo cambia lo que se ve en la lista: los totales son siempre los de todo. -->
+    <!-- Buscar, filtrar y ordenar (sale cuando hay más movimientos de los que caben en la primera pantalla). Solo cambia lo que se ve en la lista: los totales son siempre los de todo.
+         (Campamento 63) En una fila: en el teléfono, el buscador y «Filtros», que abre los tipos y «Fechas y orden» (y dice qué filtro hay:
+         «Filtros: compras»); donde caben (la lista de escritorio), todo en la misma fila y sin «Filtros». «Fechas y orden» abre su panel debajo. -->
     <div class="l-ctl" id="l-ctl" hidden>
-      <label class="l-busca"><span class="sr" data-libro="Buscar en los movimientos">Buscar en tus movimientos</span><input type="search" id="l-buscar" placeholder="Buscar: nota, mes, monto, TXID…" autocomplete="off" autocapitalize="none" enterkeyhint="search"></label>
-      <div class="l-chips" id="l-chips" role="group" aria-label="Filtrar por tipo">
-        <button type="button" data-f="todos" aria-pressed="true">Todo</button><button type="button" data-f="compra" aria-pressed="false">Compras</button><button type="button" data-f="venta" aria-pressed="false">Ventas</button><button type="button" data-f="traslado" aria-pressed="false">Traslados</button><button type="button" data-f="extra" aria-pressed="false">Extra</button><button type="button" data-f="txid" aria-pressed="false">Con TXID</button>
-      </div>
-      <details class="l-mas" id="l-mas">
-        <summary>Fechas y orden</summary>
-        <div class="l-mas-c">
-          <label>Desde <input type="date" id="l-desde"></label>
-          <label>Hasta <input type="date" id="l-hasta"></label>
-          <label id="l-etq-l" hidden>Etiqueta <select id="l-etq"><option value="">Todas</option></select></label>
-          <label>Orden <select id="l-orden"><option value="recientes">Más recientes primero</option><option value="antiguas">Más antiguas primero</option><option value="monto">Mayor monto primero</option><option value="sats">Más sats primero</option></select></label>
+      <div class="l-fila">
+        <label class="l-busca"><span class="sr" data-libro="Buscar en los movimientos">Buscar en tus movimientos</span><input type="search" id="l-buscar" placeholder="Buscar: nota, mes, monto, TXID…" autocomplete="off" autocapitalize="none" enterkeyhint="search"></label>
+        <button type="button" class="l-filtros" id="l-filtros" aria-expanded="false" aria-controls="l-filtrar">Filtros</button>
+        <div class="l-filtrar" id="l-filtrar">
+          <div class="l-chips" id="l-chips" role="group" aria-label="Filtrar por tipo">
+            <button type="button" data-f="todos" aria-pressed="true">Todo</button><button type="button" data-f="compra" aria-pressed="false">Compras</button><button type="button" data-f="venta" aria-pressed="false">Ventas</button><button type="button" data-f="traslado" aria-pressed="false">Traslados</button><button type="button" data-f="extra" aria-pressed="false">Extra</button><button type="button" data-f="txid" aria-pressed="false">Con TXID</button>
+          </div>
+          <button type="button" class="l-mas" id="l-mas" aria-expanded="false" aria-controls="l-mas-c">Fechas y orden</button>
         </div>
-      </details>
+      </div>
+      <div class="l-mas-c" id="l-mas-c" role="group" aria-label="Fechas y orden" hidden>
+        <label>Desde <input type="date" id="l-desde"></label>
+        <label>Hasta <input type="date" id="l-hasta"></label>
+        <label id="l-etq-l" hidden>Etiqueta <select id="l-etq"><option value="">Todas</option></select></label>
+        <label>Orden <select id="l-orden"><option value="recientes">Más recientes primero</option><option value="antiguas">Más antiguas primero</option><option value="monto">Mayor monto primero</option><option value="sats">Más sats primero</option></select></label>
+      </div>
       <p class="l-res" id="l-res" role="status"></p>
       <button type="button" class="enlace" id="l-limpiar" hidden>Quitar filtros</button>
     </div>
@@ -551,36 +562,36 @@
     <label class="h-nota-campo" id="h-nota-l"><span id="h-nota-t">¿Qué pasó esta semana en casa?</span>
       <input id="h-nota" type="text" maxlength="120" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: Sofi perdió su primer diente" aria-describedby="h-nota-ay">
     </label>
-    <p class="h-nota h-nota-ay" id="h-nota-ay">Opcional. Queda como nota de la compra: la ve toda la familia y, dentro de un año, el Diario la recuerda.</p>
+    <p class="h-nota h-nota-ay" id="h-nota-ay">La ve la familia; en un año el Diario la recuerda.</p>
     <details class="h-avanzado" id="h-avanzado">
-      <summary id="h-av-t">Más detalles: dólares o precio, TXID y compra extra</summary>
+      <summary id="h-av-t">Más detalles (todo opcional): dólares o precio, TXID y compra extra</summary>
       <!-- Los dólares y el precio de BTC van ligados: el que escribes manda y el otro se calcula («calculado»). Vacíos, se estiman con el
            precio de ese día, como siempre. Lo que se guarda son los sats y los dólares; el precio se deriva (ver hoja.js: datosHoja). -->
       <label class="h-usd" data-no-traslado><span><span id="h-usd-t">Pagaste (USD)</span><span class="h-calc" id="h-usd-c" hidden> · calculado</span></span>
         <input id="h-usd" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" placeholder="0.00" aria-describedby="h-dinero-ay">
       </label>
-      <label class="h-usd" data-no-traslado><span><span id="h-precio-t">Precio de BTC al que compraste (opcional)</span><span class="h-calc" id="h-precio-c" hidden> · calculado</span></span>
+      <label class="h-usd" data-no-traslado><span><span id="h-precio-t">Precio de BTC al que compraste</span><span class="h-calc" id="h-precio-c" hidden> · calculado</span></span>
         <input id="h-precio" type="text" inputmode="decimal" maxlength="16" autocomplete="off" enterkeyhint="done" placeholder="Por ejemplo: 62,500" aria-describedby="h-dinero-ay">
       </label>
-      <p class="h-nota" id="h-dinero-ay" data-no-traslado>Escribe los dólares o el precio: el otro se calcula. Si no escribes ninguno, se calculan con el precio de ese día.</p>
-      <label class="h-usd">TXID (opcional)
+      <p class="h-nota" id="h-dinero-ay" data-no-traslado>Escribe uno y el otro se calcula. Vacíos: el precio de ese día.</p>
+      <label class="h-usd">TXID
         <input id="h-txid" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="64 caracteres, o pega el enlace de mempool.space">
       </label>
-      <p class="h-nota">Sirve para comprobar la transacción en la cadena. Una compra dentro del exchange o por Lightning no tiene.</p>
+      <p class="h-nota">Para comprobarla en la cadena. Lightning o dentro del exchange: no hay.</p>
       <!-- Solo en un traslado a tu wallet: la comisión de red, que se anota también como un gasto. -->
-      <label class="h-usd" data-solo-traslado hidden>Comisión de red pagada (sats, opcional)
+      <label class="h-usd" data-solo-traslado hidden>Comisión de red pagada (sats)
         <input id="h-comision" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" placeholder="0">
       </label>
       <p class="h-nota" data-solo-traslado hidden>Si la pagaste, se anota también como un gasto («Comisión de retiro») y baja tu saldo.</p>
       <!-- Solo para compras: la marca de extra (su nota es la de arriba, como en cualquier compra). -->
       <label class="h-extra" data-solo-compra><input type="checkbox" id="h-extra"> <span>Compra extra (por una caída)</span></label>
-      <p class="h-nota" data-solo-compra>Las extra se muestran aparte: no son tu ritmo habitual ni cubren la compra de la semana.</p>
+      <p class="h-nota" data-solo-compra>Va aparte: no cuenta para el ritmo ni cubre la semana.</p>
       <!-- Etiquetas (idea 56): hasta 5, separadas por comas; las que ya usaste salen como sugerencia. Compras y ventas, no traslados. -->
-      <label class="h-usd" data-no-traslado>Etiquetas (opcional)
+      <label class="h-usd" data-no-traslado>Etiquetas
         <input id="h-etq" type="text" list="h-etq-lista" maxlength="140" autocomplete="off" autocapitalize="none" enterkeyhint="done" placeholder="cumpleaños, bono">
       </label>
       <datalist id="h-etq-lista"></datalist>
-      <p class="h-nota" data-no-traslado>Hasta 5, separadas por comas. Sirven para filtrar la lista.</p>
+      <p class="h-nota" data-no-traslado>Hasta 5, con comas. Filtran la lista.</p>
     </details>
     <div class="hoja-bot">
       <button type="button" class="borrar" id="h-borrar" hidden>Anular</button>
@@ -590,40 +601,61 @@
 </div>
 
 <dialog id="d-cuenta" class="d-cuenta" aria-labelledby="dc-t">
-  <div class="dc-menu" id="dc-menu">
+  <!-- (Campamento 62) La cabecera queda pegada arriba mientras bajas: «Cerrar» siempre a mano (antes estaba al final, dos pantallas
+       más abajo en un teléfono). En las vistas de dentro, «‹ Tu cuenta» ocupa el sitio del título (antes, «Volver» al final). -->
+  <div class="dc-cab" id="dc-cab">
     <h2 id="dc-t">Tu cuenta</h2>
+    <button type="button" class="dc-volver" data-cuenta="volver" id="dc-volver" hidden><span aria-hidden="true">‹ </span><span class="sr">Volver a </span>Tu cuenta</button>
+    <button type="button" class="cerrar" data-cuenta="cerrar" id="dc-cerrar">Cerrar</button>
+  </div>
+  <div class="dc-menu" id="dc-menu">
     <p class="dc-quien" id="dc-quien"></p>
     <!-- «Tu cuenta» por para qué sirve (campamento 20): lo que es del libro (y de la familia), lo que vale solo en este dispositivo y lo
          que se administra (la cuenta de cada quien y, para quien anota, el libro y el servidor). Al final, salir. Los ids no cambian. -->
     <div class="dc-lista">
-      <h3 class="dc-grupo" id="dc-g-libro">El libro</h3>
-      <button type="button" data-cuenta="historia" id="dc-historia-btn" data-libro="Historia y medallas del libro">Tu historia y medallas</button>
-      <button type="button" data-cuenta="montana" id="dc-montana" hidden>Nombre de la montaña: sin nombre</button>
-      <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
-      <h3 class="dc-grupo" id="dc-g-disp">Este dispositivo</h3>
-      <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
-      <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
-      <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
-      <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
-      <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
-      <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
-      <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: automático</button>
-      <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
-      <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
-      <button type="button" data-cuenta="tv-duerme" id="dc-tv-duerme">La tele duerme de noche: sí</button>
-      <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: con saldo</button>
-      <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
-      <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
-      <h3 class="dc-grupo" id="dc-g-admin">Administrar</h3>
-      <button type="button" data-cuenta="clave">Cambiar contraseña</button>
-      <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
-      <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
-      <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
-      <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
-      <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
-      <button type="button" class="dc-salir" data-cuenta="salir">Salir</button>
-      <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
-      <button type="button" data-cuenta="cerrar">Cerrar</button>
+      <!-- (Campamento 62) Cada grupo en su caja: en escritorio, «El libro» y «Administrar» a la izquierda y «Este dispositivo» a la
+           derecha (el orden del documento, y del tabulador, no cambia). En el teléfono, siete ajustes que se tocan una vez en la vida
+           van bajo «Más ajustes de este aparato» (recuerda si lo dejaste abierto). «Atajos de teclado» no se pliega (WCAG 2.1.4). -->
+      <div class="dc-sec" id="dc-sec-libro">
+        <h3 class="dc-grupo" id="dc-g-libro">El libro</h3>
+        <button type="button" data-cuenta="historia" id="dc-historia-btn" data-libro="Historia y medallas del libro">Tu historia y medallas</button>
+        <button type="button" data-cuenta="montana" id="dc-montana" hidden>Nombre de la montaña: sin nombre</button>
+        <button type="button" data-cuenta="cumple" id="dc-cumple">Mi cumpleaños</button>
+      </div>
+      <div class="dc-sec" id="dc-sec-disp">
+        <h3 class="dc-grupo" id="dc-g-disp">Este dispositivo</h3>
+        <button type="button" data-cuenta="avisos" id="dc-avisos-btn"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-campana"/></svg> Avisos en este dispositivo</button>
+        <button type="button" data-cuenta="tema" id="dc-tema">Tema: automático</button>
+        <button type="button" data-cuenta="letra" id="dc-letra">Tamaño de letra: normal</button>
+        <button type="button" data-cuenta="efectos" id="dc-efectos">Efectos: automático</button>
+        <button type="button" data-cuenta="pestanas" id="dc-pestanas">Pantalla: por pestañas</button>
+        <button type="button" data-cuenta="atajos" id="dc-atajos">Atajos de teclado: activados</button>
+        <details class="dc-mas" id="dc-mas">
+          <summary id="dc-mas-t">Más ajustes de este aparato <small aria-hidden="true">7</small></summary>
+          <div class="dc-mas-lista">
+            <button type="button" data-cuenta="contraste" id="dc-contraste">Contraste: automático</button>
+            <button type="button" data-cuenta="ganancia" id="dc-ganancia">Colores de ganancia: neutros</button>
+            <button type="button" data-cuenta="madrugada" id="dc-madrugada">Modo madrugada: de 22:00 a 5:00</button>
+            <button type="button" data-cuenta="tv" id="dc-tv">Modo pantalla grande</button>
+            <button type="button" data-cuenta="tv-duerme" id="dc-tv-duerme">La tele duerme de noche: sí</button>
+            <button type="button" data-cuenta="titulo" id="dc-titulo">Título de la pestaña: saldo y precio</button>
+            <button type="button" data-cuenta="sonido" id="dc-sonido">Sonido al guardar: apagado</button>
+          </div>
+        </details>
+      </div>
+      <div class="dc-sec" id="dc-sec-admin">
+        <h3 class="dc-grupo" id="dc-g-admin">Administrar</h3>
+        <button type="button" data-cuenta="clave">Cambiar contraseña</button>
+        <button type="button" data-cuenta="sesiones" id="dc-sesiones-btn">Sesiones abiertas</button>
+        <button type="button" data-cuenta="historial" id="dc-historial" hidden>Historial</button>
+        <button type="button" data-cuenta="datos" id="dc-datos-btn" hidden>Tus datos: descargar e importar</button>
+        <button type="button" data-cuenta="enlaces" id="dc-enlaces-btn" hidden>Enlace para tu hoja de cálculo</button>
+        <button type="button" data-cuenta="sistema" id="dc-sistema-btn" hidden>Estado del sistema</button>
+      </div>
+      <div class="dc-sec dc-sec-salir" id="dc-sec-salir">
+        <button type="button" class="dc-salir" data-cuenta="salir">Salir</button>
+        <button type="button" data-cuenta="salir-todas">Salir en todos los dispositivos</button>
+      </div>
     </div>
     <p class="dc-atajos" id="dc-atajos-lista">Atajos con el teclado: <kbd>A</kbd> anotar · <kbd>T</kbd> tema · <kbd>U</kbd> unidad del saldo · <kbd>/</kbd> buscar en la lista.</p>
   </div>
@@ -638,7 +670,7 @@
     <input id="fc-nueva2" type="password" autocomplete="new-password" minlength="12" required>
     <p class="hoja-error" id="fc-error" role="alert"></p>
     <p class="dc-nota">Al cambiarla se cierran tus otras sesiones.</p>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button><button type="submit" class="primario">Guardar</button></div>
+    <div class="d-bot"><button type="submit" class="primario">Guardar</button></div>
   </form>
   <div class="dc-avisos" id="dc-avisos" hidden>
     <h2>Avisos</h2>
@@ -665,7 +697,6 @@
       <p class="dc-nota" id="av-prueba-res" role="status"></p>
     </div>
     <p class="hoja-error" id="av-error" role="alert"></p>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-datos" id="dc-datos" hidden>
     <h2>Tus datos</h2>
@@ -685,7 +716,6 @@
       <p class="dc-nota">Además de «Mi wallet». Una wallet nueva se crea al anotar un traslado. Archivarla la saca de las opciones, pero sus traslados se conservan.</p>
       <ul class="sis-lista" id="dd-wallets-lista"></ul>
     </div>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-enlaces" id="dc-enlaces" hidden>
     <h2>Enlace para tu hoja de cálculo</h2>
@@ -700,7 +730,6 @@
     <div class="en-nuevo" id="en-nuevo" role="status" hidden></div>
     <ul class="sis-lista" id="en-lista"></ul>
     <p class="hoja-error" id="en-error" role="alert"></p>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-sesiones" id="dc-sesiones" hidden>
     <h2>Sesiones abiertas</h2>
@@ -721,7 +750,6 @@
       <p class="dc-nota tc-estado" id="tc-estado" role="status"></p>
       <p class="hoja-error" id="tc-error" role="alert"></p>
     </section>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-sistema" id="dc-sistema" hidden>
     <h2>Estado del sistema</h2>
@@ -762,12 +790,11 @@
       <button type="button" data-previa="epico">1 BTC</button>
       <button type="button" data-previa="constancia">Constancia</button>
     </div>
-    <div class="d-bot"><button type="button" data-cuenta="volver">Volver</button></div>
   </div>
   <div class="dc-historial" id="dc-hist" hidden>
     <h2>Historial</h2>
     <ol class="hist" id="hist-lista"></ol>
-    <div class="d-bot"><button type="button" id="hist-mas" hidden>Ver más</button><button type="button" data-cuenta="volver">Volver</button></div>
+    <div class="d-bot"><button type="button" id="hist-mas" hidden>Ver más</button></div>
   </div>
 </dialog>
 

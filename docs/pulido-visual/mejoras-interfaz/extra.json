@@ -1,0 +1,140 @@
+{
+ "anotarCss": [
+  "sticky",
+  "133px"
+ ],
+ "anotarPisa": {
+  "posiciones": 94,
+  "conTextoTapado": 89,
+  "desde": 1131,
+  "hasta": 4607
+ },
+ "ritmo-390": {
+  "resumen": [
+   [
+    22,
+    "toca→caida"
+   ],
+   [
+    22,
+    "caida→tramo"
+   ],
+   [
+    22,
+    "tramo→diario"
+   ],
+   [
+    22,
+    "diario→res-medallas"
+   ],
+   [
+    22,
+    "res-medallas→rep"
+   ],
+   [
+    22,
+    "rep→ubicacion"
+   ],
+   [
+    22,
+    "ubicacion→capsulas"
+   ]
+  ],
+  "graficos": [
+   [
+    26,
+    "vistas→mercado"
+   ],
+   [
+    22,
+    "mercado→spd"
+   ],
+   [
+    22,
+    "spd→rep-ext"
+   ],
+   [
+    22,
+    "rep-ext→rep-anios"
+   ]
+  ],
+  "movimientos": []
+ },
+ "ritmo-1440": {
+  "resumen": [
+   [
+    32,
+    "toca→caida"
+   ],
+   [
+    32,
+    "caida→tramo"
+   ],
+   [
+    32,
+    "tramo→diario"
+   ],
+   [
+    32,
+    "diario→res-medallas"
+   ],
+   [
+    28,
+    "ubicacion→capsulas"
+   ]
+  ],
+  "graficos": [
+   [
+    36,
+    "vistas→mercado"
+   ],
+   [
+    32,
+    "mercado→spd"
+   ],
+   [
+    32,
+    "spd→rep-ext"
+   ]
+  ],
+  "movimientos": []
+ },
+ "naranja-oscuro": {
+  "naranjaVsS1": 7.97,
+  "naranjaVsFondo": 8.8,
+  "txt2VsS2": 8.38,
+  "txt2VsS1": 9.31
+ },
+ "guia-oscuro": {
+  "si": 6,
+  "no": 0,
+  "muestra": [
+   "15.5:1 ✓",
+   "9.3:1 ✓",
+   "6.3:1 ✓",
+   "10.0:1 ✓"
+  ]
+ },
+ "naranja-claro": {
+  "naranjaVsS1": 2.15,
+  "naranjaVsFondo": 1.97,
+  "txt2VsS2": 6.92,
+  "txt2VsS1": 8.15
+ },
+ "guia-claro": {
+  "si": 6,
+  "no": 0,
+  "muestra": [
+   "16.2:1 ✓",
+   "8.1:1 ✓",
+   "6.2:1 ✓",
+   "6.2:1 ✓"
+  ]
+ },
+ "tele": {
+  "tv": "1",
+  "botones": [
+   "tv-salir"
+  ]
+ }
+}
