@@ -641,6 +641,8 @@ try {
         ok(await p.locator('#av-prueba-btn').isVisible(), `${quien}: con los avisos activados sale «Enviarme un aviso de prueba»`);
         await p.click('#av-prueba-btn');
         await p.waitForFunction(() => { const t = document.getElementById('av-prueba-res').textContent; return t && t !== 'Enviando…'; }, null, { timeout: 20000 });
+        // (61) el texto llega un instante antes de que el botón se reactive: con la máquina cargada, se espera también a eso (si no llega, falla abajo)
+        await p.waitForFunction(() => !document.getElementById('av-prueba-btn').disabled, null, { timeout: 5000 }).catch(() => {});
         const res1 = (await p.textContent('#av-prueba-res')).trim();
         ok(res1.length > 20 && !(await p.locator('#av-prueba-btn').isDisabled()), `${quien}: la prueba dice qué pasó («${res1.slice(0, 60)}…») y el botón vuelve`);
         await p.click('#av-prueba-btn');
