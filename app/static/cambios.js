@@ -9,6 +9,30 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 53A) La neblina de la mañana; resume también los vecinos con oficio (2026-12-o) y el día entero del pueblo (2026-12-n),
+    // que salen casi a la vez.
+    id: '2026-12-p',
+    items: [
+      'La neblina de la mañana ahora parece neblina: suave, sin bordes, y deja ver lo que hay detrás.',
+      'Se queda en el fondo del valle, detrás de la loma y de la montaña: el pueblo y su suelo se ven limpios.',
+      'Los vecinos del pueblo tienen oficio: el panadero, la maestra, el pescador, el sacristán… y cada uno sigue su día.',
+      'El pueblo vive el día entero, de las tortillas a la fresca en la acera, y los lunes el panadero descansa.',
+      'Con muchas compras, «Tu historia» va por semanas: toca una para verla día por día.',
+    ],
+  },
+  {
+    // (Campamento 52) Vecinos con oficio; resume también el día entero del pueblo (2026-12-n) y «Tu historia» a miles (2026-12-m).
+    id: '2026-12-o',
+    items: [
+      'Los vecinos del pueblo tienen oficio, y cada uno lleva siempre su ropa: el panadero, la maestra, el pescador, el sacristán…',
+      'Cada uno sigue su día: el pan de madrugada, el pescado a media mañana y la iglesia que se abre y se cierra.',
+      'Dos vecinos se encuentran cada mañana y cada tarde, y un osezno lleva un recado.',
+      'Los lunes el panadero descansa y los sábados hay tamales.',
+      'El pueblo vive el día entero, de las tortillas a la fresca en la acera.',
+      'Con muchas compras, la partitura de «Tu historia» va por semanas.',
+    ],
+  },
+  {
     // (Campamento 40) El día entero del pueblo; resume también «Tu historia» a miles (2026-12-m), anotar y buscar (2026-12-l) y los menús
     // (2026-12-k), que salen casi a la vez.
     id: '2026-12-n',

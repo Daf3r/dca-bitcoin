@@ -94,7 +94,7 @@ Hasta ahora el pueblo tenía seis momentos al día y todos los días eran iguale
 - Las frases de la descripción (tono para revisar con la familia).
 
 ## Lo que quedó fuera (y por qué)
-- **Las mejoras de `ideas_v5.py` que dependen de ideas posteriores**: la luz del horno del panadero (140 → 231), los tres mazos «quién, dónde y con quién» elegidos por el director con su regla de no repetir (141 → 223/227: aquí la carta del día cumple «nunca como ayer» por su cuenta), los manteles después de una fiesta y los pañales (143 → 241), «el día del primer aguacero se queda a medias» (143 → 265), el perro que duerme donde hubo fiesta (145 → 255) y las luces detrás del sacristán (147 → 234).
+- **Las mejoras de `ideas_v5.py` que dependen de ideas posteriores**: la luz del horno del panadero (140 → 231), los tres mazos «quién, dónde y con quién» elegidos por el director con su regla de no repetir (141 → 223/227: aquí la carta del día cumple «nunca como ayer» por su cuenta), los manteles después de una fiesta y los pañales (143 → 241), «el día del primer aguacero se queda a medias» (143 → 265), el perro que duerme donde hubo fiesta (145 → 255) y las luces detrás del sacristán (147 → 234). *(Campamento 52: hechas la luz del horno, 231, y las luces detrás del sacristán, 234: a las 17:45 la iglesia, luego los faroles; ver [52](52-vecinos-con-oficio.md).)*
 - **Apagar las ventanas una a una**: dos trazos más y el orden diría de quién es cada una; se apagan juntas a las 22:00.
 - **La que baja del cantón en escritorio**: allí el camino real no se dibuja (pulido del paisaje bajo).
 - **Los turnos nuevos no son focos del director**: no traen movimiento ni rareza (son la rutina); `mueve` y los ambientales no cambian. El mapa del día los recoge solo (cambia su clave).

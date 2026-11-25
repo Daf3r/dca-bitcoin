@@ -249,10 +249,25 @@
     // La noche de fiesta (la misa de gallo, la espera del 31, los abrazos de las doce) el pueblo no se apaga: todas las luces.
     const fi = turnoFiesta(f.slice(5), h);
     if (fi && fi !== 'duerme') return '';
+    // (Campamento 52, ideas 140 y 231) De 4:30 a 5:00 la única luz del pueblo es el horno del panadero (los faroles, apagados); el lunes
+    // descansa: solo los faroles, como antes.
+    if (h >= 4.5 && h < 5) return semana(f) === 1 ? 'faroles' : 'horno';
     if (h >= 16.5 && h < 17.75) return 'ninguna';
-    if ((h >= 17.75 && h < 18) || h >= 23 || h < 5) return 'faroles';
+    // (52, ideas 147 y 234) Las luces van detrás del sacristán: a las 17:45 enciende la iglesia (`templo`: solo ella), a las 18:00 los
+    // faroles y a las 18:15 las ventanas.
+    if (h >= 17.75 && h < 18) return 'templo';
+    if (h >= 23 || h < 5) return 'faroles';
     if ((h >= 18 && h < 18.25) || (h >= 22 && h < 23)) return 'iglesia';
     return '';
+  }
+  /**
+   * (Campamento 52, idea 234) La puerta de la iglesia: el sacristán la abre a las 5:30 y la cierra a las 21:00 (las noches de fiesta de la
+   * Navidad entera se queda abierta). `html[data-puerta="cerrada"]`: el portal pasa de la luz de dentro a la madera de la puerta.
+   */
+  function puertaIglesia(f, h) {
+    const fi = turnoFiesta(f.slice(5), h);
+    if (fi && fi !== 'duerme') return '';
+    return h >= 21 || h < 5.5 ? 'cerrada' : '';
   }
   // ---------------------------------------------------------------------------------------------------- (Campamento 51) el director
   /**
@@ -510,6 +525,7 @@
     const so = sombraDelPueblo(h), lu = lucesDelPueblo(d, h);
     if (so) raiz.dataset.sombra = so; else delete raiz.dataset.sombra;
     if (lu) raiz.dataset.luces = lu; else delete raiz.dataset.luces;
+    if (puertaIglesia(d, h)) raiz.dataset.puerta = 'cerrada'; else delete raiz.dataset.puerta; // (52, 234)
     const fe = festivo(d);
     if (fe) raiz.dataset.festivo = fe; else delete raiz.dataset.festivo;
     if (turnoAplicado !== null && tu !== turnoAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:turno'));
@@ -536,6 +552,6 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, turno, escuela, sombraDelPueblo, lucesDelPueblo,
+  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
     director, foco, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

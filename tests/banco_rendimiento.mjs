@@ -36,41 +36,45 @@ export const AMBIENTALES = 3;
  * son los de un día fijo (`FECHA_PRUEBA`): nada depende de la fecha real.
  */
 const CASOS = [
+  // (Campamento 52) +1 en cada fecha: el portal de la iglesia va en su propio trazo (el sacristán lo abre y lo cierra); los vecinos con
+  // oficio usan los tonos de siempre (en algún turno, uno más que antes: +2 como mucho).
   // (Campamento 40) +1 en cada fecha: la sombra del perro va en su propio trazo (se esconde con él cuando se echa en otro sitio).
   // (Campamento 51) Las capas de los ambientales suman tres nodos a cada fecha (las del humo y del cayuco, y el grupo que guarda la
   // transformación del cayuco en el lago): de ahí que cada `declara` suba 3 desde el 39 y el 41.
-  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 833 },
+  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 834 },
   // (Campamento 51) Las franjas del día en que se mueve alguien del pueblo (la que barre, las gallinas, el perro, la pelota) y el
   // anochecer del fogón: con los ambientales (F3) junto al actor, que es lo que el director reparte.
+  // (Campamento 53A) La neblina del amanecer (5:00 a 7:30): dos bancos de degradado, quietos; pesa un nodo menos que antes (ningún caso caía en su franja).
+  { caso: 'amanecer, neblina', dia: '2026-11-25', hora: 6, declara: 833 },
   { caso: 'día, barre', dia: '2026-11-25', hora: 7.5, declara: 833 },
   { caso: 'día, gallinas', dia: '2026-11-25', hora: 8.5, declara: 833 },
-  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 833 },
-  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 833 },
-  { caso: 'anochecer, fogón', dia: '2026-11-25', hora: 19, declara: 833 },
+  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 834 },
+  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 834 },
+  { caso: 'anochecer, fogón', dia: '2026-11-25', hora: 19, declara: 835 },
   { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 833 },
-  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 903 },
+  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 904 },
   { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 827 },
   { caso: 'noche de lluvia', dia: '2026-07-10', hora: 21, declara: 827 },
   // El pico del año: los cohetes (14 animaciones, en el frente) solo de 23:50 a 0:30 del 24 y del 31; esos 40 minutos el frente admite 28
   // (medido el 24 nov 2026: 26 en Nochebuena, con el papel picado de la fiesta; ya era así antes del 39, solo que el banco no lo medía).
-  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 942, frente: 28 },
-  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 908, frente: 28 },
+  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 943, frente: 28 },
+  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 909, frente: 28 },
   // (Campamento 41) La Navidad entera: un turno de cada fecha nueva (los demás pesan lo mismo: otro reparto de los mismos trazos).
-  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 911 },
-  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 904 },
-  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 874 },
-  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 912, frente: 28 },
-  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 871 },
+  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 912 },
+  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 905 },
+  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 875 },
+  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 913, frente: 28 },
+  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 872 },
   // (Campamento 40) El día entero del pueblo: un día de escuela de la seca (miércoles 10 de febrero de 2027), un lunes de ropa tendida y
   // un viernes de pupusas. Ninguno mueve a nadie nuevo: otro reparto de los mismos trazos.
-  { caso: 'antes del alba', dia: '2027-02-10', hora: 4.75, declara: 820 },
-  { caso: 'mediodía, tortillas', dia: '2027-02-10', hora: 11.75, declara: 824 },
-  { caso: 'mediodía, salida de la escuela', dia: '2027-02-10', hora: 12.25, declara: 824 },
-  { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 821 },
-  { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 824 },
-  { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 822 },
-  { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 831 },
-  { caso: 'viernes, pupusas', dia: '2027-02-12', hora: 19, declara: 825 },
+  { caso: 'antes del alba', dia: '2027-02-10', hora: 4.75, declara: 822 },
+  { caso: 'mediodía, tortillas', dia: '2027-02-10', hora: 11.75, declara: 825 },
+  { caso: 'mediodía, salida de la escuela', dia: '2027-02-10', hora: 12.25, declara: 825 },
+  { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 823 },
+  { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 825 },
+  { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 824 },
+  { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 832 },
+  { caso: 'viernes, pupusas', dia: '2027-02-12', hora: 19, declara: 826 },
 ];
 /** (Campamento 39, idea 131) Las pantallas anchas (escritorio 1440×900 y tele 2560×1440): solo los nodos, frente a `TOPES_ANCHO`. */
 const ANCHOS = [[1440, 900], [2560, 1440]].flatMap(([w, h]) => [

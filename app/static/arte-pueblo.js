@@ -269,7 +269,8 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
     add('ig-cruz', `M${P(m(-4.25, -h - 15.4))}L${P(m(-4.25, -h - 19.8))}M${P(m(-5.6, -h - 18.4))}L${P(m(-2.9, -h - 18.4))}`);
     // Los huecos oscuros (o encendidos de noche): el arco del campanario, la puerta en arco, el óculo y dos ventanas altas.
     const arco = (cx, y0, a, alto) => `M${P(m(cx - a, y0))}L${P(m(cx - a, y0 - alto + a))}Q${P(m(cx - a, y0 - alto))} ${P(m(cx, y0 - alto))}Q${P(m(cx + a, y0 - alto))} ${P(m(cx + a, y0 - alto + a))}L${P(m(cx + a, y0))}Z`;
-    add('ig-hueco', arco(-4.25, -h - 1.6, 1.9, 6) + arco(w / 2, 0, 2.6, 8.4));
+    add('ig-hueco', arco(-4.25, -h - 1.6, 1.9, 6));
+    add('ig-portal', arco(w / 2, 0, 2.6, 8.4)); // (Campamento 52, idea 234) el portal, aparte: el sacristán lo abre y lo cierra
     add('ig-hueco', `M${P(m(w / 2 - 1.3, -h + 3))}a${f1(1.3 * k)} ${f1(1.3 * k)} 0 1 0 ${f1(2.6 * k * sol)} 0a${f1(1.3 * k)} ${f1(1.3 * k)} 0 1 0 ${f1(-2.6 * k * sol)} 0Z`);
     add('ig-campana', arco(-4.25, -h - 2.6, 0.9, 2.6));
     add('ig-ventana', arco(3.4, -9, 0.9, 4) + arco(w - 3.4, -9, 0.9, 4) + arco(w + dx * 0.35, dy * 0.35 - 7, 0.8, 4) + arco(w + dx * 0.72, dy * 0.72 - 7, 0.8, 4) + arco(-4.25, -h * 0.5 - 1.4, 0.7, 3.2));
@@ -403,7 +404,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${p('v-sombra v-sombra-perro', 'perro-sombra')}${filaAtras}`
     + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-relieve', 'ig-relieve')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-atrio', 'ig-atrio')}${p('v-ig-atrio-s', 'ig-atrio-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
     + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-chimenea', 'chimenea')}${p('v-poste', 'poste', sw(0.55))}`
-    + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`
+    + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-portal', 'ig-portal')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`
     + `${mango}${fuegoV}${navidad}`
     + `${p('v-farol-poste', 'farol-poste', sw(0.55))}${p('v-farol-lampara', 'farol-lampara')}${p('v-farol-luz', 'farol-luz', sw(3.4))}`
     + `<path class="v-cordel" d="${cuerda}"${sw(0.3)}/>${foco.map((d, j) => `<path class="v-navidad v-foco v-foco-${j}" d="${d}"${sw(1.15)}/>`).join('')}${bandera.map((d, j) => `<path class="v-fiesta v-band v-band-${j}" d="${d}"/>`).join('')}`
@@ -550,16 +551,10 @@ export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx, evitar = null, a
       }
     }
   }
-  // El mar de niebla del amanecer también llena el valle de delante (campamento 22B, 5:00 a 7:30): dos velos que cubren los campos y
-  // dejan asomar el pueblo y las copas. Quieto (paisaje); su opacidad la pone `--v-mar`.
-  const velo = (dy, sem) => {
-    const r2 = azar(sem); let d = `M${P([x0 - 10, yF(1, x0) + dy])}`;
-    for (let x = x0; x <= x1 + 30; x += 26 * k) d += `Q${P([x + 13 * k, yF(1, x) + dy - (4 + r2() * 6) * k])} ${P([x + 26 * k, yF(1, x + 26 * k) + dy])}`;
-    return `${d}L${P([x1 + 30, yAbajo - 2 * k])}L${P([x0 - 10, yAbajo - 2 * k])}Z`;
-  };
+  // (Campamento 53A) Aquí no hay neblina: los velos del 22B (y el montículo que se probó en su lugar) quedaban montados sobre el pueblo.
+  // La del valle va detrás de la montaña (arte-valle.js: marDeNiebla) y el pueblo se ve limpio delante de ella.
   const svg = tono.map((d, i) => `<path class="v-parc v-parc-${i}" d="${d}"/>`).join('') + `<path class="v-surco" d="${surco}" stroke-width="${f1(0.8 * k)}"/><path class="v-loma-campo" d="${loma}" stroke-width="${f1(1.1 * k)}"/>`
-    + `<path class="v-arbolito-tronco" d="${tronco}" stroke-width="${f1(0.9 * k)}"/><path class="v-arbolito" d="${copa}"/><path class="v-arbolito-l" d="${copaL}"/>`
-    + `<path class="v-mar v-mar-luz v-mar-valle" d="${velo(-8 * k, 5)}"/><path class="v-mar v-mar-cuerpo v-mar-valle" d="${velo(2 * k, 9)}"/>`;
+    + `<path class="v-arbolito-tronco" d="${tronco}" stroke-width="${f1(0.9 * k)}"/><path class="v-arbolito" d="${copa}"/><path class="v-arbolito-l" d="${copaL}"/>`;
   return { svg, milpa: evitar && mejor < 0 ? null : milpa };
 }
 
