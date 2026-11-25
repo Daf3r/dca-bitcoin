@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 47) Los osos de la cumbre; resume también el pueblo se mueve 2 (2026-12-t) y la fiesta del hito, que salen casi a la vez.
+    id: '2026-12-u',
+    items: [
+      'Los osos de la cumbre duermen de noche y, al atardecer, se ponen de espaldas a mirar cómo baja el sol.',
+      'Cuando pasa algo en el pueblo, uno de ellos se asoma a mirar.',
+      'De vez en cuando se acomodan o se estiran, y en diciembre va creciendo a su lado un oso de nieve.',
+      'En el pueblo se mueven más vecinos: el panadero en su bicicleta, la tortillera y la hamaca de la siesta.',
+      'Al llegar a una etapa, el pueblo hace fiesta una vez para toda la familia.',
+    ],
+  },
+  {
     // (Campamento 49) El pueblo se mueve 2; resume también la pantalla grande (2026-12-s) y la fiesta del hito (2026-12-r), que salen casi a la vez.
     id: '2026-12-t',
     items: [
