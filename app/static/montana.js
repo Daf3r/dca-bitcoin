@@ -1,8 +1,8 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
-import { sinMovimiento } from './movimiento.js';
+import { sinMovimiento, conAmbiente } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
-import { reparto, repartoFiesta, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
+import { reparto, repartoFiesta, svgVecinos, manoDe, luzPupusa, cajaVecino, recorrido, tramoLibre } from './arte-vecinos.js';
 import { farolHito as dibujoFarolHito } from './arte-fiesta.js';
 import { sitiosPueblo, lugaresPueblo, TERRAZA, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
@@ -406,6 +406,25 @@ function ambientalesDelValle(host) {
 }
 
 /**
+ * (Campamento 49, idea 25) La campana de la torre: su trazo pasa del dibujo grande a su capa pequeña (se mueve, no se copia: un nodo más,
+ * el <svg>) y a las 12:00 se mece cinco minutos (`data-mueve="campana"`, solo con «todos»; muda, como todo). El giro, desde arriba.
+ */
+function campanaDelPueblo(host) {
+  const svg = host.querySelector(':scope > svg'), cam = svg?.querySelector('#m-v-pie .v-ig-campana'), frente = host.querySelector(':scope > svg.frente');
+  if (!cam?.getAttribute('d')) return null;
+  let b;
+  try { b = cam.getBBox(); } catch { return null; }
+  if (!b.width || ![b.x, b.y, b.width, b.height].every(Number.isFinite)) return null;
+  const m = b.width, [x, y, w, h] = [b.x - m, b.y - 0.5, b.width + 2 * m, b.height + m];
+  const s = document.createElementNS(NS, 'svg');
+  for (const [a, v] of [['class', 'v-capa-campana'], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
+  Object.assign(s.style, { left: `${f1(x)}px`, top: `${f1(y)}px`, width: `${f1(w)}px`, height: `${f1(h)}px` });
+  s.append(cam);
+  if (frente) frente.before(s); else host.append(s);
+  return s;
+}
+
+/**
  * (Campamento 35) El Pueblo de los Osos: el turno de ahora (cielo.js, por la hora y el día de El Salvador) y lo que se dibuja de él. Al
  * cambiar de turno con la página abierta (`libro:turno`, unas seis veces al día) se rehace solo el grupo de los vecinos (`.v-vecinos`)
  * de cada escena viva: es la única excepción a «nada se redibuja al cambiar de hora» (idea 102), un repintado del dibujo grande.
@@ -455,34 +474,101 @@ function opcionesReparto(info, t) {
   // (Campamento 52) `hora`: los vecinos con oficio están en el sitio de esa hora (no caminan: se dibuja al poner la escena o el turno).
   return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora };
 }
-function htmlVecinos(info, t) {
+/**
+ * (Campamento 49) Lo que va al dibujo grande de cada vecino cuando hay capas: el actor (o su parte quieta, `quedaT`: los postes de la
+ * hamaca, el cuerpo de la tortillera), sin la abuela de la ronda y sin la chispa de las estrellitas; `sin`: el que va caminando (204).
+ */
+function enDibujo(todos, conCapa, sin = null) {
+  if (!conCapa) return todos;
+  return todos.filter((v) => v !== sin && !v.ronda && (!v.actor || v.quedaT)).map((v) => (v.actor ? { ...v, t: v.quedaT } : v.t === 'oseznoLuz' ? { ...v, t: 'oseznoLuzSin' } : v));
+}
+function htmlVecinos(info, t, { sin = null, todos = null } = {}) {
   const { lug, sol, cometas, conCapa = false } = info;
-  const todos = reparto(lug, t, opcionesReparto(info, t)), lista = conCapa ? todos.filter((v) => !v.actor) : todos;
+  todos ??= reparto(lug, t, opcionesReparto(info, t));
+  info.lista = todos; // (49, 204) lo que está dibujado: de aquí sale el que camina al cambiar de turno
+  const lista = enDibujo(todos, conCapa, sin);
   const manos = lista.filter((v) => v.hilo).map(manoDe);
   const mx = cometas.reduce((a, q) => a + q.x, 0) / Math.max(1, cometas.length);
   const poste = [...lug.poste].sort((a, b) => Math.abs(a[0] - mx) - Math.abs(b[0] - mx))[0];
   const luz = luzPupusa(lista);
   return `${luz ? `<path class="v-charco v-vo-luz" d="${elipseV(luz[0], luz[1], luz[2], luz[2] * 0.32)}"/>` : ''}${svgVecinos(lista, { sol })}${hilosPiscuchas(cometas, cometas.map((_, i) => manos[i] ?? poste))}`;
 }
+/** (37, 49) Una capa de vecino: un <svg> pequeño con las coordenadas de la escena, hermano del principal y debajo del frente. */
+function capaDeVecinos(host, clase, lista, sol, { arriba = 0, giro = null, vars = {} } = {}) {
+  const cs = lista.map(cajaVecino), k = lista[0].k, m = 1.5 * k;
+  const c = { x0: Math.min(...cs.map((q) => q.x0)), x1: Math.max(...cs.map((q) => q.x1)), y0: Math.min(...cs.map((q) => q.y0)), y1: Math.max(...cs.map((q) => q.y1)) };
+  const [x, y, w, h] = [c.x0 - m, c.y0 - m - arriba, c.x1 - c.x0 + 2 * m, c.y1 - c.y0 + 2 * m + arriba];
+  if (![x, y, w, h].every(Number.isFinite)) return null;
+  const s = document.createElementNS(NS, 'svg');
+  for (const [a, v] of [['class', clase], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
+  Object.assign(s.style, { left: `${f1(x)}px`, top: `${f1(y)}px`, width: `${f1(w)}px`, height: `${f1(h)}px` });
+  s.style.setProperty('--bote', `${f1(-2.4 * k)}px`);
+  // El giro: desde los pies (la que barre, la abuela) o desde donde cuelga (la hamaca, `giro` en unidades del vecino).
+  const oy = giro === null ? c.y1 : lista[0].y + giro * lista[0].k * 0.82 * (lista[0].s ?? 1);
+  s.style.setProperty('--pie', `${f1(((oy - y) / h) * 100)}%`);
+  // (49, 118) La fase de un reloj común (la hora del aparato): la que barre y la abuela de la ronda nunca se mueven a la vez, aunque una capa se rehaga.
+  s.style.setProperty('--fase', `${(-(Date.now() / 1000) % 3600).toFixed(2)}s`);
+  for (const [n, v] of Object.entries(vars)) s.style.setProperty(n, v);
+  s.innerHTML = svgVecinos(lista, { sol });
+  const frente = host.querySelector(':scope > svg.frente');
+  if (frente) frente.before(s); else host.append(s);
+  return s;
+}
 /**
  * (Campamento 37, idea 114) La capa del vecino: el que se mueve (la que barre, la pelota de los oseznos) no vive en el dibujo grande
  * sino en su propio <svg> pequeño, hermano del principal, encima de él y debajo del frente; lo único que cambia es el transform de ese
  * elemento, solo con «todos» y en su franja de data-mueve. Quieto, se ve igual con cualquier nivel de efectos. Se rehace con el turno.
+ * (Campamento 49) También el panadero que cruza (116), la tortillera que palmea (200, solo sus manos), la hamaca (199, sin sus postes),
+ * la abuela de la ronda (118, otra capa, en la misma fase) y las estrellitas de los oseznos (201: un ambiental, `v-capa-amb`).
  */
 function capaVecino(host, info, t) {
-  host.querySelector(':scope > svg.v-capa-vecino')?.remove();
-  const actor = reparto(info.lug, t, opcionesReparto(info, t)).find((v) => v.actor);
-  if (!actor) return;
-  const c = cajaVecino(actor), m = 1.5 * actor.k, arriba = actor.actor === 'pelota' ? 3 * actor.k : 0;
-  const [x, y, w, h] = [c.x0 - m, c.y0 - m - arriba, c.x1 - c.x0 + 2 * m, c.y1 - c.y0 + 2 * m + arriba];
-  const s = document.createElementNS(NS, 'svg');
-  for (const [a, v] of [['class', `v-capa-vecino v-actor-${actor.actor}`], ['viewBox', `${f1(x)} ${f1(y)} ${f1(w)} ${f1(h)}`], ['aria-hidden', 'true'], ['focusable', 'false']]) s.setAttribute(a, v);
-  Object.assign(s.style, { left: `${f1(x)}px`, top: `${f1(y)}px`, width: `${f1(w)}px`, height: `${f1(h)}px` });
-  s.style.setProperty('--bote', `${f1(-2.4 * actor.k)}px`);
-  s.style.setProperty('--pie', `${f1(((c.y1 - y) / h) * 100)}%`);
-  s.innerHTML = svgVecinos([actor], { sol: info.sol });
-  const frente = host.querySelector(':scope > svg.frente');
-  if (frente) frente.before(s); else host.append(s);
+  host.querySelectorAll(':scope > svg:is(.v-capa-vecino, .v-amb-estrellitas)').forEach((x) => x.remove());
+  const todos = info.lista ?? reparto(info.lug, t, opcionesReparto(info, t));
+  const actor = todos.find((v) => v.actor);
+  if (actor) {
+    const vars = {};
+    if (actor.actor === 'cruza') {
+      // (116) De lado a lado de la calle: hasta la otra punta, sin pasar por encima de nadie (si no hay sitio, se queda).
+      const calle = [...(info.lug.calle ?? [])].sort((a, b) => a[0] - b[0]), lejos = calle.length ? (Math.abs(calle[0][0] - actor.x) > Math.abs(calle.at(-1)[0] - actor.x) ? calle[0] : calle.at(-1)) : null;
+      const otros = [...(info.lug.ocupado ?? []), ...todos.filter((v) => v !== actor).map(cajaVecino)];
+      const ida = lejos ? tramoLibre(actor, lejos[0], otros) : 0;
+      vars['--ida'] = `${f1(ida)}px`;
+    }
+    capaDeVecinos(host, `v-capa-vecino v-actor-${actor.actor}`, [{ ...actor, t: actor.capaT ?? actor.t }], info.sol, { arriba: actor.actor === 'pelota' ? 3 * actor.k : 0, giro: actor.giro ?? null, vars });
+  }
+  const ronda = todos.find((v) => v.ronda);
+  if (ronda) capaDeVecinos(host, `v-capa-vecino v-ronda v-ronda-${ronda.ronda}`, [ronda], info.sol);
+  const luces = todos.filter((v) => v.t === 'oseznoLuz').map((v) => ({ ...v, t: 'estrellita' }));
+  if (luces.length) capaDeVecinos(host, 'v-capa-amb v-amb-estrellitas', luces, info.sol);
+}
+/**
+ * (Campamento 49, idea 204) Al cambiar de turno, el vecino que se queda en la calle camina a su sitio nuevo: el grupo se dibuja sin él y
+ * él va en su capa (`v-capa-camina`), a saltos, de donde estaba a donde va (arte-vecinos.js: `recorrido`, que comprueba cada paso).
+ * Mientras camina es el actor principal (`data-camina` en la escena: lo demás del pueblo espera); al llegar, se dibuja con los demás.
+ * Solo con «todos» y con la página a la vista; si no, o si no hay un trecho libre, aparece directo, como siempre.
+ */
+let caminando = null;
+function pararCamino() {
+  if (!caminando) return;
+  const { host, capa, fin } = caminando;
+  caminando = null;
+  capa.remove(); delete host.dataset.camina; clearTimeout(fin);
+}
+function caminar(h, v, t, antes) {
+  pararCamino();
+  const todos = reparto(v.lug, t, opcionesReparto(v, t)), g = h.querySelector('.v-vecinos');
+  const rec = v.conCapa && conAmbiente() && !sinMovimiento() && document.visibilityState === 'visible' && h === estado?.host && !estado.pelicula ? recorrido(antes, todos, v.lug) : null;
+  g.innerHTML = htmlVecinos(v, t, { todos, sin: rec?.v ?? null });
+  v.turno = t;
+  capaVecino(h, v, t);
+  if (!rec) return;
+  const [x0, y0] = rec.pasos[0], n = rec.pasos.length - 1, d = rec.v;
+  const capa = capaDeVecinos(h, 'efecto-ambiente v-capa-camina', [{ ...rec.anda, f: rec.f }], v.sol, { vars: { '--dx': `${f1(x0 - d.x)}px`, '--dy': `${f1(y0 - d.y)}px`, '--pasos': String(n), '--largo': (n * 0.25).toFixed(2) } });
+  if (!capa) { g.innerHTML = htmlVecinos(v, t, { todos }); return; }
+  h.dataset.camina = '1';
+  const llega = () => { if (caminando?.capa !== capa) return; pararCamino(); if (g.isConnected && v.turno === t) g.innerHTML = htmlVecinos(v, t, { todos }); };
+  capa.addEventListener('animationend', llega);
+  caminando = { host: h, capa, fin: setTimeout(llega, 1000 * (n * 0.4 + 4)) }; // por si la animación no corre (pestaña oculta)
 }
 /** (Campamento 39, idea 125) A las 23:40 y a las 0:40 (`libro:cohetes`, cielo.js) se ponen o se quitan los cohetes de cada escena viva. */
 let oyeCohetes = false;
@@ -506,7 +592,7 @@ function vigilarTurno(host, info) {
       const g = h.isConnected && h.querySelector('.v-vecinos');
       if (!g) { vecinosVivos.delete(h); continue; }
       if (v.turno !== t && !(fiestaViva && h === estado?.host)) { // (59) con la fiesta en marcha, el turno espera: al acabar se pone el de ese momento
-        g.innerHTML = htmlVecinos(v, t); v.turno = t; if (v.conCapa) capaVecino(h, v, t);
+        if (v.conCapa) caminar(h, v, t, v.lista); else { g.innerHTML = htmlVecinos(v, t); v.turno = t; } // (49, 204) uno camina a su sitio nuevo
         // (Campamento 40, idea 148) La descripción de la montaña cuenta el turno de ahora: se rehace con él.
         if (estado?.host === h && estado.valle) { estado.valle.turno = t; describir(estado.sats, estado.etapaDesc); }
       }
@@ -534,7 +620,7 @@ export function sitiosFiesta() {
   const v = vecinosVivos.get(estado.host), pl = v?.lug?.plaza ?? [];
   if (!pl.length) return null;
   const k = pl[0][2], cx = pl.reduce((a, q) => a + q[0], 0) / pl.length, cy = pl.reduce((a, q) => a + q[1], 0) / pl.length;
-  const cam = estado.host.querySelector('#m-v-pie .v-ig-campana');
+  const cam = estado.host.querySelector('.v-ig-campana'); // (49, 25) la campana vive en su capa pequeña
   let campana = null;
   try { const b = cam?.getAttribute('d') ? cam.getBBox() : null; if (b?.width) campana = { x: b.x + b.width / 2, y: b.y + b.height / 2 }; } catch { /* sin caja */ }
   const yo = estado.host.querySelector('#m-yo')?.getBBox?.();
@@ -549,6 +635,7 @@ export function vecinosFiesta(cuadro) {
   if (!estado) return;
   const h = estado.host, v = vecinosVivos.get(h), g = h.isConnected && h.querySelector('.v-vecinos');
   if (!v || !g) return;
+  pararCamino(); // (49) la fiesta corta al que caminaba: queda en su sitio
   if (!cuadro) {
     const t = turnoDelPueblo();
     g.innerHTML = htmlVecinos(v, t); v.turno = t; if (v.conCapa) capaVecino(h, v, t);
@@ -985,8 +1072,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   } finally { delete host.dataset.colocando; }
   podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
   if (tocable && !pelicula) telefericoValle(host, W, pb.u0, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
-  if (tocable && !pelicula) { animalesDelPueblo(host); ambientalesDelValle(host); } // (34) y (51, F3)
+  if (tocable && !pelicula) { animalesDelPueblo(host); ambientalesDelValle(host); campanaDelPueblo(host); } // (34), (51, F3) y (49, 25)
   if (tocable || pelicula) vigilarTurno(host, infoV); // (35) los vecinos cambian de turno con la página abierta
+  if (host === estado?.host || caminando?.host === host) pararCamino(); // (49) una escena nueva no hereda un vecino a medio camino
   if (infoV.conCapa) capaVecino(host, infoV, infoV.turno); // (37) el vecino que se mueve, en su capa
   describir(sats, etapa);
 }

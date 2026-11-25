@@ -254,6 +254,7 @@ const PESOS = [
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 52: vecinos con oficio', 111], // 22 comprobaciones (medido el 25 nov 2026)
+  ['campamento 49: el pueblo se mueve 2', 90], // 24 comprobaciones (estimado)
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
@@ -6325,8 +6326,8 @@ try {
     try {
       // Uno a la vez: en una sola página, recorriendo días y horas (cielo.js deja `data-mueve` y el CSS enseña lo que toca).
       let t = await entrar(navegador, srv, ADMIN, { hora: 12 }, conDia('2026-10-15', { 'libro.efectos': 'todos' })); await cerrar(t.p);
-      const recorrido = [['2026-10-15', 6, 'torogoz'], ['2026-10-15', 12, 'azacuanes'], ['2026-10-15', 17, 'pericos'], ['2026-10-15', 19, 'luciernagas'], ['2026-10-15', 23, 'relampagos'],
-        ['2026-05-17', 8.5, 'zompopos'], ['2026-05-17', 12, ''], ['2027-02-10', 23, 'luciernagas'], ['2027-02-10', 12, ''], ['2026-04-10', 10, 'azacuanes'], ['2026-08-10', 2, 'relampagos'], ['2026-08-10', 20, 'luciernagas']];
+      const recorrido = [['2026-10-15', 5.5, 'torogoz'], ['2026-10-15', 12, 'azacuanes'], ['2026-10-15', 17, 'pericos'], ['2026-10-15', 19, 'luciernagas'], ['2026-10-15', 23, 'relampagos'],
+        ['2026-05-17', 8.5, 'zompopos'], ['2026-05-17', 12.75, ''], ['2027-02-10', 23, 'luciernagas'], ['2027-02-10', 12.75, ''], ['2026-04-10', 10, 'azacuanes'], ['2026-08-10', 2, 'relampagos'], ['2026-08-10', 20, 'luciernagas']];
       const vistos = [];
       for (const [dia, hora, esperado] of recorrido) {
         await t.p.evaluate(([d, h]) => { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); window.libroCielo.aplicar(); }, [dia, hora]);
@@ -6436,7 +6437,7 @@ try {
       await p.goto(`${srvE.url}/login`, { waitUntil: 'networkidle' });
       await p.waitForTimeout(800);
       const e = await p.evaluate(() => ({ mar: !!document.querySelector('.v-mar-frente') && getComputedStyle(document.querySelector('.v-mar-frente')).display !== 'none', vacas: !!document.querySelector('.v-vaca'), mueve: document.documentElement.dataset.mueve }));
-      ok(e.mar && e.vacas && e.mueve === 'torogoz', '22B entrada: el mar de niebla y las vacas también (paisaje, sin datos de nadie)');
+      ok(e.mar && e.vacas && e.mueve === 'cruza', '22B entrada: el mar de niebla y las vacas también (paisaje, sin datos de nadie; a las 6 cruza el panadero, campamento 49)');
       await ctx.close();
     } finally { srvE.parar(); }
   });
@@ -7347,7 +7348,7 @@ try {
     });
     const anio = await servidor('anio');
     try {
-      for (const [w, h, hora, ef, espera] of [[1440, 900, 11, 'todos', 'tele-va'], [1440, 900, 14, 'todos', 'none'], [1440, 900, 11, 'esenciales', 'none'], [2560, 1440, 11, 'todos', 'tele-va'], [1100, 800, 12, 'todos', 'tele-va']]) {
+      for (const [w, h, hora, ef, espera] of [[1440, 900, 11, 'todos', 'tele-va'], [1440, 900, 14, 'todos', 'tele-va'], [1440, 900, 17, 'todos', 'none'], [1440, 900, 11, 'esenciales', 'none'], [2560, 1440, 11, 'todos', 'tele-va'], [1100, 800, 12, 'todos', 'tele-va']]) {
         const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs({ 'libro.efectos': ef }));
         await cerrar(t.p);
         const r = await tele(t.p);
@@ -7587,7 +7588,8 @@ try {
       const belen = [...document.querySelectorAll('#montana .v-pueblo [class*="v-belen"]')].map(bb);
       const portal = belen.length ? belen.reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) })) : null;
       const pies = (g.querySelector('.v-vo-pie')?.getAttribute('d') ?? '').split(/(?=M)/).filter(Boolean).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); g.append(t); const b = bb(t); t.remove(); return b; });
-      return { turno: document.documentElement.dataset.turno, vecinos: pies.length, azul: n('.v-vo-azul'), brasa: n('.v-vo-brasa'), sobrePortal: portal ? pies.filter((b) => b.x0 < portal.x1 && b.x1 > portal.x0 && b.y1 > portal.y1 - 4).length : 0, portal: Boolean(portal) };
+      const chispas = ((document.querySelector('#montana > svg.v-amb-estrellitas .v-vo-brasa')?.getAttribute('d') ?? '').match(/M/g) || []).length; // (49, 201) las estrellitas titilan en su capa
+      return { turno: document.documentElement.dataset.turno, vecinos: pies.length, azul: n('.v-vo-azul'), brasa: n('.v-vo-brasa') + chispas, sobrePortal: portal ? pies.filter((b) => b.x0 < portal.x1 && b.x1 > portal.x0 && b.y1 > portal.y1 - 4).length : 0, portal: Boolean(portal) };
     });
     const anio = await servidor('anio');
     try {
@@ -7630,9 +7632,10 @@ try {
           ok(r.hay && r.actor === actor && r.anim === anim && r.bajoFrente && r.aria === 'true' && r.nodos <= 12, `37 a ${w} px, ${hora}:00 con «${ef}»: el vecino en su capa (${JSON.stringify(r)})`);
           await t.ctx.close();
         }
-        const t = await entrar(navegador, anio, ADMIN, { hora: 12.5, viewport: { width: w, height: h } }, conLs('todos'));
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12.75, viewport: { width: w, height: h } }, conLs('todos'));
         await cerrar(t.p);
-        ok(!(await capa(t.p)).hay, `37 a ${w} px: en la siesta nadie se mueve (no hay capa)`);
+        const sx = await capa(t.p); // (49) desde el 49 la hamaca va en su capa toda la siesta y se mece solo de 13:00 a 14:00
+        ok(sx.hay && sx.actor === 'v-actor-hamaca' && sx.anim === 'none', `37 a ${w} px: al empezar la siesta nadie se mueve (la hamaca, quieta en su capa: ${JSON.stringify(sx)})`);
         await t.ctx.close();
       }
     } finally {
@@ -7884,6 +7887,10 @@ try {
       // (Campamento 59) La fiesta del hito: la campana late una vez por toque, los farolitos suben (fiesta.js les pone lo que dura su
       // tramo del guion) y cada cohete estalla.
       ['svg.fiesta-ondas', 'fiesta-onda', '1.6s'], ['svg.fiesta-faroles', 'fiesta-sube', '6s'], ['svg.fiesta-palma', 'fiesta-palma', '2.2s'],
+      // (Campamento 49) El pueblo se mueve 2: el panadero cruza (una pasada cada 40 s), la tortillera palmea, la campana, la hamaca, la
+      // ronda de la abuela (la misma duración que el actor), las estrellitas y el que camina al cambiar de turno (0.4 s por paso).
+      ['svg.v-actor-cruza', 'vo-cruza', '40s'], ['svg.v-actor-palmea', 'vo-palmea', '1s'], ['svg.v-capa-campana', 'vo-campana', '2s'], ['svg.v-actor-hamaca', 'vo-hamaca', '3s'],
+      ['svg.v-ronda', 'vo-ronda-barre', '7.2s'], ['svg.v-ronda', 'vo-ronda-pelota', '9s'], ['svg.v-amb-estrellitas', 'vo-titila', '12s'], ['svg.v-capa-camina', 'vo-camina', '3.2s'],
     ];
     // Lo que no se alarga: la interfaz, que responde a tu dedo, y el paso de «Tú» al anotar (decisión del dueño: la subida sigue en 1.4 s).
     const INTERFAZ = [
@@ -7960,7 +7967,7 @@ try {
       const humo = capas.filter((s) => s.classList.contains('v-amb-humo')), cay = capas.find((s) => s.classList.contains('v-amb-cayuco'));
       // Entre el principal y el frente solo hay capas pequeñas; ninguna capa ambiental lleva estilos o trazos rotos.
       let x = frente?.previousElementSibling, orden = true;
-      while (x && x !== host.querySelector(':scope > svg')) { if (!x.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb')) orden = false; x = x.previousElementSibling; }
+      while (x && x !== host.querySelector(':scope > svg')) { if (!x.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb, .v-capa-campana, .v-capa-camina')) orden = false; x = x.previousElementSibling; }
       const malos = capas.filter((s) => /NaN|undefined|Infinity/.test(`${s.getAttribute('viewBox')}${s.style.cssText}${s.innerHTML}`)).length;
       return {
         foco: raiz.dataset.foco, ambiente: raiz.dataset.ambiente ?? '', mueve: raiz.dataset.mueve ?? '',
@@ -8203,6 +8210,89 @@ try {
         }
         ok(!malos.length && !x.consola.length, `52 a ${w} px con «todos», ${RECORRIDO.reduce((n, [, hs]) => n + hs.length, 0)} momentos: nada encima de un vecino y un trazo por tono (${malos.join(' · ')}${x.consola.join(' | ')})`);
         await x.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 49: el pueblo se mueve 2 (el panadero cruza, la tortillera palmea, la campana, la hamaca, la ronda, las estrellitas, el que camina al cambiar de turno y dos focos en pantallas anchas)
+  await bloque(async () => {
+    const conLs = (dia, ef) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } }, { dia, ef }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const capas = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), d = document.documentElement.dataset;
+      const de = (sel) => { const s = h.querySelector(`:scope > svg${sel}`); return s ? { anim: getComputedStyle(s).animationName, delay: getComputedStyle(s).animationDelay, aria: s.getAttribute('aria-hidden'), nodos: s.querySelectorAll('*').length + 1, malos: /NaN|undefined/.test(s.innerHTML + s.getAttribute('viewBox')) } : null; };
+      const cab = h.querySelector(':scope > svg.tele-cabina');
+      return { mueve: d.mueve ?? '', mueve2: d.mueve2 ?? '', ambiente: d.ambiente ?? '', actor: [...(h.querySelector(':scope > svg.v-capa-vecino:not(.v-ronda)')?.classList ?? [])].find((c) => c.startsWith('v-actor-')) ?? '',
+        vecino: de('.v-capa-vecino:not(.v-ronda)'), ronda: de('.v-ronda'), campana: de('.v-capa-campana'), estrellas: de('.v-amb-estrellitas'), cabina: cab ? getComputedStyle(cab).animationName : null,
+        campanaEnPrincipal: h.querySelector(':scope > svg #m-v-pie .v-ig-campana') !== null };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        for (const [dia, hora, actor, anim] of [['2027-02-10', 6.5, 'v-actor-cruza', 'vo-cruza'], ['2027-02-10', 11.75, 'v-actor-palmea', 'vo-palmea'], ['2027-02-10', 13.5, 'v-actor-hamaca', 'vo-hamaca'], ['2027-02-10', 7.5, 'v-actor-barre', 'vo-barre']]) {
+          for (const ef of ['todos', 'esenciales']) {
+            const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: alto } }, conLs(dia, ef));
+            await cerrar(t.p);
+            const r = await capas(t.p);
+            const bien = r.actor === actor && r.vecino && !r.vecino.malos && r.vecino.aria === 'true' && r.vecino.anim === (ef === 'todos' ? anim : 'none') && r.campana && !r.campanaEnPrincipal;
+            // La ronda (118): con la que barre, la abuela en su capa, con la misma duración y la misma fase (nunca a la vez).
+            const ronda = actor !== 'v-actor-barre' || (r.ronda && r.ronda.anim === (ef === 'todos' ? 'vo-ronda-barre' : 'none') && Math.abs(parseFloat(r.ronda.delay) - parseFloat(r.vecino.delay)) < 0.2);
+            // Dos focos (275): en pantallas anchas la cabina cruza con el del pueblo; en el teléfono no hay cabina.
+            const focos = w < 1100 ? r.cabina === null : hora < 7 ? r.mueve2 === '' && r.cabina === 'none' : r.mueve2 === 'teleferico' && r.cabina === (ef === 'todos' ? 'tele-va' : 'none'); // (de día: de 7:00 a 16:30)
+            ok(bien && ronda && focos && !t.consola.length, `49 a ${w} px, ${hora} h con «${ef}»: ${actor} en su capa (${JSON.stringify(r)}${t.consola.join(' | ')})`);
+            await t.ctx.close();
+          }
+        }
+        // La campana de las doce (25) y las estrellitas de Nochebuena (201).
+        for (const [dia, hora, prueba, que] of [['2027-02-10', 12.02, (r) => r.mueve === 'campana' && r.campana.anim === 'vo-campana', 'la campana se mece'], ['2026-12-24', 19, (r) => r.ambiente.includes('estrellitas') && r.estrellas?.anim === 'vo-titila' && !r.estrellas.malos, 'las estrellitas titilan']]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: alto } }, conLs(dia, 'todos'));
+          await cerrar(t.p);
+          const r = await capas(t.p);
+          ok(prueba(r) && !t.consola.length, `49 a ${w} px: ${que} (${JSON.stringify(r)}${t.consola.join(' | ')})`);
+          await t.ctx.close();
+        }
+      }
+      // 204: al cambiar de turno (el sábado de plaza a las tortillas) la de la tienda camina a su sitio: en su capa, el resto del pueblo
+      // espera, y en CADA paso del camino no toca nada de lo que el 52 llama «cosas» ni a otro vecino; al llegar, se dibuja con los demás.
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 11.9, viewport: { width: w, height: alto } }, conLs('2027-02-13', 'todos'));
+        await cerrar(t.p);
+        const antes = await t.p.evaluate(() => (document.querySelector('#montana .v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').split('M').length - 1);
+        await t.p.evaluate(() => { localStorage.setItem('libro.hora', '12.03'); window.libroCielo.aplicar(); });
+        const r = await t.p.evaluate(() => {
+          const h = document.getElementById('montana'), capa = h.querySelector(':scope > svg.v-capa-camina'), a = capa?.getAnimations()[0];
+          if (!capa || !a) return { capa: Boolean(capa), anim: Boolean(a) };
+          a.pause();
+          const vis = (e) => { for (let x = e; x && x.tagName !== 'svg'; x = x.parentElement) if (getComputedStyle(x).display === 'none') return false; return true; };
+          const rect = (e) => { const b = e.getBoundingClientRect(); return { c: e.getAttribute('class'), x0: b.left, x1: b.right, y0: b.top, y1: b.bottom }; };
+          const cosas = [...h.querySelectorAll(':is(.v-arbol .v-ar-tronco, .v-arbol .v-ar-copa, .v-arbol .v-ar-tallo, .v-tele-torre, .v-tele-cable, svg.tele-cabina, .v-pueblo > .v-animal, .v-pueblo > .v-gallina, circle.salida, .yo-anillo, #m-etiquetas > *)')].filter(vis).map(rect);
+          // Los demás vecinos, por su sombra de pie (como el 52): su caja, de los pies a la cabeza.
+          const pie = h.querySelector('.v-vecinos .v-vo-pie'), m = pie?.getScreenCTM(), sp = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
+          const otros = (pie?.getAttribute('d') || '').split('M').filter(Boolean).map((tt) => { const n = tt.match(/-?[\d.]+/g).map(Number), kk = (n[2] - n[0]) / 4.4, x = (n[0] + n[2]) / 2, p0 = sp(x - 2.2 * kk, n[1] - 9 * kk), p1 = sp(x + 2.2 * kk, n[1]); return { c: 'vecino', x0: p0[0], y0: p0[1], x1: p1[0], y1: p1[1] }; });
+          const dur = a.effect.getComputedTiming().duration, pasos = Number(getComputedStyle(capa).getPropertyValue('--pasos')), malos = [];
+          const fig = capa.querySelector('.v-vo-pie') ?? capa;
+          for (let i = 0; i <= pasos; i++) {
+            a.currentTime = Math.min(dur, (dur * i) / pasos + 1);
+            const b = fig.getBoundingClientRect(), k = (b.right - b.left) / 4.4, caja = { x0: b.left, x1: b.right, y0: b.top - 8.4 * k, y1: b.bottom };
+            for (const q of [...cosas, ...otros]) if (Math.min(caja.x1, q.x1) - Math.max(caja.x0, q.x0) > 1.5 && Math.min(caja.y1, q.y1) - Math.max(caja.y0, q.y0) > 1.5) malos.push(`${i}: ${q.c}`);
+          }
+          const espera = [...h.querySelectorAll(':scope > svg.v-capa-vecino')].every((s) => s.getAnimations().every((x) => x.playState !== 'running'));
+          a.finish();
+          return { capa: true, anim: true, pasos, malos, espera, camina: h.dataset.camina, malo: /NaN|undefined/.test(capa.innerHTML + capa.style.cssText) };
+        });
+        await t.p.waitForTimeout(400);
+        const despues = await t.p.evaluate(() => ({ capa: Boolean(document.querySelector('#montana > svg.v-capa-camina')), camina: document.getElementById('montana').dataset.camina ?? null, pies: (document.querySelector('#montana .v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').split('M').length - 1 }));
+        ok(r.capa && r.anim && r.pasos >= 3 && !r.malos.length && r.espera && r.camina === '1' && !r.malo && !despues.capa && despues.camina === null && despues.pies >= 1 && !t.consola.length,
+          `49 a ${w} px (204): al cambiar de turno la de la tienda camina a su sitio, nada encima en ninguno de sus pasos y, al llegar, con los demás (${JSON.stringify({ antes, ...r, despues })}${t.consola.join(' | ')})`);
+        await t.ctx.close();
+        // Con «esenciales», aparece directo: ninguna capa del que camina.
+        const e = await entrar(navegador, anio, ADMIN, { hora: 11.9, viewport: { width: w, height: alto } }, conLs('2027-02-13', 'esenciales'));
+        await cerrar(e.p);
+        const directo = await e.p.evaluate(() => { localStorage.setItem('libro.hora', '12.03'); window.libroCielo.aplicar(); return [Boolean(document.querySelector('#montana > svg.v-capa-camina')), document.documentElement.dataset.turno]; });
+        eq(directo, [false, 'tortillas'], `49 a ${w} px (204): con «esenciales» el vecino aparece directo en su sitio nuevo`);
+        await e.ctx.close();
       }
     } finally {
       anio.parar();

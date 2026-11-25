@@ -209,11 +209,22 @@ const TIPOS = {
   atarraya: () => [['rasgo', p([-0.15, 0], [0.15, 0], [0.15, -7.2], [-0.15, -7.2])], ['palma', p([0, -7.0], [2.6, -1.0], [1.4, -0.4], [0, -0.8], [-1.4, -0.4], [-2.6, -1.0])],
     ['rasgo', p([-0.05, -6.8], [0.05, -6.8], [0.1, -0.8], [-0.1, -0.8])], ['rasgo', p([-1.6, -2.6], [1.6, -2.6], [1.7, -2.4], [-1.7, -2.4])], ['rasgo', p([-0.8, -4.6], [0.8, -4.6], [0.9, -4.4], [-0.9, -4.4])]],
   escobaSola: () => [['palma', p([-0.6, -6.2], [-0.3, -6.2], [0.4, -1.1], [0.1, -1.1])], ['palma', p([-0.4, -1.2], [0.9, -1.2], [1.2, 0], [-0.7, 0])]],
+  // ---- (Campamento 49) Los actores partidos: lo que se mueve va en su capa pequeña (montana.js: capaVecino) y lo que se queda, en el
+  // dibujo grande. La figura entera (sin capa: la entrada, la película) es la de siempre, y su caja de choque también.
+  // (199) la hamaca se mece: los postes se quedan; la hamaca y el que duerme en ella, a su capa
+  hamacaPostes: (r) => TIPOS.hamaca(r).slice(0, 2),
+  hamacaSola: (r) => TIPOS.hamaca(r).slice(2),
+  // (200) la tortillera palmea: los brazos y la tortilla que palmea, a su capa; el cuerpo, el comal y la brasa se quedan
+  tortilleraCuerpo: (r) => { const q = TIPOS.tortillera(r); return [...q.slice(0, 4), ...q.slice(7, -2)]; },
+  tortilleraManos: (r) => { const q = TIPOS.tortillera(r); return [...q.slice(4, 7), ...q.slice(-2)]; },
+  // (201) la estrellita del osezno titila: la chispa, a su capa (un ambiental); el osezno con su varita se queda
+  oseznoLuzSin: (r) => TIPOS.oseznoLuz(r).slice(0, -1),
+  estrellita: (r) => TIPOS.oseznoLuz(r).slice(-1),
 };
 /** (Campamento 41) Lo que no es un vecino sino una cosa en el suelo: sin sombra de pie, no cuenta entre los ocho y no aparta a nadie. */
 export const COSAS = new Set(['pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola']);
 /** (Campamento 40) Sin sombra de pie, pero sí es un vecino (cuenta y aparta a los demás): la hamaca, con sus postes y el que duerme en ella. */
-const SIN_PIE = new Set(['hamaca']);
+const SIN_PIE = new Set(['hamaca', 'hamacaPostes', 'hamacaSola', 'tortilleraManos', 'estrellita']); // (49) las partes que van a su capa no repiten la sombra
 export const PERSONAJES = Object.keys(TIPOS);
 // La caja de cada personaje en sus unidades (de todas sus piezas): para que dos vecinos nunca se monten uno sobre otro.
 const CAJAS = Object.fromEntries(Object.entries(TIPOS).map(([t, fn]) => {
@@ -394,7 +405,8 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     if (lunes) quien('tienda', 'calle', 0);
     else {
       const lejos = hh !== null && hh >= 5.5 && lug.calle?.[1];
-      quien('panadero', 'calle', lejos ? 1 : 0, lejos ? { f: -1 } : {});
+      // (49, idea 116) De 6:00 a 7:00 el panadero cruza la calle en su bicicleta (su capa: `cruza`; antes de las 6, quieto en ella).
+      quien('panadero', 'calle', lejos ? 1 : 0, { ...(lejos ? { f: -1 } : {}), actor: 'cruza' });
       if (c(2) && !lejos) quien('tienda', 'calle', 1, { t: 'escoba', f: -1 }); else quien('tienda', 'corredor', 1, { t: 'escoba', f: -1, alt: [['corredor', 1, 4], ['calle', 0, -6]] });
     }
     if (escuela && hh !== null && hh >= 6.75) quien('maestra', ...escuelaSitio, { f: -1 });
@@ -425,7 +437,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   // escuela, los oseznos salen con su bolsón y la maestra (el viernes, con su ramo); el perro los espera. Sin escuela, juegan en la plaza.
   else if (t === 'tortillas' || t === 'salida') {
     const k = c(3);
-    quien('tortillera', 'calle', 0, { t: sabado ? 'tamales' : 'tortillera' });
+    quien('tortillera', 'calle', 0, sabado ? { t: 'tamales' } : { t: 'tortillera', actor: 'palmea', capaT: 'tortilleraManos', quedaT: 'tortilleraCuerpo' });
     if (!lunes) quien('panadero', 'calle', 0, { t: 'sentado', dx: -6.4 }); else quien(['tienda', 'pescador', 'milpero'][milpero ? k : k % 2], 'calle', 0, { t: ['vendedora', 'pescador', 'milpero'][milpero ? k : k % 2], dx: 6.4, f: -1 });
     quien('abuela', 'corredor', 0); if (t === 'tortillas') quien('sacristan', 'atrio', 4);
     if (t === 'salida') { for (let i = 0; i < 4; i++) en('plaza', i, 'oseznoBolson', { s: OSEZNO, r: i, f: i % 2 ? -1 : 1 }); quien('maestra', ...escuelaSitio, { t: sem === 5 ? 'maestraRamo' : 'maestra', f: -1, alt: [['plaza', 5], ['corredor', 1, 3.5]] }); perro('plaza', 4, 1.5); }
@@ -434,7 +446,8 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   // (40, 138) La siesta en hamaca, bajo el árbol de la plaza, con el perro echado debajo: es el pescador, con el sombrero en la cara. En
   // Navidad el árbol es el pino y está el nacimiento: duerme sentado en la banca, como antes, y el perro en su sitio.
   else if (t === 'siesta') {
-    if (navidad) { quien('pescador', 'banca', 0, { t: 'siesta' }); perro('perro', 0); } else { quien('pescador', 'banca', 0, { t: 'hamaca', dy: 0.4 }); perro('banca', 0, -2.6, { dy: 0.5, bajo: true }); }
+    // (49, 199) la hamaca se mece de 13:00 a 14:00 (los postes se quedan en el dibujo grande); (200) a mediodía, la tortillera palmea.
+    if (navidad) { quien('pescador', 'banca', 0, { t: 'siesta' }); perro('perro', 0); } else { quien('pescador', 'banca', 0, { t: 'hamaca', dy: 0.4, actor: 'hamaca', capaT: 'hamacaSola', quedaT: 'hamacaPostes', giro: -5.3 }); perro('banca', 0, -2.6, { dy: 0.5, bajo: true }); }
     quien('abuela', 'corredor', 0);
     if (c(2)) quien('tienda', 'atrio', 1); else quien('tienda', 'calle', 1, { f: -1 });
   }
@@ -579,7 +592,70 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     if (['siesta', 'tarde', 'vuelta'].includes(t)) cosa('atarraya', [['corredor', 2, 3], ['corredor', 1, 3], ['corredor', 0, -3]]);
     if (!fuera.some((v) => v.quien === 'tienda' && v.t === 'escoba')) cosa('escobaSola', [['corredor', 1, 2.6], ['corredor', 1, -2.6]], [0, 1.5, -1.5]);
   }
+  // (49, idea 118) La ronda: en la mañana de la que barre y en la tarde de la pelota, cuando el actor descansa, la abuela se mece en su
+  // taburete (su capa, la misma fase: nunca los dos a la vez).
+  if (['manana', 'tarde', 'vuelta'].includes(t) && fuera.some((v) => v.actor === 'barre' || v.actor === 'pelota')) {
+    const ab = fuera.find((v) => v.quien === 'abuela' && v.t === 'abuela');
+    if (ab) ab.ronda = 'abuela';
+  }
   return fuera;
+}
+/** (49) Los tipos que pueden caminar de un sitio a otro (de pie, sin silla ni hamaca). */
+const CAMINAN = new Set(['vecino', 'vecina', 'vendedora', 'delantal', 'maestra', 'pescador', 'pescadorSarta', 'milpero', 'sacristan', 'panadero', 'campesino', 'cura', 'escoba', 'vendedoraSaluda', 'pescadorSaluda', 'milperoSaluda', 'delantalSaluda']);
+/**
+ * (Campamento 49, idea 204) Al cambiar de turno, un vecino camina de donde estaba a su sitio nuevo en vez de aparecer. `antes`: la lista
+ * que estaba dibujada; `ahora`: la del turno nuevo; `lug`: los sitios (con lo ocupado). Elige al que va más lejos de los que siguen en
+ * la calle, de pie antes y después, por un trecho casi llano (sube o baja como mucho cinco unidades), y comprueba **cada paso**: su caja
+ * no toca la de nadie del turno nuevo ni lo ocupado (el perro, las gallinas, la cruz, el árbol). Devuelve { v, pasos: [[x, y]…], f } o
+ * null (entonces aparece directo). `anda`: la figura que camina (la de su sitio nuevo si es de pie; si no, la de antes).
+ */
+export function recorrido(antes, ahora, lug) {
+  if (!antes?.length || !ahora?.length) return null;
+  const c = [];
+  for (const v of ahora) {
+    if (!v.quien || v.actor || v.ronda || COSAS.has(v.t)) continue;
+    const a = antes.find((x) => x.quien === v.quien);
+    if (!a || !CAMINAN.has(a.t) || Math.abs(a.k - v.k) > 0.01) continue; // de pie al salir: camina así y, al llegar, se sienta o se pone a lo suyo
+    const dx = v.x - a.x, dy = v.y - a.y, d = Math.hypot(dx, dy);
+    if (d < 2 * v.k || d > 100 * v.k || Math.abs(dy) > 5 * v.k || !Number.isFinite(d)) continue;
+    c.push({ v, a, dx, dy, d });
+  }
+  c.sort((p, q) => q.d - p.d);
+  const roce = 0.35;
+  // Si el camino entero no está libre, llega andando el último trecho que sí lo está (desde un poco antes de su sitio): nunca pasa por
+  // encima de nadie. Primero el que hace el camino entero; si no, el trecho más largo (al menos tres pasos y tres unidades).
+  let mejor = null;
+  for (const { v, a, dx, dy, d } of c) {
+    const n = Math.max(4, Math.min(20, Math.round(d / (1.6 * v.k)))), f = dx >= 0 ? 1 : -1, anda = { ...v, t: CAMINAN.has(v.t) ? v.t : a.t };
+    const otros = [...(lug.ocupado ?? []), ...ahora.filter((x) => x !== v).map(cajaVecino)], m = roce * v.k;
+    const pasos = Array.from({ length: n + 1 }, (_, i) => [a.x + (dx * i) / n, a.y + (dy * i) / n]);
+    const libre = ([x, y]) => {
+      const b = cajaVecino({ ...anda, x, y, f });
+      return (!lug.borde || (b.x0 >= lug.borde[0] && b.x1 <= lug.borde[1])) && otros.every((q) => !(b.x0 < q.x1 - m && b.x1 > q.x0 + m && b.y0 < q.y1 - m && b.y1 > q.y0 + m));
+    };
+    let i = n;
+    while (i > 0 && libre(pasos[i - 1])) i--;
+    if (!libre(pasos[n])) continue;
+    if (i === 0) return { v, anda, pasos, f };
+    const tramo = pasos.slice(i), largo = (d * (n - i)) / n;
+    if (tramo.length >= 4 && largo >= 3 * v.k && (!mejor || largo > mejor.largo)) mejor = { v, anda, pasos: tramo, f, largo };
+  }
+  if (mejor) { const { largo: _l, ...r } = mejor; return r; }
+  return null;
+}
+/**
+ * (Campamento 49, idea 116) Hasta dónde puede ir uno en línea recta por la calle sin que su caja toque a nadie (`otros`: las cajas de
+ * los demás y lo ocupado), en pasos de una unidad: el desplazamiento en x (con su signo) del tramo libre, 0 si no hay sitio.
+ */
+export function tramoLibre(v, hastaX, otros) {
+  const dir = Math.sign(hastaX - v.x), m = 0.35 * v.k;
+  let ok = 0;
+  for (let dx = v.k; dir && dx <= Math.abs(hastaX - v.x) + 1e-6; dx += v.k) {
+    const b = cajaVecino({ ...v, x: v.x + dir * dx });
+    if (otros.some((q) => b.x0 < q.x1 - m && b.x1 > q.x0 + m && b.y0 < q.y1 - m && b.y1 > q.y0 + m)) break;
+    ok = dx;
+  }
+  return dir * ok;
 }
 /** El charco de luz de la plancha de la pupusera (de noche, como la luz de las puertas): [x, y, radio] o null si no está. */
 export function luzPupusa(lista) {
