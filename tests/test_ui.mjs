@@ -1915,7 +1915,7 @@ try {
       m = await medir(r.p);
       eq(m.naranja, '#f0b429', 'acento: tras llegar a 1 BTC es dorado');
       ok(m.contraste >= 4.5, `acento dorado: el texto de acento sobre las tarjetas llega a 4.5:1 (${m.contraste.toFixed(1)})`);
-      await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'naranja', null, { timeout: 12000 }); // la vista previa devuelve el estado real
+      await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'naranja', null, { timeout: 40000 }); // la vista previa devuelve el estado real (59: espera a que acabe la fiesta del campamento, 24 s)
       eq(await r.p.evaluate(() => document.querySelectorAll('.aurora-epica, .luz-gota').length), 0, '1 BTC: los efectos se retiran solos');
       await r.ctx.close();
       // El cometa: al cruzar una etapa
@@ -2774,7 +2774,7 @@ try {
       eq(filas[0].e, 'ok', 'con las cuentas bien, «Tus cuentas» está bien');
       ok(/^(Todo en orden\.|\d+ cosas? por revisar\.)$/.test((await a.p.textContent('#sis-res')).trim()), 'el resumen dice cuántas cosas revisar');
       const rutas = await a.p.$$eval('#sis-met th[scope="row"]', (ths) => ths.map((t) => t.textContent));
-      ok(rutas.includes('/api/compras') && !rutas.some((r) => /^\/[a-f0-9]{64}/.test(r)), `las métricas salen por ruta (${rutas.slice(0, 3).join(', ')}…)`);
+      ok(rutas.includes('/api/compras') && !rutas.some((r) => /^\/[a-f0-9]{64}/.test(r)), `las métricas salen por ruta (${rutas.join(', ')})`);
       const errores = await a.p.$$eval('#sis-err .sis-fila', (fs) => fs.map((f) => f.textContent));
       ok(errores.some((t) => t.includes('prueba de error en el navegador') && t.includes('Safari · iPhone')), `el error del navegador aparece con su agente: ${errores[0]}`);
       ok(await a.p.locator('#sis-err-limpiar').isVisible(), 'y se puede limpiar la lista');
