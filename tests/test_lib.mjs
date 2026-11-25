@@ -1398,9 +1398,12 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   const sv = tel(6);
   // 55 · el mar de niebla: detrás de la montaña, por debajo del saldo; dos capas, la que más se ve con su sombra.
   const mar = A.marDeNiebla({ W: 390, H: 760, canton: sv.canton, milpa: sv.milpa, k: sv.k, cresta, techo: 270 });
-  const topes = (svg) => [...svg.matchAll(/d="M[-\d.]+ ([\d.]+)/g)].map((m) => Number(m[1]));
-  ok(topes(mar.atras).every((y) => y > 270 + 20) && Math.min(...topes(mar.frente)) > sv.milpa.y + sv.milpa.h, `valle 22B: el mar de niebla, por debajo del saldo y (la capa de delante) de la milpa (${topes(mar.atras)} / ${topes(mar.frente)})`);
-  eq([(mar.atras.match(/<path/g) || []).length, (mar.frente.match(/<path/g) || []).length, /v-mar-sombra/.test(mar.frente)], [2, 3, true], 'valle 22B: dos planos detrás de la loma y tres delante (con su sombra) en el teléfono');
+  // (Campamento 53A) Dos bancos suaves: un rectángulo cada uno, relleno por el CSS con el degradado; mucho más anchos que la escena.
+  const rects = (svg) => [...svg.matchAll(/<rect class="v-mar ([\w-]+)" x="([-\d.]+)" y="([-\d.]+)" width="([\d.]+)" height="([\d.]+)"\/>/g)].map((m) => ({ clase: m[1], x: Number(m[2]), y: Number(m[3]), w: Number(m[4]), h: Number(m[5]) }));
+  const [ma] = rects(mar.atras), [mf] = rects(mar.frente);
+  ok(ma && mf && ma.y >= 270 + 24 && mf.y > sv.milpa.y + sv.milpa.h && mf.y > ma.y, `valle 22B: la neblina, por debajo del saldo y (el banco de delante, entero) de la milpa (${ma?.y} / ${mf?.y})`);
+  eq([mar.atras.match(/<\w+/g), mar.frente.match(/<\w+/g), ma.clase, mf.clase], [['<rect'], ['<rect'], 'v-mar-atras', 'v-mar-frente'], '53A: un solo nodo por banco (sin bordes festoneados ni planos opacos)');
+  ok([ma, mf].every((r) => r.x < -390 && r.x + r.w > 2 * 390 && r.y + r.h >= 760) && !/style=|fill=/.test(mar.atras + mar.frente), '53A: cada banco sobra a los lados (su lomo apenas se curva), llega al pie de la escena y no lleva estilo ni relleno en línea');
   // 58 · las vacas: una en el teléfono, en la orilla de afuera (aquí la izquierda: la derecha no cabe), mirando al agua y lejos del sendero.
   const dist = (px, py) => Math.min(...pts.slice(1).map(([bx2, by2], i) => { const [ax, ay] = pts[i], dx = bx2 - ax, dy = by2 - ay, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - ax - t * dx, py - ay - t * dy); }));
   ok(sv.vacas.length === 1 && sv.vacas[0].x < lago.cx - lago.rx && sv.vacas[0].dir === 1 && dist(sv.vacas[0].x, sv.vacas[0].y - 4) > 13, `valle 22B: una vaca en el teléfono, en la orilla, mirando al agua y lejos del sendero (${JSON.stringify(sv.vacas[0])})`);

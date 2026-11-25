@@ -535,30 +535,24 @@ export function piscuchas(lista) {
 }
 // ------------------------------------------------------------------------------------------------ campamento 22B · el mar de niebla (idea 55)
 /**
- * De 5:00 a 7:30 la niebla llena el valle por detrás de la montaña y la loma del cantón asoma como una isla. Dos capas: detrás de la
- * loma (tapa el pie de la sierra media, cuyos lomos asoman) y delante de su falda, por debajo de la milpa (nunca delante de la montaña,
- * el sendero ni los rótulos). Son planos, como todo en la escena: el cuerpo, opaco, y en la capa de delante una cresta que recibe la luz,
- * más tenue, que hace de borde suave. Sin degradados ni desenfoques. La opacidad la pone el CSS con `--v-mar` (cielo.js): se forma y se
- * levanta con la hora sin redibujar.
+ * De 5:00 a 7:30 la neblina llena el valle por detrás de la montaña y la loma del cantón asoma como una isla. Dos bancos: detrás de la
+ * loma (vela el pie de la sierra media, cuyos lomos asoman) y delante de su falda, por debajo de la milpa (nunca delante de la montaña,
+ * el sendero ni los rótulos). (Campamento 53A: antes eran planos opacos de borde festoneado, «nubes recortadas».) Cada banco es un
+ * rectángulo relleno con el degradado `#m-v-mar` (montana.js), que es medio óvalo apoyado en su base: espeso abajo, se deshace hacia
+ * arriba y hacia los lados, sin ningún borde. Por eso el rectángulo es mucho más ancho que la escena (el lomo del banco apenas se curva)
+ * y cada uno va corrido hacia un lado: el de atrás sube más a la izquierda, el de delante a la derecha. Sin desenfoques: el degradado
+ * hace el suavizado. Quieta; su opacidad la pone el CSS con `--v-mar` (cielo.js): se forma y se levanta con la hora sin redibujar.
  */
 export function marDeNiebla({ W, H, canton, milpa, k, cresta = [], techo = 0 }) {
-  const borde = (y0, semilla, paso, alto) => {
-    // Lomos redondos de distinto alto (puntos fijos con su azar propio): cada tramo se abomba hacia arriba como el lomo de una nube.
-    const rnd = azar(semilla), pts = [];
-    for (let x = -30; x <= W + 30 + paso; x += paso * (0.6 + rnd() * 0.8)) pts.push([x, y0 - rnd() * 2 * k]);
-    return `M${P(pts[0])}${pts.slice(1).map((q, i) => `Q${P([(pts[i][0] + q[0]) / 2, Math.min(pts[i][1], q[1]) - (alto * (0.4 + rnd() * 0.9)) * k])} ${P(q)}`).join('')}`;
-  };
-  const fin = `L${f1(W + 30)} ${f1(H + 10)}L-30 ${f1(H + 10)}Z`;
-  // La de atrás llena el valle hasta media altura de la sierra media (sus lomos más altos asoman), nunca por encima del saldo ni de las
-  // casas; la de delante empieza por debajo de la milpa. Cada capa: la cresta al sol (más clara) y, unos píxeles más abajo, el cuerpo.
+  // El de atrás llena el valle hasta media altura de la sierra media (sus lomos más altos asoman), nunca por encima del saldo ni de las
+  // casas; el de delante empieza por debajo de la milpa, entero (no vela la loma). `sube`: cuánto asoma el borde que se deshace por encima de `y0`.
   const ys = cresta.map((p) => p[1]), arriba = ys.length ? Math.min(...ys) : canton.y - 40 * k, abajo = ys.length ? Math.max(...ys) : canton.y;
   const yAtras = Math.max(techo + 24, Math.min(canton.y - 18 * k, arriba + (abajo - arriba) * 0.62)), yFrente = Math.max(canton.y + 12 * k, milpa.y + milpa.h + milpa.caida + 4 * k);
-  // La capa que más se ve (la de delante en el teléfono, la de atrás en los demás) lleva además su parte en sombra: la niebla de más
-  // cerca, más fría, que le da hondura (sin ella era un llano blanco).
-  const capa = (y0, semilla, paso, clase, hondo) => `<path class="v-mar v-mar-luz ${clase}" d="${borde(y0, semilla, paso, 6)}${fin}"/><path class="v-mar v-mar-cuerpo ${clase}" d="${borde(y0 + 4 * k, semilla + 1, paso * 1.4, 4)}${fin}"/>`
-    + (hondo ? `<path class="v-mar v-mar-sombra ${clase}" d="${borde(y0 + hondo, semilla + 2, paso * 2.2, 3)}${fin}"/>` : '');
-  const tel = W < 700 || (H <= 520 && W >= H * 1.5 && W < 1100);
-  return { atras: capa(yAtras, 41, 34 * k, 'v-mar-atras', tel ? 0 : Math.max(20 * k, (yFrente - yAtras) * 0.42)), frente: capa(yFrente, 43, 30 * k, 'v-mar-frente', tel ? 24 * k : 0) };
+  const banco = (y0, sube, cx, clase) => {
+    const y = Math.max(techo + 24, y0 - sube);
+    return `<rect class="v-mar ${clase}" x="${f1(cx - W * 3)}" y="${f1(y)}" width="${f1(W * 6)}" height="${f1(H + 10 - y)}"/>`;
+  };
+  return { atras: banco(yAtras, 30 * k, W * 0.3, 'v-mar-atras'), frente: banco(yFrente, 0, W * 0.7, 'v-mar-frente') };
 }
 
 // ------------------------------------------------------------------------------------------------ campamento 22B · aves de paso (idea 57)

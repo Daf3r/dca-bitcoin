@@ -6253,7 +6253,9 @@ try {
       const vaca = caja('.v-vaca-pie.v-vaca-s');
       const monte = document.querySelector('#montana path.monte'), fondo = document.getElementById('m-v-fondo');
       return {
-        mueve, mar: vis('.v-mar-cuerpo'), marOp: Number(cs('.v-mar-cuerpo')?.opacity ?? 0),
+        mueve, mar: vis('.v-mar-frente'), marOp: Number(cs('.v-mar-frente')?.opacity ?? 0), marAtras: Number(cs('.v-mar-atras')?.opacity ?? 0),
+        // (Campamento 53A) La neblina es un degradado (sin bordes), quieta y sin desenfoques.
+        marSuave: [...document.querySelectorAll('#montana .v-mar')].every((e) => e.tagName === 'rect' && /m-v-mar/.test(getComputedStyle(e).fill) && getComputedStyle(e).filter === 'none' && getComputedStyle(e).animationName === 'none'), marBancos: document.querySelectorAll('#montana .v-mar').length, marPueblo: document.querySelectorAll('#m-v-pie .v-mar, .v-campos .v-mar').length,
         // El mar de niebla va detrás de la montaña (dentro de la capa del fondo, que se dibuja antes que ella).
         marDetras: !!fondo && !!monte && fondo.contains(document.querySelector('.v-mar')) && !!(fondo.compareDocumentPosition(monte) & Node.DOCUMENT_POSITION_FOLLOWING),
         marTop: Math.min(...[...document.querySelectorAll('#montana .v-mar')].map((e) => e.getBoundingClientRect().top)), saldoAbajo: document.querySelector('.saldo').getBoundingClientRect().bottom,
@@ -6294,10 +6296,12 @@ try {
       // 55 · el mar de niebla: a las 6:00 lleno, detrás de la montaña y por debajo del saldo; a las 7:15 se levanta; a mediodía no hay. También con «ninguno».
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-10-15', { 'libro.efectos': 'ninguno' })); await cerrar(t.p);
       let v = await estado(t.p);
-      ok(v.mar && v.marOp > 0.95 && v.marDetras && v.marTop > v.saldoAbajo, `22B mar de niebla: a las 6:00, opaco, detrás de la montaña y por debajo del saldo (desde ${Math.round(v.marTop)} px; el saldo acaba en ${Math.round(v.saldoAbajo)})`);
+      ok(v.mar && v.marOp > 0.95 && v.marDetras && v.marTop > v.saldoAbajo, `22B mar de niebla: a las 6:00, llena, detrás de la montaña y por debajo del saldo (desde ${Math.round(v.marTop)} px; el saldo acaba en ${Math.round(v.saldoAbajo)})`);
       await t.p.evaluate(() => { localStorage.setItem('libro.hora', '7.25'); window.libroCielo.aplicar(); });
       v = await estado(t.p);
-      ok(v.mar && v.marOp > 0.3 && v.marOp < 0.7, `22B mar de niebla: a las 7:15 se está levantando (${v.marOp})`);
+      ok(v.marSuave && v.marBancos === 2 && v.marPueblo === 0, `53A neblina: dos bancos de degradado detrás de la montaña (ninguno en el pueblo), sin bordes, desenfoques ni movimiento (${v.marBancos})`);
+      ok(v.mar && v.marAtras > 0.3 && v.marAtras < 0.7, `22B mar de niebla: a las 7:15 se está levantando (${v.marAtras})`);
+      ok(v.marAtras < v.marOp, `53A neblina: al levantarse se va primero la de más lejos (${v.marAtras} < ${v.marOp})`);
       await t.p.evaluate(() => { localStorage.setItem('libro.hora', '17.5'); window.libroCielo.aplicar(); });
       ok(!(await estado(t.p)).mar, '22B mar de niebla: sin niebla de la tarde');
       await t.ctx.close();
@@ -6361,7 +6365,7 @@ try {
       await p.addInitScript(() => { try { localStorage.setItem('libro.hora', '6'); localStorage.setItem('libro.dia', '2026-10-15'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } });
       await p.goto(`${srvE.url}/login`, { waitUntil: 'networkidle' });
       await p.waitForTimeout(800);
-      const e = await p.evaluate(() => ({ mar: !!document.querySelector('.v-mar-cuerpo') && getComputedStyle(document.querySelector('.v-mar-cuerpo')).display !== 'none', vacas: !!document.querySelector('.v-vaca'), mueve: document.documentElement.dataset.mueve }));
+      const e = await p.evaluate(() => ({ mar: !!document.querySelector('.v-mar-frente') && getComputedStyle(document.querySelector('.v-mar-frente')).display !== 'none', vacas: !!document.querySelector('.v-vaca'), mueve: document.documentElement.dataset.mueve }));
       ok(e.mar && e.vacas && e.mueve === 'torogoz', '22B entrada: el mar de niebla y las vacas también (paisaje, sin datos de nadie)');
       await ctx.close();
     } finally { srvE.parar(); }
