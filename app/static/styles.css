@@ -4333,7 +4333,7 @@ html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite
 .v-ig-cupula { fill: color-mix(in oklab, #c9774b var(--v-luz), var(--monte)); }
 .v-ig-moldura { fill: none; stroke: color-mix(in oklab, #b9a68a var(--v-som), var(--monte-sombra)); }
 .v-ig-cruz { fill: none; stroke: color-mix(in oklab, #3a2c22 70%, var(--monte-sombra)); stroke-linecap: round; }
-.v-ig-hueco, .v-ig-ventana { fill: color-mix(in oklab, #2e2219 60%, var(--monte-sombra)); }
+.v-ig-hueco, .v-ig-portal, .v-ig-ventana { fill: color-mix(in oklab, #2e2219 60%, var(--monte-sombra)); }
 .v-ig-campana { fill: color-mix(in oklab, #b48a3a var(--v-luz), var(--monte-sombra)); }
 /* (Pulido de la iglesia) El relieve (zócalo y pilastras), un tono más hondo que la cal; el atrio de piedra (su piso al frente y la
    grada en sombra). De noche el relieve sigue a la fachada encendida. Las chimeneas de las casas con fogón, de ladrillo. */
@@ -4343,7 +4343,7 @@ html[data-cielo="noche"] .v-ig-relieve { fill: color-mix(in oklab, #d8b98c 40%, 
 .v-ig-atrio-s { fill: color-mix(in oklab, #8c7f6b var(--v-som), var(--monte-sombra)); }
 .v-chimenea { fill: color-mix(in oklab, #9a5f45 var(--v-luz), var(--monte-sombra)); }
 html[data-cielo="noche"] .v-ig-frente { fill: color-mix(in oklab, #f6d8a6 42%, var(--monte)); }
-html[data-cielo="noche"] :is(.v-ig-hueco, .v-ig-ventana) { fill: color-mix(in oklab, var(--v-calida) 70%, #7a3a12); }
+html[data-cielo="noche"] :is(.v-ig-hueco, .v-ig-portal, .v-ig-ventana) { fill: color-mix(in oklab, var(--v-calida) 70%, #7a3a12); }
 html:is([data-cielo="atardecer"], [data-cielo="amanecer"]) .v-ig-ventana { fill: color-mix(in oklab, var(--v-calida) 55%, #5a2e12); }
 /* La plaza: el empedrado y su bordillo; los faroles, que de noche dan su luz. */
 .v-plaza { fill: color-mix(in oklab, #d9c6a0 var(--v-luz), var(--monte)); }
@@ -4874,9 +4874,16 @@ html[data-sombra="corta"] .v-pueblo .v-sombra { transform: skewX(calc(var(--v-so
 /* (147) Las luces se encienden una a una: los faroles (17:45), la iglesia (18:00) y las ventanas (18:15); a las 22:00 se apagan las
    ventanas y a las 23:00 la iglesia; los faroles, toda la noche (cielo.js: lucesDelPueblo, `data-luces`). Solo el pueblo: el cantón y
    las luces de la sierra siguen como siempre. La pupusera lleva su propia luz. */
-html[data-luces="ninguna"] .v-pueblo .v-farol-luz { display: none; }
-html[data-luces="ninguna"] .v-pueblo .v-farol-lampara { fill: color-mix(in oklab, #2a2725 70%, var(--monte-sombra)); }
-html[data-luces="ninguna"] .v-pueblo > .v-charco { display: none; }
-html:is([data-luces="ninguna"], [data-luces="faroles"], [data-luces="iglesia"]) .v-pueblo .v-luz { fill: color-mix(in oklab, #2b2420 45%, var(--monte-sombra)); }
-html:is([data-luces="ninguna"], [data-luces="faroles"], [data-luces="iglesia"]) .v-pueblo .v-halo { opacity: 0; }
-html:is([data-luces="ninguna"], [data-luces="faroles"]) .v-pueblo :is(.v-ig-hueco, .v-ig-ventana) { fill: color-mix(in oklab, #2e2219 60%, var(--monte-sombra)); }
+html:is([data-luces="ninguna"], [data-luces="templo"], [data-luces="horno"]) .v-pueblo .v-farol-luz { display: none; }
+html:is([data-luces="ninguna"], [data-luces="templo"], [data-luces="horno"]) .v-pueblo .v-farol-lampara { fill: color-mix(in oklab, #2a2725 70%, var(--monte-sombra)); }
+html:is([data-luces="ninguna"], [data-luces="templo"], [data-luces="horno"]) .v-pueblo > .v-charco { display: none; }
+html:is([data-luces="ninguna"], [data-luces="faroles"], [data-luces="iglesia"], [data-luces="templo"], [data-luces="horno"]) .v-pueblo .v-luz { fill: color-mix(in oklab, #2b2420 45%, var(--monte-sombra)); }
+html:is([data-luces="ninguna"], [data-luces="faroles"], [data-luces="iglesia"], [data-luces="templo"], [data-luces="horno"]) .v-pueblo .v-halo { opacity: 0; }
+html:is([data-luces="ninguna"], [data-luces="faroles"], [data-luces="horno"]) .v-pueblo :is(.v-ig-hueco, .v-ig-portal, .v-ig-ventana) { fill: color-mix(in oklab, #2e2219 60%, var(--monte-sombra)); }
+/* (Campamento 52, ideas 140, 147, 231 y 234) De 4:30 a 5:00 la única luz es el horno del panadero (`horno`: los faroles apagados; su
+   charco va con los vecinos). Las luces van detrás del sacristán: a las 17:45 solo la iglesia (`templo`), luego los faroles y las
+   ventanas. El sacristán abre el portal a las 5:30 (al amanecer se ve la luz de dentro) y lo cierra a las 21:00: cerrado, es madera. */
+html:is([data-cielo="amanecer"], [data-luces="templo"]) .v-pueblo .v-ig-portal { fill: color-mix(in oklab, var(--v-calida) 55%, #5a2e12); }
+html[data-puerta="cerrada"] .v-pueblo .v-ig-portal { fill: color-mix(in oklab, #4a3020 70%, var(--monte-sombra)); }
+/* (52, idea 238) Las noches de luna llena el pescador no sale: el cayuco no está en el lago (ni su lámpara). */
+html[data-luna-llena][data-cielo="noche"] .montana :is(.v-cayuco, svg.v-amb-cayuco) { display: none; }

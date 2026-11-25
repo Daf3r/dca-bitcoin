@@ -411,6 +411,8 @@ function ambientalesDelValle(host) {
  */
 /** (Campamento 51, idea 228) La frase del foco del día para la descripción: lo raro si lo hay; si no, la rutina del día (cielo.js). */
 const focoDelDia = () => { const C = window.libroCielo, d = C?.dia?.(); return d ? (C.fraseDelFoco?.(d) ?? C.fraseRutina?.(d) ?? '') : ''; };
+/** (Campamento 52, idea 238) El día de la semana en El Salvador (0 = domingo; −1 sin fecha): la descripción cuenta la semana de los oficios. */
+const diaSemana = () => { const d = window.libroCielo?.dia?.(); return d ? new Date(`${d}T12:00:00Z`).getUTCDay() : -1; };
 const turnoDelPueblo = () => window.libroCielo?.turno?.(window.libroCielo.dia(), window.libroCielo.hora()) ?? 'manana';
 const elipseV = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
 /**
@@ -446,10 +448,11 @@ function conArbol(lug, arbol) {
   if (arbol) for (const [x0, y0, x1, y1] of cajasArbol(arbol)) lug.ocupado.push({ x0, y0, x1, y1 });
   return lug;
 }
-/** (Campamento 40) Lo que el reparto necesita del día y la hora (la carta del día, la escuela, la del cantón): lo mismo para el grupo y la capa. */
+/** (Campamento 40) Lo que el reparto necesita del día y la hora (la carta del día, la escuela, la del cantón y, desde el 52, la hora de cada vecino): lo mismo para el grupo y la capa. */
 function opcionesReparto(info, t) {
-  const C = window.libroCielo, dia = C?.dia?.() ?? '';
-  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, C?.hora?.() ?? 12) };
+  const C = window.libroCielo, dia = C?.dia?.() ?? '', hora = C?.hora?.() ?? 12;
+  // (Campamento 52) `hora`: los vecinos con oficio están en el sitio de esa hora (no caminan: se dibuja al poner la escena o el turno).
+  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora };
 }
 function htmlVecinos(info, t) {
   const { lug, sol, cometas, conCapa = false } = info;
@@ -895,7 +898,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><ellipse class="eco-halo" rx="12" ry="4.2" cy="0.5"/>${(() => { const c = cajaTu(ec); return `<rect class="eco-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/>`; })()}<ellipse class="eco-punto" rx="5" ry="1.9" cy="0.5"/><g class="tu">${osoTu({ k: kTu(ec) * 0.92 })}</g></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, etapaDesc: etapa, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa), foco: focoDelDia(), turno: infoV.turno } : null, osos: null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, etapaDesc: etapa, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa), foco: focoDelDia(), turno: infoV.turno, sem: diaSemana() } : null, osos: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   // (Campamento 25) Los osos polares de peluche de la familia, en la nieve al sol bajo la cumbre (los tres, la pareja o uno: lo que quepa).
   // Se sientan esquivando los rótulos de «Tú» donde quedará al final de la subida (por eso se pone a «Tú» un momento ahí) y en la nieve

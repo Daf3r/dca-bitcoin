@@ -269,7 +269,8 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
     add('ig-cruz', `M${P(m(-4.25, -h - 15.4))}L${P(m(-4.25, -h - 19.8))}M${P(m(-5.6, -h - 18.4))}L${P(m(-2.9, -h - 18.4))}`);
     // Los huecos oscuros (o encendidos de noche): el arco del campanario, la puerta en arco, el óculo y dos ventanas altas.
     const arco = (cx, y0, a, alto) => `M${P(m(cx - a, y0))}L${P(m(cx - a, y0 - alto + a))}Q${P(m(cx - a, y0 - alto))} ${P(m(cx, y0 - alto))}Q${P(m(cx + a, y0 - alto))} ${P(m(cx + a, y0 - alto + a))}L${P(m(cx + a, y0))}Z`;
-    add('ig-hueco', arco(-4.25, -h - 1.6, 1.9, 6) + arco(w / 2, 0, 2.6, 8.4));
+    add('ig-hueco', arco(-4.25, -h - 1.6, 1.9, 6));
+    add('ig-portal', arco(w / 2, 0, 2.6, 8.4)); // (Campamento 52, idea 234) el portal, aparte: el sacristán lo abre y lo cierra
     add('ig-hueco', `M${P(m(w / 2 - 1.3, -h + 3))}a${f1(1.3 * k)} ${f1(1.3 * k)} 0 1 0 ${f1(2.6 * k * sol)} 0a${f1(1.3 * k)} ${f1(1.3 * k)} 0 1 0 ${f1(-2.6 * k * sol)} 0Z`);
     add('ig-campana', arco(-4.25, -h - 2.6, 0.9, 2.6));
     add('ig-ventana', arco(3.4, -9, 0.9, 4) + arco(w - 3.4, -9, 0.9, 4) + arco(w + dx * 0.35, dy * 0.35 - 7, 0.8, 4) + arco(w + dx * 0.72, dy * 0.72 - 7, 0.8, 4) + arco(-4.25, -h * 0.5 - 1.4, 0.7, 3.2));
@@ -403,7 +404,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${p('v-sombra v-sombra-perro', 'perro-sombra')}${filaAtras}`
     + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-relieve', 'ig-relieve')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-atrio', 'ig-atrio')}${p('v-ig-atrio-s', 'ig-atrio-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
     + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-chimenea', 'chimenea')}${p('v-poste', 'poste', sw(0.55))}`
-    + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`
+    + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-portal', 'ig-portal')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`
     + `${mango}${fuegoV}${navidad}`
     + `${p('v-farol-poste', 'farol-poste', sw(0.55))}${p('v-farol-lampara', 'farol-lampara')}${p('v-farol-luz', 'farol-luz', sw(3.4))}`
     + `<path class="v-cordel" d="${cuerda}"${sw(0.3)}/>${foco.map((d, j) => `<path class="v-navidad v-foco v-foco-${j}" d="${d}"${sw(1.15)}/>`).join('')}${bandera.map((d, j) => `<path class="v-fiesta v-band v-band-${j}" d="${d}"/>`).join('')}`
