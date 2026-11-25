@@ -12,11 +12,10 @@ export const CAMBIOS = [
     // (Campamento E) El precio, a su ritmo; resume también «Tú» con más gestos (2026-12-v) y los osos de la cumbre (2026-12-u).
     id: '2026-12-w',
     items: [
-      'El pueblo sigue la semana del precio: unas semanas los vecinos se juntan en los corredores y otras salen a la plaza y tienden la ropa.',
-      'Ninguna es mejor que otra y casi siempre el valle está en calma. Se apaga en «Tu cuenta», en «Más ajustes de este aparato».',
-      'El osito «Tú» acampa de noche en su carpita, mira el atardecer de espaldas y, en las tardes de lluvia, lleva capote amarillo.',
-      'Su mochila cuenta lo ya logrado, y los osos de la cumbre se estiran por la mañana y en diciembre hacen su oso de nieve.',
-      'Al llegar a una etapa, el pueblo hace fiesta una vez para toda la familia.',
+      'El pueblo sigue la semana del precio: unas semanas los vecinos se juntan y otras salen a la plaza y tienden la ropa.',
+      'Casi siempre está en calma. Se apaga en «Tu cuenta», en «Más ajustes de este aparato».',
+      'El osito «Tú» acampa de noche, mira el atardecer y lleva en su mochila lo ya logrado.',
+      'Los osos de la cumbre se estiran por la mañana, y al llegar a una etapa hay fiesta en el pueblo.',
     ],
   },
   {

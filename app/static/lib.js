@@ -2671,6 +2671,20 @@ function nivelAnimo(sem, dist, q) {
   return 0;
 }
 /**
+ * (E) ¿Sigue el estado `nivel` con su umbral de salir (dos tercios del de entrar)? Cada uno con su propia medida: fresco y aire libre
+ * con la semana; abrigo con la semana o la distancia al máximo; plaza con la semana.
+ * @param {number} nivel
+ * @param {number} sem
+ * @param {number} dist
+ */
+function sigueAnimo(nivel, sem, dist) {
+  const U = UMBRAL_ANIMO, q = U.vuelta;
+  if (nivel === 2) return sem >= U.plaza * q;
+  if (nivel === 1) return sem >= U.aire * q;
+  if (nivel === -2) return sem <= U.abrigo * q || dist >= U.lejos * q;
+  return sem <= U.fresco * q;
+}
+/**
  * @param {string} f
  * @param {number} n
  */
@@ -2695,10 +2709,14 @@ export function animosDeSerie(serie) {
     let max = hoy;
     for (let i = 1; i < 30; i++) { const q = p.get(diasAntes(f, i)); if (q && q > max) max = q; }
     const sem = (hoy / antes - 1) * 100, dist = (1 - hoy / max) * 100;
-    const entra = nivelAnimo(sem, dist, 1), sigue = nivelAnimo(sem, dist, U.vuelta);
+    const entra = nivelAnimo(sem, dist, 1);
     let medida = entra;
-    // Con un estado puesto, se queda mientras su medida no vuelva un tercio hacia dentro; sube de grado solo con los umbrales de entrar.
-    if (cur !== 0 && Math.sign(sigue) === Math.sign(cur) && !(Math.sign(entra) === Math.sign(cur) && Math.abs(entra) > Math.abs(cur))) medida = Math.abs(sigue) >= Math.abs(cur) ? cur : sigue;
+    // Con un estado puesto, se queda mientras su propia medida no vuelva un tercio hacia dentro (abrigo de grado baja a fresco); sube de
+    // grado solo con los umbrales de entrar. Si la semana entra del otro lado (un rebote), manda la semana.
+    if (cur !== 0 && Math.sign(entra) !== -Math.sign(cur) && !(Math.sign(entra) === Math.sign(cur) && Math.abs(entra) > Math.abs(cur))) {
+      if (sigueAnimo(cur, sem, dist)) medida = cur;
+      else if (Math.abs(cur) === 2 && sigueAnimo(Math.sign(cur), sem, dist)) medida = Math.sign(cur);
+    }
     racha = medida !== 0 && Math.sign(medida) === Math.sign(cur) ? racha + 1 : medida !== 0 ? 1 : 0;
     cur = medida;
     out.push({ fecha: f, sem, dist, medida, animo: racha > U.tope ? 'calma' : NIVEL_ANIMO[medida + 2] });
