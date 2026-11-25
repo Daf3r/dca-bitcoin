@@ -2338,6 +2338,12 @@ export const FRASE_TURNO = {
   pupusas: 'En el pueblo es hora de pupusas.',
   posada: 'En el pueblo es hora de pupusas y unos vecinos miran el nacimiento.',
   fresca: 'En el pueblo, los vecinos sacan su silla a la acera a tomar el fresco.',
+  // (Campamento 43) Las temporadas del pueblo.
+  'tp-mangos': 'Es media mañana en el pueblo y un osezno baja mangos con su vara bajo el árbol de la plaza.',
+  'tp-mejenga': 'Es domingo por la tarde y en la plaza del pueblo los oseznos juegan una mejenga.',
+  'tp-atolada': 'Es sábado de atolada en el pueblo: hay atol de elote en la calle.',
+  'tp-posada': 'En el pueblo hay posada: un grupito con farolitos está frente a una casa.',
+  'tp-cuentos': 'Es noche de luna llena y los oseznos se sientan en la plaza alrededor de la abuela.',
 };
 /**
  * (Campamento 52, idea 238) La semana de cada oficio, por día de la semana (0 = domingo): el lunes el panadero descansa (de madrugada,

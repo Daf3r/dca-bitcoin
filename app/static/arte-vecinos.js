@@ -239,9 +239,27 @@ const TIPOS = {
   vendado: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), // (158) el vendado, con su palo
     ['r1', p([-2.3, -6.85], [2.3, -6.85], [2.3, -6.2], [-2.3, -6.2])], ['palma', p([1.9, -10.2], [2.3, -10.3], [2.6, -5.0], [2.2, -5.0])]],
   oseznoIndito: () => [...cuerpo(), ...brazos(), ['palma', camisa('x')[0][1]], ['r1', p([-1.1, -4.5], [1.1, -4.5], [0, -3.3])], ...cabeza(0, 0, false), ...sombrero()], // (160) cotón de manta, pañuelo rojo y sombrerito
+  // ---- (Campamento 43) Las temporadas del pueblo: los personajes de las maquetas aprobadas (prototipo-vida4.patch; el osezno sentado en
+  // el suelo, de prototipo-vida5.patch), con las mismas piezas y los mismos tonos (0 nodos).
+  // (152) el osezno que baja mangos con su vara larga, y su canasto en el suelo con los que ya bajó
+  oseznoVara: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false),
+    ['palma', p([2.0, -15.5], [2.4, -15.5], [2.5, -4.6], [2.1, -4.6])], ['palma', p([-5.2, -1.7], [-2.9, -1.7], [-3.2, 0], [-4.9, 0])], ['r2', e(-4.05, -1.9, 1.05, 0.55)]],
+  // (152) la de la tienda con el canasto lleno de mangos (el canasto de siempre, con el montón de maíz encima)
+  vendedoraMangos: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(), ['palma', p([-1.75, -8.15], [1.75, -8.15], [1.4, -9.4], [-1.4, -9.4])],
+    ['r2', e(0, -9.6, 1.45, 0.7)], ['r2', e(-0.75, -10.05, 0.6, 0.45)], ['r2', e(0.7, -10.1, 0.6, 0.45)]],
+  // (154) sembrando con el chuzo (el de la siembra, más corto que el del milpero)
+  chuzo: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ...sombrero(), ['palma', p([2.35, -7.6], [2.7, -7.6], [2.85, 0.2], [2.5, 0.2])], ['pelo2', e(2.6, -3.3, 0.6, 0.55)]],
+  // (155) la del atol: su olla grande sobre la brasa y el cucharón
+  atolera: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(),
+    ['rasgo', p([-2.8, -3.4], [2.8, -3.4], [2.3, -0.9], [-2.3, -0.9])], ['rasgo', e(0, -3.4, 2.9, 0.55)], ['r2', e(0, -3.45, 2.2, 0.32)], ['brasa', e(0, -0.5, 2.5, 0.5)],
+    ['palma', p([1.5, -6.6], [1.8, -6.6], [1.2, -3.4], [0.9, -3.4])], ['pelo2', e(1.6, -5.7, 0.6, 0.5)]],
+  // (163) la portería de palo de la mejenga (una cosa: no es un vecino)
+  porteria: () => [['pelo2', p([-4, 0], [-3.7, 0], [-3.7, -5], [3.7, -5], [3.7, 0], [4, 0], [4, -5.3], [-4, -5.3])]],
+  // (164) el osezno sentado en el suelo, en la rueda de los cuentos
+  oseznoSuelo: (r) => [['pelo', e(0, -1.5, 2.0, 1.5)], ['pelo', e(-1.5, -0.4, 1.0, 0.5)], ['pelo', e(1.5, -0.4, 1.0, 0.5)], [r, p([-1.7, -2.6], [1.7, -2.6], [1.9, -1.0], [-1.9, -1.0])], ...cabeza(0, 2.2, false)],
 };
 /** (Campamento 41) Lo que no es un vecino sino una cosa en el suelo: sin sombra de pie, no cuenta entre los ocho y no aparta a nadie. */
-export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola']);
+export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola', 'porteria']);
 /** (Campamento 40) Sin sombra de pie, pero sí es un vecino (cuenta y aparta a los demás): la hamaca, con sus postes y el que duerme en ella. */
 const SIN_PIE = new Set(['hamaca', 'hamacaPostes', 'hamacaSola', 'tortilleraManos', 'estrellita']); // (49) las partes que van a su capa no repiten la sombra
 export const PERSONAJES = Object.keys(TIPOS);
@@ -319,7 +337,7 @@ export function carta(dia, t, n) {
   return (((numDia(dia) + sal) % n) + n) % n;
 }
 /** (Campamento 52) Los turnos de un día cualquiera (los de los vecinos con oficio): en ellos salen las cosas de cada quien (237). */
-const DIARIOS = ['alba', 'amanece', 'manana', 'mananaLibre', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'mercado'];
+const DIARIOS = ['alba', 'amanece', 'manana', 'mananaLibre', 'tp-mangos', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'mercado'];
 /** (Campamento 40, idea 145) Los turnos en que el perro se echa en otro sitio (dibujado con los vecinos; el de siempre se esconde). */
 export const PERRO_TURNOS = ['alba', 'amanece', 'manana', 'tortillas', 'salida', 'siesta', 'pupusas', 'posada', 'fresca'];
 /**
@@ -343,7 +361,7 @@ export const VECINOS = {
  * cantón (144; montana.js lo saca de la hora al dibujar el turno), o null. (Campamento E) `animo`: el del valle según la semana del
  * precio (lib.js: `ANIMOS`; 'calma', el de siempre).
  */
-export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null, hora = null, animo = 'calma' } = {}) {
+export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null, hora = null, animo = 'calma', temporada = null } = {}) {
   const L = [];
   const en = (sitio, i, tipo, extra = {}) => { const q = lug[sitio]?.[i]; if (q) L.push({ t: tipo, x: q[0] + (extra.dx ?? 0) * q[2], y: q[1] + (extra.dy ?? 0) * q[2], k: q[2], ...extra }); };
   const oseznos = (cuantos, tipo = null) => {
@@ -381,7 +399,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   const recado = () => {
     if (hh === null || !dia) return;
     const nd = numDia(dia), deManana = !escuela && nd % 2 === 0, [a, b] = deManana ? [8, 11] : [15, 17];
-    if (hh < a || hh >= b || !(deManana ? ['manana', 'mananaLibre'] : ['tarde', 'vuelta']).includes(t)) return;
+    if (hh < a || hh >= b || !(deManana ? ['manana', 'mananaLibre', 'tp-mangos'] : ['tarde', 'vuelta']).includes(t)) return;
     const ruta = [...(lug.calle ?? [])].sort((p, q) => p[0] - q[0]);
     if (ruta.length < 2) return;
     const fr = (hh - a) / (b - a), A = ruta[0], B = ruta.at(-1), q = fr < 0.25 ? 0.1 : fr < 0.5 ? 0.5 : fr < 0.8 ? 0.9 : 0.45, vuelve = fr >= 0.8;
@@ -415,6 +433,19 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   const panaderoDeManana = () => { if (lunes) return; if (hh !== null && hh >= 10) quien('panadero', 'plaza', 4, { f: -1 }); else quien('panadero', 'atrio', 1); };
   // El pescador (233): hasta las 9:00 en el lago (su cayuco); a las 9:00 vuelve por la calle con la sarta; desde las 10:00 la vende en la plaza.
   const pescadorDeManana = () => { if (entre(9, 10)) quien('pescador', 'calle', 1, { t: 'pescadorSarta', f: -1, alt: [['calle', 1, -7], ['calle', 0, -7]] }); else if (hh !== null && hh >= 10) quien('pescador', 'plaza', 2, { t: 'pescadorSarta' }); };
+  // ---- (Campamento 43, idea 154) La milpa con su gente: las dos primeras semanas de cada etapa, de 6:00 a 10:00 (cielo.js:
+  // `temporadaDelPueblo`, que ya dice si el turno es una mañana de siempre), el milpero trabaja la milpa del valle y otro lo ayuda: en
+  // la siembra con su chuzo, en la tapisca con su matate; en la dobla, de pie entre las matas (doblar la caña no tiene dibujo todavía).
+  // Van antes que el pueblo (con ocho como mucho, no se quedan fuera) y el milpero ese rato no baja al pueblo. Donde no hay milpa
+  // (`lug.milpa` vacío: a 1440×900 no cabe) no sale nadie y el milpero sigue su día.
+  const faena = temporada?.milpa ?? '';
+  if (faena && lug.milpa?.length) {
+    quien('milpero', 'milpa', 0, { t: faena === 'tapisca' ? 'matate' : 'milpero' });
+    en('milpa', 1, faena === 'siembra' ? 'chuzo' : faena === 'tapisca' ? 'matate' : 'campesino', { r: 1, f: -1 });
+  }
+  // (Campamento 43, idea 152) Los mangos (marzo y abril): un osezno los baja con su vara bajo el árbol de la plaza (su canasto, al lado)
+  // y la de la tienda lleva el suyo lleno. Las mañanas sin escuela (`tp-mangos`) y el sábado de plaza (`temporada.mangos`).
+  const mangos = () => { en('banca', 0, 'oseznoVara', { s: OSEZNO, r: 0, dx: -3 }); quien('tienda', 'atrio', 0, { t: 'vendedoraMangos' }); };
   if (t === 'alba') { if (!lunes) quien('panadero', 'calle', 0, { horno: true }); perro('calle', 0, -8.5); } // (140, 231) antes del alba, el panadero carga su canasto con el horno encendido
   else if (t === 'amanece') {
     // La abuela se estira en su corredor; el sacristán, con sus llaves, abre la iglesia a las 5:30 (234; el domingo barre el atrio
@@ -446,7 +477,8 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     quien('tortillera', 'calle', 1, { t: 'delantal', f: -1, alt: [['calle', 0, -5], ['atrio', 0]] }); // en su puerta (su comal, frío, al lado)
     perro('perro', 0);
   }
-  else if (t === 'mananaLibre') {
+  else if (t === 'mananaLibre' || t === 'tp-mangos') {
+    if (t === 'tp-mangos') mangos(); // (43, 152) la misma mañana sin escuela, con los mangos
     recado(); encuentro('m');
     quien('tienda', 'atrio', 0); panaderoDeManana(); pescadorDeManana(); quien('abuela', 'corredor', 0);
     if (milpero) quien('milpero', 'calle', 0, { f: -1 }); else quien('tortillera', 'calle', 1, { f: -1 });
@@ -512,7 +544,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   else if (t === 'misa') { en('atrio', 3, 'cura', {}); quien('tortillera', 'atrio', 0, { t: 'espaldas' }); quien('tienda', 'atrio', 1, { t: 'espaldas' }); quien('panadero', 'atrio', 4, { t: 'vecino' }); en('atrio', 4, 'osezno', { r: 0, s: OSEZNO, dx: 3.1 }); quien('abuela', 'corredor', 0); if (milpero) quien('milpero', 'calle', 0, { f: -1 }); quien('sacristan', 'atrio', 2); }
   // El sábado, más plaza (110): dos vendedoras con su canasto (la de la tienda y la que baja del cantón a vender lo de su huerta, 144),
   // el panadero, la tortillera, un osezno, la maestra y el pescador con su sarta.
-  else if (t === 'mercado') { quien('tienda', 'atrio', 0); en('plaza', 0, 'vendedora', { r: 0, f: -1 }); quien('panadero', 'plaza', 2); quien('pescador', 'calle', 0, { t: 'pescadorSarta', f: -1 }); quien('tortillera', 'plaza', 4, { t: 'delantal' }); en('plaza', 5, 'osezno', { r: 1, s: OSEZNO, dx: 0.8 }); quien('abuela', 'corredor', 0); quien('maestra', 'calle', 1, { f: -1 }); }
+  else if (t === 'mercado') { if (temporada?.mangos) mangos(); quien('tienda', 'atrio', 0); en('plaza', 0, 'vendedora', { r: 0, f: -1 }); quien('panadero', 'plaza', 2); quien('pescador', 'calle', 0, { t: 'pescadorSarta', f: -1 }); quien('tortillera', 'plaza', 4, { t: 'delantal' }); en('plaza', 5, 'osezno', { r: 1, s: OSEZNO, dx: 0.8 }); quien('abuela', 'corredor', 0); quien('maestra', 'calle', 1, { f: -1 }); }
   // El 15 de septiembre, el desfile (111): el abanderado con la azul y blanco, el del bombo de la banda de paz y los vecinos mirando.
   else if (t === 'desfile') { en('calle', 0, 'abanderado', { r: 0, f: -1 }); en('plaza', 1, 'bombo', { r: 0 }); en('plaza', 3, 'oseznoArriba', { r: 0, s: OSEZNO }); en('plaza', 5, 'vecino', { r: 0 }); en('atrio', 0, 'vecina', { r: 2 }); en('atrio', 0, 'osezno', { r: 1, s: OSEZNO, dx: 3 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'campesino', { r: 1, f: -1 }); }
   // (Nochebuena y el 31 de 18:00 a 1:00, con los oseznos y su estrellita (113), pasó a la cena del campamento 41: `nb-cena`, `f31-cena`.)
@@ -598,6 +630,38 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   else if (t === 'i12-iglesia') { en('atrio', 0, 'oseznoIndito', { s: OSEZNO }); en('atrio', 3, 'cura', {}); for (const i of [1, 4]) en('atrio', i, 'oseznoIndito', { s: OSEZNO, f: -1 }); en('atrio', 0, 'vecina', { r: 1, dx: 3.4 }); en('atrio', 2, 'vecino', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'oseznoIndito', { s: OSEZNO }); en('calle', 0, 'vecina', { r: 2, dx: 3.4 }); }
   else if (t === 'i12-plaza') { for (let i = 0; i < 4; i++) en('plaza', i, 'oseznoIndito', { s: OSEZNO, f: i % 2 ? -1 : 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('atrio', 0, 'vendedora', { r: 0 }); }
   else if (t === 'i12-vuelta') { en('calle', 0, 'oseznoIndito', { s: OSEZNO }); en('calle', 1, 'oseznoIndito', { s: OSEZNO, f: -1 }); en('calle', 0, 'vecina', { r: 2, dx: 3.4 }); en('calle', 1, 'vecino', { r: 0, dx: -3.6, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'oseznoIndito', { s: OSEZNO }); }
+  // ---- (Campamento 43) Las temporadas del pueblo (cielo.js: `turno`): otros repartos de los mismos ocho vecinos y de los mismos trazos.
+  // (163) El domingo por la tarde, la mejenga: dos porterías de palo en la plaza, los oseznos jugando y la pelota de siempre (el actor de
+  // su franja, 15:00–16:30); el panadero mira desde la calle.
+  else if (t === 'tp-mejenga') {
+    en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); en('plaza', 0, 'porteria', { dx: -3 }); en('plaza', 5, 'porteria', { dx: 4 });
+    for (const i of [1, 2, 3, 4]) en('plaza', i, i % 2 ? 'osezno' : 'oseznoArriba', { s: OSEZNO, r: i, f: i < 3 ? 1 : -1 });
+    quien('panadero', 'calle', 0, { t: 'vecino' }); quien('abuela', 'corredor', 0); quien('tienda', 'calle', 1, { t: 'vecina', f: -1 });
+  }
+  // (155) Los sábados de julio y agosto, la atolada: la tortillera con la olla del atol sobre su brasa, vecinos con su huacal y los
+  // oseznos con su elote; hasta las 16:30 la pelota sigue en la plaza (su franja).
+  else if (t === 'tp-atolada') {
+    quien('tortillera', 'calle', 0, { t: 'atolera' }); quien('panadero', 'calle', 0, { t: 'huacal', dx: 6.2, f: -1 }); quien('pescador', 'calle', 1, { t: 'huacal' });
+    en('plaza', 0, 'oseznoElote', { s: OSEZNO, r: 0 }); en('plaza', 3, 'oseznoElote', { s: OSEZNO, r: 2, f: -1 }); en('plaza', 2, 'osezno', { s: OSEZNO, r: 1 });
+    en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); quien('abuela', 'corredor', 0); delCanton();
+  }
+  // (161) Del 16 al 23 de diciembre, de 18:30 a 20:00, la posada: un grupito con farolitos frente a una casa (de espaldas, mirando su
+  // puerta), cada noche otra (la calle tiene un sitio frente a cada casa: `lug.calle`); quietos: no hay procesión. La pupusera sigue en
+  // su sitio si esa noche no es su casa, y la de la tienda y su osezno miran el nacimiento, como cada noche de diciembre.
+  else if (t === 'tp-posada') {
+    const casas = lug.calle?.length ?? 0, noche = /^\d{4}-12-(1[6-9]|2[0-3])$/.test(dia) ? Number(dia.slice(8, 10)) - 16 : 0, i = casas ? noche % casas : 0;
+    en('calle', i, 'espaldas', { r: 0, dx: -2.2 }); en('calle', i, 'espaldas', { r: 2, dx: 2.4 });
+    for (const [j, dx, dy] of [[0, -6.2, 0.6], [1, 5.8, 0.6], [2, 0.2, 1.4]]) en('calle', i, 'oseznoFarol', { s: OSEZNO, r: j, dx, dy, f: dx < 0 ? 1 : -1 });
+    if (i !== 0) quien('tortillera', 'calle', 0, { t: 'pupusera' });
+    quien('tienda', 'portal', 0, { t: 'espaldas' }); en('portal', 0, 'osezno', { r: 2, s: OSEZNO, dx: 3.2, dy: 0.5 }); quien('abuela', 'corredor', 0);
+  }
+  // (164) Las noches de luna llena, de 20:00 a 20:30, los cuentos: la abuela saca su taburete a la plaza y los oseznos se sientan en el
+  // suelo a su alrededor, en rueda; dos vecinos miran desde sus sillas en la acera. Nadie habla: se entiende por la rueda.
+  else if (t === 'tp-cuentos') {
+    quien('abuela', 'plaza', 2, { dx: 1 });
+    for (const [i, dx, dy] of [[0, 0, 0], [1, 0, 0.6], [3, 0.5, 0.8], [4, 0, 0.4], [5, 0, 0]]) en('plaza', i, 'oseznoSuelo', { s: OSEZNO, r: i % 3, dx, dy, f: i < 2 ? 1 : -1 });
+    quien('tortillera', 'calle', 0, { t: 'sentado' }); quien('panadero', 'calle', 1, { t: 'sentado', f: -1 });
+  }
   // 'duerme' (22:00–5:00): nadie en la calle (103).
   // ---- (Campamento E) El ánimo del valle según la semana del precio (lib.js: `animoDelValle`): vestuario y reparto del turno que toque,
   // nunca un actor. Solo en los turnos de un día cualquiera (no el sábado de plaza, la misa, el desfile ni la Navidad entera, que mandan)
@@ -653,7 +717,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   // lluviosa se recoge al empezar la siesta, antes del aguacero. Delante de una casa con corredor donde no tape a nadie; si no cabe, no sale.
   const lluviosa = Boolean(md) && md.slice(0, 2) >= '05' && md.slice(0, 2) <= '10';
   // (E) Con el valle al aire libre, la ropa sale cualquier día (los mismos turnos; el jueves, los uniformes; los demás, las sábanas).
-  if ((sem === 1 || sem === 4 || (conAnimo && (animo === 'aire' || animo === 'plaza'))) && (['manana', 'mananaLibre', 'tortillas', 'salida'].includes(t) || (!lluviosa && ['siesta', 'tarde'].includes(t)))) {
+  if ((sem === 1 || sem === 4 || (conAnimo && (animo === 'aire' || animo === 'plaza'))) && (['manana', 'mananaLibre', 'tp-mangos', 'tortillas', 'salida'].includes(t) || (!lluviosa && ['siesta', 'tarde'].includes(t)))) {
     const tipo = sem === 1 ? 'tendedero' : 'tendederoJueves';
     const sitios = [...(lug.corredor ?? []).slice(2), ...[...(lug.calle ?? [])].reverse(), ...(lug.corredor ?? []).slice(0, 2)];
     // Primero el largo, sin moverlo; si no cabe en ningún sitio, el corto, con unos pasos a un lado si hace falta.
@@ -679,8 +743,8 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   if (dia && !navidad && DIARIOS.includes(t)) {
     const pan = fuera.find((v) => v.quien === 'panadero'), ensuCasa = pan?.t !== 'panadero'; // sin su bicicleta: la dejó en su pared
     if (sem !== 1 && (t === 'tortillas' || t === 'salida') && pan) cosa('bicicleta', [['calle', 0, -12.5], ['calle', 0, 7]]);
-    else if (sem !== 1 && ensuCasa && !['alba', 'amanece', 'manana', 'mananaLibre', 'mercado'].includes(t)) cosa('bicicleta', [['calle', 0, -4]]);
-    if (['manana', 'mananaLibre', 'siesta', 'tarde', 'vuelta'].includes(t)) cosa(sem === 6 ? 'olla' : 'comal', [['calle', 1, -4], ['calle', 1, 4]]);
+    else if (sem !== 1 && ensuCasa && !['alba', 'amanece', 'manana', 'mananaLibre', 'tp-mangos', 'mercado'].includes(t)) cosa('bicicleta', [['calle', 0, -4]]);
+    if (['manana', 'mananaLibre', 'tp-mangos', 'siesta', 'tarde', 'vuelta'].includes(t)) cosa(sem === 6 ? 'olla' : 'comal', [['calle', 1, -4], ['calle', 1, 4]]);
     if (['siesta', 'tarde', 'vuelta'].includes(t)) cosa('atarraya', [['corredor', 2, 3], ['corredor', 1, 3], ['corredor', 0, -3]]);
     if (!fuera.some((v) => v.quien === 'tienda' && v.t === 'escoba')) cosa('escobaSola', [['corredor', 1, 2.6], ['corredor', 1, -2.6]], [0, 1.5, -1.5]);
   }

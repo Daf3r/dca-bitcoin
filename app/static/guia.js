@@ -132,6 +132,9 @@ export const FECHAS_ALMANAQUE = [
   // (Campamento 42) Las fiestas del resto del año (Semana Santa de 2027: Ramos el 21 de marzo, Pascua el 28).
   ['Domingo de Ramos', '2027-03-21'], ['Viernes Santo', '2027-03-26'], ['Sábado de Gloria', '2027-03-27'], ['10 de mayo', '2027-05-10'], ['Día del Padre', '2027-06-17'],
   ['6 de agosto', '2027-08-06'], ['14 de septiembre', '2027-09-14'], ['Día del Niño', '2026-10-01'], ['2 de noviembre', '2026-11-02'], ['12 de diciembre', '2026-12-12'],
+  // (Campamento 43) Las temporadas del pueblo: un domingo de mangos (con la mejenga), la siembra, la atolada, la posada y una luna llena.
+  ['Mangos y mejenga (domingo de marzo)', '2027-03-14'], ['La siembra (mayo)', '2027-05-05'], ['Sábado de atolada (julio)', '2027-07-17'],
+  ['Las posadas (diciembre)', '2026-12-18'], ['Luna llena: los cuentos', '2027-02-20'],
 ];
 const hhmm = (h) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 /**

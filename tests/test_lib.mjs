@@ -1851,7 +1851,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
       if (fi) { if (x !== fi) malos++; continue; }
       const fa = C.turnoDelAnio(f, h); // (42) y las fiestas del resto del año, el suyo (solo de 5:00 a 22:00)
       if (fa) { if (x !== fa || h >= 22 || h < 5) malos++; continue; }
-      if (!['duerme', 'alba', 'amanece', 'manana', 'mananaLibre', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'misa', 'mercado', 'desfile', 'posada'].includes(x) || ((h >= 22 || h < 4.5) !== (x === 'duerme')) || ((h >= 4.5 && h < 5) !== (x === 'alba')) || (['manana', 'salida'].includes(x) && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
+      if (!['duerme', 'alba', 'amanece', 'manana', 'mananaLibre', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'misa', 'mercado', 'desfile', 'posada', 'tp-mangos', 'tp-mejenga', 'tp-atolada', 'tp-posada', 'tp-cuentos'].includes(x) || ((h >= 22 || h < 4.5) !== (x === 'duerme')) || ((h >= 4.5 && h < 5) !== (x === 'alba')) || (['manana', 'salida'].includes(x) && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
     }
   }
   eq(malos, 0, 'pueblo 35 (40): en cada cuarto de hora de un año, un turno válido; de noche nadie (de 4:30 a 5:00, solo el panadero); la escuela solo entre semana fuera de vacaciones');
@@ -2120,6 +2120,56 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   const turnos = new Set();
   for (const f of ['2026-03-29', '2026-04-02', '2026-04-04', '2026-04-05', '2026-05-10', '2026-06-17', '2026-08-05', '2026-08-06', '2026-09-14', '2026-09-15', '2026-10-01', '2026-11-01', '2026-11-02', '2026-12-12']) for (let h = 0; h < 24; h += 0.25) { const t = C.turnoDelAnio(f, h); if (t) turnos.add(t); }
   eq([...turnos].filter((t) => !CLAVE[t]), [], `fiesta 42: cada turno del guion (${turnos.size}) tiene su figura comprobada`);
+
+  // ---- Campamento 43 · Las temporadas del pueblo (152, 154, 155, 161, 163 y 164): el turno de cada una, el foco y la frase, las
+  // costumbres que se apagan con una línea y el reparto en cada tamaño.
+  eq(dia('2027-03-14', [7, 7.5, 10, 11.4, 11.5]).concat(dia('2027-03-10', [9]), dia('2027-03-13', [9]), dia('2027-05-09', [10.5])), ['tp-mangos', 'misa', 'tp-mangos', 'tp-mangos', 'tortillas', 'manana', 'mercado', 'mananaLibre'], 'temporada 43 (152): en marzo y abril, las mañanas sin escuela son de mangos (el domingo, antes y después de misa); con escuela, la mañana de siempre; en mayo, ya no');
+  eq([C.temporadaDelPueblo('2027-03-13', 9).mangos, C.temporadaDelPueblo('2027-03-13', 12.5).mangos, C.temporadaDelPueblo('2027-05-08', 9).mangos], [true, false, false], 'temporada 43 (152): el sábado de plaza de marzo y abril también se bajan mangos (no después de la plaza ni en mayo)');
+  eq(dia('2027-02-14', [14.9, 15, 16.4, 16.5]).concat(dia('2026-12-20', [15.5]), dia('2027-02-13', [15.5])), ['tarde', 'tp-mejenga', 'tp-mejenga', 'vuelta', 'tarde', 'tarde'], 'temporada 43 (163): el domingo de 15:00 a 16:30, la mejenga (en Navidad, la tarde de siempre; el sábado, también)');
+  eq(dia('2026-07-18', [15.9, 16, 17.7, 17.75]).concat(dia('2026-08-29', [16.5]), dia('2026-09-05', [16.5]), dia('2026-07-15', [16.5])), ['tarde', 'tp-atolada', 'tp-atolada', 'pupusas', 'tp-atolada', 'vuelta', 'vuelta'], 'temporada 43 (155): los sábados de julio y agosto, de 16:00 a 17:45, la atolada (en septiembre y entre semana, la vuelta de siempre)');
+  eq(dia('2026-12-18', [18.4, 18.5, 19.9, 20]).concat(dia('2026-12-15', [19]), dia('2026-12-23', [19]), dia('2026-12-24', [19])), ['posada', 'tp-posada', 'tp-posada', 'fresca', 'posada', 'tp-posada', 'nb-cena'], 'temporada 43 (161): del 16 al 23 de diciembre, de 18:30 a 20:00, la posada (Nochebuena sigue su guion)');
+  eq(dia('2027-02-20', [19.9, 20, 20.4, 20.5]).concat(dia('2027-02-10', [20.2])), ['pupusas', 'tp-cuentos', 'tp-cuentos', 'fresca', 'fresca'], 'temporada 43 (164): las noches de luna llena, de 20:00 a 20:30, los cuentos (sin luna llena, la fresca)');
+  eq([['2026-05-06', 8.5], ['2026-05-06', 5.9], ['2026-05-06', 10], ['2026-05-15', 8.5], ['2026-08-19', 8], ['2026-11-04', 8], ['2026-11-02', 8], ['2026-05-10', 8], ['2026-05-03', 8.5]].map(([f, h]) => C.temporadaDelPueblo(f, h).milpa), ['siembra', '', '', '', 'dobla', 'tapisca', '', '', 'siembra'], 'temporada 43 (154): la milpa con su gente, las dos primeras semanas de cada etapa, de 6:00 a 10:00, en una mañana de siempre (no en Difuntos ni el 10 de mayo)');
+  eq([['2027-03-14', 10.5], ['2027-03-13', 9], ['2026-07-18', 17], ['2026-05-06', 8.5], ['2026-12-18', 19], ['2027-02-14', 15.5], ['2027-02-20', 20.25], ['2027-04-11', 10.5], ['2026-05-03', 8.5]].map(([f, h]) => C.foco(f, h).id), ['temporada', 'temporada', 'temporada', 'temporada', 'posada', 'mejenga', 'luna', 'azacuanes', 'cruz'], 'temporada 43: el foco de cada temporada (los azacuanes de abril y el Día de la Cruz mandan: choque declarado)');
+  const fr43 = ['2027-03-01', '2026-05-01', '2026-08-15', '2026-11-03', '2026-07-04', '2026-12-16'].map(C.fraseDelFoco);
+  ok(fr43.every((t) => typeof t === 'string' && t.length < 110 && /\.$/.test(t) && !mandar.test(t)) && C.fraseDelFoco('2027-03-02') === null && C.fraseDelFoco('2026-07-11') === null && C.fraseDelFoco('2026-12-17') === null, `temporada 43: la línea de hoy, el primer día de cada temporada y solo ese (${fr43.join(' | ')})`);
+  const antes43 = { ...C.costumbres };
+  for (const k of ['mangos', 'milpa', 'atolada', 'posadas', 'mejenga', 'cuentos']) C.costumbres[k] = false;
+  const apagado43 = [C.turno('2027-03-14', 10.5), C.turno('2027-02-14', 15.5), C.turno('2026-07-18', 17), C.turno('2026-12-18', 19), C.turno('2027-02-20', 20.25), C.temporadaDelPueblo('2026-05-06', 8.5).milpa, C.temporadaDelPueblo('2027-03-13', 9).mangos, C.foco('2026-05-06', 8.5).id, ...['2027-03-01', '2026-05-01', '2026-07-04', '2026-12-16'].map(C.fraseDelFoco)];
+  eq(apagado43, ['mananaLibre', 'tarde', 'vuelta', 'posada', 'fresca', '', false, 'rutina', null, null, null, null], 'temporada 43: con cada temporada apagada (una línea en cielo.js: COSTUMBRES), ese rato es el de siempre: su turno, su foco, su frase y lo que va al reparto');
+  Object.assign(C.costumbres, antes43);
+  eq([C.turno('2027-02-14', 15.5), C.mueve('2027-02-14', 15.5), C.mueve('2026-07-18', 16.2), C.mueve('2026-12-18', 19), C.mueve('2027-02-20', 20.25)], ['tp-mejenga', 'pelota', 'pelota', 'luciernagas', 'luciernagas'], 'temporada 43: nada se mueve distinto (la pelota de la mejenga y de la atolada es la de siempre, en su franja)');
+  // El reparto, en cada tamaño y con la luz de cada lado: la figura de cada temporada, su actor (la pelota, donde hay), entre dos y ocho
+  // vecinos y ningún NaN; la milpa, con su gente donde hay milpa; la posada, cada noche en otra casa.
+  const A = await import('../app/static/arte-valle.js');
+  const T43 = { 'tp-mangos': ['oseznoVara', '', '2027-03-14', 10.5], 'tp-mejenga': ['porteria', 'pelota', '2027-02-14', 15.5], 'tp-atolada': ['atolera', 'pelota', '2026-07-18', 16.5], 'tp-posada': ['oseznoFarol', '', '2026-12-18', 19], 'tp-cuentos': ['oseznoSuelo', '', '2027-02-20', 20.25] };
+  const f43 = [];
+  for (const c of FORMAS) for (const sol of [1, -1]) {
+    const lug = P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }));
+    for (const [t, [clave, actor, d43, h43]] of Object.entries(T43)) {
+      const l = V.reparto(lug, t, { dia: d43, hora: h43, escuela: false }), svg = V.svgVecinos(l, { sol }), actores = l.filter((v) => v.actor), figuras = l.filter((v) => !V.COSAS.has(v.t));
+      if (!l.some((v) => v.t === clave)) f43.push(`${c.W}/${c.forma} ${t}: falta ${clave}`);
+      if (/NaN|undefined|Infinity|style=/.test(svg)) f43.push(`${c.W} ${t}: el SVG`);
+      if (actores.length > 1 || (actores[0]?.actor ?? '') !== actor) f43.push(`${c.W} ${t}: actores ${actores.map((v) => v.actor)}`);
+      if (figuras.length > V.MAX_VECINOS || figuras.length < 2) f43.push(`${c.W} ${t}: ${figuras.length} vecinos`);
+    }
+    // El sábado de plaza de marzo, con sus mangos; la mañana de la siembra con la milpa (y sin ella, nadie en la milpa).
+    const pl = V.reparto(lug, 'mercado', { dia: '2027-03-13', hora: 9, escuela: false, temporada: { mangos: true, milpa: '' } });
+    if (!pl.some((v) => v.t === 'oseznoVara') || pl.filter((v) => !V.COSAS.has(v.t)).length > V.MAX_VECINOS) f43.push(`${c.W} mercado: sin mangos`);
+    const yb = Math.min(...lug.calle.map((q) => q[1])) - 30, milpaF = { x: c.W * 0.05, y: yb, w: 60, h: 14, caida: 0 };
+    for (const [faena, quien2] of [['siembra', 'chuzo'], ['dobla', 'campesino'], ['tapisca', 'matate']]) {
+      const lugM = { ...lug, milpa: A.sitiosMilpa(milpaF, lug.calle[0][2] * 0.85) }, m = V.reparto(lugM, 'manana', { dia: '2026-05-06', hora: 8.5, temporada: { milpa: faena, mangos: false } });
+      const enMilpa = m.filter((v) => v.y <= milpaF.y + milpaF.h + 1 && v.x <= milpaF.x + milpaF.w + 1);
+      if (enMilpa.length !== 2 || !enMilpa.some((v) => v.quien === 'milpero') || !enMilpa.some((v) => v.t === quien2) || m.filter((v) => v.quien === 'milpero').length !== 1 || !m.some((v) => v.actor === 'barre') || m.filter((v) => !V.COSAS.has(v.t)).length > V.MAX_VECINOS || /NaN/.test(V.svgVecinos(m, { sol }))) f43.push(`${c.W} milpa ${faena}: ${enMilpa.map((v) => v.t)}`);
+      const sin = V.reparto({ ...lug, milpa: [] }, 'manana', { dia: '2026-05-06', hora: 8.5, temporada: { milpa: faena, mangos: false } });
+      if (sin.some((v) => v.t === quien2 && v.quien !== 'milpero' && v.y < yb + 20)) f43.push(`${c.W} milpa ${faena}: sin milpa, alguien en ella`);
+    }
+    const casas = new Set(['2026-12-16', '2026-12-17', '2026-12-18'].map((d) => { const q = V.reparto(lug, 'tp-posada', { dia: d, hora: 19 }).find((v) => v.t === 'espaldas' && !v.quien); return q ? Math.round(q.x) : null; }));
+    if (lug.calle.length > 1 && casas.size < 2) f43.push(`${c.W} posada: siempre la misma casa`);
+  }
+  eq(f43, [], 'temporada 43: en cada tamaño y luz, cada temporada con su figura, su actor (la pelota, donde va) y ningún NaN; la milpa, con su gente solo donde la hay; la posada, en otra casa cada noche');
+  const sm = A.sitiosMilpa({ x: 100, y: 200, w: 80, h: 16, caida: 4 }, 2);
+  ok(sm.length === 2 && sm.every(([x, y, k]) => x > 100 && x < 180 && y > 190 && y < 222 && k === 2), `temporada 43: los dos sitios de la milpa caen dentro de la parcela (${JSON.stringify(sm)})`);
 }
 
 // Campamento 51 · El director del valle: el foco del momento (223), la escalera de rareza (224), el mapa del día (225), el movimiento con
@@ -2171,7 +2221,8 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   // 228: la frase del foco solo en lo raro y sin «tú» ni verbos de mandar; la de la rutina, para la descripción.
   const frases = dias.map(C.fraseDelFoco).filter(Boolean), rutinas = C.rutinas.map((x) => C.fraseRutina(dias.find((f) => C.rutinaDelDia(f) === x)));
   const mandar = /\b(tu|tus|tú|te|compra|compre|comprar|abre|mira|mire|ven|entra|no te pierdas|aprovecha)\b/i;
-  ok(frases.length >= 10 && frases.length <= 70 && [...frases, ...rutinas].every((t) => t.length < 110 && !mandar.test(t) && /\.$/.test(t)), `director 228: la línea de hoy cuenta lo raro (${frases.length} días en dos años) y nada manda ni tutea; seis frases de la rutina`);
+  // (43) Las temporadas suman seis frases al año (el primer día de cada una): de 69 a 81 en dos años; el tope, de 70 a 90.
+  ok(frases.length >= 10 && frases.length <= 90 && [...frases, ...rutinas].every((t) => t.length < 110 && !mandar.test(t) && /\.$/.test(t)), `director 228: la línea de hoy cuenta lo raro (${frases.length} días en dos años) y nada manda ni tutea; seis frases de la rutina`);
   eq([C.fraseDelFoco('2026-11-25'), Boolean(C.fraseDelFoco('2026-12-24')), Boolean(C.fraseDelFoco('2026-10-10')), C.fraseDelFoco('2026-10-11'), Boolean(C.fraseDelFoco('2026-09-15'))], [null, true, true, null, true], 'director 228: un miércoles cualquiera, nada; Nochebuena, el primer día de los azacuanes (no el segundo) y el 15 de septiembre, sí');
   // F3: los ambientales, hasta tres; de noche ninguno; cada uno con lo que pesa, y el mapa del día lo reparte sin pasarse.
   let ambMal = 0;

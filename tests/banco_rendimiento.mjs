@@ -120,6 +120,15 @@ const CASOS = [
   { caso: '2 nov, las velitas', dia: '2026-11-02', hora: 19, declara: 846 },
   { caso: '12 dic, los inditos', dia: '2026-12-12', hora: 8, declara: 885 },
   { caso: '14 sept, la banderita', dia: '2026-09-14', hora: 15, declara: 877 },
+  // (Campamento 43) Las temporadas del pueblo: un momento de cada una (otro reparto de los mismos trazos).
+  { caso: 'marzo, los mangos', dia: '2027-03-14', hora: 10.5, declara: 1100 },
+  { caso: 'mayo, la siembra', dia: '2026-05-06', hora: 8.5, declara: 1100 },
+  { caso: 'agosto, la dobla', dia: '2026-08-19', hora: 8.5, declara: 1100 },
+  { caso: 'noviembre, la tapisca', dia: '2026-11-04', hora: 8.5, declara: 1100 },
+  { caso: 'julio, la atolada', dia: '2026-07-18', hora: 17, declara: 1100 },
+  { caso: 'diciembre, la posada', dia: '2026-12-18', hora: 19, declara: 1100 },
+  { caso: 'domingo, la mejenga', dia: '2027-02-14', hora: 15.5, declara: 1100 },
+  { caso: 'luna llena, los cuentos', dia: '2027-02-20', hora: 20.25, declara: 1100 },
   // (Campamento E) El ánimo del valle según la semana del precio (`animo`: lo fuerza `libro.animo`): otro reparto de los mismos vecinos
   // (sentados de dos en dos si baja; la ropa tendida y vecinos de paseo si sube). Un miércoles de escuela por la mañana (la que barre ya
   // acabó: 10:00) y en la tarde de la pelota; los cinco estados, cada uno con lo suyo declarado (un tono de más es un trazo más).
@@ -135,6 +144,10 @@ const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
   // (42) los farolitos del 14 de septiembre y las velitas del 2 de noviembre, de noche
   { caso: `14 sept ${w}`, dia: '2026-09-14', hora: 19, w, h },
   { caso: `2 nov ${w}`, dia: '2026-11-02', hora: 19, w, h },
+  // (43) la posada de diciembre, la mejenga del domingo y la siembra (la milpa, donde cabe)
+  { caso: `posada ${w}`, dia: '2026-12-18', hora: 19, w, h },
+  { caso: `mejenga ${w}`, dia: '2027-02-14', hora: 15.5, w, h },
+  { caso: `siembra ${w}`, dia: '2026-05-06', hora: 8.5, w, h },
   // (E) con el valle en «plaza» y en «abrigo» (los que más vecinos sacan), un día cualquiera por la mañana
   { caso: `ánimo plaza ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'plaza' },
   { caso: `ánimo abrigo ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'abrigo' },
@@ -166,6 +179,8 @@ const TELE = [
   { caso: 'tele tarde, ánimo abrigo', dia: '2027-02-10', hora: 15.5, animo: 'abrigo' },
   { caso: 'tele 14 sept, los farolitos', dia: '2026-09-14', hora: 19 }, // (42)
   { caso: 'tele Día del Niño, la piñata', dia: '2026-10-01', hora: 15.5 },
+  { caso: 'tele posada', dia: '2026-12-18', hora: 19 }, // (43)
+  { caso: 'tele mejenga', dia: '2027-02-14', hora: 15.5 },
 ];
 
 const puertoLibre = () => new Promise((res) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); }); });

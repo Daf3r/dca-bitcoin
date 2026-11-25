@@ -315,6 +315,15 @@ export function potrero({ vacas = [], k = 1 }) {
  * (`html[data-milpa]`): siembra (brotes en surcos de tierra fresca), jilote (matas altas con su espiga), doblada (la caña doblada
  * bajo la mazorca, secándose), tapisca (cañas secas y los tercios de la cosecha) y rastrojo (tierra seca con los tocones).
  */
+/**
+ * (Campamento 43, idea 154) Dónde se paran los que trabajan la milpa: dos sitios dentro de la parcela (sus pies entre los surcos de
+ * delante, con la misma perspectiva que `milpa`), [x, y, k] como los del pueblo. `k`: su escala (la del pueblo).
+ */
+export function sitiosMilpa({ x, y, w, h, caida = 0 }, k) {
+  const fondo = [[x + w * 0.12, y + caida * 0.88], [x + w * 0.9, y - h * 0.22 + caida * 0.1]], frente = [[x, y + h + caida], [x + w, y + h * 0.7]];
+  const en = (u, v) => [0, 1].map((i) => { const a = fondo[0][i] + (fondo[1][i] - fondo[0][i]) * u, b = frente[0][i] + (frente[1][i] - frente[0][i]) * u; return a + (b - a) * v; });
+  return [[0.34, 0.8], [0.66, 0.62]].map(([u, v]) => [...en(u, v), k]).filter((q) => q.every(Number.isFinite));
+}
 export function milpa({ x, y, w, h, k, sol = 1, caida = 0 }) {
   // La parcela en perspectiva y siguiendo la loma (baja hacia la izquierda `caida` px): el borde de atrás más corto que el de delante.
   const fondo = [[x + w * 0.12, y + caida * 0.88], [x + w * 0.9, y - h * 0.22 + caida * 0.1]], frente = [[x, y + h + caida], [x + w, y + h * 0.7]];
