@@ -2076,7 +2076,8 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   eq(['2027-02-10', '2027-02-13', '2027-02-14', '2026-11-25', '2026-09-15'].map(C.escuela), [true, false, false, false, false], 'pueblo 40: hay escuela entre semana fuera de vacaciones (y no el 15 de septiembre)');
   // 146 y 147: las sombras y las luces, por turnos.
   eq([4.9, 5, 6.9, 7, 11.4, 11.5, 13.9, 14, 15.9, 16, 17.7, 17.75, 21].map(C.sombraDelPueblo), ['', 'larga', 'larga', '', '', 'corta', 'corta', '', '', 'larga', 'larga', '', ''], 'pueblo 146: las sombras, largas al amanecer y al caer la tarde, cortas a mediodía');
-  eq([12, 16.4, 16.5, 17.7, 17.75, 17.99, 18, 18.2, 18.25, 21.9, 22, 22.9, 23, 3, 4.9, 5].map(C.lucesDelPueblo), ['', '', 'ninguna', 'ninguna', 'faroles', 'faroles', 'iglesia', 'iglesia', '', '', 'iglesia', 'iglesia', 'faroles', 'faroles', 'faroles', ''], 'pueblo 147: los faroles, la iglesia y las ventanas, una a una; de noche se apagan al revés');
+  eq([12, 16.4, 16.5, 17.7, 17.75, 17.99, 18, 18.2, 18.25, 21.9, 22, 22.9, 23, 3, 4.9, 5].map((h) => C.lucesDelPueblo('2027-02-10', h)), ['', '', 'ninguna', 'ninguna', 'faroles', 'faroles', 'iglesia', 'iglesia', '', '', 'iglesia', 'iglesia', 'faroles', 'faroles', 'faroles', ''], 'pueblo 147: los faroles, la iglesia y las ventanas, una a una; de noche se apagan al revés');
+  eq([['2026-12-24', 22.5], ['2026-12-24', 23.9], ['2026-12-25', 0.5], ['2026-12-31', 23.5], ['2027-01-01', 0.5], ['2026-12-25', 3], ['2026-12-24', 17]].map(([f, h]) => C.lucesDelPueblo(f, h)), ['', '', '', '', '', 'faroles', ''], 'pueblo 147: las noches de fiesta (la misa de gallo, la espera, las doce) el pueblo no se apaga');
   // 141: la carta del día gira: nunca la de ayer ni la del mismo día de la semana pasada; sin fecha, la 0 (el reparto de antes).
   let repite = 0;
   for (const t of ['manana', 'tortillas', 'tarde', 'pupusas', 'fresca', 'siesta', 'amanece']) for (const nn of [2, 3]) {

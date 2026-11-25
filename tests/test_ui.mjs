@@ -251,7 +251,7 @@ const PESOS = [
   ['pulido integral: el movimiento (nada co', 113], // 20 comprobaciones
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
-  ['campamento 40: el día entero del pueblo', 90], // 41 comprobaciones (estimado)
+  ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
@@ -7967,7 +7967,7 @@ try {
       const m = pie?.getScreenCTM(), sp = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
       const figs = (pie?.getAttribute('d') || '').split('M').filter(Boolean).map((t) => { const n = t.match(/-?[\d.]+/g).map(Number), kk = (n[2] - n[0]) / 4.4, x = (n[0] + n[2]) / 2, a = sp(x - 2.4 * kk, n[1] - 9.6 * kk), b = sp(x + 2.4 * kk, n[1]); return { x0: a[0], y0: a[1], x1: b[0], y1: b[1] }; });
       const cajas = (e) => (e.getAttribute('d') || '').split(/(?=M)/).filter(Boolean).map((t) => { const q = e.cloneNode(); q.setAttribute('d', t); e.parentNode.append(q); const r = q.getBoundingClientRect(); q.remove(); return { c: e.getAttribute('class'), x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }; });
-      const cosas = [...document.querySelectorAll('#montana :is(.v-arbol .v-ar-tronco, .v-arbol .v-ar-copa, .v-arbol .v-ar-tallo, .v-tele-torre, .v-pueblo > .v-animal, .v-pueblo > .v-gallina)')].filter(vis).flatMap((e) => (e.matches('.v-tele-torre, .v-gallina') ? cajas(e) : [(() => { const r = e.getBoundingClientRect(); return { c: e.getAttribute('class'), x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }; })()]));
+      const cosas = [...document.querySelectorAll('#montana :is(.v-arbol .v-ar-tronco, .v-arbol .v-ar-copa, .v-arbol .v-ar-tallo, .v-tele-torre, .v-tele-cable, svg.tele-cabina, .v-pueblo > .v-animal, .v-pueblo > .v-gallina, circle.salida, .yo-anillo, #m-etiquetas > *)')].filter(vis).flatMap((e) => (e.matches('.v-tele-torre, .v-gallina') ? cajas(e) : [(() => { const r = e.getBoundingClientRect(); return { c: e.getAttribute('class'), x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }; })()]));
       const encima = figs.flatMap((f) => cosas.filter((c) => Math.min(f.x1, c.x1) - Math.max(f.x0, c.x0) > 1 && Math.min(f.y1, c.y1) - Math.max(f.y0, c.y0) > 1).map((c) => c.c));
       const malos = [...document.querySelectorAll('#montana svg [d], #montana svg [transform]')].filter((e) => /NaN|undefined/.test((e.getAttribute('d') || '') + (e.getAttribute('transform') || ''))).length;
       const animal = document.querySelector('#montana .v-pueblo > .v-animal');
@@ -7994,6 +7994,7 @@ try {
         ['2027-02-08', 9, (r) => r.turno === 'manana' && /v-vo-r[0-2]/.test(r.tipos)],
         ['2027-02-12', 19, (r) => r.turno === 'pupusas' && r.vecinos >= 6],
         ['2026-12-10', 19, (r) => r.turno === 'posada'],
+        ['2026-12-24', 23.8, (r) => r.turno === 'nb-doce' && r.luces === '' && /255, 197, 107/.test(r.ventana)], // la noche de fiesta no se apaga
       ];
       for (const [w, h] of [[390, 844], [1440, 900]]) {
         for (const [dia, hora, prueba] of MOMENTOS) {
@@ -8007,20 +8008,39 @@ try {
       // Con la página abierta, al pasar a la fresca se rehacen los vecinos y la descripción cuenta el turno nuevo (el dibujo grande es el mismo).
       const t = await entrar(navegador, anio, ADMIN, { hora: 19.95, viewport: { width: 390, height: 844 } }, conLs('2027-02-10'));
       await cerrar(t.p);
-      const antes = await t.p.evaluateHandle(() => document.querySelector('#montana > svg'));
+      const antes = await t.p.evaluateHandle(() => document.querySelector('#montana > svg')), d0 = (await mira(t.p)).desc;
       await t.p.evaluate(() => { localStorage.setItem('libro.hora', '20.05'); window.libroCielo.aplicar(); });
       await t.p.waitForTimeout(200);
       const r = await mira(t.p), mismo = await t.p.evaluate((x) => x === document.querySelector('#montana > svg'), antes);
-      ok(r.turno === 'fresca' && /tomar el fresco/.test(r.desc) && mismo, `40: al pasar a la fresca con la página abierta, la descripción cuenta el turno nuevo sin redibujar la escena («${r.desc.slice(-90)}»)`);
+      // Lo demás de la descripción (el saldo, la meta, el bosque, los osos) no cambia: solo la frase del turno.
+      const sinTurno = (x) => x.replace('En el pueblo es hora de pupusas.', '').replace('En el pueblo, los vecinos sacan su silla a la acera a tomar el fresco.', '');
+      ok(r.turno === 'fresca' && /tomar el fresco/.test(r.desc) && /hora de pupusas/.test(d0) && sinTurno(d0) === sinTurno(r.desc) && mismo, `40: al pasar a la fresca con la página abierta, la descripción cuenta el turno nuevo (y nada más cambia) sin redibujar la escena («${r.desc.slice(-90)}»)`);
       await t.ctx.close();
-      // En pantallas de otro ancho (320, 768 y 2560) y con «todos», en los turnos más llenos, nada encima de nadie.
-      for (const [w, h] of [[320, 640], [768, 1024], [2560, 1440]]) for (const [dia, hora] of [['2027-02-12', 19], ['2027-02-10', 12.25], ['2027-02-10', 21], ['2026-12-24', 19]]) {
-        const x = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia, 'todos'));
+      // Pedido del dueño: nada pintado después de los vecinos les queda encima, en todos los turnos (los de un día cualquiera, la carta de
+      // varios días, el fin de semana y la Navidad entera) y en cinco anchos, con «todos». Una página por ancho: se cambia el día y la hora.
+      const RECORRIDO = [['2027-02-10', [4.75, 6.2, 7.5, 9, 11.75, 12.25, 13, 15, 16.75, 19, 21]], ['2027-02-11', [9, 12.25, 19, 21]], ['2027-02-12', [19, 21]], ['2027-02-13', [9, 19]], ['2027-02-14', [8, 19]],
+        ['2026-12-10', [13, 19]], ['2026-12-24', [5, 9, 12, 19, 21.5, 23.8]], ['2026-12-25', [8, 9.5, 12.5, 15, 19]], ['2026-12-31', [8, 15, 19, 23.5]], ['2027-01-01', [0.5, 8, 10, 15, 19]], ['2027-01-06', [15]], ['2026-09-15', [9]], ['2026-10-18', [8]], ['2026-07-09', [9, 13, 19]]];
+      for (const [w, h] of [[320, 640], [390, 844], [768, 1024], [1440, 900], [2560, 1440]]) {
+        const x = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: w, height: h } }, conLs('2027-02-10', 'todos'));
         await cerrar(x.p);
-        const q = await mira(x.p);
-        ok(q.encima.length === 0 && q.malos === 0, `40 a ${w} px, ${dia} a las ${hora} con «todos»: nada pintado encima de un vecino (${q.encima.join(', ')})`);
+        const malos = [];
+        for (const [dia, horas] of RECORRIDO) for (const hora of horas) {
+          await x.p.evaluate(([d, hh]) => { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); }, [dia, hora]);
+          await x.p.waitForTimeout(250);
+          const q = await mira(x.p);
+          if (q.encima.length || q.malos) malos.push(`${dia} ${hora} (${q.turno}): ${q.encima.join(', ')}${q.malos ? ` NaN ${q.malos}` : ''}`);
+        }
+        ok(!malos.length && !x.consola.length, `40 a ${w} px con «todos», ${RECORRIDO.reduce((n, [, hs]) => n + hs.length, 0)} momentos: nada pintado encima de un vecino (${malos.join(' · ')}${x.consola.join(' | ')})`);
         await x.ctx.close();
       }
+      // (40) El perro cruza a las 14:00 aunque la escena se haya puesto en un turno en que el de siempre está escondido (la siesta).
+      const y = await entrar(navegador, anio, ADMIN, { hora: 13, viewport: { width: 1440, height: 900 } }, conLs('2027-02-10', 'todos'));
+      await cerrar(y.p);
+      await y.p.evaluate(() => { localStorage.setItem('libro.hora', '14.5'); window.libroCielo.aplicar(); });
+      await y.p.waitForTimeout(400);
+      const perro = await y.p.evaluate(() => { const c = document.querySelector('#montana svg.v-capa-perro-anda'), r = c?.getBoundingClientRect(); return { hay: Boolean(c), w: r?.width ?? 0, vb: c?.getAttribute('viewBox') ?? '', se: c ? getComputedStyle(c).display : '', mueve: document.documentElement.dataset.mueve }; });
+      ok(perro.hay && perro.w > 4 && !/NaN|^0 0 0/.test(perro.vb) && perro.se !== 'none' && perro.mueve === 'perro', `40: abierta en la siesta, a las 14:30 el perro cruza la plaza con su tamaño (${JSON.stringify(perro)})`);
+      await y.ctx.close();
     } finally {
       anio.parar();
     }

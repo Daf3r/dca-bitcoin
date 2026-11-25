@@ -398,17 +398,13 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     if (COSAS.has(v.t)) { fuera.push(v); continue; }
     if (figuras >= n) continue;
     const roce = m * v.k, adulto = (v.s ?? 1) >= 1;
-    const d = (adulto ? [0, 3, -3, 6, -6] : [0]).find((dx) => !choca({ ...cajaVecino({ ...v, x: v.x + dx * v.k }), osezno: !adulto }, roce));
-    if (d === undefined) continue;
-    const w = { ...v, x: v.x + d * v.k };
-    if (v.fila && lug.borde) { // (40, 142) la fila, dentro de la calle; si no cabe de un lado, del otro
-      const dentro = (q) => { const cj = cajaVecino(q); return cj.x0 >= lug.borde[0] && cj.x1 <= lug.borde[1]; };
-      if (!dentro(w)) {
-        const o = { ...v, x: v.x + v.otro * v.k, f: -1, fila: false };
-        if (!dentro(o) || choca({ ...cajaVecino(o), osezno: !adulto }, roce)) continue;
-        Object.assign(w, o);
-      }
-    }
+    // (40) Quien se aparta unos pasos no se sale de la calle (`lug.borde`: en escritorio acaba junto al sendero); la fila del fin de
+    // semana (142) prueba primero su lado y, si no cabe, el otro, detrás de los que esperan (también los oseznos).
+    const dentro = (q) => { if (!lug.borde) return true; const cj = cajaVecino(q); return cj.x0 >= lug.borde[0] && cj.x1 <= lug.borde[1]; };
+    const pruebas = (adulto ? [0, 3, -3, 6, -6] : [0]).map((dx) => ({ q: { ...v, x: v.x + dx * v.k }, borde: dx !== 0 || v.fila }));
+    if (v.fila) pruebas.push({ q: { ...v, x: v.x + v.otro * v.k, f: -1 }, borde: true });
+    const w = pruebas.find(({ q, borde }) => !choca({ ...cajaVecino(q), osezno: !adulto }, roce) && (!borde || dentro(q)))?.q;
+    if (!w) continue;
     puestos.push({ ...cajaVecino(w), osezno: !adulto });
     fuera.push(w);
     figuras++;

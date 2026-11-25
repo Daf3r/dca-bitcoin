@@ -347,7 +347,8 @@ function animalesDelPueblo(host) {
   });
   const perro = pie.querySelector('.v-animal');
   if (perro?.getAttribute('d')) {
-    const b = perro.getBBox(), k = b.width / ANCHO_PERRO, y = b.y + b.height, x0 = b.x + COLA_PERRO * k - 0.2 * k;
+    // (40) Medido como un trazo suelto: en los turnos en que el perro se echa en otro sitio, el de siempre está escondido (y su caja sería 0).
+    const b = caja(perro.getAttribute('d')), k = b.width / ANCHO_PERRO, y = b.y + b.height, x0 = b.x + COLA_PERRO * k - 0.2 * k;
     // De pie, de perfil, mirando a donde va (a la derecha): lomo, cabeza, cola y cuatro patas, en sus unidades k (el echado mide 5.2).
     // Llega andando desde cinco largos a la izquierda hasta donde se echa.
     const q = (px, py) => `${f1(x0 + px * k)} ${f1(y + py * k)}`;
@@ -503,7 +504,7 @@ function vigilarTurno(host, info) {
       if (v.turno !== t) {
         g.innerHTML = htmlVecinos(v, t); v.turno = t; if (v.conCapa) capaVecino(h, v, t);
         // (Campamento 40, idea 148) La descripción de la montaña cuenta el turno de ahora: se rehace con él.
-        if (estado?.host === h && estado.valle) { estado.valle.turno = t; describir(estado.sats, estado.meta); }
+        if (estado?.host === h && estado.valle) { estado.valle.turno = t; describir(estado.sats, estado.etapaDesc); }
       }
     }
   });
@@ -894,7 +895,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><ellipse class="eco-halo" rx="12" ry="4.2" cy="0.5"/>${(() => { const c = cajaTu(ec); return `<rect class="eco-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/>`; })()}<ellipse class="eco-punto" rx="5" ry="1.9" cy="0.5"/><g class="tu">${osoTu({ k: kTu(ec) * 0.92 })}</g></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa), foco: focoDelDia(), turno: infoV.turno } : null, osos: null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, etapaDesc: etapa, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa), foco: focoDelDia(), turno: infoV.turno } : null, osos: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   // (Campamento 25) Los osos polares de peluche de la familia, en la nieve al sol bajo la cumbre (los tres, la pareja o uno: lo que quepa).
   // Se sientan esquivando los rótulos de «Tú» donde quedará al final de la subida (por eso se pone a «Tú» un momento ahí) y en la nieve

@@ -243,9 +243,12 @@
   /**
    * (Campamento 40, idea 147) Las luces del pueblo se encienden una a una: a las 17:45 los faroles, a las 18:00 la iglesia y a las 18:15
    * las ventanas; a las 22:00 (el pueblo se duerme) se apagan las ventanas y a las 23:00 la iglesia (los faroles, toda la noche). Antes
-   * (16:30–17:45) aún no hay ninguna. `html[data-luces]`: 'ninguna', 'faroles', 'iglesia' o '' (como siempre: todas las que tocan).
+   * (16:30–17:45) aún no hay ninguna; los ratos de fiesta de la Navidad entera, todas. `html[data-luces]`: 'ninguna', 'faroles', 'iglesia' o '' (como siempre: todas las que tocan).
    */
-  function lucesDelPueblo(h) {
+  function lucesDelPueblo(f, h) {
+    // La noche de fiesta (la misa de gallo, la espera del 31, los abrazos de las doce) el pueblo no se apaga: todas las luces.
+    const fi = turnoFiesta(f.slice(5), h);
+    if (fi && fi !== 'duerme') return '';
     if (h >= 16.5 && h < 17.75) return 'ninguna';
     if ((h >= 17.75 && h < 18) || h >= 23 || h < 5) return 'faroles';
     if ((h >= 18 && h < 18.25) || (h >= 22 && h < 23)) return 'iglesia';
@@ -504,7 +507,7 @@
     const tu = turno(d, h);
     raiz.dataset.turno = tu;
     // (Campamento 40) Las sombras del pueblo (146) y sus luces una a una (147): el CSS enseña lo que toca, nada se redibuja.
-    const so = sombraDelPueblo(h), lu = lucesDelPueblo(h);
+    const so = sombraDelPueblo(h), lu = lucesDelPueblo(d, h);
     if (so) raiz.dataset.sombra = so; else delete raiz.dataset.sombra;
     if (lu) raiz.dataset.luces = lu; else delete raiz.dataset.luces;
     const fe = festivo(d);
