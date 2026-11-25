@@ -35,7 +35,7 @@ Hasta ahora Nochebuena y el 31 eran una sola estampa de 18:00 a 1:00. Ahora **ca
 Los turnos no suman nodos (el mismo número de trazos); lo que sube es el reparto más lleno (unos 7–10 más que la estampa de antes) y los regalos (2). El escritorio (1440 y 2560 px) queda en 958–979, bajo su tope.
 
 ## Decidido (no se vuelve a preguntar)
-- **Un día de fiesta es un guion entero**: sus turnos pasan delante de los de un día cualquiera, también un domingo o un sábado. Una fiesta nueva añade los suyos en `turnoFiesta` (y su franja en `mueveFiesta`, si algo se mueve) y declara lo que pesa en el banco.
+- **Un día de fiesta es un guion entero**: sus turnos pasan delante de los de un día cualquiera, también un domingo o un sábado. Una fiesta nueva añade los suyos en `turnoFiesta` (y su franja en `mueveFiesta`, si algo se mueve) y declara lo que pesa en el banco. *(Campamento 42: las fiestas del resto del año van en `turnoDelAnio` y `mueveAnio`, con su foco `fiestas`, no en `turnoFiesta`: así las luces del pueblo y la puerta de la iglesia, que leen `turnoFiesta`, siguen su horario de siempre y el foco de la Navidad no se entera de ellas. Ver [42](42-las-fiestas-del-ano.md).)*
 - **La noche del 24 y del 31 es de la fiesta**: las luciérnagas descansan y se mueve un actor de la fiesta, uno a la vez.
 - **El perro de las fiestas es el mismo perro**, dibujado con los vecinos donde se esconde; el de siempre no se ve esos ratos.
 - **Los regalos van fuera del grupo de los osos** (no gastan su tope) y se esconden con ellos.

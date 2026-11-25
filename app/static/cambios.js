@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 42) Las fiestas del resto del año; resume también un solo material (2026-12-x) y el precio a su ritmo (2026-12-w).
+    id: '2026-12-y',
+    items: [
+      'El pueblo vive sus fiestas del año, cada una el día entero: Semana Santa, mayo, junio, agosto y septiembre.',
+      'El 14 de septiembre salen los farolitos, el Día del Niño hay piñata y el 2 de noviembre una velita en cada casa.',
+      'Los botones van más ordenados: el naranja es solo para anotar y guardar.',
+      'Y el pueblo sigue la semana del precio: unas semanas los vecinos se juntan y otras salen a la plaza.',
+    ],
+  },
+  {
     // (Campamento 64) Un solo material; resume también el precio a su ritmo (2026-12-w). El renglón de «Dónde están tus sats» sin
     // traslados solo lo ve el dueño: no lleva frase.
     id: '2026-12-x',

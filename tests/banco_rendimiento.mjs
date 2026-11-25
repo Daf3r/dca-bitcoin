@@ -104,6 +104,21 @@ const CASOS = [
   { caso: 'atardecer, de espaldas', dia: '2026-11-25', hora: 17.75, declara: 846 },
   { caso: 'abril, sombrero', dia: '2027-04-14', hora: 12, declara: 841 },
   { caso: 'diciembre, oso de nieve', dia: '2026-12-10', hora: 12, declara: 892 },
+  // (Campamento 42) Las fiestas del resto del año: el momento grande de cada fecha (otro reparto de los mismos trazos; lo que sube es
+  // algún tono que un día cualquiera no sale a esa hora: la brasa de los farolitos y las velitas, el rojo de la piñata).
+  { caso: 'Ramos, misa con palmas', dia: '2026-03-29', hora: 8.5, declara: 836 },
+  { caso: 'Viernes Santo, en silencio', dia: '2027-03-26', hora: 12, declara: 833 },
+  { caso: 'Sábado de Gloria, al lago', dia: '2026-04-04', hora: 9, declara: 835 },
+  { caso: '10 de mayo, las mañanitas', dia: '2026-05-10', hora: 6, declara: 836 },
+  { caso: '10 de mayo, la mesa', dia: '2026-05-10', hora: 12.5, declara: 837 },
+  { caso: 'Día del Padre, en hombros', dia: '2026-06-17', hora: 15.5, declara: 837 },
+  { caso: '6 de agosto, la misa', dia: '2026-08-06', hora: 8.5, declara: 869 },
+  { caso: '5 de agosto, la plaza de noche', dia: '2026-08-05', hora: 19, declara: 869 },
+  { caso: '14 sept, los farolitos', dia: '2026-09-14', hora: 19, declara: 868 },
+  { caso: '15 sept, se guarda la bandera', dia: '2026-09-15', hora: 16, declara: 870 },
+  { caso: 'Día del Niño, la piñata', dia: '2026-10-01', hora: 15.5, declara: 849 },
+  { caso: '2 nov, las velitas', dia: '2026-11-02', hora: 19, declara: 846 },
+  { caso: '12 dic, los inditos', dia: '2026-12-12', hora: 8, declara: 885 },
   { caso: '14 sept, la banderita', dia: '2026-09-14', hora: 15, declara: 877 },
   // (Campamento E) El ánimo del valle según la semana del precio (`animo`: lo fuerza `libro.animo`): otro reparto de los mismos vecinos
   // (sentados de dos en dos si baja; la ropa tendida y vecinos de paseo si sube). Un miércoles de escuela por la mañana (la que barre ya
@@ -117,6 +132,9 @@ const CASOS = [
 const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
   { caso: `Nochebuena ${w}`, dia: '2026-12-24', hora: 21, w, h },
   { caso: `31 dic ${w}`, dia: '2026-12-31', hora: 23.92, w, h },
+  // (42) los farolitos del 14 de septiembre y las velitas del 2 de noviembre, de noche
+  { caso: `14 sept ${w}`, dia: '2026-09-14', hora: 19, w, h },
+  { caso: `2 nov ${w}`, dia: '2026-11-02', hora: 19, w, h },
   // (E) con el valle en «plaza» y en «abrigo» (los que más vecinos sacan), un día cualquiera por la mañana
   { caso: `ánimo plaza ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'plaza' },
   { caso: `ánimo abrigo ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'abrigo' },
@@ -146,6 +164,8 @@ const TELE = [
   { caso: 'tele Nochebuena', dia: '2026-12-24', hora: 21 },
   { caso: 'tele día, ánimo plaza', dia: '2027-02-10', hora: 10, animo: 'plaza' }, // (E)
   { caso: 'tele tarde, ánimo abrigo', dia: '2027-02-10', hora: 15.5, animo: 'abrigo' },
+  { caso: 'tele 14 sept, los farolitos', dia: '2026-09-14', hora: 19 }, // (42)
+  { caso: 'tele Día del Niño, la piñata', dia: '2026-10-01', hora: 15.5 },
 ];
 
 const puertoLibre = () => new Promise((res) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); }); });
