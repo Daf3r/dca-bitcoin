@@ -1,11 +1,11 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
+import { estiranLosOsos, ultimoTramo, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
 import { sinMovimiento, conAmbiente } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { reparto, repartoFiesta, svgVecinos, manoDe, luzPupusa, cajaVecino, recorrido, tramoLibre } from './arte-vecinos.js';
 import { farolHito as dibujoFarolHito } from './arte-fiesta.js';
 import { sitiosPueblo, lugaresPueblo, TERRAZA, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
-import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
+import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA, PUNTAS_SOMBRERO, zetas, CAJA_ZETAS, plantado, etapaOsoNieve } from './arte-osos.js';
 import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, cajasArbol, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 /** (Campamento 39) Un círculo como subtrazo, redondeado como el `<circle>` de antes (centro y radio a una décima): para juntar muchos en un trazo. */
@@ -268,6 +268,7 @@ export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
     fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
     md !== '05-03' && '.v-cruz-mayo', // (34) el Día de la Cruz
     md !== '12-24' && md !== '12-25' && '.c-regalo', // (41) los regalos de la cumbre
+    !etapaOsoNieve(d) && '.c-nieve-oso', !lluviosa && '.c-lluvia', !['09-13', '09-14', '09-15'].includes(md) && '.c-patria', // (47) lo plantado junto a los osos
   ].filter(Boolean);
 }
 
@@ -664,12 +665,25 @@ export function ponerFarolHito() {
   const html = farolDelPueblo(v.lug);
   if (html) pie.querySelector('.v-pueblo')?.insertAdjacentHTML('afterend', html);
 }
+/**
+ * (Campamento 25; 47, idea 187) El saltito de los de la cumbre, con uno de tres festejos según el día (el de la escena, no el del reloj):
+ * solo el saltito, el saltito con los brazos arriba (si caben; si no, mirando arriba) o el saltito mirando al cielo. Dura lo mismo.
+ */
+let festejoFin = 0;
+function festejoCumbre(os) {
+  if (!os) return;
+  const dia = window.libroCielo?.dia?.() ?? '', n = Math.round(Date.parse(`${dia}T12:00:00Z`) / 864e5) % 3;
+  const extra = n === 1 && !os.hasAttribute('data-sin-estirar') ? 'festeja-brazos' : n >= 1 ? 'festeja-arriba' : '';
+  clearTimeout(festejoFin);
+  if (['salta', 'festeja-brazos', 'festeja-arriba'].some((c) => os.classList.contains(c))) { os.classList.remove('salta', 'festeja-brazos', 'festeja-arriba'); os.getBoundingClientRect(); } // otro saltito seguido: que empiece de nuevo
+  os.classList.add('salta', ...(extra ? [extra] : []));
+  festejoFin = setTimeout(() => os.classList.remove('salta', 'festeja-brazos', 'festeja-arriba'), 2000);
+}
 /** (59) El clímax en la cumbre: los osos de arriba dan su saltito y, si toca, «Tú» levanta los brazos (los mismos gestos del 25 y el 31). */
 export function gestoCumbre(conTu) {
   const host = estado?.host;
   if (!host) return;
-  const os = host.querySelector('#m-osos.osos');
-  if (os) { os.classList.remove('salta'); os.getBoundingClientRect(); os.classList.add('salta'); setTimeout(() => os.classList.remove('salta'), 2000); }
+  festejoCumbre(host.querySelector('#m-osos.osos'));
   if (conTu) { const yo = host.querySelector('#m-yo'); yo?.classList.add('festeja'); setTimeout(() => yo?.classList.remove('festeja'), 2600); }
 }
 
@@ -1078,7 +1092,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   host.dataset.colocando = '';
   try {
     colocar(sats, false);
-    estado.osos = colocarOsos({ host, W, H, c, ec, esc, inicio: pelicula || inicio <= 0 ? sats : Math.min(inicio, sats), campos, nieveMedidas, camino, L, silueta: [...cimaPts, [derX + W, H], [izqX - W, H]], cara: [[c.sx, c.sy], ...cuerno.slice(N_CARA), ...der.filter((p) => p[0] > c.sx + 48 * ecC), [derX + W, H], ...[...quiebre].reverse()], aurora, cumple: cumples.length > 0 });
+    estado.osos = colocarOsos({ host, W, H, c, ec, esc, inicio: pelicula || inicio <= 0 ? sats : Math.min(inicio, sats), campos, nieveMedidas, camino, L, silueta: [...cimaPts, [derX + W, H], [izqX - W, H]], cara: [[c.sx, c.sy], ...cuerno.slice(N_CARA), ...der.filter((p) => p[0] > c.sx + 48 * ecC), [derX + W, H], ...[...quiebre].reverse()], aurora, cumple: cumples.length > 0, hola: tocable && !pelicula && ultimoTramo(sats) });
     if (inicio !== sats) colocar(inicio, false);
     host.getBoundingClientRect(); // (el estado de `inicio`, ya calculado sin transiciones)
   } finally { delete host.dataset.colocando; }
@@ -1097,7 +1111,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
  * (`arte-osos.js: sitioOsos`); aquí se le dan el sendero (cada 3 px), la meta (mojón y bandera, con 8 px de aire) y las cajas de lo que
  * se lee encima de la escena (el saldo, la cabecera, la tarjeta de la entrada, los textos de la película).
  */
-function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, camino, L, silueta, cara, aurora, cumple }) {
+function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, camino, L, silueta, cara, aurora, cumple, hola = false }) {
   const cima = campos.find((x) => x.cima), g = host.querySelector('#m-osos');
   if (!cima || !g) return null;
   const sendero = [];
@@ -1118,6 +1132,8 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
     const [dx, dy] = t.closest('#m-yo') ? host.querySelector('#m-yo').getAttribute('transform').match(/-?[\d.]+/g).map(Number) : [0, 0]; // «Tú» va trasladado
     textos.push([a + dx - 3, q.y + dy - 3, b + dx + 3, q.y + q.height + dy + 3]);
   }
+  // (Campamento 47) Y el eco de hace un año (el osito translúcido), que tampoco se tapa.
+  for (const r of [...host.querySelectorAll('#m-eco .eco-anillo')].map((el) => el.getBoundingClientRect()).filter((r) => r.width)) textos.push([r.left - hr.left - 3, r.top - hr.top - 3, r.right - hr.left + 3, r.bottom - hr.top + 3]);
   // El gorrito ocupa algo más (la cabeza que mira a la aurora va dentro de la de siempre): si con él caben menos osos, se quedan sin
   // él. Antes los osos que el adorno: un cumpleaños no se lleva a dos de la cumbre.
   const geo = { W, H, sx: c.sx, sy: c.sy, ec, silueta, cara, nieveMin: puntosNieve(nieveMedidas, 0), nieveHoy: puntosNieve(nieveMedidas, altitud(inicio, esc)), sendero, meta, textos, aurora };
@@ -1130,11 +1146,32 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
   g.setAttribute('class', `osos${aurora ? ' con-aurora' : ''}`);
   g.setAttribute('aria-hidden', 'true');
   g.dataset.zona = sitio.zona; // dónde se sentaron: «nieve» (la de siempre), «nieveHoy» o «cumbre» (lo leen las pruebas)
-  g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora, cumple });
-  regalosCumbre(g, sitio.lista, ec * 1.1 * K_OSO, silueta);
   // (Campamento 33) ¿Caben estirados? Las puntas de los brazos alzados, con 2 px de aire, dentro de la montaña; si no, no se estiran.
-  const caben = sitio.lista.every(({ x, y, s = 1 }) => PUNTAS_ESTIRA.every(([px, py]) => { const e = ec * 1.1 * s * K_OSO, X = x + px * e, Y = y + py * e; return [[0, 0], [2, 0], [-2, 0], [0, -2]].every(([dx, dy]) => dentroDe(silueta, X + dx, Y + dy)); }));
+  const conAire = (X, Y) => [[0, 0], [2, 0], [-2, 0], [0, -2]].every(([dx, dy]) => dentroDe(silueta, X + dx, Y + dy));
+  const puntas = (o, lista, salto = 0) => { const e = ec * 1.1 * (o.s ?? 1) * K_OSO; return lista.every(([px, py]) => conAire(o.x + px * e, o.y + py * e - salto)); };
+  const caben = sitio.lista.every((o) => puntas(o, PUNTAS_ESTIRA));
   if (!caben) g.dataset.sinEstirar = '1';
+  // (Campamento 47) El sombrero de palma (189), en marzo y abril, si su copa cabe con el saltito; el brazo que saluda (188), si caben
+  // los brazos; y quién mira hacia el pueblo (229): el que queda de su lado (`data-mira`: i o d, hacia dónde), si inclinado (4°) su
+  // cabeza sigue dentro de la montaña (si no, solo baja la mirada: `data-sin-inclinar`).
+  const dia = window.libroCielo?.dia?.() ?? '', grande = sitio.lista.find((o) => o.quien === 'grande');
+  const sombrero = ['03', '04'].includes(dia.slice(5, 7)) && !cumple && Boolean(grande) && puntas(grande, PUNTAS_SOMBRERO, SALTO_PX);
+  const pr = host.querySelector('.v-pueblo')?.getBoundingClientRect(), px = pr?.width ? pr.left + pr.width / 2 - hr.left : -1e9;
+  const mira = px < (grande?.x ?? 0) ? 'i' : 'd';
+  const asoma = [...sitio.lista].sort((a, b) => (mira === 'i' ? a.x - b.x : b.x - a.x))[0];
+  const giro = (o, gr) => { const r = (gr * Math.PI) / 180, e = ec * 1.1 * (o.s ?? 1) * K_OSO; return [[-7.3, -12.2], [7.3, -12.2], [0, -17.9], [-5, -16.4], [5, -16.4]].every(([u, v]) => conAire(o.x + (u * Math.cos(r) - v * Math.sin(r)) * e, o.y + (u * Math.sin(r) + v * Math.cos(r)) * e)); };
+  g.dataset.mira = mira;
+  if (!giro(asoma, mira === 'i' ? -4 : 4)) g.dataset.sinInclinar = '1';
+  if (!sitio.lista.filter((o) => o.quien !== 'grande').every((o) => giro(o, o.x > (grande?.x ?? 0) ? -5 : 5))) g.dataset.sinAcomodar = '1';
+  g.innerHTML = osos(sitio.lista, { k: ec * 1.1, aurora, cumple, sombrero, hola: hola && caben, asoma: asoma.quien });
+  // (47, idea 24) Las zetas del sueño, junto a la cabeza del grande (o del que haya), del lado que quepan dentro de la montaña.
+  const cab = grande ?? sitio.lista[0], ez = ec * 1.1 * (cab.s ?? 1) * K_OSO;
+  for (const [ux, uy] of [[6.6, -15.5], [-12.9, -15.5], [7.6, -9.5], [-13.9, -9.5]]) {
+    const X = cab.x + ux * ez, Y = cab.y + uy * ez;
+    if ([[CAJA_ZETAS.x0, CAJA_ZETAS.y0], [CAJA_ZETAS.x1, CAJA_ZETAS.y0], [CAJA_ZETAS.x0, CAJA_ZETAS.y1], [CAJA_ZETAS.x1, CAJA_ZETAS.y1]].every(([u, v]) => conAire(X + u * ez, Y + v * ez))) { g.insertAdjacentHTML('beforeend', zetas(X, Y, ez)); break; }
+  }
+  regalosCumbre(g, sitio.lista, ec * 1.1 * K_OSO, silueta);
+  const cajas = [...sitio.cajas, ...plantadosCumbre(g, sitio, { e: ec * 1.1 * K_OSO, dia, sendero, textos: [...(meta ? [meta] : []), ...textos], nieve: puntosNieve(nieveMedidas, altitud(inicio, esc)), conAire })];
   // Si se sentaron en la nieve de hoy (no en la que hay siempre), ¿desde qué altitud los cubre? Más abajo (al empezar la película, o
   // al principio de una subida que les trae la nieve) quedarían sobre la roca: esperan escondidos hasta que la nieve llega (`colocar`).
   let nieve = 0;
@@ -1144,7 +1181,47 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
     for (let i = 0; i < 18; i++) { const m = (a + b) / 2; if (cubre(m)) b = m; else a = m; }
     nieve = b;
   }
-  return { cajas: sitio.cajas, n: sitio.lista.length, zona: sitio.zona, nieve };
+  return { cajas, n: sitio.lista.length, zona: sitio.zona, nieve };
+}
+
+/** El saltito cuenta 4 px (`arte-osos.js: SALTO`). */
+const SALTO_PX = 4;
+/**
+ * (Campamento 47, ideas 185, 26 y 190) Lo que se clava en la nieve junto a los osos, según el día: el oso de nieve de diciembre (crece
+ * con los días; solo sobre la nieve), el paraguas de la lluviosa (lo enseña el CSS por la tarde) y la banderita del 13 al 15 de
+ * septiembre. Fuera del grupo de los osos (no gasta su tope), justo después de él (se esconde con ellos), cada uno en el primer sitio
+ * donde quepa: a un lado de los osos, dentro de la montaña con aire, lejos del sendero y de los rótulos, sin tocar a los osos ni a lo
+ * ya plantado. Si no cabe, no sale. Devuelve sus cajas (se suman a las de los osos: si un rótulo las pisa, ceden con ellos).
+ */
+function plantadosCumbre(g, sitio, { e, dia, sendero, textos, nieve, conAire }) {
+  for (const x of g.parentNode?.querySelectorAll(':scope > .c-plantado') ?? []) x.remove();
+  const piezas = [];
+  const et = etapaOsoNieve(dia);
+  if (et) piezas.push(['nieve', et]);
+  if (['09-13', '09-14', '09-15'].includes(dia.slice(5))) piezas.push(['bandera', 0]); // (la de tres días antes que el de toda la lluviosa)
+  if (window.libroCielo?.epoca?.(dia) === 'lluviosa') piezas.push(['paraguas', 0]);
+  if (!piezas.length) return [];
+  const [x0, , x1] = sitio.caja, pie = Math.max(...sitio.lista.map((o) => o.y));
+  const ocupadas = [...sitio.cajas], puestas = []; // (la caja de cada oso, no la de todos: cabe en un hueco a su lado)
+  for (const [tipo, etapa] of piezas) {
+    // Los sitios, pegados a los osos (a 4 px de su caja) por la derecha y por la izquierda, a la altura de sus pies (nunca más abajo:
+    // ahí empiezan los cerros de delante).
+    const q = plantado(tipo, 0, 0, e, etapa).pts, u0 = Math.min(...q.map((v) => v[0])), u1 = Math.max(...q.map((v) => v[0]));
+    const sitios = [0, 3].flatMap((dy) => [[x1 + 4 - u0, pie + dy * e], [x0 - 4 - u1, pie + dy * e], [x1 + 4 - u0 + 6 * e, pie + dy * e], [x0 - 4 - u1 - 6 * e, pie + dy * e]]);
+    for (const c of sitio.cajas) for (const dy of [0, 3]) sitios.push([c[2] + 3 - u0, c[3] + dy * e], [c[0] - 3 - u1, c[3] + dy * e]); // (y junto a cada uno)
+    for (const [x, y] of sitios) {
+      const p = plantado(tipo, x, y, e, etapa), b = [Math.min(...p.pts.map((q) => q[0])), Math.min(...p.pts.map((q) => q[1])), Math.max(...p.pts.map((q) => q[0])), Math.max(...p.pts.map((q) => q[1]))];
+      if (!p.pts.every(([px, py]) => Number.isFinite(px + py))) continue;
+      if (ocupadas.some((c) => b[0] < c[2] + 2 && b[2] > c[0] - 2 && b[1] < c[3] + 2 && b[3] > c[1] - 2) || textos.some((c) => b[0] < c[2] && b[2] > c[0] && b[1] < c[3] && b[3] > c[1])) continue;
+      if (sendero.some(([sx, sy]) => Math.max(b[0] - sx, 0, sx - b[2]) ** 2 + Math.max(b[1] - sy, 0, sy - b[3]) ** 2 < 64)) continue;
+      if (![[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]], [x, b[1]]].every(([px, py]) => conAire(px, py))) continue;
+      if (tipo === 'nieve' && ![[x, y - e]].every(([px, py]) => dentroDe(nieve, px, py))) continue;
+      ocupadas.push(b); puestas.push(b);
+      g.insertAdjacentHTML('afterend', p.svg);
+      break;
+    }
+  }
+  return puestas;
 }
 
 /**
@@ -1946,12 +2023,7 @@ function llegar({ nivel, etapa, delta }, p, hasta) {
   // (Campamento 31) Al cruzar una etapa o un campamento, el osito de «Tú» levanta los brazos un momento (un cambio a saltos, no una animación).
   if (nivel !== 'compra') { const yo = host.querySelector('#m-yo'); yo?.classList.add('festeja'); setTimeout(() => yo?.classList.remove('festeja'), 2000); }
   // (Campamento 25) Y los osos de la cumbre dan un saltito (1.8 s desde el 39b, solo transform; el CSS lo apaga con efectos «ninguno»).
-  const os = host.querySelector('#m-osos.osos');
-  if (os) {
-    if (os.classList.contains('salta')) { os.classList.remove('salta'); os.getBoundingClientRect(); } // otro saltito seguido: que empiece de nuevo
-    os.classList.add('salta');
-    setTimeout(() => os.classList.remove('salta'), 2000);
-  }
+  festejoCumbre(host.querySelector('#m-osos.osos'));
   // «+N sats» donde no choque con las etiquetas (banderas y «Tú»): se prueban varios sitios.
   const t = nodo('text', { class: 'flota' }, fx);
   t.textContent = `+${entero(delta)} sats`;
@@ -2054,9 +2126,17 @@ export function colocarReloj(host = document.querySelector('.montana')) {
 setInterval(() => { if (document.visibilityState === 'visible') colocarReloj(); }, 300_000);
 // (Campamento 33) De 7:00 a 8:00, cada cinco minutos, los osos de la cumbre se estiran: la clase `estira` seis segundos (39b; antes 2.6; el CSS
 // los enseña uno tras otro, solo con «todos»). Un cambio a saltos, no una animación que corra siempre.
-let estirados = -1;
+let estirados = -1, gestoHecho = -1;
 setInterval(() => {
-  const h = globalThis.window?.libroCielo?.hora?.() ?? 0, slot = Math.floor(h * 12);
+  const C = globalThis.window?.libroCielo, h = C?.hora?.() ?? 0, slot = Math.floor(h * 12);
+  // (Campamento 47) De 8:05 a 17:25, cada diez minutos, un gesto a saltos de seis segundos (cielo.js: gestoDeLosOsos): uno mira hacia
+  // el pueblo, los otros se recuestan en el grande o el grande se estira. Solo un cambio al empezar y otro al acabar; el CSS lo enseña con «todos».
+  const ge = document.visibilityState === 'visible' ? C?.gestoDeLosOsos?.(C.dia(), h) : null, q = Math.floor(h * 6 + 1e-9);
+  if (ge && q !== gestoHecho) {
+    gestoHecho = q;
+    const os = estado?.host?.querySelector('#m-osos.osos'), cls = ge === 'estira' ? 'estira-1' : ge;
+    if (os) { os.classList.add(cls); setTimeout(() => os.classList.remove(cls), 6000); }
+  }
   if (document.visibilityState !== 'visible' || !estiranLosOsos(h) || slot === estirados) return;
   estirados = slot;
   const os = estado?.host?.querySelector('#m-osos.osos');

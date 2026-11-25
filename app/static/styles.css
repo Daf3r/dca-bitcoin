@@ -4866,6 +4866,58 @@ html:is([data-turno="nb-doce"], [data-festivo="navidad"]) .c-regalo { display: i
 .osos.sin-nieve ~ .c-regalo { opacity: 0; }
 .osos[visibility="hidden"] ~ .c-regalo { visibility: hidden; }
 
+/* ---------------------------------------------------------------- Campamento 47 · Los osos de la cumbre
+   Poses quietas según la hora (cielo.js pone `html[data-cumbre]`; nada se redibuja): de 22:00 a 5:00 duermen (ojos cerrados y sus zetas,
+   salvo las noches de fiesta), de 17:30 a 18:15 se ven de espaldas mirando bajar el sol (sin cara ni parche) y en marzo y abril, de 10:00
+   a 15:00, el grande lleva su sombrero de palma. Cuando pasa algo en el pueblo (el panadero que cruza, un vecino que camina, la fiesta
+   del hito, el desfile), el que queda del lado del pueblo baja la mirada hacia allá y se inclina 4°; a saltos, como estirarse (33): un
+   cambio al empezar y otro al acabar, solo transform (y con «todos»). Igual con los gestos de cada diez minutos (`mira`, `acomoda`,
+   `estira-1`). Los festejos al guardar (187) acompañan una acción: salen también con «esenciales». */
+.montana { --oso-palma: #d9b46a; }
+.oso-dormido, .oso-zz, .oso-sombrero { display: none; }
+.oso-dormido { fill: var(--oso-rasgo); }
+.oso-zz { fill: color-mix(in oklab, var(--oso-celeste) 72%, var(--monte-sombra)); }
+.oso-sombrero { fill: color-mix(in oklab, var(--oso-palma) 90%, var(--luz-roca, #fff)); }
+.oso-hola { fill: color-mix(in oklab, var(--pelo) 93%, var(--luz-roca, #fff)); }
+html[data-cumbre="duermen"] .osos :is(.oso-dormido, .oso-zz) { display: inline; }
+html[data-cumbre="duermen"] .osos :is(.oso-rasgos, .oso-hola) { display: none; }
+html[data-cumbre="duermen"][data-cielo="noche"][data-efectos="todos"] .osos.con-aurora :is(.oso-hocico-arriba, .oso-rasgos-arriba) { display: none; }
+html[data-cumbre="duermen"][data-cielo="noche"][data-efectos="todos"] .osos.con-aurora .oso-hocico { display: inline; }
+html[data-cumbre="espaldas"] .osos :is(.oso-hocico, .oso-rasgos, .oso-parche) { display: none; }
+html[data-cumbre="sol"] .osos .oso-sombrero { display: inline; }
+/* Mirar hacia el pueblo: la cara (con las manitas) se corre hacia allá y hacia abajo, en proporción a su caja (vale a cualquier tamaño). */
+.osos .oso-asoma :is(.oso-hocico, .oso-rasgos), .osos.festeja-arriba :is(.oso-hocico, .oso-rasgos, .oso-hocico-arriba, .oso-rasgos-arriba) { transform-box: fill-box; }
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]):is([data-mueve="cruza"], [data-mueve="fiesta-hito"], [data-foco="desfile"]) .osos > .oso-asoma,
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]) .montana[data-camina] .osos > .oso-asoma,
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]) .osos.mira > .oso-asoma { --asoma: 1; }
+.osos > .oso-asoma { --asoma: 0; }
+.osos[data-mira="i"] > .oso-asoma .oso-hocico { transform: translate(calc(var(--asoma) * -12%), calc(var(--asoma) * 8%)); }
+.osos[data-mira="i"] > .oso-asoma .oso-rasgos { transform: translate(calc(var(--asoma) * -13%), calc(var(--asoma) * 24%)); }
+.osos[data-mira="d"] > .oso-asoma .oso-hocico { transform: translate(calc(var(--asoma) * 12%), calc(var(--asoma) * 8%)); }
+.osos[data-mira="d"] > .oso-asoma .oso-rasgos { transform: translate(calc(var(--asoma) * 13%), calc(var(--asoma) * 24%)); }
+.osos[data-mira="i"]:not([data-sin-inclinar]) > .oso-asoma { transform: rotate(calc(var(--asoma) * -4deg)); }
+.osos[data-mira="d"]:not([data-sin-inclinar]) > .oso-asoma { transform: rotate(calc(var(--asoma) * 4deg)); }
+/* Se acomodan: los que no son el grande se recuestan en él (5°), si así siguen dentro de la montaña. */
+html[data-efectos="todos"] .osos.acomoda:not([data-sin-acomodar]) > .oso-hacia-i { transform: rotate(-5deg); }
+html[data-efectos="todos"] .osos.acomoda:not([data-sin-acomodar]) > .oso-hacia-d { transform: rotate(5deg); }
+/* (187) Los festejos al guardar: con el saltito, los brazos arriba o la mirada al cielo (lo mismo que dura el saltito). */
+html:not([data-efectos="ninguno"]) .osos.festeja-brazos:not([data-sin-estirar]) .oso-brazos { display: inline; }
+html:not([data-efectos="ninguno"]) .osos.festeja-arriba :is(.oso-hocico, .oso-hocico-arriba) { transform: translateY(-14%); }
+html:not([data-efectos="ninguno"]) .osos.festeja-arriba :is(.oso-rasgos, .oso-rasgos-arriba) { transform: translateY(-42%); }
+/* (185, 26 y 190) Lo plantado junto a los osos: el oso de nieve (crece con los días de diciembre), el paraguas de las tardes de la
+   lluviosa y la banderita del 13 al 15 de septiembre. Se esconden con los osos. */
+.c-plantado { pointer-events: none; }
+.c-nieve-oso { fill: color-mix(in oklab, #fffdf8 90%, var(--luz-roca, #fff)); }
+.c-nieve-sombra { fill: color-mix(in oklab, var(--nieve-sb) 55%, var(--monte-sombra)); }
+.c-nieve-bufanda { fill: var(--oso-cinta); }
+.c-paraguas { fill: color-mix(in oklab, var(--oso-celeste) 88%, var(--monte-sombra)); }
+.c-paraguas-palo { fill: color-mix(in oklab, #3a2c22 85%, var(--monte-sombra)); }
+.c-bandera { fill: #2f5fae; }
+.c-bandera-b { fill: #fffaf3; }
+html:not([data-tarde]) .c-lluvia { display: none; }
+.osos.sin-nieve ~ .c-plantado { opacity: 0; }
+.osos[visibility="hidden"] ~ .c-plantado { visibility: hidden; }
+
 /* ---------------------------------------------------------------- Campamento 40 · El día entero del pueblo
    Turnos nuevos (cielo.js: turno; arte-vecinos.js: reparto), todo quieto: con cualquier nivel de efectos, el mismo dibujo.
    (145) El perro tiene su día: en estos turnos se echa en otro sitio y va dibujado con los vecinos (el de siempre, y su sombra, no se

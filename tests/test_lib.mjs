@@ -1666,7 +1666,7 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
       ok(senda >= 11.5, `${et}: a 12 px o más del sendero (${senda.toFixed(1)})`);
       eq(encima, 0, `${et}: ni sobre la meta ni sobre el saldo o la cabecera`);
       // Se pintan de atrás adelante (el de más arriba primero): así pueden apoyarse uno en otro sin que se cruce un tono con otro.
-      const orden = [...O.osos(s.lista, { k }).matchAll(/class="oso oso-(\w+)"/g)].map((m) => m[1]);
+      const orden = [...O.osos(s.lista, { k }).matchAll(/class="oso oso-(\w+)[" ]/g)].map((m) => m[1]);
       eq(orden, [...s.lista].sort((a, b) => a.y - b.y).map((o) => o.quien), `${et}: se pintan de atrás adelante`);
       if (s.zona !== 'cumbre') ok(s.lista.every((o) => enPol(s.zona === 'nieve' ? g.nieveMin : g.nieveHoy, o.x, o.y) && enPol(g.cara, o.x, o.y)), `${et}: los pies en la nieve de la cara al sol`);
       const c = O.cajaOsos(s.lista, k, { aurora, cumple });
@@ -1690,11 +1690,11 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   const svgs = { trio: O.osos(tres, { k: k0 }), aurora: O.osos(tres, { k: k0, aurora: true }), todo: O.osos(tres, { k: k0, aurora: true, cumple: true }), uno: O.osos(tres.slice(0, 1), { k: k0 }) };
   for (const [k, svg] of Object.entries(svgs)) {
     ok(!/style=|NaN|undefined/.test(svg) && svg.startsWith('<path class="oso-pie"'), `osos (${k}): sin estilos en línea ni NaN; primero la sombra de contacto de todos`);
-    ok([...svg.matchAll(/class="([^"]+)"/g)].every((m) => /^(oso oso-(grande|chico|mameluco)|oso-[a-z-]+( v-navidad)?)$/.test(m[1])), `osos (${k}): solo clases oso- (y v-navidad en las bufandas)`);
+    ok([...svg.matchAll(/class="([^"]+)"/g)].every((m) => /^(oso oso-(grande|chico|mameluco)( oso-asoma)?( oso-hacia-[id])?|oso-[a-z-]+( v-navidad)?)$/.test(m[1])), `osos (${k}): solo clases oso- (y v-navidad en las bufandas)`);
   }
-  // (Campamento 33: un trazo más por oso, los brazos de estirarse.)
-  ok(nodos(svgs.trio) <= 28 && nodos(svgs.aurora) <= 34 && nodos(svgs.todo) <= 35, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 28), con aurora ${nodos(svgs.aurora)} (≤ 34), con gorrito ${nodos(svgs.todo)} (≤ 35)`);
-  ok(nodos(svgs.uno) <= 11, `osos: el grande solo, ${nodos(svgs.uno)} nodos`);
+  // (Campamento 33: un trazo más por oso, los brazos de estirarse; 47: otro, los ojos cerrados de dormir.)
+  ok(nodos(svgs.trio) <= 31 && nodos(svgs.aurora) <= 37 && nodos(svgs.todo) <= 38, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 31), con aurora ${nodos(svgs.aurora)} (≤ 37), con gorrito ${nodos(svgs.todo)} (≤ 38)`);
+  ok(nodos(svgs.uno) <= 12, `osos: el grande solo, ${nodos(svgs.uno)} nodos (47: con sus ojos cerrados)`);
   ok(svgs.trio.includes('oso-marino') && svgs.trio.includes('oso-cinta') && svgs.trio.includes('oso-parche') && svgs.trio.includes('oso-celeste') && svgs.trio.includes('oso-chico'), 'osos: el grande con su camiseta, su parche y su cinta; el del mameluco; el chico');
   ok(!svgs.uno.includes('oso-celeste') && !svgs.uno.includes('oso-bufanda'), 'osos: el grande solo no lleva mameluco ni bufanda de Navidad (ya tiene su cinta)');
   ok((svgs.trio.match(/oso-bufanda v-navidad/g) || []).length === 2 && !svgs.trio.includes('oso-gorro') && svgs.todo.includes('oso-gorro'), 'osos: dos bufandas de Navidad (las enseña el CSS) y el gorrito solo con cumpleaños');
@@ -2473,6 +2473,23 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   // 275: el mapa del día en pantalla ancha suma el segundo principal y nunca pasa de dos; en el teléfono, uno.
   const mapa = (f, a) => C.mapaDelDia(f, a).map((x) => x.principales);
   eq([Math.max(...mapa('2027-02-10', false)), Math.max(...mapa('2027-02-10', true))], [1, 2], 'pueblo 49 (275): un principal en el teléfono, hasta dos en pantallas anchas');
+
+  // ---- Campamento 47 · Los osos de la cumbre: sus poses por la hora, los gestos a saltos, el oso de nieve y el último tramo.
+  eq([C.poseCumbre('2026-11-25', 23), C.poseCumbre('2026-11-25', 3), C.poseCumbre('2026-11-25', 17.75), C.poseCumbre('2027-04-10', 12), C.poseCumbre('2027-05-10', 12), C.poseCumbre('2026-11-25', 12)],
+    ['duermen', 'duermen', 'espaldas', 'sol', '', ''], 'cumbre 47: duermen de 22 a 5 (24), de espaldas de 17:30 a 18:15 (184), sombrero al mediodía de marzo y abril (189)');
+  eq([C.poseCumbre('2026-12-24', 23.9), C.poseCumbre('2026-12-31', 23.7), C.poseCumbre('2027-01-01', 0.3)], ['', '', ''], 'cumbre 47: las noches de fiesta (el 24 y el 31, hasta pasadas las doce) esperan despiertos');
+  const gestos = [];
+  for (let q = 0; q < 1440; q++) { const g = C.gestoDeLosOsos('2026-11-25', q / 60); if (g) gestos.push([q, g]); }
+  ok(gestos.length === 57 && gestos.every(([q]) => q % 10 === 5 && q >= 480 && q < 1050) && new Set(gestos.map((x) => x[1])).size === 3, `cumbre 47: de 8:05 a 17:25, un gesto cada diez minutos (mira, acomoda, estira), nunca de noche (${gestos.length})`);
+  let malCumbre = 0;
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) for (const tr of C.mapaDelDia(new Date(t).toISOString().slice(0, 10))) if (tr.cumbre && !C.cumbre.some((c) => c.id === tr.cumbre && c.pesa.anim === 0 && c.pesa.capas === 0)) malCumbre++;
+  eq(malCumbre, 0, 'cumbre 47: el mapa del día declara la pose de la cumbre, y ninguna pone capas ni animaciones');
+  const O47 = await import('../app/static/arte-osos.js');
+  eq(['2026-11-30', '2026-12-01', '2026-12-08', '2026-12-16', '2026-12-24', '2027-01-06', '2027-01-07'].map(O47.etapaOsoNieve), [0, 1, 2, 3, 4, 4, 0], 'cumbre 47 (185): el oso de nieve crece en diciembre y el 7 de enero ya no está');
+  const pl = ['nieve', 'paraguas', 'bandera'].map((t) => O47.plantado(t, 100, 200, 1.2, 4));
+  ok(pl.every((p) => p.pts.length && p.pts.every(([x, y]) => Number.isFinite(x + y)) && !/NaN|style=/.test(p.svg)) && pl.map((p) => (p.svg.match(/<path/g) || []).length).join() === '3,2,2', 'cumbre 47: lo plantado son pocos trazos, sin NaN ni estilos en línea');
+  const L47 = await import('../app/static/lib.js');
+  eq([5e4, 2e5, 7.6e5, 9e5, 4.6e6, 9.2e6, 1.2e7].map(L47.ultimoTramo), [false, false, true, true, false, true, false], 'cumbre 47 (188): el último tramo es cuando ya no queda etapa antes de la cima');
 }
 
 console.log(`OK ${n} comprobaciones`);

@@ -258,6 +258,7 @@ const PESOS = [
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
+  ['campamento 47: los osos de la cumbre', 40], // 14 comprobaciones (estimado)
   ['campamento 59: la fiesta del hito', 110], // 24 comprobaciones (estimado: dos fiestas enteras de 24 s)
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
@@ -6757,7 +6758,7 @@ try {
       const svg = host.querySelector('svg'), inv = svg.getScreenCTM().inverse();
       const usuario = (x, y) => new DOMPoint(x, y).matrixTransform(inv);
       const monte = svg.querySelector('.monte'), nieve = svg.querySelector('.nieve-clip');
-      const cajas = [...g.querySelectorAll(':scope > .oso')].map((o) => ({ quien: o.getAttribute('class').replace('oso oso-', ''), r: o.getBoundingClientRect() }));
+      const cajas = [...g.querySelectorAll(':scope > .oso')].map((o) => ({ quien: [...o.classList].find((c) => /^oso-(grande|chico|mameluco)$/.test(c)).slice(4), r: o.getBoundingClientRect() })); // (47: el grupo lleva también oso-asoma u oso-hacia-…)
       const camino = svg.querySelector('#m-sendero'), m = camino.getScreenCTM(), L = camino.getTotalLength(), sendero = [];
       for (let l = 0; l <= L; l += 3) { const q = camino.getPointAtLength(l); sendero.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]); }
       const cruza = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -6926,7 +6927,7 @@ try {
         const n = await entrar(navegador, sMil, ADMIN, { hora: 21 }, conLs({ 'libro.dia': '2026-12-24', 'libro.efectos': 'esenciales' }));
         await cerrar(n.p);
         const r = await n.p.evaluate(() => { const h = document.getElementById('montana'), o = h.querySelector('#m-osos'); return { escena: h.querySelectorAll('*').length, osos: o.querySelectorAll('*').length + 1 }; });
-        ok(r.escena <= 1100 && r.osos <= 40, `25·nodos: la escena con mil compras en Nochebuena tiene ${r.escena} nodos (≤ 1100), los osos ${r.osos} (≤ 40)`);
+        ok(r.escena <= 1100 && r.osos <= 46, `25·nodos: la escena con mil compras en Nochebuena tiene ${r.escena} nodos (≤ 1100), los osos ${r.osos} (≤ 46 desde el 47)`);
         await n.ctx.close();
       } finally { sMil.parar(); }
 
@@ -7388,6 +7389,49 @@ try {
       const v = await e.p.evaluate(() => { const o = document.querySelector('#m-osos.osos'); if (!o) return 'sin osos'; o.classList.add('estira-1'); return getComputedStyle(o.querySelector('.oso-brazos')).display; });
       ok(v === 'none', `33 con «esenciales» no se estiran (${v})`);
       await e.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 47: los osos de la cumbre (duermen, de espaldas, sombrero, lo plantado, se asoman)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const ver = (p, s) => p.evaluate((s) => [...document.querySelectorAll(`#montana ${s}`)].filter((e) => e.checkVisibility({ checkVisibilityCSS: true })).length, s);
+    const ir = async (p, dia, hora) => { await p.evaluate(([d, h]) => { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); window.libroCielo.aplicar(); }, [dia, hora]); await p.waitForTimeout(900); };
+    const anio = await servidor('anio');
+    try {
+      const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      const n = (await ver(t.p, '#m-osos > .oso'));
+      ok(n >= 1, `47 los osos están en la cumbre (${n})`);
+      eq([await ver(t.p, '.oso-dormido'), await ver(t.p, '.oso-zz'), await ver(t.p, '.oso-sombrero')], [0, 0, 0], '47 de día, ni ojos cerrados ni zetas ni sombrero (en noviembre)');
+      await ir(t.p, '2026-11-25', 23);
+      const d = await t.p.evaluate(() => document.documentElement.dataset.cumbre);
+      eq([d, await ver(t.p, '.oso-dormido'), await ver(t.p, '#m-osos .oso-rasgos')], ['duermen', n, 0], '47 (24) de 22:00 a 5:00 duermen: ojos cerrados en todos, sin los abiertos');
+      ok(await ver(t.p, '.oso-zz') <= 1, '47 (24) y como mucho unas zetas');
+      await ir(t.p, '2026-11-25', 17.75);
+      eq([await t.p.evaluate(() => document.documentElement.dataset.cumbre), await ver(t.p, '#m-osos .oso-hocico'), await ver(t.p, '#m-osos .oso-parche')], ['espaldas', 0, 0], '47 (184) de 17:30 a 18:15, de espaldas mirando bajar el sol (sin cara ni parche)');
+      await ir(t.p, '2027-04-14', 12);
+      const so = await ver(t.p, '.oso-sombrero');
+      ok(so <= 1 && (await t.p.evaluate(() => document.documentElement.dataset.cumbre)) === 'sol', `47 (189) al mediodía de abril, el grande con su sombrero si su copa cabe (${so})`);
+      // Lo plantado, según el día: el oso de nieve de diciembre y la banderita de septiembre (si caben); fuera del grupo de los osos.
+      for (const [dia, hora, sel] of [['2026-12-10', 12, '.c-nieve-oso'], ['2026-09-14', 15, '.c-patria'], ['2026-11-25', 12, '.c-plantado']]) {
+        await ir(t.p, dia, hora);
+        const r = await t.p.evaluate((sel) => { const h = document.getElementById('montana'), pl = [...h.querySelectorAll('.c-plantado')]; return { n: h.querySelectorAll(sel).length, dentro: Boolean(h.querySelector('#m-osos .c-plantado')), nan: pl.some((e) => /NaN/.test(e.getAttribute('d'))), estilo: pl.some((e) => e.hasAttribute('style')) }; }, sel);
+        ok(!r.dentro && !r.nan && !r.estilo && (dia === '2026-11-25' ? r.n === 0 : r.n <= 3), `47 lo plantado el ${dia}: ${r.n} trazos, fuera del grupo de los osos, sin NaN ni estilos (${JSON.stringify(r)})`);
+      }
+      // (229) Cuando alguien camina en el pueblo, uno de la cumbre mira hacia allá (y solo uno); con «esenciales», nadie.
+      await ir(t.p, '2026-11-25', 12);
+      const asoma = () => t.p.evaluate(() => { const h = document.getElementById('montana'); h.dataset.camina = '1'; const r = [...h.querySelectorAll('#m-osos > .oso')].filter((o) => !/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(getComputedStyle(o.querySelector('.oso-rasgos')).transform)).length; delete h.dataset.camina; return r; });
+      eq(await asoma(), 1, '47 (229) cuando un vecino camina, uno de los de la cumbre mira hacia el pueblo');
+      await t.p.evaluate(() => window.libroEfectos.fijar('esenciales'));
+      eq(await asoma(), 0, '47 (229) con «esenciales», no');
+      const nodos = await t.p.evaluate(() => document.querySelector('#montana #m-osos').querySelectorAll('*').length + 1);
+      ok(nodos <= 46, `47 los osos, ${nodos} nodos (≤ 46)`);
+      ok(t.consola.length === 0, `47 consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
     } finally {
       anio.parar();
     }

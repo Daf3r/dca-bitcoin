@@ -158,7 +158,7 @@ function pintarAlmanaque() {
       const foco = tr.foco ? ` · foco: ${tr.foco === 'rutina' ? `rutina (${tr.rutina})` : tr.foco}` : '';
       const amb = tr.ambiente?.length ? ` · ambiente: ${tr.ambiente.join(', ')}` : '';
       const peso = tr.capas != null ? ` · capas pequeñas: ${tr.capas} (hasta ${tr.anim} animaciones por capa)` : '';
-      txt.textContent = `${hhmm(tr.desde)}–${hhmm(tr.hasta)} · ${tr.turno}${tr.mueve ? ` · se mueve: ${tr.mueve}` : ''}${tr.mueve2 ? ` + ${tr.mueve2} (ancho)` : ''}${foco}${amb}${peso}`;
+      txt.textContent = `${hhmm(tr.desde)}–${hhmm(tr.hasta)} · ${tr.turno}${tr.mueve ? ` · se mueve: ${tr.mueve}` : ''}${tr.mueve2 ? ` + ${tr.mueve2} (ancho)` : ''}${foco}${amb}${tr.cumbre ? ` · la cumbre: ${tr.cumbre}` : ''}${peso}`;
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'enlace';

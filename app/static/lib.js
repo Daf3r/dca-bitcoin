@@ -132,6 +132,13 @@ export function etapasHasta(tope) {
   return out;
 }
 export const etapaSiguiente = (sats) => { for (const m of escalera()) if (m > sats) return m; return Number.POSITIVE_INFINITY; };
+/**
+ * (Campamento 47, idea 188) ¿«Tú» va ya en el último tramo antes de la cima? Cuando la siguiente etapa es un campamento (la potencia de
+ * 10 que es la cima): entre «Tú» y la meta ya no queda ninguna etapa. Desde las 100,000 (antes de la primera etapa no hay tramos).
+ * @param {number} sats
+ * @returns {boolean}
+ */
+export const ultimoTramo = (sats) => sats >= 1e5 && Number.isFinite(etapaSiguiente(sats)) && rangoEtapa(etapaSiguiente(sats)) === 'campamento';
 export const etapaAnterior = (sats) => { let prev = 0; for (const m of escalera()) { if (m > sats) break; prev = m; } return prev; };
 /** Etapas que se cruzan al subir de `desde` a `hasta` sats (vacío si no se sube). */
 export const etapasCruzadas = (desde, hasta) => (hasta > desde ? etapasHasta(Math.max(hasta, 1e5)).filter((m) => m > desde && m <= hasta) : []);
