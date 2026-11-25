@@ -2653,7 +2653,7 @@ export const ANIMOS = /** @type {const} */ (['calma', 'fresco', 'abrigo', 'aire'
  * cambio de un solo día no cuenta. `vuelta`: para salir hay que volver un tercio hacia dentro del umbral (umbral × 2/3). `tope`: un
  * estado dura como mucho 7 días seguidos; después vuelve la calma y no regresa hasta que la medida salga y vuelva a entrar.
  */
-export const UMBRAL_ANIMO = Object.freeze({ fresco: -8, abrigo: -15, lejos: 22, aire: 8, plaza: 15, vuelta: 2 / 3, tope: 7, ventana: 120 });
+export const UMBRAL_ANIMO = Object.freeze({ fresco: -11, abrigo: -21, lejos: 31, aire: 11, plaza: 21, vuelta: 2 / 3, tope: 7, ventana: 120 });
 const NIVEL_ANIMO = /** @type {const} */ (['abrigo', 'fresco', 'calma', 'aire', 'plaza']); // nivel −2 … +2
 /**
  * (E) El nivel de una medida (−2 abrigo, −1 fresco, 0 calma, +1 aire libre, +2 plaza), con los umbrales multiplicados por `q` (1 para
