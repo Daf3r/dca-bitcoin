@@ -793,7 +793,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const arbolV = valle.arbol ? { ...valle.arbol, ...arbolDelPrimerDia(anios), sol: solV } : null;
   // (Campamento 22C) El pueblo al pie, donde arranca el sendero: la iglesia con su plaza, las casas, la gente; el camino real llega de
   // la plaza a la salida.
-  const pb = sitiosPueblo({ W, H, forma: valle.forma, by, bx, pts, lago: lg, techo, sol: solV });
+  // (Campamento D) `--pueblo-k` (styles.css): en la pantalla grande a 1080p el pueblo va más grande; el llano, el primer plano y el
+  // teleférico siguen a su escala de siempre (`pb.u0`).
+  const pb = sitiosPueblo({ W, H, forma: valle.forma, by, bx, pts, lago: lg, techo, sol: solV, escala: Number.parseFloat(getComputedStyle(host).getPropertyValue('--pueblo-k')) || 1 });
   if (pb.plaza) { const pzx = pb.plaza.x + 12 * pb.u; valle.camino = { ...valle.camino, ini: [pzx, pb.yg + 1.5 * pb.u], ctrl: [(pzx + bx) / 2, Math.max(by, pb.yg - 4 * pb.u)], ancho: [5 * pb.u, 3 * pb.u] }; }
   // (Pulido del paisaje bajo) En escritorio y acostado la calle del pueblo ya lleva a la salida: el camino real pasaba por debajo de ella
   // y su cerca asomaba entre las casas. Ahí no se pone (sus cajas siguen apartando los árboles de honor y el papel picado).
@@ -801,7 +803,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const huecosPP = [[pb.caja[0], pb.caja[2]], [lg.cx - lg.rx, lg.cx + lg.rx]];
   // Los campos del llano, entre el bosque y el pueblo; la milpa es la parcela de delante más ancha (los zompopos salen de ella).
   const ladoV = valle.forma === 'esc' || valle.forma === 'acostado';
-  const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u * 0.55), vx: c.sx, evitar: [[pb.caja[0] - 6, pb.caja[2] + 6 * pb.u], [bx - 30, bx + 30]], ancho: W, techoPueblo: pb.yg - 27 * pb.u, lago: lg ? [lg.cx - lg.rx, lg.cy - lg.ry, lg.cx + lg.rx, lg.cy + lg.ry] : null });
+  const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u0 * 0.55), vx: c.sx, evitar: [[pb.caja[0] - 6, pb.caja[2] + 6 * pb.u], [bx - 30, bx + 30]], ancho: W, techoPueblo: pb.yg - 27 * pb.u, lago: lg ? [lg.cx - lg.rx, lg.cy - lg.ry, lg.cx + lg.rx, lg.cy + lg.ry] : null });
   const milpaV = cm.milpa ? { ...cm.milpa, k: Math.max(1, pb.u * 0.5), sol: solV } : null;
   s = s.replace('<!--v-campos-->', `<g class="v-campos" aria-hidden="true">${cm.svg}${milpaV ? milpa(milpaV) + zompopos({ milpa: milpaV, k: milpaV.k }) : ''}</g>`);
   // (22C) Las piscuchas vuelan a la izquierda de la montaña y su hilo baja a los niños de la plaza: van delante, con el pueblo.
@@ -816,7 +818,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   host.style.setProperty('--v-suelo', `${f1(pb.yg)}px`);
   host.style.setProperty('--v-suelo-atras', `${f1(pb.yg - TERRAZA * pb.u)}px`);
   host.style.setProperty('--v-sol', String(solV));
-  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${farolHito ? farolDelPueblo(infoV.lug) : ''}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
+  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${farolHito ? farolDelPueblo(infoV.lug) : ''}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u0 * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
@@ -982,7 +984,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     host.getBoundingClientRect(); // (el estado de `inicio`, ya calculado sin transiciones)
   } finally { delete host.dataset.colocando; }
   podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
-  if (tocable && !pelicula) telefericoValle(host, W, pb.u, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
+  if (tocable && !pelicula) telefericoValle(host, W, pb.u0, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
   if (tocable && !pelicula) { animalesDelPueblo(host); ambientalesDelValle(host); } // (34) y (51, F3)
   if (tocable || pelicula) vigilarTurno(host, infoV); // (35) los vecinos cambian de turno con la página abierta
   if (infoV.conCapa) capaVecino(host, infoV, infoV.turno); // (37) el vecino que se mueve, en su capa
@@ -1537,6 +1539,9 @@ function huellas(l) {
 /** Etiquetas sin choques: a la derecha de la bandera; si choca o se sale, a la izquierda; si sigue, se oculta. */
 function etiquetar(yo, sats = estado.sats) {
   const { campos, W, host } = estado;
+  // (Campamento D) En la pantalla grande a 1080p los rótulos crecen (`--rotulo-k` en styles.css: de 16 a 26 px) y sus cajas con ellos.
+  // `kr` es el de los campamentos y las etapas (16 px de base); «Tú» y «Vamos aquí» (14 px en la app) crecen hasta lo mismo (`kyo`).
+  const kr = Number.parseFloat(getComputedStyle(host).getPropertyValue('--rotulo-k')) || 1, kyo = kr > 1 ? (kr * 16) / 14 : 1;
   // Cada campamento (mástil, banderín y tienda) y el punto de «Tú» ocupan su sitio: ninguna etiqueta se les encima.
   const e = estado.ec || 1;
   const cajas = campos.map(({ m, p, cima, lado }) => (cima ? { x: p.x - 12 * e, y: p.y - 26 * e, w: 34 * e, h: 34 * e, m } : { x: p.x + (lado < 0 ? -32 : 0) * e, y: p.y - 38 * e, w: 32 * e, h: 42 * e, m }));
@@ -1544,6 +1549,16 @@ function etiquetar(yo, sats = estado.sats) {
   const tb = cajaTu(estado.ec || 1);
   cajas.push({ x: yo.x + tb.x - 2, y: yo.y + tb.y - 2, w: tb.w + 4, h: tb.h + 4 });
   if (estado.eco) cajas.push({ x: estado.eco.p.x - 12, y: estado.eco.p.y - 12, w: 24, h: 24 });
+  // (Campamento D) En la pantalla grande el saldo (la cifra y su unidad) también ocupa su sitio: ningún rótulo se le acerca a menos de
+  // 20 px (los 8 de aire de la regla y los 12 que se corre contra el quemado: tv.js, `derivaTele`).
+  if (document.documentElement.dataset.tv === '1') {
+    const base = host.getBoundingClientRect(), q = [host.ownerDocument.querySelector('#s-sats .od-num'), host.ownerDocument.getElementById('s-unidad')].map((x) => x?.getBoundingClientRect()).filter((r) => r?.width);
+    if (q.length) {
+      const raiz = getComputedStyle(document.documentElement), dx = Number.parseFloat(raiz.getPropertyValue('--tv-dx')) || 0, dy = Number.parseFloat(raiz.getPropertyValue('--tv-dy')) || 0; // sin la deriva de ahora
+      const l = Math.min(...q.map((r) => r.left)) - dx, t = Math.min(...q.map((r) => r.top)) - dy, r2 = Math.max(...q.map((r) => r.right)) - dx, b2 = Math.max(...q.map((r) => r.bottom)) - dy;
+      cajas.push({ x: l - base.left - 20, y: t - base.top - 20, w: r2 - l + 40, h: b2 - t + 40, m: 'saldo' });
+    }
+  }
   // Las marcas de etapa también ocupan su sitio (solo la siguiente lleva rótulo).
   for (const { m, p } of estado.etapas || []) cajas.push({ x: p.x - 9, y: p.y - 9, w: 18, h: 18, m, fina: rangoEtapa(m) === 'intermedia' });
   // En el teléfono y la tablet el saldo ocupa todo el ancho de arriba: ninguna etiqueta sube por encima de él.
@@ -1556,12 +1571,12 @@ function etiquetar(yo, sats = estado.sats) {
   // lo que el texto (36 px para «Tú», como siempre) y se aparta lo mismo del punto.
   // (Campamento 23) La película del ascenso pone el suyo («Íbamos aquí» los días de antes, para quien solo mira).
   const rotulo = estado.rotulo ?? (estado.libro ? 'Vamos aquí' : 'Tú');
-  const wYo = rotulo !== 'Tú' ? rotulo.length * 7.4 + 16 : 36;
+  const wYo = rotulo !== 'Tú' ? rotulo.length * 7.4 * kyo + 16 * kr : 36 * kyo, hYo = 24 * kr;
   // (Campamento 31) Los rincones se miden desde la caja del osito, no desde el punto: arriba, a media altura y abajo, a cada lado; y
   // encima y debajo. La placa se aparta 4 px del osito; el texto, 6 px dentro de la placa.
-  const izq = yo.x + tb.x - 4, der = yo.x + tb.x + tb.w + 4, arriba = yo.y + tb.y, medio = yo.y + tb.y + tb.h / 2 - 12;
-  const yoOpc = [[izq, arriba - 6, 'end'], [der, arriba - 6, 'start'], [izq, yo.y + 6, 'end'], [der, yo.y + 6, 'start'], [izq - 8, medio, 'end'], [der + 8, medio, 'start'], [yo.x, arriba - 30, 'middle'], [yo.x, yo.y + 10, 'middle']]
-    .map(([bx, y, a]) => ({ x: a === 'end' ? bx - wYo : a === 'middle' ? bx - wYo / 2 : bx, y, w: wYo, h: 24, anclaje: a, tx: a === 'end' ? bx - 6 : a === 'middle' ? bx : bx + 6 }));
+  const izq = yo.x + tb.x - 4, der = yo.x + tb.x + tb.w + 4, arriba = yo.y + tb.y, medio = yo.y + tb.y + tb.h / 2 - hYo / 2;
+  const yoOpc = [[izq, arriba - 6, 'end'], [der, arriba - 6, 'start'], [izq, yo.y + 6, 'end'], [der, yo.y + 6, 'start'], [izq - 8, medio, 'end'], [der + 8, medio, 'start'], [yo.x, arriba - 6 - hYo, 'middle'], [yo.x, yo.y + 10, 'middle']]
+    .map(([bx, y, a]) => ({ x: a === 'end' ? bx - wYo : a === 'middle' ? bx - wYo / 2 : bx, y, w: wYo, h: hYo, anclaje: a, tx: a === 'end' ? bx - 6 * kr : a === 'middle' ? bx : bx + 6 * kr }));
   // «Vamos aquí» es más largo que «Tú»: además se aparta del propio sendero (unas muestras del trazo a cada lado del punto).
   const senda = [];
   if (rotulo !== 'Tú') {
@@ -1578,20 +1593,20 @@ function etiquetar(yo, sats = estado.sats) {
   const prioridad = (m) => (m === estado.esc.cima ? 0 : m === estado.meta ? 1 : 2);
   const orden = [...campos].sort((a, b) => prioridad(a.m) - prioridad(b.m));
   let repisa = '', repisaM = '';
-  let s = `<text class="yo-txt" x="${f1(yb.tx)}" y="${f1(yb.y + 17)}" text-anchor="${yb.anclaje}">${rotulo}</text>`;
+  let s = `<text class="yo-txt" x="${f1(yb.tx)}" y="${f1(yb.y + 17 * kr)}" text-anchor="${yb.anclaje}">${rotulo}</text>`;
   for (const { m, p, cima, lado } of orden) {
     const txt = nombreHito(m);
-    const w = txt.length * 8.2 + 6;
+    const w = (txt.length * 8.2 + 6) * kr, h = 20 * kr;
     // Un letrero junto al campamento: por fuera (del lado de la tienda), encima, del otro lado del camino o debajo.
     // El rótulo es texto con un halo suave sobre la roca, junto al hito: por fuera del camino, al otro lado, encima o debajo.
     // El de un campamento se apoya en su repisa (que sigue hasta ahí: ver `terrazas`); el de la cumbre, pegado a la antecima.
     const xc = cima ? p.x : p.x + DH * lado * e;
-    const yt = cima ? p.y - 24 * e : p.y - 19 - 2.6 * e;
+    const yt = (cima ? p.y - 24 * e : p.y - 19 - 2.6 * e) - (h - 20) / 2;
     const dx = (cima ? 19 : 16) * e;
-    const fuera = { x: lado > 0 || cima ? xc + dx : xc - dx - w, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'start' : 'end', tx: lado > 0 || cima ? xc + dx + 3 : xc - dx - 3 };
-    const otro = { x: lado > 0 || cima ? xc - dx - w : xc + dx, y: yt, w, h: 20, anclaje: lado > 0 || cima ? 'end' : 'start', tx: lado > 0 || cima ? xc - dx - 3 : xc + dx + 3 };
-    const encima = { x: xc - w / 2, y: p.y - (cima ? 52 : 46) * e, w, h: 20, anclaje: 'middle', tx: xc };
-    const abajo = { x: xc - w / 2, y: p.y + 6 * e, w, h: 20, anclaje: 'middle', tx: xc };
+    const fuera = { x: lado > 0 || cima ? xc + dx : xc - dx - w, y: yt, w, h, anclaje: lado > 0 || cima ? 'start' : 'end', tx: lado > 0 || cima ? xc + dx + 3 : xc - dx - 3 };
+    const otro = { x: lado > 0 || cima ? xc - dx - w : xc + dx, y: yt, w, h, anclaje: lado > 0 || cima ? 'end' : 'start', tx: lado > 0 || cima ? xc - dx - 3 : xc + dx + 3 };
+    const encima = { x: xc - w / 2, y: p.y - (cima ? 52 : 46) * e - (h - 20), w, h, anclaje: 'middle', tx: xc };
+    const abajo = { x: xc - w / 2, y: p.y + 6 * e, w, h, anclaje: 'middle', tx: xc };
     const opciones = cima ? [otro, encima, fuera] : [fuera, otro, encima, abajo];
     const b = opciones.find((o) => !choca(o, m));
     if (!b) continue;
@@ -1601,38 +1616,38 @@ function etiquetar(yo, sats = estado.sats) {
       const [arriba, canto] = losa(q, REPISA - 9, fin);
       repisa += arriba; repisaM += canto;
     }
-    s += `<text class="campo-txt${cima ? ' cima' : ''}" x="${f1(b.tx)}" y="${f1(b.y + 15)}" text-anchor="${b.anclaje}">${txt}</text>`;
+    s += `<text class="campo-txt${cima ? ' cima' : ''}" x="${f1(b.tx)}" y="${f1(b.y + 15 * kr)}" text-anchor="${b.anclaje}">${txt}</text>`;
   }
   // El rótulo del eco, pequeño y sin placa, donde quepa (si no cabe, el eco queda sin letrero: la descripción de la montaña lo dice).
   if (estado.eco) {
-    const q = estado.eco.p, w = 62;
+    const q = estado.eco.p, w = 62 * kr, h = 18 * kr;
     const opc = [
-      { x: q.x + 13, y: q.y - 9, w, h: 18, anclaje: 'start', tx: q.x + 15 },
-      { x: q.x - 13 - w, y: q.y - 9, w, h: 18, anclaje: 'end', tx: q.x - 15 },
-      { x: q.x - w / 2, y: q.y - 32, w, h: 18, anclaje: 'middle', tx: q.x },
-      { x: q.x - w / 2, y: q.y + 12, w, h: 18, anclaje: 'middle', tx: q.x },
+      { x: q.x + 13, y: q.y - h / 2, w, h, anclaje: 'start', tx: q.x + 15 },
+      { x: q.x - 13 - w, y: q.y - h / 2, w, h, anclaje: 'end', tx: q.x - 15 },
+      { x: q.x - w / 2, y: q.y - 14 - h, w, h, anclaje: 'middle', tx: q.x },
+      { x: q.x - w / 2, y: q.y + 12, w, h, anclaje: 'middle', tx: q.x },
     ];
     const b = opc.find((o) => !choca(o, 'eco'));
-    if (b) { cajas.push(b); s += `<text class="eco-txt" x="${f1(b.tx)}" y="${f1(b.y + 13)}" text-anchor="${b.anclaje}">hace 1 año</text>`; }
+    if (b) { cajas.push(b); s += `<text class="eco-txt" x="${f1(b.tx)}" y="${f1(b.y + 13 * kr)}" text-anchor="${b.anclaje}">hace 1 año</text>`; }
   }
   // La siguiente etapa, si no es un campamento: su rótulo junto a la marca (a la derecha, a la izquierda, encima o debajo). (Campamento 21)
   // Con las etapas más juntas la siguiente suele ir pegada a «Tú»: si su rótulo no cabe, lo lleva la siguiente con sello.
   const sigs = [(estado.etapas || []).find((x) => x.m === etapaSiguiente(sats)), (estado.etapas || []).find((x) => x.m > sats && rangoEtapa(x.m) !== 'intermedia')];
   host.querySelectorAll('#m-etapas .etapa[visibility]').forEach((g) => g.removeAttribute('visibility'));
   for (const eSig of sigs.filter((x, i) => x && sigs.indexOf(x) === i)) {
-    const txt = nombreHito(eSig.m), w = txt.length * 8.2 + 6, p = eSig.p;
+    const txt = nombreHito(eSig.m), w = (txt.length * 8.2 + 6) * kr, h = 20 * kr, p = eSig.p;
     const opciones = [
-      { x: p.x + 12 * e, y: p.y - 10, w, h: 20, anclaje: 'start', tx: p.x + 12 * e + 3 },
-      { x: p.x - 12 * e - w, y: p.y - 10, w, h: 20, anclaje: 'end', tx: p.x - 12 * e - 3 },
-      { x: p.x - w / 2, y: p.y - 30 * e, w, h: 20, anclaje: 'middle', tx: p.x },
-      { x: p.x - w / 2, y: p.y + 10 * e, w, h: 20, anclaje: 'middle', tx: p.x },
+      { x: p.x + 12 * e, y: p.y - h / 2, w, h, anclaje: 'start', tx: p.x + 12 * e + 3 },
+      { x: p.x - 12 * e - w, y: p.y - h / 2, w, h, anclaje: 'end', tx: p.x - 12 * e - 3 },
+      { x: p.x - w / 2, y: p.y - 30 * e - (h - 20), w, h, anclaje: 'middle', tx: p.x },
+      { x: p.x - w / 2, y: p.y + 10 * e, w, h, anclaje: 'middle', tx: p.x },
     ];
     // El rótulo de la etapa puede ir sobre una marca fina (intermedia), que entonces se esconde: el rótulo manda.
     const sinFinas = cajas.filter((o) => !o.fina || o.m === eSig.m);
     const chocaEt = (b) => b.x < 4 || b.x + b.w > W - 4 || b.y < Math.max(4, techoEt) || sinFinas.some((o) => o.m !== eSig.m && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y);
     const b = opciones.find((o) => !chocaEt(o));
     if (b) {
-      s += `<text class="campo-txt etapa-txt" x="${f1(b.tx)}" y="${f1(b.y + 15)}" text-anchor="${b.anclaje}">${txt}</text>`;
+      s += `<text class="campo-txt etapa-txt" x="${f1(b.tx)}" y="${f1(b.y + 15 * kr)}" text-anchor="${b.anclaje}">${txt}</text>`;
       for (const o of cajas) if (o.fina && o.m !== eSig.m && b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y) host.querySelector(`#m-etapas .etapa[data-m="${o.m}"]`)?.setAttribute('visibility', 'hidden');
       break;
     }

@@ -25,7 +25,9 @@ const RAPIDO = process.argv.includes('--rapido');
 /** Los topes de nodos (CLAUDE.md, «Escena y arte») y el presupuesto de animaciones a la vista por capa (docs/rendimiento.md). */
 export const TOPES = { escena: 1100, valle: 300, osos: 40 };
 /** (Campamento 39, idea 131) El tope de la escena en pantallas anchas (escritorio y tele), por ancho: lo «solo ancho» no baja al teléfono. */
-export const TOPES_ANCHO = { 1440: 1100, 2560: 1100 };
+export const TOPES_ANCHO = { 1440: 1100, 1920: 1100, 2560: 1100 };
+/** (Campamento D) El tope propio de la pantalla grande (#tv) a 1920×1080: animaciones a la vista en toda la escena, a cualquier hora en que está despierta. */
+export const TOPE_TV = 24;
 export const PRESUPUESTO = { principal: 56, frente: 16, 'par-cielo': 44, 'par-lejos': 22, 'par-medio': 4, propia: 3, total: 110 };
 /** (Campamento 51, F3) Como mucho tres ambientales (`svg.v-capa-amb`) moviéndose a la vez junto al actor principal. */
 export const AMBIENTALES = 3;
@@ -90,10 +92,23 @@ const CASOS = [
   { caso: 'fiesta del halving', dia: '2026-11-25', hora: 10, declara: 840, fiesta: 'halving', en: 5800 },
 ];
 /** (Campamento 39, idea 131) Las pantallas anchas (escritorio 1440×900 y tele 2560×1440): solo los nodos, frente a `TOPES_ANCHO`. */
-const ANCHOS = [[1440, 900], [2560, 1440]].flatMap(([w, h]) => [
+const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
   { caso: `Nochebuena ${w}`, dia: '2026-12-24', hora: 21, w, h },
   { caso: `31 dic ${w}`, dia: '2026-12-31', hora: 23.92, w, h },
 ]);
+/**
+ * (Campamento D) La pantalla grande (#tv) a 1920×1080, el monitor de la casa: sus momentos más cargados mientras está despierta (de 23:00
+ * a 5:00 duerme y la escena se pausa). Nodos frente a `TOPES_ANCHO` y animaciones a la vista (con «todos») frente a `TOPE_TV`.
+ */
+const TELE = [
+  { caso: 'tele día', dia: '2026-11-25', hora: 12 },
+  { caso: 'tele anochecer', dia: '2026-11-25', hora: 19 },
+  { caso: 'tele noche', dia: '2026-11-25', hora: 21 },
+  { caso: 'tele tarde de lluvia', dia: '2026-07-10', hora: 15 },
+  { caso: 'tele noche de lluvia', dia: '2026-07-10', hora: 21 },
+  { caso: 'tele Nochebuena, cena', dia: '2026-12-24', hora: 19 },
+  { caso: 'tele Nochebuena', dia: '2026-12-24', hora: 21 },
+];
 
 const puertoLibre = () => new Promise((res) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); }); });
 async function servidor(escenario) {
@@ -108,7 +123,7 @@ async function servidor(escenario) {
   throw new Error(`no arrancó el escenario ${escenario}`);
 }
 
-async function abrir(navegador, srv, dia, hora, efectos, ancho = null) {
+async function abrir(navegador, srv, dia, hora, efectos, ancho = null, tv = false) {
   const ctx = ancho ? await navegador.newContext({ viewport: { width: ancho[0], height: ancho[1] } }) : await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 664 } });
   const p = await ctx.newPage();
   await p.addInitScript(([d, h, e]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.efectos', e); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.madrugada', '0'); } catch { /* sin almacenamiento */ } }, [dia, hora, efectos]);
@@ -116,6 +131,7 @@ async function abrir(navegador, srv, dia, hora, efectos, ancho = null) {
   await p.fill('input[autocomplete="username"]', 'Daf3r');
   await p.fill('input[autocomplete="current-password"]', 'clave-de-prueba-12');
   await Promise.all([p.waitForURL('**/'), p.click('button[type=submit], .guardar')]);
+  if (tv) { await p.goto(`${srv.url}/#tv`); await p.reload({ waitUntil: 'networkidle' }); } // (D) la pantalla grande
   await p.waitForTimeout(4000); // la subida de «Tú», las letras y los osos ya en su sitio
   for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); }
   await p.evaluate(() => window.scrollTo(0, 0));
@@ -222,6 +238,15 @@ try {
     filas.push({ caso: nombre, escena: n.escena, valle: n.valle, osos: n.osos, animaciones: {}, total: 0, ancho: true });
     if (n.escena > TOPES_ANCHO[w]) fallos.push(`${nombre}: escena ${n.escena} > ${TOPES_ANCHO[w]} (tope de pantallas anchas)`);
   }
+  for (const { caso: nombre, dia, hora } of TELE.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
+    const { ctx, p } = await abrir(navegador, srv, dia, hora, 'todos', [1920, 1080], true);
+    const t = await medir(p);
+    await ctx.close();
+    const total = Object.values(t.anim).reduce((a, x) => a + x, 0);
+    filas.push({ caso: nombre, escena: t.escena, valle: t.valle, osos: t.osos, animaciones: t.anim, total, tele: true });
+    if (t.escena > TOPES_ANCHO[1920]) fallos.push(`${nombre}: escena ${t.escena} > ${TOPES_ANCHO[1920]}`);
+    if (total > TOPE_TV) fallos.push(`${nombre}: ${total} animaciones a la vista > ${TOPE_TV} (tope de la pantalla grande)`);
+  }
 } finally {
   srv.parar();
   await navegador.close();
@@ -229,6 +254,7 @@ try {
 console.log('caso               escena  valle  osos  (con «todos»)  animaciones a la vista por capa                     crear (4×)  fps (4×)');
 for (const f of filas) {
   const capas = Object.entries(f.animaciones).map(([k, v]) => `${k} ${v}`).join(' · ') + (f.ambientales ? ` (ambientales: ${f.ambientales})` : '');
+  if (f.tele) { console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)}   (pantalla grande 1920×1080, «todos»: ${f.total} animaciones a la vista, tope ${TOPE_TV})`); continue; }
   if (f.ancho) { console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)}   (pantalla ancha: solo nodos, tope ${TOPES_ANCHO[f.caso.split(' ').at(-1)]})`); continue; }
   console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)} ${String(f.escenaTodos).padStart(14)}  ${`${f.total}: ${capas}`.padEnd(50)} ${f.crearMs != null ? `${f.crearMs} ms`.padStart(10) : ''} ${f.fps != null ? String(f.fps).padStart(9) : ''}`);
 }

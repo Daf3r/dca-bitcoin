@@ -4929,3 +4929,35 @@ html[data-efectos="ninguno"] .montana svg.fiesta-capa { display: none; }
 /* El farol del hito (hasta la medianoche): colgado entre los faroles de la plaza, quieto; de noche su halo luce más. */
 .v-farol-hito .fi-halo { opacity: 0.16; }
 html[data-cielo="noche"] .v-farol-hito .fi-halo, html[data-cielo="atardecer"] .v-farol-hito .fi-halo { opacity: 0.4; }
+
+/* ================================================================ Campamento D · La pantalla grande a 1920×1080
+   Es el monitor de la casa (1920×1080): la app en ventana o a pantalla completa, y el modo pantalla grande (#tv) para mirarla de lejos.
+   - Pantalla grande desde 1600 px: los rótulos de la montaña a 26 px (`--rotulo-k`, que montana.js: etiquetar lee para que sus cajas
+     crezcan con ellos) y dos datos menos («Coinbase · hace 8 s» mientras el precio está vivo, lo ya realizado y la mini línea): de lejos
+     son ruido. Si el precio se queda viejo o no llega, su aviso sí se ve.
+   - El pueblo más grande (`--pueblo-k`, montana.js → arte-pueblo.js: sitiosPueblo): las mismas piezas y menos casas, en el mismo hueco
+     entre el borde y la salida del sendero. ×1.35 en la pantalla grande (a ×1.5 solo cabían la iglesia, la plaza y una casa delante)
+     y ×1.2 en la app desde 1800 px de ancho. El llano, el primer plano y el teleférico siguen a su escala. */
+@media (min-width: 1800px) { html:not([data-tv]) .montana { --pueblo-k: 1.2; } }
+/* La app de 1600 a 2399 px (el monitor de 1920 y su escala de Windows) toma la columna del saldo de la tele: con 8 cifras «sats» rozaba
+   la ladera a 1920 (24-pulido-final-a, «Hallazgo»). De 1100 a 1599 sigue como estaba: lo decide el dueño. */
+@media (min-width: 1600px) and (max-width: 2399px) { html:not([data-tv]) .saldo { width: min(40%, var(--medio-ancho)); } }
+@media (min-width: 1600px) {
+  html[data-tv] .montana { --rotulo-k: 1.625; --pueblo-k: 1.35; }
+  html[data-tv] :is(.campo-txt, .yo-txt) { font-size: 26px; }
+  html[data-tv] .campo-txt { stroke-width: 6px; }
+  html[data-tv] .campo-txt.cima { stroke-width: 5.5px; }
+  html[data-tv] .eco-txt { font-size: 19.5px; stroke-width: 4.5px; }
+  html[data-tv] .cotizacion[data-estado="vivo"] #precio-meta, html[data-tv] :is(.sd-r, .sd-gan .mini) { display: none; }
+}
+/* - El tope propio de la pantalla grande: 24 animaciones a la vista (el teléfono tiene 110). A 3 m no se distingue el titilar de cada
+     estrella, el temblor del reflejo del lago, el vaivén del papel picado ni el humo de cada farol: se quedan quietos o no salen; de las
+     luciérnagas quedan dos y de la lluvia seis gotas. Medido con mil compras a 1920×1080: de 41–47 a 18–24 de noche (Nochebuena,
+     lluvia, el anochecer), de 37 a 23 en una tarde de lluvia y 19 de día. Mientras la tele duerme (23:00–5:00) la escena, tapada, se pausa.
+     La fiesta de un hito (unos segundos) va aparte, como en el teléfono. */
+html[data-tv] :is(.estrella, .lago-reflejo, .pp-bandera) { animation: none !important; }
+html[data-tv] :is(.lu:not(.lu-1, .lu-2), .farol .humo, .gota:nth-child(n+7)) { display: none !important; }
+html[data-tv-duerme] .montana * { animation-play-state: paused !important; }
+/* - La deriva contra el quemado (tv.js: `derivar`, lib.js: `derivaTele`): el saldo y la cabecera se corren hasta 12 px cada 10 minutos,
+     a mitad del marco de la historia. Sin transición: el salto no se ve. Los rótulos de la montaña dejan 20 px al saldo (8 + 12). */
+html[data-tv] :is(.cima, .saldo) { translate: var(--tv-dx, 0px) var(--tv-dy, 0px); }

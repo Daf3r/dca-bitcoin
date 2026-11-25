@@ -422,7 +422,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   anchoMontana = host.clientWidth;
   altoMontana = host.clientHeight;
   const inicio = animar ? 0 : desde ?? R.sats;
-  const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - host.getBoundingClientRect().top;
+  const techo = bajoSaldo() - host.getBoundingClientRect().top;
   techoDibujado = techo;
   const fechas = Object.fromEntries(R.camino.map((h) => [h.m, h.fecha]));
   // Cuánto se reserva al pie para el botón flotante: lo dice el CSS (`--pie` en `.escena`; menos cuando la escena deja la franja
@@ -450,11 +450,15 @@ export function pintarMontana(animar, desde, festejo = null) {
 // (Campamento 20) Si el bloque del saldo crece después de dibujar la montaña (llega el precio y «ya realizaste» baja a su renglón, otra
 // letra…), la cumbre quedaría bajo el texto: se redibuja, cuando acaba la subida si estaba subiendo. Si encoge no hace falta.
 let techoDibujado = 0, ocupadaHasta = 0, redibujo = 0;
+/** Dónde acaba el bloque del saldo, sin la deriva de la tele (campamento D: se corre ±12 px y eso no debe redibujar la montaña). */
+function bajoSaldo() {
+  return document.querySelector('.saldo').getBoundingClientRect().bottom - (Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tv-dy')) || 0);
+}
 /** (59) La fiesta del hito ocupa la escena `ms` más: los redibujos que esperan (el saldo que crece, la familia, la voz) esperan también. */
 export function ocuparEscena(ms) { ocupadaHasta = Math.max(ocupadaHasta, performance.now() + ms); }
 new ResizeObserver(() => {
   if (!S.cargado || !anchoMontana) return;
-  const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - $('montana').getBoundingClientRect().top;
+  const techo = bajoSaldo() - $('montana').getBoundingClientRect().top;
   if (techo <= techoDibujado + 4) return;
   clearTimeout(redibujo);
   redibujo = setTimeout(() => pintarMontana(false), Math.max(0, ocupadaHasta - performance.now()));

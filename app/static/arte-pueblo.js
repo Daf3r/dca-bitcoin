@@ -78,14 +78,15 @@ export function cajaIglesia(x, s, u, yg, sol = 1) {
  * Dónde va cada pieza del pueblo. `limite(xa, xb)`: la y más alta (en pantalla, la menor) que pueden alcanzar los tejados entre `xa` y
  * `xb` sin acercarse al sendero ni a la salida. Se recorre de izquierda a derecha: primero la iglesia con su plaza, luego las casas (una
  * fila delante y, donde cabe, otra detrás, más chica). Lo que no cabe se encoge o no se pone; nunca se pone encima del camino.
+ * (Campamento D) `escala`: en escritorio, el pueblo entero más grande (la pantalla grande a 1080p: ×1.5): las mismas piezas, menos casas.
  */
-export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo = 0, sol = 1, ancho = null }) {
+export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo = 0, sol = 1, ancho = null, escala = 1 }) {
   const tel = forma === 'tel', esc = forma === 'esc', acostado = forma === 'acostado';
   // La escala: un rancho del frente mide unos 28 px en el teléfono, 30 en la tablet y 40 en escritorio.
-  const u = tel ? Math.max(1.4, Math.min(2.4, W / 168)) : forma === 'tab' ? 2.5 : esc ? Math.max(2.4, Math.min(3.6, H / 225)) : 1.3;
+  const k = esc ? escala : 1, u = (tel ? Math.max(1.4, Math.min(2.4, W / 168)) : forma === 'tab' ? 2.5 : esc ? Math.max(2.4, Math.min(3.6, H / 225)) : 1.3) * k;
   // La calle: en el teléfono y la tablet, a media franja del valle (delante va el primer plano); en escritorio, en el valle de la izquierda.
   const yg = esc ? H * 0.925 : acostado ? H - 12 : Math.min(H - 14, by + (H - by) * 0.75);
-  const x0 = esc ? Math.max(30, bx - (ancho ?? Math.min(560, bx - 40))) : 4;
+  const x0 = esc ? Math.max(30, bx - (ancho ?? Math.min(560 * k, bx - 40))) : 4;
   const xMax = esc ? bx - 26 : acostado ? Math.min(bx - 18, W * 0.5) : lago ? Math.min(W - 4, lago.cx - lago.rx * 0.95) : W - 4;
   // Los puntos del sendero, cada 4 px (para medir cuánto sitio deja encima).
   const muestras = [];
@@ -148,7 +149,7 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
   const anchoPlaza = tel || acostado ? 24 : 30, paso = (anchoPlaza * 0.78 - 6.6) / 5;
   const ninos = plaza ? [0, 1, 2, 3, 4, 5].map((j) => [plaza.x + (4 + j * paso) * u * plaza.s, yg + (2.6 + (j % 2) * 1.2) * u]) : [];
   // Los vecinos (osos, campamento 35) y los animales: en la calle, delante de las casas y en la plaza (`lugaresPueblo`).
-  return { u, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 12 * u), xFin + 4, yg + 4 * u] };
+  return { u, u0: u / k, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 12 * u), xFin + 4, yg + 4 * u] };
 }
 
 // ------------------------------------------------------------------------------------------------ los sitios de los vecinos

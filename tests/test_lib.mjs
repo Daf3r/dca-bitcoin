@@ -1214,6 +1214,12 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(seq.every((x, i) => i === 0 || x === (seq[i - 1] + 1) % 3), `marco: en la vuelta siguiente, el dibujo siguiente (${seq})`);
   eq(L.marcoTele(a(20, 5, 10), lis).faltaMs, 30_000, 'marco: cuánto le queda');
   eq(L.marcoTele(a(20, 5, 10), []), null, 'marco: sin dibujos listos no hay marco');
+  // (Campamento D) La deriva contra el quemado: hasta 12 px, cambia a mitad del marco (:05:20) y recorre los nueve sitios en 90 minutos
+  eq(L.derivaTele(a(20, 5, 19)), L.derivaTele(a(20, 0, 0)), 'deriva: no cambia antes de las :05:20');
+  ok(L.marcoTele(a(20, 5, 20), lis).visible && String(L.derivaTele(a(20, 5, 20))) !== String(L.derivaTele(a(20, 5, 19))), 'deriva: cambia a las :05:20, con el marco a la vista');
+  eq(L.derivaTele(a(20, 5, 20)), L.derivaTele(a(20, 15, 19)), 'deriva: se queda diez minutos');
+  const sitiosD = new Set(Array.from({ length: 9 }, (_, k) => String(L.derivaTele(a(20, 5, 30) + k * 600e3))));
+  ok(sitiosD.size === 9 && L.DERIVA_TELE.every(([x, y]) => Math.abs(x) <= 12 && Math.abs(y) <= 12), 'deriva: nueve sitios distintos, ninguno a más de 12 px');
   // Lo que enseña la tele: dormir gana; una fiesta o el atardecer ganan al marco
   const m = (o) => L.modoTele({ ahoraMs: a(20, 5, 10), hora: 20.08, listos: lis, ...o }).modo;
   eq([m({}), m({ fiesta: true }), m({ ritual: true }), m({ hora: 23.5, ahoraMs: a(23, 30, 0) }), m({ hora: 23.5, ahoraMs: a(23, 30, 0), duerme: false }), m({ hora: 23.5, ahoraMs: a(23, 30, 0), despiertaHasta: a(23, 31, 0) })],

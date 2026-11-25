@@ -2050,6 +2050,18 @@ export function marcoTele(ahoraMs, listos, { cadaMs = 600e3, duraMs = 40e3, desf
   const visible = dentro < duraMs;
   return { visible, dibujo: listos[((vuelta % n) + n) % n], vuelta, faltaMs: visible ? duraMs - dentro : cadaMs - dentro };
 }
+/** (Campamento D) Los nueve sitios de la deriva de la tele: el centro y las ocho direcciones a 12 px. */
+export const DERIVA_TELE = [[0, 0], [12, 0], [12, 12], [0, 12], [-12, 12], [-12, 0], [-12, -12], [0, -12], [12, -12]];
+/**
+ * (Campamento D) Contra el quemado de la pantalla: el saldo y la cabecera de la tele se corren hasta 12 px, un sitio cada 10 minutos.
+ * Cambia a las :05:20, :15:20… (a mitad del marco de la historia, que tapa la pantalla: el salto no se ve). Devuelve `[dx, dy]` en px.
+ * @param {number} ahoraMs
+ * @returns {number[]}
+ */
+export function derivaTele(ahoraMs) {
+  const k = Math.floor((ahoraMs - 320e3) / 600e3), n = DERIVA_TELE.length;
+  return DERIVA_TELE[((k % n) + n) % n];
+}
 /**
  * Lo que enseña la tele en este momento: `'duerme'` (de 23:00 a 5:00, si el dispositivo no lo apagó y nadie la despertó un rato con un
  * toque), `'marco'` (el dibujo de la historia, si toca y no hay fiesta ni atardecer en curso: una compra nueva siempre gana) o `'escena'`.
