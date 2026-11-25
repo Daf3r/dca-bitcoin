@@ -2274,6 +2274,19 @@ export function arbolDelPrimerDia(anios) {
 }
 /** Las iniciales de la familia, como van grabadas en la roca las noches de luna llena (idea 27): «A · D · M». */
 export const inicialesGrabadas = (iniciales) => [...String(iniciales ?? '')].filter((c) => c.trim()).join(' · ');
+/**
+ * (Campamento 42) El domingo de Pascua de un año del calendario gregoriano (AAAA-MM-DD), con el cálculo de siempre (Meeus/Jones/Butcher).
+ * De él salen el Domingo de Ramos (7 días antes), el Jueves y el Viernes Santo (3 y 2 antes) y el Sábado de Gloria (1 antes). cielo.js,
+ * que es un script clásico y no puede importarla, lleva la misma función (`libroCielo.pascua`): `test_lib` las compara.
+ * @param {number} anio
+ * @returns {string}
+ */
+export function pascua(anio) {
+  const a = anio % 19, b = Math.floor(anio / 100), c = anio % 100, d = Math.floor(b / 4), e = b % 4, g = Math.floor((8 * b + 13) / 25);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 19 * l) / 433);
+  const mes = Math.floor((h + l - 7 * m + 90) / 25), dia = (h + l - 7 * m + 33 * mes + 19) % 32;
+  return `${String(anio).padStart(4, '0')}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}
 const ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 /** La fecha de la primera compra como se graba en una piedra: «20 · XI · 2025». */
 export function fechaGrabada(f) {

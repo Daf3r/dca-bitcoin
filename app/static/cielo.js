@@ -189,7 +189,7 @@
     return false;
   }
   /** (Campamento 49, idea 275) Los actores del pueblo: con uno de ellos de principal, en pantallas anchas cabe un segundo en otra zona. */
-  const DEL_PUEBLO = new Set(['cruza', 'barre', 'gallinas', 'campana', 'palmea', 'hamaca', 'perro', 'pelota']);
+  const DEL_PUEBLO = new Set(['cruza', 'barre', 'gallinas', 'campana', 'palmea', 'hamaca', 'perro', 'pelota', 'mece']); // (42) la piñata del Día del Niño
   /**
    * (Campamento 49, idea 275, aprobada por el dueño el 25 nov 2026) El segundo principal, solo desde 1100 px (lo enseña el CSS bajo su
    * media query; en el teléfono no hay cabina): mientras el principal es del pueblo, de día (7:00–16:30), la cabina del teleférico cruza
@@ -232,6 +232,105 @@
   }
   /** (Campamento 41) El día de fiesta de la Navidad entera ('' si no lo es): `html[data-festivo]`, para lo que dura el día entero (los regalos del 25). */
   const festivo = (f) => ({ '12-24': 'nochebuena', '12-25': 'navidad', '12-31': 'fin', '01-01': 'anio', '01-06': 'reyes' })[f.slice(5)] ?? '';
+  // ---------------------------------------------------------------------------------------------------- (Campamento 42) las fiestas del año
+  /**
+   * (Campamento 42) Las costumbres del resto del año, una línea cada una: con `false`, ese día vuelve a ser un día cualquiera (su turno, su
+   * foco, su frase y lo que se mueve). Las religiosas y la de Difuntos las puede apagar la familia aquí sin tocar nada más.
+   */
+  const COSTUMBRES = {
+    ramos: true, // 149 · Domingo de Ramos: a misa con su palma (religiosa)
+    santos: true, // 150 · Jueves y Viernes Santo: el pueblo en silencio, sin juegos, sin escoba ni campana (religiosa)
+    gloria: true, // 151 · Sábado de Gloria y Domingo de Pascua: los oseznos al lago con su llanta
+    madre: true, // 153 · 10 de mayo: las mañanitas y los oseznos con su flor
+    padre: true, // 219 · 17 de junio: papás en hombros y la pelota
+    agostinas: true, // 156 · 5 y 6 de agosto: el pueblo estrena (sin rueda)
+    misaAgosto: true, // 156 · la misa de la mañana del 6 de agosto (religiosa; con `false`, el 6 por la mañana se adorna como el 5)
+    patrias: true, // 157 y 220 · el 14 y el 15 de septiembre: la antorcha, los farolitos, las banderitas (el desfile del 36 sigue igual)
+    nino: true, // 158 · 1 de octubre, Día del Niño: la piñata
+    difuntos: true, // 159 · 1 y 2 de noviembre: flores y, al anochecer del 2, las velitas (día de duelo para muchas familias)
+    inditos: true, // 160 · 12 de diciembre: los oseznos de inditos a la iglesia (religiosa)
+  };
+  /**
+   * (Campamento 42) El domingo de Pascua de un año (AAAA-MM-DD), con el cálculo gregoriano de siempre (Meeus/Jones/Butcher). Es la misma
+   * función que lib.js (`pascua`; cielo.js no puede importarla): `test_lib` comprueba que dan lo mismo en cuatro siglos.
+   */
+  function pascua(anio) {
+    const a = anio % 19, b = Math.floor(anio / 100), c = anio % 100, d = Math.floor(b / 4), e = b % 4, g = Math.floor((8 * b + 13) / 25);
+    const hh = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - hh - k) % 7, m = Math.floor((a + 11 * hh + 19 * l) / 433);
+    const mes = Math.floor((hh + l - 7 * m + 90) / 25), diaM = (hh + l - 7 * m + 33 * mes + 19) % 32;
+    return `${String(anio).padStart(4, '0')}-${String(mes).padStart(2, '0')}-${String(diaM).padStart(2, '0')}`;
+  }
+  const masDias = (f, n) => new Date(Date.parse(`${f}T12:00:00Z`) + n * 864e5).toISOString().slice(0, 10);
+  /**
+   * (Campamento 42) La fiesta del resto del año de una fecha ('' si no hay o si su costumbre está apagada): Semana Santa (Ramos, Jueves y
+   * Viernes Santo, Sábado de Gloria, Pascua: la fecha sale de `pascua`), el 10 de mayo, el 17 de junio, el 5 y el 6 de agosto, el 14 y el
+   * 15 de septiembre, el 1 de octubre, el 1 y el 2 de noviembre y el 12 de diciembre. La Navidad (41) va aparte (`festivo`).
+   */
+  function fiestaDelAnio(f) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f ?? '')) return '';
+    const md = f.slice(5), p = pascua(Number(f.slice(0, 4))), C = COSTUMBRES;
+    if (f === masDias(p, -7)) return C.ramos ? 'ramos' : '';
+    if (f === masDias(p, -3) || f === masDias(p, -2)) return C.santos ? (f === masDias(p, -3) ? 'jueves' : 'viernes') : '';
+    if (f === masDias(p, -1) || f === p) return C.gloria ? (f === p ? 'pascua' : 'gloria') : '';
+    const fijas = { '05-10': ['madre', C.madre], '06-17': ['padre', C.padre], '08-05': ['agosto5', C.agostinas], '08-06': ['agosto6', C.agostinas], '09-14': ['antorcha', C.patrias], '09-15': ['patria', C.patrias], '10-01': ['nino', C.nino], '11-01': ['difuntos1', C.difuntos], '11-02': ['difuntos2', C.difuntos], '12-12': ['inditos', C.inditos] };
+    const x = fijas[md];
+    return x?.[1] ? x[0] : '';
+  }
+  /**
+   * (Campamento 42, ideas 149–160 y 219–220) El guion de cada fiesta del resto del año: sus turnos pasan delante de los de un día
+   * cualquiera (también un domingo o un sábado, como en la Navidad); donde el diseño dice «lo de siempre», '' (corre el turno normal).
+   * Va aparte de `turnoFiesta` a propósito: las luces del pueblo y la puerta de la iglesia siguen su horario de siempre (solo las noches
+   * de la Navidad se quedan encendidas) y el foco de la Navidad no se entera de estas fechas.
+   */
+  function turnoDelAnio(f, h) {
+    const fa = fiestaDelAnio(f);
+    if (!fa || h >= 22 || h < 5) return '';
+    if (fa === 'ramos') return h >= 7 && h < 10 ? 'sr-ramos' : h >= 10 && h < 11.5 ? 'sr-vuelta' : '';
+    if (fa === 'jueves' || fa === 'viernes') return h >= 7 && h < 20 ? 'ss-silencio' : '';
+    if (fa === 'gloria' || fa === 'pascua') return fa === 'pascua' && h < 10 ? '' : h >= 7 && h < 11.5 ? 'sg-lago' : h >= 11.5 && h < 16 ? 'sg-solo' : h >= 16 && h < 17.75 ? 'sg-vuelven' : '';
+    if (fa === 'madre') return h >= 5.5 && h < 7 ? 'm10-mananitas' : h >= 7 && h < 11.5 ? 'm10-flores' : h >= 11.5 && h < 14 ? 'm10-mesa' : h >= 14 && h < 17.75 ? 'm10-visita' : '';
+    if (fa === 'padre') return h >= 14 && h < 17.75 ? 'p17-hombros' : '';
+    if (fa === 'agosto5' || fa === 'agosto6') {
+      if (fa === 'agosto6' && COSTUMBRES.misaAgosto && h >= 7.5 && h < 10) return 'ag-misa';
+      return h >= 7 && h < 11.5 ? 'ag-adorna' : h >= 11.5 && h < 14 ? 'ag-almuerzo' : h >= 14 && h < 17.75 ? 'ag-elotes' : h >= 17.75 ? 'ag-plaza' : '';
+    }
+    if (fa === 'antorcha') return h >= 7 && h < 11.5 ? 'p14-hacen' : h >= 16 && h < 17.75 ? 'p14-antorcha' : h >= 17.75 && h < 20 ? 'p14-farolitos' : '';
+    if (fa === 'patria') return h < 7 ? 'p15-banderitas' : h >= 12 && h < 15 ? 'p15-plaza' : h >= 15 && h < 17.75 ? 'p15-guarda' : '';
+    if (fa === 'nino') return h >= 7 && h < 11.5 ? 'n1-cuelga' : h >= 11.5 && h < 15 ? 'n1-plaza' : h >= 15 && h < 17 ? 'n1-pinata' : h >= 17 && h < 20 ? 'n1-dulces' : '';
+    if (fa === 'difuntos1' || fa === 'difuntos2') return h >= 6 && h < 11.5 ? 'd-flores' : h >= 11.5 && h < 15 ? 'd-vacio' : h >= 15 && h < 17.75 ? 'd-vuelven' : fa === 'difuntos2' && h >= 17.75 ? 'd-velitas' : '';
+    if (fa === 'inditos') return h >= 6 && h < 11.5 ? 'i12-iglesia' : h >= 11.5 && h < 15 ? 'i12-plaza' : h >= 15 && h < 17.75 ? 'i12-vuelta' : '';
+    return '';
+  }
+  /**
+   * (Campamento 42) Lo que se mueve en las fiestas del año: casi siempre lo de un día cualquiera (null). Jueves y Viernes Santo no se
+   * barre, no se juega a la pelota y la campana de las doce calla (`fiesta`: nadie del pueblo se mueve; los azacuanes, si es su día,
+   * vuelan igual); el anochecer del 2 de noviembre, con las velitas, todo quieto (las luciérnagas descansan); y el 1 de octubre, de
+   * 15:00 a 17:00, la piñata se mece (`mece`, en su capa, en lugar de la pelota).
+   */
+  function mueveAnio(f, h) {
+    const fa = fiestaDelAnio(f);
+    if ((fa === 'jueves' || fa === 'viernes') && ((h >= 7 && h < 8) || (h >= 12 && h < 12 + 5 / 60) || (h >= 15 && h < 16.5))) return azacuanes(f) && h >= 8 && h < 16 ? null : 'fiesta';
+    if (fa === 'difuntos2' && h >= 17.75 && h < 22) return 'fiesta';
+    if (fa === 'nino' && h >= 15 && h < 17) return 'mece';
+    return null;
+  }
+  /** (Campamento 42) Lo que cuenta la línea de hoy de cada fiesta del año (una frase, sin «tú» y sin mandar nada). */
+  const FRASE_ANIO = {
+    ramos: 'Es Domingo de Ramos: por la mañana los vecinos van a misa con su palma.',
+    jueves: 'Es Jueves Santo: el pueblo está en silencio.',
+    viernes: 'Es Viernes Santo: el pueblo está en silencio.',
+    gloria: 'Es Sábado de Gloria: los oseznos se van al lago con su llanta.',
+    pascua: 'Es Domingo de Pascua: después de misa, los oseznos van al lago con su llanta.',
+    madre: 'Es 10 de mayo: en el pueblo hay mañanitas y oseznos con su flor.',
+    padre: 'Es Día del Padre: por la tarde hay oseznos en hombros en el pueblo.',
+    agosto5: 'Son las fiestas de agosto: el pueblo se adorna y por la tarde hay elotes locos.',
+    agosto6: 'Es 6 de agosto, día del Divino Salvador del Mundo: fiesta en el pueblo.',
+    antorcha: 'Es 14 de septiembre: llega la antorcha y al anochecer salen los farolitos.',
+    nino: 'Es Día del Niño: por la tarde hay piñata en la plaza.',
+    difuntos1: 'Es 1 de noviembre: los vecinos llevan flores y coronas de papel.',
+    difuntos2: 'Es Día de los Difuntos: flores por la mañana y velitas al anochecer.',
+    inditos: 'Es 12 de diciembre: los oseznos van a la iglesia vestidos de inditos.',
+  };
   /**
    * (Campamento 35, idea 102) El turno del Pueblo de los Osos: quién está en la calle según la hora y el día (El Salvador). Amanece
    * (5:00–7:00: el que se estira, el panadero, la que barre), mañana (hasta las 11:30; entre semana los oseznos están en la escuela,
@@ -251,6 +350,10 @@
     // una estampa de 18:00 a 1:00, `nochebuena`).
     const fi = turnoFiesta(md, h);
     if (fi) return fi;
+    // (Campamento 42) Las fiestas del resto del año (Semana Santa, el 10 de mayo, agosto, septiembre, el Día del Niño, Difuntos, el 12 de
+    // diciembre): su guion pasa delante del de un día cualquiera (también de la misa del domingo y del sábado de plaza).
+    const fa = turnoDelAnio(f, h);
+    if (fa) return fa;
     // (Campamento 40) El día entero del pueblo: antes del alba el panadero (4:30, idea 140), a mediodía la tortillera (11:30, 136) y,
     // los días de escuela, la salida (12:00–12:30, 137), la siesta en hamaca (12:30, 138), la vuelta del cantón (16:00, 144: también
     // es cuando se recoge la ropa tendida, 143) y la fresca (20:00–22:00, 139). Cada cambio de turno rehace solo `.v-vecinos`.
@@ -335,6 +438,8 @@
   const FOCOS = [
     { id: 'navidad', rareza: 'anio', delDia: (f) => Boolean(festivo(f)), cuando: (f, h) => turnoFiesta(f.slice(5), h) !== '' || mueveFiesta(f, h) !== null, mueve: mueveFiesta, pesa: { nodos: 0, anim: 0 }, frase: (f) => NAVIDAD_FRASE[f.slice(5)] ?? null },
     { id: 'desfile', rareza: 'anio', delDia: (f) => f.slice(5) === '09-15', cuando: (f, h) => f.slice(5) === '09-15' && h >= 7 && h < 12, pesa: { nodos: 0, anim: 0 }, frase: () => 'Es 15 de septiembre: por la mañana el pueblo tiene su desfile.' },
+    // (Campamento 42) Las fiestas del resto del año: su guion por turnos y, si algo se mueve distinto, su franja (`mueveAnio`).
+    { id: 'fiestas', rareza: 'anio', delDia: (f) => Boolean(fiestaDelAnio(f)), cuando: (f, h) => turnoDelAnio(f, h) !== '' || mueveAnio(f, h) !== null, mueve: mueveAnio, pesa: { nodos: 0, anim: 0 }, frase: (f) => FRASE_ANIO[fiestaDelAnio(f)] ?? null },
     { id: 'cruz', rareza: 'anio', delDia: (f) => f.slice(5) === '05-03', cuando: (f) => f.slice(5) === '05-03', pesa: { nodos: 0, anim: 0 }, frase: () => 'Es Día de la Cruz: en el pueblo hay una cruz adornada con frutas.' },
     { id: 'zompopos', rareza: 'anio', delDia: zompopos, cuando: (f, h) => zompopos(f) && h >= 7.5 && h < 10, mueve: () => 'zompopos', pesa: { nodos: 0, anim: 0 }, frase: (f) => (f.slice(5) === '05-15' ? 'Empieza la semana de los zompopos de mayo: por las mañanas salen en el valle.' : null) },
     { id: 'azacuanes', rareza: 'anio', delDia: azacuanes, cuando: (f, h) => azacuanes(f) && h >= 8 && h < 16, mueve: () => 'azacuanes', pesa: { nodos: 0, anim: 0 }, frase: (f) => (['10-10', '04-01'].includes(f.slice(5)) ? 'Llegan los azacuanes: estos días pasan sobre el valle a mediodía.' : null) },
@@ -349,7 +454,9 @@
    * Cruz: manda la fiesta.
    * Los zompopos y los azacuanes son de día y la luna de noche: no se pisan. Una prueba recorre el año y falla con un choque no declarado.
    */
-  const CHOQUES = [['navidad', 'luna'], ['posada', 'luna'], ['cruz', 'luna']];
+  // (Campamento 42) Las fiestas del año caen a veces en luna llena (el anochecer del 14 de septiembre, el del 2 de noviembre, las noches
+  // de agosto) y Semana Santa, a veces, en los días de azacuanes (del 1 al 20 de abril): manda la fiesta, y los azacuanes vuelan igual.
+  const CHOQUES = [['navidad', 'luna'], ['posada', 'luna'], ['cruz', 'luna'], ['fiestas', 'luna'], ['fiestas', 'azacuanes']];
   function diaAntes(f) { return new Date(Date.parse(`${f}T12:00:00Z`) - 864e5).toISOString().slice(0, 10); }
   /**
    * (Campamento 51, idea 227) La rutina del día, cuando no hay nada raro: a quién se fija uno hoy en el pueblo. Una baraja fija de seis
@@ -468,6 +575,7 @@
     // pelota llevan además la abuela de la ronda (118: otra capa, en la misma fase, nunca a la vez). El que camina al cambiar de turno
     // (204) no es del calendario: unos segundos, unas diez veces al día, es el actor principal (`data-camina`; lo demás del pueblo espera).
     cruza: { capas: 1, anim: 1 }, palmea: { capas: 1, anim: 1 }, campana: { capas: 1, anim: 1 }, hamaca: { capas: 1, anim: 1 }, camina: { capas: 1, anim: 1 },
+    mece: { capas: 1, anim: 1 }, // (Campamento 42) la piñata del Día del Niño, en su capa, de 15:00 a 17:00 (en lugar de la pelota)
     // (Campamento 59) La fiesta del hito: no es del calendario (no sale en el mapa del día), sale al cruzar una etapa por primera vez o el
     // día del halving, y mientras dura (30 s como mucho) es el actor principal: la campana, los farolitos y cada cohete, cada uno en su
     // capa y con una animación; en el clímax, los farolitos y hasta cinco cohetes (tres en el teléfono). Lo ambiental espera.
@@ -657,6 +765,6 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
+  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, pascua, fiestaDelAnio, turnoDelAnio, mueveAnio, costumbres: COSTUMBRES, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
     director, foco, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

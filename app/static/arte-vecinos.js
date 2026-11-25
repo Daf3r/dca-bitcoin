@@ -220,9 +220,28 @@ const TIPOS = {
   // (201) la estrellita del osezno titila: la chispa, a su capa (un ambiental); el osezno con su varita se queda
   oseznoLuzSin: (r) => TIPOS.oseznoLuz(r).slice(0, -1),
   estrellita: (r) => TIPOS.oseznoLuz(r).slice(-1),
+  // ---- (Campamento 42) Las fiestas del resto del año: los personajes de las maquetas aprobadas (prototipo-vida4.patch), con las mismas
+  // piezas y los mismos tonos (0 nodos: van en los trazos de siempre).
+  ramos: (r) => [...cuerpo(), ...brazos(0, 1), ...vestido(r), ...cabeza(), // (149) con su palma
+    ['palma', p([2.0, -5.2], [2.4, -5.2], [3.9, -11.6], [3.0, -12.2], [2.5, -9.2], [1.4, -12.0], [0.7, -11.3], [1.9, -8.2])], ['r0', p([2.3, -9.0], [4.6, -10.4], [4.3, -9.6])]],
+  oseznoLlanta: () => [...cuerpo(), ...brazos(1, 1), ...cabeza(0, 0, false), ['rasgo', aro(0, -2.4, 3.1, 1.05)]], // (151) al lago con su llanta
+  guitarra: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ...sombrero(), ['palma', e(0.6, -2.4, 1.5, 1.2)], ['palma', e(-0.4, -3.1, 1.0, 0.85)], ['rasgo', e(0.5, -2.5, 0.42)], ['rasgo', p([-0.6, -3.5], [-0.3, -3.8], [-3.9, -5.6], [-4.1, -5.2])], ['pelo2', e(1.6, -2.4, 0.55, 0.45)]], // (153) las mañanitas
+  flores: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...cabeza(), // (153, 159) con su ramo
+    ['r0', p([0.5, -3.7], [1.2, -3.7], [1.5, -1.9], [1.1, -1.9])], ['r1', e(0.25, -4.15, 0.62)], ['r2', e(1.35, -4.3, 0.62)], ['r1', e(0.85, -4.85, 0.5)], ['pelo2', e(1.0, -3.2, 0.6, 0.45)]],
+  corona: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ['r2', aro(0, -2.3, 1.9, 0.6)], ['r1', e(-1.6, -2.3, 0.45)], ['r1', e(1.6, -2.3, 0.45)], ['r1', e(0, -3.9, 0.45)], ['r1', e(0, -0.7, 0.45)]], // (159) la corona de papel
+  velita: () => [['pelo2', p([-0.3, -1.7], [0.3, -1.7], [0.3, 0], [-0.3, 0])], ['brasa', e(0, -2.25, 0.5, 0.7)]], // (159) frente a cada casa, el anochecer del 2
+  oseznoElote: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['palma', p([2.1, -6.6], [2.35, -6.6], [2.35, -5.4], [2.1, -5.4])], ['r2', e(2.22, -7.6, 0.55, 1.05)]], // (156, 220) el elote loco
+  oseznoFarol: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), // (157) el farolito del 14 de septiembre
+    ['rasgo', p([2.15, -8.6], [2.35, -8.6], [2.35, -5.6], [2.15, -5.6])], ['brasa', p([1.35, -10.8], [3.15, -10.8], [3.4, -8.6], [1.1, -8.6])], ['r1', p([1.2, -11.3], [3.3, -11.3], [3.15, -10.8], [1.35, -10.8])]],
+  antorcha: (r) => [...cuerpo(), ...brazos(0, 1), ...camisa(r), ...cabeza(), ['palma', p([2.0, -8.6], [2.5, -8.6], [2.4, -5.2], [2.1, -5.2])], ['brasa', p([1.5, -8.6], [3.0, -8.6], [2.7, -9.8], [2.25, -11.0], [1.8, -9.7])]], // (157) la antorcha
+  pinata: () => [['rasgo', p([-0.1, -21], [0.1, -21], [0.1, -14.2], [-0.1, -14.2])], ['r2', p([0, -15.6], [0.8, -13.6], [-0.8, -13.6])], ['r2', p([0, -9.2], [0.8, -11.2], [-0.8, -11.2])], // (158) la piñata, colgada
+    ['r0', p([-3.2, -12.4], [-1.2, -13.2], [-1.2, -11.6])], ['r0', p([3.2, -12.4], [1.2, -13.2], [1.2, -11.6])], ['r1', e(0, -12.4, 1.6)], ['pelo2', e(0, -12.4, 0.6)]],
+  vendado: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), // (158) el vendado, con su palo
+    ['r1', p([-2.3, -6.85], [2.3, -6.85], [2.3, -6.2], [-2.3, -6.2])], ['palma', p([1.9, -10.2], [2.3, -10.3], [2.6, -5.0], [2.2, -5.0])]],
+  oseznoIndito: () => [...cuerpo(), ...brazos(), ['palma', camisa('x')[0][1]], ['r1', p([-1.1, -4.5], [1.1, -4.5], [0, -3.3])], ...cabeza(0, 0, false), ...sombrero()], // (160) cotón de manta, pañuelo rojo y sombrerito
 };
 /** (Campamento 41) Lo que no es un vecino sino una cosa en el suelo: sin sombra de pie, no cuenta entre los ocho y no aparta a nadie. */
-export const COSAS = new Set(['pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola']);
+export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola']);
 /** (Campamento 40) Sin sombra de pie, pero sí es un vecino (cuenta y aparta a los demás): la hamaca, con sus postes y el que duerme en ella. */
 const SIN_PIE = new Set(['hamaca', 'hamacaPostes', 'hamacaSola', 'tortilleraManos', 'estrellita']); // (49) las partes que van a su capa no repiten la sombra
 export const PERSONAJES = Object.keys(TIPOS);
@@ -527,6 +546,58 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   else if (t === 'e1-barre') { en('corredor', 1, 'escoba', { r: 0 }); en('plaza', 2, 'polvora', {}); en('corredor', 0, 'abuela', { r: 2 }); }
   else if (t === 'e1-visitas') { en('calle', 0, 'vecina', { r: 0 }); en('calle', 0, 'osezno', { s: OSEZNO, r: 1, dx: 3.1 }); en('calle', 1, 'vecino', { r: 2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'vecina', { r: 1, f: -1 }); oseznos(2); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); }
   else if (t === 'e6-guarda') { en('plaza', 0, 'escalera', { r: 0, dx: -2 }); en('plaza', 2, 'oseznoArriba', { s: OSEZNO, r: 1, f: -1 }); en('plaza', 3, 'osezno', { s: OSEZNO, r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'vendedora', { r: 0 }); }
+  // ---- (Campamento 42) Las fiestas del resto del año (cielo.js: `turnoDelAnio`): cada fecha, su guion; otro reparto de los mismos osos y
+  // de los mismos trazos (0 nodos). La figura de cada turno va la primera (con ocho como mucho, lo último es lo que no sale). Las
+  // religiosas, sobrias: de espaldas camino de la iglesia, el padre a la puerta, como la misa del domingo; nada de procesiones.
+  // Semana Santa (149–151): Ramos con su palma; Jueves y Viernes Santo, pocos, de espaldas frente a la iglesia; Gloria, al lago con la llanta.
+  else if (t === 'sr-ramos') { en('atrio', 0, 'ramos', { r: 0 }); en('atrio', 3, 'cura', {}); en('atrio', 1, 'ramos', { r: 2, f: -1 }); en('atrio', 4, 'ramos', { r: 1 }); en('calle', 0, 'ramos', { r: 2 }); en('calle', 1, 'ramos', { r: 0, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('plaza', 2, 'oseznoArriba', { s: OSEZNO, r: 1 }); }
+  else if (t === 'sr-vuelta') { en('calle', 0, 'ramos', { r: 0 }); en('calle', 0, 'osezno', { s: OSEZNO, r: 1, dx: 3.4 }); en('calle', 1, 'ramos', { r: 2, f: -1 }); en('corredor', 1, 'ramos', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 3, 'sacristan', { r: 'rasgo' }); }
+  else if (t === 'ss-silencio') { en('atrio', 0, 'espaldas', { r: 0 }); en('atrio', 1, 'espaldas', { r: 2 }); en('atrio', 4, 'espaldas', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'sentado', { r: 2, f: -1 }); }
+  else if (t === 'sg-lago') { for (const i of [0, 2, 4]) en('plaza', i, 'oseznoLlanta', { s: OSEZNO, f: i % 4 ? -1 : 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); }
+  else if (t === 'sg-solo') { en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 3, 'sacristan', { r: 'rasgo' }); }
+  else if (t === 'sg-vuelven') { en('calle', 0, 'oseznoLlanta', { s: OSEZNO }); en('calle', 1, 'oseznoLlanta', { s: OSEZNO, f: -1 }); en('calle', 0, 'vecina', { r: 1, dx: 4 }); en('calle', 1, 'vecino', { r: 2, dx: -4, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 0 }); }
+  // El 10 de mayo (153): las mañanitas con guitarra frente a una casa, los oseznos con su flor, la mesa puesta, la abuela con visita.
+  else if (t === 'm10-mananitas') { en('calle', 0, 'guitarra', { r: 0 }); en('calle', 0, 'oseznoFlores', { s: OSEZNO, r: 1, dx: 4.2 }); en('calle', 0, 'oseznoFlores', { s: OSEZNO, r: 2, dx: 7.2 }); en('corredor', 1, 'vecina', { r: 1, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); }
+  else if (t === 'm10-flores') { for (const i of [0, 2, 4]) en('plaza', i, 'oseznoFlores', { s: OSEZNO, r: i, f: i ? -1 : 1 }); en('corredor', 1, 'escoba', { r: 1, actor: 'barre' }); en('calle', 0, 'oseznoFlores', { s: OSEZNO, r: 1 }); en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); }
+  else if (t === 'm10-mesa') { en('calle', 0, 'flores', { r: 0, dx: -6.5 }); en('calle', 0, lug.forma === 'tel' || lug.forma === 'acostado' ? 'mesaCorta' : 'mesa', { dx: 3 }); en('calle', 0, 'sentado', { r: 1, dx: 12.5, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); for (const i of [0, 2, 4]) en('plaza', i, 'oseznoFlores', { s: OSEZNO, r: i, f: i ? -1 : 1 }); en('atrio', 0, 'flores', { r: 1 }); }
+  else if (t === 'm10-visita') { en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 0, 'flores', { r: 1, dx: 4.6, f: -1 }); en('corredor', 1, 'sentado', { r: 2 }); en('calle', 0, 'vecino', { r: 0 }); oseznos(2); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); }
+  // El Día del Padre (219): por la tarde, papás con su osezno en hombros y la pelota en la plaza.
+  else if (t === 'p17-hombros') { en('calle', 0, 'hombros', { r: 0 }); en('atrio', 0, 'hombros', { r: 1, f: -1 }); en('plaza', 1, 'vecino', { r: 2 }); en('plaza', 3, 'osezno', { s: OSEZNO, r: 1, f: -1 }); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vecino', { r: 2, f: -1 }); en('calle', 1, 'osezno', { s: OSEZNO, r: 0, dx: -3.4 }); }
+  // El 5 y el 6 de agosto (156), sin rueda: el pueblo se adorna, la misa del 6, el almuerzo en la calle, los elotes locos y la plaza llena.
+  else if (t === 'ag-adorna') { en('calle', 1, 'escalera', { r: 0 }); en('corredor', 1, 'escoba', { r: 1, actor: 'barre' }); en('atrio', 0, 'vendedora', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('plaza', 4, 'oseznoArriba', { s: OSEZNO, r: 1 }); en('plaza', 5, 'osezno', { s: OSEZNO, r: 0, dx: 0.8 }); }
+  else if (t === 'ag-misa') { en('atrio', 3, 'cura', {}); for (const [i, r] of [[0, 0], [1, 2], [4, 1]]) en('atrio', i, 'espaldas', { r }); en('atrio', 2, 'vecino', { r: 0 }); en('atrio', 2, 'osezno', { s: OSEZNO, r: 1, dx: 3.1 }); en('corredor', 0, 'abuela', { r: 2 }); }
+  else if (t === 'ag-almuerzo') { en('calle', 0, 'sentado', { r: 0, dx: -6.5 }); en('calle', 0, lug.forma === 'tel' || lug.forma === 'acostado' ? 'mesaCorta' : 'mesa', { dx: 3 }); en('calle', 0, 'sentado', { r: 1, dx: 12.5, f: -1 }); en('calle', 1, 'vecina', { r: 2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); oseznos(2); }
+  else if (t === 'ag-elotes') { en('plaza', 0, 'oseznoElote', { s: OSEZNO, r: 0 }); en('plaza', 2, 'oseznoElote', { s: OSEZNO, r: 2, f: -1 }); en('plaza', 4, 'vendedora', { r: 1, f: -1 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecino', { r: 0 }); en('calle', 1, 'vecina', { r: 2, f: -1 }); }
+  else if (t === 'ag-plaza') { en('plaza', 1, 'oseznoElote', { s: OSEZNO, r: 0 }); en('calle', 0, 'pupusera', { r: 0 }); en('plaza', 0, 'vecina', { r: 0 }); en('plaza', 2, 'vecino', { r: 1, f: -1 }); en('plaza', 4, 'vecina', { r: 2 }); en('plaza', 3, 'osezno', { s: OSEZNO, r: 2, f: -1 }); en('calle', 0, 'vecino', { r: 2, dx: 6.2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); }
+  // El 14 de septiembre (157): los oseznos hacen sus farolitos, llega la antorcha y, al anochecer, todos con su farolito. El 15 (220),
+  // además del desfile: se cuelgan las últimas banderitas, la plaza llena con elotes y el abanderado se lleva la bandera en alto.
+  else if (t === 'p14-hacen') { for (let i = 0; i < 4; i++) en('plaza', i, 'oseznoFarol', { s: OSEZNO, r: i, f: i % 2 ? -1 : 1 }); en('plaza', 5, 'maestra', { r: 2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); }
+  else if (t === 'p14-antorcha') { en('calle', 0, 'antorcha', { r: 0 }); en('calle', 1, 'vecina', { r: 1, f: -1 }); en('plaza', 1, 'oseznoArriba', { s: OSEZNO, r: 0 }); en('plaza', 2, 'osezno', { s: OSEZNO, r: 1 }); en('plaza', 3, 'oseznoArriba', { s: OSEZNO, r: 2, f: -1 }); en('atrio', 0, 'vecino', { r: 2 }); en('corredor', 0, 'abuela', { r: 2 }); }
+  else if (t === 'p14-farolitos') { for (let i = 0; i < 5; i++) en('plaza', i, 'oseznoFarol', { s: OSEZNO, r: i, f: i % 2 ? -1 : 1 }); en('calle', 0, 'antorcha', { r: 0 }); en('calle', 1, 'vecina', { r: 1, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); }
+  else if (t === 'p15-banderitas') { en('calle', 1, 'escalera', { r: 0 }); en('corredor', 0, 'estira', { r: 2 }); en('calle', 0, 'vecino', { r: 1 }); en('atrio', 3, 'sacristan', { r: 'rasgo' }); }
+  else if (t === 'p15-plaza') { en('plaza', 0, 'oseznoElote', { s: OSEZNO, r: 0 }); en('plaza', 2, 'oseznoElote', { s: OSEZNO, r: 2, f: -1 }); en('plaza', 4, 'vendedora', { r: 0, f: -1 }); en('plaza', 1, 'vecino', { r: 2 }); en('plaza', 3, 'osezno', { s: OSEZNO, r: 1 }); en('atrio', 0, 'vecina', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'campesino', { r: 1, f: -1 }); }
+  else if (t === 'p15-guarda') { en('calle', 1, 'abanderado', { r: 0, f: -1 }); en('atrio', 0, 'vecina', { r: 2 }); en('atrio', 0, 'osezno', { s: OSEZNO, r: 1, dx: 3 }); en('plaza', 3, 'oseznoArriba', { s: OSEZNO, r: 0 }); en('plaza', 5, 'vecino', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); }
+  // El Día del Niño (158): por la mañana un vecino en su escalera cuelga la piñata; a las 15:00, el vendado y todos alrededor (la piñata
+  // se mece en su capa: `mece`); al anochecer ya no está y los oseznos se reparten los dulces.
+  else if (t === 'n1-cuelga') { en('plaza', 2, 'pinata', { dx: 1.6 }); en('plaza', 4, 'escalera', { r: 0, dx: 1 }); en('calle', 0, 'vecina', { r: 1 }); en('plaza', 0, 'oseznoArriba', { s: OSEZNO, r: 0 }); en('plaza', 1, 'osezno', { s: OSEZNO, r: 2 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'vendedora', { r: 2 }); }
+  else if (t === 'n1-plaza') { en('plaza', 2, 'pinata', { dx: 1.6 }); oseznos(5); en('calle', 0, 'vecina', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'vecino', { r: 0 }); }
+  else if (t === 'n1-pinata') { en('plaza', 2, 'pinata', { dx: 1.6, actor: 'mece', giro: -21 }); en('plaza', 1, 'vendado', { s: OSEZNO, r: 0 }); for (const i of [0, 3, 4, 5]) en('plaza', i, i % 2 ? 'oseznoArriba' : 'osezno', { s: OSEZNO, r: i, f: i < 2 ? 1 : -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'vecino', { r: 2, f: -1 }); }
+  else if (t === 'n1-dulces') { for (let i = 0; i < 4; i++) en('plaza', i, 'oseznoDulce', { s: OSEZNO, r: i, f: i % 2 ? -1 : 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'vecino', { r: 2, f: -1 }); }
+  // Difuntos (159), con cuidado: flores y coronas de papel de colores camino de enflorar, el pueblo medio vacío a mediodía y, al
+  // anochecer del 2, una velita frente a cada casa. Sin cementerio, sin cruces y sin luto.
+  else if (t === 'd-flores') { en('calle', 0, 'flores', { r: 0 }); en('calle', 0, 'corona', { r: 2, dx: 5.6 }); en('atrio', 0, 'flores', { r: 1, f: -1 }); en('atrio', 4, 'vecino', { r: 0 }); en('atrio', 4, 'oseznoFlores', { s: OSEZNO, r: 1, dx: 3.1 }); en('corredor', 0, 'abuela', { r: 2 }); }
+  else if (t === 'd-vacio') { en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'sentado', { r: 2, f: -1 }); }
+  else if (t === 'd-vuelven') { en('calle', 0, 'corona', { r: 2 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 0, 'flores', { r: 1, dx: 4.6, f: -1 }); en('calle', 1, 'vecino', { r: 0, f: -1 }); en('calle', 1, 'osezno', { s: OSEZNO, r: 1, dx: -3.4 }); }
+  else if (t === 'd-velitas') {
+    for (let i = 0; i < (lug.corredor?.length ?? 0); i++) en('corredor', i, 'velita', { dx: -3.6 });
+    for (const i of [0, 1]) en('calle', i, 'velita', { dx: i ? 3 : -2.6 });
+    en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'sentado', { r: 0, dx: 4 }); en('atrio', 0, 'corona', { r: 2 }); en('calle', 1, 'vecina', { r: 1, f: -1 });
+  }
+  // El 12 de diciembre (160): los oseznos de inditos (sombrerito, cotón de manta y pañuelo rojo) van a la iglesia, juegan así en la plaza y
+  // vuelven a casa; el padre a la puerta, como la misa del domingo.
+  else if (t === 'i12-iglesia') { en('atrio', 0, 'oseznoIndito', { s: OSEZNO }); en('atrio', 3, 'cura', {}); for (const i of [1, 4]) en('atrio', i, 'oseznoIndito', { s: OSEZNO, f: -1 }); en('atrio', 0, 'vecina', { r: 1, dx: 3.4 }); en('atrio', 2, 'vecino', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'oseznoIndito', { s: OSEZNO }); en('calle', 0, 'vecina', { r: 2, dx: 3.4 }); }
+  else if (t === 'i12-plaza') { for (let i = 0; i < 4; i++) en('plaza', i, 'oseznoIndito', { s: OSEZNO, f: i % 2 ? -1 : 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('atrio', 0, 'vendedora', { r: 0 }); }
+  else if (t === 'i12-vuelta') { en('calle', 0, 'oseznoIndito', { s: OSEZNO }); en('calle', 1, 'oseznoIndito', { s: OSEZNO, f: -1 }); en('calle', 0, 'vecina', { r: 2, dx: 3.4 }); en('calle', 1, 'vecino', { r: 0, dx: -3.6, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'oseznoIndito', { s: OSEZNO }); }
   // 'duerme' (22:00–5:00): nadie en la calle (103).
   // ---- (Campamento E) El ánimo del valle según la semana del precio (lib.js: `animoDelValle`): vestuario y reparto del turno que toque,
   // nunca un actor. Solo en los turnos de un día cualquiera (no el sábado de plaza, la misa, el desfile ni la Navidad entera, que mandan)
