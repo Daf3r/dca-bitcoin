@@ -252,6 +252,7 @@ const PESOS = [
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
+  ['campamento 52: vecinos con oficio', 111], // 22 comprobaciones (medido el 25 nov 2026)
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
@@ -7464,8 +7465,9 @@ try {
     try {
       for (const [w, h] of [[390, 844], [1440, 900]]) {
         // Un miércoles de octubre (escuela): por la mañana sin oseznos; por la tarde, los cinco con su pelota; de noche, nadie.
-        // (40) Al amanecer, en el teléfono, puede bajar además la del cantón por el camino real (144): hasta cuatro.
-        for (const [hora, turno, min, max] of [[6, 'amanece', 2, 4], [9, 'manana', 3, 5], [12.5, 'siesta', 2, 3], [15, 'tarde', 6, 8], [19, 'pupusas', 3, 5], [23, 'duerme', 0, 0]]) {
+        // (40) Al amanecer, en el teléfono, puede bajar además la del cantón por el camino real (144): hasta cuatro. (52) Y el sacristán
+        // en la puerta de la iglesia: hasta cinco.
+        for (const [hora, turno, min, max] of [[6, 'amanece', 2, 5], [9, 'manana', 3, 5], [12.5, 'siesta', 2, 3], [15, 'tarde', 6, 8], [19, 'pupusas', 3, 5], [23, 'duerme', 0, 0]]) {
           const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs('2026-10-14', { 'libro.efectos': 'esenciales' }));
           await cerrar(t.p);
           const r = await pueblo(t.p);
@@ -7646,7 +7648,7 @@ try {
       const t = await entrar(navegador, mil, ADMIN, { hora: 21, viewport: { width: 390, height: 664 } }, conLs('2026-12-24', 'esenciales'));
       await cerrar(t.p);
       const r = await pieza(t.p);
-      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 908, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030; desde el 51, +3 de las capas ambientales), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
+      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 910, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030; desde el 51, +3 de las capas ambientales; desde el 52, +1 el portal de la iglesia en su trazo), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
       // A las 23:45 (cielo.js avisa con «libro:cohetes») se ponen; pasada la medianoche, el día cambia y se redibuja con ellos; a las 0:45, fuera.
       const paso = (d, h) => t.p.evaluate(async ([dd, hh]) => { localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400)); }, [d, h]);
       await paso('2026-12-24', 23.75);
@@ -7981,14 +7983,15 @@ try {
     try {
       // Un miércoles de escuela de la seca (10 de febrero de 2027), un lunes de ropa tendida y un viernes de pupusas.
       const MOMENTOS = [
-        ['2027-02-10', 4.75, (r) => r.turno === 'alba' && r.vecinos === 1 && r.luces === 'faroles' && /aún es de noche/.test(r.desc)],
+        ['2027-02-10', 4.75, (r) => r.turno === 'alba' && r.vecinos === 1 && r.luces === 'horno' && r.farol === 'none' && /aún es de noche/.test(r.desc)], // (52) la única luz, el horno
         ['2027-02-10', 6.2, (r) => r.turno === 'amanece' && r.sombra === 'larga' && r.sombraT !== 'none'],
         ['2027-02-10', 11.75, (r) => r.turno === 'tortillas' && r.sombra === 'corta' && /tortillas en su comal/.test(r.desc) && r.perroVecino && r.perroSiempre === false],
         ['2027-02-10', 12.25, (r) => r.turno === 'salida' && r.vecinos >= 6 && /salen de la escuela/.test(r.desc)],
         ['2027-02-10', 13, (r) => r.turno === 'siesta' && r.perroVecino],
         ['2027-02-10', 15, (r) => r.turno === 'tarde' && !r.perroVecino && r.perroSiempre === true && r.sombraT === 'none'],
         ['2027-02-10', 17, (r) => r.turno === 'vuelta' && r.luces === 'ninguna' && r.farol === 'none'],
-        ['2027-02-10', 17.9, (r) => r.turno === 'pupusas' && r.luces === 'faroles' && r.farol !== 'none' && !/255, 197, 107/.test(r.ventana)],
+        ['2027-02-10', 17.9, (r) => r.turno === 'pupusas' && r.luces === 'templo' && r.farol === 'none' && !/255, 197, 107/.test(r.ventana)], // (52) primero la iglesia (el sacristán)
+        ['2027-02-10', 18.1, (r) => r.turno === 'pupusas' && r.luces === 'iglesia' && r.farol !== 'none' && !/255, 197, 107/.test(r.ventana)],
         ['2027-02-10', 19, (r) => r.turno === 'pupusas' && r.luces === '' && /255, 197, 107/.test(r.ventana)],
         ['2027-02-10', 21, (r) => r.turno === 'fresca' && /tomar el fresco/.test(r.desc) && r.vecinos >= 4],
         ['2027-02-10', 22.5, (r) => r.turno === 'duerme' && r.luces === 'iglesia' && !/255, 197, 107/.test(r.ventana)],
@@ -8042,6 +8045,89 @@ try {
       const perro = await y.p.evaluate(() => { const c = document.querySelector('#montana svg.v-capa-perro-anda'), r = c?.getBoundingClientRect(); return { hay: Boolean(c), w: r?.width ?? 0, vb: c?.getAttribute('viewBox') ?? '', se: c ? getComputedStyle(c).display : '', mueve: document.documentElement.dataset.mueve }; });
       ok(perro.hay && perro.w > 4 && !/NaN|^0 0 0/.test(perro.vb) && perro.se !== 'none' && perro.mueve === 'perro', `40: abierta en la siesta, a las 14:30 el perro cruza la plaza con su tamaño (${JSON.stringify(perro)})`);
       await y.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 52: vecinos con oficio (el horno del panadero, la puerta de la iglesia, las luces detrás del sacristán, la semana de los oficios, el pescador y la luna llena, 0 nodos y nadie con algo encima)
+  await bloque(async () => {
+    const conLs = (dia, ef = 'esenciales') => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } }, { dia, ef }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Lo mismo que mira el bloque 40 (los vecinos por su sombra de pie y lo pintado después de ellos), más la puerta de la iglesia, la luz
+    // del horno, cuántos trazos lleva el grupo de los vecinos (un trazo por tono: 0 nodos de más) y el cayuco.
+    const mira = (p) => p.evaluate(() => {
+      const d = document.documentElement.dataset, g = document.querySelector('#montana .v-vecinos'), pie = g?.querySelector('.v-vo-pie');
+      const vis = (e) => { for (let x = e; x && x.tagName !== 'svg'; x = x.parentElement) if (getComputedStyle(x).display === 'none') return false; return true; };
+      const m = pie?.getScreenCTM(), sp = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
+      const figs = (pie?.getAttribute('d') || '').split('M').filter(Boolean).map((t) => { const n = t.match(/-?[\d.]+/g).map(Number), kk = (n[2] - n[0]) / 4.4, x = (n[0] + n[2]) / 2, a = sp(x - 2.4 * kk, n[1] - 9.6 * kk), b = sp(x + 2.4 * kk, n[1]); return { x0: a[0], y0: a[1], x1: b[0], y1: b[1] }; });
+      const cajas = (e) => (e.getAttribute('d') || '').split(/(?=M)/).filter(Boolean).map((t) => { const q = e.cloneNode(); q.setAttribute('d', t); e.parentNode.append(q); const r = q.getBoundingClientRect(); q.remove(); return { c: e.getAttribute('class'), x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }; });
+      const cosas = [...document.querySelectorAll('#montana :is(.v-arbol .v-ar-tronco, .v-arbol .v-ar-copa, .v-arbol .v-ar-tallo, .v-tele-torre, .v-tele-cable, svg.tele-cabina, .v-pueblo > .v-animal, .v-pueblo > .v-gallina, circle.salida, .yo-anillo, #m-etiquetas > *)')].filter(vis).flatMap((e) => (e.matches('.v-tele-torre, .v-gallina') ? cajas(e) : [(() => { const r = e.getBoundingClientRect(); return { c: e.getAttribute('class'), x0: r.left, x1: r.right, y0: r.top, y1: r.bottom }; })()]));
+      const encima = figs.flatMap((f) => cosas.filter((c) => Math.min(f.x1, c.x1) - Math.max(f.x0, c.x0) > 1 && Math.min(f.y1, c.y1) - Math.max(f.y0, c.y0) > 1).map((c) => c.c));
+      const malos = [...document.querySelectorAll('#montana svg [d], #montana svg [transform]')].filter((e) => /NaN|undefined/.test((e.getAttribute('d') || '') + (e.getAttribute('transform') || ''))).length;
+      const portal = document.querySelector('#montana .v-ig-portal'), cay = document.querySelector('#montana svg.v-amb-cayuco, #montana .lago .v-cayuco');
+      return { turno: d.turno, luces: d.luces ?? '', puerta: d.puerta ?? '', luna: 'lunaLlena' in d, vecinos: figs.length, trazos: g?.querySelectorAll('path').length ?? 0, horno: Boolean(g?.querySelector('.v-vo-luz')),
+        portal: portal ? getComputedStyle(portal).fill : '', cayuco: cay ? getComputedStyle(cay).display : '', malos, encima, desc: document.getElementById('m-desc')?.textContent ?? '' };
+    });
+    const anio = await servidor('anio');
+    try {
+      // Un miércoles de escuela (10 de febrero de 2027), el lunes antes (el panadero descansa) y el sábado (tamales).
+      const MOMENTOS = [
+        ['2027-02-10', 4.75, (r) => r.turno === 'alba' && r.luces === 'horno' && r.horno && r.puerta === 'cerrada' && r.vecinos === 1],
+        ['2027-02-08', 4.75, (r) => r.turno === 'alba' && r.luces === 'faroles' && !r.horno && r.vecinos === 0 && /los lunes el panadero descansa/.test(r.desc)],
+        ['2027-02-10', 6.2, (r) => r.turno === 'amanece' && r.puerta === '' && r.vecinos >= 3],
+        ['2027-02-10', 15.2, (r) => r.turno === 'tarde' && r.vecinos >= 6],
+        ['2027-02-13', 12.2, (r) => r.turno === 'tortillas' && /tamales/.test(r.desc)],
+        ['2027-02-10', 20.5, (r) => r.turno === 'fresca' && r.puerta === ''],
+        ['2027-02-10', 21.5, (r) => r.turno === 'fresca' && r.puerta === 'cerrada'],
+      ];
+      for (const [w, h] of [[390, 844], [1440, 900]]) {
+        const portales = {};
+        for (const [dia, hora, prueba] of MOMENTOS) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs(dia));
+          await cerrar(t.p);
+          const r = await mira(t.p);
+          portales[`${dia} ${hora}`] = r.portal;
+          ok(prueba(r) && r.malos === 0 && r.encima.length === 0 && r.trazos <= 13 && !/\b(tu|tus|tú)\b/i.test(r.desc.split('osos polares.').pop()) && !t.consola.length, `52 a ${w} px, ${dia} a las ${hora}: ${r.turno} (${JSON.stringify({ ...r, desc: r.desc.slice(-150) })}${t.consola.join(' | ')})`);
+          await t.ctx.close();
+        }
+        // La puerta: a las 20:30 se ve la luz de dentro y a las 21:30 la madera (la cerró el sacristán).
+        ok(portales['2027-02-10 20.5'] !== portales['2027-02-10 21.5'], `52 a ${w} px: el portal cerrado no se ve como el abierto (${portales['2027-02-10 20.5']} → ${portales['2027-02-10 21.5']})`);
+      }
+      // (238) Las noches de luna llena el pescador no sale: el cayuco no está; otra noche, su lámpara sí.
+      {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 21, viewport: { width: 1440, height: 900 } }, conLs('2027-02-10'));
+        await cerrar(t.p);
+        const noches = await t.p.evaluate(() => {
+          const out = [];
+          for (let i = 0; i < 31; i++) {
+            const d = new Date(Date.UTC(2027, 0, 1) + i * 864e5).toISOString().slice(0, 10);
+            localStorage.setItem('libro.dia', d); window.libroCielo.aplicar();
+            const cay = document.querySelector('#montana svg.v-amb-cayuco, #montana .lago .v-cayuco');
+            out.push({ d, luna: 'lunaLlena' in document.documentElement.dataset, se: cay ? getComputedStyle(cay).display : '' });
+          }
+          return out;
+        });
+        const llena = noches.filter((n) => n.luna), otra = noches.filter((n) => !n.luna);
+        ok(llena.length >= 1 && llena.every((n) => n.se === 'none') && otra.every((n) => n.se !== 'none'), `52·238 de noche: con luna llena no hay cayuco; las demás noches, sí (${llena.map((n) => n.d)})`);
+        await t.ctx.close();
+      }
+      // Nadie con algo encima, en cinco anchos, con las horas nuevas de los vecinos con oficio (la fila de la escuela, el recreo, el pescador
+      // de vuelta, el recado, el encuentro, la tienda de los lunes, los tamales del sábado, el sacristán que cierra).
+      const RECORRIDO = [['2027-02-08', [4.75, 6, 9.2, 10.5, 12.2, 15.2]], ['2027-02-10', [6.8, 7.1, 9.6, 10.5, 15.2, 16.8, 17.9, 21.5]], ['2027-02-11', [9.2, 10.5, 15.2]], ['2027-02-12', [12.2, 15.6, 19]], ['2027-02-13', [12.2, 13, 15.2]], ['2027-02-14', [6.5, 10.5, 15.2]], ['2026-07-14', [10.5, 15.2]]];
+      for (const [w, h] of [[320, 640], [390, 844], [768, 1024], [1440, 900], [2560, 1440]]) {
+        const x = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: w, height: h } }, conLs('2027-02-10', 'todos'));
+        await cerrar(x.p);
+        const malos = [];
+        for (const [dia, horas] of RECORRIDO) for (const hora of horas) {
+          await x.p.evaluate(([d, hh]) => { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); }, [dia, hora]);
+          await x.p.waitForTimeout(250);
+          const q = await mira(x.p);
+          if (q.encima.length || q.malos || q.trazos > 13) malos.push(`${dia} ${hora} (${q.turno}): ${q.encima.join(', ')}${q.malos ? ` NaN ${q.malos}` : ''}${q.trazos > 13 ? ` ${q.trazos} trazos` : ''}`);
+        }
+        ok(!malos.length && !x.consola.length, `52 a ${w} px con «todos», ${RECORRIDO.reduce((n, [, hs]) => n + hs.length, 0)} momentos: nada encima de un vecino y un trazo por tono (${malos.join(' · ')}${x.consola.join(' | ')})`);
+        await x.ctx.close();
+      }
     } finally {
       anio.parar();
     }
