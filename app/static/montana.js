@@ -803,7 +803,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const huecosPP = [[pb.caja[0], pb.caja[2]], [lg.cx - lg.rx, lg.cx + lg.rx]];
   // Los campos del llano, entre el bosque y el pueblo; la milpa es la parcela de delante más ancha (los zompopos salen de ella).
   const ladoV = valle.forma === 'esc' || valle.forma === 'acostado';
-  const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u0 * 0.55), vx: c.sx, evitar: [[pb.caja[0] - 6, pb.caja[2] + 6 * pb.u], [bx - 30, bx + 30]], ancho: W, techoPueblo: pb.yg - 27 * pb.u, lago: lg ? [lg.cx - lg.rx, lg.cy - lg.ry, lg.cx + lg.rx, lg.cy + lg.ry] : null });
+  const cm = camposLlano({ borde, yAbajo: ladoV ? Math.min(H - 4, pb.yg + 2 * pb.u) : pb.yg - 1.5 * pb.u, x0: -6, x1: ladoV ? bx + 10 : W + 6, k: Math.max(1, pb.u0 * 0.55), vx: c.sx, evitar: [[pb.caja[0] - 6, pb.caja[2] + 6 * pb.u0], [bx - 30, bx + 30]], ancho: W, techoPueblo: pb.yg - 27 * pb.u0, lago: lg ? [lg.cx - lg.rx, lg.cy - lg.ry, lg.cx + lg.rx, lg.cy + lg.ry] : null });
   const milpaV = cm.milpa ? { ...cm.milpa, k: Math.max(1, pb.u * 0.5), sol: solV } : null;
   s = s.replace('<!--v-campos-->', `<g class="v-campos" aria-hidden="true">${cm.svg}${milpaV ? milpa(milpaV) + zompopos({ milpa: milpaV, k: milpaV.k }) : ''}</g>`);
   // (22C) Las piscuchas vuelan a la izquierda de la montaña y su hilo baja a los niños de la plaza: van delante, con el pueblo.
@@ -1620,7 +1620,7 @@ function etiquetar(yo, sats = estado.sats) {
   }
   // El rótulo del eco, pequeño y sin placa, donde quepa (si no cabe, el eco queda sin letrero: la descripción de la montaña lo dice).
   if (estado.eco) {
-    const q = estado.eco.p, w = 62 * kr, h = 18 * kr;
+    const keco = kr > 1 ? (kr * 16) / 12 : 1, q = estado.eco.p, w = 62 * keco, h = 18 * keco; // (D) en la tele, a 26 px como los demás
     const opc = [
       { x: q.x + 13, y: q.y - h / 2, w, h, anclaje: 'start', tx: q.x + 15 },
       { x: q.x - 13 - w, y: q.y - h / 2, w, h, anclaje: 'end', tx: q.x - 15 },
@@ -1628,7 +1628,7 @@ function etiquetar(yo, sats = estado.sats) {
       { x: q.x - w / 2, y: q.y + 12, w, h, anclaje: 'middle', tx: q.x },
     ];
     const b = opc.find((o) => !choca(o, 'eco'));
-    if (b) { cajas.push(b); s += `<text class="eco-txt" x="${f1(b.tx)}" y="${f1(b.y + 13 * kr)}" text-anchor="${b.anclaje}">hace 1 año</text>`; }
+    if (b) { cajas.push(b); s += `<text class="eco-txt" x="${f1(b.tx)}" y="${f1(b.y + 13 * keco)}" text-anchor="${b.anclaje}">hace 1 año</text>`; }
   }
   // La siguiente etapa, si no es un campamento: su rótulo junto a la marca (a la derecha, a la izquierda, encima o debajo). (Campamento 21)
   // Con las etapas más juntas la siguiente suele ir pegada a «Tú»: si su rótulo no cabe, lo lleva la siguiente con sello.

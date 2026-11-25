@@ -223,7 +223,7 @@ const PESOS = [
   ['campamento 20: cada cosa en su sitio', 297], // 157 comprobaciones
   ['campamento 21: etapas más cercanas', 151], // 129 comprobaciones
   ['campamento 21B: la tele de la sala (tarj', 306], // 113 comprobaciones
-  ['tele: el saldo contra la montaña (pulido', 229], // 87 comprobaciones
+  ['tele: el saldo contra la montaña (pulido', 275], // 103 comprobaciones (campamento D: con la app a 1920)
   ['campamento D: la pantalla grande a 1920', 45], // 10 comprobaciones (estimado)
   ['campamento 24: medir este aparato (idea', 58], // 58 comprobaciones
   ['campamento 24: confianza (la revisión tr', 42], // 43 comprobaciones
@@ -5776,7 +5776,7 @@ try {
 
   // ---------------------------------------------------------------- campamento D: la pantalla grande a 1920×1080 (rótulos, datos, tope y deriva)
   await bloque(async () => {
-    const srv = await servidor('medio');
+    const srv = await servidor('milbtc'); // con eco («hace 1 año») y siete rótulos
     try {
       // Cada hora, su sesión: `entrar` fija `libro.hora` en cada carga.
       const tele = async (hora) => {
@@ -5792,9 +5792,9 @@ try {
       // Los rótulos de la montaña a 26 px o más y sin «Coinbase · hace…» ni la mini línea (el precio sigue)
       const v = await p.evaluate(() => {
         const vis = (e) => Boolean(e?.getClientRects().length && getComputedStyle(e).display !== 'none');
-        return { tam: [...document.querySelectorAll('#m-etiquetas text')].map((t) => Number.parseFloat(getComputedStyle(t).fontSize)), meta: vis(document.getElementById('precio-meta')), estado: document.getElementById('cotizacion').dataset.estado, mini: [...document.querySelectorAll('#s-valor .mini')].some(vis), precio: vis(document.getElementById('precio')), pueblo: getComputedStyle(document.getElementById('montana')).getPropertyValue('--pueblo-k').trim() };
+        return { eco: Boolean(document.querySelector('#m-etiquetas .eco-txt')), tam: [...document.querySelectorAll('#m-etiquetas text')].map((t) => Number.parseFloat(getComputedStyle(t).fontSize)), meta: vis(document.getElementById('precio-meta')), estado: document.getElementById('cotizacion').dataset.estado, mini: [...document.querySelectorAll('#s-valor .mini')].some(vis), precio: vis(document.getElementById('precio')), pueblo: getComputedStyle(document.getElementById('montana')).getPropertyValue('--pueblo-k').trim() };
       });
-      ok(v.tam.length >= 3 && v.tam.every((t) => t >= 26), `D: en la tele a 1080p los rótulos de la montaña miden 26 px o más (${v.tam})`);
+      ok(v.tam.length >= 5 && v.tam.every((t) => t >= 26) && v.eco, `D: en la tele a 1080p los rótulos de la montaña (también el del eco) miden 26 px o más (${v.tam})`);
       ok(v.estado === 'vivo' && !v.meta && !v.mini && v.precio, `D: dos datos menos (sin «Coinbase · hace…» ni la mini línea) y el precio a la vista (${JSON.stringify(v)})`);
       eq(v.pueblo, '1.35', 'D: el pueblo, más grande en la tele');
       // La deriva contra el quemado, en sus cuatro esquinas (hasta 12 px a los lados y hacia abajo): el saldo sigue sin tocar la montaña
