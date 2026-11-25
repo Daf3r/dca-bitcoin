@@ -2520,22 +2520,22 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   eq([anE(plano, 80), L47.animoDelValle([], diaE(80)), L47.animoDelValle(null, diaE(80)), anE(plano.slice(0, 10), 80)], ['calma', 'calma', 'calma', 'calma'], 'ánimo E: sin cambios, sin histórico o con el último cierre de hace días, la calma');
   // Un escalón en el día 60: la semana del día 60 al 66 compara con el precio de antes.
   const escalon = (x) => serieE(90, (i) => (i < 60 ? 60000 : 60000 * x));
-  eq([0.9, 0.84, 1.09, 1.16].map((x) => anE(escalon(x), 61)), ['fresco', 'abrigo', 'aire', 'plaza'], 'ánimo E: semana −10 % fresco, −16 % abrigo, +9 % aire libre, +16 % plaza');
-  eq([0.95, 1.05].map((x) => anE(escalon(x), 61)), ['calma', 'calma'], 'ánimo E: una semana de ±5 % es la calma');
-  // Lejos del máximo de 30 días (−25 %) pero con la semana quieta: abrigo; y ese mismo día un rebote de +9 % en la semana: manda la semana.
-  // (Un 1 % menos cada día: la semana, −6.8 %, no entra en fresco; el día 45 ya está 22 % bajo el máximo.) Y una caída de 40 % con un
-  // rebote de +9 % en la semana, aún 35 % bajo el máximo: manda la semana.
-  const lento = serieE(90, (i) => 60000 * 0.99 ** Math.max(0, i - 20)), rebote = serieE(90, (i) => (i < 30 ? 60000 : i < 45 ? 36000 : 39240));
-  eq([anE(lento, 44), anE(lento, 47), anE(rebote, 46)], ['calma', 'abrigo', 'aire'], 'ánimo E: 22 % bajo el máximo de 30 días, abrigo; con una semana de subida a la vez, manda la semana');
-  // El tope: una subida que no para (+1.5 % al día, semana ≈ +11 %) da aire libre siete días y después la calma, aunque siga subiendo.
-  const sube = serieE(120, (i) => 60000 * 1.015 ** Math.max(0, i - 50));
+  eq([0.86, 0.78, 1.12, 1.22].map((x) => anE(escalon(x), 61)), ['fresco', 'abrigo', 'aire', 'plaza'], 'ánimo E: semana −14 % fresco, −22 % abrigo, +12 % aire libre, +22 % plaza');
+  eq([0.95, 1.05, 0.91, 1.09].map((x) => anE(escalon(x), 61)), ['calma', 'calma', 'calma', 'calma'], 'ánimo E: una semana de ±5 % o ±9 % es la calma');
+  // Lejos del máximo de 30 días (−35 %) pero con la semana quieta: abrigo; y ese mismo día un rebote de +9 % en la semana: manda la semana.
+  // (Un 1.5 % menos cada día: la semana, −10 %, no entra en fresco; desde el día 46 ya está 31 % bajo el máximo.) Y una caída de 40 % con un
+  // rebote de +12 % en la semana, aún 33 % bajo el máximo: manda la semana.
+  const lento = serieE(90, (i) => 60000 * 0.985 ** Math.max(0, i - 20)), rebote = serieE(90, (i) => (i < 30 ? 60000 : i < 45 ? 36000 : 40320));
+  eq([anE(lento, 40), anE(lento, 48), anE(rebote, 46)], ['calma', 'abrigo', 'aire'], 'ánimo E: 31 % bajo el máximo de 30 días, abrigo; con una semana de subida a la vez, manda la semana');
+  // El tope: una subida que no para (+2 % al día, semana ≈ +15 %) da aire libre siete días y después la calma, aunque siga subiendo.
+  const sube = serieE(120, (i) => 60000 * 1.02 ** Math.max(0, i - 50));
   const vistos = Array.from({ length: 30 }, (_, k) => anE(sube, 52 + k));
   eq([vistos.filter((a) => a !== 'calma').length, vistos.slice(-10).every((a) => a === 'calma')], [7, true], `ánimo E: como mucho siete días seguidos y luego la calma, aunque la medida siga (${vistos.join(' ')})`);
-  // La vuelta: entra en fresco con −10 %, se queda con −6 % (aún dentro del tercio) y sale con −4 %.
-  const dentro = serieE(70, (i) => (i < 55 ? 60000 : i < 62 ? 54000 : 54000 * 1.04)); // −10 % el día 55; el 62, frente al 55 (54000), +4 %: calma
+  // La vuelta: entra en fresco con −14 %, se queda con −8 % (aún dentro del tercio) y sale con −4 %.
+  const dentro = serieE(70, (i) => (i < 55 ? 60000 : i < 62 ? 51600 : 51600 * 1.04)); // −14 % el día 55; el 62, frente al 55 (51600), +4 %: calma
   const sigue = serieE(70, (i) => (i < 55 ? 60000 : 56400)); // el 55: −6 %: no entra
-  const entra = serieE(70, (i) => (i < 55 ? 60000 : i < 58 ? 54000 : 56400)); // entra con −10 % y el 58 la semana es −6 %: sigue
-  eq([anE(sigue, 57), anE(entra, 60), anE(dentro, 64)], ['calma', 'fresco', 'calma'], 'ánimo E: −6 % no entra, pero quien ya estaba en fresco se queda; con la semana de vuelta, la calma');
+  const entra = serieE(70, (i) => (i < 55 ? 60000 : i < 58 ? 51600 : 55200)); // entra con −14 % y el 58 la semana es −8 %: sigue
+  eq([anE(sigue, 57), anE(entra, 60), anE(dentro, 64)], ['calma', 'fresco', 'calma'], 'ánimo E: −8 % no entra, pero quien ya estaba en fresco se queda; con la semana de vuelta, la calma');
   // Hoy no cuenta (ni el precio vivo): el ánimo de hoy sale del cierre de ayer; y no depende de desde cuándo pidió el histórico el aparato.
   const conHoy = [...plano.slice(0, 81), [diaE(80), 30000]];
   eq([anE(conHoy, 80), anE(conHoy, 81)], ['calma', 'abrigo'], 'ánimo E: el cierre de hoy cuenta mañana, no hoy (cambia a lo sumo una vez al día)');

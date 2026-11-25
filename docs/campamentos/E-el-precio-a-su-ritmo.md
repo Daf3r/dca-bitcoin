@@ -5,15 +5,15 @@ La parte **E** del diseño de Fable («Diseño A–F», sección «E · Cuando e
 **El principio** (de Fable): el valle nunca se ve peor por el precio. Si la semana del precio va hacia abajo, los vecinos se juntan; si va hacia arriba, salen. Ningún estado es mejor que otro, casi siempre es la calma, **no cambia ningún texto, no se toca el cielo** y los brazos arriba, los cohetes y los farolitos siguen siendo de los hitos.
 
 ## Lo hecho
-- **La cuenta** (`lib.js: animoDelValle`, `animosDeSerie`, `ANIMOS`, `UMBRAL_ANIMO`; pura, con JSDoc que revisa `tsc`). Cinco estados activos: `calma`, `fresco`, `abrigo`, `aire` (aire libre) y `plaza`; **sin la Manta** (decidido). Con los umbrales del diseño:
+- **La cuenta** (`lib.js: animoDelValle`, `animosDeSerie`, `ANIMOS`, `UMBRAL_ANIMO`; pura, con JSDoc que revisa `tsc`). Cinco estados activos: `calma`, `fresco`, `abrigo`, `aire` (aire libre) y `plaza`; **sin la Manta** (decidido). Con los umbrales del diseño ×1.4 (*campamento 64: el dueño dio el OK a la propuesta; con el mercado real dan ~84 % de calma, no el 75 % de los del diseño*):
 
   | Estado | Entra cuando | Se queda mientras (la vuelta: dos tercios del umbral) |
   |---|---|---|
   | Calma | nada de lo de abajo | — |
-  | Fresco | semana ≤ −8 % | semana ≤ −5.3 % |
-  | Abrigo | semana ≤ −15 % **o** 22 % o más bajo el máximo de 30 cierres | semana ≤ −10 % o 14.7 % bajo el máximo (si no, y la semana sigue ≤ −5.3 %, baja a fresco) |
-  | Aire libre | semana ≥ +8 % | semana ≥ +5.3 % |
-  | Plaza | semana ≥ +15 % | semana ≥ +10 % |
+  | Fresco | semana ≤ −11 % | semana ≤ −7.3 % |
+  | Abrigo | semana ≤ −21 % **o** 31 % o más bajo el máximo de 30 cierres | semana ≤ −14 % o 20.7 % bajo el máximo (si no, y la semana sigue ≤ −7.3 %, baja a fresco) |
+  | Aire libre | semana ≥ +11 % | semana ≥ +7.3 % |
+  | Plaza | semana ≥ +21 % | semana ≥ +14 % |
 
   «Semana» = el cierre del día frente al de siete días antes (el cambio de un solo día no cuenta). Si coinciden una caída lejos del máximo y una semana de subida (un rebote), manda la semana. **Tope**: siete días seguidos en el mismo lado (contando fresco y abrigo juntos, o aire y plaza juntos); después, la calma, y no vuelve hasta que la medida salga y vuelva a entrar. Sube de grado (fresco → abrigo) solo con los umbrales de entrar; cada estado se queda con su propia medida (fresco, por la semana; no por la distancia al máximo).
 - **Una vez al día, como mucho.** El estado de hoy es el del **último cierre completo** (el de ayer; nunca el precio vivo), mirando solo los 120 días anteriores a hoy (`hoyISO`, la hora de El Salvador): el mismo resultado en cada aparato aunque cada uno pida el histórico desde otra fecha. Sin histórico, o con el último cierre de hace más de tres días: calma. Es 100 % determinista y sale de precios públicos (el histórico que la app ya tiene), nunca de las compras ni de nadie: «nada depende de si se compró» sigue intacta.
@@ -76,3 +76,6 @@ Valle 193–210 (tope 300), osos 26–37 (tope 46). Sin cambios en el resto: el 
 - El histórico real de producción (ver «El límite»).
 - Lighthouse A/B: no se corrió (verificación ligera por encargo).
 - Los cierres que guarda el servidor (`/api/historico`, días UTC): el ánimo usa solo los de antes de hoy (El Salvador), así que el día en curso nunca cuenta; no comprobé si un cierre guardado a medio día se reescribe al cerrar, ni qué pasa con un hueco (un cierre que falte siete días atrás reinicia la medida y la racha de ese día). Si el relleno deja huecos, el tope podría volver a contar.
+
+
+*(Umbrales ×1.4, aprobados por el dueño tras la simulación con el histórico real: fresco −11 %, abrigo −21 % o 31 % bajo el máximo, aire libre +11 %, plaza +21 %. Las cifras de arriba y de la simulación anterior son las del diseño original; las pruebas de `test_lib` se reescalaron con los nuevos.)*
