@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 53A) La neblina de la mañana; resume también el día entero del pueblo (2026-12-n), que sale casi a la vez.
+    id: '2026-12-p',
+    items: [
+      'La neblina de la mañana ahora parece neblina: suave, sin bordes, y deja ver lo que hay detrás.',
+      'Se queda en el fondo del valle, detrás de la loma y de la montaña: el pueblo y su suelo se ven limpios.',
+      'El pueblo vive el día entero: el pan de madrugada, las tortillas, la salida de la escuela y la hamaca.',
+      'Con muchas compras, «Tu historia» va por semanas: toca una para verla día por día.',
+    ],
+  },
+  {
     // (Campamento 40) El día entero del pueblo; resume también «Tu historia» a miles (2026-12-m), anotar y buscar (2026-12-l) y los menús
     // (2026-12-k), que salen casi a la vez.
     id: '2026-12-n',
