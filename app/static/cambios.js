@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 42) Las fiestas del resto del año; resume también el precio a su ritmo (2026-12-w).
+    id: '2026-12-y',
+    items: [
+      'El pueblo vive sus fiestas del año, cada una el día entero: Semana Santa, el 10 de mayo, el Día del Padre y agosto.',
+      'El 14 de septiembre llega la antorcha y, al anochecer, los oseznos salen con su farolito.',
+      'El Día del Niño hay piñata en la plaza, y el 12 de diciembre los oseznos van a la iglesia de inditos.',
+      'El 1 y el 2 de noviembre los vecinos llevan flores y, al anochecer del 2, hay una velita en cada casa.',
+      'Y el pueblo sigue la semana del precio: unas semanas los vecinos se juntan y otras salen a la plaza.',
+    ],
+  },
+  {
     // (Campamento E) El precio, a su ritmo; resume también «Tú» con más gestos (2026-12-v) y los osos de la cumbre (2026-12-u).
     id: '2026-12-w',
     items: [

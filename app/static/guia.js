@@ -129,6 +129,9 @@ export const FECHAS_ALMANAQUE = [
   ['Un día de lluvia (julio)', '2026-07-10'], ['Zompopos de mayo', '2027-05-18'], ['Día de la Cruz', '2027-05-03'], ['Agostinas', '2027-08-05'],
   ['15 de septiembre', '2027-09-15'], ['Azacuanes y piscuchas (octubre)', '2026-10-20'], ['Navidad en el pueblo (1 dic)', '2026-12-01'],
   ['Nochebuena', '2026-12-24'], ['Navidad', '2026-12-25'], ['31 de diciembre', '2026-12-31'], ['1 de enero', '2027-01-01'], ['6 de enero', '2027-01-06'],
+  // (Campamento 42) Las fiestas del resto del año (Semana Santa de 2027: Ramos el 21 de marzo, Pascua el 28).
+  ['Domingo de Ramos', '2027-03-21'], ['Viernes Santo', '2027-03-26'], ['Sábado de Gloria', '2027-03-27'], ['10 de mayo', '2027-05-10'], ['Día del Padre', '2027-06-17'],
+  ['6 de agosto', '2027-08-06'], ['14 de septiembre', '2027-09-14'], ['Día del Niño', '2026-10-01'], ['2 de noviembre', '2026-11-02'], ['12 de diciembre', '2026-12-12'],
 ];
 const hhmm = (h) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 /**

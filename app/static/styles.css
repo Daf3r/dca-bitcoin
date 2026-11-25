@@ -5068,6 +5068,9 @@ html[data-efectos="todos"][data-mueve="campana"] .montana svg.v-capa-campana { a
 @keyframes vo-campana { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
 html[data-efectos="todos"][data-mueve="hamaca"] .montana svg.v-actor-hamaca { animation: vo-hamaca calc(var(--t-gesto) * 1.875) steps(1) infinite; }
 @keyframes vo-hamaca { 0%, 100% { transform: rotate(-7deg); } 25%, 75% { transform: none; } 50% { transform: rotate(7deg); } }
+/* (Campamento 42, idea 158) El Día del Niño, de 15:00 a 17:00, la piñata se mece desde donde cuelga (su capa; solo con «todos» y en su franja). */
+html[data-efectos="todos"][data-mueve="mece"] .montana svg.v-actor-mece { animation: vo-mece calc(var(--t-gesto) * 2.5) steps(1) infinite; }
+@keyframes vo-mece { 0%, 100% { transform: rotate(-6deg); } 25%, 75% { transform: none; } 50% { transform: rotate(6deg); } }
 html[data-efectos="todos"][data-mueve="barre"] .montana svg.v-ronda { animation: vo-ronda-barre calc(var(--t-accion) * 1.2) steps(1) var(--fase, 0s) infinite; }
 html[data-efectos="todos"][data-mueve="pelota"] .montana svg.v-ronda { animation: vo-ronda-pelota calc(var(--t-accion) * 1.5) steps(1) var(--fase, 0s) infinite; }
 @keyframes vo-ronda-barre { 0%, 64%, 92%, 100% { transform: none; } 68%, 84% { transform: rotate(5deg); } 76% { transform: rotate(-5deg); } }
