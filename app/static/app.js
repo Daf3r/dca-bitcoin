@@ -1,6 +1,7 @@
 // Entrada de la app: carga los módulos (cada uno engancha sus propios eventos) y arranca. Ver CLAUDE.md, «Módulos».
 import { S } from './estado.js';
-import { actualizarSuave, cargarCompras, consultarPrecio } from './datos.js';
+import { actualizarSuave, cargarCompras, cargarHistorico, consultarPrecio } from './datos.js';
+import { hoyISO } from './lib.js';
 import './avisar.js';
 import { pintarMontana, pintarPrecio } from './pintar.js';
 import './mercado.js';
@@ -39,7 +40,11 @@ setInterval(() => aLaVista() && hoja.hidden && !document.querySelector('dialog[o
 // El «hace X s» del precio avanza solo, sin volver a consultar.
 setInterval(() => aLaVista() && S.precio && pintarPrecio(), 5_000);
 // (Campamento 30) Al cambiar de día con la app abierta, la escena se vuelve a dibujar con lo de la temporada nueva (cielo.js avisa).
-window.addEventListener('libro:dia', () => { if (S.cargado && !reproduciendo()) pintarMontana(false); });
+window.addEventListener('libro:dia', () => {
+  if (S.cargado && !reproduciendo()) pintarMontana(false);
+  // (Campamento E) Con la página abierta de un día para otro (la tele), el cierre de ayer llega con el histórico de hoy: el ánimo del valle.
+  if (S.cargado && S.animoDia && S.animoDia !== hoyISO()) cargarHistorico();
+});
 // Al volver a la pestaña: precio fresco y compras al día (la base es compartida por la familia).
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;

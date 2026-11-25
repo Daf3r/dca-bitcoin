@@ -13,6 +13,7 @@ import { abrirCumple, etiquetaCumple } from './cumple.js';
 import { abrirMontana, etiquetaMontana } from './bautizo.js';
 import { avatar } from './iconos.js';
 import { pose } from './arte-osos-poses.js';
+import { fijarValleSiguePrecio, valleSiguePrecio } from './montana.js';
 import { avisar } from './avisar.js';
 import { $, R, S, api, vozLibro } from './estado.js';
 import { conTransicion, sinMovimiento } from './movimiento.js';
@@ -154,6 +155,8 @@ function fundirTema() {
 }
 // (Campamento 62) Las horas van en el valor cuando está encendido: la etiqueta corta cabe en su renglón.
 const etiquetaMadrugada = () => { $('dc-madrugada').textContent = `Modo madrugada: ${window.libroCielo?.madrugadaPref() ? 'de 22:00 a 5:00' : 'apagado'}`; };
+// (Campamento E) El valle según la semana del precio (otros repartos de los mismos vecinos): por aparato; apagado, siempre la calma.
+const etiquetaValle = () => { $('dc-valle').textContent = `El valle sigue al precio: ${valleSiguePrecio() ? 'sí' : 'no'}`; };
 const etiquetaSonido = () => { $('dc-sonido').textContent = `Sonido al guardar: ${sonidoActivo() ? 'encendido' : 'apagado'}`; };
 // (Campamento 21B) La tele duerme de 23:00 a 5:00; por dispositivo se puede dejar despierta toda la noche.
 const etiquetaTeleDuerme = () => { $('dc-tv-duerme').textContent = `La tele duerme de noche: ${teleDuermeActiva() ? 'sí' : 'no'}`; };
@@ -204,7 +207,7 @@ $('dc-mas').addEventListener('toggle', () => {
 });
 ANCHO_CUENTA.addEventListener('change', ajustarMas);
 ajustarMas();
-$('cuenta-btn').addEventListener('click', () => { ajustarMas(); vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaTeleDuerme(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetaMontana(); etiquetasAccesibilidad(); dCuenta.showModal(); });
+$('cuenta-btn').addEventListener('click', () => { ajustarMas(); vistaCuenta('menu'); etiquetaTema(); etiquetaEfectos(); etiquetaTitulo(); etiquetaSonido(); etiquetaValle(); etiquetaTeleDuerme(); etiquetaMadrugada(); $('dc-pestanas').textContent = etiquetaModo(); $('dc-cumple').textContent = etiquetaCumple(); etiquetaMontana(); etiquetasAccesibilidad(); dCuenta.showModal(); });
 
 const txCorto = (t) => (t ? `${t.slice(0, 8)}…${t.slice(-6)}` : 'sin TXID');
 /** Describe un movimiento de la auditoría: «20,000 sats ($15.52) del 4 nov 2026 · TXID 01234567…abcdef · «nota»». */
@@ -315,6 +318,7 @@ dCuenta.addEventListener('click', async (e) => {
   else if (accion === 'ganancia') { window.libroAcc?.fijarGanancia(window.libroAcc.ganancia() ? '' : 'color'); etiquetasAccesibilidad(); }
   else if (accion === 'madrugada') { window.libroCielo?.fijarMadrugada(!window.libroCielo.madrugadaPref()); etiquetaMadrugada(); }
   else if (accion === 'sonido') { fijarSonido(!sonidoActivo()); etiquetaSonido(); if (sonidoActivo()) sonar('compra'); } // al encenderlo suena una muestra
+  else if (accion === 'valle') { fijarValleSiguePrecio(!valleSiguePrecio()); etiquetaValle(); }
   else if (accion === 'tv') { dCuenta.close(); entrarTV(); }
   else if (accion === 'tv-duerme') { fijarTeleDuerme(!teleDuermeActiva()); etiquetaTeleDuerme(); }
   else if (accion === 'titulo') { fijarTituloConSaldo(!tituloConSaldo()); etiquetaTitulo(); }

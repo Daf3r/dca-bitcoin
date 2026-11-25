@@ -7,7 +7,7 @@ export const reducido = sinMovimiento; // sin animación (nivel «ninguno» de e
 export const S = {
   compras: [], cargado: false, errorCarga: false,
   precio: null, precioTs: 0, fuente: '', viejo: false, errorPrecio: false,
-  historico: [], histEstado: 'cargando', histDesde: null, rango: null,
+  historico: [], histEstado: 'cargando', histDesde: null, animoDia: null, rango: null,
   traslados: [],
   wallets: [], // las wallets además de la principal (idea 156)
   piedritas: [], // las piedritas de los lectores en las compras (15B): { compra_id, quien, creado }
