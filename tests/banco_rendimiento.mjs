@@ -44,40 +44,40 @@ const CASOS = [
   // (Campamento 40) +1 en cada fecha: la sombra del perro va en su propio trazo (se esconde con él cuando se echa en otro sitio).
   // (Campamento 51) Las capas de los ambientales suman tres nodos a cada fecha (las del humo y del cayuco, y el grupo que guarda la
   // transformación del cayuco en el lago): de ahí que cada `declara` suba 3 desde el 39 y el 41.
-  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 842 },
+  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 849 },
   // (Campamento 51) Las franjas del día en que se mueve alguien del pueblo (la que barre, las gallinas, el perro, la pelota) y el
   // anochecer del fogón: con los ambientales (F3) junto al actor, que es lo que el director reparte.
   // (Campamento 53A) La neblina del amanecer (53B: de 5:00 a 9:00 y, fina, por la tarde): quieta; en el teléfono, dos bancos de degradado (los jirones y la bruma del pueblo, solo en escritorio) (ningún caso caía en su franja).
-  { caso: 'amanecer, neblina', dia: '2026-11-25', hora: 6, declara: 843 },
-  { caso: 'día, barre', dia: '2026-11-25', hora: 7.5, declara: 835 },
-  { caso: 'día, gallinas', dia: '2026-11-25', hora: 8.5, declara: 835 },
-  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 845 },
-  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 845 },
-  { caso: 'anochecer, fogón', dia: '2026-11-25', hora: 19, declara: 839 },
-  { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 837 },
-  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 911 },
-  { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 837 },
-  { caso: 'noche de lluvia', dia: '2026-07-10', hora: 21, declara: 829 },
+  { caso: 'amanecer, neblina', dia: '2026-11-25', hora: 6, declara: 850 },
+  { caso: 'día, barre', dia: '2026-11-25', hora: 7.5, declara: 842 },
+  { caso: 'día, gallinas', dia: '2026-11-25', hora: 8.5, declara: 842 },
+  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 852 },
+  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 852 },
+  { caso: 'anochecer, fogón', dia: '2026-11-25', hora: 19, declara: 846 },
+  { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 844 },
+  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 918 },
+  { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 847 },
+  { caso: 'noche de lluvia', dia: '2026-07-10', hora: 21, declara: 839 },
   // El pico del año: los cohetes (14 animaciones, en el frente) solo de 23:50 a 0:30 del 24 y del 31; esos 40 minutos el frente admite 28
   // (medido el 24 nov 2026: 26 en Nochebuena, con el papel picado de la fiesta; ya era así antes del 39, solo que el banco no lo medía).
-  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 952, frente: 28 },
-  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 916, frente: 28 },
+  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 959, frente: 28 },
+  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 923, frente: 28 },
   // (Campamento 41) La Navidad entera: un turno de cada fecha nueva (los demás pesan lo mismo: otro reparto de los mismos trazos).
-  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 921 },
-  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 912 },
-  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 882 },
-  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 922, frente: 28 },
-  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 879 },
+  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 928 },
+  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 919 },
+  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 889 },
+  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 929, frente: 28 },
+  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 886 },
   // (Campamento 40) El día entero del pueblo: un día de escuela de la seca (miércoles 10 de febrero de 2027), un lunes de ropa tendida y
   // un viernes de pupusas. Ninguno mueve a nadie nuevo: otro reparto de los mismos trazos.
-  { caso: 'antes del alba', dia: '2027-02-10', hora: 4.75, declara: 826 },
-  { caso: 'mediodía, tortillas', dia: '2027-02-10', hora: 11.75, declara: 833 },
-  { caso: 'mediodía, salida de la escuela', dia: '2027-02-10', hora: 12.25, declara: 833 },
-  { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 831 },
-  { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 836 },
-  { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 828 },
-  { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 843 },
-  { caso: 'viernes, pupusas', dia: '2027-02-12', hora: 19, declara: 830 },
+  { caso: 'antes del alba', dia: '2027-02-10', hora: 4.75, declara: 833 },
+  { caso: 'mediodía, tortillas', dia: '2027-02-10', hora: 11.75, declara: 840 },
+  { caso: 'mediodía, salida de la escuela', dia: '2027-02-10', hora: 12.25, declara: 840 },
+  { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 838 },
+  { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 843 },
+  { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 835 },
+  { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 850 },
+  { caso: 'viernes, pupusas', dia: '2027-02-12', hora: 19, declara: 837 },
   // (Campamento 59) La fiesta del hito, medida en su clímax («Probar la celebración», que usa el mismo código): la campana, los
   // farolitos y los cohetes, cada uno en su capa pequeña, mientras dura (unos +12 nodos en el clímax; el resto de la diferencia con
   // el día normal es la escena de la prueba, que se dibuja con el saldo inventado de cada nivel); los vecinos de la fiesta son otro
@@ -87,23 +87,24 @@ const CASOS = [
   // (Campamento 49) El pueblo se mueve 2: el panadero que cruza (6:00–7:00), la tortillera que palmea, la campana de las doce, la hamaca
   // de la siesta y las estrellitas de Nochebuena; cada uno en su capa (la campana, todo el día: +1 nodo en cada fecha; la abuela de la
   // ronda, con la que barre y con la pelota: +6 a +7 en los turnos de la mañana de escuela y de la tarde, aunque la ronda esté quieta).
-  { caso: 'amanecer, el panadero cruza', dia: '2027-02-10', hora: 6.5, declara: 834 },
-  { caso: 'mediodía, la campana', dia: '2027-02-10', hora: 12.02, declara: 833 },
-  { caso: 'siesta, la hamaca se mece', dia: '2027-02-10', hora: 13.5, declara: 831 },
-  { caso: 'fiesta del hito, tarde', dia: '2026-11-25', hora: 16, declara: 885, fiesta: 'hito', en: 12_400 },
-  { caso: 'fiesta del hito, noche de lluvia', dia: '2026-07-10', hora: 23, declara: 856, fiesta: 'hito', en: 12_400 },
-  { caso: 'fiesta del hito, tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 875, fiesta: 'hito', en: 12_400 },
-  { caso: 'fiesta del hito, Nochebuena 23:55', dia: '2026-12-24', hora: 23.92, declara: 992, frente: 28, fiesta: 'hito', en: 12_400 },
-  { caso: 'fiesta de etapa con sello', dia: '2026-11-25', hora: 10, declara: 864, fiesta: 'etapa', en: 7400 },
-  { caso: 'fiesta del halving', dia: '2026-11-25', hora: 10, declara: 844, fiesta: 'halving', en: 5800 },
+  { caso: 'amanecer, el panadero cruza', dia: '2027-02-10', hora: 6.5, declara: 841 },
+  { caso: 'mediodía, la campana', dia: '2027-02-10', hora: 12.02, declara: 840 },
+  { caso: 'siesta, la hamaca se mece', dia: '2027-02-10', hora: 13.5, declara: 838 },
+  { caso: 'fiesta del hito, tarde', dia: '2026-11-25', hora: 16, declara: 892, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta del hito, noche de lluvia', dia: '2026-07-10', hora: 23, declara: 866, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta del hito, tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 885, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta del hito, Nochebuena 23:55', dia: '2026-12-24', hora: 23.92, declara: 999, frente: 28, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta de etapa con sello', dia: '2026-11-25', hora: 10, declara: 871, fiesta: 'etapa', en: 7400 },
+  { caso: 'fiesta del halving', dia: '2026-11-25', hora: 10, declara: 851, fiesta: 'halving', en: 5800 },
   // (Campamento 47) +4 en cada fecha: los ojos cerrados de los osos (un trazo por oso, escondidos de día) y sus zetas.
+  // (Campamento 48) +8 en cada fecha (+11 en la lluviosa): la carpa y la mochila de espaldas de «Tú» (escondidas según la hora), su equipo y sus parches (mil compras) y el capote.
   // (Campamento 47) Los osos de la cumbre: sus poses quietas (cielo.js: CUMBRE, 0 animaciones) y lo plantado a su lado según el día
   // (fuera de su grupo). Los ojos cerrados van siempre dibujados (+3 nodos en los osos y en cada fecha); las zetas, +1 si caben.
-  { caso: 'madrugada, duermen', dia: '2026-11-25', hora: 23, declara: 827 },
-  { caso: 'atardecer, de espaldas', dia: '2026-11-25', hora: 17.75, declara: 839 },
-  { caso: 'abril, sombrero', dia: '2027-04-14', hora: 12, declara: 834 },
-  { caso: 'diciembre, oso de nieve', dia: '2026-12-10', hora: 12, declara: 885 },
-  { caso: '14 sept, la banderita', dia: '2026-09-14', hora: 15, declara: 869 },
+  { caso: 'madrugada, duermen', dia: '2026-11-25', hora: 23, declara: 834 },
+  { caso: 'atardecer, de espaldas', dia: '2026-11-25', hora: 17.75, declara: 846 },
+  { caso: 'abril, sombrero', dia: '2027-04-14', hora: 12, declara: 841 },
+  { caso: 'diciembre, oso de nieve', dia: '2026-12-10', hora: 12, declara: 892 },
+  { caso: '14 sept, la banderita', dia: '2026-09-14', hora: 15, declara: 877 },
 ];
 /** (Campamento 39, idea 131) Las pantallas anchas (escritorio 1440×900 y tele 2560×1440): solo los nodos, frente a `TOPES_ANCHO`. */
 const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
