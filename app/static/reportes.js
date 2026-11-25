@@ -4,7 +4,6 @@ import { dual, pegado, pegarHtml } from './cifras.js';
 import { $, R, S, esAdmin, vozLibro } from './estado.js';
 import { abrirHoja } from './hoja.js';
 import { plazo } from './pintar.js';
-import { ilustracion } from './iconos.js';
 
 // --------------------------------------------------------------- reportes
 const MESES = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
@@ -152,15 +151,17 @@ export function pintarToca() {
 }
 
 // ------------------------------------------------------ dónde están tus sats
-/** Wallet frente a exchange, según los traslados. Todos la ven cuando hay traslados; el admin ve además la pista inicial. */
+/** Wallet frente a exchange, según los traslados. Todos la ven cuando hay traslados; el admin ve además la pista inicial.
+ * (Campamento 64) Sin traslados, la tarjeta es un renglón (`.vacia`): la pregunta y «Anotar un traslado»; el título se queda para el
+ * índice de títulos, escondido a la vista. Con el primer traslado vuelve la tarjeta con su rueda. */
 export function pintarUbicacion() {
   const u = ubicacionSats(S.traslados, R.sats, S.wallets);
   const ver = S.cargado && R.n > 0 && (u.hay || esAdmin());
   $('ubicacion').hidden = !ver;
   if (!ver) return;
   $('ub-datos').hidden = !u.hay;
+  $('ubicacion').classList.toggle('vacia', !u.hay);
   $('ub-pista').hidden = u.hay;
-  if (!u.hay && !$('ub-pista').querySelector('.ilu')) $('ub-pista').insertAdjacentHTML('afterbegin', ilustracion('traslado'));
   $('ub-anotar').hidden = u.hay;
   // La pista y el botón son para quien anota; un lector sin traslados no ve la tarjeta.
   // Una wallet: como siempre. Varias: un arco por wallet (los de las demás con otro tono) y una fila por cada una en la leyenda.

@@ -35,7 +35,7 @@ export function pintarCapsulas() {
       const nueva = c.texto && !vistas.has(c.id);
       cuerpo.append(nodo('b', null, `Carta de ${c.autor}, del ${fechaLarga(new Date((c.creado ?? 0) * 1000).toISOString().slice(0, 10))}`));
       if (nueva) cuerpo.append(nodo('span', 'cap-nueva', 'Nueva'));
-      const b = nodo('button', 'enlace', 'Leer la carta');
+      const b = nodo('button', 'secundario', 'Leer la carta');
       b.type = 'button';
       b.dataset.leer = c.id;
       cuerpo.append(b);
