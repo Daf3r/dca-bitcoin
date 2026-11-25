@@ -1354,8 +1354,13 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(['2026-05-01', '2026-05-14', '2026-11-01', '2026-11-14'].every((f) => C.epoca(f) === (f.slice(5, 7) === '05' ? 'lluviosa' : 'seca')), 'valle 22B: la mezcla empieza donde cambia la época (misma partición)');
   const mezcla = ['2026-05-01', '2026-05-02', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07', '2026-05-08', '2026-05-09', '2026-05-10', '2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14', '2026-05-15'].map(C.verdor);
   ok(mezcla.every((x, i) => !i || x > mezcla[i - 1]), 'valle 22B: en mayo el valle reverdece un poco cada día');
-  // 55 · mar de niebla de 5:00 a 7:30 (se forma hasta las 5:30 y se levanta de 7:00 a 7:30); sin niebla de la tarde.
-  eq([4.5, 4.9, 5, 5.25, 5.5, 6, 7, 7.25, 7.5, 12, 17.5, 18, 20].map((h) => Math.round(C.marNiebla(h) * 100) / 100), [0, 0, 0, 0.5, 1, 1, 1, 0.5, 0, 0, 0, 0, 0], 'valle 22B: el mar de niebla solo de 5:00 a 7:30 (se forma hasta las 5:30 y se levanta desde las 7:00); nada por la tarde');
+  // 55 · la neblina (53B: otro ritmo): se forma de 5:00 a 6:30, llena hasta las 7:00 y se levanta hasta las 9:00; sin día, solo la de la mañana.
+  eq([4.5, 4.9, 5, 5.75, 6.5, 7, 8, 8.5, 9, 12, 17.5, 18, 20].map((h) => Math.round(C.marNiebla(h) * 100) / 100), [0, 0, 0, 0.75, 1, 1, 0.75, 0.44, 0, 0, 0, 0, 0], '53B: la neblina de la mañana se forma de 5:00 a 6:30 y se levanta de 7:00 a 9:00');
+  // Al caer la tarde vuelve fina (nunca más de 0.4): en la lluviosa, de 16:30 a 18:30; en la seca, de 17:30 a 19:00 (antes de las luces del valle).
+  eq([16, 16.5, 17.25, 17.5, 18.5, 19, 20].map((h) => Math.round(C.marNiebla(h, '2026-07-10') * 100) / 100), [0, 0, 0.4, 0.4, 0, 0, 0], '53B: en la lluviosa, neblina fina de 16:30 a 18:30');
+  eq([16.5, 17.5, 18.25, 18.5, 19, 20, 23].map((h) => Math.round(C.marNiebla(h, '2027-02-10') * 100) / 100), [0, 0, 0.4, 0.27, 0, 0, 0], '53B: en la seca, neblina fina de 17:30 a 19:00');
+  ok([19, 20, 22, 0, 3, 4.9].every((h) => ['2026-07-10', '2027-02-10', '2026-12-24'].every((f) => C.marNiebla(h, f) === 0)), '53B: de noche (las luces del valle encendidas) no hay neblina');
+  { let tope = 0; for (let h = 9; h < 29; h += 0.05) for (const f of ['2026-07-10', '2027-02-10', '2026-05-07', '2026-11-07']) tope = Math.max(tope, C.marNiebla(h % 24, f)); ok(tope > 0.39 && tope <= 0.4, `53B: de las 9:00 a las 5:00 la neblina nunca pasa de fina (${tope})`); }
   // 56 · árboles en flor
   eq(['2027-01-31', '2027-02-01', '2027-02-28', '2027-03-01', '2026-03-31', '2026-04-01', '2026-04-30', '2026-05-01'].map(C.flor), ['', 'maquilishuat', 'maquilishuat', '', '', 'fuego', 'fuego', ''], 'valle 22B: el maquilishuat florece en febrero y el árbol de fuego en abril');
   // 57 y 60 · fechas de los azacuanes y de los zompopos
@@ -1381,7 +1386,7 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   eq(malos, 0, 'valle 22B: lo que se mueve respeta sus fechas y horas en todo el año (el torogoz, siempre en la franja del amanecer)');
   // Lo que deja en <html>
   almacen['libro.dia'] = '2026-05-07'; almacen['libro.hora'] = '6'; C.aplicar();
-  ok(raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '1.000' && raiz.estilo['--v-verde'] === '0.467' && raiz.dataset.mueve === 'torogoz' && !raiz.dataset.flor, `valle 22B: el 7 de mayo a las 6:00, mar de niebla, el valle a medio reverdecer y el torogoz (${JSON.stringify(raiz.estilo['--v-verde'])})`);
+  ok(raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.889' && raiz.estilo['--v-verde'] === '0.467' && raiz.dataset.mueve === 'torogoz' && !raiz.dataset.flor, `valle 22B: el 7 de mayo a las 6:00, mar de niebla, el valle a medio reverdecer y el torogoz (${JSON.stringify(raiz.estilo['--v-verde'])})`);
   almacen['libro.dia'] = '2027-02-10'; almacen['libro.hora'] = '12'; C.aplicar();
   ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === 'teleferico', 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y solo el teleférico (campamento 32) que se mueva');
   delete almacen['libro.dia']; delete almacen['libro.hora'];
@@ -1404,6 +1409,10 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(ma && mf && ma.y >= 270 + 24 && mf.y > sv.milpa.y + sv.milpa.h && mf.y > ma.y, `valle 22B: la neblina, por debajo del saldo y (el banco de delante, entero) de la milpa (${ma?.y} / ${mf?.y})`);
   eq([mar.atras.match(/<\w+/g), mar.frente.match(/<\w+/g), ma.clase, mf.clase], [['<rect'], ['<rect'], 'v-mar-atras', 'v-mar-frente'], '53A: un solo nodo por banco (sin bordes festoneados ni planos opacos)');
   ok([ma, mf].every((r) => r.x < -390 && r.x + r.w > 2 * 390 && r.y + r.h >= 760) && !/style=|fill=/.test(mar.atras + mar.frente), '53A: cada banco sobra a los lados (su lomo apenas se curva), llega al pie de la escena y no lleva estilo ni relleno en línea');
+  // (53B) Los jirones, solo si se piden (tablet y escritorio): dos óvalos sobre el lomo del banco de atrás, nunca por encima de su tope.
+  const conJ = A.marDeNiebla({ W: 390, H: 760, canton: sv.canton, milpa: sv.milpa, k: sv.k, cresta, techo: 270, jirones: true });
+  const ovalos = [...conJ.atras.matchAll(/<ellipse class="v-mar v-mar-jiron" cx="([-\d.]+)" cy="([-\d.]+)" rx="([\d.]+)" ry="([\d.]+)"\/>/g)].map((m) => m.slice(1).map(Number));
+  ok(ovalos.length === 2 && ovalos.every(([, cy, rx, ry]) => cy - ry >= ma.y - 0.1 && rx > ry * 4) && !/ellipse/.test(mar.atras + conJ.frente), `53B: dos jirones largos y bajos sobre el banco de atrás, por debajo de su tope (${JSON.stringify(ovalos)}); en el teléfono, ninguno`);
   // 58 · las vacas: una en el teléfono, en la orilla de afuera (aquí la izquierda: la derecha no cabe), mirando al agua y lejos del sendero.
   const dist = (px, py) => Math.min(...pts.slice(1).map(([bx2, by2], i) => { const [ax, ay] = pts[i], dx = bx2 - ax, dy = by2 - ay, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - ax - t * dx, py - ay - t * dy); }));
   ok(sv.vacas.length === 1 && sv.vacas[0].x < lago.cx - lago.rx && sv.vacas[0].dir === 1 && dist(sv.vacas[0].x, sv.vacas[0].y - 4) > 13, `valle 22B: una vaca en el teléfono, en la orilla, mirando al agua y lejos del sendero (${JSON.stringify(sv.vacas[0])})`);
@@ -1461,6 +1470,14 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(!/v-estrella|estrella/.test(P.pinoPlaza(100, 700, 2)), 'pueblo: el pino de Navidad no lleva estrella (nada sobresale contra el cielo)');
   // Escritorio: a la izquierda de la salida, más grande.
   const se = P.sitiosPueblo({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400, sol: 1 });
+  // (53B) La bruma baja del pueblo: solo en escritorio, un óvalo pintado antes que la fila de atrás, entero por encima de la terraza y dentro del pueblo.
+  {
+    const pe = P.pueblo(se, { ventanas: 2 }), m = pe.match(/<ellipse class="v-mar v-mar-pueblo" cx="([-\d.]+)" cy="([-\d.]+)" rx="([\d.]+)" ry="([\d.]+)"\/>/);
+    const [cx, cy, rx, ry] = m ? m.slice(1).map(Number) : [];
+    ok(m && pe.indexOf('v-mar-pueblo') < pe.indexOf('v-terraza') && pe.indexOf('v-mar-pueblo') > pe.indexOf('v-plaza') && cy + ry <= se.yg - P.TERRAZA * se.u + 0.1 && cx - rx >= se.x0 - 0.1 && cx + rx <= se.xFin + 0.1,
+      `53B: la bruma del pueblo va detrás de las casas (antes que la fila de atrás), por encima de la terraza y sin salirse del pueblo (${m?.[0]})`);
+    ok(!/v-mar/.test(P.pueblo(sp, { ventanas: 2 })) && !/v-mar/.test(P.pueblo(P.sitiosPueblo({ W: 768, H: 944, forma: 'tab', by: 780, bx: 150, pts: [[150, 780], [460, 700], [330, 620], [520, 300]], lago: null, techo: 300, sol: 1 }), { ventanas: 2 })), '53B: en el teléfono y la tablet el pueblo no lleva bruma (detrás de las casas va el sendero)');
+  }
   ok(se.u > sp.u && se.caja[2] < 466 && se.piezas.filter((q) => q.tipo === 'casa').length >= 2 && se.atras.length >= 1, `pueblo: en escritorio, a la izquierda de la salida y más grande (${se.caja.map(Math.round)})`);
   // El llano, los campos, la ladera baja y el primer plano: sin NaN ni estilos, con sus clases.
   const geo = { W: 390, H: 764, forma: 'tel', by: 600, bx: 55 };

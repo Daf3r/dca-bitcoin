@@ -384,6 +384,12 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   // La fila de atrás, entera y en su orden (sombra, muro de la terraza, paredes, tejados, puertas y ventanas), antes que la iglesia.
   const filaAtras = p('v-sombra v-sombra-atras', 'sombra', '', B) + p('v-terraza', 'terraza', '', B) + COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`, '', B)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`, '', B)).join('')
     + p('v-alero', 'alero', '', B) + p('v-techo-l', 'techo-l', '', B) + p('v-techo-s', 'techo-s', '', B) + p('v-teja', 'teja', sw(0.6), B) + p('v-poste', 'poste', sw(0.55), B) + p('v-puerta', 'puerta', '', B) + p('v-ventana v-ventana-atras', 'ventana', '', B);
+  // (Campamento 53B) La bruma baja del pueblo: un jirón quieto DETRÁS de la fila de atrás (se pinta antes que ella), a la altura de
+  // sus tejados: flota sobre la loma, no toca la terraza, la calle ni la plaza, y se deshace antes de los extremos del pueblo. Solo en
+  // escritorio, donde el pueblo queda a la izquierda de la salida del sendero (en el teléfono y la tablet detrás de las casas están el
+  // pie de la montaña y el sendero: ahí no va). Mismo degradado que la neblina del valle (`.v-mar`); su opacidad, `--v-mar`.
+  const bruma = sit.forma === 'esc' && atras.length
+    ? `<ellipse class="v-mar v-mar-pueblo" cx="${f1(sit.x0 + (sit.xFin - sit.x0) * 0.44)}" cy="${f1(yg - (TERRAZA + 9.5) * u)}" rx="${f1((sit.xFin - sit.x0) * 0.42)}" ry="${f1(9 * u)}"/>` : '';
   // Los árboles de aquí, detrás de las casas (campamento 22B, idea 56, ahora en el pueblo): un maquilishuat junto a la iglesia (en
   // febrero, todo rosado) y un árbol de fuego al final de la calle (en abril, rojo). Con sus flores caídas cuando florecen.
   const arbolito = (sp, x, y, r) => {
@@ -401,7 +407,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   if (fuegoV) add('sombra', elipse(xFuego - sol * 1.6 * u, yg + 0.9 * u, 6 * u, 1.1 * u));
   // Los charcos de luz: dos trazos (el halo ancho y el centro), sin degradados (más baratos de pintar que una elipse con degradado cada uno).
   const luzSuelo = `<path class="v-charco" d="${charcos.map(([x, y, r]) => elipse(x, y, r, r * 0.32)).join('')}"/><path class="v-charco v-charco-c" d="${charcos.map(([x, y, r]) => elipse(x, y, r * 0.5, r * 0.16)).join('')}"/>`;
-  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${p('v-sombra v-sombra-perro', 'perro-sombra')}${filaAtras}`
+  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${p('v-sombra v-sombra-perro', 'perro-sombra')}${bruma}${filaAtras}`
     + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-relieve', 'ig-relieve')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-atrio', 'ig-atrio')}${p('v-ig-atrio-s', 'ig-atrio-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
     + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-chimenea', 'chimenea')}${p('v-poste', 'poste', sw(0.55))}`
     + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-portal', 'ig-portal')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`

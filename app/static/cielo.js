@@ -112,11 +112,19 @@
     if (m === 11 && d <= 14) return 1 - d / 15;
     return m >= 5 && m <= 10 ? 1 : 0;
   }
-  /** El mar de niebla del amanecer (idea 55): de 0 a 1, solo de 5:00 a 7:30. Se forma de 5:00 a 5:30, llena el valle hasta las 7 y se levanta antes de las 7:30. Sin niebla de la tarde. */
-  function marNiebla(h) {
-    if (h < 5 || h >= 7.5) return 0;
-    if (h < 5.5) return (h - 5) / 0.5;
-    return h <= 7 ? 1 : (7.5 - h) / 0.5;
+  /**
+   * La neblina (idea 55; campamento 53B: otro ritmo), de 0 a 1. De mañana: se forma despacio de 5:00 a 6:30, llena el valle hasta las
+   * 7:00 y se levanta poco a poco hasta las 9:00. Al caer la tarde vuelve fina (hasta `NIEBLA_TARDE`), si se da el día `f`: en la
+   * lluviosa, de 16:30 a 18:30; en la seca, de 17:30 a 19:00 (se va antes de la noche: a las 19:00 se encienden las luces del valle,
+   * que se pintan debajo de ella). Sin día, solo la de la mañana.
+   */
+  const NIEBLA_TARDE = 0.4;
+  function marNiebla(h, f) {
+    // Espesa pronto y aguanta: lo que falta para estar llena, al cuadrado (a medias es un velo turbio; así dura poco).
+    if (h >= 5 && h < 9) return 1 - (h < 6.5 ? (6.5 - h) / 1.5 : h <= 7 ? 0 : (h - 7) / 2) ** 2;
+    if (!f) return 0;
+    const [a, b] = verdor(f) >= 0.5 ? [16.5, 18.5] : [17.5, 19];
+    return h > a && h < b ? NIEBLA_TARDE * Math.min(1, (h - a) / 0.75, (b - h) / 0.75) : 0;
   }
   /** Árboles de aquí en flor (idea 56): el maquilishuat en febrero y el árbol de fuego en abril; si no, ''. */
   const flor = (f) => ({ '02': 'maquilishuat', '04': 'fuego' })[f.slice(5, 7)] ?? '';
@@ -507,7 +515,7 @@
     // El valle vivo, parte 2 (campamento 22B): el verdor del valle (variable de 0 a 1), el mar de niebla del amanecer (su espesor, de 0
     // a 1), los árboles en flor y lo que se mueve (uno a la vez); la escena lo dibuja todo y el CSS enseña lo que toca.
     raiz.style.setProperty('--v-verde', verdor(d).toFixed(3));
-    const mar = marNiebla(h);
+    const mar = marNiebla(h, d);
     raiz.style.setProperty('--v-mar', mar.toFixed(3));
     raiz.toggleAttribute('data-mar-niebla', mar > 0);
     const fl = flor(d), mv = mueve(d, h);

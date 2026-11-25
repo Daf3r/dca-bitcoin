@@ -563,6 +563,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const lado = c.sol[0] >= c.sx ? 1 : -1; // de qué lado está el astro: esa cara de la montaña recibe la luz
   const derX0 = c.sx + (c.sx - (c.base[0] - W * 0.2)) * 0.95;
   const grad = (id, attrs, paradas) => `<linearGradient id="${id}" ${attrs}>${paradas.map(([o, k]) => `<stop offset="${o}" class="${k}"/>`).join('')}</linearGradient>`;
+  const jirones = formaValle(W, H) === 'esc'; // (53B) los jirones de la neblina y la bruma del pueblo (arte-pueblo.js: misma condición): solo en escritorio
   const defs = grad('m-cielo', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'g-c0'], [0.17, 'g-c1'], [0.31, 'g-c2'], [0.46, 'g-c3'], [Math.min(0.9, yH * 0.92).toFixed(3), 'g-c4'], [1, 'g-c4']])
     + '<radialGradient id="m-sol"><stop offset="0" class="so-0"/><stop offset="0.72" class="so-1"/><stop offset="1" class="so-2"/></radialGradient>'
     + `<radialGradient id="m-halo"><stop offset="0" class="h-0"/><stop offset="0.3" class="h-1"/><stop offset="0.55" class="h-2"/><stop offset="1" class="h-3"/></radialGradient>`
@@ -582,9 +583,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     + grad('m-via', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vl-0'], [0.5, 'vl-1'], [1, 'vl-0']])
     + grad('m-aire', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'ai-0'], [0.62, 'ai-1'], [1, 'ai-0']])
     + grad('m-v-loma', 'x1="0" y1="0" x2="0" y2="1"', [[0, 'vlo-0'], [0.55, 'vlo-1'], [1, 'vlo-2']])
-    // (Campamento 53A) La neblina del amanecer: medio óvalo apoyado en la base de cada banco (el círculo, estirado al doble hacia arriba):
-    // espesa abajo y en el centro, nada en el borde de arriba ni en los lados. Un solo degradado para los dos bancos (`.v-mar`).
-    + '<radialGradient id="m-v-mar" cx="0.5" cy="1" r="0.5" gradientTransform="translate(0 1) scale(1 2) translate(0 -1)"><stop offset="0" class="vm-0"/><stop offset="0.8" class="vm-1"/><stop offset="1" class="vm-2"/></radialGradient>'
+    // (Campamentos 53A y 53B) La neblina: un óvalo que llena la caja de cada pieza, espeso en el centro y nada en el borde. Un solo
+    // degradado para los bancos (rectángulos de los que se ve la mitad de arriba) y los jirones (óvalos enteros): `.v-mar`.
+    + '<radialGradient id="m-v-mar"><stop offset="0" class="vm-0"/><stop offset="0.8" class="vm-1"/><stop offset="1" class="vm-2"/></radialGradient>'
+    // Los jirones (solo en escritorio: arte-valle.js y arte-pueblo.js) se deshacen desde el centro, sin meseta: más blandos que un banco.
+    + (jirones ? '<radialGradient id="m-v-jiron"><stop offset="0" class="vj-0"/><stop offset="1" class="vm-2"/></radialGradient>' : '')
     + '<radialGradient id="m-v-rayo" cx="0.48" cy="0.55" r="0.62"><stop offset="0" class="ry-0"/><stop offset="0.45" class="ry-1"/><stop offset="1" class="ry-2"/></radialGradient>';
   let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-labelledby="m-desc"><desc id="m-desc"></desc><defs><radialGradient id="m-luz"><stop offset="0" class="luz-0"/><stop offset="1" class="luz-1"/></radialGradient><radialGradient id="m-lu"><stop offset="0" class="lu-g0"/><stop offset="0.193" class="lu-g0"/><stop offset="0.193" class="lu-g1"/><stop offset="1" class="lu-g2"/></radialGradient><radialGradient id="m-farol"><stop offset="0" class="fa-0"/><stop offset="0.42" class="fa-1"/><stop offset="1" class="fa-2"/></radialGradient><linearGradient id="m-bano" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="ba-0"/><stop offset="1" class="ba-1"/></linearGradient><linearGradient id="m-aurora" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="au-0"/><stop offset="0.55" class="au-1"/><stop offset="1" class="au-2"/></linearGradient><filter id="m-bruma" x="-2%" y="-5%" width="104%" height="110%"><feGaussianBlur stdDeviation="1.6"/></filter>${defs}</defs><g aria-hidden="true">`;
   host.style.setProperty('--escena-w', `${W}px`); // las nubes, la niebla y las aves cruzan en CSS: necesitan saber cuánto mide la escena
@@ -757,7 +760,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
   // (Campamento 22B) El mar de niebla del amanecer: una capa detrás de la loma y otra delante de su falda (todo detrás de la montaña).
-  const mar = marDeNiebla({ W, H, canton: valle.canton, milpa: valle.milpa, k: valle.k, cresta: crestaMedia, techo });
+  const mar = marDeNiebla({ W, H, canton: valle.canton, milpa: valle.milpa, k: valle.k, cresta: crestaMedia, techo, jirones });
   s = s.replace('<!--v-cielo-->', bandadas(valle.aves)).replace('<!--v-vacas-->', potrero({ vacas: valle.vacas, k: valle.k })).replace('<!--v-luces-->', lucesValle(valle.luces, valle.k, 0)).replace('<!--v-fondo-->', `<g id="m-v-fondo">${mar.atras}${canton({ ...valle.canton, sol: solV, ventanas: personas, H })}${lucesValle(valle.luces, valle.k, 1)}${mar.frente}</g>`);
   // El mismo trazo, entero (para medir la altitud y el tramo recorrido) y por tramos de zigzag (para la tierra del camino,
   // que se estrecha con la altura: más ancho abajo, más fino arriba, como visto en perspectiva).
