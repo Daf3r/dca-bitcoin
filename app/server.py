@@ -1631,7 +1631,7 @@ def estado_sistema(conn: sqlite3.Connection) -> dict[str, Any]:
     metricas = [{"ruta": r["ruta"], "n": r["n"], "errores": r["errores"], "lentas": r["lentas"], "ms_medio": round(r["ms_total"] / r["n"]) if r["n"] else 0,
                  "ms_max": round(r["ms_max"])} for r in conn.execute(
         "SELECT ruta, SUM(n) AS n, SUM(errores) AS errores, SUM(lentas) AS lentas, SUM(ms_total) AS ms_total, MAX(ms_max) AS ms_max "
-        "FROM metricas WHERE dia >= ? GROUP BY ruta ORDER BY n DESC LIMIT 15", (desde,))]
+        "FROM metricas WHERE dia >= ? GROUP BY ruta ORDER BY n DESC LIMIT 20", (desde,))]
     return {
         "ahora": ahora, "version": VERSION, "commit": VERSION_GIT[:12], "esquema": version_esquema(conn),
         "respaldo": {"ultimo": int(ultimo) if ultimo else None, "ok": ultimo is not None and ahora - ultimo < 36 * 3600, "prueba": prueba},
