@@ -1914,7 +1914,7 @@ try {
       m = await medir(r.p);
       eq(m.naranja, '#f0b429', 'acento: tras llegar a 1 BTC es dorado');
       ok(m.contraste >= 4.5, `acento dorado: el texto de acento sobre las tarjetas llega a 4.5:1 (${m.contraste.toFixed(1)})`);
-      await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'naranja', null, { timeout: 12000 }); // la vista previa devuelve el estado real
+      await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'naranja', null, { timeout: 40000 }); // la vista previa devuelve el estado real (59: espera a que acabe la fiesta del campamento, 24 s)
       eq(await r.p.evaluate(() => document.querySelectorAll('.aurora-epica, .luz-gota').length), 0, '1 BTC: los efectos se retiran solos');
       await r.ctx.close();
       // El cometa: al cruzar una etapa
