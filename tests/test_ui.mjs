@@ -1061,8 +1061,8 @@ try {
       ok(e.sw <= e.cw, 'atmósfera: sin scroll horizontal');
       await r.ctx.close();
 
-      // Al amanecer sí cruzan aves
-      r = await entrar(navegador, srv, ADMIN, { hora: 6 }, fuerte);
+      // Al amanecer sí cruzan aves (49: el torogoz cruza de 5:00 a 6:00; desde las 6:00 la calle es del panadero)
+      r = await entrar(navegador, srv, ADMIN, { hora: 5.5 }, fuerte);
       e = await estado(r.p);
       eq(e.ave, 'ave', 'atmósfera: al amanecer cruzan aves');
       await r.ctx.close();
@@ -1103,7 +1103,7 @@ try {
           primero: `${h.firstElementChild.tagName.toLowerCase()}|${h.firstElementChild.getAttribute('role')}`,
           capas: [...h.querySelectorAll(':scope > svg.capa')].map((s) => `${[...s.classList].find((c) => c.startsWith('par-'))}|${s.getAttribute('aria-hidden')}|${cs(s).zIndex}|${cs(s).willChange}|${cs(s).transform}`),
           grupos: h.querySelector('svg').querySelectorAll('.par').length,
-          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb')) x = x.previousElementSibling; // (32, 34, 37, 51) entre los dos, solo las capas pequeñas de la cabina, de los animales, del vecino y de los ambientales
+          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb, .v-capa-campana, .v-capa-camina')) x = x.previousElementSibling; // (32, 34, 37, 51) entre los dos, solo las capas pequeñas de la cabina, de los animales, del vecino y de los ambientales
           return f ? `${x === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
           alba: document.getElementById('m-alba').ownerSVGElement.classList.contains('par-cielo'),
           aislada: cs(h).isolation, velo: cs(document.querySelector('.escena-velo')).willChange,
@@ -3067,8 +3067,8 @@ try {
       ok(/san-salvador/.test(await r.p.evaluate(() => document.querySelector('.lejos').dataset.volcanes)), 'volcanes: en escritorio también el de San Salvador');
       await r.ctx.close();
 
-      // Torogoz al amanecer (todos los efectos): cruza y aletea; con esenciales no está.
-      r = await ent(navegador, sAnio, ADMIN, { hora: 6 }, con('2026-03-10'));
+      // Torogoz al amanecer (todos los efectos): cruza y aletea; con esenciales no está. (49: cruza de 5:00 a 6:00; desde las 6:00, el panadero.)
+      r = await ent(navegador, sAnio, ADMIN, { hora: 5.5 }, con('2026-03-10'));
       eq([await cs(r.p, '.torogoz', 'animationName'), await cs(r.p, '.toro-ala:not(.toro-ala-lejos)', 'animationName'), await r.p.locator('.toro-ceja').count()], ['ave', 'toro-aleteo', 1], 'torogoz: al amanecer cruza el cielo y aletea');
       await r.p.evaluate(() => window.libroEfectos.fijar('esenciales'));
       eq(await cs(r.p, '.torogoz', 'display'), 'none', 'torogoz: con esenciales no está');
