@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 53B) La neblina, segunda pasada; resume también la primera (2026-12-p) y los vecinos con oficio (2026-12-o).
+    id: '2026-12-q',
+    items: [
+      'La neblina dura más: se forma desde las cinco y se va levantando poco a poco hasta las nueve.',
+      'Al caer la tarde vuelve, fina, y se va antes de la noche.',
+      'En pantallas grandes, una bruma baja se queda detrás de las casas del pueblo, sin tocar el suelo.',
+      'Es clara y suave, sin bordes, y el pueblo y su suelo se ven limpios.',
+      'Los vecinos del pueblo tienen oficio: el panadero, la maestra, el pescador, el sacristán… y cada uno sigue su día.',
+    ],
+  },
+  {
     // (Campamento 53A) La neblina de la mañana; resume también los vecinos con oficio (2026-12-o) y el día entero del pueblo (2026-12-n),
     // que salen casi a la vez.
     id: '2026-12-p',
