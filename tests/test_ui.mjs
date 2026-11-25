@@ -257,6 +257,7 @@ const PESOS = [
   ['campamento 49: el pueblo se mueve 2', 100], // 25 comprobaciones (medido el 25 nov 2026)
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
+  ['campamento 64: un solo material', 30], // 27 comprobaciones (estimado)
   ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
   ['campamento 47: los osos de la cumbre', 40], // 14 comprobaciones (estimado)
   ['campamento 48: «Tú» con más gestos', 30], // 9 comprobaciones (estimado)
@@ -8675,6 +8676,56 @@ try {
         await r.ctx.close();
       }
     } finally { anio.parar(); sinp.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamento 64: un solo material (tres niveles de botón, una sola tarjeta, lo vacío en un renglón y el rango junto a «Ampliar»)
+  await bloque(async () => {
+    const anio = await servidor('anio');
+    const conLs = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); } catch { /* sin almacenamiento */ } };
+    const cerrarTodo = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    try {
+      for (const w of [320, 390, 1440]) {
+        const r = await entrar(navegador, anio, ADMIN, w < 1100 ? { viewport: { width: w, height: 844 } } : { viewport: { width: w, height: 900 }, isMobile: false, hasTouch: false }, conLs);
+        await cerrarTodo(r.p);
+        // 309 · los secundarios: 48 px, filo naranja de 1.5 px, sin fondo, en tinta; los enlaces, tinta de 15 px subrayada
+        const b = await r.p.evaluate(() => {
+          const v = (e) => e?.checkVisibility();
+          const sec = [...document.querySelectorAll('.secundario')].filter(v).map((e) => { const c = getComputedStyle(e); return { id: e.id || e.textContent.trim(), alto: e.getBoundingClientRect().height, filo: c.borderTopWidth, fondo: c.backgroundColor, tinta: c.color === getComputedStyle(document.body).color, letra: c.fontSize }; });
+          const enl = ['caida-ocultar', 'g-ampliar', 'cap-nueva', 'ub-anotar'].map((i) => document.getElementById(i)).filter(v).map((e) => { const c = getComputedStyle(e); return { id: e.id, alto: e.getBoundingClientRect().height, letra: c.fontSize, sub: c.textDecorationLine }; });
+          return { sec, enl };
+        });
+        ok(b.sec.length >= 3 && b.sec.every((x) => x.alto >= 47.5 && parseFloat(x.filo) >= 1 && parseFloat(x.filo) <= 1.5 && x.fondo === 'rgba(0, 0, 0, 0)' && x.tinta && x.letra === '16px'), `64·309 ${w}: los botones secundarios, píldora de 48 px con filo de 1.5 px (Chromium lo ajusta a los píxeles del aparato), sin fondo y en tinta (${JSON.stringify(b.sec)})`);
+        ok(b.enl.length >= 3 && b.enl.every((x) => x.alto >= 47.5 && x.letra === '15px' && x.sub === 'underline'), `64·309 ${w}: los enlaces, tinta de 15 px subrayada y 48 px de toque (${JSON.stringify(b.enl)})`);
+        // 310 · una sola tarjeta: mismo radio, relleno y título
+        const t = await r.p.evaluate(() => {
+          const v = (e) => e?.checkVisibility();
+          const tarjetas = ['#tramo', '#res-medallas', '#capsulas', '.rep-const'].map((s) => document.querySelector(s)).filter(v).map((e) => { const c = getComputedStyle(e); return `${c.borderTopLeftRadius} ${c.paddingTop} ${c.paddingLeft}`; });
+          const titulos = ['#t-tramo', '#t-res-med', '#t-capsulas', '.rep-const h3'].map((s) => document.querySelector(s)).filter(v).map((e) => { const c = getComputedStyle(e); return `${c.fontSize} ${c.fontFamily.split(',')[0]}`; });
+          return { tarjetas: [...new Set(tarjetas)], titulos: [...new Set(titulos)], tramo: document.getElementById('t-tramo').tagName + ':' + document.getElementById('t-tramo').innerText };
+        });
+        eq(t.tarjetas, [`20px ${w < 380 ? '16px 16px' : '20px 20px'}`], `64·310 ${w}: todas las tarjetas del Resumen con el mismo radio y relleno`);
+        ok(t.titulos.length === 1 && /^20px /.test(t.titulos[0]) && /Fraunces/i.test(t.titulos[0]), `64·310 ${w}: y el mismo título, Fraunces de 20 px (${JSON.stringify(t.titulos)})`);
+        eq(t.tramo, 'H2:Próxima etapa', `64·310 ${w}: «Próxima etapa» es el título a la vista de su tarjeta`);
+        // 312 · sin traslados, «Dónde están tus sats» es un renglón con su h2 para el índice
+        const u = await r.p.evaluate(() => { const e = document.getElementById('ubicacion'), h = document.getElementById('t-ubic'); return { vacia: e.classList.contains('vacia'), alto: e.getBoundingClientRect().height, h2: h.textContent, h2Escondido: h.getBoundingClientRect().height <= 1, pista: document.getElementById('ub-pista').innerText, ilu: !!e.querySelector('.ilu') }; });
+        ok(u.vacia && u.alto <= (w < 380 ? 110 : 80) && u.h2 === 'Dónde están tus sats' && u.h2Escondido && u.pista === '¿Ya sacaste sats del exchange?' && !u.ilu, `64·312 ${w}: sin traslados, un renglón con la pregunta y el enlace; el h2 sigue para el índice (${JSON.stringify(u)})`);
+        // 313 · Gráficos: en el teléfono, el rango y «Ampliar» en una fila entre la lectura y el dibujo; en escritorio, el rango junto al título
+        const g = await r.p.evaluate(() => {
+          const q = (s) => document.querySelector(s).getBoundingClientRect();
+          const R = q('#rangos'), A = q('#g-ampliar'), L = q('#g-lectura'), Z = q('#lienzo'), T = q('#t-mercado');
+          return { fila: Math.abs((R.top + R.bottom) / 2 - (A.top + A.bottom) / 2) < 4 && A.left > R.right, bajoLectura: R.top >= L.bottom - 1, sobreDibujo: R.bottom <= Z.top + 1, junto: Math.abs(R.top - T.top) < 40, desborde: document.documentElement.scrollWidth - innerWidth };
+        });
+        if (w < 700) ok(g.fila && g.bajoLectura && g.sobreDibujo && g.desborde === 0, `64·313 ${w}: el rango a la izquierda y «Ampliar» a la derecha, bajo la lectura y pegados al dibujo (${JSON.stringify(g)})`);
+        else ok(g.junto && g.desborde === 0, `64·313 ${w}: en escritorio el rango sigue junto al título (${JSON.stringify(g)})`);
+        // El tabulador sigue lo que se ve: el último rango, «Ampliar» y el gráfico
+        await r.p.focus('#rangos button[data-r="0"]');
+        const orden = [];
+        for (let k = 0; k < 2; k++) { await r.p.keyboard.press('Tab'); orden.push(await r.p.evaluate(() => document.activeElement.id)); }
+        eq(orden, ['g-ampliar', 'lienzo'], `64·313 ${w}: el tabulador va del rango a «Ampliar» y al gráfico`);
+        eq(r.consola, [], `64 ${w}: sin errores en la consola`);
+        await r.ctx.close();
+      }
+    } finally { anio.parar(); }
   });
 
   // ---------------------------------------------------------------- campamentos 57 y 58: «Tu historia» a miles (partitura por semanas y «Todos», constelación por semanas, extra por mayoría, tope de nodos)

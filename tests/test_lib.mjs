@@ -2560,8 +2560,8 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   eq(malE.slice(0, 5), [], 'ánimo E: solo en los turnos de un día cualquiera, con el mismo actor, sin poses de fiesta, ocho como mucho y nadie dos veces');
   ok(['fresco', 'abrigo', 'aire', 'plaza'].every((a) => (difiere[`0${a}`] ?? 0) >= 8 && (difiere[`1${a}`] ?? 0) >= 8), `ánimo E: cada estado se nota en varios ratos del día, en el teléfono y en escritorio (${JSON.stringify(difiere)})`);
   // Nada aconseja: la entrada de «Qué hay de nuevo» y la etiqueta del interruptor, sin palabras de compra o venta ni juicios.
-  // (cambios.js importa la app entera: se lee su primera entrada como texto)
-  const fuenteE = fs.readFileSync(new URL('../app/static/cambios.js', import.meta.url), 'utf8'), primeraE = fuenteE.slice(fuenteE.indexOf('export const CAMBIOS = ['), fuenteE.indexOf('\n  },'));
+  // (cambios.js importa la app entera: se lee su entrada como texto; desde el campamento 64 ya no es la primera)
+  const fuenteE = fs.readFileSync(new URL('../app/static/cambios.js', import.meta.url), 'utf8'), primeraE = fuenteE.slice(fuenteE.indexOf("id: '2026-12-w'"), fuenteE.indexOf('\n  },', fuenteE.indexOf("id: '2026-12-w'")));
   const CAMBIOS_E = [{ id: primeraE.match(/id: '([^']+)'/)[1], items: [...primeraE.matchAll(/^ {6}'(.+)',$/gm)].map((m) => m[1]) }];
   const NO_ACONSEJA = /\b(compr\w*|vend\w*|aprovech\w*|momento|oportunidad\w*|barat\w*|car[oa]s?|baj\w*|sub\w*|ganga|rojo|verde|alarma|cuidado|deber\w*)\b/i;
   const textoE = `${CAMBIOS_E[0].items.join(' ')} El valle sigue al precio: sí El valle sigue al precio: no`;

@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 64) Un solo material; resume también el precio a su ritmo (2026-12-w). El renglón de «Dónde están tus sats» sin
+    // traslados solo lo ve el dueño: no lleva frase.
+    id: '2026-12-x',
+    items: [
+      'Los botones van más ordenados: el naranja es solo para anotar y guardar; lo demás es una píldora con borde o un enlace subrayado.',
+      'Las tarjetas del Resumen tienen todas la misma forma y el mismo título, y «Próxima etapa» lleva el suyo como las demás.',
+      'En el teléfono, en Gráficos, el rango de fechas y «Ampliar» van juntos, pegados al dibujo, y el gráfico queda más arriba.',
+      'Y el pueblo sigue la semana del precio: unas semanas los vecinos se juntan y otras salen a la plaza.',
+    ],
+  },
+  {
     // (Campamento E) El precio, a su ritmo; resume también «Tú» con más gestos (2026-12-v) y los osos de la cumbre (2026-12-u).
     id: '2026-12-w',
     items: [

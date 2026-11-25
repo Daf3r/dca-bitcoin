@@ -213,8 +213,7 @@
   </div>
 
   <section class="tramo" id="tramo" aria-labelledby="t-tramo" hidden data-p="resumen">
-    <h2 class="sr" id="t-tramo">Siguiente meta</h2>
-    <p class="tr-k">Próxima etapa</p>
+    <h2 class="tr-k" id="t-tramo">Próxima etapa</h2>
     <p class="tr-v"><b id="t-meta"></b><span id="t-falta"></span></p>
     <p class="tr-ritmo" id="t-ritmo"></p>
     <div class="rueda tr-anillo" id="t-anillo" role="img" aria-label=""><svg id="t-anillo-svg"></svg><span class="an-centro" id="t-pct"></span></div>
@@ -244,7 +243,7 @@
     <h2 id="t-res-med" data-libro="Medallas del libro">Tus medallas</h2>
     <p class="res-med-n" id="res-med-n"></p>
     <ul class="med-rejilla" id="res-med-lista"></ul>
-    <button type="button" class="res-med-ver" id="res-historia" data-libro="Ver todas las medallas">Ver todas mis medallas</button>
+    <button type="button" class="secundario sigue" id="res-historia" data-libro="Ver todas las medallas">Ver todas mis medallas</button>
   </section>
 
   <!-- Qué gráfico ver: Precio, Valor, Costo promedio o Sats. Solo salen las vistas con datos; se recuerda la última por dispositivo. -->
@@ -261,9 +260,11 @@
     </div>
     <p class="lectura" id="g-lectura"></p>
     <p class="sr" id="g-sr" aria-live="polite"></p>
+    <!-- (Campamento 64) En el teléfono el rango baja aquí, pegado al dibujo, con «Ampliar» a su derecha (styles.css: solo CSS; el orden
+         de tabulación ya es el que se ve: rango, «Ampliar» y, debajo, la escala logarítmica). En escritorio el rango sigue junto al título. -->
     <div class="g-opciones">
+      <button type="button" class="enlace" id="g-ampliar">Ampliar</button>
       <button type="button" class="g-op" id="g-log" aria-pressed="false" hidden>Escala logarítmica</button>
-      <button type="button" class="g-op" id="g-ampliar">Ampliar</button>
     </div>
     <div class="g-caja">
       <div class="lienzo" id="lienzo" tabindex="0" role="img" aria-label="Precio de bitcoin con tus compras marcadas. Usa las flechas para recorrerlo y Intro para ver la compra de ese día." data-libro-aria="Precio de bitcoin con las compras del libro marcadas. Usa las flechas para recorrerlo y Intro para ver la compra de ese día."></div>
@@ -376,7 +377,7 @@
           <div class="l-chips" id="l-chips" role="group" aria-label="Filtrar por tipo">
             <button type="button" data-f="todos" aria-pressed="true">Todo</button><button type="button" data-f="compra" aria-pressed="false">Compras</button><button type="button" data-f="venta" aria-pressed="false">Ventas</button><button type="button" data-f="traslado" aria-pressed="false">Traslados</button><button type="button" data-f="extra" aria-pressed="false">Extra</button><button type="button" data-f="txid" aria-pressed="false">Con TXID</button>
           </div>
-          <button type="button" class="l-mas" id="l-mas" aria-expanded="false" aria-controls="l-mas-c">Fechas y orden</button>
+          <button type="button" class="enlace l-mas" id="l-mas" aria-expanded="false" aria-controls="l-mas-c">Fechas y orden</button>
         </div>
       </div>
       <div class="l-mas-c" id="l-mas-c" role="group" aria-label="Fechas y orden" hidden>
@@ -390,7 +391,7 @@
     </div>
     <p class="l-col" id="l-col" aria-hidden="true" hidden>desde entonces</p>
     <ul class="lista" id="lista"><li class="vacio">Cargando compras…</li></ul>
-    <button type="button" class="ver-todas" id="ver-todas" hidden></button>
+    <button type="button" class="secundario ver-todas" id="ver-todas" hidden></button>
   </section>
 
   <!-- Dónde están tus sats: lo trasladado a tu wallet frente al saldo total. La ven todos cuando hay traslados;
@@ -404,8 +405,8 @@
         <div><dt><i class="ub-e" aria-hidden="true"></i> En el exchange</dt><dd id="ub-e"></dd></div>
       </dl>
     </div>
-    <p class="ub-pista" id="ub-pista" hidden>¿Ya sacaste sats del exchange? Anótalo como «Traslado» para ver cuánto tienes en tu wallet.</p>
-    <button type="button" class="com-boton" id="ub-anotar" hidden>Anotar un traslado</button>
+    <p class="ub-pista" id="ub-pista" hidden>¿Ya sacaste sats del exchange?</p>
+    <button type="button" class="enlace" id="ub-anotar" hidden>Anotar un traslado</button>
   </section>
 
   <!-- Cartas para el futuro (campamento 15A): selladas hasta su fecha o su etapa. El texto de una carta sellada nunca llega a la página. -->
@@ -423,7 +424,7 @@
       <li><span>Racha</span><b id="com-racha"></b><small id="com-racha-sub"></small></li>
       <li><span>Después</span><b id="com-despues"></b><small>campamentos por delante</small></li>
     </ul>
-    <button type="button" class="com-boton" id="com-anotar">Anotar la siguiente compra</button>
+    <button type="button" class="secundario" id="com-anotar">Anotar la siguiente compra</button>
   </section>
 
     <article class="rep rep-ganancia" id="rep-ganancia" aria-labelledby="t-ganancia" hidden data-p="resumen">
@@ -456,13 +457,13 @@
           <p class="dh-hoy-k">El dibujo de hoy</p>
           <h3 id="dh-hoy-t"></h3>
           <p class="dh-hoy-desc" id="dh-hoy-desc"></p>
-          <button type="button" class="dh-hoy-ver" id="dh-hoy-ver">Verlo de cerca</button>
+          <button type="button" class="secundario sigue" id="dh-hoy-ver">Verlo de cerca</button>
         </div>
       </article>
       <!-- La película del ascenso (campamento 23): el camino del libro, de la primera compra a hoy, sobre la montaña de hoy. -->
       <section class="dh-peli" id="dh-peli" aria-labelledby="dh-peli-t" hidden>
         <div class="dh-peli-txt"><h3 id="dh-peli-t">La película del ascenso</h3><p id="dh-peli-d"></p></div>
-        <button type="button" class="dh-peli-ver" id="dh-peli-ver"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-reproducir"/></svg>Ver la película</button>
+        <button type="button" class="secundario dh-peli-ver" id="dh-peli-ver"><svg class="ico" aria-hidden="true" focusable="false"><use href="#i-reproducir"/></svg>Ver la película</button>
       </section>
       <div class="dh-vistas" id="dh-vistas" role="group" aria-label="Cómo ver tu historia" data-libro-aria="Cómo ver la historia del libro">
         <button type="button" data-vh="linea" aria-pressed="true">Línea</button>
