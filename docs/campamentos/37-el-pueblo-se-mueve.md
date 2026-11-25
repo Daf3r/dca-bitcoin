@@ -26,7 +26,7 @@ El movimiento que pidió el dueño, donde es barato: una sola figura chica en su
   - gallinas, 8:00–10:00;
   - teleférico, 10:00–13:00;
   - perro, 14:00–15:00;
-  - **pelota**, 15:00–16:30;
+  - **pelota**, 15:00–16:30 *(campamento 40: el turno `vuelta` empieza a las 16:00 y lleva la misma pelota como actor)*;
   - pericos, 16:30–18:00;
   - luciérnagas y relámpagos, de noche.
 

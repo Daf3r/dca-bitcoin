@@ -9,6 +9,19 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 40) El día entero del pueblo; resume también «Tu historia» a miles (2026-12-m), anotar y buscar (2026-12-l) y los menús
+    // (2026-12-k), que salen casi a la vez.
+    id: '2026-12-n',
+    items: [
+      'El pueblo vive el día entero: el pan de madrugada, las tortillas, la salida de la escuela, la hamaca y la fresca en la acera.',
+      'Cada día el pueblo está un poco distinto, y los lunes y jueves hay ropa tendida.',
+      'Al anochecer las luces se encienden una a una, y las sombras de las casas siguen al sol.',
+      'Con muchas compras, la partitura de «Tu historia» va por semanas: toca una para verla día por día.',
+      'En «Movimientos», buscar y filtrar van en una fila.',
+      '«Tu cuenta» se cierra desde arriba y es más corta.',
+    ],
+  },
+  {
     // (Campamentos 57 y 58) «Tu historia» a miles de compras; resume también anotar y buscar (2026-12-l), que sale casi a la vez.
     id: '2026-12-m',
     items: [

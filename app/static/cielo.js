@@ -202,6 +202,8 @@
    * plaza), pupusas (hasta las 22:00: la pupusera) y duerme (22:00–5:00: nadie). Como `mueve`, lo pinta montana.js y el CSS no.
    */
   function vacaciones(f) { const md = f.slice(5); return md >= '11-15' || md <= '01-15'; }
+  /** (Campamento 40) ¿Hay escuela ese día? Entre semana, fuera de vacaciones y no el 15 de septiembre (es feriado: hay desfile). */
+  function escuela(f) { const sem = new Date(`${f}T12:00:00Z`).getUTCDay(); return sem >= 1 && sem <= 5 && !vacaciones(f) && f.slice(5) !== '09-15'; }
   function turno(f, h) {
     // (Campamento 36) El calendario del pueblo: el desfile del 15 de septiembre (7:00–12:00), Nochebuena y el 31 (18:00–1:00, pasada
     // la medianoche ya es el 25 o el 1), la misa del domingo (7:30–10:00), el sábado de plaza (7:00–12:00) y, en Navidad, la posada
@@ -212,15 +214,45 @@
     // una estampa de 18:00 a 1:00, `nochebuena`).
     const fi = turnoFiesta(md, h);
     if (fi) return fi;
-    if (h >= 22 || h < 5) return 'duerme';
+    // (Campamento 40) El día entero del pueblo: antes del alba el panadero (4:30, idea 140), a mediodía la tortillera (11:30, 136) y,
+    // los días de escuela, la salida (12:00–12:30, 137), la siesta en hamaca (12:30, 138), la vuelta del cantón (16:00, 144: también
+    // es cuando se recoge la ropa tendida, 143) y la fresca (20:00–22:00, 139). Cada cambio de turno rehace solo `.v-vecinos`.
+    if (h >= 22 || h < 4.5) return 'duerme';
+    if (h < 5) return 'alba';
     if (h < 7) return 'amanece';
     const sem = new Date(`${f}T12:00:00Z`).getUTCDay();
     if (sem === 0 && h >= 7.5 && h < 10) return 'misa';
     if (sem === 6 && h < 12) return 'mercado';
-    if (h < 11.5) return sem >= 1 && sem <= 5 && !vacaciones(f) ? 'manana' : 'mananaLibre';
+    if (h < 11.5) return escuela(f) ? 'manana' : 'mananaLibre';
+    if (h < 12.5) return h >= 12 && escuela(f) ? 'salida' : 'tortillas';
     if (h < 14) return 'siesta';
-    if (h < 17.75) return 'tarde';
-    return md >= '12-01' || md <= '01-06' ? 'posada' : 'pupusas';
+    if (h < 16) return 'tarde';
+    if (h < 17.75) return 'vuelta';
+    if (h < 20) return md >= '12-01' || md <= '01-06' ? 'posada' : 'pupusas';
+    return 'fresca';
+  }
+  /**
+   * (Campamento 40, idea 146) Las sombras del pueblo siguen al sol, por turnos (no cada minuto): largas al amanecer y en la vuelta de
+   * la tarde, cortas a mediodía, como siempre el resto. Lo enseña el CSS (`html[data-sombra]`) sobre los trazos que ya existen.
+   */
+  function sombraDelPueblo(h) {
+    if ((h >= 5 && h < 7) || (h >= 16 && h < 17.75)) return 'larga';
+    if (h >= 11.5 && h < 14) return 'corta';
+    return '';
+  }
+  /**
+   * (Campamento 40, idea 147) Las luces del pueblo se encienden una a una: a las 17:45 los faroles, a las 18:00 la iglesia y a las 18:15
+   * las ventanas; a las 22:00 (el pueblo se duerme) se apagan las ventanas y a las 23:00 la iglesia (los faroles, toda la noche). Antes
+   * (16:30–17:45) aún no hay ninguna; los ratos de fiesta de la Navidad entera, todas. `html[data-luces]`: 'ninguna', 'faroles', 'iglesia' o '' (como siempre: todas las que tocan).
+   */
+  function lucesDelPueblo(f, h) {
+    // La noche de fiesta (la misa de gallo, la espera del 31, los abrazos de las doce) el pueblo no se apaga: todas las luces.
+    const fi = turnoFiesta(f.slice(5), h);
+    if (fi && fi !== 'duerme') return '';
+    if (h >= 16.5 && h < 17.75) return 'ninguna';
+    if ((h >= 17.75 && h < 18) || h >= 23 || h < 5) return 'faroles';
+    if ((h >= 18 && h < 18.25) || (h >= 22 && h < 23)) return 'iglesia';
+    return '';
   }
   // ---------------------------------------------------------------------------------------------------- (Campamento 51) el director
   /**
@@ -474,6 +506,10 @@
     // (Campamento 35) El turno del pueblo: si cambió con la página abierta, montana.js rehace solo sus vecinos (`libro:turno`).
     const tu = turno(d, h);
     raiz.dataset.turno = tu;
+    // (Campamento 40) Las sombras del pueblo (146) y sus luces una a una (147): el CSS enseña lo que toca, nada se redibuja.
+    const so = sombraDelPueblo(h), lu = lucesDelPueblo(d, h);
+    if (so) raiz.dataset.sombra = so; else delete raiz.dataset.sombra;
+    if (lu) raiz.dataset.luces = lu; else delete raiz.dataset.luces;
     const fe = festivo(d);
     if (fe) raiz.dataset.festivo = fe; else delete raiz.dataset.festivo;
     if (turnoAplicado !== null && tu !== turnoAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:turno'));
@@ -500,6 +536,6 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, turno,
+  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, turno, escuela, sombraDelPueblo, lucesDelPueblo,
     director, foco, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

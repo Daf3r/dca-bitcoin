@@ -53,7 +53,7 @@ Tope 1100 en todos. Ninguna animación nueva en el dibujo grande. Los fotogramas
 ## Lo que se dejó fuera (y por qué)
 - **229** (los de la cumbre se asoman): «después» (sube el tope de los osos).
 - **La ropa tendida de todos los días**: no hay dibujo; suma nodos (ver arriba).
-- **Más palancas para la rutina** (quién sale, dónde): son del 40 y del 52.
+- **Más palancas para la rutina** (quién sale, dónde): son del 40 y del 52. *(Campamento 40: la carta del día, `arte-vecinos.js: carta`, elige entre dos o tres repartos de cada turno; los turnos nuevos no son focos y no cambian `mueve` ni los ambientales.)*
 - La línea de hoy **no** sale en la entrada ni en un push, y **no** cuenta la rutina (lo común es callado).
 
 ## Lo que puede no verse bien (avisado)

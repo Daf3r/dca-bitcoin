@@ -388,6 +388,17 @@ export function caminoReal({ ini, ctrl, fin, ancho: [a0, a1], k }) {
  * Un conacaste junto a la salida, sembrado el día de la primera compra: crece con los años del libro (retoño, joven, árbol, grande) y,
  * en la época seca, bota la hoja (el CSS ralea la copa y enseña sus ramas). Copa de sombrilla, ancha y baja, facetada como la roca.
  */
+/**
+ * (Campamento 40, pedido del dueño) Las cajas del árbol del primer día ([x0, y0, x1, y1]: el tronco con sus ramas bajas y la copa), con
+ * las mismas medidas que `arbolPrimerDia`. Se pinta después del pueblo (va en el pie de la escena, más cerca), así que ningún vecino
+ * puede quedar bajo él: el reparto las cuenta como sitio ocupado (`lug.ocupado`).
+ */
+export function cajasArbol({ x, y, k, ra, etapa, tam }) {
+  const s = tam;
+  if (etapa === 'retono') { const h = 14 * k * (0.7 + s), a = 5 * k * (0.8 + s) + 1.2 * k; return [[x - a, y - h - 4.6 * k, x + a, y + 0.6 * k]]; }
+  const rx = ra * (0.45 + 0.55 * s), ry = rx * (etapa === 'joven' ? 0.5 : 0.36), alto = rx * (etapa === 'joven' ? 1.1 : 0.86), cy = y - alto, tw = rx * 0.1 + 0.9 * k;
+  return [[x - tw - 0.5 * k, cy + ry * 0.7, x + tw + 0.5 * k, y + 1.2 * k], [x - rx * 1.05, cy - ry * 1.3, x + rx * 1.05, cy + ry * 1.2]];
+}
 export function arbolPrimerDia({ x, y, k, ra, etapa, tam, sol = 1 }) {
   const s = tam;
   if (etapa === 'retono') {

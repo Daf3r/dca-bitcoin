@@ -147,11 +147,35 @@ const TIPOS = {
   volcancitoApagado: () => [['r1', p([-0.7, 0], [0.7, 0], [0.25, -1.5], [-0.25, -1.5])], ['pelo2', p([-0.55, -0.55], [0.55, -0.55], [0.48, -0.8], [-0.48, -0.8])]],
   // el perro de la plaza, echado donde se esconde
   perroEchado: () => [['perro', p(...PERRO_V)]],
+  // ---- (Campamento 40) El día entero del pueblo: los personajes de las maquetas aprobadas (prototipo v4), en la misma talla y tonos.
+  // (136) la tortillera del mediodía: su comal redondo sobre la hornilla de barro, la brasa debajo y las tortillas (de día; no es la
+  // plancha de la pupusera)
+  tortillera: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(),
+    ['palma', p([-3.1, 0], [-2.7, -2.3], [2.7, -2.3], [3.1, 0])], ['rasgo', e(0, -2.45, 3.2, 0.45)],
+    ['pelo2', e(-1.6, -2.8, 0.85, 0.3)], ['pelo2', e(0.3, -2.8, 0.85, 0.3)], ['brasa', e(0, -0.75, 1.3, 0.5)], ['pelo2', e(1.3, -4.0, 0.62, 0.5)], ['pelo2', e(2.1, -3.75, 0.62, 0.5)]],
+  // (137) el osezno a la salida de la escuela, con su bolsón cruzado
+  oseznoBolson: (r) => [...cuerpo(), ...brazos(), ...pantaloncito(r), ...cabeza(0, 0, false),
+    ['rasgo', p([-1.3, -4.3], [-0.9, -4.3], [1.9, -2.3], [1.5, -2.1])], ['palma', p([0.9, -2.7], [3.0, -2.7], [3.0, -0.8], [0.9, -0.8])]],
+  // (138) la siesta en hamaca: sus dos postes, la hamaca y el de la siesta acostado con el sombrero en la cara (quieta: mecerse es la 199)
+  hamaca: (r) => [['rasgo', p([-6.4, 0], [-6.0, 0], [-6.0, -5.6], [-6.4, -5.6])], ['rasgo', p([6.0, 0], [6.4, 0], [6.4, -5.6], [6.0, -5.6])],
+    [r, p([-6.1, -5.3], [-4, -3.0], [0, -1.7], [4, -3.0], [6.1, -5.3], [6.1, -4.5], [4, -1.9], [0, -0.7], [-4, -1.9], [-6.1, -4.5])],
+    ['pelo', e(0.6, -3.0, 2.7, 1.15)], ['pelo', e(-3.0, -3.7, 1.55, 1.35)], ['pelo', e(-4.1, -4.75, 0.6)], ['som', luna(-3.0, -3.7, 1.55, 1.35)], ['pelo', e(3.3, -3.3, 0.9, 0.55)],
+    ['palma', p([-4.4, -4.6], [-1.6, -4.9], [-1.7, -4.3], [-4.3, -4.0])], ['palma', e(-2.9, -4.95, 0.9, 0.6)]],
+  // (143) el jueves, en el tendedero van los uniformes de la escuela: camisas blancas y pantalones oscuros (el lunes, las sábanas:
+  // `tendedero`, el mismo del 31)
+  tendederoJueves: () => [['rasgo', p([-7.2, 0], [-6.85, 0], [-6.85, -6.7], [-7.2, -6.7])], ['rasgo', p([6.85, 0], [7.2, 0], [7.2, -6.7], [6.85, -6.7])], ['rasgo', p([-7, -6.45], [7, -6.25], [7, -6.1], [-7, -6.3])],
+    ['pelo2', p([-6.2, -6.3], [-3.6, -6.25], [-3.3, -5.5], [-3.9, -5.3], [-3.9, -3.9], [-5.9, -3.9], [-5.9, -5.3], [-6.5, -5.5])], ['rasgo', p([-2.6, -6.2], [-0.8, -6.2], [-0.9, -3.2], [-1.5, -3.2], [-1.7, -4.6], [-1.9, -3.2], [-2.5, -3.2])],
+    ['pelo2', p([0.2, -6.15], [2.8, -6.1], [3.1, -5.4], [2.5, -5.2], [2.5, -3.8], [0.5, -3.8], [0.5, -5.2], [-0.1, -5.4])], ['rasgo', p([3.8, -6.1], [5.6, -6.05], [5.5, -3.3], [4.9, -3.3], [4.7, -4.6], [4.5, -3.3], [3.9, -3.3])]],
+  // (143) donde la calle es corta (el teléfono, el escritorio de un solo corredor), el tendedero corto: el mismo, más estrecho
+  tendederoCorto: () => TIPOS.tendedero().map(([t, q]) => [t, ['p', q[1].map(([x, y]) => [x * 0.55, y])]]),
+  tendederoJuevesCorto: () => TIPOS.tendederoJueves().map(([t, q]) => [t, ['p', q[1].map(([x, y]) => [x * 0.55, y])]]),
   // los oseznos de espaldas (la espera del 31, mirando la torre): su pantaloncito y la nuca
   oseznoEspaldas: (r) => [...cuerpo(), ...brazos(), ...pantaloncito(r), ['pelo', e(0, CAB.y, CAB.rx, CAB.ry)], ['pelo', e(-1.85, CAB.y - 1.6, 0.74)], ['pelo', e(1.85, CAB.y - 1.6, 0.74)], ['som', luna(0, CAB.y, CAB.rx, CAB.ry)]],
 };
 /** (Campamento 41) Lo que no es un vecino sino una cosa en el suelo: sin sombra de pie, no cuenta entre los ocho y no aparta a nadie. */
-export const COSAS = new Set(['pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'perroEchado']);
+export const COSAS = new Set(['pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado']);
+/** (Campamento 40) Sin sombra de pie, pero sí es un vecino (cuenta y aparta a los demás): la hamaca, con sus postes y el que duerme en ella. */
+const SIN_PIE = new Set(['hamaca']);
 export const PERSONAJES = Object.keys(TIPOS);
 // La caja de cada personaje en sus unidades (de todas sus piezas): para que dos vecinos nunca se monten uno sobre otro.
 const CAJAS = Object.fromEntries(Object.entries(TIPOS).map(([t, fn]) => {
@@ -194,7 +218,7 @@ export function vecinos(lista, { sol = 1 } = {}) {
     const m = (px, py) => [x + f * px * kk, y + py * kk];
     const mSom = (px, py) => [x + sol * px * kk, y + py * kk];
     for (const [tono, pieza] of piezas) tonos[tono] += trazo(pieza, tono === 'som' ? mSom : m, kk);
-    if (!COSAS.has(t)) pie += `M${f1(x - 2.2 * kk)} ${f1(y)}L${f1(x + 2.2 * kk)} ${f1(y)}L${f1(x + (1.4 - sol * 2.6) * kk)} ${f1(y + 0.85 * kk)}L${f1(x - (1.4 + sol * 2.6) * kk)} ${f1(y + 0.7 * kk)}Z`;
+    if (!COSAS.has(t) && !SIN_PIE.has(t)) pie += `M${f1(x - 2.2 * kk)} ${f1(y)}L${f1(x + 2.2 * kk)} ${f1(y)}L${f1(x + (1.4 - sol * 2.6) * kk)} ${f1(y + 0.85 * kk)}L${f1(x - (1.4 + sol * 2.6) * kk)} ${f1(y + 0.7 * kk)}Z`;
   }
   return { tonos, pie };
 }
@@ -210,12 +234,33 @@ export function manoDe({ x, y, k, f = 1, s = 1 }) {
 }
 
 // ------------------------------------------------------------------------------------------------ el reparto según el turno (101–107)
+/** El número del día (desde el lunes 1 de enero de 2024) de una fecha AAAA-MM-DD; 0 si no hay fecha. */
+const numDia = (f) => (/^\d{4}-\d{2}-\d{2}$/.test(f ?? '') ? Math.round((Date.parse(`${f}T00:00:00Z`) - Date.UTC(2024, 0, 1)) / 864e5) : 0);
+/**
+ * (Campamento 40, idea 141) La carta del día de un turno: cuál de sus `n` repartos parecidos toca hoy (0 a n−1). Lo decide solo la fecha
+ * (nunca la cuenta ni las compras): igual para toda la familia. Gira de un día al siguiente, así que **hoy nunca es como ayer**, y con
+ * dos o tres cartas tampoco como el mismo día de la semana pasada (7 no es múltiplo de 2 ni de 3). Cada turno empieza en otra carta (su
+ * `sal`), para que no cambien todos a la vez. Sin fecha (las pruebas de siempre, la entrada sin día), la carta 0: el reparto de antes.
+ * @param {string} dia
+ * @param {string} t
+ * @param {number} n
+ */
+export function carta(dia, t, n) {
+  if (!dia || n < 2) return 0;
+  const sal = [...t].reduce((a, c) => a + c.charCodeAt(0), 0);
+  return (((numDia(dia) + sal) % n) + n) % n;
+}
+/** (Campamento 40, idea 145) Los turnos en que el perro se echa en otro sitio (dibujado con los vecinos; el de siempre se esconde). */
+export const PERRO_TURNOS = ['alba', 'amanece', 'manana', 'tortillas', 'salida', 'siesta', 'pupusas', 'posada', 'fresca'];
 /**
  * Quién está dónde. `lug`: los sitios del pueblo (`lugaresPueblo`: { atrio, corredor, calle, plaza, banca }, cada uno [[x, y, k]…]);
  * `t`: el turno (cielo.js: `turno`). `hilos`: cuántas piscuchas vuelan (de octubre a noviembre): esos oseznos de la plaza, cuando
  * están, llevan el brazo arriba y miran hacia ellas. Nunca más de `n` figuras (la pelota no cuenta) y nunca según las cuentas.
+ * (Campamento 40) `dia`: la fecha (la carta del día, 141; el tendedero de los lunes y jueves, 143; la fila del fin de semana, 142);
+ * `escuela`: si ese día hay escuela (cielo.js: `escuela`); `canton`: [x, y, k, f], dónde va hoy por el camino real la que baja del
+ * cantón (144; montana.js lo saca de la hora al dibujar el turno), o null.
  */
-export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
+export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null } = {}) {
   const L = [];
   const en = (sitio, i, tipo, extra = {}) => { const q = lug[sitio]?.[i]; if (q) L.push({ t: tipo, x: q[0] + (extra.dx ?? 0) * q[2], y: q[1] + (extra.dy ?? 0) * q[2], k: q[2], ...extra }); };
   const oseznos = (cuantos, tipo = null) => {
@@ -224,17 +269,84 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
       en('plaza', i, tipo ?? (hilo || i % 3 === 1 ? 'oseznoArriba' : 'osezno'), { s: OSEZNO, r: i, f: hilo || i % 2 === 0 ? 1 : -1, hilo });
     }
   };
-  if (t === 'amanece') { en('corredor', 0, 'estira', { r: 2 }); en('calle', 0, 'panadero', { r: 1 }); en('corredor', 1, 'escoba', { r: 0, f: -1 }); }
+  // (40, 145) El perro de hoy: a su lado de alguien (`perro(sitio, i, dx)`) o bajo la hamaca (`bajo`). Se pone al final, donde quepa sin
+  // que nadie quede encima; si no cabe, en su sitio de siempre. Así, en sus turnos, el perro siempre va con los vecinos.
+  let perroHoy = null;
+  const perro = (sitio, i, dx = 0, extra = {}) => { const q = lug[sitio]?.[i]; perroHoy = q ? { x: q[0] + dx * q[2], y: q[1] + (extra.dy ?? 0) * q[2], k: q[2], bajo: Boolean(extra.bajo) } : null; };
+  const c = (m) => carta(dia, t === 'vuelta' ? 'tarde' : t === 'salida' ? 'tortillas' : t, m); // la vuelta y la salida siguen la carta de su turno de antes
+  const md = (dia || '').slice(5), sem = dia ? new Date(`${dia}T12:00:00Z`).getUTCDay() : -1;
+  const navidad = Boolean(md) && (md >= '12-01' || md <= '01-06');
+  // (40, 144) La que baja del cantón por el camino real (de 5:30 a 7:00) y vuelve a subir (de 16:00 a 17:30); va al final de la lista.
+  const delCanton = () => { if (canton) L.push({ t: 'vendedora', x: canton[0], y: canton[1], k: canton[2], r: 1, f: canton[3], canton: true }); };
+  if (t === 'alba') { en('calle', 0, 'panadero', { r: 1 }); perro('calle', 0, -8.5); } // (140) antes del alba, el panadero carga su canasto
+  else if (t === 'amanece') {
+    en('corredor', 0, 'estira', { r: 2 }); en('calle', 0, 'panadero', { r: 1 });
+    if (c(2)) en('calle', 1, 'escoba', { r: 0, f: -1 }); else en('corredor', 1, 'escoba', { r: 0, f: -1 });
+    perro('calle', 0, -8.5); delCanton(); // (145) el perro sigue al panadero un trecho
+  }
   // (37) `actor`: el que se mueve en su propia capa (montana.js), en su franja de data-mueve: la que barre de 7:00 a 8:00 y la pelota de
   // los oseznos de 15:00 a 16:30. Uno a la vez.
-  else if (t === 'manana') { en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'campesino', { r: 1 }); en('corredor', 1, 'escoba', { r: 1, actor: 'barre' }); en('calle', 1, 'vecina', { r: 2, f: -1 }); }
-  else if (t === 'mananaLibre') { en('atrio', 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'campesino', { r: 1 }); en('calle', 1, 'vecina', { r: 2, f: -1 }); oseznos(4); }
-  else if (t === 'siesta') { en('banca', 0, 'siesta', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', 1, 'vendedora', { r: 0, f: -1 }); }
-  else if (t === 'tarde') { en('corredor', 0, 'abuela', { r: 2 }); oseznos(5); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'campesino', { r: 2, f: -1 }); }
+  else if (t === 'manana') {
+    // (40, 141) Tres repartos: el de siempre; la vendedora en la plaza platicando con una vecina; la abuela con visita.
+    const k = c(3);
+    if (k === 1) { en('plaza', 1, 'vendedora', { r: 0 }); en('plaza', 1, 'vecina', { r: 2, dx: 3.8, f: -1 }); } else en('atrio', 0, 'vendedora', { r: 0 });
+    en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'escoba', { r: 1, actor: 'barre' }); // la que barre, antes que la visita: nunca se queda fuera
+    if (k === 2) en('corredor', 0, 'sentado', { r: 0, dx: 4.6, f: -1 });
+    en('calle', k === 2 ? 1 : 0, 'campesino', { r: 1, f: k === 2 ? -1 : 1 });
+    if (k === 0) en('calle', 1, 'vecina', { r: 2, f: -1 });
+    if (k === 1) perro('calle', 0, -5.5); else perro('perro', 0);
+  }
+  else if (t === 'mananaLibre') {
+    const k = c(2);
+    en(k ? 'atrio' : 'atrio', k ? 1 : 0, 'vendedora', { r: 0 }); en('corredor', 0, 'abuela', { r: 2 }); en('calle', k, 'campesino', { r: 1, f: k ? -1 : 1 }); en('calle', 1 - k, 'vecina', { r: 2, f: k ? 1 : -1 }); oseznos(4);
+  }
+  // (40, 136 y 137) A mediodía, la tortillera en la calle (donde de noche se pone la pupusera) y alguien que espera sus tortillas; a las
+  // 12:00, los días de escuela, los oseznos salen con su bolsón (el perro los espera); sin escuela, juegan en la plaza.
+  else if (t === 'tortillas' || t === 'salida') {
+    const k = c(3);
+    en('calle', 0, 'tortillera', { r: 0 }); en('calle', 0, ['vecino', 'vecina', 'campesino'][k], { r: [2, 1, 0][k], dx: 6.4, f: -1 });
+    en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, k === 1 ? 'vendedora' : 'vecina', { r: 1 });
+    if (t === 'salida') { for (let i = 0; i < 4; i++) en('plaza', i, 'oseznoBolson', { s: OSEZNO, r: i, f: i % 2 ? -1 : 1 }); perro('plaza', 4, 1.5); }
+    else { if (!escuela) oseznos(3); if (k === 1) perro('calle', 0, -5.5); else perro('perro', 0); }
+  }
+  // (40, 138) La siesta en hamaca, bajo el árbol de la plaza, con el perro echado debajo. En Navidad el árbol es el pino y está el
+  // nacimiento: el de la siesta duerme sentado en la banca, como antes, y el perro en su sitio.
+  else if (t === 'siesta') {
+    if (navidad) { en('banca', 0, 'siesta', { r: 1 }); perro('perro', 0); } else { en('banca', 0, 'hamaca', { r: 1, dy: 0.4 }); perro('banca', 0, -2.6, { dy: 0.5, bajo: true }); }
+    en('corredor', 0, 'abuela', { r: 2 });
+    if (c(2)) en('atrio', 1, 'vecina', { r: 1 }); else en('calle', 1, 'vendedora', { r: 0, f: -1 });
+  }
+  else if (t === 'tarde' || t === 'vuelta') {
+    // (40, 141) Tres repartos de la tarde; la vuelta (16:00–17:45) es la misma tarde con la del cantón subiendo.
+    const k = c(3);
+    en('corredor', 0, 'abuela', { r: 2 });
+    if (k === 2) en('corredor', 0, 'sentado', { r: 1, dx: 4.6, f: -1 });
+    oseznos(5); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' });
+    if (k === 0) { en('calle', 0, 'vecina', { r: 1 }); en('calle', 1, 'campesino', { r: 2, f: -1 }); }
+    else if (k === 1) { en('calle', 0, 'vecino', { r: 0 }); en('atrio', 1, 'vecina', { r: 2 }); }
+    else en('calle', 0, 'campesino', { r: 1 });
+    if (t === 'vuelta') delCanton();
+  }
   else if (t === 'pupusas' || t === 'posada') {
     // (36, idea 112) En Navidad, al anochecer, además una osa y su osezno miran el nacimiento (de espaldas; el nacimiento no cambia).
     if (t === 'posada') { en('portal', 0, 'espaldas', { r: 0 }); en('portal', 0, 'osezno', { r: 2, s: OSEZNO, dx: 3.2, dy: 0.5 }); }
-    en('calle', 0, 'pupusera', { r: 0 }); en('calle', 0, 'vecino', { r: 2, dx: 6.2, f: -1 }); en('calle', 0, 'osezno', { r: 1, s: OSEZNO, dx: 9.6, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, 'vecina', { r: 1 });
+    const k = c(2);
+    en('calle', 0, 'pupusera', { r: 0 }); en('calle', 0, k ? 'vecina' : 'vecino', { r: k ? 1 : 2, dx: 6.2, f: -1 }); en('calle', 0, 'osezno', { r: 1, s: OSEZNO, dx: 9.6, f: -1 });
+    // (40, 142, fundida en la 141) Viernes, sábado y domingo hay más fila donde la pupusera (hasta los ocho de siempre).
+    if ([5, 6, 0].includes(sem)) { // del otro lado de la plancha (hacia la plaza) y, si ahí no caben, detrás de los que esperan; sin salirse de la calle
+      for (const [tipo, r, dx, dx2, s] of [['campesino', 0, -6.6, 12.6, 1], ['vecina', 2, -10, 15.8, 1], ['osezno', 0, -13, 19, OSEZNO]]) en('calle', 0, tipo, { r, s, dx, f: 1, fila: true, otro: dx2 - dx });
+    }
+    en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 1, k ? 'vecino' : 'vecina', { r: 1 });
+    perro('calle', 0, -6); // (145) junto a la pupusera, esperando
+  }
+  // (40, 139) La fresca: de 20:00 a 22:00 los vecinos sacan su silla a la acera (uno junto al farol de la plaza, que de noche se ve); los
+  // oseznos ya están adentro.
+  else if (t === 'fresca') {
+    const k = c(2);
+    en('corredor', 0, 'abuela', { r: 2 }); en('calle', 0, 'sentado', { r: 0 }); en('calle', 0, 'sentado', { r: 1, dx: 5.6, f: -1 }); en('calle', 1, 'sentado', { r: 2, f: -1 });
+    en('farol', k, 'sentado', { r: 1, dx: k ? -2.6 : 2.6, f: k ? -1 : 1 }); en('atrio', 1, 'vecina', { r: 1 });
+    if (!k) en('atrio', 0, 'vecino', { r: 0, f: -1 });
+    perro('calle', 0, -5.5);
   }
   // ---- (Campamento 36) El calendario del pueblo: cada fecha, otro reparto de los mismos osos.
   // El domingo, a misa (108): de espaldas camino de la puerta, un vecino con su osezno de la mano y el padre a la puerta (109).
@@ -286,12 +398,35 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0 } = {}) {
     if (COSAS.has(v.t)) { fuera.push(v); continue; }
     if (figuras >= n) continue;
     const roce = m * v.k, adulto = (v.s ?? 1) >= 1;
-    const d = (adulto ? [0, 3, -3, 6, -6] : [0]).find((dx) => !choca({ ...cajaVecino({ ...v, x: v.x + dx * v.k }), osezno: !adulto }, roce));
-    if (d === undefined) continue;
-    const w = { ...v, x: v.x + d * v.k };
+    // (40) Quien se aparta unos pasos no se sale de la calle (`lug.borde`: en escritorio acaba junto al sendero); la fila del fin de
+    // semana (142) prueba primero su lado y, si no cabe, el otro, detrás de los que esperan (también los oseznos).
+    const dentro = (q) => { if (!lug.borde) return true; const cj = cajaVecino(q); return cj.x0 >= lug.borde[0] && cj.x1 <= lug.borde[1]; };
+    const pruebas = (adulto ? [0, 3, -3, 6, -6] : [0]).map((dx) => ({ q: { ...v, x: v.x + dx * v.k }, borde: dx !== 0 || v.fila }));
+    if (v.fila) pruebas.push({ q: { ...v, x: v.x + v.otro * v.k, f: -1 }, borde: true });
+    const w = pruebas.find(({ q, borde }) => !choca({ ...cajaVecino(q), osezno: !adulto }, roce) && (!borde || dentro(q)))?.q;
+    if (!w) continue;
     puestos.push({ ...cajaVecino(w), osezno: !adulto });
     fuera.push(w);
     figuras++;
+  }
+  // (40, 145) El perro de hoy, el último: donde quepa sin que nadie le quede encima (o bajo la hamaca, a propósito); si no, en su sitio.
+  if (perroHoy && PERRO_TURNOS.includes(t)) {
+    const v = { t: 'perroEchado', x: perroHoy.x, y: perroHoy.y, k: perroHoy.k }, cj = cajaVecino(v);
+    const s0 = lug.perro?.[0];
+    if (perroHoy.bajo || !choca(cj, m * v.k)) { fuera.push(v); puestos.push(cj); } else if (s0) fuera.push({ t: 'perroEchado', x: s0[0], y: s0[1], k: s0[2] });
+  }
+  // (40, 143) Lunes y jueves, la ropa tendida (el lunes, sábanas; el jueves, los uniformes de la escuela) de la mañana a las 16:00; en la
+  // lluviosa se recoge al empezar la siesta, antes del aguacero. Delante de una casa con corredor donde no tape a nadie; si no cabe, no sale.
+  const lluviosa = Boolean(md) && md.slice(0, 2) >= '05' && md.slice(0, 2) <= '10';
+  if ((sem === 1 || sem === 4) && (['manana', 'mananaLibre', 'tortillas', 'salida'].includes(t) || (!lluviosa && ['siesta', 'tarde'].includes(t)))) {
+    const tipo = sem === 1 ? 'tendedero' : 'tendederoJueves';
+    const sitios = [...(lug.corredor ?? []).slice(2), ...[...(lug.calle ?? [])].reverse(), ...(lug.corredor ?? []).slice(0, 2)];
+    // Primero el largo, sin moverlo; si no cabe en ningún sitio, el corto, con unos pasos a un lado si hace falta.
+    const prueba = [...sitios.map((q) => [q, tipo, 0]), ...sitios.flatMap((q) => [0, -3, 3, -6, 6].map((dx) => [q, `${tipo}Corto`, dx]))];
+    for (const [q, tt, dx] of prueba) {
+      const v = { t: tt, x: q[0] + dx * q[2], y: q[1] - 0.4 * q[2], k: q[2] }, cj = cajaVecino(v);
+      if (!choca(cj, m * v.k)) { fuera.push(v); break; }
+    }
   }
   return fuera;
 }

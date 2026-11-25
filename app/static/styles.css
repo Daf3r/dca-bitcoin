@@ -4857,3 +4857,26 @@ html:is([data-turno="nb-doce"], [data-festivo="navidad"]) .c-regalo { display: i
 .c-regalo-verde { fill: color-mix(in oklab, var(--vo-verde, #2e8b62) 82%, var(--monte-sombra)); }
 .osos.sin-nieve ~ .c-regalo { opacity: 0; }
 .osos[visibility="hidden"] ~ .c-regalo { visibility: hidden; }
+
+/* ---------------------------------------------------------------- Campamento 40 · El día entero del pueblo
+   Turnos nuevos (cielo.js: turno; arte-vecinos.js: reparto), todo quieto: con cualquier nivel de efectos, el mismo dibujo.
+   (145) El perro tiene su día: en estos turnos se echa en otro sitio y va dibujado con los vecinos (el de siempre, y su sombra, no se
+   ven esos ratos; de tarde sigue en su sitio, que es adonde llega al cruzar la plaza). */
+html:is([data-turno="alba"], [data-turno="amanece"], [data-turno="manana"], [data-turno="tortillas"], [data-turno="salida"], [data-turno="siesta"], [data-turno="pupusas"], [data-turno="posada"], [data-turno="fresca"]) #m-v-pie :is(.v-animal, .v-sombra-perro) { display: none; }
+html:is([data-turno="nb-doce"], [data-turno="f31-espera"], [data-turno="f31-doce"], [data-turno="n25-recalentado"]) #m-v-pie .v-sombra-perro { display: none; }
+/* (146) Las sombras del pueblo siguen al sol, por turnos: largas al amanecer y al caer la tarde (se estiran y se tuercen lejos del
+   astro desde su base), cortas a mediodía. La base es el suelo de la calle (y el de la terraza, la fila de atrás): montana.js deja su
+   altura en --v-suelo y --v-suelo-atras, y de qué lado está el astro en --v-sol. No es una animación: cambia unas pocas veces al día. */
+.v-pueblo .v-sombra { transform-box: view-box; transform-origin: 0 var(--v-suelo, 0px); }
+.v-pueblo .v-sombra-atras { transform-origin: 0 var(--v-suelo-atras, 0px); }
+html[data-sombra="larga"] .v-pueblo .v-sombra { transform: skewX(calc(var(--v-sol, 1) * -38deg)) scaleY(1.7); }
+html[data-sombra="corta"] .v-pueblo .v-sombra { transform: skewX(calc(var(--v-sol, 1) * 18deg)) scaleY(0.55); }
+/* (147) Las luces se encienden una a una: los faroles (17:45), la iglesia (18:00) y las ventanas (18:15); a las 22:00 se apagan las
+   ventanas y a las 23:00 la iglesia; los faroles, toda la noche (cielo.js: lucesDelPueblo, `data-luces`). Solo el pueblo: el cantón y
+   las luces de la sierra siguen como siempre. La pupusera lleva su propia luz. */
+html[data-luces="ninguna"] .v-pueblo .v-farol-luz { display: none; }
+html[data-luces="ninguna"] .v-pueblo .v-farol-lampara { fill: color-mix(in oklab, #2a2725 70%, var(--monte-sombra)); }
+html[data-luces="ninguna"] .v-pueblo > .v-charco { display: none; }
+html:is([data-luces="ninguna"], [data-luces="faroles"], [data-luces="iglesia"]) .v-pueblo .v-luz { fill: color-mix(in oklab, #2b2420 45%, var(--monte-sombra)); }
+html:is([data-luces="ninguna"], [data-luces="faroles"], [data-luces="iglesia"]) .v-pueblo .v-halo { opacity: 0; }
+html:is([data-luces="ninguna"], [data-luces="faroles"]) .v-pueblo :is(.v-ig-hueco, .v-ig-ventana) { fill: color-mix(in oklab, #2e2219 60%, var(--monte-sombra)); }

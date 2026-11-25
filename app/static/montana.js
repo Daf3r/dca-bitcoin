@@ -3,9 +3,9 @@ import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, 
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { reparto, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
-import { sitiosPueblo, lugaresPueblo, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
+import { sitiosPueblo, lugaresPueblo, TERRAZA, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
-import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
+import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, cajasArbol, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 /** (Campamento 39) Un círculo como subtrazo, redondeado como el `<circle>` de antes (centro y radio a una décima): para juntar muchos en un trazo. */
 const circuloD = (cx, cy, r) => { const x = Number(f1(cx)), y = Number(f1(cy)), q = Number(f1(r)); return `M${f1(x - q)} ${f1(y)}a${f1(q)} ${f1(q)} 0 1 0 ${f1(2 * q)} 0a${f1(q)} ${f1(q)} 0 1 0 ${f1(-2 * q)} 0Z`; };
@@ -347,7 +347,8 @@ function animalesDelPueblo(host) {
   });
   const perro = pie.querySelector('.v-animal');
   if (perro?.getAttribute('d')) {
-    const b = perro.getBBox(), k = b.width / ANCHO_PERRO, y = b.y + b.height, x0 = b.x + COLA_PERRO * k - 0.2 * k;
+    // (40) Medido como un trazo suelto: en los turnos en que el perro se echa en otro sitio, el de siempre está escondido (y su caja sería 0).
+    const b = caja(perro.getAttribute('d')), k = b.width / ANCHO_PERRO, y = b.y + b.height, x0 = b.x + COLA_PERRO * k - 0.2 * k;
     // De pie, de perfil, mirando a donde va (a la derecha): lomo, cabeza, cola y cuatro patas, en sus unidades k (el echado mide 5.2).
     // Llega andando desde cinco largos a la izquierda hasta donde se echa.
     const q = (px, py) => `${f1(x0 + px * k)} ${f1(y + py * k)}`;
@@ -412,8 +413,47 @@ function ambientalesDelValle(host) {
 const focoDelDia = () => { const C = window.libroCielo, d = C?.dia?.(); return d ? (C.fraseDelFoco?.(d) ?? C.fraseRutina?.(d) ?? '') : ''; };
 const turnoDelPueblo = () => window.libroCielo?.turno?.(window.libroCielo.dia(), window.libroCielo.hora()) ?? 'manana';
 const elipseV = (x, y, rx, ry) => `M${f1(x - rx)} ${f1(y)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z`;
-function htmlVecinos({ lug, sol, cometas, conCapa = false }, t) {
-  const todos = reparto(lug, t, { hilos: cometas.length }), lista = conCapa ? todos.filter((v) => !v.actor) : todos;
+/**
+ * (Campamento 40, idea 144) Dónde va la que baja del cantón por el camino real: baja de 5:30 a 7:00 (turno `amanece`) y vuelve a subir de
+ * 16:00 a 17:30 (`vuelta`). No camina: su sitio sale de la hora **al dibujar el turno** (cada vez que se abre, un poco más allá) y se
+ * queda quieta hasta el turno siguiente. Guarda 13 px del sendero (de los pies a la cabeza) y no se mete en el conacaste; si no, más
+ * abajo, o no sale. Solo donde hay camino real (en el teléfono y la tableta: en escritorio la calle ya lleva a la salida). [x, y, k, f]
+ */
+function sitioCanton(cm, t, h) {
+  if (!cm || !['amanece', 'vuelta'].includes(t)) return null;
+  const sube = t === 'vuelta', fr = Math.min(1, Math.max(0, (h - (sube ? 16 : 5.5)) / 1.5));
+  if (sube && h >= 17.5) return null;
+  const pto = (q) => { const v = 1 - q; return [v * v * cm.ini[0] + 2 * v * q * cm.ctrl[0] + q * q * cm.fin[0], v * v * cm.ini[1] + 2 * v * q * cm.ctrl[1] + q * q * cm.fin[1]]; };
+  const segs = cm.pts.slice(1).map((b, i) => [cm.pts[i], b]);
+  const dist = ([x, y]) => Math.min(...segs.map(([[ax, ay], [bx, by]]) => { const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy || 1, q = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l)); return Math.hypot(x - ax - q * dx, y - ay - q * dy); }));
+  for (let q = sube ? 0.05 + 0.65 * fr : 0.7 - 0.65 * fr; q >= 0.05; q -= 0.05) {
+    const [x, y] = pto(q), k = cm.u * (1 - 0.35 * q), alto = 9.5 * k * 0.82;
+    const lejos = dist([x, y]) >= 13 && dist([x, y - alto]) >= 13 && dist([x, y - alto / 2]) >= 13;
+    const arbol = cm.arbol && Math.hypot(x - cm.arbol.x, y - cm.arbol.y) < cm.arbol.ra + 4 * k;
+    // Ni encima de los tejados: donde el camino sale de la plaza pasa por detrás del pueblo (su caja, con su alto de casa).
+    const [c0, c1, c2] = cm.caja, tejados = x + 3 * k > c0 && x - 3 * k < c2 && y > c1 - 2 * k;
+    if (!lejos || arbol || tejados || !Number.isFinite(x + y + k)) continue;
+    const [ax] = pto(Math.max(0, q - 0.02)), [bx] = pto(Math.min(1, q + 0.02)); // hacia dónde va: al pueblo al bajar, al cantón al subir
+    return [x, y, k, (sube ? bx - ax : ax - bx) >= 0 ? 1 : -1];
+  }
+  return null;
+}
+/**
+ * (Campamento 40, pedido del dueño) El árbol del primer día se pinta después del pueblo: con sus cajas en lo ocupado, ningún vecino queda
+ * bajo su tronco ni su copa (antes, con la fila de las pupusas de un viernes a 1440 px, el tronco le cruzaba el cuerpo a una vecina).
+ */
+function conArbol(lug, arbol) {
+  if (arbol) for (const [x0, y0, x1, y1] of cajasArbol(arbol)) lug.ocupado.push({ x0, y0, x1, y1 });
+  return lug;
+}
+/** (Campamento 40) Lo que el reparto necesita del día y la hora (la carta del día, la escuela, la del cantón): lo mismo para el grupo y la capa. */
+function opcionesReparto(info, t) {
+  const C = window.libroCielo, dia = C?.dia?.() ?? '';
+  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, C?.hora?.() ?? 12) };
+}
+function htmlVecinos(info, t) {
+  const { lug, sol, cometas, conCapa = false } = info;
+  const todos = reparto(lug, t, opcionesReparto(info, t)), lista = conCapa ? todos.filter((v) => !v.actor) : todos;
   const manos = lista.filter((v) => v.hilo).map(manoDe);
   const mx = cometas.reduce((a, q) => a + q.x, 0) / Math.max(1, cometas.length);
   const poste = [...lug.poste].sort((a, b) => Math.abs(a[0] - mx) - Math.abs(b[0] - mx))[0];
@@ -427,7 +467,7 @@ function htmlVecinos({ lug, sol, cometas, conCapa = false }, t) {
  */
 function capaVecino(host, info, t) {
   host.querySelector(':scope > svg.v-capa-vecino')?.remove();
-  const actor = reparto(info.lug, t, { hilos: info.cometas.length }).find((v) => v.actor);
+  const actor = reparto(info.lug, t, opcionesReparto(info, t)).find((v) => v.actor);
   if (!actor) return;
   const c = cajaVecino(actor), m = 1.5 * actor.k, arriba = actor.actor === 'pelota' ? 3 * actor.k : 0;
   const [x, y, w, h] = [c.x0 - m, c.y0 - m - arriba, c.x1 - c.x0 + 2 * m, c.y1 - c.y0 + 2 * m + arriba];
@@ -461,7 +501,11 @@ function vigilarTurno(host, info) {
     for (const [h, v] of vecinosVivos) {
       const g = h.isConnected && h.querySelector('.v-vecinos');
       if (!g) { vecinosVivos.delete(h); continue; }
-      if (v.turno !== t) { g.innerHTML = htmlVecinos(v, t); v.turno = t; if (v.conCapa) capaVecino(h, v, t); }
+      if (v.turno !== t) {
+        g.innerHTML = htmlVecinos(v, t); v.turno = t; if (v.conCapa) capaVecino(h, v, t);
+        // (Campamento 40, idea 148) La descripción de la montaña cuenta el turno de ahora: se rehace con él.
+        if (estado?.host === h && estado.valle) { estado.valle.turno = t; describir(estado.sats, estado.etapaDesc); }
+      }
     }
   });
 }
@@ -695,7 +739,13 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 35) Los vecinos osos del turno de ahora; sus hilos llevan las piscuchas a la manita de un osezno (o al poste del farol si
   // no hay oseznos en la plaza) y se rehacen con ellos al cambiar de turno (`libro:turno`).
   const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q) => ({ ...q, k: kp, hilo: null }));
-  const C = window.libroCielo, infoV = { lug: lugaresPueblo(pb), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula };
+  const C = window.libroCielo, infoV = { lug: conArbol(lugaresPueblo(pb), arbolV), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula,
+    camino: conCamino && pb.plaza ? { ...valle.camino, u: pb.u, pts, arbol: arbolV, caja: [pb.caja[0], pb.yg - 16 * pb.u, pb.caja[2]] } : null };
+  // (Campamento 40, idea 146) Las sombras del pueblo se alargan y se acortan desde su base (el suelo de la calle y el de la terraza):
+  // el CSS las tuerce y estira según `data-sombra`, sin redibujarlas.
+  host.style.setProperty('--v-suelo', `${f1(pb.yg)}px`);
+  host.style.setProperty('--v-suelo-atras', `${f1(pb.yg - TERRAZA * pb.u)}px`);
+  host.style.setProperty('--v-sol', String(solV));
   s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
@@ -845,7 +895,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El eco deja una estela de luz por el tramo que subiste en este año (de su sitio al tuyo).
   if (ecoP) host.querySelector('#m-eco').innerHTML = `<path class="eco-estela" d="${camino.getAttribute('d')}" stroke-dasharray="0 ${f1(ecoTramo[0])} ${f1(ecoTramo[1])} ${f1(L)}"/><g transform="translate(${f1(ecoP.x)} ${f1(ecoP.y)})"><g class="eco-fantasma"><ellipse class="eco-halo" rx="12" ry="4.2" cy="0.5"/>${(() => { const c = cajaTu(ec); return `<rect class="eco-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/>`; })()}<ellipse class="eco-punto" rx="5" ry="1.9" cy="0.5"/><g class="tu">${osoTu({ k: kTu(ec) * 0.92 })}</g></g></g>`;
   instalarMoneda(host);
-  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa), foco: focoDelDia() } : null, osos: null };
+  estado = { host, W, H, L, camino, enAltura, esc, campos, etapas, sats, meta, c, nieveMedidas, fechas, compras, caja: null, navFocos: navFocos.filter((f) => !campos.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 13 * ec) && !etapas.some(({ p }) => Math.hypot(p.x - f.x, p.y - f.y) < 9)), navN: -1, navTodas: !tocable, mensajes, puedeEscribir, firmas, techo, ec, libro, rotulo, pelicula, eco: ecoP ? { p: ecoP, sats: eco.sats } : null, etapaDesc: etapa, valle: tocable ? { luces: lucesDelValle(meses), arbol: arbolV ? { fecha: primera, etapa: arbolV.etapa } : null, milpa: Boolean(cm.milpa), foco: focoDelDia(), turno: infoV.turno } : null, osos: null };
   if (tocable) { banderas(host, campos, W, H); instalarCierre(); }
   // (Campamento 25) Los osos polares de peluche de la familia, en la nieve al sol bajo la cumbre (los tres, la pareja o uno: lo que quepa).
   // Se sientan esquivando los rótulos de «Tú» donde quedará al final de la subida (por eso se pone a «Tú» un momento ahí) y en la nieve

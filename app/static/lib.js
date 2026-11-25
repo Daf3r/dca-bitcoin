@@ -2245,18 +2245,42 @@ export const piscuchasDelValle = (personas) => Math.max(0, Math.min(PISCUCHAS_MA
 /**
  * La frase del valle para la descripción de la montaña (lectores de pantalla). Sin «tu»: el valle es el mismo para toda la familia.
  * `arbol` = { fecha, etapa } si el libro ya tiene su árbol; `milpa`: si en ese tamaño se dibuja (campamento 38).
- * `foco`: la frase del foco del día (campamento 51), si la hay.
- * @param {{ luces?: number, arbol?: { fecha: string, etapa: string } | null, milpa?: boolean, foco?: string }} [valle]
+ * `foco`: la frase del foco del día (campamento 51), si la hay. `turno`: el turno del pueblo de ahora (campamento 40, idea 148): qué
+ * pasa en él, en una frase (`FRASE_TURNO`; los de fiesta ya los cuenta su foco).
+ * @param {{ luces?: number, arbol?: { fecha: string, etapa: string } | null, milpa?: boolean, foco?: string, turno?: string }} [valle]
  */
-export function textoValle({ luces = 0, arbol = null, milpa = true, foco = '' } = {}) {
+export function textoValle({ luces = 0, arbol = null, milpa = true, foco = '', turno = '' } = {}) {
   // (22C) El pueblo bajó al pie de la montaña: el sendero empieza en él. (Campamento 38, idea 121) Sus vecinos son osos polares: lo
   // decorativo va con aria-hidden y lo que se ve tiene que estar aquí (sin tutear y sin nombres). Sin milpa en ese tamaño, no se nombra.
   let t = `Al pie de la montaña hay un pueblo con su iglesia, su plaza y sus casas de colores; de él sale el camino real hasta donde empieza el sendero. En el pueblo, los vecinos son osos polares. Alrededor hay campos${milpa ? ' con su milpa' : ''}, un bosque y un lago, y una quebrada baja de la montaña${luces ? `; de noche se ven ${luces} luces, una por mes del libro, en los caseríos de la sierra` : ''}.`;
   if (arbol?.fecha) t += ` Junto a la salida crece ${{ retono: 'el retoño de un conacaste', joven: 'un conacaste joven', arbol: 'un conacaste', grande: 'un conacaste grande' }[arbol.etapa] ?? 'un conacaste'}, sembrado el ${fechaLarga(arbol.fecha)}, el día de la primera compra.`;
   // (Campamento 51, idea 228) El foco del día, en una frase (la del director: cielo.js, `fraseDelFoco` o `fraseRutina`); sin «tú».
   if (foco) t += ` ${foco}`;
+  if (FRASE_TURNO[turno]) t += ` ${FRASE_TURNO[turno]}`;
   return t;
 }
+/**
+ * (Campamento 40, idea 148) Lo que pasa en el pueblo en cada turno de un día cualquiera, para la descripción de la montaña: una frase,
+ * sin tutear, sin nombres y sin mandar nada. Los turnos de fiesta (la Navidad entera, el desfile) no llevan: ya los cuenta su foco.
+ * @type {Record<string, string>}
+ */
+export const FRASE_TURNO = {
+  duerme: 'En el pueblo todos duermen.',
+  alba: 'En el pueblo aún es de noche y el panadero ya carga su canasto.',
+  amanece: 'En el pueblo amanece: un vecino se estira y el panadero sale con el pan.',
+  manana: 'Es media mañana en el pueblo; los oseznos están en la escuela.',
+  mananaLibre: 'Es media mañana en el pueblo y los oseznos juegan en la plaza.',
+  misa: 'Es domingo y en el pueblo van a misa.',
+  mercado: 'Es sábado de plaza en el pueblo.',
+  tortillas: 'Es mediodía en el pueblo: una vecina echa tortillas en su comal.',
+  salida: 'Es mediodía en el pueblo y los oseznos salen de la escuela con su bolsón.',
+  siesta: 'En el pueblo es la hora de la siesta.',
+  tarde: 'Es la tarde en el pueblo y los oseznos juegan en la plaza.',
+  vuelta: 'Cae la tarde en el pueblo y los oseznos siguen en la plaza.',
+  pupusas: 'En el pueblo es hora de pupusas.',
+  posada: 'En el pueblo es hora de pupusas y unos vecinos miran el nacimiento.',
+  fresca: 'En el pueblo, los vecinos sacan su silla a la acera a tomar el fresco.',
+};
 
 /**
  * (Campamento 25) Los osos polares de peluche de la familia en la descripción de la montaña (sin tutear: es igual para quien solo mira).
