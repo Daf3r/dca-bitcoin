@@ -9,6 +9,18 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 52) Vecinos con oficio; resume también el día entero del pueblo (2026-12-n) y «Tu historia» a miles (2026-12-m).
+    id: '2026-12-o',
+    items: [
+      'Los vecinos del pueblo tienen oficio, y cada uno lleva siempre su ropa: el panadero, la maestra, el pescador, el sacristán…',
+      'Cada uno sigue su día: el pan de madrugada, el pescado a media mañana y la iglesia que se abre y se cierra.',
+      'Dos vecinos se encuentran cada mañana y cada tarde, y un osezno lleva un recado.',
+      'Los lunes el panadero descansa y los sábados hay tamales.',
+      'El pueblo vive el día entero, de las tortillas a la fresca en la acera.',
+      'Con muchas compras, la partitura de «Tu historia» va por semanas.',
+    ],
+  },
+  {
     // (Campamento 40) El día entero del pueblo; resume también «Tu historia» a miles (2026-12-m), anotar y buscar (2026-12-l) y los menús
     // (2026-12-k), que salen casi a la vez.
     id: '2026-12-n',
