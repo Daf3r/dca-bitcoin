@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 49) El pueblo se mueve 2; resume también la pantalla grande (2026-12-s) y la fiesta del hito (2026-12-r), que salen casi a la vez.
+    id: '2026-12-t',
+    items: [
+      'Los osos del pueblo se mueven más: el panadero cruza en su bicicleta, la tortillera palmea y la hamaca de la siesta se mece.',
+      'A mediodía la campana de la torre se mece unos minutos.',
+      'Cuando cambia la hora del pueblo, algún vecino camina hasta su sitio nuevo.',
+      'En las pantallas anchas pueden moverse dos cosas a la vez, lejos una de la otra.',
+      'Al llegar a una etapa, el pueblo hace fiesta una vez para toda la familia, y en la pantalla grande todo se lee de lejos.',
+    ],
+  },
+  {
     // (Campamento D) La pantalla grande a 1920×1080; resume también la fiesta del hito (2026-12-r), la neblina y los vecinos con oficio, que salen casi a la vez.
     id: '2026-12-s',
     items: [

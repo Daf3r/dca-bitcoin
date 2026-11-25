@@ -51,8 +51,8 @@ const CASOS = [
   { caso: 'amanecer, neblina', dia: '2026-11-25', hora: 6, declara: 833 },
   { caso: 'día, barre', dia: '2026-11-25', hora: 7.5, declara: 833 },
   { caso: 'día, gallinas', dia: '2026-11-25', hora: 8.5, declara: 833 },
-  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 834 },
-  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 834 },
+  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 841 },
+  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 841 },
   { caso: 'anochecer, fogón', dia: '2026-11-25', hora: 19, declara: 835 },
   { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 833 },
   { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 904 },
@@ -74,9 +74,9 @@ const CASOS = [
   { caso: 'mediodía, tortillas', dia: '2027-02-10', hora: 11.75, declara: 825 },
   { caso: 'mediodía, salida de la escuela', dia: '2027-02-10', hora: 12.25, declara: 825 },
   { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 823 },
-  { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 825 },
+  { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 832 },
   { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 824 },
-  { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 832 },
+  { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 839 },
   { caso: 'viernes, pupusas', dia: '2027-02-12', hora: 19, declara: 826 },
   // (Campamento 59) La fiesta del hito, medida en su clímax («Probar la celebración», que usa el mismo código): la campana, los
   // farolitos y los cohetes, cada uno en su capa pequeña, mientras dura (unos +12 nodos en el clímax; el resto de la diferencia con
@@ -84,6 +84,12 @@ const CASOS = [
   // reparto de los mismos trazos. Lo ambiental espera (0 ambientales). En Nochebuena a las 23:55 (el pico) la fiesta no repite el
   // saltito de la cumbre: el frente ya lleva los cohetes del calendario. `fiesta`: el botón; `en`: cuándo se mide (ms
   // tras el clic: la subida de «Tú», 1.4 s, y el clímax, 10 s en un campamento y 5 s en una principal o el halving).
+  // (Campamento 49) El pueblo se mueve 2: el panadero que cruza (6:00–7:00), la tortillera que palmea, la campana de las doce, la hamaca
+  // de la siesta y las estrellitas de Nochebuena; cada uno en su capa (la campana, todo el día: +1 nodo en cada fecha; la abuela de la
+  // ronda, con la que barre y con la pelota: +6 a +7 en los turnos de la mañana de escuela y de la tarde, aunque la ronda esté quieta).
+  { caso: 'amanecer, el panadero cruza', dia: '2027-02-10', hora: 6.5, declara: 830 },
+  { caso: 'mediodía, la campana', dia: '2027-02-10', hora: 12.02, declara: 829 },
+  { caso: 'siesta, la hamaca se mece', dia: '2027-02-10', hora: 13.5, declara: 827 },
   { caso: 'fiesta del hito, tarde', dia: '2026-11-25', hora: 16, declara: 875, fiesta: 'hito', en: 12_400 },
   { caso: 'fiesta del hito, noche de lluvia', dia: '2026-07-10', hora: 23, declara: 865, fiesta: 'hito', en: 12_400 },
   { caso: 'fiesta del hito, tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 863, fiesta: 'hito', en: 12_400 },
@@ -95,6 +101,17 @@ const CASOS = [
 const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
   { caso: `Nochebuena ${w}`, dia: '2026-12-24', hora: 21, w, h },
   { caso: `31 dic ${w}`, dia: '2026-12-31', hora: 23.92, w, h },
+]);
+/**
+ * (Campamento 49, idea 275) Los principales a la vez en pantallas anchas, con «todos»: hasta dos (uno del pueblo y la cabina del
+ * teleférico, lejos de la plaza); en el teléfono, uno. Se cuentan las capas que se mueven de verdad (la abuela de la ronda no: va en
+ * secuencia con el actor, nunca a la vez), y cada capa sigue con su presupuesto.
+ */
+const PRINCIPALES = { tel: 1, ancho: 2 };
+const DOS_FOCOS = [[390, 664], [1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
+  { caso: `dos focos ${w}, barre`, dia: '2027-02-10', hora: 7.5, w, h },
+  { caso: `dos focos ${w}, campana`, dia: '2027-02-10', hora: 12.02, w, h },
+  { caso: `dos focos ${w}, hamaca`, dia: '2027-02-10', hora: 13.5, w, h },
 ]);
 /**
  * (Campamento D) La pantalla grande (#tv) a 1920×1080, el monitor de la casa: sus momentos más cargados mientras está despierta (de 23:00
@@ -158,7 +175,16 @@ const medir = (p) => p.evaluate(() => {
     const capa = !svg || svg.parentElement !== host ? propia(svg) : /\bfrente\b/.test(c) ? 'frente' : (c.match(/par-\w+/)?.[0] ?? (svg === host.querySelector(':scope > svg') ? 'principal' : propia(svg)));
     anim[capa] = (anim[capa] ?? 0) + 1;
   }
-  return { escena: host.querySelectorAll('*').length, valle, osos, anim, ambientales: ambientales.size };
+  // (49, 275) Los principales que se mueven: cada capa de actor cuenta uno (las tres gallinas, una; el perro que anda, uno).
+  const principales = new Set();
+  for (const a of document.getAnimations()) {
+    const t = a.effect?.target, svg = t?.closest?.('svg');
+    if (!t || !host.contains(t) || a.playState !== 'running' || escondido(t) || !svg || svg.parentElement !== host || svg.classList.contains('v-ronda')) continue;
+    const c = svg.classList;
+    const id = c.contains('tele-cabina') ? 'teleferico' : c.contains('v-capa-gallina') ? 'gallinas' : c.contains('v-capa-perro') ? 'perro' : c.contains('v-capa-vecino') || c.contains('v-capa-campana') || c.contains('v-capa-camina') ? [...c].find((k) => k.startsWith('v-actor-') || k === 'v-capa-campana' || k === 'v-capa-camina') : null;
+    if (id) principales.add(id);
+  }
+  return { escena: host.querySelectorAll('*').length, valle, osos, anim, ambientales: ambientales.size, principales: [...principales] };
 });
 
 /** Lo blando: crear la escena (CPU 4×) y fotogramas en reposo con la montaña a la vista (CPU 4×), mediana de 3. */
@@ -238,6 +264,17 @@ try {
     filas.push({ caso: nombre, escena: n.escena, valle: n.valle, osos: n.osos, animaciones: {}, total: 0, ancho: true });
     if (n.escena > TOPES_ANCHO[w]) fallos.push(`${nombre}: escena ${n.escena} > ${TOPES_ANCHO[w]} (tope de pantallas anchas)`);
   }
+  for (const { caso: nombre, dia, hora, w, h } of DOS_FOCOS.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
+    const { ctx, p } = await abrir(navegador, srv, dia, hora, 'todos', [w, h]);
+    const t = await medir(p);
+    await ctx.close();
+    const total = Object.values(t.anim).reduce((a, x) => a + x, 0), tope = w >= 1100 ? PRINCIPALES.ancho : PRINCIPALES.tel;
+    filas.push({ caso: nombre, escena: t.escena, valle: t.valle, osos: t.osos, animaciones: t.anim, total, principales: t.principales, focos: true });
+    if (t.principales.length > tope) fallos.push(`${nombre}: ${t.principales.length} principales a la vez (${t.principales.join(', ')}) > ${tope}`);
+    if (w >= 1100 && t.principales.length < 2) fallos.push(`${nombre}: en pantalla ancha se esperaban dos principales (${t.principales.join(', ')})`);
+    if (t.escena > (TOPES_ANCHO[w] ?? TOPES.escena)) fallos.push(`${nombre}: escena ${t.escena}`);
+    for (const [capa, x] of Object.entries(t.anim)) if (x > (PRESUPUESTO[capa] ?? PRESUPUESTO.propia)) fallos.push(`${nombre}: ${x} animaciones a la vista en «${capa}»`);
+  }
   for (const { caso: nombre, dia, hora } of TELE.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
     const { ctx, p } = await abrir(navegador, srv, dia, hora, 'todos', [1920, 1080], true);
     const t = await medir(p);
@@ -254,6 +291,7 @@ try {
 console.log('caso               escena  valle  osos  (con «todos»)  animaciones a la vista por capa                     crear (4×)  fps (4×)');
 for (const f of filas) {
   const capas = Object.entries(f.animaciones).map(([k, v]) => `${k} ${v}`).join(' · ') + (f.ambientales ? ` (ambientales: ${f.ambientales})` : '');
+  if (f.focos) { console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)}   («todos»: principales ${f.principales.join(' + ') || '—'}; ${f.total} animaciones a la vista)`); continue; }
   if (f.tele) { console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)}   (pantalla grande 1920×1080, «todos»: ${f.total} animaciones a la vista, tope ${TOPE_TV})`); continue; }
   if (f.ancho) { console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)}   (pantalla ancha: solo nodos, tope ${TOPES_ANCHO[f.caso.split(' ').at(-1)]})`); continue; }
   console.log(`${f.caso.padEnd(18)} ${String(f.escena).padStart(6)} ${String(f.valle).padStart(6)} ${String(f.osos).padStart(5)} ${String(f.escenaTodos).padStart(14)}  ${`${f.total}: ${capas}`.padEnd(50)} ${f.crearMs != null ? `${f.crearMs} ms`.padStart(10) : ''} ${f.fps != null ? String(f.fps).padStart(9) : ''}`);
