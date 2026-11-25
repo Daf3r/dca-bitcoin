@@ -44,6 +44,8 @@ const CASOS = [
   { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 834 },
   // (Campamento 51) Las franjas del día en que se mueve alguien del pueblo (la que barre, las gallinas, el perro, la pelota) y el
   // anochecer del fogón: con los ambientales (F3) junto al actor, que es lo que el director reparte.
+  // (Campamento 53A) La neblina del amanecer (5:00 a 7:30): dos bancos de degradado, quietos; pesa un nodo menos que antes (ningún caso caía en su franja).
+  { caso: 'amanecer, neblina', dia: '2026-11-25', hora: 6, declara: 833 },
   { caso: 'día, barre', dia: '2026-11-25', hora: 7.5, declara: 833 },
   { caso: 'día, gallinas', dia: '2026-11-25', hora: 8.5, declara: 833 },
   { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 834 },

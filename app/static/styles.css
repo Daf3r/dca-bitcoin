@@ -4246,13 +4246,15 @@ html[data-cielo="noche"] .montana { --v-tin: 7%; }
 .v-canton { --copa: color-mix(in oklab, color-mix(in oklab, #4f8f48 calc(var(--v-verde, 1) * 100%), #8f8a4c) calc(var(--v-luz) + 6%), var(--pino0)); --corteza: color-mix(in oklab, var(--monte-sombra) 45%, #6f5a46); }
 .v-arbol { --copa: color-mix(in oklab, color-mix(in oklab, #5c9c4c calc(var(--v-verde, 1) * 100%), #9c9456) calc(var(--v-luz) + 4% + var(--v-verde, 1) * 4%), var(--pino0)); }
 
-/* 55 · El mar de niebla del amanecer (5:00 a 7:30): quieto, opaco, detrás de la montaña; se forma y se levanta con `--v-mar`. */
-.v-mar { display: none; }
+/* 55 · La neblina del amanecer (5:00 a 7:30): quieta, detrás de la montaña; se forma y se levanta con `--v-mar`. (Campamento 53A)
+   Dos bancos suaves por profundidad (detrás de la loma y delante de su falda; el pueblo queda limpio delante de ellos), con el mismo
+   degradado: espesa abajo, se deshace hacia arriba, sin bordes ni desenfoques. Clara, apenas teñida por el cielo de la hora (`--c2`,
+   `--c3`). La de más cerca tarda más en irse. */
+.v-mar { display: none; fill: url(#m-v-mar); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
 html[data-mar-niebla] .v-mar { display: inline; }
-.montana { --v-niebla: color-mix(in oklab, var(--c3) 24%, #efe9ea); --v-niebla-luz: color-mix(in oklab, var(--c2) 30%, #fffbf4); }
-.v-mar-cuerpo { fill: var(--v-niebla); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
-.v-mar-luz { fill: var(--v-niebla-luz); opacity: calc(var(--v-mar, 0) * 0.9); transition: opacity 4s linear; }
-.v-mar-sombra { fill: color-mix(in oklab, var(--v-niebla) 80%, var(--medio)); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
+.montana { --v-niebla: color-mix(in oklab, var(--c3) 9%, #f4f1ee); --v-niebla-luz: color-mix(in oklab, var(--c2) 12%, #fffdf9); }
+.vm-0 { stop-color: var(--v-niebla); stop-opacity: 0.95; } .vm-1 { stop-color: var(--v-niebla-luz); stop-opacity: 0.84; } .vm-2 { stop-color: var(--v-niebla-luz); stop-opacity: 0; }
+.v-mar-frente { opacity: min(1, calc(var(--v-mar, 0) * 1.5)); }
 
 /* 56 · Árboles de aquí: el maquilishuat del patio florece en febrero (toda la copa rosada) y el árbol de fuego en abril (la copa roja
    sobre su follaje verde, que queda en la sombra); a su pie, las flores caídas. `data-flor` (cielo.js). Es paisaje: con cualquier nivel

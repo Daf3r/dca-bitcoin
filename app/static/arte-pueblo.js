@@ -551,16 +551,10 @@ export function campos({ borde, yAbajo, x0 = -6, x1, k = 1, vx, evitar = null, a
       }
     }
   }
-  // El mar de niebla del amanecer también llena el valle de delante (campamento 22B, 5:00 a 7:30): dos velos que cubren los campos y
-  // dejan asomar el pueblo y las copas. Quieto (paisaje); su opacidad la pone `--v-mar`.
-  const velo = (dy, sem) => {
-    const r2 = azar(sem); let d = `M${P([x0 - 10, yF(1, x0) + dy])}`;
-    for (let x = x0; x <= x1 + 30; x += 26 * k) d += `Q${P([x + 13 * k, yF(1, x) + dy - (4 + r2() * 6) * k])} ${P([x + 26 * k, yF(1, x + 26 * k) + dy])}`;
-    return `${d}L${P([x1 + 30, yAbajo - 2 * k])}L${P([x0 - 10, yAbajo - 2 * k])}Z`;
-  };
+  // (Campamento 53A) Aquí no hay neblina: los velos del 22B (y el montículo que se probó en su lugar) quedaban montados sobre el pueblo.
+  // La del valle va detrás de la montaña (arte-valle.js: marDeNiebla) y el pueblo se ve limpio delante de ella.
   const svg = tono.map((d, i) => `<path class="v-parc v-parc-${i}" d="${d}"/>`).join('') + `<path class="v-surco" d="${surco}" stroke-width="${f1(0.8 * k)}"/><path class="v-loma-campo" d="${loma}" stroke-width="${f1(1.1 * k)}"/>`
-    + `<path class="v-arbolito-tronco" d="${tronco}" stroke-width="${f1(0.9 * k)}"/><path class="v-arbolito" d="${copa}"/><path class="v-arbolito-l" d="${copaL}"/>`
-    + `<path class="v-mar v-mar-luz v-mar-valle" d="${velo(-8 * k, 5)}"/><path class="v-mar v-mar-cuerpo v-mar-valle" d="${velo(2 * k, 9)}"/>`;
+    + `<path class="v-arbolito-tronco" d="${tronco}" stroke-width="${f1(0.9 * k)}"/><path class="v-arbolito" d="${copa}"/><path class="v-arbolito-l" d="${copaL}"/>`;
   return { svg, milpa: evitar && mejor < 0 ? null : milpa };
 }
 
