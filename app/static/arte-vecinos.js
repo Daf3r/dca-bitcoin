@@ -244,9 +244,6 @@ const TIPOS = {
   // (152) el osezno que baja mangos con su vara larga, y su canasto en el suelo con los que ya bajó
   oseznoVara: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false),
     ['palma', p([2.0, -15.5], [2.4, -15.5], [2.5, -4.6], [2.1, -4.6])], ['palma', p([-5.2, -1.7], [-2.9, -1.7], [-3.2, 0], [-4.9, 0])], ['r2', e(-4.05, -1.9, 1.05, 0.55)]],
-  // (152) la de la tienda con el canasto lleno de mangos (el canasto de siempre, con el montón de maíz encima)
-  vendedoraMangos: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...delantal(), ...cabeza(), ['palma', p([-1.75, -8.15], [1.75, -8.15], [1.4, -9.4], [-1.4, -9.4])],
-    ['r2', e(0, -9.6, 1.45, 0.7)], ['r2', e(-0.75, -10.05, 0.6, 0.45)], ['r2', e(0.7, -10.1, 0.6, 0.45)]],
   // (154) sembrando con el chuzo (el de la siembra, más corto que el del milpero)
   chuzo: (r) => [...cuerpo(), ...brazos(), ...camisa(r), ...cabeza(), ...sombrero(), ['palma', p([2.35, -7.6], [2.7, -7.6], [2.85, 0.2], [2.5, 0.2])], ['pelo2', e(2.6, -3.3, 0.6, 0.55)]],
   // (155) la del atol: su olla grande sobre la brasa y el cucharón
@@ -339,7 +336,7 @@ export function carta(dia, t, n) {
 /** (Campamento 52) Los turnos de un día cualquiera (los de los vecinos con oficio): en ellos salen las cosas de cada quien (237). */
 const DIARIOS = ['alba', 'amanece', 'manana', 'mananaLibre', 'tp-mangos', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'mercado'];
 /** (Campamento 40, idea 145) Los turnos en que el perro se echa en otro sitio (dibujado con los vecinos; el de siempre se esconde). */
-export const PERRO_TURNOS = ['alba', 'amanece', 'manana', 'tortillas', 'salida', 'siesta', 'pupusas', 'posada', 'fresca'];
+export const PERRO_TURNOS = ['alba', 'amanece', 'manana', 'tortillas', 'salida', 'siesta', 'pupusas', 'posada', 'fresca', 'tp-mejenga']; // (43) en la mejenga se echa en la calle: la plaza es la cancha
 /**
  * (Campamento 52, idea 230) Los ocho vecinos de siempre: cada uno con su color de ropa (el mismo en todos los turnos: lo fija la persona,
  * no el turno) y su prenda. Ninguno lleva nombre ni es nadie de la familia; las ventanas (una por persona con cuenta) no se tocan.
@@ -444,8 +441,8 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     en('milpa', 1, faena === 'siembra' ? 'chuzo' : faena === 'tapisca' ? 'matate' : 'campesino', { r: 1, f: -1 });
   }
   // (Campamento 43, idea 152) Los mangos (marzo y abril): un osezno los baja con su vara bajo el árbol de la plaza (su canasto, al lado)
-  // y la de la tienda lleva el suyo lleno. Las mañanas sin escuela (`tp-mangos`) y el sábado de plaza (`temporada.mangos`).
-  const mangos = () => { en('banca', 0, 'oseznoVara', { s: OSEZNO, r: 0, dx: -3 }); quien('tienda', 'atrio', 0, { t: 'vendedoraMangos' }); };
+  // (la de la tienda, con su canasto de siempre en el atrio). Las mañanas sin escuela (`tp-mangos`) y el sábado de plaza (`temporada.mangos`).
+  const mangos = () => { en('banca', 0, 'oseznoVara', { s: OSEZNO, r: 0, dx: -3 }); };
   if (t === 'alba') { if (!lunes) quien('panadero', 'calle', 0, { horno: true }); perro('calle', 0, -8.5); } // (140, 231) antes del alba, el panadero carga su canasto con el horno encendido
   else if (t === 'amanece') {
     // La abuela se estira en su corredor; el sacristán, con sus llaves, abre la iglesia a las 5:30 (234; el domingo barre el atrio
@@ -634,7 +631,14 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   // (163) El domingo por la tarde, la mejenga: dos porterías de palo en la plaza, los oseznos jugando y la pelota de siempre (el actor de
   // su franja, 15:00–16:30); el panadero mira desde la calle.
   else if (t === 'tp-mejenga') {
-    en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); en('plaza', 0, 'porteria', { dx: -3 }); en('plaza', 5, 'porteria', { dx: 4 });
+    en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' });
+    // Las porterías, en los extremos de la plaza (el perro se echa en la calle, lejos de la cancha: `PERRO_TURNOS`); la del
+    // otro lado, sin pisar el sitio de las gallinas (`lug.ocupado`): si no, unos pasos adentro.
+    perro('calle', 1, -9);
+    for (const [i, dxs] of [[0, [-3]], [5, [4, 2, 0, -2]]]) {
+      const q = lug.plaza?.[i], libre = q && dxs.find((dx) => { const b = cajaVecino({ t: 'porteria', x: q[0] + dx * q[2], y: q[1], k: q[2] }); return i === 0 || !(lug.ocupado ?? []).slice(1).some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0); });
+      en('plaza', i, 'porteria', { dx: libre ?? dxs[0] });
+    }
     for (const i of [1, 2, 3, 4]) en('plaza', i, i % 2 ? 'osezno' : 'oseznoArriba', { s: OSEZNO, r: i, f: i < 3 ? 1 : -1 });
     quien('panadero', 'calle', 0, { t: 'vecino' }); quien('abuela', 'corredor', 0); quien('tienda', 'calle', 1, { t: 'vecina', f: -1 });
   }

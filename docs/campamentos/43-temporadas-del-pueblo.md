@@ -7,7 +7,7 @@ Lo que cambia con la **época del año** (no con una fecha de fiesta: eso fue el
 
 | Idea | Cuándo | Turno (`cielo.js: turno`) | Quién |
 |---|---|---|---|
-| 152 · Mangos | marzo y abril, las mañanas **sin escuela** (domingo antes y después de misa, vacaciones) y el **sábado de plaza** | `tp-mangos` (en lugar de `mananaLibre`); el sábado, el `mercado` de siempre con los mangos (`temporadaDelPueblo().mangos`) | un osezno baja mangos con su vara bajo el árbol de la plaza (su canasto al lado) y la de la tienda lleva el suyo lleno |
+| 152 · Mangos | marzo y abril, las mañanas **sin escuela** (domingo antes y después de misa, vacaciones) y el **sábado de plaza** | `tp-mangos` (en lugar de `mananaLibre`); el sábado, el `mercado` de siempre con los mangos (`temporadaDelPueblo().mangos`) | un osezno baja mangos con su vara bajo el árbol de la plaza (su canasto al lado, con los que ya bajó); la de la tienda, con su canasto de siempre |
 | 154 · La milpa con su gente | las dos primeras semanas de cada etapa: siembra 1–14 may, dobla 15–28 ago, tapisca 1–14 nov; de 6:00 a 10:00 | ninguno: va con el turno de la mañana (`temporadaDelPueblo().milpa`) | el milpero y otro: con el chuzo (siembra), de pie entre las matas (dobla) o con su matate (tapisca) |
 | 155 · La atolada | sábados de julio y agosto, 16:00–17:45 | `tp-atolada` (en lugar de `vuelta`) | la tortillera con la olla del atol sobre su brasa, dos vecinos con su huacal, oseznos con elote; la pelota de siempre en la plaza |
 | 161 · Las posadas | 16–23 de diciembre, 18:30–20:00 | `tp-posada` (después de la `posada` del nacimiento) | un grupito de espaldas frente a una casa, con tres oseznos con farolito; cada noche otra casa; la pupusera y los que miran el nacimiento |
@@ -40,12 +40,13 @@ En `app/static/cielo.js`, la misma tabla `COSTUMBRES` del 42. Con `false`, ese r
 - **La milpa no es un turno**: su gente va con el turno de la mañana y se mira la hora **al dibujarlo** (como los recorridos del 52). Si la página se abre a las 9:00, siguen ahí hasta el cambio de turno de las 11:30; si se abre a las 10:30, ya no están; el turno de las 5:00 se dibuja sin ellos y salen con el de las 7:00. Así no hay un aviso `libro:turno` más.
 - **El milpero**, esas mañanas, está en la milpa y no baja al pueblo. Donde la milpa no cabe (a 1440×900) no sale nadie y él sigue su día.
 - **La posada cambia de casa cada noche** (la calle tiene un sitio frente a cada casa: la noche 16 la primera, la 17 la siguiente…; con menos casas que noches, vuelve a empezar).
-- **La mejenga, fuera de la Navidad**: la plaza de diciembre es la del nacimiento y el pino.
+- **La mejenga, fuera de la Navidad**: la plaza de diciembre es la del nacimiento y el pino. Durante la mejenga **el perro se echa en la calle** (como en los turnos del 40: `PERRO_TURNOS` y su línea del CSS), porque su sitio de siempre quedaba dentro de la portería de la izquierda; la de la derecha no pisa el sitio de las gallinas (si no, unos pasos adentro).
+- **La posada en el teléfono y a 1440 px alterna entre dos casas**: ahí la calle solo tiene dos sitios (`lug.calle`); con más casas (tableta, acostado, 2560), cada noche otra.
 - **Los cuentos duran media hora** (20:00–20:30, como dice la idea), y de 20:30 sigue la fresca.
 - Lo de las mejoras de la v5 que piden memoria de varios días o arte nuevo queda para su campamento (abajo).
 
 ## Lo que queda para después o para Fable (y por qué)
-- **152 · el osezno sentado comiéndose un mango a mediodía y el canasto que se llena durante la mañana** (v5, 253): la memoria del día es del campamento 54; el osezno comiendo es **arte nuevo** (para Fable). El canasto lleno de la de la tienda es el canasto de siempre con un montón de mangos (el tono de maíz); Fable puede afinarlo.
+- **152 · el osezno sentado comiéndose un mango a mediodía y el canasto que se llena durante la mañana** (v5, 253): la memoria del día es del campamento 54; el osezno comiendo es **arte nuevo** (para Fable). **«La vendedora lleva el canasto lleno»** tampoco tiene dibujo (la maqueta usaba la vendedora de siempre): hoy lleva su canasto de siempre. **Para Fable**: el canasto con el montón de mangos.
 - **154 · el gesto de doblar la caña**: no hay dibujo; en la dobla están de pie entre las matas. **Para Fable**: un campesino doblando la caña, a la talla del pueblo. La milpa por capítulos (roza, primera hoja, vacas en el rastrojo; v5, 239) es del campamento 53.
 - **155 · la ramada que se levanta el jueves y el viernes** (v5, 240): historia de varios días, campamento 53 (la maqueta `s-ramada` existe en `prototipo-vida5.patch`).
 - **161 · el farolito que se queda encendido en la puerta de cada casa visitada** (v5): **arte nuevo** (un farolito de puerta) y memoria de varios días. **Para Fable**; hoy la posada no deja rastro.
@@ -61,10 +62,10 @@ En `app/static/cielo.js`, la misma tabla `COSTUMBRES` del 42. Con `false`, ese r
 | 4 nov 8:30 (la tapisca) | 859 → **861** | 18 → 18 |
 | Sábado de julio 17:00 (la atolada) | 847 → 841 | 36 → 36 |
 | 18 dic 19:00 (la posada) | 889 → 886 | 45 → 45 |
-| Domingo 15:30 (la mejenga) | 843 → 836 | 15 → 14 (sin la abuela de la ronda) |
+| Domingo 15:30 (la mejenga) | 843 → 837 | 15 → 14 (sin la abuela de la ronda; el perro, echado en la calle) |
 | Luna llena 20:15 (los cuentos) | 835 → 833 | 38 → 38 |
-| Escritorio posada · mejenga · siembra (1440 / 1920 / 2560) | 956·907·914 / 971·924·933 / 969·923·930 → 953·900·914 / 970·917·935 / 968·916·932 (tope 1100) | — |
-| Tele 1920×1080, posada · mejenga | 971 · 924 → 968 · 917 | 24 · 15 → 24 · 14 (tope 24; la posada ya iba en el tope en la base) |
+| Escritorio posada · mejenga · siembra (1440 / 1920 / 2560) | 956·907·914 / 971·924·933 / 969·923·930 → 953·901·914 / 970·918·935 / 968·917·932 (tope 1100) | — |
+| Tele 1920×1080, posada · mejenga | 971 · 924 → 968 · 918 | 24 · 15 → 24 · 14 (tope 24; la posada ya iba en el tope en la base) |
 
 **La milpa con su gente sube 2 nodos** (y el valle, 2): no es la gente (van en los trazos de siempre) sino dos tonos que a esa hora el pueblo no tenía: la camisa de maíz del milpero (su color, fijado por persona desde el 52) y la manita sobre su herramienta. Comprobado en el navegador comparando la escena con la costumbre encendida y apagada. Muy lejos del tope (852 de 1100). Lo demás baja o queda igual: los turnos de temporada no sacan las cosas de cada quien (la bicicleta, el comal) ni la ronda de la abuela. Cada momento va declarado en `tests/banco_rendimiento.mjs`; el banco entero en verde («OK: dentro de los topes»). Los demás casos del banco, iguales que en la base.
 

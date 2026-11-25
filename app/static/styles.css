@@ -4985,7 +4985,7 @@ html:not([data-efectos="ninguno"]) #m-yo.anda.para .oso-tu { animation: none; }
    Turnos nuevos (cielo.js: turno; arte-vecinos.js: reparto), todo quieto: con cualquier nivel de efectos, el mismo dibujo.
    (145) El perro tiene su día: en estos turnos se echa en otro sitio y va dibujado con los vecinos (el de siempre, y su sombra, no se
    ven esos ratos; de tarde sigue en su sitio, que es adonde llega al cruzar la plaza). */
-html:is([data-turno="alba"], [data-turno="amanece"], [data-turno="manana"], [data-turno="tortillas"], [data-turno="salida"], [data-turno="siesta"], [data-turno="pupusas"], [data-turno="posada"], [data-turno="fresca"]) #m-v-pie :is(.v-animal, .v-sombra-perro) { display: none; }
+html:is([data-turno="alba"], [data-turno="amanece"], [data-turno="manana"], [data-turno="tortillas"], [data-turno="salida"], [data-turno="siesta"], [data-turno="pupusas"], [data-turno="posada"], [data-turno="fresca"], [data-turno="tp-mejenga"]) #m-v-pie :is(.v-animal, .v-sombra-perro) { display: none; }
 html:is([data-turno="nb-doce"], [data-turno="f31-espera"], [data-turno="f31-doce"], [data-turno="n25-recalentado"]) #m-v-pie .v-sombra-perro { display: none; }
 /* (146) Las sombras del pueblo siguen al sol, por turnos: largas al amanecer y al caer la tarde (se estiran y se tuercen lejos del
    astro desde su base), cortas a mediodía. La base es el suelo de la calle (y el de la terraza, la fila de atrás): montana.js deja su

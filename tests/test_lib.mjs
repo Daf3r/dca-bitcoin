@@ -2152,6 +2152,11 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
       if (/NaN|undefined|Infinity|style=/.test(svg)) f43.push(`${c.W} ${t}: el SVG`);
       if (actores.length > 1 || (actores[0]?.actor ?? '') !== actor) f43.push(`${c.W} ${t}: actores ${actores.map((v) => v.actor)}`);
       if (figuras.length > V.MAX_VECINOS || figuras.length < 2) f43.push(`${c.W} ${t}: ${figuras.length} vecinos`);
+      // Que el tope y los choques no se coman la escena: lo mínimo de cada una.
+      const MIN = { 'tp-mejenga': { porteria: 2, osezno: 2, oseznoArriba: 2 }, 'tp-atolada': { atolera: 1, huacal: 2, oseznoElote: 2 }, 'tp-cuentos': { abuela: 1, oseznoSuelo: 3 } }[t] ?? {};
+      for (const [tipo, n] of Object.entries(MIN)) if (l.filter((v) => v.t === tipo).length < n) f43.push(`${c.W} ${t}: menos de ${n} ${tipo}`);
+      // En la mejenga el perro se echa en la calle (su sitio de siempre queda dentro de la portería).
+      if (t === 'tp-mejenga' && !l.some((v) => v.t === 'perroEchado' && Math.abs(v.x - lug.perro[0][0]) > 0.01)) f43.push(`${c.W} ${t}: el perro en la cancha`);
     }
     // El sábado de plaza de marzo, con sus mangos; la mañana de la siembra con la milpa (y sin ella, nadie en la milpa).
     const pl = V.reparto(lug, 'mercado', { dia: '2027-03-13', hora: 9, escuela: false, temporada: { mangos: true, milpa: '' } });

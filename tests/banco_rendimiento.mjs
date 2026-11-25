@@ -128,7 +128,7 @@ const CASOS = [
   { caso: 'noviembre, la tapisca', dia: '2026-11-04', hora: 8.5, declara: 861 },
   { caso: 'julio, la atolada', dia: '2026-07-18', hora: 17, declara: 841 },
   { caso: 'diciembre, la posada', dia: '2026-12-18', hora: 19, declara: 886 },
-  { caso: 'domingo, la mejenga', dia: '2027-02-14', hora: 15.5, declara: 836 },
+  { caso: 'domingo, la mejenga', dia: '2027-02-14', hora: 15.5, declara: 837 },
   { caso: 'luna llena, los cuentos', dia: '2027-02-20', hora: 20.25, declara: 833 },
   // (Campamento E) El ánimo del valle según la semana del precio (`animo`: lo fuerza `libro.animo`): otro reparto de los mismos vecinos
   // (sentados de dos en dos si baja; la ropa tendida y vecinos de paseo si sube). Un miércoles de escuela por la mañana (la que barre ya
