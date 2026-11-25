@@ -59,7 +59,18 @@ La app **no sabe en qué bloque va la red**: ese dato llega con el nodo del due�
 - **La tarjeta del halving** dice «Hoy, en la red de Bitcoin · El halving»: los osos no hablan, pero sin una línea la fiesta del halving no se entendería.
 
 ## Medido (banco, 390×664, mil compras; la fiesta, en su clímax con «Probar la celebración»)
-MEDIDAS
+Antes = `claude/vida-52` (el banco de siempre); después = esta rama. **Los 27 casos de antes no cambian** (nodos y animaciones idénticos: 833 un día normal, 903 Nochebuena, 942 el pico; pantallas anchas 962–984): fuera de la fiesta nada pesa más (el farol solo existe el día de una fiesta: +4 nodos, quieto).
+
+| Caso (en el clímax, con «todos») | Nodos | Animaciones a la vista (por capa) |
+|---|---|---|
+| Fiesta de un campamento, tarde | 873 | 20: principal 4 · farolitos 1 · cohete 1 · cohete 1 · frente 10 · cielo 3 (0 ambientales) |
+| Campamento, noche de lluvia (sin vecinos) | 863 | 29: principal 6 · farolitos 1 · cohetes 1+1 · frente 10 · cielo 10 |
+| Campamento, tarde de lluvia (sin farolitos) | 861 | 37: principal 2 · cohetes 1+1 · frente 10 · cielo 3 · sierra lejana 20 (la lluvia) |
+| **Campamento en Nochebuena a las 23:55 (el pico)** | **982** (tope 1100) | 49: principal 9 · farolitos 1 · cohetes 1+1 · **frente 27 de 28** · cielo 10 |
+| Etapa con sello (principal) | 859 | 20 |
+| Halving | 839 | 15 |
+
+La diferencia con el día normal (unos +40) es sobre todo la escena de «Probar la celebración», que se dibuja con un saldo inventado (más campamentos y rótulos); lo propio de la fiesta en el clímax son unos 12 nodos (la capa de los farolitos, 4; cada cohete, 3; los vecinos, uno o dos tonos más). En el frente, el clímax suma el saltito de los osos y «Tú» (5) a lo de siempre. Capturas (cada escala en su clímax a 320, 390, 768, 1440 y 2560; el campamento de día en claro, de noche, con lluvia, «esenciales» y «ninguno»), sin NaN ni errores de consola: `scratchpad/c59/capturas/`.
 
 ## Pruebas
 - `test_api` (bloque «Campamento 59»): la migración 19 (columnas, idempotente, sin nada de personas; una base en la 18 sin su fila de `esquema` aplica solo la 19, y otra vez nada), `pico_saldo`, la primera vez trae su fiesta y su marca (día de hoy y compra), la lectora lee `/api/fiesta` sin escribir ni auditar, sin sesión 401, la lectora no anota, vender y volver a cruzar no repite, editar no celebra, lo ya alcanzado sin marca no se celebra, anular suelta la marca (y la fiesta de hoy desaparece) y volver a anotar la celebra, una venta no celebra, la destacada de hoy entre varias, `HALVING_FECHA` (con y sin, y mal escrita). Cambió una prueba vieja: la del campamento 24 decía «hoy hay 18 migraciones».
@@ -68,7 +79,12 @@ MEDIDAS
 - `banco_rendimiento`: seis casos de fiesta (tarde, noche de lluvia, tarde de lluvia, Nochebuena a las 23:55, etapa con sello y halving), medidos en el clímax; con la fiesta el banco espera 0 ambientales. `SOLO=texto` mide solo unos casos.
 
 ## Verificado (25 nov 2026, en local)
-VERIFICADO
+- `test_lib` **1113**, `test_api` **1346** (con el disco simulado sano; entero: hay migración), `tsc`, Biome (0 avisos), recorte, ruff y mypy (los del CI): en verde.
+- `test_ui`, **solo los bloques que toca el cambio** (uno tras otro, tras el último cambio de código salvo «Qué hay de nuevo»): «campamentos (arte) y campamento 21», «campamento 21» y «21B» (271), 25 (103), 31 (12), pulido integral (20), 41 (5), 39b (8; cambió la tabla del tempo: +3 filas de la fiesta), 51 (19), 40 (39), 52 (22), «se siente como app» (23), «anotar y datos vivos» (24) y el nuevo «campamento 59» (21): en verde. **La suite entera no se corrió** (la corre el CI).
+- axe: **348** estados (uno nuevo: la fiesta en su clímax, claro y oscuro), sin violaciones.
+- El banco entero, antes y después (arriba): en verde.
+- «Qué hay de nuevo» (`2026-12-q`) cabe entero a 360×640 con letra grande, sin desplazar.
+- **No se corrieron** Lighthouse A/B, el barrido (`rapido` y por pestañas) ni la regresión visual: los corre el CI.
 
 ## Sin probar aquí
 - **iPhone real y Safari/WebKit**: las capas de la fiesta (hasta seis a la vez en el clímax, cada una con su animación de transform y opacidad), el `animationIterationCount` de la campana y el recorrido de los farolitos con `translate(var(--dx), var(--dy))`. «Medir este aparato» durante una fiesta.
