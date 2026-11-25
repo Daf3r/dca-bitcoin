@@ -876,8 +876,14 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(e.every((x) => x.x >= 0 && x.x <= 1 && x.y >= 0 && x.y <= 1 && x.mag >= 0.15 && x.mag <= 1), 'constelación: todo cae dentro del círculo unidad y el brillo está acotado');
   eq(JSON.stringify(estrellasConstelacion(mov)), JSON.stringify(e), 'constelación: siempre sale igual (sin azar)');
   const muchas = Array.from({ length: 1000 }, (_, k) => ({ id: k + 1, fecha: `2025-${String(1 + (k % 12)).padStart(2, '0')}-10`, tipo: 'compra', sats: 1000 + k, extra: 0 }));
-  const em = estrellasConstelacion(muchas);
-  ok(em.length === 1000 && em.every((x) => x.x >= 0 && x.x <= 1 && x.y >= 0 && x.y <= 1), 'constelación: con 1,000 compras sigue dentro del círculo');
+  const em = estrellasConstelacion(muchas, 120, 2000);
+  ok(em.length === 1000 && em.every((x) => x.x >= 0 && x.x <= 1 && x.y >= 0 && x.y <= 1), 'constelación: con 1,000 compras (y el tope en 2,000) sigue dentro del círculo');
+  const LC = await import('../app/static/lib.js');
+  // Campamento 58: con más de 600 compras, una estrella por semana (la marca de extra por mayoría; el texto cuenta las compras)
+  const ew = estrellasConstelacion(muchas.map((c, k) => ({ ...c, extra: k % 5 ? 1 : 0 })));
+  ok(ew.length === 12 && ew.every((x) => x.semanal && x.n > 1 && x.desde <= x.fecha && x.fecha <= x.hasta) && ew.reduce((a, x) => a + x.n, 0) === 1000 && ew.every((x) => x.extra === (x.nExtra * 2 > x.n)), `constelación: con 1,000 compras, una estrella por semana (${ew.length})`);
+  ok(/tiene 12 estrellas, una por semana con compras \(1,000 compras\)\. La más reciente es la semana del /.test(textoConstelacion(ew)) && /^Semana del .* · \d+ compras \(\d+ extra\) · \+[\d,]+ sats$/.test(LC.textoEstrella(ew[0])) && LC.textoEstrella(e[1]) === `${LC.fechaLarga(e[1].fecha)} · +${e[1].sats.toLocaleString('en-US')} sats · compra extra`, 'constelación: textos de las estrellas por semana y por compra');
+  eq([estrellasConstelacion(muchas.slice(0, 600)).length, estrellasConstelacion(muchas.slice(0, 601)).length], [600, 12], 'constelación: hasta 600 compras, una estrella por compra; con 601, por semana');
   eq(estrellasConstelacion([]), [], 'constelación: sin compras no hay estrellas');
   ok(/4 estrellas, una por compra\. La más reciente es la del/.test(textoConstelacion(e)), 'constelación: texto para lectores');
 
@@ -2135,6 +2141,89 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   // 148: la frase de cada turno, sin tutear ni mandar; los de fiesta no llevan.
   const mandar = /\b(tu|tus|tú|te|compra|compre|comprar|abre|mira|mire|ven|entra|aprovecha)\b/i, fr = Object.values(L.FRASE_TURNO);
   ok(fr.length >= 14 && fr.every((t) => t.length < 100 && !mandar.test(t) && /\.$/.test(t)) && L.textoValle({ turno: 'pupusas' }).endsWith('En el pueblo es hora de pupusas.') && !/undefined/.test(L.textoValle({ turno: 'nb-cena' })), 'pueblo 148: la descripción cuenta el turno, sin tutear');
+}
+
+// ---------------------------------------------------------------- campamentos 57 y 58: «Tu historia» a miles de compras
+{
+  const L = await import('../app/static/lib.js');
+  const A = await import('../app/static/arte-historia.js');
+  // Un libro realista y fijo (sin azar): ritmo regular más extras amontonadas en las «caídas», varias el mismo día, en cinco años.
+  const fijo = (i) => { const s = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return s - Math.floor(s); };
+  const libro = (N, anios = 5) => {
+    const out = [], dias = anios * 365, t0 = Date.UTC(2022, 0, 1);
+    for (let k = 0; k < N; k++) {
+      const extra = fijo(k) < 0.6;
+      // las extra caen en diez «caídas» de dos semanas; las de siempre, repartidas
+      const d = Math.min(dias - 1, extra ? Math.floor((Math.floor(fijo(k + 7) * 10) + 0.5) * (dias / 10) + fijo(k + 3) * 14) : Math.floor((k / N) * dias));
+      const precio = 20_000 + 80_000 * (0.5 + 0.5 * Math.sin(d / 180));
+      const monto = extra ? 25 : 12;
+      out.push({ id: k + 1, fecha: new Date(t0 + d * 864e5).toISOString().slice(0, 10), tipo: 'compra', monto, sats: Math.round((monto / precio) * 1e8), precio, extra: extra ? 1 : 0 });
+    }
+    out.push({ id: N + 1, fecha: '2024-05-05', tipo: 'venta', sats: 1000, monto: 1, precio: 60_000, extra: 0 });
+    return out.sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : a.id - b.id));
+  };
+  const nodos = (svg) => (svg.match(/<[a-zA-Z]/g) ?? []).length;
+  const sano = (svg) => !/NaN|undefined|Infinity|null/.test(svg);
+  // Las figuras de la partitura: por días hasta 60 notas (el mismo día, un acorde con su cantidad); con más, por semanas
+  const c = (id, fecha, precio, extra = 0) => ({ id, fecha, tipo: 'compra', sats: 10_000, precio, extra });
+  const pocas = L.partitura([c(1, '2026-03-02', 50_000), c(2, '2026-03-02', 50_000, 1), c(3, '2026-03-02', 52_000, 1), c(4, '2026-05-10', 90_000)])[0];
+  const fp = L.figurasPartitura(pocas);
+  eq([fp.modo, fp.figuras.length, fp.figuras[0].n, fp.figuras[0].nExtra, fp.figuras[0].extra, fp.figuras[1].n], ['dia', 2, 3, 2, true, 1], 'partitura 57: por días, varias compras el mismo día son una figura (extra por mayoría)');
+  ok(L.textoFigura(fp.figuras[1]) === L.textoNota(pocas.notas[3]) && /^2 mar 2026 · 3 compras \(2 extra\) · \+30,000 sats · BTC entre \$50,000 y \$52,000$/.test(L.textoFigura(fp.figuras[0])), `partitura 57: una figura de una compra se lee como su nota; varias, con su cantidad (${L.textoFigura(fp.figuras[0])})`);
+  const grande = L.partitura(libro(5000));
+  const y = grande.find((a) => a.notas.length > 600);
+  const fs5 = L.figurasPartitura(y);
+  ok(fs5.modo === 'semana' && fs5.figuras.length <= 54 && fs5.figuras.reduce((a, f) => a + f.n, 0) === y.notas.length && fs5.figuras.every((f) => f.col >= 0 && f.col <= 53 && f.desde <= f.hasta && f.desde.startsWith(String(y.anio)) && f.hasta.startsWith(String(y.anio))), `partitura 57: más de 60 notas van por semanas (${y.notas.length} notas en ${fs5.figuras.length} figuras), cortadas al año`);
+  ok(fs5.figuras.every((f) => f.pasoMin <= f.paso && f.paso <= f.pasoMax && f.extra === L.mayoriaExtra(f.nExtra, f.n)) && /^Semana del .+ · \d+ compras( \(\d+ extra\))? · \+[\d,]+ sats · BTC (a|entre) \$/.test(L.textoFigura(fs5.figuras.find((f) => f.n > 1))), 'partitura 57: cada semana trae su nota del medio, su rango y su texto');
+  eq([L.figurasPartitura({ anio: 2026, notas: Array.from({ length: 60 }, (_, k) => ({ fecha: `2026-01-${String(1 + (k % 28)).padStart(2, '0')}`, precio: 1, sats: 1, extra: false, paso: 6 })) }).modo, L.figurasPartitura({ anio: 2026, notas: Array.from({ length: 61 }, () => ({ fecha: '2026-01-05', precio: 1, sats: 1, extra: false, paso: 6 })) }).modo], ['dia', 'semana'], 'partitura 57: el umbral es 60 notas');
+  // 31 de diciembre de un año bisiesto y una semana que cruza el año: la semana se corta al año y no se sale de la pauta
+  const bis = L.figurasPartitura({ anio: 2024, notas: [...Array.from({ length: 61 }, (_, k) => ({ fecha: '2024-12-31', precio: 1 + k, sats: 1, extra: k % 2 === 0, paso: k % 13 }))] });
+  ok(bis.figuras.length === 1 && bis.figuras[0].desde === '2024-12-30' && bis.figuras[0].hasta === '2024-12-31' && bis.figuras[0].col <= 53 && bis.figuras[0].extra, `partitura 57: el 31 de diciembre bisiesto (${JSON.stringify([bis.figuras[0].desde, bis.figuras[0].hasta, bis.figuras[0].col])})`);
+  const ene = L.figurasPartitura({ anio: 2027, notas: Array.from({ length: 61 }, () => ({ fecha: '2027-01-01', precio: 1, sats: 1, extra: false, paso: 6 })) });
+  ok(ene.figuras[0].desde === '2027-01-01' && ene.figuras[0].col === 0 && /^Semana del 1 – 3 ene 2027/.test(L.textoFigura(ene.figuras[0])), `partitura 57: la semana del 1 de enero empieza el 1 de enero (${L.textoFigura(ene.figuras[0])})`);
+  const todos = L.figurasTodos(grande);
+  ok(todos.figuras.length <= grande.length * 12 && todos.figuras.every((f, i) => f.i === i && f.col >= 0 && f.col < 12 && f.fila >= 0 && f.fila < grande.length) && todos.figuras.reduce((a, f) => a + f.n, 0) === grande.reduce((a, x) => a + x.notas.length, 0), `partitura 58: todos los años, una figura por mes (${todos.figuras.length})`);
+  ok(/^noviembre 2022 · \d+ compras/.test(L.textoFigura(todos.figuras.find((f) => f.anio === 2022 && f.mes === 10))) && /^De 2022 a 2026: 5,000 notas, una figura por mes en tus compras$/.test(L.textoTodos(grande)) && !/tus/.test(L.textoTodos(grande, true)), `partitura 58: los textos de todos los años (${L.textoTodos(grande)})`);
+  ok(/una nota por compra \(en un año de muchas compras, una figura por semana\)/.test(L.textoPartitura(grande)) && / en \d+ semanas; BTC entre/.test(L.textoAnioPartitura(y, false, fs5)), 'partitura 57: los textos dicen cuándo va por semanas');
+  // La marca de «extra» por mayoría: la manta borda la semana solo si más de la mitad fue extra; la torre cuenta cuántas
+  const man = L.semanasManta([c(1, '2026-03-02', 1, 1), c(2, '2026-03-03', 1), c(3, '2026-03-04', 1), c(4, '2026-03-10', 1, 1), c(5, '2026-03-11', 1, 1)], '2026-03-20');
+  eq(man.celdas.filter((x) => x.n).map((x) => [x.extra, x.nExtra, x.n]), [[true, 1, 3], [true, 2, 2]], 'manta 57: cada semana sabe cuántas fueron extra');
+  ok(/1 de ellas|con una compra extra\.$/.test(L.textoSemanaManta(man.celdas[0])) && /, 2 de ellas extra\.$/.test(L.textoSemanaManta(man.celdas.find((x) => x.nExtra === 2))), 'manta 57: el texto dice cuántas fueron extra');
+  const svgMan = A.manta(man);
+  eq((svgMan.match(/class="pieza celda[^"]*extra/g) ?? []).length, 1, 'manta 57: la puntada solo en la semana de mayoría extra');
+  const pt = L.piedrasTorre(libro(1000));
+  ok(pt.every((p) => p.nExtra <= p.n && p.extra === p.nExtra > 0) && /^.+ · \d+ compras · \+[\d,]+ sats · \d+ extra$/.test(L.textoPiedra(pt.find((p) => p.nExtra))), 'torre 57: cada piedra cuenta sus extra y lo dice');
+  const svgT = A.torre(pt);
+  ok(/hm-veta hm-v[123]/.test(svgT) && (svgT.match(/hm-veta hm-v/g) ?? []).length === pt.filter((p) => p.nExtra).length, 'torre 57: la veta se enciende según la proporción');
+  // El tronco: un nudo por mes con extras, no uno por compra
+  const tro = L.aniosTronco(libro(5000), '2026-12-31');
+  const nudos = (A.tronco(tro).match(/class="ht-nudo" d="([^"]*)"/)?.[1].match(/M/g) ?? []).length;
+  ok(nudos <= tro.length * 12 && nudos >= 1 && L.textoTronco(tro).includes(`Hay ${nudos} nudos, uno por cada mes con compras extra (${tro.reduce((a, x) => a + x.nExtras, 0).toLocaleString('en-US')} en total).`), `tronco 57: un nudo por mes con extras (${nudos}) y el texto cuenta las ${tro.reduce((a, x) => a + x.nExtras, 0)}`);
+  // El tope: ningún dibujo pasa de A.TOPE_NODOS con 1, 200, 1,000, 5,000 y 10,000 compras (cinco años), ni trae NaN
+  const hoy = '2026-12-31';
+  const casos = [['una', [c(1, '2026-06-01', 50_000, 1)]], ['iguales', Array.from({ length: 90 }, (_, k) => c(k + 1, `2026-${String(1 + (k % 12)).padStart(2, '0')}-0${1 + (k % 9)}`, 70_000))],
+    ['todas extra', libro(800).map((x) => ({ ...x, extra: 1 }))], ['sin extra', libro(800).map((x) => ({ ...x, extra: 0 }))], ...[200, 1000, 5000, 10000].map((N) => [String(N), libro(N)])];
+  const medidas = {};
+  for (const [nombre, items] of casos) {
+    const as = L.partitura(items);
+    const dib = {
+      tronco: A.tronco(L.aniosTronco(items, hoy)), constelacion: A.constelacion(L.estrellasConstelacion(items)), torre: A.torre(L.piedrasTorre(items)),
+      manta: A.manta(L.semanasManta(items, hoy)), estratos: A.estratos(L.estratosMes(items, hoy)),
+      partitura: Math.max(...as.map((a) => nodos(A.partitura(L.figurasPartitura(a))))), semana: Math.max(...as.map((a) => { const f = L.figurasPartitura(a); return nodos(A.partitura(f, { sel: f.figuras.length - 1 })); })),
+      todos: nodos(A.partitura(L.figurasTodos(as), { sel: 0 })),
+    };
+    const mal = [];
+    for (const [k, v] of Object.entries(dib)) {
+      const n = typeof v === 'number' ? v : nodos(v);
+      medidas[`${nombre}:${k}`] = n;
+      if (n > A.TOPE_NODOS || (typeof v === 'string' && !sano(v))) mal.push(`${k} ${n}`);
+    }
+    for (const a of as) { const f = L.figurasPartitura(a); for (const s of [A.partitura(f), A.partitura(f, { sel: 0 })]) if (!sano(s)) mal.push(`partitura ${a.anio}`); }
+    if (as.length && !sano(A.partitura(L.figurasTodos(as)))) mal.push('todos');
+    eq(mal, [], `tope 58: con ${nombre} compras ningún dibujo pasa de ${A.TOPE_NODOS} nodos ni trae NaN (${Object.entries(medidas).filter(([k]) => k.startsWith(`${nombre}:`)).map(([k, v]) => `${k.split(':')[1]} ${v}`).join(', ')})`);
+  }
+  if (process.env.MEDIDAS) console.log(JSON.stringify(medidas)); // MEDIDAS=1 node tests/test_lib.mjs: los nodos de cada dibujo
+  ok(medidas['10000:constelacion'] < 60 && medidas['10000:partitura'] < 200, `tope 58: con 10,000 compras la constelación y la partitura quedan pequeñas (${medidas['10000:constelacion']}, ${medidas['10000:partitura']})`);
 }
 
 console.log(`OK ${n} comprobaciones`);

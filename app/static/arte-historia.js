@@ -5,18 +5,26 @@
 //  · Cada función devuelve un solo `<svg viewBox="0 0 320 320" aria-hidden="true" focusable="false">` (el contenedor lleva el `role="img"`);
 //    la manta, `0 0 320 H`, con el alto según sus filas.
 //  · Cada pieza tocable lleva `data-anio` (anillo del tronco) o `data-i` (estrella o piedra, el índice del dato) y la clase `.pieza`.
+//    (Campamento 58) La constelación por semanas (más de 600 compras) no lleva un círculo por estrella: un solo `.hc-vigia` recibe el
+//    toque y `historia.js` busca la estrella más cercana.
 //  · `sel` es el año (tronco) o el índice (constelación, torre de piedras) seleccionado, o null: la pieza elegida lleva además la clase `sel`.
 //  · Colores solo con variables CSS (`var(--…)`) o clases del bloque «Campamento 13» de styles.css; sin estilos en línea (la CSP los
 //    bloquea); animaciones solo con transform/opacity y solo con efectos «todos» (clase `efecto-ambiente`).
-//  · Poco coste: el tronco, una pieza por año; la constelación hasta 1,000 estrellas (usa `<path>`s agrupados, no un nodo pesado por
-//    estrella); la torre de piedras, hasta 40 piedras.
+//  · Poco coste: el tronco, una pieza por año; la constelación, una estrella por compra hasta 600 y después una por semana (en
+//    `<path>`s agrupados, no un nodo por estrella); la torre de piedras, hasta 40 piedras; la partitura, como mucho 60 figuras por año.
+//    (Campamentos 57 y 58) Tope escrito: ningún dibujo pasa de `TOPE_NODOS` nodos con 10,000 compras en cinco años (`test_lib` lo
+//    comprueba con cada dibujo); la manta y los estratos crecen con los años, no con las compras.
+//  · La marca de «compra extra» de una pieza que junta varias va por mayoría (`lib.mayoriaExtra`) o por proporción (la veta de la
+//    piedra); los textos siguen contando la cifra real.
 //
 // El lenguaje es el de la montaña y los árboles de honor: formas facetadas, luz que llega desde arriba a la derecha (cara iluminada,
 // media luz y sombra, con un filo de luz en los bordes que miran al astro) y pocas piezas con intención. Lo que no se toca (vetas,
 // luces, sombras, polvo) va en unos pocos `<path>` con `pointer-events: none`, así el toque cae siempre en la pieza de debajo.
-import { fraccionAnio, hoyISO } from './lib.js';
+import { fraccionAnio, hoyISO, mayoriaExtra } from './lib.js';
 
 const f1 = (n) => n.toFixed(1);
+/** (Campamentos 57 y 58) El tope de nodos de cualquier dibujo de «Tu historia» (lo comprueba `test_lib`). */
+export const TOPE_NODOS = 400;
 const MARCO = 'viewBox="0 0 320 320" aria-hidden="true" focusable="false"';
 const lin = (pts) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${f1(x)} ${f1(y)}`).join('');
 const TAU = Math.PI * 2;
@@ -144,8 +152,12 @@ export function tronco(anios, { sel = null, primer = null } = {}) {
       grieta += `M${f1(a[0])} ${f1(a[1])}L${f1(m[0])} ${f1(m[1])}L${f1(b[0])} ${f1(b[1])}`;
       labio += `M${f1(a[0] + 0.9)} ${f1(a[1] - 0.6)}L${f1(m[0] + 0.9)} ${f1(m[1] - 0.6)}L${f1(b[0] + 0.9)} ${f1(b[1] - 0.6)}`;
     }
-    for (const e of y.extras) {
-      const t = angulo(e.frac), [x, yy] = pt(t, r0 + w * 0.5), r = Math.max(1.6, Math.min(3, w * 0.22));
+    // (Campamento 57) Un nudo por mes con extras (doce por anillo como mucho), en el lugar medio de las suyas: con miles de compras
+    // extra, un nudo por compra sería una costra; el texto sigue contándolas todas.
+    const porMes = new Map();
+    for (const e of y.extras) { const m = Math.min(11, Math.floor(e.frac * 12)), o = porMes.get(m) ?? { s: 0, n: 0 }; o.s += e.frac; o.n++; porMes.set(m, o); }
+    for (const o of porMes.values()) {
+      const t = angulo(o.s / o.n), [x, yy] = pt(t, r0 + w * 0.5), r = Math.max(1.6, Math.min(3, w * 0.22));
       // Un nudo de verdad, visto en el corte: un ojal oscuro con su aro de madera más clara y una brasa cálida alrededor.
       nudo += `M${f1(x - r)} ${f1(yy)}a${f1(r)} ${f1(r * 0.86)} 0 1 0 ${f1(2 * r)} 0a${f1(r)} ${f1(r * 0.86)} 0 1 0 ${f1(-2 * r)} 0Z`;
       brasa += punto(x, yy);
@@ -252,9 +264,11 @@ export function constelacion(estrellas, { sel = null } = {}) {
   s += '<g class="efecto-ambiente hc-titilan">';
   destacadas.slice(0, 12).forEach((e, k) => { const [x, y] = pos[e.i]; s += `<path class="hc-titila tw${k % 4}" d="${destello(x, y, 3 + 5 * e.mag, 0.8)}"/>`; });
   s += '</g>';
-  // Zonas para tocar: un círculo invisible por estrella (radio 9 del dibujo, unos 20 px en un teléfono).
+  // Zonas para tocar: un círculo invisible por estrella (radio 9 del dibujo, unos 20 px en un teléfono). Por semanas (campamento 58),
+  // un solo vigía sobre todo el cielo: `historia.js` elige la estrella más cercana al toque.
   let toques = '<g class="hc-toques">';
-  for (const e of estrellas) toques += `<circle class="pieza h-estrella${e.i === sel ? ' sel' : ''}" data-i="${e.i}" cx="${f1(pos[e.i][0])}" cy="${f1(pos[e.i][1])}" r="9"/>`;
+  if (estrellas[0].semanal) toques += `<circle class="hc-vigia" cx="160" cy="160" r="${CIELO_R}"/>`;
+  else for (const e of estrellas) toques += `<circle class="pieza h-estrella${e.i === sel ? ' sel' : ''}" data-i="${e.i}" cx="${f1(pos[e.i][0])}" cy="${f1(pos[e.i][1])}" r="9"/>`;
   s += `${toques}</g>`;
   if (sel != null && pos[sel]) {
     const [x, y] = pos[sel];
@@ -368,9 +382,11 @@ export function torre(piedras, { sel = null } = {}) {
     s += `<path class="pieza h-piedra hp-${p.i % 4}${p.extra ? ' hp-extra' : ''}${p.i === sel ? ' sel' : ''}" data-i="${p.i}" d="${d}"/>`
       + `<path class="hm-media" d="${t.media}"/><path class="hm-luz" d="${t.luz}"/><path class="hm-sombra" d="${t.sombra}"/><path class="hm-filo" d="${t.filo}"/>`;
     if (p.extra) {
-      // La compra extra: las caras de arriba de la piedra guardan una luz cálida, como una veta de cobre al sol.
+      // La compra extra: las caras de arriba de la piedra guardan una luz cálida, como una veta de cobre al sol. (Campamento 57) Con
+      // varias compras en la piedra, la veta se enciende según la parte que fue extra (hasta un tercio, dos tercios o más).
       const caras = t.luz.split('Z').filter(Boolean).slice(0, 3).map((c) => `${c}Z`).join('');
-      if (caras) s += `<path class="hm-veta" d="${caras}"/>`;
+      const parte = (p.nExtra ?? 1) / p.n, nivel = parte > 2 / 3 ? 3 : parte > 1 / 3 ? 2 : 1;
+      if (caras) s += `<path class="hm-veta hm-v${nivel}" d="${caras}"/>`;
     }
     if (p.i === sel) marca = d;
   });
@@ -381,9 +397,12 @@ export function torre(piedras, { sel = null } = {}) {
 // ================================================================ la manta de añil (campamento 13B)
 // Una manta teñida con añil, como las de Izalco y Suchitoto: una fila por año, una celda por semana. El añil es más hondo cuanto más
 // sats tuvo esa semana (tono 1 a 4); una semana sin compras es algodón crudo, el mismo hilo sin teñir (nunca un hueco). Las compras
-// extra llevan una puntada naranja en cruz. Lo de antes de tu primera semana no se teje; lo que falta del año son hilos sueltos (flecos).
+// extra llevan una puntada naranja en cruz (campamento 57: si más de la mitad de las de esa semana lo fueron). Lo de antes de tu primera semana no se teje; lo que falta del año son hilos sueltos (flecos).
 
 /** Celda de cada semana real, con su rectángulo: `k` es su posición en la fila (cada fila llena el ancho, tenga 52 o 53 semanas). */
+/** La semana lleva la puntada de «extra» si más de la mitad de sus compras lo fueron (campamento 57). */
+const bordada = (w) => w.extra && mayoriaExtra(w.nExtra ?? 1, w.n || 1);
+
 function tejer(datos) {
   const filas = datos.anios.length;
   const ch = Math.min(30, 8 + 96 / filas); // alto de cada fila: con pocos años, bandas anchas; con doce, más finas
@@ -435,7 +454,7 @@ export function manta(datos, { sel = null } = {}) {
   s += `<path class="ha-crudo" d="${tela}"/>`;
 
   // Las semanas: el color de cada una es su tono de añil (o el crudo); son las piezas tocables.
-  for (const c of celdas) s += `<rect class="pieza celda tono-${c.w.tono}${c.w.extra ? ' extra' : ''}${c.i === sel ? ' sel' : ''}" data-i="${c.i}" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.wc + 0.05)}" height="${f1(c.ch)}"/>`;
+  for (const c of celdas) s += `<rect class="pieza celda tono-${c.w.tono}${bordada(c.w) ? ' extra' : ''}${c.i === sel ? ' sel' : ''}" data-i="${c.i}" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.wc + 0.05)}" height="${f1(c.ch)}"/>`;
 
   s += '<g class="ha-sobre">';
   // Jaspe: el añil teñido con reserva no queda parejo; unas vetas claras, fijas para cada semana, como el hilo que no tomó el tinte.
@@ -497,7 +516,7 @@ export function manta(datos, { sel = null } = {}) {
   // El bordado de las compras extra: una puntada en cruz, naranja, con su sombra para que se lea sobre el crudo y sobre el añil oscuro.
   let cruz = '';
   for (const c of celdas) {
-    if (!c.w.extra) continue;
+    if (!bordada(c.w)) continue;
     const r = Math.min(c.wc, c.ch) * 0.3, mx = c.x + c.wc / 2, my = c.y + c.ch / 2;
     cruz += `M${f1(mx - r)} ${f1(my - r)}L${f1(mx + r)} ${f1(my + r)}M${f1(mx + r)} ${f1(my - r)}L${f1(mx - r)} ${f1(my + r)}`;
   }
@@ -549,7 +568,7 @@ export function mantaPrimer(datos, { sel = null } = {}) {
   }
   s += `<path class="ha-urdimbre ha-telar" d="${urdimbre}"/><path class="ha-manojo" d="${mano}"/>`;
   s += `<path class="ha-sombra" d="${bandas.map((b) => rect({ ...b, x: b.x + 2.2, y: b.y + 3 })).join('')}"/><path class="ha-crudo" d="${tela}"/>`;
-  for (const c of celdas) s += `<rect class="pieza celda tono-${c.w.tono}${c.w.extra ? ' extra' : ''}${c.i === sel ? ' sel' : ''}" data-i="${c.i}" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(wc + 0.05)}" height="${f1(ch)}"/>`;
+  for (const c of celdas) s += `<rect class="pieza celda tono-${c.w.tono}${bordada(c.w) ? ' extra' : ''}${c.i === sel ? ' sel' : ''}" data-i="${c.i}" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(wc + 0.05)}" height="${f1(ch)}"/>`;
   s += '<g class="ha-sobre">';
   let jaspe = '', jaspeOsc = '';
   for (const c of celdas) {
@@ -583,7 +602,7 @@ export function mantaPrimer(datos, { sel = null } = {}) {
     + `<path class="ha-orillo" d="M${f1(x0)} ${f1(cy)}h${f1(W)}M${f1(x0)} ${f1(cy)}v9M${f1(x0 + W)} ${f1(cy)}v9"/>`;
   let cruz = '';
   for (const c of celdas) {
-    if (!c.w.extra) continue;
+    if (!bordada(c.w)) continue;
     const r = Math.min(wc, ch) * 0.3, mx = c.x + wc / 2, my = c.y + ch / 2;
     cruz += `M${f1(mx - r)} ${f1(my - r)}L${f1(mx + r)} ${f1(my + r)}M${f1(mx + r)} ${f1(my - r)}L${f1(mx - r)} ${f1(my + r)}`;
   }
@@ -760,14 +779,24 @@ export function estratos(lista, { sel = null } = {}) {
   return `${s}</svg>`;
 }
 
-// ================================================================ la partitura (campamento 13C)
-// Una pauta por año y una nota por compra: cuanto más caro estaba BTC ese día, más aguda. Los meses son compases; las compras de un
-// mismo mes van unidas por su barra, como corcheas (dobles con cuatro o más). La clave es la montañita del logo. Con muchas compras el
-// año se parte en varios sistemas (dos semestres, tres cuatrimestres o cuatro trimestres), como una partitura de verdad.
+// ================================================================ la partitura (campamento 13C; campamentos 57 y 58)
+// Una pauta por año: cuanto más caro estaba BTC, más aguda la nota. La clave es la montañita del logo. Tres alturas
+// (`lib.figurasPartitura` y `lib.figurasTodos`):
+//  · por días (hasta 60 notas en el año): una cabeza por día de compra, repartidas por cantidad y no por calendario (las del mismo
+//    día son un acorde con su «×n»); las de un mismo mes van unidas por su barra, como corcheas, y cada mes lleva su nombre encima.
+//  · por semanas (más de 60): una figura por semana en cuatro pautas de catorce semanas. La barra es el rango de precios de la
+//    semana; la cabeza, su nota del medio, más grande con más compras, y el número debajo, cuántas. Una rayita es una semana sin compras.
+//    La semana elegida se abre debajo, día por día (sin piezas tocables: se lee en el texto).
+//  · todos los años: una pauta por año y una figura por mes, del mismo modo.
+// La marca de «extra» va por mayoría: la cabeza naranja si más de la mitad de lo que junta fue extra (sin aros).
 
 const PASO_P = 6; // media distancia entre dos líneas de la pauta
 const SISTEMA = 112; // alto de cada sistema (pauta con sus líneas adicionales y sus plicas)
 const X0P = 56, X1P = 308; // donde empiezan las notas (tras la clave) y donde acaba la pauta
+const PASO_C = 3.4, SISTEMA_C = 74, X0C = 44; // la pauta compacta de las figuras por semana y por mes
+const POR_SISTEMA = 14; // semanas por pauta (cuatro pautas: hasta 56 semanas, y un año tiene como mucho 54)
+const MES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const DIA_C = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 /** Una cabeza de nota: una elipse inclinada (dos arcos), como las de una partitura grabada. */
 function cabeza(x, y, rx, ry) {
@@ -775,83 +804,85 @@ function cabeza(x, y, rx, ry) {
   return `M${f1(x - dx)} ${f1(y - dy)}a${f1(rx)} ${f1(ry)} -22 1 0 ${f1(2 * dx)} ${f1(2 * dy)}a${f1(rx)} ${f1(ry)} -22 1 0 ${f1(-2 * dx)} ${f1(-2 * dy)}Z`;
 }
 
-/** La clave: la montañita del logo, alta como la pauta, con el sendero que la sube y el sol de la cumbre. */
-function clave(x, yc) {
+/** La clave: la montañita del logo, alta como la pauta (`P` es su media distancia), con el sendero que la sube y el sol de la cumbre. */
+function clave(x, yc, P = PASO_P) {
   // Ancha como el logo (no una aguja): del pie, bajo la pauta, a la cumbre, sobre la quinta línea; el sol junto al hombro derecho.
-  const k = 1.22, X = (d) => x + d * k;
-  const yb = yc + 4.3 * PASO_P, yp = yc - 4.5 * PASO_P;
-  const pts = [[X(-1), yb], [X(6), yc + 0.8 * PASO_P], [X(12.5), yp], [X(17.5), yc - 1.4 * PASO_P], [X(21), yc - 2.6 * PASO_P], [X(30), yb]];
-  const nieve = `M${f1(X(9.2))} ${f1(yc - 2.3 * PASO_P)}L${f1(X(12.5))} ${f1(yp)}L${f1(X(15.4))} ${f1(yc - 2.5 * PASO_P)}L${f1(X(13.6))} ${f1(yc - 2 * PASO_P)}L${f1(X(12))} ${f1(yc - 2.7 * PASO_P)}Z`;
-  const sendero = `M${f1(X(15))} ${f1(yb - 1.2)}L${f1(X(8))} ${f1(yc + 2.2 * PASO_P)}L${f1(X(16))} ${f1(yc + 0.4 * PASO_P)}L${f1(X(11))} ${f1(yc - 1.2 * PASO_P)}`;
-  return { cuerpo: `${lin(pts)}Z`, nieve, sendero, sol: `M${f1(X(24.5))} ${f1(yc - 4.6 * PASO_P)}h0.01` };
+  const k = 1.22 * Math.min(1, (P / PASO_P) * 1.25), X = (d) => x + d * k;
+  const yb = yc + 4.3 * P, yp = yc - 4.5 * P;
+  const pts = [[X(-1), yb], [X(6), yc + 0.8 * P], [X(12.5), yp], [X(17.5), yc - 1.4 * P], [X(21), yc - 2.6 * P], [X(30), yb]];
+  const nieve = `M${f1(X(9.2))} ${f1(yc - 2.3 * P)}L${f1(X(12.5))} ${f1(yp)}L${f1(X(15.4))} ${f1(yc - 2.5 * P)}L${f1(X(13.6))} ${f1(yc - 2 * P)}L${f1(X(12))} ${f1(yc - 2.7 * P)}Z`;
+  const sendero = `M${f1(X(15))} ${f1(yb - 1.2)}L${f1(X(8))} ${f1(yc + 2.2 * P)}L${f1(X(16))} ${f1(yc + 0.4 * P)}L${f1(X(11))} ${f1(yc - 1.2 * P)}`;
+  return { cuerpo: `${lin(pts)}Z`, nieve, sendero, sol: `M${f1(X(24.5))} ${f1(yc - 4.6 * P)}h0.01` };
 }
 
-/** Partitura: `anio` = un elemento de `lib.partitura`. Cada nota tocable es un `<circle class="pieza hp-toque">` con `data-i`. */
-export function partitura(anio, { sel = null } = {}) {
-  const notas = anio?.notas ?? [];
-  const n = notas.length;
-  const S = n <= 40 ? 1 : n <= 80 ? 2 : n <= 120 ? 3 : 4; // sistemas
-  const H = Math.max(150, 24 + S * SISTEMA);
-  const yc = (j) => 12 + SISTEMA / 2 + j * SISTEMA + (S === 1 ? (H - 24 - SISTEMA) / 2 : 0);
-  const yN = (j, p) => yc(j) - (p - 6) * PASO_P;
-  const ancho = X1P - X0P - 10;
+/** El papel, las cinco líneas de cada pauta, sus barras y sus claves; `S` pautas con centro `yc(j)`. */
+function pautas(S, H, yN, yc, P, x0) {
   let s = `<svg class="h-partitura" viewBox="0 0 320 ${H}" aria-hidden="true" focusable="false"><defs>`
-    + `<linearGradient id="h-p-papel" x1="0.9" y1="0" x2="0.1" y2="1"><stop class="hp-p0" offset="0"/><stop class="hp-p1" offset="0.6"/><stop class="hp-p2" offset="1"/></linearGradient>`
+    + '<linearGradient id="h-p-papel" x1="0.9" y1="0" x2="0.1" y2="1"><stop class="hp-p0" offset="0"/><stop class="hp-p1" offset="0.6"/><stop class="hp-p2" offset="1"/></linearGradient>'
     + '</defs>';
   s += `<rect class="hp-sombra" x="4" y="5" width="314" height="${H - 5}" rx="9"/><rect class="hp-papel" x="1" y="1" width="314" height="${H - 5}" rx="9"/>`;
-
-  // Dónde va cada nota: su sistema, su x (por su día del año) y su y (por su paso).
-  const pos = notas.map((nt) => {
-    const j = Math.min(S - 1, Math.floor(nt.frac * S));
-    return { nt, j, x: X0P + 5 + (nt.frac * S - j) * ancho, y: yN(j, nt.paso), mes: Math.min(11, Math.floor(nt.frac * 12)) };
-  });
-  // El tamaño de las cabezas según lo apretado que esté cada sistema, y un reparto sutil para que dos notas juntas no se tapen.
-  let rx = 4.2;
-  for (let j = 0; j < S; j++) { const m = pos.filter((p) => p.j === j).length; if (m) rx = Math.min(rx, Math.max(2.7, ((ancho / m) * 0.46))); }
-  const ry = rx * 0.72;
-  for (let j = 0; j < S; j++) {
-    const de = pos.filter((p) => p.j === j);
-    for (let k = 1; k < de.length; k++) {
-      const a = de[k - 1], b = de[k], hueco = Math.abs(a.nt.paso - b.nt.paso) <= 1 ? rx * 1.75 : rx * 0.95;
-      if (b.x - a.x < hueco) b.x = a.x + hueco;
-    }
-    // Si el reparto empujó el final fuera de la pauta, se aprieta todo hacia dentro.
-    const ult = de.at(-1);
-    if (ult && ult.x > X1P - 7) { const x0 = X0P + 5, k = (X1P - 7 - x0) / (ult.x - x0); for (const p of de) p.x = x0 + (p.x - x0) * k; }
-  }
-
-  // La pauta: cinco líneas por sistema, la barra de inicio, las de cada mes y la doble barra final.
-  let lineas = '', barras = '', fin = '';
+  let lineas = '', barras = '';
   const claves = { cuerpo: '', nieve: '', sendero: '', sol: '' };
   for (let j = 0; j < S; j++) {
     for (const p of [2, 4, 6, 8, 10]) lineas += `M12 ${f1(yN(j, p))}H${X1P}`;
     barras += `M12 ${f1(yN(j, 10))}V${f1(yN(j, 2))}`;
-    const meses = 12 / S;
-    for (let m = 1; m < meses; m++) { const x = X0P + 5 + (m / meses) * ancho - 1.5; barras += `M${f1(x)} ${f1(yN(j, 10))}V${f1(yN(j, 2))}`; }
     if (j < S - 1) barras += `M${X1P} ${f1(yN(j, 10))}V${f1(yN(j, 2))}`;
-    else fin = `M${X1P - 5} ${f1(yN(j, 10))}V${f1(yN(j, 2))}`;
-    const c = clave(15, yc(j));
+    const c = clave(15, yc(j), P);
     for (const k of Object.keys(claves)) claves[k] += c[k];
   }
-  s += `<path class="hp-linea" d="${lineas}"/><path class="hp-barra" d="${barras}"/><path class="hp-fin" d="${fin}"/>`
+  s += `<path class="hp-linea" d="${lineas}"/><path class="hp-barra" d="${barras}"/><path class="hp-fin" d="M${X1P - 5} ${f1(yN(S - 1, 10))}V${f1(yN(S - 1, 2))}"/>`
     + `<path class="hp-final" d="M${X1P - 1.2} ${f1(yN(S - 1, 10))}V${f1(yN(S - 1, 2))}"/>`
     + `<path class="hp-clave" d="${claves.cuerpo}"/><path class="hp-clave-nieve" d="${claves.nieve}"/><path class="hp-clave-sendero" d="${claves.sendero}"/><path class="hp-clave-sol" d="${claves.sol}"/>`;
+  return { s, x0 };
+}
 
-  // Las plicas y las barras: las notas de un mismo mes van unidas; una sola en su mes es una negra.
+/**
+ * Partitura: `fig` = lo que dan `lib.figurasPartitura` (un año, por días o por semanas) o `lib.figurasTodos` (todos los años, por
+ * meses). Cada figura tocable es una `.pieza.hp-toque` con `data-i` (su índice en `fig.figuras`, el mismo que suena con «Tocar»):
+ * un círculo sobre la cabeza por días; una columna de pauta entera por semanas y por meses (no se tapan entre sí).
+ */
+export function partitura(fig, { sel = null } = {}) {
+  const figuras = fig?.figuras ?? [];
+  if (fig?.modo === 'semana' || fig?.modo === 'todos') return resumen(fig, sel);
+  const F = figuras.length;
+  const S = Math.max(1, Math.ceil(F / 16)); // sistemas: hasta 16 figuras en cada uno
+  const H = Math.max(150, 24 + S * SISTEMA);
+  const yc = (j) => 12 + SISTEMA / 2 + j * SISTEMA + (S === 1 ? (H - 24 - SISTEMA) / 2 : 0);
+  const yN = (j, p) => yc(j) - (p - 6) * PASO_P;
+  const ancho = X1P - X0P - 10;
+  let { s } = pautas(S, H, yN, yc, PASO_P, X0P);
+  const por = Math.max(1, Math.ceil(F / S));
+  // Dónde va cada figura: su sistema y su lugar en él por orden (no por calendario), y su y por su nota.
+  const pos = figuras.map((f, k) => {
+    const j = Math.floor(k / por), q = k - j * por;
+    return { f, j, x: X0P + 5 + ((q + 0.5) / por) * ancho, y: yN(j, f.paso), mes: f.mes };
+  });
+  const rx = 4.2, ry = rx * 0.72;
+  // Los meses: una barra entre dos figuras de meses distintos y el nombre del mes sobre la primera de cada uno.
+  let barras = '', etiquetas = '', numeros = '';
+  pos.forEach((p, k) => {
+    const a = pos[k - 1];
+    if (a && a.j === p.j && a.mes !== p.mes) barras += `M${f1((a.x + p.x) / 2)} ${f1(yN(p.j, 10))}V${f1(yN(p.j, 2))}`;
+    if (!a || a.j !== p.j || a.mes !== p.mes) etiquetas += `<text class="hp-eti" x="${f1(p.x - rx)}" y="${f1(yN(p.j, 12.8))}">${MES_C[p.mes]}</text>`;
+    if (p.f.n > 1) numeros += `<text class="hp-num" x="${f1(p.x)}" y="${f1(yN(p.j, -0.9))}" text-anchor="middle">×${p.f.n}</text>`;
+  });
+  s += `<path class="hp-barra" d="${barras}"/>`;
+
+  // Las plicas y las barras: las figuras de un mismo mes van unidas; una sola en su mes es una negra.
   const L = 3.4 * PASO_P;
-  let plicas = '', vigas = '', adicionales = '', cabezas = '', extras = '', aros = '';
+  let plicas = '', vigas = '', adicionales = '', cabezas = '', extras = '';
   const grupos = [];
   // Un mismo mes va unido, salvo un salto muy grande (más de una octava): ahí cada nota lleva su plica, como en un grabado cuidado.
   for (const p of pos) {
     const g = grupos.at(-1);
-    const junto = g && g[0].j === p.j && g[0].mes === p.mes && Math.max(p.nt.paso, ...g.map((q) => q.nt.paso)) - Math.min(p.nt.paso, ...g.map((q) => q.nt.paso)) <= 7;
+    const junto = g && g[0].j === p.j && g[0].mes === p.mes && Math.max(p.f.paso, ...g.map((q) => q.f.paso)) - Math.min(p.f.paso, ...g.map((q) => q.f.paso)) <= 7;
     if (junto) g.push(p); else grupos.push([p]);
   }
   for (const g of grupos) {
-    const media = g.reduce((a, p) => a + p.nt.paso, 0) / g.length, abajo = media >= 6, sx = abajo ? -rx * 0.86 : rx * 0.86;
+    const media = g.reduce((a, p) => a + p.f.paso, 0) / g.length, abajo = media >= 6, sx = abajo ? -rx * 0.86 : rx * 0.86;
     if (g.length === 1) {
-      const p = g[0], abajo = p.nt.paso >= 6, sx = abajo ? -rx * 0.86 : rx * 0.86;
-      plicas += `M${f1(p.x + sx)} ${f1(p.y)}V${f1(p.y + (abajo ? L : -L))}`;
+      const p = g[0], ab = p.f.paso >= 6, sx1 = ab ? -rx * 0.86 : rx * 0.86;
+      plicas += `M${f1(p.x + sx1)} ${f1(p.y)}V${f1(p.y + (ab ? L : -L))}`;
       continue;
     }
     // La barra: con la pendiente de la primera a la última (moderada) y lo bastante lejos para que todas las plicas la alcancen.
@@ -866,17 +897,103 @@ export function partitura(anio, { sel = null } = {}) {
     vigas += viga(0);
     if (g.length >= 4) vigas += viga(dir * 4.2); // semicorcheas: una segunda barra
   }
-  // Las líneas adicionales (el do de abajo y el la de arriba), las cabezas y los aros de las compras extra.
+  // Las líneas adicionales (el do de abajo y el la de arriba) y las cabezas: naranja si la mayoría de las compras de ese día fue extra.
   for (const p of pos) {
-    if (p.nt.paso <= 0 || p.nt.paso >= 12) adicionales += `M${f1(p.x - rx - 2.6)} ${f1(p.y)}h${f1(2 * rx + 5.2)}`;
-    const c = cabeza(p.x, p.y, rx, ry);
-    if (p.nt.extra) { extras += c; aros += `M${f1(p.x - rx - 2.4)} ${f1(p.y)}a${f1(rx + 2.4)} ${f1(rx + 2.4)} 0 1 0 ${f1(2 * rx + 4.8)} 0a${f1(rx + 2.4)} ${f1(rx + 2.4)} 0 1 0 ${f1(-2 * rx - 4.8)} 0Z`; }
-    else cabezas += c;
+    if (p.f.paso <= 0 || p.f.paso >= 12) adicionales += `M${f1(p.x - rx - 2.6)} ${f1(p.y)}h${f1(2 * rx + 5.2)}`;
+    if (p.f.extra) extras += cabeza(p.x, p.y, rx, ry); else cabezas += cabeza(p.x, p.y, rx, ry);
   }
   s += `<path class="hp-adicional" d="${adicionales}"/><path class="hp-plica" d="${plicas}"/><path class="hp-viga" d="${vigas}"/>`
-    + `<path class="hp-cabeza" d="${cabezas}"/><path class="hp-aro" d="${aros}"/><path class="hp-cabeza hp-extra" d="${extras}"/>`;
-  // Las zonas para tocar: un círculo por nota (invisible; se enciende al elegirla o mientras suena).
+    + `<path class="hp-cabeza" d="${cabezas}"/><path class="hp-cabeza hp-extra" d="${extras}"/>${etiquetas}${numeros}`;
+  // Las zonas para tocar: un círculo por figura (invisible; se enciende al elegirla o mientras suena).
   s += '<g class="hp-toques">';
-  for (const p of pos) s += `<circle class="pieza hp-toque${p.nt.i === sel ? ' sel' : ''}" data-i="${p.nt.i}" cx="${f1(p.x)}" cy="${f1(p.y)}" r="9"/>`;
+  for (const p of pos) s += `<circle class="pieza hp-toque${p.f.i === sel ? ' sel' : ''}" data-i="${p.f.i}" cx="${f1(p.x)}" cy="${f1(p.y)}" r="9"/>`;
   return `${s}</g></svg>`;
 }
+
+/** Una figura resumen: la barra del rango de su nota, la cabeza en la del medio (más grande con más compras) y su cantidad debajo. */
+function figuraResumen(f, x, yN, j, rmax, acc, numMin) {
+  if (f.pasoMax > f.pasoMin) acc.rango += `M${f1(x)} ${f1(yN(j, f.pasoMax))}V${f1(yN(j, f.pasoMin))}`;
+  const r = Math.min(rmax, 2.5 + 0.8 * Math.sqrt(f.n - 1)), y = yN(j, f.paso);
+  acc[f.extra ? 'ex' : 'no'] += cabeza(x, y, r, r * 0.74);
+  if (f.paso <= 0 || f.paso >= 12) acc.adicional += `M${f1(x - r - 2)} ${f1(y)}h${f1(2 * r + 4)}`;
+  if (f.n >= numMin) acc.num += `<text class="hp-num" x="${f1(x)}" y="${f1(yN(j, -2.6))}" text-anchor="middle">${f.n}</text>`;
+}
+const juntar = (acc) => `<path class="hp-rango" d="${acc.rango}"/><path class="hp-adicional" d="${acc.adicional}"/><path class="hp-cabeza" d="${acc.no}"/><path class="hp-cabeza hp-extra" d="${acc.ex}"/>`
+  + `<path class="hp-sil" d="${acc.sil}"/>${acc.num}`;
+const nuevoAcc = () => ({ rango: '', adicional: '', no: '', ex: '', sil: '', num: '' });
+const fechaUTC = (anio, dia) => new Date(Date.UTC(anio, 0, 1 + dia));
+
+/** Las figuras por semana (un año) o por mes (todos los años), en pautas compactas; con una semana elegida, sus días debajo. */
+function resumen(fig, sel) {
+  const figuras = fig.figuras, todos = fig.modo === 'todos';
+  const S = todos ? Math.max(1, fig.anios.length) : 4;
+  const slots = todos ? 12 : POR_SISTEMA;
+  const elegida = !todos && sel != null ? figuras[sel] : null;
+  // Por semanas, el sitio de la semana abierta se guarda siempre (vacío hasta elegir una): elegir no mueve lo de debajo, ni ‹ ›.
+  const H = 20 + S * SISTEMA_C + (todos ? 0 : SISTEMA_C + 22);
+  const yc = (j) => 14 + SISTEMA_C / 2 + j * SISTEMA_C + (j >= S ? 12 : 0);
+  const yN = (j, p) => yc(j) - (p - 6) * PASO_C;
+  const ancho = (X1P - X0C - 10) / slots;
+  let { s } = pautas(S, H, yN, yc, PASO_C, X0C);
+  const xDe = (k) => X0C + 4 + (k + 0.5) * ancho;
+  const lugar = (f) => (todos ? { j: f.fila, k: f.col } : { j: Math.floor(f.col / POR_SISTEMA), k: f.col % POR_SISTEMA });
+  // Qué dice cada pauta: el año (todos) o sus meses (por semanas, de la primera a la última semana que le tocan).
+  let eti = '';
+  if (todos) fig.anios.forEach((a, j) => { eti += `<text class="hp-eti" x="${X1P}" y="${f1(yN(j, 13.6))}" text-anchor="end">${a}</text>`; });
+  else {
+    const lunes = -((fechaUTC(fig.anio, 0).getUTCDay() + 6) % 7); // el lunes de la semana del 1 de enero, en días desde el 1 de enero
+    const fin = (Date.UTC(fig.anio + 1, 0, 1) - Date.UTC(fig.anio, 0, 1)) / 864e5 - 1;
+    for (let j = 0; j < S; j++) {
+      const d0 = Math.max(0, lunes + j * POR_SISTEMA * 7), d1 = Math.min(fin, lunes + (j + 1) * POR_SISTEMA * 7 - 1);
+      if (d0 > fin) continue;
+      const m0 = fechaUTC(fig.anio, d0).getUTCMonth(), m1 = fechaUTC(fig.anio, d1).getUTCMonth();
+      eti += `<text class="hp-eti" x="${X1P}" y="${f1(yN(j, 13.6))}" text-anchor="end">${m0 === m1 ? MES_C[m0] : `${MES_C[m0]} – ${MES_C[m1]}`}</text>`;
+    }
+  }
+  const acc = nuevoAcc();
+  let toques = '', marco = '';
+  // Las rayitas de silencio: los huecos entre la primera figura y la última.
+  const ocupado = new Set(figuras.map((f) => { const l = lugar(f); return l.j * slots + l.k; }));
+  if (figuras.length) {
+    const a = lugar(figuras[0]), b = lugar(figuras.at(-1));
+    for (let q = a.j * slots + a.k + 1; q < b.j * slots + b.k; q++) if (!ocupado.has(q)) { const x = xDe(q % slots); acc.sil += `M${f1(x - 2.2)} ${f1(yN(Math.floor(q / slots), 6))}h4.4`; }
+  }
+  for (const f of figuras) {
+    const { j, k } = lugar(f), x = xDe(k);
+    figuraResumen(f, x, yN, j, todos ? 6 : 5.4, acc, todos ? 1 : 2);
+    toques += `<rect class="pieza hp-toque hp-col${f.i === sel ? ' sel' : ''}" data-i="${f.i}" x="${f1(x - ancho / 2)}" y="${f1(yN(j, 14))}" width="${f1(ancho)}" height="${f1(18 * PASO_C)}" rx="4"/>`;
+  }
+  // La semana elegida, abierta día por día (solo se mira: el detalle se lee en el texto de debajo). Sin elegir, su pauta vacía y una pista.
+  if (!todos && !elegida) {
+    let lineas = '';
+    for (const p of [2, 4, 6, 8, 10]) lineas += `M12 ${f1(yN(S, p))}H${X1P}`;
+    s += `<g class="hp-semana hp-vacia"><path class="hp-corte" d="M20 ${f1(yc(S) - SISTEMA_C / 2 - 2)}H${X1P - 8}"/><path class="hp-linea" d="${lineas}"/>`
+      + `<text class="hp-eti" x="${f1((X0C + X1P) / 2)}" y="${f1(yN(S, -5.4))}" text-anchor="middle">toca una semana para verla día por día</text></g>`;
+  }
+  if (elegida) {
+    const j = S, dias = (Date.UTC(...ymd(elegida.hasta)) - Date.UTC(...ymd(elegida.desde))) / 864e5 + 1;
+    const anchoD = (X1P - X0C - 10) / 7, d0 = new Date(Date.UTC(...ymd(elegida.desde)));
+    const dAcc = nuevoAcc();
+    let dEti = '';
+    for (let k = 0; k < dias; k++) {
+      const d = new Date(d0.getTime() + k * 864e5), iso = d.toISOString().slice(0, 10), x = X0C + 4 + (k + 0.5) * anchoD;
+      dEti += `<text class="hp-eti hp-dia" x="${f1(x)}" y="${f1(yN(j, -5.4))}" text-anchor="middle">${DIA_C[(d.getUTCDay() + 6) % 7]} ${d.getUTCDate()}</text>`;
+      const g = elegida.notas.filter((nt) => nt.fecha === iso);
+      if (!g.length) continue;
+      const ps = g.map((nt) => nt.paso).sort((a, b) => a - b), nEx = g.filter((nt) => nt.extra).length;
+      figuraResumen({ n: g.length, paso: ps[Math.floor((ps.length - 1) / 2)], pasoMin: ps[0], pasoMax: ps.at(-1), extra: nEx * 2 > g.length }, x, yN, j, 5.4, dAcc, 2);
+    }
+    let lineas = '';
+    for (const p of [2, 4, 6, 8, 10]) lineas += `M12 ${f1(yN(j, p))}H${X1P}`;
+    const c = clave(15, yc(j), PASO_C);
+    s += `<g class="hp-semana"><path class="hp-corte" d="M20 ${f1(yc(j) - SISTEMA_C / 2 - 2)}H${X1P - 8}"/><path class="hp-linea" d="${lineas}"/>`
+      + `<path class="hp-barra" d="M12 ${f1(yN(j, 10))}V${f1(yN(j, 2))}M${X1P} ${f1(yN(j, 10))}V${f1(yN(j, 2))}"/>`
+      + `<path class="hp-clave" d="${c.cuerpo}"/><path class="hp-clave-nieve" d="${c.nieve}"/>${juntar(dAcc)}${dEti}</g>`;
+    const { j: js, k: ks } = lugar(elegida);
+    marco = `<path class="hp-lazo" d="M${f1(xDe(ks))} ${f1(yN(js, -2.6) + 3)}V${f1(yc(S) - SISTEMA_C / 2 - 2)}"/>`;
+  }
+  s += eti + juntar(acc) + marco;
+  return `${s}<g class="hp-toques">${toques}</g></svg>`;
+}
+/** «2026-11-03» → [2026, 10, 3] (para `Date.UTC`). */
+const ymd = (f) => { const [y, m, d] = f.split('-').map(Number); return /** @type {[number, number, number]} */ ([y, m - 1, d]); };

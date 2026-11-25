@@ -3,7 +3,8 @@
 Uso: python tests/servidor_prueba.py PUERTO [ESCENARIO]
 Escenarios: hoy (1 compra), bonito (saldo capicúa), cero (vendió todo), aniv (hoy es el aniversario de su primera compra), taldia (hoy hace un año llegó a 1M), eco (80 semanas), dos, tres, medio (532,702 sats: cima 1M), nueve, anio (≈1 año de compras semanales), largo, ballena,
 milbtc (como ballena, con una compra de 600 BTC: más de 1,000 BTC, para probar las cifras más largas),
-mil (1,000 compras en casi seis años, con extras, ventas y traslados), vacio (sin compras), sinprecio,
+mil (1,000 compras en casi seis años, con extras, ventas y traslados), miles o milesN (N compras realistas, 5,000 por defecto: rachas,
+huecos y más de la mitad extra amontonadas en las caídas, varias el mismo día; campamentos 57 y 58), vacio (sin compras), sinprecio,
 sinhist (sin histórico de precios).
 Cuentas: Daf3r / clave-de-prueba-12 (admin) y Ana / lectora-de-prueba (lector).
 """
@@ -157,6 +158,45 @@ elif esc == "mil":
     for fecha, sentido, sats in ((HOY - timedelta(days=500), "a_wallet", 3_000_000), (HOY - timedelta(days=60), "a_wallet", 1_500_000)):
         conn.execute("INSERT INTO traslados (fecha, sats, sentido, creado) VALUES (?, ?, ?, ?)", (fecha.isoformat(), sats, sentido, 1))
     conn.commit()
+elif esc.startswith("miles"):
+    # (Campamentos 57 y 58) `miles` o `milesN` (p. ej. `miles1000`; 5,000 por defecto): N compras realistas en 3–5 años: ritmo
+    # regular con rachas y huecos, extras en las caídas (varias el mismo día), ventas ocasionales y traslados.
+    N = int(esc[5:] or 5000)
+    dias = 1095 if N <= 300 else 1825
+    rm = random.Random(N)
+    reg = int(N * 0.4)
+    paso = dias / reg
+    huecos = [(rm.randint(100, dias - 100), rm.randint(18, 45)) for _ in range(4)]
+    plan = []
+    t = 0.0
+    while t < dias - 3:
+        k = int(t)
+        if not any(a <= k < a + b for a, b in huecos):
+            plan.append((HOY - timedelta(days=dias - k), False))
+        t += paso * (0.6 + rm.random() * 0.8)
+    # caída respecto al máximo de 60 días: ahí caen las extras
+    peso = []
+    for k in range(dias - 2):
+        d = HOY - timedelta(days=dias - k)
+        mx = max(PRECIOS.get(d - timedelta(days=j), PRECIO) for j in range(0, 60, 3))
+        c = max(0.0, 1 - PRECIOS.get(d, PRECIO) / mx)
+        peso.append((c ** 2.2) * (1.6 if rm.random() < 0.25 else 0.4) + 0.0004)
+    for k in rm.choices(range(dias - 2), weights=peso, k=N - len(plan)):
+        plan.append((HOY - timedelta(days=dias - k), True))
+    plan.sort(key=lambda x: x[0])
+    for i, (d, ex) in enumerate(plan):
+        monto = round((rm.choice([20, 25, 25, 30]) if ex else rm.choice([10, 10, 15, 15, 20])) + rm.random() * 3, 2)
+        comprar(d, monto)
+        if ex:
+            conn.execute("UPDATE compras SET extra = 1" + (", nota = 'Caída'" if i % 23 == 0 else "") + " WHERE id = (SELECT MAX(id) FROM compras)")
+        elif i % 57 == 5:
+            conn.execute("UPDATE compras SET etiquetas = ? WHERE id = (SELECT MAX(id) FROM compras)", ("cumpleaños,bono" if i % 114 == 5 else "bono",))
+    for k in range(max(2, N // 250)):
+        server.insertar(conn, ((HOY - timedelta(days=40 + k * (dias - 80) // max(2, N // 250))).isoformat(), 40.0, 60000.0, 60000), None, "venta", "Gasto", 0)
+    for k in range(6):
+        conn.execute("INSERT INTO traslados (fecha, sats, sentido, creado) VALUES (?, ?, ?, ?)", ((HOY - timedelta(days=60 + k * 280)).isoformat(), 2_000_000, "a_wallet", 1))
+    conn.commit()
+    print("miles", N, "compras", len(plan), "extras", sum(1 for _, e in plan if e), file=sys.stderr)
 elif esc in ("anio", "eco", "largo", "ballena", "milbtc"):
     semanas = {"anio": 52, "eco": 80, "largo": 300, "ballena": 300, "milbtc": 300}[esc]
     r2 = random.Random(len(esc) * 13)

@@ -254,6 +254,7 @@ const PESOS = [
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
+  ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -3277,7 +3278,7 @@ try {
       await p.click('#dh-vistas [data-vh="partitura"]'); await p.waitForTimeout(300);
       const pautas = L.partitura(todos);
       const ult = pautas.at(-1);
-      eq(await p.locator('#dh-anios button').count(), pautas.length, 'partitura: un botón por año');
+      eq(await p.locator('#dh-anios button').count(), pautas.length + (pautas.length > 1 ? 1 : 0), 'partitura: un botón por año (y «Todos», campamento 58)');
       eq(await p.locator('#dh-lienzo .pieza[data-i]').count(), ult.notas.length, `partitura: una nota por compra del último año (${ult.notas.length})`);
       ok(await p.locator('#dh-tocar').isVisible() && /^Tocar este año$/.test((await p.textContent('#dh-tocar')).trim()), 'partitura: el botón «Tocar este año» está a la vista');
       await p.focus('#dh-lienzo'); await p.keyboard.press('Home'); await p.waitForTimeout(150);
@@ -8317,6 +8318,106 @@ try {
         await r.ctx.close();
       }
     } finally { anio.parar(); sinp.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamentos 57 y 58: «Tu historia» a miles (partitura por semanas y «Todos», constelación por semanas, extra por mayoría, tope de nodos)
+  await bloque(async () => {
+    const sinAviso = () => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } };
+    const ent = async (...a) => { const r = await entrar(...a); for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); } return r; };
+    const abrirHistoria = async (p) => { await p.click('#cuenta-btn'); await p.waitForTimeout(300); await p.click('[data-cuenta="historia"]'); await p.waitForTimeout(400); };
+    const L = await import('../app/static/lib.js');
+    const A = await import('../app/static/arte-historia.js');
+    // Un día fijo: qué año va por semanas y cuál por días no depende de cuándo corre la prueba.
+    const srv = await servidor('miles1000', { FECHA_PRUEBA: '2026-11-24' });
+    try {
+      const { ctx, p, consola } = await ent(navegador, srv, ADMIN, { viewport: { width: 320, height: 640 } }, sinAviso);
+      const todos = await datos(p, '/api/compras');
+      const pautas = L.partitura(todos);
+      ok(todos.filter((c) => c.tipo !== 'venta').length >= 1000 && pautas.length >= 5, `57: el escenario tiene miles de compras en varios años (${todos.length})`);
+      await abrirHistoria(p);
+      // ---- Cada dibujo, bajo el tope de nodos, sin scroll horizontal y pintado sin tardar
+      for (const v of ['tronco', 'constelacion', 'torre', 'manta', 'estratos', 'partitura']) {
+        await p.click('#dh-vistas [data-vh="linea"]'); await p.waitForTimeout(150);
+        const ms = await p.evaluate(async (v) => { const t = performance.now(); document.querySelector(`#dh-vistas [data-vh="${v}"]`).click(); await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))); return Math.round(performance.now() - t); }, v);
+        await p.waitForTimeout(150);
+        const m = await p.evaluate(() => ({ nodos: document.querySelectorAll('#dh-lienzo *').length, sw: document.documentElement.scrollWidth - document.documentElement.clientWidth, nan: /NaN|undefined|Infinity/.test(document.getElementById('dh-lienzo').innerHTML) }));
+        ok(m.nodos <= A.TOPE_NODOS && !m.nan && m.sw <= 0 && ms < 600, `58: ${v} con ${todos.length} movimientos: ${m.nodos} nodos (tope ${A.TOPE_NODOS}), pintado en ${ms} ms, sin scroll ni NaN`);
+      }
+      // ---- La partitura del año con más compras: una figura por semana, columnas para tocar y ‹ › de 48 px
+      const y = pautas.reduce((m, a) => (a.notas.length > m.notas.length ? a : m), pautas[0]);
+      const fig = L.figurasPartitura(y);
+      await p.click(`#dh-anios button[data-anio="${y.anio}"]`); await p.waitForTimeout(250);
+      ok(fig.modo === 'semana' && fig.figuras.length <= 54, `57: ${y.anio} (${y.notas.length} notas) va por semanas (${fig.figuras.length} figuras)`);
+      eq(await p.locator('#dh-lienzo .pieza.hp-toque[data-i]').count(), fig.figuras.length, '57: una columna tocable por semana con compras');
+      ok(new RegExp(`^${y.anio}: [\\d,]+ notas en ${fig.figuras.length} semanas; BTC entre`).test(await p.innerText('#dh-detalle')), `57: el año dice que va por semanas (${await p.innerText('#dh-detalle')})`);
+      const pasos = await p.evaluate(() => [...document.querySelectorAll('#dh-pasos button')].map((b) => { const r = b.getBoundingClientRect(); return { w: r.width, h: r.height, l: b.getAttribute('aria-label') }; }));
+      ok(await p.locator('#dh-pasos').isVisible() && pasos.length === 2 && pasos.every((b) => b.w >= 47.5 && b.h >= 47.5) && pasos[0].l === 'Semana anterior' && pasos[1].l === 'Semana siguiente', `57: ‹ › de 48 px, con su nombre (${JSON.stringify(pasos)})`);
+      const arriba = async () => p.evaluate(() => Math.round(document.getElementById('dh-sig').getBoundingClientRect().top + window.scrollY));
+      const antes = await arriba();
+      await p.click('#dh-ant'); await p.waitForTimeout(200);
+      eq(await p.getAttribute('#dh-lienzo .pieza.sel', 'data-i'), String(fig.figuras.length - 1), '57: ‹ sin nada elegido lleva a la última semana');
+      eq(await arriba(), antes, '57: elegir una semana no mueve ‹ › (el sitio de la semana abierta ya estaba guardado)');
+      ok(await p.locator('#dh-sig').isDisabled() && /^(Semana del .+ · \d+ compras|.+ · BTC a \$)/.test(await p.innerText('#dh-detalle')), `57: la semana se lee (${await p.innerText('#dh-detalle')})`);
+      await p.click('#dh-ant'); await p.waitForTimeout(200);
+      eq(await p.getAttribute('#dh-lienzo .pieza.sel', 'data-i'), String(fig.figuras.length - 2), '57: ‹ va a la semana anterior');
+      ok(await p.locator('#dh-lienzo .hp-semana').count() === 1 && await p.locator('#dh-lienzo .hp-semana .pieza, #dh-lienzo .hp-semana [data-i]').count() === 0, '57: la semana elegida se abre debajo, día por día, sin piezas tocables');
+      const grande = fig.figuras.reduce((m, f) => (f.n > m.n ? f : m), fig.figuras[0]);
+      await p.locator(`#dh-lienzo .pieza[data-i="${grande.i}"]`).click({ force: true }); await p.waitForTimeout(200);
+      eq(await p.innerText('#dh-detalle'), L.textoFigura(grande), '57: tocar la columna de una semana la lee con su cantidad, sus extra y el rango de BTC');
+      // «Ver estas compras»: «Movimientos» con solo las compras de esa semana
+      ok((await p.innerText('#dh-ver')).trim() === 'Ver estas compras', '57: «Ver estas compras» sale con una semana elegida');
+      await p.click('#dh-ver');
+      await p.waitForFunction(() => { const t = document.getElementById('t-compras').getBoundingClientRect().top; return t >= 0 && t < 400; }, null, { timeout: 6000 }).catch(() => {});
+      const lst = await p.evaluate(() => ({ desde: document.getElementById('l-desde').value, hasta: document.getElementById('l-hasta').value, chip: document.querySelector('#l-chips [aria-pressed="true"]')?.dataset.f, top: Math.round(document.getElementById('t-compras').getBoundingClientRect().top) }));
+      eq([lst.desde, lst.hasta, lst.chip], [grande.desde, grande.hasta, 'compra'], '57: la lista queda filtrada por las fechas de la semana y por compras');
+      ok(lst.top >= 0 && lst.top < 400, `57: y se ve el título de «Movimientos» (${lst.top})`);
+      await p.locator('#dh-lienzo').scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
+      await p.focus('#dh-lienzo'); await p.keyboard.press('Home'); await p.waitForTimeout(150);
+      eq(await p.getAttribute('#dh-lienzo .pieza.sel', 'data-i'), '0', '57: las flechas del teclado siguen moviendo lo elegido');
+      ok(await p.locator('#dh-ant').isDisabled(), '57: en la primera, ‹ se apaga');
+      // La marca de «extra», por mayoría: tantas cabezas naranjas como semanas con más de la mitad extra
+      const naranjas = await p.evaluate(() => (document.querySelector('#dh-lienzo svg > .hp-cabeza.hp-extra')?.getAttribute('d').match(/M/g) ?? []).length);
+      eq(naranjas, fig.figuras.filter((f) => f.extra).length, '57: la cabeza naranja solo en las semanas de mayoría extra (sin aros)');
+      await p.click('#dh-tocar'); await p.waitForTimeout(500);
+      ok(await p.locator('#dh-lienzo .pieza.sonando').count() === 1 && (await p.innerText('#dh-tocar')).trim() === 'Detener', '57: «Tocar este año» suena una figura por semana');
+      await p.click('#dh-tocar'); await p.waitForTimeout(200);
+      // ---- «Todos»: una pauta por año y una figura por mes
+      const ft = L.figurasTodos(pautas);
+      await p.click('#dh-anios button[data-anio="todos"]'); await p.waitForTimeout(250);
+      eq([await p.locator('#dh-lienzo .pieza[data-i]').count(), await p.locator('#dh-anios button[aria-pressed="true"]').innerText()], [ft.figuras.length, 'Todos'], '58: «Todos» dibuja una figura por mes con compras');
+      ok(/^De \d{4} a \d{4}: [\d,]+ notas, una figura por mes en tus compras\. Toca un mes/.test(await p.innerText('#dh-detalle')) && (await p.innerText('#dh-tocar')).trim() === 'Tocar todos los años' && await p.getAttribute('#dh-ant', 'aria-label') === 'Mes anterior', `58: «Todos» lo dice y se toca entero (${await p.innerText('#dh-detalle')})`);
+      await p.click('#dh-sig'); await p.waitForTimeout(150);
+      ok(new RegExp(`^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre) ${pautas[0].anio} · `).test(await p.innerText('#dh-detalle')) || /· BTC a \$/.test(await p.innerText('#dh-detalle')), `58: › lee el primer mes (${await p.innerText('#dh-detalle')})`);
+      // Un año con pocas notas va por días: una figura por día de compra
+      const poco = pautas.find((a) => a.notas.length <= L.NOTAS_POR_DIA);
+      if (poco) {
+        await p.click(`#dh-anios button[data-anio="${poco.anio}"]`); await p.waitForTimeout(200);
+        const fd = L.figurasPartitura(poco);
+        eq([fd.modo, await p.locator('#dh-lienzo .pieza[data-i]').count(), await p.getAttribute('#dh-ant', 'aria-label')], ['dia', fd.figuras.length, 'Nota anterior'], `57: ${poco.anio} (${poco.notas.length} notas) va por días`);
+      }
+      // ---- La constelación por semanas: un solo vigía, el toque elige la estrella más cercana
+      await p.click('#dh-vistas [data-vh="constelacion"]'); await p.waitForTimeout(250);
+      const est = L.estrellasConstelacion(todos);
+      ok(est[0].semanal && await p.locator('#dh-lienzo .hc-vigia').count() === 1 && await p.locator('#dh-lienzo .pieza').count() === 0 && /una por semana con compras/.test(await p.innerText('#dh-desc')), `58: con ${todos.length} movimientos, una estrella por semana (${est.length}) y un solo vigía`);
+      await p.locator('#dh-lienzo').scrollIntoViewIfNeeded(); await p.waitForTimeout(600);
+      const k = Math.floor(est.length * 0.6), punto = await p.evaluate((s) => { const svg = document.querySelector('#dh-lienzo svg'); const q = new DOMPoint(160 + (s.x - 0.5) * 268, 160 + (s.y - 0.5) * 268).matrixTransform(svg.getScreenCTM()); return [q.x, q.y]; }, est[k]);
+      const bajo = await p.evaluate(([x, y]) => document.elementFromPoint(x, y)?.getAttribute('class'), punto);
+      await p.mouse.click(punto[0], punto[1]); await p.waitForTimeout(200);
+      ok(/^Semana del .+ · \d+ compras?( \(\d+ extra\))? · \+[\d,]+ sats$/.test(await p.innerText('#dh-detalle')) && await p.locator('#dh-lienzo .h-marca-c').count() === 1, `58: tocar el cielo lee la semana de la estrella más cercana (${await p.innerText('#dh-detalle')}; bajo el dedo: ${bajo})`);
+      // ---- La manta borda la puntada solo en las semanas de mayoría extra
+      await p.click('#dh-vistas [data-vh="manta"]'); await p.waitForTimeout(250);
+      const man = L.semanasManta(todos, hoySV());
+      eq(await p.locator('#dh-lienzo .pieza.celda.extra').count(), man.celdas.filter((c) => c.extra && L.mayoriaExtra(c.nExtra, c.n)).length, '57: la manta, la × solo en las semanas de mayoría extra');
+      eq(consola, [], `consola limpia (57 y 58): ${consola.join(' | ')}`);
+      await ctx.close();
+      // ---- Quien solo mira: sin tutear
+      const l = await ent(navegador, srv, LECTOR, { viewport: { width: 390, height: 844 } }, sinAviso);
+      await abrirHistoria(l.p);
+      await l.p.click('#dh-vistas [data-vh="partitura"]'); await l.p.waitForTimeout(250);
+      await l.p.click('#dh-anios button[data-anio="todos"]'); await l.p.waitForTimeout(250);
+      ok(/en las compras del libro/.test(await l.p.innerText('#dh-detalle')) && !/(^|\s)tus?\s/i.test(await l.p.innerText('#dh-detalle')), `58: una lectora lee «Todos» sin tuteo (${await l.p.innerText('#dh-detalle')})`);
+      await l.ctx.close();
+    } finally { srv.parar(); }
   });
 
   // ---------------------------------------------------------------- sin histórico de precios
