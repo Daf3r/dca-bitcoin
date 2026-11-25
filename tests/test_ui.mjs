@@ -6257,7 +6257,7 @@ try {
       return {
         mueve, mar: vis('.v-mar-frente'), marOp: Number(cs('.v-mar-frente')?.opacity ?? 0), marAtras: Number(cs('.v-mar-atras')?.opacity ?? 0),
         // (Campamento 53A) La neblina es un degradado (sin bordes), quieta y sin desenfoques.
-        marSuave: [...document.querySelectorAll('#montana .v-mar')].every((e) => e.tagName === 'rect' && /m-v-mar/.test(getComputedStyle(e).fill) && getComputedStyle(e).filter === 'none' && getComputedStyle(e).animationName === 'none'), marBancos: document.querySelectorAll('#montana .v-mar').length, marPueblo: document.querySelectorAll('#m-v-pie .v-mar, .v-campos .v-mar').length,
+        marSuave: [...document.querySelectorAll('#montana .v-mar')].every((e) => ['rect', 'ellipse'].includes(e.tagName) && /m-v-(mar|jiron)/.test(getComputedStyle(e).fill) && getComputedStyle(e).filter === 'none' && getComputedStyle(e).animationName === 'none'), marBancos: document.querySelectorAll('#montana rect.v-mar').length, marPueblo: document.querySelectorAll('#m-v-pie .v-mar, .v-campos .v-mar').length,
         // El mar de niebla va detrás de la montaña (dentro de la capa del fondo, que se dibuja antes que ella).
         marDetras: !!fondo && !!monte && fondo.contains(document.querySelector('.v-mar')) && !!(fondo.compareDocumentPosition(monte) & Node.DOCUMENT_POSITION_FOLLOWING),
         marTop: Math.min(...[...document.querySelectorAll('#montana .v-mar')].map((e) => e.getBoundingClientRect().top)), saldoAbajo: document.querySelector('.saldo').getBoundingClientRect().bottom,
@@ -6295,17 +6295,33 @@ try {
         eq((await estado(t.p)).mueve.filter((m) => m !== 'luciernagas' && m !== 'torogoz'), [], `22B esenciales: ${dia} a las ${hora} no se mueve nada del valle`);
         await t.ctx.close();
       }
-      // 55 · el mar de niebla: a las 6:00 lleno, detrás de la montaña y por debajo del saldo; a las 7:15 se levanta; a mediodía no hay. También con «ninguno».
+      // 55 · la neblina: a las 6:00 ya llena, detrás de la montaña y por debajo del saldo; a las 8:30 se levanta; vuelve fina por la tarde (53B); a mediodía no hay. También con «ninguno».
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-10-15', { 'libro.efectos': 'ninguno' })); await cerrar(t.p);
       let v = await estado(t.p);
       ok(v.mar && v.marOp > 0.95 && v.marDetras && v.marTop > v.saldoAbajo, `22B mar de niebla: a las 6:00, llena, detrás de la montaña y por debajo del saldo (desde ${Math.round(v.marTop)} px; el saldo acaba en ${Math.round(v.saldoAbajo)})`);
-      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '7.25'); window.libroCielo.aplicar(); });
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '8.5'); window.libroCielo.aplicar(); });
       v = await estado(t.p);
-      ok(v.marSuave && v.marBancos === 2 && v.marPueblo === 0, `53A neblina: dos bancos de degradado detrás de la montaña (ninguno en el pueblo), sin bordes, desenfoques ni movimiento (${v.marBancos})`);
-      ok(v.mar && v.marAtras > 0.3 && v.marAtras < 0.7, `22B mar de niebla: a las 7:15 se está levantando (${v.marAtras})`);
+      ok(v.marSuave && v.marBancos === 2 && v.marPueblo === 0, `53A neblina: dos bancos de degradado detrás de la montaña (en el teléfono, nada en el pueblo), sin bordes, desenfoques ni movimiento (${v.marBancos})`);
+      ok(v.mar && v.marAtras > 0.3 && v.marAtras < 0.7, `53B neblina: a las 8:30 se está levantando (${v.marAtras})`);
       ok(v.marAtras < v.marOp, `53A neblina: al levantarse se va primero la de más lejos (${v.marAtras} < ${v.marOp})`);
       await t.p.evaluate(() => { localStorage.setItem('libro.hora', '17.5'); window.libroCielo.aplicar(); });
-      ok(!(await estado(t.p)).mar, '22B mar de niebla: sin niebla de la tarde');
+      v = await estado(t.p);
+      ok(v.mar && v.marAtras > 0.3 && v.marAtras < 0.5, `53B neblina: en la lluviosa vuelve fina por la tarde (${v.marAtras})`);
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '12'); window.libroCielo.aplicar(); });
+      ok(!(await estado(t.p)).mar, '22B mar de niebla: a mediodía no hay');
+      await t.ctx.close();
+      // (53B) En escritorio: los dos jirones sobre el banco de atrás y la bruma baja del pueblo, detrás de las casas y por encima del suelo, con su degradado.
+      t = await entrar(navegador, srv, ADMIN, { hora: 6.75, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, conDia('2026-10-15', { 'libro.efectos': 'ninguno' })); await cerrar(t.p);
+      const esc = await t.p.evaluate(() => {
+        const b = document.querySelector('#montana .v-mar-pueblo'), fila = document.querySelector('#montana .v-pueblo .v-sombra-atras'), plaza = document.querySelector('#montana .v-pueblo .v-plaza');
+        const r = b?.getBoundingClientRect(), casas = [...document.querySelectorAll('#montana .v-pueblo .v-frente')].map((e) => e.getBoundingClientRect()).filter((q) => q.width);
+        return { hay: !!b, grad: !!document.getElementById('m-v-jiron'), relleno: b ? getComputedStyle(b).fill : '', op: b ? Number(getComputedStyle(b).opacity) : 0, jirones: document.querySelectorAll('#montana .v-mar-jiron').length,
+          antes: !!b && !!fila && !!(b.compareDocumentPosition(fila) & Node.DOCUMENT_POSITION_FOLLOWING), trasPlaza: !!b && !!plaza && !!(plaza.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING),
+          sobreSuelo: !!r && r.bottom <= Math.max(...casas.map((q) => q.bottom)) - 20, dentro: !!r && r.left >= document.querySelector('#montana .v-pueblo .v-ig-torre').getBoundingClientRect().left - 8 && r.right <= Math.max(...casas.map((q) => q.right)) + 8,
+          suave: [...document.querySelectorAll('#montana .v-mar')].every((e) => getComputedStyle(e).filter === 'none' && getComputedStyle(e).animationName === 'none') };
+      });
+      ok(esc.hay && esc.grad && /m-v-jiron/.test(esc.relleno) && esc.op > 0.9 && esc.jirones === 2 && esc.antes && esc.trasPlaza && esc.sobreSuelo && esc.dentro && esc.suave, `53B escritorio: la bruma del pueblo detrás de las casas, por encima del suelo y dentro del pueblo, y dos jirones; todo quieto y sin desenfoque (${JSON.stringify(esc)})`);
+      ok(t.consola.length === 0, `53B escritorio: consola limpia (${t.consola.slice(0, 2)})`);
       await t.ctx.close();
       // 54 · verde de invierno y dorado de verano; 56 · árboles en flor; 58 · vacas de día.
       t = await entrar(navegador, srv, ADMIN, { hora: 12 }, conDia('2026-07-10')); await cerrar(t.p);

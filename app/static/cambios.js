@@ -9,13 +9,25 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
-    // (Campamento 59) La fiesta del hito; resume también la neblina (2026-12-p) y los vecinos con oficio (2026-12-o), que salen casi a la vez.
-    id: '2026-12-q',
+    // (Campamento 59) La fiesta del hito; resume también la neblina (2026-12-p y q) y los vecinos con oficio (2026-12-o), que salen casi a la vez.
+    id: '2026-12-r',
     items: [
       'Al llegar a una etapa, el pueblo hace fiesta: campana, osos en la plaza, farolitos y cohetes.',
       'La ve toda la familia ese día, una vez, y queda un farol en la plaza hasta la medianoche.',
       'Un toque la salta, y cada etapa tiene su fiesta una sola vez.',
-      'Los vecinos tienen oficio y la neblina se queda en el fondo del valle.',
+      'La neblina de la mañana es más suave y se levanta poco a poco hasta las nueve.',
+      'Los vecinos tienen oficio, y el pueblo y su suelo se ven limpios.',
+    ],
+  },
+  {
+    // (Campamento 53B) La neblina, segunda pasada; resume también la primera (2026-12-p) y los vecinos con oficio (2026-12-o).
+    id: '2026-12-q',
+    items: [
+      'La neblina dura más: se forma desde las cinco y se va levantando poco a poco hasta las nueve.',
+      'Al caer la tarde vuelve, fina, y se va antes de la noche.',
+      'En pantallas grandes, una bruma baja se queda detrás de las casas del pueblo, sin tocar el suelo.',
+      'Es clara y suave, sin bordes, y el pueblo y su suelo se ven limpios.',
+      'Los vecinos del pueblo tienen oficio: el panadero, la maestra, el pescador, el sacristán… y cada uno sigue su día.',
     ],
   },
   {
