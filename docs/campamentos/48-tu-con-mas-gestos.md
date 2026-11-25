@@ -23,7 +23,10 @@ Lo que lleva (40, 195, 196, 197) sale de `lib.llevaTu(R, hoy, { libro })` y **so
 El osito sale para todos (es «Vamos aquí» para quien solo mira, campamento 31; la tele entra con la cuenta de una lectora). Las poses por la hora y lo ya alcanzado del libro (equipo, parches, flor) también: la 195 decía que los parches se ven mejor en la tele. **El tecomate (196), que responde a anotar, solo a quien anota**, como «Tú» en la fiesta del hito (59).
 
 ## Medidas (banco `--rapido`, 390×664, mil compras, «esenciales»)
-MEDIDAS
+- Escena: **+8 nodos** en cada fecha (la carpa, la mochila de espaldas y, con mil compras, la cuerda, el piolet y los parches), **+11 en la lluviosa** (el capote): día normal 841 → 849, tarde de lluvia 836 → 847, Nochebuena 910 → 918, el pico (la fiesta del hito en Nochebuena 23:55) 991 → 999; pantallas anchas, 31 dic a 1920 996 → 1004; la tele en la cena de Nochebuena 1000 → 1008. **Tope 1100.** El peor caso de «Tú» (todo lo que puede llevar a la vez) suma 12.
+- Osos (46) y valle (300): sin cambio. `#m-yo`: de unos 20 a 27–32 nodos.
+- Animaciones: **ninguna nueva** (todo a saltos). La fiesta del hito en Nochebuena 23:55 da 48 → 49 a la vista: es la segunda capa de palmas de la fiesta (`fiesta-palma.fi-p1`), que según el momento de la medida ya está o no (lo mismo anotó el 47); no es de «Tú». Pantalla grande: 15–22 de 24, sin cambio.
+- Antes y después: `banco-antes.txt` (de la base, `claude/vida-47`) y `banco-despues2.txt` en el scratchpad de la sesión (`…/scratchpad/c48/`).
 
 ## Decidido por mí
 - Las poses son a saltos y viven en `#m-yo` (no en una capa propia): ninguna se mueve en cada fotograma.
@@ -39,7 +42,7 @@ MEDIDAS
 ## Pruebas
 - `test_lib` (+9): las poses por la hora (y la noche del 24), el mapa las declara sin capas ni animaciones, `llevaTu` (el pico, los parches, la flor, el tecomate solo a quien anota y nunca por una venta, y que un día sin compra no cambia nada), sin pedirlo el osito no lleva nada nuevo, ocho parches como mucho y todas las piezas dentro de `CAJA_TU`.
 - `test_ui`, bloque «campamento 48» (9 comprobaciones): de día el osito de siempre y todo en su caja; acampa de noche (sin respirar) y cede al andar; no la noche del 24; de espaldas al atardecer; se estira con «todos» y no con «ninguno»; el capote en la lluviosa, sin estilos en línea ni NaN.
-- Cambió una prueba vieja: la del campamento 31 contaba `#m-yo` ≤ 24 nodos; ahora ≤ 34 (lo nuevo suma hasta 12).
+- Cambiaron pruebas viejas: la del campamento 31 contaba `#m-yo` ≤ 24 nodos (ahora ≤ 34: lo nuevo suma hasta 12); la del 39 (Nochebuena 21:00, ≤ 910 nodos) pasa a ≤ 922; y el banco declara +7 a +11 nodos en cada fecha.
 
 ## Sin probar aquí
 iPhone real, Safari/WebKit, la tele y un monitor real. Revisar en el iPhone a las 23:00 (la carpa con su luz), a las 17:45, una tarde de julio (el capote) y a las 7:00 (se estira), y que al abrir las paradas en los campamentos se sientan como pausas y no como tirones.
