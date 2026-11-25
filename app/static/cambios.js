@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 59) La fiesta del hito; resume también la neblina (2026-12-p) y los vecinos con oficio (2026-12-o), que salen casi a la vez.
+    id: '2026-12-q',
+    items: [
+      'Al llegar a un campamento o a una etapa, el pueblo hace fiesta: suena la campana, los osos bailan en la plaza, suben farolitos y hay cohetes.',
+      'La fiesta la ve toda la familia el mismo día, una sola vez, y queda un farol encendido en la plaza hasta la medianoche.',
+      'Un toque la salta. Una etapa que ya tuvo su fiesta no la repite, aunque se vuelva a cruzar.',
+      'Los vecinos del pueblo tienen oficio y siguen su día, y la neblina de la mañana se queda en el fondo del valle.',
+    ],
+  },
+  {
     // (Campamento 53A) La neblina de la mañana; resume también los vecinos con oficio (2026-12-o) y el día entero del pueblo (2026-12-n),
     // que salen casi a la vez.
     id: '2026-12-p',
