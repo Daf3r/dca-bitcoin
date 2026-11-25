@@ -7813,6 +7813,9 @@ try {
       ['.v-hu', 'v-humo', '16s'], ['.v-hu-b', '', '18s'], ['.v-cy-remo', 'v-remo', '4.2s'], ['.v-pis', 'v-pis', '10s'], ['.v-pis-r2', '', '13s'], ['.v-pis-r3', '', '9s'],
       ['.osos.salta .oso', 'oso-salta', '1.8s'], ['.osos.salta .oso-pie', 'oso-pie', '1.8s'], ['.oso-saluda', 'oso-saluda', '3.2s'], ['[data-efectos="todos"] .oso-tu', 'tu-respira', '4.8s'], ['#m-yo.anda.sola .oso-tu', '', '0.55s'],
       ['svg.v-capa-gallina', 'gallina-pica', '3.6s'], ['svg.v-actor-barre', 'vo-barre', '7.2s'], ['svg.v-actor-pelota', 'vo-bota', '9s'], ['svg.v-actor-brinda', 'vo-brinda', '3.2s'], ['svg.v-actor-chispea', 'vo-chispea', '1.8s'],
+      // (Campamento 59) La fiesta del hito: la campana late una vez por toque, los farolitos suben (fiesta.js les pone lo que dura su
+      // tramo del guion) y cada cohete estalla.
+      ['svg.fiesta-ondas', 'fiesta-onda', '1.6s'], ['svg.fiesta-faroles', 'fiesta-sube', '6s'], ['svg.fiesta-palma', 'fiesta-palma', '2.2s'],
     ];
     // Lo que no se alarga: la interfaz, que responde a tu dedo, y el paso de «Tú» al anotar (decisión del dueño: la subida sigue en 1.4 s).
     const INTERFAZ = [
