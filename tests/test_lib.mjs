@@ -2074,6 +2074,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   for (const k of Object.keys(C.costumbres)) C.costumbres[k] = false;
   const apagado = ['2026-03-29', '2026-04-03', '2026-04-04', '2026-05-10', '2026-08-06', '2026-10-01', '2026-11-02', '2026-12-12'].map((f) => [C.fiestaDelAnio(f), C.turno(f, 9), C.fraseDelFoco(f), C.mueve(f, f === '2026-10-01' ? 15.5 : 7.5)]);
   eq(apagado, [['', 'misa', null, 'barre'], ['', 'manana', null, 'barre'], ['', 'mercado', null, 'barre'], ['', 'misa', null, 'barre'], ['', 'manana', null, 'barre'], ['', 'manana', null, 'pelota'], ['', 'manana', null, 'barre'], ['', 'mercado', null, 'barre']], 'fiesta 42: con cada costumbre apagada (una línea en cielo.js: COSTUMBRES), ese día es un día cualquiera: su turno, su frase y lo que se mueve');
+  eq([C.fiestaDelAnio('2026-06-17'), C.turno('2026-06-17', 15), C.fiestaDelAnio('2026-09-14'), C.turno('2026-09-14', 19), C.turno('2026-09-15', 6), C.turno('2026-09-15', 9)], ['', 'tarde', '', 'pupusas', 'amanece', 'desfile'], 'fiesta 42: sin el Día del Padre ni las patrias, esas tardes son las de siempre (el desfile del 36 sigue)');
   C.costumbres.misaAgosto = false; C.costumbres.agostinas = true;
   eq(C.turno('2026-08-06', 8), 'ag-adorna', 'fiesta 42: sin la misa del 6 de agosto, esa mañana el pueblo se adorna como el 5');
   Object.assign(C.costumbres, antes);
