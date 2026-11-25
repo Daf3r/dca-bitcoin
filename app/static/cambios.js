@@ -12,10 +12,10 @@ export const CAMBIOS = [
     // (Campamento 59) La fiesta del hito; resume también la neblina (2026-12-p) y los vecinos con oficio (2026-12-o), que salen casi a la vez.
     id: '2026-12-q',
     items: [
-      'Al llegar a un campamento o a una etapa, el pueblo hace fiesta: suena la campana, los osos bailan en la plaza, suben farolitos y hay cohetes.',
-      'La fiesta la ve toda la familia el mismo día, una sola vez, y queda un farol encendido en la plaza hasta la medianoche.',
-      'Un toque la salta. Una etapa que ya tuvo su fiesta no la repite, aunque se vuelva a cruzar.',
-      'Los vecinos del pueblo tienen oficio y siguen su día, y la neblina de la mañana se queda en el fondo del valle.',
+      'Al llegar a una etapa, el pueblo hace fiesta: campana, osos en la plaza, farolitos y cohetes.',
+      'La ve toda la familia ese día, una vez, y queda un farol en la plaza hasta la medianoche.',
+      'Un toque la salta, y cada etapa tiene su fiesta una sola vez.',
+      'Los vecinos tienen oficio y la neblina se queda en el fondo del valle.',
     ],
   },
   {
