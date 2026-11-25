@@ -2311,4 +2311,84 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   ok(medidas['10000:constelacion'] < 60 && medidas['10000:partitura'] < 200, `tope 58: con 10,000 compras la constelación y la partitura quedan pequeñas (${medidas['10000:constelacion']}, ${medidas['10000:partitura']})`);
 }
 
+// Campamento 59 · La fiesta del hito: el guion (cuatro tiempos, la escala, noche, lluvia y efectos), los cohetes, la fiesta por ver,
+// el farol, el reparto de la fiesta (hasta nueve) y el arte (SVG puro, sin estilo en línea ni NaN).
+{
+  const L = await import('../app/static/lib.js'), V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js'), F = await import('../app/static/arte-fiesta.js');
+  eq([1e6, 1e7, 1e8, 1e5, 2.5e6, 5e6, 250_000, 500_000, 1.25e6, 750_000, 3e6].map(L.escalaFiesta),
+    ['campamento', 'campamento', 'campamento', 'principal', 'principal', 'principal', 'principal', 'principal', 'intermedia', 'intermedia', 'intermedia'], 'fiesta 59: la escala (10× desde 1M; 2.5 y 5 y 100k; las demás)');
+  eq(L.MS_FIESTA, { campamento: 24_000, principal: 12_000, halving: 12_000, intermedia: 6000 }, 'fiesta 59: 24 s, 12 s y 6 s (el halving, como una principal)');
+  const g = L.guionFiesta('campamento', { conTu: true });
+  const ques = (x) => x.pasos.map((p) => p.que);
+  ok(g.ms === 24_000 && g.farol && g.pasos.every((p, i) => i === 0 || p.en >= g.pasos[i - 1].en) && g.pasos.every((p) => p.en < g.ms), 'fiesta 59: el campamento dura 24 s, en orden, todo dentro y deja el farol');
+  eq(g.pasos.filter((p) => p.que === 'vecinos').map((p) => [p.en, p.cuadro]), [[0, 'salen'], [5000, 'rueda'], [10_000, 'arriba'], [16_000, 'chocolate']], 'fiesta 59: cuatro tiempos en la plaza (salen, rueda, brazos arriba, chocolate)');
+  eq([g.pasos.find((p) => p.que === 'campana').toques, g.pasos.find((p) => p.que === 'faroles').n, g.pasos.find((p) => p.que === 'cohetes').n], [3, 7, 3], 'fiesta 59: en el teléfono, 3 toques, 7 farolitos y 3 cohetes');
+  eq(L.guionFiesta('campamento', { ancho: 1440 }).pasos.find((p) => p.que === 'cohetes').n, 5, 'fiesta 59: en escritorio, 5 cohetes');
+  ok(ques(g).includes('tu') && !ques(L.guionFiesta('campamento')).includes('tu'), 'fiesta 59: «Tú» solo para quien anota (para quien solo mira no sale)');
+  const pr = L.guionFiesta('principal', { conTu: true }), iv = L.guionFiesta('intermedia', { conTu: true }), hv = L.guionFiesta('halving', { conTu: true });
+  ok(pr.ms === 12_000 && pr.pasos.find((p) => p.que === 'campana').toques === 2 && pr.pasos.find((p) => p.que === 'faroles').n === 3 && pr.pasos.find((p) => p.que === 'cohetes').n === 1 && !pr.pasos.some((p) => p.cuadro === 'chocolate') && pr.farol,
+    'fiesta 59: la etapa principal, 12 s: dos toques, rueda de cinco, 3 farolitos, un cohete, sin chocolate, y su farol');
+  ok(iv.ms === 6000 && !iv.farol && iv.pasos.length === 3 && iv.pasos.find((p) => p.que === 'campana').toques === 1 && iv.pasos.find((p) => p.que === 'vecinos').cuadro === 'tres' && iv.pasos.find((p) => p.que === 'faroles').n === 1 && !ques(iv).some((q) => ['cohetes', 'cumbre', 'tu'].includes(q)),
+    'fiesta 59: la intermedia, sobria: 6 s, un toque, tres osos con los brazos arriba y un farolito; sin cohetes, sin cumbre y sin farol');
+  ok(hv.ms === 12_000 && hv.farol && !ques(hv).includes('tu') && !ques(hv).includes('cumbre') && hv.pasos.find((p) => p.que === 'faroles').n === 4 && hv.pasos.find((p) => p.que === 'cohetes').n === 1,
+    'fiesta 59: el halving es fiesta del pueblo: sin «Tú» ni la cumbre aunque lo pida quien anota; 4 farolitos y un cohete');
+  for (const e of ['campamento', 'principal', 'intermedia', 'halving']) {
+    const noche = L.guionFiesta(e, { noche: true }), lluvia = L.guionFiesta(e, { lluvia: true }), es = L.guionFiesta(e, { efectos: 'esenciales', ancho: 1440 }), ni = L.guionFiesta(e, { efectos: 'ninguno', conTu: true });
+    ok(!ques(noche).includes('vecinos') && ques(noche).includes('campana'), `fiesta 59 (${e}): de noche en el pueblo no hay nadie (la campana sí)`);
+    ok(!ques(lluvia).includes('faroles'), `fiesta 59 (${e}): con lluvia, sin farolitos`);
+    ok(!ques(es).includes('faroles') && es.pasos.filter((p) => p.que === 'cohetes').every((p) => p.n === 1), `fiesta 59 (${e}): con «esenciales», sin farolitos volando y un solo cohete que aparece y se apaga`);
+    ok(ni.ms === 0 && ni.pasos.length === 0 && ni.farol === (e !== 'intermedia'), `fiesta 59 (${e}): con «ninguno», el estado final (el farol, si toca)`);
+    ok(L.guionFiesta(e).ms <= 30_000, `fiesta 59 (${e}): 30 s como mucho`);
+  }
+  // Los cohetes: dentro de la escena, debajo del saldo y de la tarjeta, sobre la cumbre en escritorio y a la derecha en la tele
+  for (const [W, H, tu, cumbre, techo, tv] of [[390, 760, { x: 200, y: 420 }, { x: 240, y: 330 }, 280, false], [320, 568, { x: 160, y: 330 }, { x: 200, y: 250 }, 200, false], [1440, 774, { x: 860, y: 330 }, { x: 900, y: 80 }, 0, false], [2560, 1440, { x: 1500, y: 600 }, { x: 1560, y: 230 }, 0, true]]) {
+    const ps = L.palmasFiesta({ W, H, n: 5, tu, cumbre, techo, k: 1, tv });
+    ok(ps.length >= 1 && ps.length <= 5 && ps.every((q) => q.y - q.r > techo + 8 && q.x - q.r > 2 && q.x + q.r < W - 2 && q.y + q.r < H - 2 && Number.isFinite(q.x + q.y + q.r)), `fiesta 59: los cohetes a ${W} px caben, bajo el saldo y la tarjeta (${ps.length})`);
+    if (tv) ok(ps.every((q) => q.x > cumbre.x), 'fiesta 59: en la tele, a la derecha de la cumbre (lejos del saldo y del reloj)');
+  }
+  eq(L.palmasFiesta({ W: 390, H: 760, n: 3, tu: { x: 200, y: 300 }, cumbre: { x: 240, y: 200 }, techo: 900 }), [], 'fiesta 59: si no cabe ninguno bajo el saldo, no sale ninguno');
+  // La fiesta por ver al abrir: la de un campamento o una etapa principal de hoy, y el halving, una vez por aparato; marcas sin cifras
+  const hoy = '2026-11-25', f = { dia: hoy, hito: { meta: 1e6, rango: 'campamento', id: 41 }, halving: false };
+  eq(L.fiestaPorVer(f, '', hoy), { escala: 'campamento', meta: 1e6, marca: '2026-11-25#41' }, 'fiesta 59: la familia ve la fiesta de hoy al abrir');
+  ok(L.fiestaPorVer(f, '2026-11-25#41', hoy) === null && L.fiestaPorVer(f, '', '2026-11-26') === null && L.fiestaPorVer(null, '', hoy) === null, 'fiesta 59: una vez por aparato, solo hoy');
+  ok(L.fiestaPorVer({ dia: hoy, hito: { meta: 1.25e6, id: 3 }, halving: false }, '', hoy) === null, 'fiesta 59: la intermedia no se repite al abrir (solo la ve quien anota)');
+  eq(L.fiestaPorVer({ dia: hoy, hito: { meta: 2.5e6, id: 7 }, halving: true }, '2026-11-25#7', hoy), { escala: 'halving', meta: null, marca: '2026-11-25#halving' }, 'fiesta 59: el halving, aparte');
+  ok(L.fiestaPorVer({ dia: hoy, hito: { meta: 2.5e6, id: 7 }, halving: true }, '2026-11-25#7 2026-11-25#halving', hoy) === null, 'fiesta 59: vistas las dos, nada');
+  ok(!/\d{4,}#|sats/.test(L.fiestaPorVer(f, '', hoy).marca.split('#')[1]), 'fiesta 59: la marca del aparato no lleva cifras del saldo');
+  ok(L.farolDelHito(f, hoy) && !L.farolDelHito(f, '2026-11-26') && !L.farolDelHito({ dia: hoy, hito: { meta: 1.5e6 } }, hoy) && L.farolDelHito({ dia: hoy, hito: null, halving: true }, hoy) && !L.farolDelHito(null, hoy),
+    'fiesta 59: el farol del hito, hasta la medianoche (campamento, principal o halving; la intermedia no deja farol)');
+  // El reparto de la fiesta: hasta nueve, en la plaza, con los personajes de siempre; el SVG con un trazo por tono
+  ok(V.MAX_FIESTA === 9 && L.MAX_VECINOS_FIESTA === 9 && V.MAX_VECINOS === 8, 'fiesta 59: hasta nueve en la fiesta; el tope de un día cualquiera sigue en ocho');
+  const fallos = [];
+  for (const c of [{ W: 320, H: 640, forma: 'tel', by: 505, bx: 45, pts: [[45, 505], [190, 455], [95, 395], [200, 275]], lago: { cx: 268, cy: 590, rx: 50, ry: 10 }, techo: 225 },
+    { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 2560, H: 1440, forma: 'esc', by: 1318, bx: 900, pts: [[900, 1318], [1600, 1100], [980, 880], [1560, 230]], lago: null, techo: 600 }]) for (const sol of [1, -1]) {
+    const lug = P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }));
+    for (const cuadro of ['salen', 'rueda', 'arriba', 'rueda5', 'arriba5', 'tres', 'chocolate']) {
+      const l = V.repartoFiesta(lug, cuadro), svg = V.svgVecinos(l, { sol });
+      const esperado = { salen: 4, rueda: 9, arriba: 9, rueda5: 5, arriba5: 5, tres: 3, chocolate: 6 }[cuadro];
+      if (l.length !== esperado || l.length > V.MAX_FIESTA) fallos.push(`${c.W} ${cuadro}: ${l.length}`);
+      if (l.some((v) => !V.PERSONAJES.includes(v.t) || !Number.isFinite(v.x + v.y + v.k))) fallos.push(`${c.W} ${cuadro}: alguien sin sitio`);
+      if (/style=|NaN/.test(svg) || (svg.match(/<path/g) || []).length > V.TONOS.length + 1) fallos.push(`${c.W} ${cuadro}: el SVG`);
+      const xs = lug.plaza.map((q) => q[0]), w = Math.max(...xs) - Math.min(...xs) + 30 * lug.plaza[0][2];
+      if (l.some((v) => Math.abs(v.x - xs.reduce((a, x) => a + x, 0) / xs.length) > w)) fallos.push(`${c.W} ${cuadro}: lejos de la plaza`);
+    }
+    if (V.repartoFiesta({ ...lug, plaza: [] }, 'rueda').length) fallos.push(`${c.W}: sin plaza, alguien`);
+  }
+  eq(fallos, [], 'fiesta 59: el reparto de cada cuadro, a 320, 390, 1440 y 2560 px, con el sol a los dos lados');
+  eq(V.repartoFiesta(P.lugaresPueblo(P.sitiosPueblo({ W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: null, techo: 270, sol: 1 })), 'rueda').filter((v) => v.t === 'bombo').length, 1, 'fiesta 59: el del bombo marca el paso de la rueda');
+  // El arte: SVG como texto, clases fi-…, sin estilo en línea ni NaN, cajas finitas
+  const piezas = [F.ondasCampana(15, 738, 2.3), F.farolitos(7, 97, 770, 2.3), F.farolitos(1, 97, 770, 1), F.palma(120, 400, 26, 2), F.palma(800, 120, 30, 5)];
+  ok(piezas.every((x) => x.caja.length === 4 && x.caja.every(Number.isFinite) && x.caja[2] > 0 && x.caja[3] > 0 && !/style=|NaN|Infinity/.test(x.svg) && (x.svg.match(/class="([^"]+)"/g) || []).every((k) => /^class="fi-[a-z0-9 -]+"$/.test(k))),
+    'fiesta 59: ondas, farolitos y palmas: SVG puro con su caja, sin estilo en línea ni NaN');
+  ok((F.farolitos(7, 97, 770, 2.3).svg.match(/<path/g) || []).length === 3 && (F.palma(1, 1, 10, 0).svg.match(/<path/g) || []).length === 2 && (F.ondasCampana(1, 1, 1).svg.match(/<path/g) || []).length === 2, 'fiesta 59: pocos nodos (3 trazos los farolitos, 2 cada cohete y la campana)');
+  eq(F.farolitos(5, 10, 10, 1), F.farolitos(5, 10, 10, 1), 'fiesta 59: los farolitos, el mismo reparto en cada aparato (azar con semilla)');
+  const fh = F.farolHito(10, 40, 100, 2);
+  ok(/^<g class="v-farol-hito" aria-hidden="true">/.test(fh) && (fh.match(/<path/g) || []).length === 3 && !/style=|NaN/.test(fh), 'fiesta 59: el farol del hito, tres trazos quietos y decorativo');
+  // Lo que se quiere evitar: nada que hable ni recomiende (los textos de la fiesta están en celebracion.js)
+  const cel = fs.readFileSync(new URL('../app/static/celebracion.js', import.meta.url), 'utf8');
+  ok(!/compra ahora|deberías|te conviene|aprovecha/i.test(cel) && cel.includes("'Hoy el libro llegó a'"), 'fiesta 59: la tarjeta de quien solo mira no tutea y nada recomienda');
+}
+
 console.log(`OK ${n} comprobaciones`);

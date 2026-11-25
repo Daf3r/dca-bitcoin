@@ -1,4 +1,4 @@
-import { cruzo1Btc, escalaFiesta, etapaAnterior, etapaCelebrada, etapaSiguiente, fiestaPorVer, hoyISO, metaSiguiente, MS_FIESTA, nombreHito, nombreHitoMeses, rangoEtapa } from './lib.js';
+import { cruzo1Btc, escalaFiesta, farolDelHito, etapaAnterior, etapaCelebrada, etapaSiguiente, fiestaPorVer, hoyISO, metaSiguiente, MS_FIESTA, nombreHito, nombreHitoMeses, rangoEtapa } from './lib.js';
 import { avisar } from './avisar.js';
 import { lacre, selloSemana } from './arte-sellos.js';
 import { dCuenta } from './cuenta.js';
@@ -69,6 +69,8 @@ export function fiestaVista(marca) {
   const hoy = hoyISO(), lista = vistas().split(' ').filter((x) => x.startsWith(`${hoy}#`) && x !== marca);
   try { localStorage.setItem(CLAVE_VISTAS, [...lista, marca].join(' ')); } catch { /* sin almacenamiento: a lo sumo se vería otra vez */ }
 }
+/** (59) Si la escena lleva hoy el farol del hito: hubo fiesta hoy y este aparato ya la vio (si no, se enciende al acabar la suya). */
+export const farolEncendido = () => farolDelHito(S.fiesta, hoyISO()) && !fiestaPorVer(S.fiesta, vistas(), hoyISO());
 /** Si hay una fiesta de hoy que este aparato no ha visto (`S.fiesta`, de `/api/fiesta`), la enseña con su tarjeta. `retraso`: ms. */
 export function revisarFiesta(retraso = 0) {
   const f = fiestaPorVer(S.fiesta, vistas(), hoyISO());

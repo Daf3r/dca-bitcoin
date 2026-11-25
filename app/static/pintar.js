@@ -1,4 +1,4 @@
-import { farolDelHito, escalaFiesta, MS_FIESTA, aFecha, acentoDe, aniosDelLibro, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapaCelebrada, hayAurora, haceCuanto, hoyISO, hora, mesesDelLibro, nombreHito, primeraCompra, pct, rangoEtapa, resumen, numCorto, tramoEtapas, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { escalaFiesta, MS_FIESTA, aFecha, acentoDe, aniosDelLibro, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapaCelebrada, hayAurora, haceCuanto, hoyISO, hora, mesesDelLibro, nombreHito, primeraCompra, pct, rangoEtapa, resumen, numCorto, tramoEtapas, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
@@ -10,6 +10,7 @@ import { pintarTV } from './tv.js';
 import { dual, miniLinea, pegado } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
 import { enFiesta, terminarFiesta } from './fiesta.js';
+import { farolEncendido } from './celebracion.js';
 import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos, pintarSaludo } from './cuenta.js';
 import { $, R, S, esAdmin, fijarR, quienAnota, reducido, vozLibro } from './estado.js';
@@ -429,7 +430,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   const pie = Number.parseFloat(getComputedStyle(host).getPropertyValue('--pie')) || 104;
   vozMontana = vozLibro();
   familiaMontana = firmaFamilia();
-  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), firmas: S.firmas, cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0, personas: S.familia?.personas ?? 0, iniciales: S.familia?.iniciales ?? '', primera: primeraCompra(S.compras), meses: mesesDelLibro(S.compras, diaVista()), anios: aniosDelLibro(S.compras, diaVista()), farolHito: farolDelHito(S.fiesta, hoyISO()) });
+  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), firmas: S.firmas, cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0, personas: S.familia?.personas ?? 0, iniciales: S.familia?.iniciales ?? '', primera: primeraCompra(S.compras), meses: mesesDelLibro(S.compras, diaVista()), anios: aniosDelLibro(S.compras, diaVista()), farolHito: farolEncendido() });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     // La celebración va en proporción (campamento 21): una etapa intermedia sube como una compra (su marca se enciende al pasar y la
