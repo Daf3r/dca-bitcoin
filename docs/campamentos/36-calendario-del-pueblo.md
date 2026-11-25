@@ -24,7 +24,7 @@ La originalidad según el día sin inventar costumbres: cada fecha es otro repar
   - mañana o mañana libre, hasta las 11:30;
   - siesta, hasta las 14:00;
   - tarde, hasta las 17:45;
-  - al anochecer, posada en Navidad y pupusas el resto del año.
+  - al anochecer, posada en Navidad y pupusas el resto del año. *(Campamento 40: hasta las 20:00; después, la fresca. Ver [40](40-el-dia-entero-del-pueblo.md).)*
 
 **Nodos**: los turnos de calendario no suman nodos (otro reparto de los mismos trazos), salvo el azul del 15 de septiembre (+1). Banco con mil compras a 390×664: 924 un día normal, 1030 en Nochebuena (con las estrellitas).
 
