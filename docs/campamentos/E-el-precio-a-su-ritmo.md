@@ -48,7 +48,16 @@ Con la serie de prueba la implementación reproduce la tabla de Fable (84 % de c
 **El límite**: la serie real es la de velas diarias públicas de Coinbase (la misma fuente que usa el servidor), bajada desde el sandbox; no es la tabla `historico` que guarda la app en producción. La repetición con esa tabla queda del dueño (`/api/historico?desde=2020-11-25` y `sim.mjs`).
 
 ## Medidas (banco, `--rapido`)
-BANCO
+Casos nuevos (`ánimo …`, con `libro.animo`, mil compras, un miércoles de escuela). Los vecinos van en un trazo por tono: un vecino más no es un nodo más.
+
+| Caso | Calma (antes) | Fresco | Abrigo | Aire libre | Plaza | Animaciones a la vista |
+|---|---|---|---|---|---|---|
+| 390 × 664, 10:00 | 849 | 850 | 850 | 850 | 850 | 13 en los cinco |
+| 390 × 664, 15:30 (pelota) | 844 | 844 | 844 | 844 | 844 | 15 en los cinco |
+| 1440 / 1920 / 2560, 10:00 (plaza y abrigo) | — | | 914 / 931 / 930 | | 914 / 931 / 930 | (solo nodos; tope 1100) |
+| tele 1920 × 1080 (plaza 10:00, abrigo 15:30) | 930 (día normal) | | 925 | | 931 | 13 y 15 (tope 24) |
+
+Valle 193–210 (tope 300), osos 26–37 (tope 46). Sin cambios en el resto: el banco entero antes (`banco-antes.txt`, todo en verde) y solo los casos «ánimo» después (`banco-despues.txt`, en verde); la calma pasa por el mismo código que antes. Fotogramas con CPU 4× no medidos (`--rapido`).
 
 ## Decidido por mí (no por el dueño)
 - **El tope cuenta por lado** (fresco y abrigo juntos; aire y plaza juntos) y es de siete días para todos. El diseño daba 7 para abrigo y aire libre y no decía nada de fresco y plaza (sus rachas simuladas ya eran 6 y 7).
