@@ -2660,6 +2660,10 @@ html[data-pestanas] .indice { display: none; }
   /* «Dónde están tus sats» y «Ganancia» van lado a lado; si solo está una, a lo ancho. */
   .cuerpo[data-pestana="resumen"] .col-lateral:not(:has(> .rep-ganancia:not([hidden]))) > .ubicacion,
   .cuerpo[data-pestana="resumen"] .col-lateral:not(:has(> .ubicacion:not([hidden]))) > .rep-ganancia { grid-column: 1 / -1; }
+  /* (Campamento 64) Sin traslados, «Dónde están tus sats» es un renglón: a lo ancho, y «Ganancia» también (estirado a su lado
+     volvería a ser una tarjeta vacía). */
+  .cuerpo[data-pestana="resumen"] .col-lateral > .ubicacion.vacia,
+  .cuerpo[data-pestana="resumen"] .col-lateral:has(> .ubicacion.vacia:not([hidden])) > .rep-ganancia { grid-column: 1 / -1; }
 }
 /* Escritorio: arriba, a lo ancho, lo importante (te toca, gran caída, próxima etapa); debajo, medallas y constancia lado a lado. */
 @media (min-width: 1100px) {

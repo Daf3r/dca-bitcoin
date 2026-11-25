@@ -18,6 +18,9 @@ Cinco propuestas **aprobadas por el dueño**, más la prueba y la entrada de «Q
 - El filo del secundario es un `border` de verdad, no la sombra de la maqueta: una sombra desaparece en los colores forzados de Windows.
 - «Ganancia» (`#rep-ganancia`) no es una tarjeta hoy (solo «Constancia» va en caja; las demás respiran sobre el fondo): solo se le igualó el título. La maqueta le daba relleno sin superficie, y el escenario de las maquetas no tenía ventas, así que el dueño no la vio.
 - «Siguiente paso» (`.comienzo`) toma el radio y el relleno, pero su título grande se queda: es la portada de quien empieza, no el título de una tarjeta.
+- De 700 a 1099 px, donde «Dónde están tus sats» y «Ganancia» van lado a lado, el renglón vacío va a lo ancho y «Ganancia» también (estirado junto a «Ganancia» volvía a ser una tarjeta vacía; visto con `cero`, que tiene una venta y ningún traslado).
+- En escritorio «Ampliar» sale ahora a la izquierda de «Escala logarítmica» (en el HTML va antes, para que el tabulador del teléfono siga lo que se ve).
+- El `h2` de la tarjeta pasó de «Siguiente meta» (escondido) a «Próxima etapa» (a la vista).
 - Las flechitas de «Ver todas mis medallas» y «Verlo de cerca» se quedan (`.sigue`): dicen que llevan a otra parte.
 - `test_lib` (ánimo E) leía la primera entrada de `CAMBIOS` como la del campamento E: ahora busca la suya por su `id`.
 
@@ -26,7 +29,7 @@ Capturas en el scratchpad de la sesión: `c64/antes`, `c64/despues` (320, 390, 7
 - «Dónde están tus sats» sin traslados: **267 → 69 px** a 390 (la maqueta, 60), 267 → 95 a 320 (la pregunta y el enlace en dos renglones), 222/244 → **56** en tablet y escritorio. Con letra muy grande, 108.
 - El Resumen entero a 390: **3388 → 3185 px** (320: 3413 → 3189; 768: 3454 → 3282; en escritorio no cambia: la columna de al lado manda). Con `mil` (traslados y ventas), 3633 → 3630 a 390.
 - Las tarjetas a 390 (con `anio`): «Próxima etapa» 278 → 285 (gana su título), «Tus medallas» 463 → 456, «Cartas» 295 → 293, «Constancia» 390 → 387; «Sats por dólar» 159 → 171 (relleno de 14/16 a 20). A 320, todas bajan (relleno de 16): «Próxima etapa» 335 → 310, «Constancia» 467 → 457.
-- Gráficos en el teléfono, de «Qué gráfico ver» al dibujo: **277 → 227 px** a 390 y 277 → 225 a 320 (la maqueta, 223); sin desborde a 320, 360, 390 ni 699, con letra normal, grande y muy grande, con y sin «Todo». En escritorio, igual (251).
+- Gráficos en el teléfono, de «Qué gráfico ver» al dibujo: **277 → 227 px** a 390 y 277 → 225 a 320 (la maqueta, 223); sin desborde a 320, 360, 390 ni 699, con letra normal, grande y muy grande, con y sin «Todo». En escritorio, igual (251). **Pero con la escala logarítmica a la vista** (con «Todo», que es lo que abre un libro largo: `mil`), su botón ocupa un renglón entre el rango y el dibujo y la ganancia casi se pierde: 277 → 275 a 390 y 299 → 295 a 320. Dejarla en la fila no cabe (rango, escala y «Ampliar» suman más de 350 px) y llevarla bajo el dibujo cambiaría también el escritorio: **queda para el dueño**.
 - Ningún desborde horizontal en ninguna captura; sin errores de página.
 
 ## Pruebas
