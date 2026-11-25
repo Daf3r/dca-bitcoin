@@ -514,6 +514,8 @@ function capaDeVecinos(host, clase, lista, sol, { arriba = 0, giro = null, vars 
   if (frente) frente.before(s); else host.append(s);
   return s;
 }
+/** (49, 116) ¿Está `v` claramente detrás de `actor` (sus pies, al menos una unidad más arriba en la escena)? */
+const detrasDe = (v, actor) => v.y < actor.y - actor.k;
 /**
  * (Campamento 37, idea 114) La capa del vecino: el que se mueve (la que barre, la pelota de los oseznos) no vive en el dibujo grande
  * sino en su propio <svg> pequeño, hermano del principal, encima de él y debajo del frente; lo único que cambia es el transform de ese
@@ -530,11 +532,16 @@ function capaVecino(host, info, t) {
     if (actor.actor === 'cruza') {
       // (116) De lado a lado de la calle: hasta la otra punta, sin pasar por encima de nadie (si no hay sitio, se queda).
       const calle = [...(info.lug.calle ?? [])].sort((a, b) => a[0] - b[0]), lejos = calle.length ? (Math.abs(calle[0][0] - actor.x) > Math.abs(calle.at(-1)[0] - actor.x) ? calle[0] : calle.at(-1)) : null;
-      const otros = [...(info.lug.ocupado ?? []), ...todos.filter((v) => v !== actor).map(cajaVecino)];
+      // Pasa por delante de quien está más atrás (en su corredor, en el atrio: la capa va encima y él está delante), nunca por encima de
+      // quien está a su altura o más adelante, ni de lo ocupado (el perro, las gallinas, la cruz, el árbol).
+      const otros = [...(info.lug.ocupado ?? []), ...todos.filter((v) => v !== actor && !detrasDe(v, actor)).map(cajaVecino)];
       const ida = lejos ? tramoLibre(actor, lejos[0], otros) : 0;
       vars['--ida'] = `${f1(ida)}px`;
+      // Mira hacia donde va (el `scaleX(-1)` de la vuelta lo da la animación); sin tramo libre, quieto y sin animación.
+      if (ida) actor.anda = { f: Math.sign(ida) }; else actor.anda = { quieto: true };
     }
-    capaDeVecinos(host, `v-capa-vecino v-actor-${actor.actor}`, [{ ...actor, t: actor.capaT ?? actor.t }], info.sol, { arriba: actor.actor === 'pelota' ? 3 * actor.k : 0, giro: actor.giro ?? null, vars });
+    const nombre = actor.anda?.quieto ? 'quieto' : actor.actor;
+    capaDeVecinos(host, `v-capa-vecino v-actor-${nombre}`, [{ ...actor, ...(actor.anda?.f ? { f: actor.anda.f } : {}), t: actor.capaT ?? actor.t }], info.sol, { arriba: actor.actor === 'pelota' ? 3 * actor.k : 0, giro: actor.giro ?? null, vars });
   }
   const ronda = todos.find((v) => v.ronda);
   if (ronda) capaDeVecinos(host, `v-capa-vecino v-ronda v-ronda-${ronda.ronda}`, [ronda], info.sol);
@@ -545,9 +552,14 @@ function capaVecino(host, info, t) {
  * (Campamento 49, idea 204) Al cambiar de turno, el vecino que se queda en la calle camina a su sitio nuevo: el grupo se dibuja sin él y
  * él va en su capa (`v-capa-camina`), a saltos, de donde estaba a donde va (arte-vecinos.js: `recorrido`, que comprueba cada paso).
  * Mientras camina es el actor principal (`data-camina` en la escena: lo demás del pueblo espera); al llegar, se dibuja con los demás.
- * Solo con «todos» y con la página a la vista; si no, o si no hay un trecho libre, aparece directo, como siempre.
+ * Solo con «todos» y con la página a la vista; si no, o si no hay un trecho libre, aparece directo, como siempre. En el teléfono, solo
+ * si lo que se mueve es del pueblo (espera) o nada: nunca dos principales a la vez.
  */
 let caminando = null;
+// (49) Lo que espera en pausa mientras uno camina (las capas del pueblo); con otro principal fuera del pueblo (el torogoz, los pericos,
+// las luciérnagas, las bandadas), en el teléfono nadie camina: serían dos a la vez. En pantallas anchas caben dos.
+const ESPERAN = new Set(['cruza', 'barre', 'gallinas', 'campana', 'palmea', 'hamaca', 'perro', 'pelota', 'brinda', 'chispea', 'teleferico']);
+const puedeCaminar = () => { const mv = document.documentElement.dataset.mueve ?? ''; return !mv || ESPERAN.has(mv) || Boolean(window.matchMedia?.('(min-width: 1100px)').matches); };
 function pararCamino() {
   if (!caminando) return;
   const { host, capa, fin } = caminando;
@@ -557,7 +569,7 @@ function pararCamino() {
 function caminar(h, v, t, antes) {
   pararCamino();
   const todos = reparto(v.lug, t, opcionesReparto(v, t)), g = h.querySelector('.v-vecinos');
-  const rec = v.conCapa && conAmbiente() && !sinMovimiento() && document.visibilityState === 'visible' && h === estado?.host && !estado.pelicula ? recorrido(antes, todos, v.lug) : null;
+  const rec = v.conCapa && conAmbiente() && !sinMovimiento() && document.visibilityState === 'visible' && h === estado?.host && !estado.pelicula && puedeCaminar() ? recorrido(antes, todos, v.lug) : null;
   g.innerHTML = htmlVecinos(v, t, { todos, sin: rec?.v ?? null });
   v.turno = t;
   capaVecino(h, v, t);

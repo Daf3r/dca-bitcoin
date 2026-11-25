@@ -254,7 +254,7 @@ const PESOS = [
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 52: vecinos con oficio', 111], // 22 comprobaciones (medido el 25 nov 2026)
-  ['campamento 49: el pueblo se mueve 2', 90], // 24 comprobaciones (estimado)
+  ['campamento 49: el pueblo se mueve 2', 100], // 25 comprobaciones (medido el 25 nov 2026)
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
@@ -8226,7 +8226,7 @@ try {
       const cab = h.querySelector(':scope > svg.tele-cabina');
       return { mueve: d.mueve ?? '', mueve2: d.mueve2 ?? '', ambiente: d.ambiente ?? '', actor: [...(h.querySelector(':scope > svg.v-capa-vecino:not(.v-ronda)')?.classList ?? [])].find((c) => c.startsWith('v-actor-')) ?? '',
         vecino: de('.v-capa-vecino:not(.v-ronda)'), ronda: de('.v-ronda'), campana: de('.v-capa-campana'), estrellas: de('.v-amb-estrellitas'), cabina: cab ? getComputedStyle(cab).animationName : null,
-        campanaEnPrincipal: h.querySelector(':scope > svg #m-v-pie .v-ig-campana') !== null };
+        campanaEnPrincipal: h.querySelector(':scope > svg #m-v-pie .v-ig-campana') !== null, ida: h.querySelector(':scope > svg.v-actor-cruza')?.style.getPropertyValue('--ida') ?? '' };
     });
     const anio = await servidor('anio');
     try {
@@ -8236,7 +8236,7 @@ try {
             const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: alto } }, conLs(dia, ef));
             await cerrar(t.p);
             const r = await capas(t.p);
-            const bien = r.actor === actor && r.vecino && !r.vecino.malos && r.vecino.aria === 'true' && r.vecino.anim === (ef === 'todos' ? anim : 'none') && r.campana && !r.campanaEnPrincipal;
+            const bien = r.actor === actor && (actor !== 'v-actor-cruza' || Math.abs(parseFloat(r.ida)) >= 10) && r.vecino && !r.vecino.malos && r.vecino.aria === 'true' && r.vecino.anim === (ef === 'todos' ? anim : 'none') && r.campana && !r.campanaEnPrincipal;
             // La ronda (118): con la que barre, la abuela en su capa, con la misma duración y la misma fase (nunca a la vez).
             const ronda = actor !== 'v-actor-barre' || (r.ronda && r.ronda.anim === (ef === 'todos' ? 'vo-ronda-barre' : 'none') && Math.abs(parseFloat(r.ronda.delay) - parseFloat(r.vecino.delay)) < 0.2);
             // Dos focos (275): en pantallas anchas la cabina cruza con el del pueblo; en el teléfono no hay cabina.
@@ -8293,6 +8293,14 @@ try {
         const directo = await e.p.evaluate(() => { localStorage.setItem('libro.hora', '12.03'); window.libroCielo.aplicar(); return [Boolean(document.querySelector('#montana > svg.v-capa-camina')), document.documentElement.dataset.turno]; });
         eq(directo, [false, 'tortillas'], `49 a ${w} px (204): con «esenciales» el vecino aparece directo en su sitio nuevo`);
         await e.ctx.close();
+        // En el teléfono, si el principal es de fuera del pueblo (a las 20:00, las luciérnagas), nadie camina: serían dos a la vez.
+        if (w < 1100) {
+          const l = await entrar(navegador, anio, ADMIN, { hora: 19.9, viewport: { width: w, height: alto } }, conLs('2027-02-12', 'todos'));
+          await cerrar(l.p);
+          const dos = await l.p.evaluate(() => { localStorage.setItem('libro.hora', '20.05'); window.libroCielo.aplicar(); return [Boolean(document.querySelector('#montana > svg.v-capa-camina')), document.documentElement.dataset.mueve]; });
+          eq(dos, [false, 'luciernagas'], `49 a ${w} px (204): con las luciérnagas de principal, nadie camina en el teléfono`);
+          await l.ctx.close();
+        }
       }
     } finally {
       anio.parar();

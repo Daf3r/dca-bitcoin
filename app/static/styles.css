@@ -4981,15 +4981,15 @@ html[data-efectos="todos"][data-mueve="cruza"] .montana svg.v-actor-cruza { anim
   23%, 100% { transform: translateX(0) scaleX(1); }
 }
 html[data-efectos="todos"][data-mueve="palmea"] .montana svg.v-actor-palmea { animation: vo-palmea calc(var(--t-gesto) * 0.625) steps(1) infinite; }
-@keyframes vo-palmea { 0%, 100% { transform: none; } 50% { transform: translateY(calc(var(--bote) * 0.18)); } }
+@keyframes vo-palmea { 0%, 100% { transform: none; } 50% { transform: translateY(calc(var(--bote) * 0.45)); } }
 html[data-efectos="todos"][data-mueve="campana"] .montana svg.v-capa-campana { animation: vo-campana calc(var(--t-gesto) * 1.25) ease-in-out infinite alternate; }
 @keyframes vo-campana { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
 html[data-efectos="todos"][data-mueve="hamaca"] .montana svg.v-actor-hamaca { animation: vo-hamaca calc(var(--t-gesto) * 1.875) steps(1) infinite; }
-@keyframes vo-hamaca { 0%, 100% { transform: rotate(-2.5deg); } 25%, 75% { transform: none; } 50% { transform: rotate(2.5deg); } }
+@keyframes vo-hamaca { 0%, 100% { transform: rotate(-7deg); } 25%, 75% { transform: none; } 50% { transform: rotate(7deg); } }
 html[data-efectos="todos"][data-mueve="barre"] .montana svg.v-ronda { animation: vo-ronda-barre calc(var(--t-accion) * 1.2) steps(1) var(--fase, 0s) infinite; }
 html[data-efectos="todos"][data-mueve="pelota"] .montana svg.v-ronda { animation: vo-ronda-pelota calc(var(--t-accion) * 1.5) steps(1) var(--fase, 0s) infinite; }
-@keyframes vo-ronda-barre { 0%, 64%, 92%, 100% { transform: none; } 68%, 84% { transform: rotate(2deg); } 76% { transform: rotate(-2deg); } }
-@keyframes vo-ronda-pelota { 0%, 70%, 96%, 100% { transform: none; } 74%, 90% { transform: rotate(2deg); } 82% { transform: rotate(-2deg); } }
+@keyframes vo-ronda-barre { 0%, 64%, 92%, 100% { transform: none; } 68%, 84% { transform: rotate(5deg); } 76% { transform: rotate(-5deg); } }
+@keyframes vo-ronda-pelota { 0%, 70%, 96%, 100% { transform: none; } 74%, 90% { transform: rotate(5deg); } 82% { transform: rotate(-5deg); } }
 .montana svg.v-amb-estrellitas { position: absolute; pointer-events: none; overflow: visible; will-change: opacity; }
 html[data-efectos="todos"][data-ambiente~="estrellitas"] .montana svg.v-amb-estrellitas { animation: vo-titila calc(var(--t-ambiente) * 0.75) steps(1) infinite; }
 @keyframes vo-titila { 0%, 12%, 44%, 75%, 100% { opacity: 1; } 8% { opacity: 0.45; } 40% { opacity: 0.6; } 71% { opacity: 0.5; } }

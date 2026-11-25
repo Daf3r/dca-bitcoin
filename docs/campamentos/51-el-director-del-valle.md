@@ -74,3 +74,5 @@ Tope 1100 en todos. Ninguna animación nueva en el dibujo grande. Los fotogramas
 - **iPhone real y Safari**: «Medir este aparato» de día (con el humo y el cayuco en sus capas, 17 animaciones a la vista en vez de 13) y al deslizar; que la capa del cayuco con `will-change` no pese en el iPhone de verdad.
 - La tele real (2560 px): las dos chimeneas.
 - Que a la familia le parezcan bien las frases del aviso del día (sobre todo la de la luna llena, que puede salir uno o dos días al mes).
+
+*(Campamento 49: el director trae `mueve2`, el segundo principal de las pantallas anchas, y `mapaDelDia` cuenta los `principales`. Las estrellitas de Nochebuena y del 31 son un ambiental de noche. Ver [49-el-pueblo-se-mueve-2.md](49-el-pueblo-se-mueve-2.md).)*

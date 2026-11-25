@@ -49,3 +49,5 @@ El movimiento que pidió el dueño, donde es barato: una sola figura chica en su
 ### Sin probar aquí
 - «Medir este aparato» en el iPhone de 7:00 a 8:00 y de 15:00 a 16:30 (si baja de 55 fps con la montaña a la vista, se quita).
 - Safari.
+
+*(Campamento 49: la capa del vecino también lleva al panadero que cruza, las manos de la tortillera y la hamaca (actores partidos, `capaT`/`quedaT`), y la abuela de la ronda va en la misma fase. Al cambiar de turno, el que camina va en su capa (`v-capa-camina`). Ver [49-el-pueblo-se-mueve-2.md](49-el-pueblo-se-mueve-2.md).)*
