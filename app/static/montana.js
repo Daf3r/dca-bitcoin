@@ -1168,6 +1168,8 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
   const cab = grande ?? sitio.lista[0], ez = ec * 1.1 * (cab.s ?? 1) * K_OSO;
   for (const [ux, uy] of [[6.6, -15.5], [-12.9, -15.5], [7.6, -9.5], [-13.9, -9.5]]) {
     const X = cab.x + ux * ez, Y = cab.y + uy * ez;
+    const zb = [X + CAJA_ZETAS.x0 * ez - 2, Y + CAJA_ZETAS.y0 * ez - 2, X + CAJA_ZETAS.x1 * ez + 2, Y + CAJA_ZETAS.y1 * ez + 2]; // (con su aire: ni rótulos, ni «Tú», ni el eco, ni la meta)
+    if ([meta, ...textos].some((q) => zb[0] < q[2] && zb[2] > q[0] && zb[1] < q[3] && zb[3] > q[1])) continue;
     if ([[CAJA_ZETAS.x0, CAJA_ZETAS.y0], [CAJA_ZETAS.x1, CAJA_ZETAS.y0], [CAJA_ZETAS.x0, CAJA_ZETAS.y1], [CAJA_ZETAS.x1, CAJA_ZETAS.y1]].every(([u, v]) => conAire(X + u * ez, Y + v * ez))) { g.insertAdjacentHTML('beforeend', zetas(X, Y, ez)); break; }
   }
   regalosCumbre(g, sitio.lista, ec * 1.1 * K_OSO, silueta);

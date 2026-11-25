@@ -7410,7 +7410,8 @@ try {
       await ir(t.p, '2026-11-25', 23);
       const d = await t.p.evaluate(() => document.documentElement.dataset.cumbre);
       eq([d, await ver(t.p, '.oso-dormido'), await ver(t.p, '#m-osos .oso-rasgos')], ['duermen', n, 0], '47 (24) de 22:00 a 5:00 duermen: ojos cerrados en todos, sin los abiertos');
-      ok(await ver(t.p, '.oso-zz') <= 1, '47 (24) y como mucho unas zetas');
+      const zz = await t.p.evaluate(() => document.querySelectorAll('#montana #m-osos .oso-zz').length);
+      ok(zz <= 1 && await ver(t.p, '.oso-zz') === zz, `47 (24) y sus zetas, si caben junto a la cabeza del grande sin tocar rótulos ni «Tú» (${zz})`);
       await ir(t.p, '2026-11-25', 17.75);
       eq([await t.p.evaluate(() => document.documentElement.dataset.cumbre), await ver(t.p, '#m-osos .oso-hocico'), await ver(t.p, '#m-osos .oso-parche')], ['espaldas', 0, 0], '47 (184) de 17:30 a 18:15, de espaldas mirando bajar el sol (sin cara ni parche)');
       await ir(t.p, '2027-04-14', 12);
