@@ -259,6 +259,7 @@ const PESOS = [
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
   ['campamento 47: los osos de la cumbre', 40], // 14 comprobaciones (estimado)
+  ['campamento 48: «Tú» con más gestos', 30], // 9 comprobaciones (estimado)
   ['campamento 59: la fiesta del hito', 110], // 24 comprobaciones (estimado: dos fiestas enteras de 24 s)
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
@@ -7297,7 +7298,7 @@ try {
         await cerrar(t.p); await t.p.evaluate(() => window.scrollTo(0, 0)); await t.p.waitForTimeout(300);
         const r = await tu(t.p);
         ok(r.hay && r.enSendero && r.pisadaEnPunto && r.dentro && r.rotulo && r.naranja && r.decorativo, `31 a ${w} px: «Tú» es el osito con la mochila naranja, los pies sobre el sendero, dentro de su caja y sin su rótulo encima (${JSON.stringify(r)})`);
-        ok(r.nodos <= 24 && r.alto >= 18, `31 a ${w} px: el osito mide ${r.alto} px y #m-yo son ${r.nodos} nodos (≤ 24)`);
+        ok(r.nodos <= 34 && r.alto >= 18, `31 a ${w} px: el osito mide ${r.alto} px y #m-yo son ${r.nodos} nodos (≤ 34: el 48 suma la carpa, la mochila de espaldas, el capote y lo que lleva, hasta 12)`);
         const hu = await t.p.evaluate(() => { const c = document.querySelector('#m-huellas'); return { trazos: c.querySelectorAll('path').length, circulos: c.querySelectorAll('circle').length, n: Number(c.querySelector('.huellas-oso')?.dataset.n ?? 0) }; });
         ok(hu.trazos === 1 && hu.circulos === 0 && hu.n > 2, `31 a ${w} px: las huellas son de oso y van en un solo trazo (${hu.n} huellas)`);
         await t.ctx.close();
@@ -7433,6 +7434,56 @@ try {
       ok(nodos <= 46, `47 los osos, ${nodos} nodos (≤ 46)`);
       ok(t.consola.length === 0, `47 consola limpia (${t.consola.slice(0, 2)})`);
       await t.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 48: «Tú» con más gestos (acampa, de espaldas, capote, se estira)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const ir = async (p, dia, hora) => { await p.evaluate(([d, h]) => { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); window.libroCielo.aplicar(); }, [dia, hora]); await p.waitForTimeout(600); };
+    // Qué se ve de «Tú» y si todo lo visible cabe en su caja (`.yo-anillo`, con 1 px de redondeo).
+    const tu = (p) => p.evaluate(() => {
+      const yo = document.getElementById('m-yo'), c = yo.querySelector('.yo-anillo').getBoundingClientRect();
+      const vis = (e) => { for (let x = e; x && x !== yo; x = x.parentElement) if (getComputedStyle(x).display === 'none') return false; return true; }; // (checkVisibility no mira el display de los <g> de un SVG)
+      const ve = (s) => [...yo.querySelectorAll(s)].some(vis);
+      const fuera = [...yo.querySelectorAll('.tu path')].filter((e) => vis(e) && !e.closest('.tu-festeja')).map((e) => e.getBoundingClientRect()).filter((b) => b.width && (b.left < c.left - 1 || b.right > c.right + 1 || b.top < c.top - 1 || b.bottom > c.bottom + 1)).length;
+      return { pose: document.documentElement.dataset.tu ?? '', carpa: ve('.tu-carpa path'), cara: ve('.oso-tu > .oso-hocico'), espalda: ve('.oso-mochila-espalda'), capote: ve('.oso-capote'), brazos: ve('.tu-festeja path'), respira: getComputedStyle(yo.querySelector('.oso-tu')).animationName, fuera, estilo: [...yo.querySelectorAll('*')].some((e) => e.hasAttribute('style')), nan: /NaN/.test(yo.innerHTML) };
+    });
+    const anio = await servidor('anio');
+    try {
+      const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      let r = await tu(t.p);
+      ok(!r.carpa && r.cara && !r.espalda && r.fuera === 0 && !r.estilo && !r.nan && r.respira === 'tu-respira', `48 de día, el osito de siempre, todo en su caja (${JSON.stringify(r)})`);
+      await ir(t.p, '2026-11-25', 23);
+      r = await tu(t.p);
+      ok(r.pose === 'carpa' && r.carpa && !r.cara && r.respira === 'none' && r.fuera === 0, `48 (191) de 22 a 5 acampa: la carpa en su caja y el osito, que no se ve, no respira (${JSON.stringify(r)})`);
+      await t.p.evaluate(() => document.getElementById('m-yo').classList.add('anda'));
+      r = await tu(t.p);
+      ok(!r.carpa && r.cara, '48 (191) mientras anda, el osito de siempre (la carpa le cede)');
+      await t.p.evaluate(() => document.getElementById('m-yo').classList.remove('anda'));
+      await ir(t.p, '2026-12-24', 23.9);
+      eq((await tu(t.p)).carpa, false, '48 (191) la noche del 24 no acampa (espera las doce con los de la cumbre)');
+      await ir(t.p, '2026-11-25', 17.75);
+      r = await tu(t.p);
+      ok(r.pose === 'espaldas' && r.espalda && !r.cara && r.fuera === 0, `48 (193) de 17:30 a 18:15, de espaldas con la mochila al frente (${JSON.stringify(r)})`);
+      await ir(t.p, '2026-11-25', 7.2);
+      await t.p.evaluate(() => document.getElementById('m-yo').classList.add('estira'));
+      eq((await tu(t.p)).brazos, true, '48 (194) de 7 a 8 se estira con los de la cumbre (con «todos»)');
+      await t.p.evaluate(() => window.libroEfectos.fijar('ninguno'));
+      eq((await tu(t.p)).brazos, false, '48 (194) con «ninguno», no');
+      await t.ctx.close();
+      // La lluviosa: el capote (fuera de ella ni se dibuja: se poda con lo de otra temporada).
+      const l = await entrar(navegador, anio, ADMIN, { hora: 15, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'todos', 'libro.dia': '2026-07-10' }));
+      await cerrar(l.p);
+      r = await tu(l.p);
+      const capotes = await l.p.evaluate(() => document.querySelectorAll('#m-yo .oso-capote').length);
+      ok(r.pose === 'capote' && r.capote && r.cara && r.fuera === 0 && capotes === 1, `48 (192) las tardes de la lluviosa, con su capote amarillo y la cara a la vista (${JSON.stringify(r)})`);
+      ok(t.consola.length === 0 && l.consola.length === 0, `48 consola limpia (${[...t.consola, ...l.consola].slice(0, 2)})`);
+      await l.ctx.close();
     } finally {
       anio.parar();
     }
@@ -7769,7 +7820,7 @@ try {
       const t = await entrar(navegador, mil, ADMIN, { hora: 21, viewport: { width: 390, height: 664 } }, conLs('2026-12-24', 'esenciales'));
       await cerrar(t.p);
       const r = await pieza(t.p);
-      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 915, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030; desde el 51, +3 de las capas ambientales; desde el 52, +1 el portal de la iglesia en su trazo; desde el 47, +7 de las poses de los osos de la cumbre), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
+      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 922, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030; desde el 51, +3 de las capas ambientales; desde el 52, +1 el portal de la iglesia en su trazo; desde el 47, +7 de las poses de los osos de la cumbre; desde el 48, +8 de las poses de «Tú»), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
       // A las 23:45 (cielo.js avisa con «libro:cohetes») se ponen; pasada la medianoche, el día cambia y se redibuja con ellos; a las 0:45, fuera.
       const paso = (d, h) => t.p.evaluate(async ([dd, hh]) => { localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400)); }, [d, h]);
       await paso('2026-12-24', 23.75);

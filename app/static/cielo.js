@@ -409,6 +409,21 @@
   ];
   const poseCumbre = (f, h) => CUMBRE.find((c) => c.cuando(f, h))?.id ?? '';
   /**
+   * (Campamento 48) «Tú» según la hora: poses quietas que enseña el CSS (`html[data-tu]`, varias separadas por espacios), a saltos y
+   * sin nada que se mueva (0 capas, 0 animaciones; las declara el director y las lee el banco). Mientras «Tú» anda o festeja, el osito
+   * de siempre (el CSS les cede):
+   *   carpa     22:00–5:00 (191): acampa en su sitio, con la luz dentro; no las noches de fiesta (como los de la cumbre)
+   *   espaldas  17:30–18:15 (193): mira bajar el sol de espaldas, con la mochila al frente (a la misma hora que los de la cumbre)
+   *   capote    época lluviosa, 14:00–17:45 (192): su capote amarillo
+   * La fiesta del hito (59) las quita (aplicar).
+   */
+  const TU = [
+    { id: 'carpa', cuando: (f, h) => (h >= 22 || h < 5) && !/^(nb-(cena|misa|doce)|f31-(cena|espera|doce)|n25-polvora|e1-polvora)$/.test(turno(f, h)), pesa: { capas: 0, anim: 0 } },
+    { id: 'espaldas', cuando: (_f, h) => h >= 17.5 && h < 18.25, pesa: { capas: 0, anim: 0 } },
+    { id: 'capote', cuando: (f, h) => epoca(f) === 'lluviosa' && h >= 14 && h < 17.75, pesa: { capas: 0, anim: 0 } },
+  ];
+  const poseTu = (f, h) => TU.filter((t) => t.cuando(f, h)).map((t) => t.id).join(' ');
+  /**
    * (Campamento 47) Los gestos a saltos de los de la cumbre (como estirarse a las 7, campamento 33): de 8:05 a 17:25, cada diez minutos (a las
    * y cinco: las horas en punto quedan quietas), uno de los tres seis segundos (montana.js pone la clase; el CSS lo enseña solo con «todos»): `mira` (el que da al pueblo mira hacia
    * abajo), `acomoda` (los otros dos se recuestan en el grande) o `estira` (el grande se estira). Ninguna animación: un cambio al empezar
@@ -431,7 +446,7 @@
    */
   function director(f, h) {
     const fo = foco(f, h);
-    return { foco: fo.id, rareza: fo.rareza, rutina: rutinaDelDia(f), turno: turno(f, h), mueve: mueve(f, h), mueve2: mueve2(f, h), ambiente: ambiente(f, h), cumbre: poseCumbre(f, h) };
+    return { foco: fo.id, rareza: fo.rareza, rutina: rutinaDelDia(f), turno: turno(f, h), mueve: mueve(f, h), mueve2: mueve2(f, h), ambiente: ambiente(f, h), cumbre: poseCumbre(f, h), tu: poseTu(f, h) };
   }
   /**
    * (Campamento 51, idea 228) La frase del foco para la línea de hoy: solo si ese día tiene algo raro (de mes o más raro), la del
@@ -466,7 +481,7 @@
   function mapaDelDia(f, ancho = false) {
     const t = [];
     for (let q = 0; q < 288; q++) {
-      const h = q / 12, dr = director(f, h), clave = `${dr.turno}|${dr.foco}|${dr.mueve}|${dr.mueve2}|${dr.ambiente.join(' ')}|${dr.cumbre}`;
+      const h = q / 12, dr = director(f, h), clave = `${dr.turno}|${dr.foco}|${dr.mueve}|${dr.mueve2}|${dr.ambiente.join(' ')}|${dr.cumbre}|${dr.tu}`;
       if (t.length && t.at(-1).clave === clave) continue;
       const pm = PESO_MUEVE[dr.mueve], amb = dr.ambiente.map((id) => AMBIENTALES.find((a) => a.id === id).pesa);
       // (49, 275) En pantallas anchas, el segundo principal suma su capa.
@@ -623,6 +638,9 @@
     // (Campamento 47) La pose de los osos de la cumbre (duermen, de espaldas, con sombrero); la fiesta del hito los despierta.
     const cu = fiestaHitoViva ? '' : poseCumbre(d, h);
     if (cu) raiz.dataset.cumbre = cu; else delete raiz.dataset.cumbre;
+    // (Campamento 48) Las poses de «Tú» (acampa, de espaldas, con capote); la fiesta del hito también lo despierta.
+    const pt = fiestaHitoViva ? '' : poseTu(d, h);
+    if (pt) raiz.dataset.tu = pt; else delete raiz.dataset.tu;
     raiz.dataset.tinta = ti;
     raiz.style.setProperty('--cielo-txt', t.txt);
     raiz.style.setProperty('--cielo-txt2', t.txt2);
@@ -640,5 +658,5 @@
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
   window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
-    director, foco, poseCumbre, cumbre: CUMBRE, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+    director, foco, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();
