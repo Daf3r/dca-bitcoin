@@ -1214,6 +1214,12 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(seq.every((x, i) => i === 0 || x === (seq[i - 1] + 1) % 3), `marco: en la vuelta siguiente, el dibujo siguiente (${seq})`);
   eq(L.marcoTele(a(20, 5, 10), lis).faltaMs, 30_000, 'marco: cuánto le queda');
   eq(L.marcoTele(a(20, 5, 10), []), null, 'marco: sin dibujos listos no hay marco');
+  // (Campamento D) La deriva contra el quemado: hasta 12 px, cambia a mitad del marco (:05:20) y recorre los nueve sitios en 90 minutos
+  eq(L.derivaTele(a(20, 5, 19)), L.derivaTele(a(20, 0, 0)), 'deriva: no cambia antes de las :05:20');
+  ok(L.marcoTele(a(20, 5, 20), lis).visible && String(L.derivaTele(a(20, 5, 20))) !== String(L.derivaTele(a(20, 5, 19))), 'deriva: cambia a las :05:20, con el marco a la vista');
+  eq(L.derivaTele(a(20, 5, 20)), L.derivaTele(a(20, 15, 19)), 'deriva: se queda diez minutos');
+  const sitiosD = new Set(Array.from({ length: 9 }, (_, k) => String(L.derivaTele(a(20, 5, 30) + k * 600e3))));
+  ok(sitiosD.size === 9 && L.DERIVA_TELE.every(([x, y]) => Math.abs(x) <= 12 && y >= 0 && y <= 12), 'deriva: nueve sitios distintos, hasta 12 px a los lados y hacia abajo (nunca hacia arriba)');
   // Lo que enseña la tele: dormir gana; una fiesta o el atardecer ganan al marco
   const m = (o) => L.modoTele({ ahoraMs: a(20, 5, 10), hora: 20.08, listos: lis, ...o }).modo;
   eq([m({}), m({ fiesta: true }), m({ ritual: true }), m({ hora: 23.5, ahoraMs: a(23, 30, 0) }), m({ hora: 23.5, ahoraMs: a(23, 30, 0), duerme: false }), m({ hora: 23.5, ahoraMs: a(23, 30, 0), despiertaHasta: a(23, 31, 0) })],
@@ -1354,8 +1360,13 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(['2026-05-01', '2026-05-14', '2026-11-01', '2026-11-14'].every((f) => C.epoca(f) === (f.slice(5, 7) === '05' ? 'lluviosa' : 'seca')), 'valle 22B: la mezcla empieza donde cambia la época (misma partición)');
   const mezcla = ['2026-05-01', '2026-05-02', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07', '2026-05-08', '2026-05-09', '2026-05-10', '2026-05-11', '2026-05-12', '2026-05-13', '2026-05-14', '2026-05-15'].map(C.verdor);
   ok(mezcla.every((x, i) => !i || x > mezcla[i - 1]), 'valle 22B: en mayo el valle reverdece un poco cada día');
-  // 55 · mar de niebla de 5:00 a 7:30 (se forma hasta las 5:30 y se levanta de 7:00 a 7:30); sin niebla de la tarde.
-  eq([4.5, 4.9, 5, 5.25, 5.5, 6, 7, 7.25, 7.5, 12, 17.5, 18, 20].map((h) => Math.round(C.marNiebla(h) * 100) / 100), [0, 0, 0, 0.5, 1, 1, 1, 0.5, 0, 0, 0, 0, 0], 'valle 22B: el mar de niebla solo de 5:00 a 7:30 (se forma hasta las 5:30 y se levanta desde las 7:00); nada por la tarde');
+  // 55 · la neblina (53B: otro ritmo): se forma de 5:00 a 6:30, llena hasta las 7:00 y se levanta hasta las 9:00; sin día, solo la de la mañana.
+  eq([4.5, 4.9, 5, 5.75, 6.5, 7, 8, 8.5, 9, 12, 17.5, 18, 20].map((h) => Math.round(C.marNiebla(h) * 100) / 100), [0, 0, 0, 0.75, 1, 1, 0.75, 0.44, 0, 0, 0, 0, 0], '53B: la neblina de la mañana se forma de 5:00 a 6:30 y se levanta de 7:00 a 9:00');
+  // Al caer la tarde vuelve fina (nunca más de 0.4): en la lluviosa, de 16:30 a 18:30; en la seca, de 17:30 a 19:00 (antes de las luces del valle).
+  eq([16, 16.5, 17.25, 17.5, 18.5, 19, 20].map((h) => Math.round(C.marNiebla(h, '2026-07-10') * 100) / 100), [0, 0, 0.4, 0.4, 0, 0, 0], '53B: en la lluviosa, neblina fina de 16:30 a 18:30');
+  eq([16.5, 17.5, 18.25, 18.5, 19, 20, 23].map((h) => Math.round(C.marNiebla(h, '2027-02-10') * 100) / 100), [0, 0, 0.4, 0.27, 0, 0, 0], '53B: en la seca, neblina fina de 17:30 a 19:00');
+  ok([19, 20, 22, 0, 3, 4.9].every((h) => ['2026-07-10', '2027-02-10', '2026-12-24'].every((f) => C.marNiebla(h, f) === 0)), '53B: de noche (las luces del valle encendidas) no hay neblina');
+  { let tope = 0; for (let h = 9; h < 29; h += 0.05) for (const f of ['2026-07-10', '2027-02-10', '2026-05-07', '2026-11-07']) tope = Math.max(tope, C.marNiebla(h % 24, f)); ok(tope > 0.39 && tope <= 0.4, `53B: de las 9:00 a las 5:00 la neblina nunca pasa de fina (${tope})`); }
   // 56 · árboles en flor
   eq(['2027-01-31', '2027-02-01', '2027-02-28', '2027-03-01', '2026-03-31', '2026-04-01', '2026-04-30', '2026-05-01'].map(C.flor), ['', 'maquilishuat', 'maquilishuat', '', '', 'fuego', 'fuego', ''], 'valle 22B: el maquilishuat florece en febrero y el árbol de fuego en abril');
   // 57 y 60 · fechas de los azacuanes y de los zompopos
@@ -1363,27 +1374,27 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   eq(['2026-05-14', '2026-05-15', '2026-05-21', '2026-05-22'].map(C.zompopos), [false, true, true, false], 'valle 22B: zompopos del 15 al 21 de mayo');
   // Lo que se mueve: uno a la vez, cada uno a su hora.
   eq([5, 6.9, 7, 7.5, 9.9, 10, 12, 16.4, 16.5, 17.9, 18, 21.9, 22, 2, 4.9].map((h) => C.mueve('2026-05-17', h)),
-    ['torogoz', 'torogoz', 'barre', 'zompopos', 'zompopos', 'teleferico', 'teleferico', 'pelota', 'pericos', 'pericos', 'luciernagas', 'luciernagas', 'relampagos', 'relampagos', 'relampagos'], 'valle 22B: un 17 de mayo, torogoz, la que barre (37), zompopos, el teleférico (32), la pelota (37), pericos, luciérnagas y relámpagos, cada uno a su hora');
+    ['torogoz', 'cruza', 'barre', 'zompopos', 'zompopos', 'teleferico', 'campana', 'pelota', 'pericos', 'pericos', 'luciernagas', 'luciernagas', 'relampagos', 'relampagos', 'relampagos'], 'valle 22B: un 17 de mayo, torogoz, la que barre (37), zompopos, el teleférico (32), la pelota (37), pericos, luciérnagas y relámpagos, cada uno a su hora');
   eq([7.9, 8, 15.9, 16, 16.5, 22, 2].map((h) => C.mueve('2026-10-15', h)), ['barre', 'azacuanes', 'azacuanes', 'pelota', 'pericos', 'relampagos', 'relampagos'], 'valle 22B: un 15 de octubre, los azacuanes de día; relámpagos de madrugada (lluviosa)');
-  eq([8, 12, 18, 22, 2, 5.5].map((h) => C.mueve('2027-02-10', h)), ['gallinas', 'teleferico', 'luciernagas', 'luciernagas', 'luciernagas', 'torogoz'], 'valle 22B: en la seca no hay relámpagos y las luciérnagas siguen toda la noche');
-  eq([9.9, 10, 12.9, 13, 11].map((h) => C.mueve('2026-11-25', h)).concat(C.mueve('2026-10-15', 11)), ['gallinas', 'teleferico', 'teleferico', '', 'teleferico', 'azacuanes'], 'valle 32: el teleférico de 10:00 a 13:00, y los días de azacuanes, ellos');
+  eq([8, 12, 18, 22, 2, 5.5].map((h) => C.mueve('2027-02-10', h)), ['gallinas', 'campana', 'luciernagas', 'luciernagas', 'luciernagas', 'torogoz'], 'valle 22B: en la seca no hay relámpagos y las luciérnagas siguen toda la noche');
+  eq([9.9, 10, 12.9, 13, 11].map((h) => C.mueve('2026-11-25', h)).concat(C.mueve('2026-10-15', 11)), ['gallinas', 'teleferico', 'teleferico', 'hamaca', 'teleferico', 'azacuanes'], 'valle 32: el teleférico de 10:00 a 13:00, y los días de azacuanes, ellos');
   eq([7.5, 12].map((h) => C.mueve('2026-04-20', h)), ['barre', 'azacuanes'], 'valle 22B: en abril pasan los azacuanes (sin zompopos)');
-  eq([6.9, 7, 7.9, 8, 9.9, 10, 13.9, 14, 14.9, 15, 16.4, 16.5].map((h) => C.mueve('2026-11-25', h)), ['torogoz', 'barre', 'barre', 'gallinas', 'gallinas', 'teleferico', '', 'perro', 'perro', 'pelota', 'pelota', 'pericos'], 'pueblo 34 y 37: la que barre de 7:00 a 8:00, las gallinas de 8:00 a 10:00, el perro de 14:00 a 15:00 y la pelota de 15:00 a 16:30');
+  eq([6.9, 7, 7.9, 8, 9.9, 10, 13.9, 14, 14.9, 15, 16.4, 16.5].map((h) => C.mueve('2026-11-25', h)), ['cruza', 'barre', 'barre', 'gallinas', 'gallinas', 'teleferico', 'hamaca', 'perro', 'perro', 'pelota', 'pelota', 'pericos'], 'pueblo 34 y 37: la que barre de 7:00 a 8:00, las gallinas de 8:00 a 10:00, el perro de 14:00 a 15:00 y la pelota de 15:00 a 16:30');
   // Nunca dos a la vez: en cada media hora de todo un año, `mueve` da una sola cosa (o nada) y respeta sus fechas y horas.
   let malos = 0;
   for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) {
     const f = new Date(t).toISOString().slice(0, 10);
     for (let h = 0; h < 24; h += 0.5) {
       const m = C.mueve(f, h);
-      if ((m === 'zompopos' && !C.zompopos(f)) || (m === 'azacuanes' && !C.azacuanes(f)) || (m === 'relampagos' && C.epoca(f) !== 'lluviosa') || (m === 'torogoz' && C.franja(h) !== 'amanecer') || (m === 'gallinas' && (h < 8 || h >= 10)) || (m === 'perro' && (h < 14 || h >= 15)) || (m === 'barre' && (h < 7 || h >= 8)) || (m === 'pelota' && (h < 15 || h >= 16.5) && !(f.slice(5) === '12-25' && h >= 9 && h < 12)) || (['brinda', 'chispea', 'fiesta'].includes(m) && !['12-24', '12-25', '12-31', '01-01'].includes(f.slice(5)))) malos++; // (41) el 25 la pelota nueva, de 9:00 a 12:00; la fiesta, solo esas noches
+      if ((m === 'zompopos' && !C.zompopos(f)) || (m === 'azacuanes' && !C.azacuanes(f)) || (m === 'relampagos' && C.epoca(f) !== 'lluviosa') || (m === 'torogoz' && C.franja(h) !== 'amanecer') || (['cruza', 'palmea', 'hamaca'].includes(m) && !C.hayActor(f, h, m)) || (m === 'campana' && (h < 12 || h >= 12.09)) || (m === 'gallinas' && (h < 8 || h >= 10)) || (m === 'perro' && (h < 14 || h >= 15)) || (m === 'barre' && (h < 7 || h >= 8)) || (m === 'pelota' && (h < 15 || h >= 16.5) && !(f.slice(5) === '12-25' && h >= 9 && h < 12)) || (['brinda', 'chispea', 'fiesta'].includes(m) && !['12-24', '12-25', '12-31', '01-01'].includes(f.slice(5)))) malos++; // (41) el 25 la pelota nueva, de 9:00 a 12:00; la fiesta, solo esas noches
     }
   }
   eq(malos, 0, 'valle 22B: lo que se mueve respeta sus fechas y horas en todo el año (el torogoz, siempre en la franja del amanecer)');
   // Lo que deja en <html>
   almacen['libro.dia'] = '2026-05-07'; almacen['libro.hora'] = '6'; C.aplicar();
-  ok(raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '1.000' && raiz.estilo['--v-verde'] === '0.467' && raiz.dataset.mueve === 'torogoz' && !raiz.dataset.flor, `valle 22B: el 7 de mayo a las 6:00, mar de niebla, el valle a medio reverdecer y el torogoz (${JSON.stringify(raiz.estilo['--v-verde'])})`);
+  ok(raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.889' && raiz.estilo['--v-verde'] === '0.467' && raiz.dataset.mueve === 'cruza' && !raiz.dataset.flor, `valle 22B: el 7 de mayo a las 6:00, mar de niebla, el valle a medio reverdecer y el panadero que cruza (49; el torogoz, de 5 a 6) (${JSON.stringify(raiz.estilo['--v-verde'])})`);
   almacen['libro.dia'] = '2027-02-10'; almacen['libro.hora'] = '12'; C.aplicar();
-  ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === 'teleferico', 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y solo el teleférico (campamento 32) que se mueva');
+  ok(!raiz.atributos.has('data-mar-niebla') && raiz.estilo['--v-mar'] === '0.000' && raiz.estilo['--v-verde'] === '0.000' && raiz.dataset.flor === 'maquilishuat' && raiz.dataset.mueve === 'campana', 'valle 22B: el 10 de febrero a mediodía, sin niebla, valle dorado, el maquilishuat en flor y solo la campana de las doce (campamento 49) que se mueva');
   delete almacen['libro.dia']; delete almacen['libro.hora'];
 
   // El arte de la parte 2: funciones puras, sin estilos en línea, con clases v-…; lo que se mueve lleva `efecto-ambiente`.
@@ -1404,6 +1415,10 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(ma && mf && ma.y >= 270 + 24 && mf.y > sv.milpa.y + sv.milpa.h && mf.y > ma.y, `valle 22B: la neblina, por debajo del saldo y (el banco de delante, entero) de la milpa (${ma?.y} / ${mf?.y})`);
   eq([mar.atras.match(/<\w+/g), mar.frente.match(/<\w+/g), ma.clase, mf.clase], [['<rect'], ['<rect'], 'v-mar-atras', 'v-mar-frente'], '53A: un solo nodo por banco (sin bordes festoneados ni planos opacos)');
   ok([ma, mf].every((r) => r.x < -390 && r.x + r.w > 2 * 390 && r.y + r.h >= 760) && !/style=|fill=/.test(mar.atras + mar.frente), '53A: cada banco sobra a los lados (su lomo apenas se curva), llega al pie de la escena y no lleva estilo ni relleno en línea');
+  // (53B) Los jirones, solo si se piden (tablet y escritorio): dos óvalos sobre el lomo del banco de atrás, nunca por encima de su tope.
+  const conJ = A.marDeNiebla({ W: 390, H: 760, canton: sv.canton, milpa: sv.milpa, k: sv.k, cresta, techo: 270, jirones: true });
+  const ovalos = [...conJ.atras.matchAll(/<ellipse class="v-mar v-mar-jiron" cx="([-\d.]+)" cy="([-\d.]+)" rx="([\d.]+)" ry="([\d.]+)"\/>/g)].map((m) => m.slice(1).map(Number));
+  ok(ovalos.length === 2 && ovalos.every(([, cy, rx, ry]) => cy - ry >= ma.y - 0.1 && rx > ry * 4) && !/ellipse/.test(mar.atras + conJ.frente), `53B: dos jirones largos y bajos sobre el banco de atrás, por debajo de su tope (${JSON.stringify(ovalos)}); en el teléfono, ninguno`);
   // 58 · las vacas: una en el teléfono, en la orilla de afuera (aquí la izquierda: la derecha no cabe), mirando al agua y lejos del sendero.
   const dist = (px, py) => Math.min(...pts.slice(1).map(([bx2, by2], i) => { const [ax, ay] = pts[i], dx = bx2 - ax, dy = by2 - ay, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy))); return Math.hypot(px - ax - t * dx, py - ay - t * dy); }));
   ok(sv.vacas.length === 1 && sv.vacas[0].x < lago.cx - lago.rx && sv.vacas[0].dir === 1 && dist(sv.vacas[0].x, sv.vacas[0].y - 4) > 13, `valle 22B: una vaca en el teléfono, en la orilla, mirando al agua y lejos del sendero (${JSON.stringify(sv.vacas[0])})`);
@@ -1461,6 +1476,14 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   ok(!/v-estrella|estrella/.test(P.pinoPlaza(100, 700, 2)), 'pueblo: el pino de Navidad no lleva estrella (nada sobresale contra el cielo)');
   // Escritorio: a la izquierda de la salida, más grande.
   const se = P.sitiosPueblo({ W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400, sol: 1 });
+  // (53B) La bruma baja del pueblo: solo en escritorio, un óvalo pintado antes que la fila de atrás, entero por encima de la terraza y dentro del pueblo.
+  {
+    const pe = P.pueblo(se, { ventanas: 2 }), m = pe.match(/<ellipse class="v-mar v-mar-pueblo" cx="([-\d.]+)" cy="([-\d.]+)" rx="([\d.]+)" ry="([\d.]+)"\/>/);
+    const [cx, cy, rx, ry] = m ? m.slice(1).map(Number) : [];
+    ok(m && pe.indexOf('v-mar-pueblo') < pe.indexOf('v-terraza') && pe.indexOf('v-mar-pueblo') > pe.indexOf('v-plaza') && cy + ry <= se.yg - P.TERRAZA * se.u + 0.1 && cx - rx >= se.x0 - 0.1 && cx + rx <= se.xFin + 0.1,
+      `53B: la bruma del pueblo va detrás de las casas (antes que la fila de atrás), por encima de la terraza y sin salirse del pueblo (${m?.[0]})`);
+    ok(!/v-mar/.test(P.pueblo(sp, { ventanas: 2 })) && !/v-mar/.test(P.pueblo(P.sitiosPueblo({ W: 768, H: 944, forma: 'tab', by: 780, bx: 150, pts: [[150, 780], [460, 700], [330, 620], [520, 300]], lago: null, techo: 300, sol: 1 }), { ventanas: 2 })), '53B: en el teléfono y la tablet el pueblo no lleva bruma (detrás de las casas va el sendero)');
+  }
   ok(se.u > sp.u && se.caja[2] < 466 && se.piezas.filter((q) => q.tipo === 'casa').length >= 2 && se.atras.length >= 1, `pueblo: en escritorio, a la izquierda de la salida y más grande (${se.caja.map(Math.round)})`);
   // El llano, los campos, la ladera baja y el primer plano: sin NaN ni estilos, con sus clases.
   const geo = { W: 390, H: 764, forma: 'tel', by: 600, bx: 55 };
@@ -1643,7 +1666,7 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
       ok(senda >= 11.5, `${et}: a 12 px o más del sendero (${senda.toFixed(1)})`);
       eq(encima, 0, `${et}: ni sobre la meta ni sobre el saldo o la cabecera`);
       // Se pintan de atrás adelante (el de más arriba primero): así pueden apoyarse uno en otro sin que se cruce un tono con otro.
-      const orden = [...O.osos(s.lista, { k }).matchAll(/class="oso oso-(\w+)"/g)].map((m) => m[1]);
+      const orden = [...O.osos(s.lista, { k }).matchAll(/class="oso oso-(\w+)[" ]/g)].map((m) => m[1]);
       eq(orden, [...s.lista].sort((a, b) => a.y - b.y).map((o) => o.quien), `${et}: se pintan de atrás adelante`);
       if (s.zona !== 'cumbre') ok(s.lista.every((o) => enPol(s.zona === 'nieve' ? g.nieveMin : g.nieveHoy, o.x, o.y) && enPol(g.cara, o.x, o.y)), `${et}: los pies en la nieve de la cara al sol`);
       const c = O.cajaOsos(s.lista, k, { aurora, cumple });
@@ -1667,11 +1690,11 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   const svgs = { trio: O.osos(tres, { k: k0 }), aurora: O.osos(tres, { k: k0, aurora: true }), todo: O.osos(tres, { k: k0, aurora: true, cumple: true }), uno: O.osos(tres.slice(0, 1), { k: k0 }) };
   for (const [k, svg] of Object.entries(svgs)) {
     ok(!/style=|NaN|undefined/.test(svg) && svg.startsWith('<path class="oso-pie"'), `osos (${k}): sin estilos en línea ni NaN; primero la sombra de contacto de todos`);
-    ok([...svg.matchAll(/class="([^"]+)"/g)].every((m) => /^(oso oso-(grande|chico|mameluco)|oso-[a-z-]+( v-navidad)?)$/.test(m[1])), `osos (${k}): solo clases oso- (y v-navidad en las bufandas)`);
+    ok([...svg.matchAll(/class="([^"]+)"/g)].every((m) => /^(oso oso-(grande|chico|mameluco)( oso-asoma)?( oso-hacia-[id])?|oso-[a-z-]+( v-navidad)?)$/.test(m[1])), `osos (${k}): solo clases oso- (y v-navidad en las bufandas)`);
   }
-  // (Campamento 33: un trazo más por oso, los brazos de estirarse.)
-  ok(nodos(svgs.trio) <= 28 && nodos(svgs.aurora) <= 34 && nodos(svgs.todo) <= 35, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 28), con aurora ${nodos(svgs.aurora)} (≤ 34), con gorrito ${nodos(svgs.todo)} (≤ 35)`);
-  ok(nodos(svgs.uno) <= 11, `osos: el grande solo, ${nodos(svgs.uno)} nodos`);
+  // (Campamento 33: un trazo más por oso, los brazos de estirarse; 47: otro, los ojos cerrados de dormir.)
+  ok(nodos(svgs.trio) <= 31 && nodos(svgs.aurora) <= 37 && nodos(svgs.todo) <= 38, `osos: nodos del trío ${nodos(svgs.trio)} (≤ 31), con aurora ${nodos(svgs.aurora)} (≤ 37), con gorrito ${nodos(svgs.todo)} (≤ 38)`);
+  ok(nodos(svgs.uno) <= 12, `osos: el grande solo, ${nodos(svgs.uno)} nodos (47: con sus ojos cerrados)`);
   ok(svgs.trio.includes('oso-marino') && svgs.trio.includes('oso-cinta') && svgs.trio.includes('oso-parche') && svgs.trio.includes('oso-celeste') && svgs.trio.includes('oso-chico'), 'osos: el grande con su camiseta, su parche y su cinta; el del mameluco; el chico');
   ok(!svgs.uno.includes('oso-celeste') && !svgs.uno.includes('oso-bufanda'), 'osos: el grande solo no lleva mameluco ni bufanda de Navidad (ya tiene su cinta)');
   ok((svgs.trio.match(/oso-bufanda v-navidad/g) || []).length === 2 && !svgs.trio.includes('oso-gorro') && svgs.todo.includes('oso-gorro'), 'osos: dos bufandas de Navidad (las enseña el CSS) y el gorrito solo con cumpleaños');
@@ -1976,7 +1999,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   // Que no dependa del día de la semana: un 24 y un 31 en domingo (2028) y un 24 en sábado (2033) siguen su guion, no la misa ni la plaza.
   eq([['2028-12-24', 8], ['2028-12-31', 8], ['2033-12-24', 9], ['2028-12-24', 9.5]].map(([f, h]) => C.turno(f, h)), ['nb-compras', 'f31-limpia', 'nb-compras', 'nb-compras'], 'fiesta 41: un domingo o un sábado de fiesta sigue el guion de la fiesta');
   eq([17.7, 17.75, 20.9, 21, 23.6, 23.7].map((h) => C.mueve('2026-12-24', h)).concat([0.9, 1].map((h) => C.mueve('2026-12-25', h)), [9, 11.9, 12].map((h) => C.mueve('2026-12-25', h)), [17.75, 22.9, 23].map((h) => C.mueve('2026-12-31', h)), [0.5, 1.5].map((h) => C.mueve('2027-01-01', h))),
-    ['pericos', 'brinda', 'brinda', 'fiesta', 'fiesta', 'chispea', 'chispea', 'luciernagas', 'pelota', 'pelota', 'teleferico', 'brinda', 'brinda', 'fiesta', 'chispea', 'luciernagas'], 'fiesta 41 (210): la noche del 24 y del 31 es de la fiesta (brinda uno, la misa y la espera quietas, a las doce chispea un volcancito) y las luciérnagas descansan; el 25, la pelota nueva por la mañana');
+    ['pericos', 'brinda', 'brinda', 'fiesta', 'fiesta', 'chispea', 'chispea', 'luciernagas', 'pelota', 'pelota', 'campana', 'brinda', 'brinda', 'fiesta', 'chispea', 'luciernagas'], 'fiesta 41 (210): la noche del 24 y del 31 es de la fiesta (brinda uno, la misa y la espera quietas, a las doce chispea un volcancito) y las luciérnagas descansan; el 25, la pelota nueva por la mañana');
   eq(['2026-12-24', '2026-12-25', '2026-12-31', '2027-01-01', '2027-01-06', '2026-12-26'].map(C.festivo), ['nochebuena', 'navidad', 'fin', 'anio', 'reyes', ''], 'fiesta 41: html[data-festivo] el día entero');
   // El reparto: en cada tamaño (teléfono, acostado, tablet, escritorio, tele) y con la luz de cada lado, la figura clave de cada turno sale.
   const V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
@@ -2058,7 +2081,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   // F3: los ambientales, hasta tres; de noche ninguno; cada uno con lo que pesa, y el mapa del día lo reparte sin pasarse.
   let ambMal = 0;
   for (const f of dias.slice(0, 366)) for (const ancho of [false, true]) for (const tr of C.mapaDelDia(f, ancho)) {
-    if (tr.capasAmb > C.maxAmbientales || tr.anim > 3 || ((tr.desde >= 20 || tr.desde < 5) && tr.ambiente.length)) ambMal++;
+    if (tr.capasAmb > C.maxAmbientales || tr.anim > 3 || ((tr.desde >= 20 || tr.desde < 5) && tr.ambiente.some((x) => x !== 'estrellitas'))) ambMal++; // (49, 201) de noche, solo las estrellitas del 24 y el 31
   }
   eq([ambMal, C.ambiente('2026-11-25', 12).join(' '), C.ambiente('2026-11-25', 6).join(' '), C.ambiente('2026-11-25', 18).join(' '), C.ambiente('2026-11-25', 21).join(' '), C.ambiente('2026-11-25', 3).join(' ')], [0, 'humo cayuco', 'humo cayuco', 'humo', '', ''], 'director F3: humo de 5 a 20 y el cayuco de 5 a 16:30, ninguno de noche, y en el mapa de un año ningún tramo pasa de tres ambientales ni de tres animaciones por capa');
   const mapa = C.mapaDelDia('2026-11-25'), mapaA = C.mapaDelDia('2026-11-25', true);
@@ -2069,7 +2092,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   almacen['libro.dia'] = '2026-11-18'; almacen['libro.hora'] = '23'; C.aplicar();
   const a2 = { ...raiz.dataset };
   delete almacen['libro.dia']; delete almacen['libro.hora'];
-  eq([a1.foco, a1.ambiente, a1.mueve, a2.foco, a2.ambiente], ['navidad', 'humo', 'brinda', `rutina-${C.rutinaDelDia('2026-11-18')}`, undefined], 'director: <html> lleva data-foco y data-ambiente (de noche, sin ambientales)');
+  eq([a1.foco, a1.ambiente, a1.mueve, a2.foco, a2.ambiente], ['navidad', 'humo estrellitas', 'brinda', `rutina-${C.rutinaDelDia('2026-11-18')}`, undefined], 'director: <html> lleva data-foco y data-ambiente (de noche, sin ambientales)');
 }
 
 // Campamento 40 · El día entero del pueblo: turnos nuevos (antes del alba, la tortillera, la salida de la escuela, la hamaca, la vuelta
@@ -2115,7 +2138,10 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
       if (/style=|NaN|undefined/.test(svg) || (svg.match(/<path/g) || []).length > V.TONOS.length + 1) fallos.push(`${dd}: el SVG`);
       if (l.some((v) => !V.PERSONAJES.includes(v.t) || !Number.isFinite(v.x + v.y + v.k))) fallos.push(`${dd}: alguien sin sitio`);
       const act = l.filter((v) => v.actor).map((v) => v.actor);
-      if (act.join() !== (ACTOR[t] ?? '')) fallos.push(`${dd}: actor ${act}`);
+      // (49) El panadero que cruza (salvo el lunes), la tortillera que palmea (salvo el sábado: tamales) y la hamaca (salvo en Navidad).
+      const sem = new Date(`${dia}T12:00:00Z`).getUTCDay(), nav = dia.slice(5) >= '12-01' || dia.slice(5) <= '01-06';
+      const esperado = { ...ACTOR, amanece: sem === 1 ? '' : 'cruza', tortillas: sem === 6 ? '' : 'palmea', salida: sem === 6 ? '' : 'palmea', siesta: nav ? '' : 'hamaca' }[t] ?? '';
+      if (act.join() !== esperado) fallos.push(`${dd}: actor ${act}`);
       const perros = l.filter((v) => v.t === 'perroEchado');
       if (perros.length !== (V.PERRO_TURNOS.includes(t) && lug.perro.length ? 1 : 0)) fallos.push(`${dd}: ${perros.length} perros`);
       // Nadie de pie encima del perro (bajo la hamaca va a propósito) ni de la ropa tendida.
@@ -2309,6 +2335,161 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   }
   if (process.env.MEDIDAS) console.log(JSON.stringify(medidas)); // MEDIDAS=1 node tests/test_lib.mjs: los nodos de cada dibujo
   ok(medidas['10000:constelacion'] < 60 && medidas['10000:partitura'] < 200, `tope 58: con 10,000 compras la constelación y la partitura quedan pequeñas (${medidas['10000:constelacion']}, ${medidas['10000:partitura']})`);
+}
+
+// Campamento 59 · La fiesta del hito: el guion (cuatro tiempos, la escala, noche, lluvia y efectos), los cohetes, la fiesta por ver,
+// el farol, el reparto de la fiesta (hasta nueve) y el arte (SVG puro, sin estilo en línea ni NaN).
+{
+  const L = await import('../app/static/lib.js'), V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js'), F = await import('../app/static/arte-fiesta.js');
+  eq([1e6, 1e7, 1e8, 1e5, 2.5e6, 5e6, 250_000, 500_000, 1.25e6, 750_000, 3e6].map(L.escalaFiesta),
+    ['campamento', 'campamento', 'campamento', 'principal', 'principal', 'principal', 'principal', 'principal', 'intermedia', 'intermedia', 'intermedia'], 'fiesta 59: la escala (10× desde 1M; 2.5 y 5 y 100k; las demás)');
+  eq(L.MS_FIESTA, { campamento: 24_000, principal: 12_000, halving: 12_000, intermedia: 6000 }, 'fiesta 59: 24 s, 12 s y 6 s (el halving, como una principal)');
+  const g = L.guionFiesta('campamento', { conTu: true });
+  const ques = (x) => x.pasos.map((p) => p.que);
+  ok(g.ms === 24_000 && g.farol && g.pasos.every((p, i) => i === 0 || p.en >= g.pasos[i - 1].en) && g.pasos.every((p) => p.en < g.ms), 'fiesta 59: el campamento dura 24 s, en orden, todo dentro y deja el farol');
+  eq(g.pasos.filter((p) => p.que === 'vecinos').map((p) => [p.en, p.cuadro]), [[0, 'salen'], [5000, 'rueda'], [10_000, 'arriba'], [16_000, 'chocolate']], 'fiesta 59: cuatro tiempos en la plaza (salen, rueda, brazos arriba, chocolate)');
+  eq([g.pasos.find((p) => p.que === 'campana').toques, g.pasos.find((p) => p.que === 'faroles').n, g.pasos.find((p) => p.que === 'cohetes').n], [3, 7, 3], 'fiesta 59: en el teléfono, 3 toques, 7 farolitos y 3 cohetes');
+  eq(L.guionFiesta('campamento', { ancho: 1440 }).pasos.find((p) => p.que === 'cohetes').n, 5, 'fiesta 59: en escritorio, 5 cohetes');
+  ok(ques(g).includes('tu') && !ques(L.guionFiesta('campamento')).includes('tu'), 'fiesta 59: «Tú» solo para quien anota (para quien solo mira no sale)');
+  const pr = L.guionFiesta('principal', { conTu: true }), iv = L.guionFiesta('intermedia', { conTu: true }), hv = L.guionFiesta('halving', { conTu: true });
+  ok(pr.ms === 12_000 && pr.pasos.find((p) => p.que === 'campana').toques === 2 && pr.pasos.find((p) => p.que === 'faroles').n === 3 && pr.pasos.find((p) => p.que === 'cohetes').n === 1 && !pr.pasos.some((p) => p.cuadro === 'chocolate') && pr.farol,
+    'fiesta 59: la etapa principal, 12 s: dos toques, rueda de cinco, 3 farolitos, un cohete, sin chocolate, y su farol');
+  ok(iv.ms === 6000 && !iv.farol && iv.pasos.length === 3 && iv.pasos.find((p) => p.que === 'campana').toques === 1 && iv.pasos.find((p) => p.que === 'vecinos').cuadro === 'tres' && iv.pasos.find((p) => p.que === 'faroles').n === 1 && !ques(iv).some((q) => ['cohetes', 'cumbre', 'tu'].includes(q)),
+    'fiesta 59: la intermedia, sobria: 6 s, un toque, tres osos con los brazos arriba y un farolito; sin cohetes, sin cumbre y sin farol');
+  ok(hv.ms === 12_000 && hv.farol && !ques(hv).includes('tu') && !ques(hv).includes('cumbre') && hv.pasos.find((p) => p.que === 'faroles').n === 4 && hv.pasos.find((p) => p.que === 'cohetes').n === 1,
+    'fiesta 59: el halving es fiesta del pueblo: sin «Tú» ni la cumbre aunque lo pida quien anota; 4 farolitos y un cohete');
+  for (const e of ['campamento', 'principal', 'intermedia', 'halving']) {
+    const noche = L.guionFiesta(e, { noche: true }), lluvia = L.guionFiesta(e, { lluvia: true }), es = L.guionFiesta(e, { efectos: 'esenciales', ancho: 1440 }), ni = L.guionFiesta(e, { efectos: 'ninguno', conTu: true });
+    ok(!ques(noche).includes('vecinos') && ques(noche).includes('campana'), `fiesta 59 (${e}): de noche en el pueblo no hay nadie (la campana sí)`);
+    ok(!ques(lluvia).includes('faroles'), `fiesta 59 (${e}): con lluvia, sin farolitos`);
+    ok(!ques(es).includes('faroles') && es.pasos.filter((p) => p.que === 'cohetes').every((p) => p.n === 1), `fiesta 59 (${e}): con «esenciales», sin farolitos volando y un solo cohete que aparece y se apaga`);
+    ok(ni.ms === 0 && ni.pasos.length === 0 && ni.farol === (e !== 'intermedia'), `fiesta 59 (${e}): con «ninguno», el estado final (el farol, si toca)`);
+    ok(L.guionFiesta(e).ms <= 30_000, `fiesta 59 (${e}): 30 s como mucho`);
+  }
+  // Los cohetes: dentro de la escena, debajo del saldo y de la tarjeta, sobre la cumbre en escritorio y a la derecha en la tele
+  for (const [W, H, tu, cumbre, techo, tv] of [[390, 760, { x: 200, y: 420 }, { x: 240, y: 330 }, 280, false], [320, 568, { x: 160, y: 330 }, { x: 200, y: 250 }, 200, false], [1440, 774, { x: 860, y: 330 }, { x: 900, y: 80 }, 0, false], [2560, 1440, { x: 1500, y: 600 }, { x: 1560, y: 230 }, 0, true]]) {
+    const ps = L.palmasFiesta({ W, H, n: 5, tu, cumbre, techo, k: 1, tv });
+    ok(ps.length >= 1 && ps.length <= 5 && ps.every((q) => q.y - q.r > techo + 8 && q.x - q.r > 2 && q.x + q.r < W - 2 && q.y + q.r < H - 2 && Number.isFinite(q.x + q.y + q.r)), `fiesta 59: los cohetes a ${W} px caben, bajo el saldo y la tarjeta (${ps.length})`);
+    if (tv) ok(ps.every((q) => q.x > cumbre.x), 'fiesta 59: en la tele, a la derecha de la cumbre (lejos del saldo y del reloj)');
+  }
+  eq(L.palmasFiesta({ W: 390, H: 760, n: 3, tu: { x: 200, y: 300 }, cumbre: { x: 240, y: 200 }, techo: 900 }), [], 'fiesta 59: si no cabe ninguno bajo el saldo, no sale ninguno');
+  // La fiesta por ver al abrir: la de un campamento o una etapa principal de hoy, y el halving, una vez por aparato; marcas sin cifras
+  const hoy = '2026-11-25', f = { dia: hoy, hito: { meta: 1e6, rango: 'campamento', id: 41 }, halving: false };
+  eq(L.fiestaPorVer(f, '', hoy), { escala: 'campamento', meta: 1e6, marca: '2026-11-25#41' }, 'fiesta 59: la familia ve la fiesta de hoy al abrir');
+  ok(L.fiestaPorVer(f, '2026-11-25#41', hoy) === null && L.fiestaPorVer(f, '', '2026-11-26') === null && L.fiestaPorVer(null, '', hoy) === null, 'fiesta 59: una vez por aparato, solo hoy');
+  ok(L.fiestaPorVer({ dia: hoy, hito: { meta: 1.25e6, id: 3 }, halving: false }, '', hoy) === null, 'fiesta 59: la intermedia no se repite al abrir (solo la ve quien anota)');
+  eq(L.fiestaPorVer({ dia: hoy, hito: { meta: 2.5e6, id: 7 }, halving: true }, '2026-11-25#7', hoy), { escala: 'halving', meta: null, marca: '2026-11-25#halving' }, 'fiesta 59: el halving, aparte');
+  ok(L.fiestaPorVer({ dia: hoy, hito: { meta: 2.5e6, id: 7 }, halving: true }, '2026-11-25#7 2026-11-25#halving', hoy) === null, 'fiesta 59: vistas las dos, nada');
+  ok(!/\d{4,}#|sats/.test(L.fiestaPorVer(f, '', hoy).marca.split('#')[1]), 'fiesta 59: la marca del aparato no lleva cifras del saldo');
+  ok(L.farolDelHito(f, hoy) && !L.farolDelHito(f, '2026-11-26') && !L.farolDelHito({ dia: hoy, hito: { meta: 1.5e6 } }, hoy) && L.farolDelHito({ dia: hoy, hito: null, halving: true }, hoy) && !L.farolDelHito(null, hoy),
+    'fiesta 59: el farol del hito, hasta la medianoche (campamento, principal o halving; la intermedia no deja farol)');
+  // El reparto de la fiesta: hasta nueve, en la plaza, con los personajes de siempre; el SVG con un trazo por tono
+  ok(V.MAX_FIESTA === 9 && L.MAX_VECINOS_FIESTA === 9 && V.MAX_VECINOS === 8, 'fiesta 59: hasta nueve en la fiesta; el tope de un día cualquiera sigue en ocho');
+  const fallos = [];
+  for (const c of [{ W: 320, H: 640, forma: 'tel', by: 505, bx: 45, pts: [[45, 505], [190, 455], [95, 395], [200, 275]], lago: { cx: 268, cy: 590, rx: 50, ry: 10 }, techo: 225 },
+    { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 2560, H: 1440, forma: 'esc', by: 1318, bx: 900, pts: [[900, 1318], [1600, 1100], [980, 880], [1560, 230]], lago: null, techo: 600 }]) for (const sol of [1, -1]) {
+    const lug = P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }));
+    for (const cuadro of ['salen', 'rueda', 'arriba', 'rueda5', 'arriba5', 'tres', 'chocolate']) {
+      const l = V.repartoFiesta(lug, cuadro), svg = V.svgVecinos(l, { sol });
+      const esperado = { salen: 4, rueda: 9, arriba: 9, rueda5: 5, arriba5: 5, tres: 3, chocolate: 6 }[cuadro];
+      if (l.length !== esperado || l.length > V.MAX_FIESTA) fallos.push(`${c.W} ${cuadro}: ${l.length}`);
+      if (l.some((v) => !V.PERSONAJES.includes(v.t) || !Number.isFinite(v.x + v.y + v.k))) fallos.push(`${c.W} ${cuadro}: alguien sin sitio`);
+      if (/style=|NaN/.test(svg) || (svg.match(/<path/g) || []).length > V.TONOS.length + 1) fallos.push(`${c.W} ${cuadro}: el SVG`);
+      const xs = lug.plaza.map((q) => q[0]), w = Math.max(...xs) - Math.min(...xs) + 30 * lug.plaza[0][2];
+      if (l.some((v) => Math.abs(v.x - xs.reduce((a, x) => a + x, 0) / xs.length) > w)) fallos.push(`${c.W} ${cuadro}: lejos de la plaza`);
+    }
+    if (V.repartoFiesta({ ...lug, plaza: [] }, 'rueda').length) fallos.push(`${c.W}: sin plaza, alguien`);
+  }
+  eq(fallos, [], 'fiesta 59: el reparto de cada cuadro, a 320, 390, 1440 y 2560 px, con el sol a los dos lados');
+  eq(V.repartoFiesta(P.lugaresPueblo(P.sitiosPueblo({ W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: null, techo: 270, sol: 1 })), 'rueda').filter((v) => v.t === 'bombo').length, 1, 'fiesta 59: el del bombo marca el paso de la rueda');
+  // El arte: SVG como texto, clases fi-…, sin estilo en línea ni NaN, cajas finitas
+  const piezas = [F.ondasCampana(15, 738, 2.3), F.farolitos(7, 97, 770, 2.3), F.farolitos(1, 97, 770, 1), F.palma(120, 400, 26, 2), F.palma(800, 120, 30, 5)];
+  ok(piezas.every((x) => x.caja.length === 4 && x.caja.every(Number.isFinite) && x.caja[2] > 0 && x.caja[3] > 0 && !/style=|NaN|Infinity/.test(x.svg) && (x.svg.match(/class="([^"]+)"/g) || []).every((k) => /^class="fi-[a-z0-9 -]+"$/.test(k))),
+    'fiesta 59: ondas, farolitos y palmas: SVG puro con su caja, sin estilo en línea ni NaN');
+  ok((F.farolitos(7, 97, 770, 2.3).svg.match(/<path/g) || []).length === 3 && (F.palma(1, 1, 10, 0).svg.match(/<path/g) || []).length === 2 && (F.ondasCampana(1, 1, 1).svg.match(/<path/g) || []).length === 2, 'fiesta 59: pocos nodos (3 trazos los farolitos, 2 cada cohete y la campana)');
+  eq(F.farolitos(5, 10, 10, 1), F.farolitos(5, 10, 10, 1), 'fiesta 59: los farolitos, el mismo reparto en cada aparato (azar con semilla)');
+  const fh = F.farolHito(10, 40, 100, 2);
+  ok(/^<g class="v-farol-hito" aria-hidden="true">/.test(fh) && (fh.match(/<path/g) || []).length === 3 && !/style=|NaN/.test(fh), 'fiesta 59: el farol del hito, tres trazos quietos y decorativo');
+  // Lo que se quiere evitar: nada que hable ni recomiende (los textos de la fiesta están en celebracion.js)
+  const cel = fs.readFileSync(new URL('../app/static/celebracion.js', import.meta.url), 'utf8');
+  ok(!/compra ahora|deberías|te conviene|aprovecha/i.test(cel) && cel.includes("'Hoy el libro llegó a'"), 'fiesta 59: la tarjeta de quien solo mira no tutea y nada recomienda');
+}
+
+// Campamento 49 · El pueblo se mueve 2: cada franja nueva tiene su actor en el reparto, el segundo principal solo con uno del pueblo, el
+// camino de un turno a otro libre en cada paso y los actores partidos completos sin capa.
+{
+  const almacen = {};
+  const raiz = { dataset: {}, atributos: new Set(), estilo: {}, toggleAttribute() {}, style: { setProperty() {} } };
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem() {}, removeItem() {} }, setInterval() {}, Intl, Date, Math, Number, Object };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo, V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
+  const lugs = [{ W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 }].map((c) => P.lugaresPueblo(P.sitiosPueblo({ ...c, sol: 1 })));
+  // Un año, cada cuarto de hora: lo que nombra `data-mueve` (y su predicado) está en el reparto de ese turno; el segundo principal solo
+  // va con uno del pueblo y de día.
+  const malos = [];
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) {
+    const f = new Date(t).toISOString().slice(0, 10);
+    for (let h = 0; h < 24; h += 0.25) {
+      const m = C.mueve(f, h), m2 = C.mueve2(f, h);
+      if (m2 && (m2 !== 'teleferico' || !['cruza', 'barre', 'gallinas', 'campana', 'palmea', 'hamaca', 'perro', 'pelota'].includes(m) || h < 7 || h >= 16.5)) malos.push(`${f} ${h}: dos principales ${m} + ${m2}`);
+      if (!['cruza', 'palmea', 'hamaca'].includes(m)) continue;
+      const l = V.reparto(lugs[1], C.turno(f, h), { dia: f, escuela: C.escuela(f), hora: h });
+      if (!l.some((v) => v.actor === m)) malos.push(`${f} ${h}: ${m} sin actor (${C.turno(f, h)})`);
+    }
+  }
+  eq(malos.slice(0, 5), [], 'pueblo 49: en un año, la franja de cada gesto nuevo tiene su actor en la calle, y el segundo principal (solo ancho) va con uno del pueblo');
+  eq([6, 6.5, 11.75, 12, 12.05, 12.25, 13.5].map((h) => C.mueve('2027-02-10', h)).concat(C.mueve('2027-02-08', 6.5), C.mueve('2027-02-13', 12.25), C.mueve('2026-12-10', 13.5)),
+    ['cruza', 'cruza', 'palmea', 'campana', 'campana', 'palmea', 'hamaca', 'torogoz', 'teleferico', ''], 'pueblo 49: el panadero cruza (el lunes descansa), la tortillera palmea (el sábado, tamales), la campana a las 12 y la hamaca (en Navidad no)');
+  // Los actores partidos: lo que se queda y lo que va a la capa suman la figura entera (sin capa se dibuja la de siempre).
+  const tr = (t) => V.svgVecinos([{ t, x: 100, y: 100, k: 2 }]).match(/[ML]/g).length;
+  eq([tr('hamacaPostes') + tr('hamacaSola') - tr('hamaca'), tr('tortilleraCuerpo') + tr('tortilleraManos') - tr('tortillera'), tr('oseznoLuzSin') + tr('estrellita') - tr('oseznoLuz')].map((x) => x <= 4), [true, true, true], 'pueblo 49: los actores partidos (hamaca, tortillera, estrellita) suman la figura entera');
+  // 204: de un turno a otro, si alguien camina, cada paso de su camino está libre (ni encima de nadie ni de lo ocupado) y sin NaN.
+  let caminan = 0;
+  const choques = [];
+  for (const lug of lugs) for (const f of ['2027-02-08', '2027-02-10', '2027-02-12', '2027-02-13', '2027-02-14']) {
+    let antes = null;
+    for (let h = 4.5; h < 22; h += 0.25) {
+      const tu = C.turno(f, h), ahora = V.reparto(lug, tu, { dia: f, escuela: C.escuela(f), hora: h });
+      if (antes && antes.t !== tu) {
+        const r = V.recorrido(antes.l, ahora, lug);
+        if (r) {
+          caminan++;
+          const otros = [...(lug.ocupado ?? []), ...ahora.filter((x) => x !== r.v).map(V.cajaVecino)];
+          for (const [x, y] of r.pasos) {
+            const b = V.cajaVecino({ ...r.anda, x, y, f: r.f });
+            if (!Number.isFinite(x + y) || otros.some((q) => b.x0 < q.x1 - 0.35 * r.v.k && b.x1 > q.x0 + 0.35 * r.v.k && b.y0 < q.y1 - 0.35 * r.v.k && b.y1 > q.y0 + 0.35 * r.v.k)) choques.push(`${f} ${h} ${r.v.quien}`);
+          }
+        }
+      }
+      antes = { t: tu, l: ahora };
+    }
+  }
+  ok(caminan >= 3 && !choques.length, `pueblo 49 (204): al cambiar de turno camina alguien (${caminan} veces en diez días) y cada paso está libre (${choques.join(', ')})`);
+  eq(V.recorrido([], [], lugs[0]), null, 'pueblo 49 (204): sin nada dibujado antes, nadie camina (aparece directo)');
+  // 275: el mapa del día en pantalla ancha suma el segundo principal y nunca pasa de dos; en el teléfono, uno.
+  const mapa = (f, a) => C.mapaDelDia(f, a).map((x) => x.principales);
+  eq([Math.max(...mapa('2027-02-10', false)), Math.max(...mapa('2027-02-10', true))], [1, 2], 'pueblo 49 (275): un principal en el teléfono, hasta dos en pantallas anchas');
+
+  // ---- Campamento 47 · Los osos de la cumbre: sus poses por la hora, los gestos a saltos, el oso de nieve y el último tramo.
+  eq([C.poseCumbre('2026-11-25', 23), C.poseCumbre('2026-11-25', 3), C.poseCumbre('2026-11-25', 17.75), C.poseCumbre('2027-04-10', 12), C.poseCumbre('2027-05-10', 12), C.poseCumbre('2026-11-25', 12)],
+    ['duermen', 'duermen', 'espaldas', 'sol', '', ''], 'cumbre 47: duermen de 22 a 5 (24), de espaldas de 17:30 a 18:15 (184), sombrero al mediodía de marzo y abril (189)');
+  eq([C.poseCumbre('2026-12-24', 23.9), C.poseCumbre('2026-12-31', 23.7), C.poseCumbre('2027-01-01', 0.3)], ['', '', ''], 'cumbre 47: las noches de fiesta (el 24 y el 31, hasta pasadas las doce) esperan despiertos');
+  const gestos = [];
+  for (let q = 0; q < 1440; q++) { const g = C.gestoDeLosOsos('2026-11-25', q / 60); if (g) gestos.push([q, g]); }
+  ok(gestos.length === 57 && gestos.every(([q]) => q % 10 === 5 && q >= 480 && q < 1050) && new Set(gestos.map((x) => x[1])).size === 3, `cumbre 47: de 8:05 a 17:25, un gesto cada diez minutos (mira, acomoda, estira), nunca de noche (${gestos.length})`);
+  let malCumbre = 0;
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) for (const tr of C.mapaDelDia(new Date(t).toISOString().slice(0, 10))) if (tr.cumbre && !C.cumbre.some((c) => c.id === tr.cumbre && c.pesa.anim === 0 && c.pesa.capas === 0)) malCumbre++;
+  eq(malCumbre, 0, 'cumbre 47: el mapa del día declara la pose de la cumbre, y ninguna pone capas ni animaciones');
+  const O47 = await import('../app/static/arte-osos.js');
+  eq(['2026-11-30', '2026-12-01', '2026-12-08', '2026-12-16', '2026-12-24', '2027-01-06', '2027-01-07'].map(O47.etapaOsoNieve), [0, 1, 2, 3, 4, 4, 0], 'cumbre 47 (185): el oso de nieve crece en diciembre y el 7 de enero ya no está');
+  const pl = ['nieve', 'paraguas', 'bandera'].map((t) => O47.plantado(t, 100, 200, 1.2, 4));
+  ok(pl.every((p) => p.pts.length && p.pts.every(([x, y]) => Number.isFinite(x + y)) && !/NaN|style=/.test(p.svg)) && pl.map((p) => (p.svg.match(/<path/g) || []).length).join() === '3,2,2', 'cumbre 47: lo plantado son pocos trazos, sin NaN ni estilos en línea');
+  const L47 = await import('../app/static/lib.js');
+  eq([5e4, 2e5, 7.6e5, 9e5, 4.6e6, 9.2e6, 1.2e7].map(L47.ultimoTramo), [false, false, true, true, false, true, false], 'cumbre 47 (188): el último tramo es cuando ya no queda etapa antes de la cima');
 }
 
 console.log(`OK ${n} comprobaciones`);

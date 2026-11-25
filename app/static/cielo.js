@@ -112,11 +112,19 @@
     if (m === 11 && d <= 14) return 1 - d / 15;
     return m >= 5 && m <= 10 ? 1 : 0;
   }
-  /** El mar de niebla del amanecer (idea 55): de 0 a 1, solo de 5:00 a 7:30. Se forma de 5:00 a 5:30, llena el valle hasta las 7 y se levanta antes de las 7:30. Sin niebla de la tarde. */
-  function marNiebla(h) {
-    if (h < 5 || h >= 7.5) return 0;
-    if (h < 5.5) return (h - 5) / 0.5;
-    return h <= 7 ? 1 : (7.5 - h) / 0.5;
+  /**
+   * La neblina (idea 55; campamento 53B: otro ritmo), de 0 a 1. De mañana: se forma despacio de 5:00 a 6:30, llena el valle hasta las
+   * 7:00 y se levanta poco a poco hasta las 9:00. Al caer la tarde vuelve fina (hasta `NIEBLA_TARDE`), si se da el día `f`: en la
+   * lluviosa, de 16:30 a 18:30; en la seca, de 17:30 a 19:00 (se va antes de la noche: a las 19:00 se encienden las luces del valle,
+   * que se pintan debajo de ella). Sin día, solo la de la mañana.
+   */
+  const NIEBLA_TARDE = 0.4;
+  function marNiebla(h, f) {
+    // Espesa pronto y aguanta: lo que falta para estar llena, al cuadrado (a medias es un velo turbio; así dura poco).
+    if (h >= 5 && h < 9) return 1 - (h < 6.5 ? (6.5 - h) / 1.5 : h <= 7 ? 0 : (h - 7) / 2) ** 2;
+    if (!f) return 0;
+    const [a, b] = verdor(f) >= 0.5 ? [16.5, 18.5] : [17.5, 19];
+    return h > a && h < b ? NIEBLA_TARDE * Math.min(1, (h - a) / 0.75, (b - h) / 0.75) : 0;
   }
   /** Árboles de aquí en flor (idea 56): el maquilishuat en febrero y el árbol de fuego en abril; si no, ''. */
   const flor = (f) => ({ '02': 'maquilishuat', '04': 'fuego' })[f.slice(5, 7)] ?? '';
@@ -150,9 +158,16 @@
   }
   /** (Campamento 51) Lo que se mueve un día cualquiera, franja por franja (la rutina): el reparto de siempre, sin los focos. */
   function mueveRutina(f, h) {
+    // (Campamento 49) Cada franja nueva nombra a un actor solo si está en la calle ese rato (`hayActor`): el lunes no hay panadero, el
+    // sábado la tortillera hace tamales, en Navidad no hay hamaca y los días de fiesta mandan sus turnos.
+    if (h >= 6 && h < 7 && hayActor(f, h, 'cruza')) return 'cruza'; // (116) el panadero cruza en su bicicleta (el torogoz, de 5 a 6)
     if (h >= 5 && h < 7) return 'torogoz';
     if (h >= 7 && h < 8) return 'barre'; // (37) la que barre su acera (las gallinas, desde las 8:00)
     if (h >= 8 && h < 10) return 'gallinas';
+    // (25) A las 12:00 la campana de la torre se mece cinco minutos (el grano del director: `aplicar` mira cada cinco); la tortillera espera.
+    if (h >= 12 && h < 12 + 5 / 60) return 'campana';
+    if (h >= 11.5 && h < 12.5 && hayActor(f, h, 'palmea')) return 'palmea'; // (200) la tortillera palmea
+    if (h >= 13 && h < 14 && hayActor(f, h, 'hamaca')) return 'hamaca'; // (199) la hamaca de la siesta se mece
     if (h >= 10 && h < 13) return 'teleferico';
     if (h >= 14 && h < 15) return 'perro';
     if (h >= 15 && h < 16.5) return 'pelota'; // (37) la pelota de los oseznos (el perro cruza antes)
@@ -160,6 +175,28 @@
     if (epoca(f) === 'lluviosa' && (h >= 22 || h < 5)) return 'relampagos';
     if (h >= 18 || h < 5) return 'luciernagas';
     return '';
+  }
+  /**
+   * (Campamento 49) ¿Está en la calle el actor de esa franja? Lo mismo que pide arte-vecinos.js (`reparto`) para marcarlo: el panadero en
+   * el amanecer (salvo el lunes), la tortillera con su comal a mediodía (el sábado, tamales: no palmea) y la hamaca de la siesta (en
+   * Navidad duerme en la banca). Una prueba recorre el año y comprueba que el reparto lo trae.
+   */
+  function hayActor(f, h, a) {
+    const t = turno(f, h);
+    if (a === 'cruza') return t === 'amanece' && semana(f) !== 1;
+    if (a === 'palmea') return (t === 'tortillas' || t === 'salida') && semana(f) !== 6;
+    if (a === 'hamaca') return t === 'siesta' && !navidad(f);
+    return false;
+  }
+  /** (Campamento 49, idea 275) Los actores del pueblo: con uno de ellos de principal, en pantallas anchas cabe un segundo en otra zona. */
+  const DEL_PUEBLO = new Set(['cruza', 'barre', 'gallinas', 'campana', 'palmea', 'hamaca', 'perro', 'pelota']);
+  /**
+   * (Campamento 49, idea 275, aprobada por el dueño el 25 nov 2026) El segundo principal, solo desde 1100 px (lo enseña el CSS bajo su
+   * media query; en el teléfono no hay cabina): mientras el principal es del pueblo, de día (7:00–16:30), la cabina del teleférico cruza
+   * el valle, lejos de la plaza. '' si no toca. Nunca dos en el pueblo, nunca dos en el cielo.
+   */
+  function mueve2(f, h) {
+    return h >= 7 && h < 16.5 && DEL_PUEBLO.has(mueve(f, h)) ? 'teleferico' : '';
   }
   /**
    * (Campamento 41, idea 210) La franja de lo que se mueve en las fiestas de Navidad: la noche del 24 y del 31 es de la fiesta (las
@@ -344,15 +381,44 @@
    * 12 s o más, recorrido de 20 px o menos y sin cruzar la escena; solo con «todos» y solo a su hora (si el CSS no lo enseña, no corre):
    *   humo     5:00–20:00: el fogón de una chimenea (dos en pantallas anchas) todo el día, no solo a la hora del café y de la cena
    *   cayuco   5:00–16:30: el cayuco a la deriva en el lago también de día (al amanecer, además, el pescador rema)
-   * De noche, ninguno. `pesa`: las capas que pone cada uno (las del escritorio entre paréntesis) y sus animaciones por capa.
+   *   estrellitas  (49) la noche del 24 y del 31, 18:00–1:00: las de los oseznos titilan
+   * De noche, ninguno (salvo las estrellitas de esas dos noches). `pesa`: las capas que pone cada uno (las del escritorio entre paréntesis) y sus animaciones por capa.
    */
   const AMBIENTALES = [
     { id: 'humo', cuando: (_f, h) => h >= 5 && h < 20, pesa: { capas: 1, capasAncho: 2, anim: 3 } },
     { id: 'cayuco', cuando: (_f, h) => h >= 5 && h < 16.5, pesa: { capas: 1, capasAncho: 1, anim: 2 } },
+    // (Campamento 49, idea 201) Las estrellitas de los oseznos titilan en la cena de Nochebuena y del 31 y en los abrazos de las doce
+    // (18:00–1:00): una capa, una animación de opacidad, ciclo de 12 s. Las dos noches más cargadas del año, sin un nodo en el dibujo grande.
+    { id: 'estrellitas', cuando: (f, h) => (h >= 18 || h < 1) && ['nb-cena', 'f31-cena', 'nb-doce', 'f31-doce'].includes(turno(f, h)), pesa: { capas: 1, capasAncho: 1, anim: 1 } },
   ];
   const MAX_AMBIENTALES = 3;
   /** (51) Los ambientales de ese momento (ids), como mucho tres capas. */
   const ambiente = (f, h) => AMBIENTALES.filter((a) => a.cuando(f, h)).map((a) => a.id);
+  /**
+   * (Campamento 47) Los osos de la cumbre según la hora: una pose quieta que enseña el CSS (`html[data-cumbre]`), a saltos y sin nada
+   * que se mueva (0 capas, 0 animaciones; la declara el director y la lee el banco):
+   *   duermen   22:00–5:00 (24): ojos cerrados y sus zetas; no en las noches de fiesta (el 24 y el 31 esperan las doce despiertos)
+   *   espaldas  17:30–18:15 (184): de espaldas, mirando bajar el sol
+   *   sol       marzo y abril, 10:00–15:00 (189): el grande con su sombrero de palma
+   * `ninguno` (''): la de siempre. La fiesta del hito (59) los despierta (aplicar).
+   */
+  const CUMBRE = [
+    { id: 'duermen', cuando: (f, h) => (h >= 22 || h < 5) && !/^(nb-(cena|misa|doce)|f31-(cena|espera|doce)|n25-polvora|e1-polvora)$/.test(turno(f, h)), pesa: { capas: 0, anim: 0 } },
+    { id: 'espaldas', cuando: (_f, h) => h >= 17.5 && h < 18.25, pesa: { capas: 0, anim: 0 } },
+    { id: 'sol', cuando: (f, h) => ['03', '04'].includes(f.slice(5, 7)) && h >= 10 && h < 15, pesa: { capas: 0, anim: 0 } },
+  ];
+  const poseCumbre = (f, h) => CUMBRE.find((c) => c.cuando(f, h))?.id ?? '';
+  /**
+   * (Campamento 47) Los gestos a saltos de los de la cumbre (como estirarse a las 7, campamento 33): de 8:05 a 17:25, cada diez minutos (a las
+   * y cinco: las horas en punto quedan quietas), uno de los tres seis segundos (montana.js pone la clase; el CSS lo enseña solo con «todos»): `mira` (el que da al pueblo mira hacia
+   * abajo), `acomoda` (los otros dos se recuestan en el grande) o `estira` (el grande se estira). Ninguna animación: un cambio al empezar
+   * y otro al acabar. null si a esa hora no toca (o si tienen otra pose).
+   */
+  const GESTOS_CUMBRE = ['mira', 'acomoda', 'estira'];
+  function gestoDeLosOsos(f, h) {
+    if (h < 8 || h >= 17.5 || Math.floor(h * 60 + 1e-9) % 10 !== 5 || !['', 'sol'].includes(poseCumbre(f, h))) return null;
+    return GESTOS_CUMBRE[Math.floor(h * 6 + 1e-9) % 3];
+  }
   /** (51, idea 223) El foco del momento: el primero de la tabla que está; si no, la rutina del día. */
   function foco(f, h) {
     return FOCOS.find((fo) => fo.cuando(f, h)) ?? { id: 'rutina', rareza: 'dia', rutina: rutinaDelDia(f) };
@@ -360,11 +426,12 @@
   /**
    * (Campamento 51, idea 223) El director del valle: con la fecha y la hora, qué se ve. Pura y sin guardar nada (lo mismo en todos los
    * aparatos). { foco, rareza, rutina, turno, mueve, ambiente }: el foco del momento (o 'rutina'), su peldaño, la rutina del día, el
-   * turno del pueblo (`turno`), lo que se mueve (`mueve`: uno, el del foco si trae a alguien) y los ambientales (hasta tres).
+   * turno del pueblo (`turno`), lo que se mueve (`mueve`: uno, el del foco si trae a alguien), el segundo principal de las pantallas
+   * anchas (`mueve2`, campamento 49) y los ambientales (hasta tres).
    */
   function director(f, h) {
     const fo = foco(f, h);
-    return { foco: fo.id, rareza: fo.rareza, rutina: rutinaDelDia(f), turno: turno(f, h), mueve: mueve(f, h), ambiente: ambiente(f, h) };
+    return { foco: fo.id, rareza: fo.rareza, rutina: rutinaDelDia(f), turno: turno(f, h), mueve: mueve(f, h), mueve2: mueve2(f, h), ambiente: ambiente(f, h), cumbre: poseCumbre(f, h) };
   }
   /**
    * (Campamento 51, idea 228) La frase del foco para la línea de hoy: solo si ese día tiene algo raro (de mes o más raro), la del
@@ -380,8 +447,16 @@
    * banco por capa; aquí solo lo de las capas propias, que es lo que se reparte con los ambientales.
    */
   const PESO_MUEVE = {
-    barre: { capas: 1, anim: 1 }, pelota: { capas: 1, anim: 1 }, brinda: { capas: 1, anim: 1 }, chispea: { capas: 1, anim: 1 },
+    barre: { capas: 2, anim: 1 }, pelota: { capas: 2, anim: 1 }, brinda: { capas: 1, anim: 1 }, chispea: { capas: 1, anim: 1 },
     gallinas: { capas: 3, anim: 1 }, perro: { capas: 2, anim: 1 }, teleferico: { capas: 0, capasAncho: 1, anim: 1 },
+    // (Campamento 49) El panadero que cruza, las manos de la tortillera, la campana y la hamaca, cada uno en su capa; la que barre y la
+    // pelota llevan además la abuela de la ronda (118: otra capa, en la misma fase, nunca a la vez). El que camina al cambiar de turno
+    // (204) no es del calendario: unos segundos, unas diez veces al día, es el actor principal (`data-camina`; lo demás del pueblo espera).
+    cruza: { capas: 1, anim: 1 }, palmea: { capas: 1, anim: 1 }, campana: { capas: 1, anim: 1 }, hamaca: { capas: 1, anim: 1 }, camina: { capas: 1, anim: 1 },
+    // (Campamento 59) La fiesta del hito: no es del calendario (no sale en el mapa del día), sale al cruzar una etapa por primera vez o el
+    // día del halving, y mientras dura (30 s como mucho) es el actor principal: la campana, los farolitos y cada cohete, cada uno en su
+    // capa y con una animación; en el clímax, los farolitos y hasta cinco cohetes (tres en el teléfono). Lo ambiental espera.
+    'fiesta-hito': { capas: 7, capasAncho: 7, anim: 1 },
   };
   /**
    * (Campamento 51, idea 225) El mapa del día: cada tramo en que cambia algo (el turno, el foco, lo que se mueve o los ambientales), de
@@ -391,11 +466,13 @@
   function mapaDelDia(f, ancho = false) {
     const t = [];
     for (let q = 0; q < 288; q++) {
-      const h = q / 12, dr = director(f, h), clave = `${dr.turno}|${dr.foco}|${dr.mueve}|${dr.ambiente.join(' ')}`;
+      const h = q / 12, dr = director(f, h), clave = `${dr.turno}|${dr.foco}|${dr.mueve}|${dr.mueve2}|${dr.ambiente.join(' ')}|${dr.cumbre}`;
       if (t.length && t.at(-1).clave === clave) continue;
       const pm = PESO_MUEVE[dr.mueve], amb = dr.ambiente.map((id) => AMBIENTALES.find((a) => a.id === id).pesa);
+      // (49, 275) En pantallas anchas, el segundo principal suma su capa.
+      const p2 = ancho && dr.mueve2 ? PESO_MUEVE[dr.mueve2] : null, capas2 = p2 ? (p2.capasAncho ?? p2.capas) : 0;
       const capasAmb = amb.reduce((s, p) => s + (ancho ? p.capasAncho : p.capas), 0), capasMueve = pm ? (ancho ? (pm.capasAncho ?? pm.capas) : pm.capas) : 0;
-      t.push({ clave, desde: h, ...dr, capasAmb, capas: capasAmb + capasMueve, anim: Math.max(0, ...amb.map((p) => p.anim), capasMueve ? pm.anim : 0) });
+      t.push({ clave, desde: h, ...dr, principales: (dr.mueve ? 1 : 0) + (p2 ? 1 : 0), capasAmb, capas: capasAmb + capasMueve + capas2, anim: Math.max(0, ...amb.map((p) => p.anim), capasMueve ? pm.anim : 0, p2 ? p2.anim : 0) });
     }
     return t.map((x, i) => ({ ...x, hasta: t[i + 1]?.desde ?? 24 }));
   }
@@ -478,6 +555,10 @@
     aplicar();
   }
 
+  // (Campamento 59) Con la fiesta del hito en marcha (fiesta.js), `data-mueve` es `fiesta-hito` y no hay ambientales: la fiesta es el
+  // actor principal unos segundos. Vive aquí porque `aplicar` reescribe los dos atributos cada cinco minutos y al volver a la página.
+  let fiestaHitoViva = false;
+  function fiestaHito(on) { fiestaHitoViva = Boolean(on); aplicar(); }
   let diaAplicado = null; // (Campamento 30) para avisar del cambio de día
   let turnoAplicado = null; // (Campamento 35) para avisar del cambio de turno del pueblo
   let cohetesAplicados = null; // (Campamento 39) para poner o quitar los cohetes en su hora
@@ -507,15 +588,18 @@
     // El valle vivo, parte 2 (campamento 22B): el verdor del valle (variable de 0 a 1), el mar de niebla del amanecer (su espesor, de 0
     // a 1), los árboles en flor y lo que se mueve (uno a la vez); la escena lo dibuja todo y el CSS enseña lo que toca.
     raiz.style.setProperty('--v-verde', verdor(d).toFixed(3));
-    const mar = marNiebla(h);
+    const mar = marNiebla(h, d);
     raiz.style.setProperty('--v-mar', mar.toFixed(3));
     raiz.toggleAttribute('data-mar-niebla', mar > 0);
-    const fl = flor(d), mv = mueve(d, h);
+    const fl = flor(d), mv = fiestaHitoViva ? 'fiesta-hito' : mueve(d, h);
     if (fl) raiz.dataset.flor = fl; else delete raiz.dataset.flor;
     if (mv) raiz.dataset.mueve = mv; else delete raiz.dataset.mueve;
+    // (Campamento 49, idea 275) El segundo principal de las pantallas anchas (el CSS lo enseña solo desde 1100 px); con la fiesta, nada.
+    const mv2 = fiestaHitoViva ? '' : mueve2(d, h);
+    if (mv2) raiz.dataset.mueve2 = mv2; else delete raiz.dataset.mueve2;
     // (Campamento 51) El director: el foco del momento (`data-foco`, lo lee el CSS y la descripción) y los ambientales que van junto al
     // actor (`data-ambiente`, hasta tres, separados por espacios: el CSS enseña cada capa con `~=`).
-    const fo = foco(d, h), amb = ambiente(d, h);
+    const fo = foco(d, h), amb = fiestaHitoViva ? [] : ambiente(d, h);
     raiz.dataset.foco = fo.id === 'rutina' ? `rutina-${fo.rutina}` : fo.id;
     if (amb.length) raiz.dataset.ambiente = amb.join(' '); else delete raiz.dataset.ambiente;
     // (Campamento 35) El turno del pueblo: si cambió con la página abierta, montana.js rehace solo sus vecinos (`libro:turno`).
@@ -536,6 +620,9 @@
     // época lluviosa sacan su paraguas.
     raiz.toggleAttribute('data-sueno', h >= 22 || h < 5);
     raiz.toggleAttribute('data-tarde', h >= 13 && h < 18);
+    // (Campamento 47) La pose de los osos de la cumbre (duermen, de espaldas, con sombrero); la fiesta del hito los despierta.
+    const cu = fiestaHitoViva ? '' : poseCumbre(d, h);
+    if (cu) raiz.dataset.cumbre = cu; else delete raiz.dataset.cumbre;
     raiz.dataset.tinta = ti;
     raiz.style.setProperty('--cielo-txt', t.txt);
     raiz.style.setProperty('--cielo-txt2', t.txt2);
@@ -552,6 +639,6 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
-    director, foco, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
+    director, foco, poseCumbre, cumbre: CUMBRE, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

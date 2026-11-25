@@ -27,6 +27,8 @@ services:
       # 1 = modo solo lectura de emergencia: todo se ve, nada se puede escribir (ver README, «Modo solo lectura»).
       SOLO_LECTURA: ${SOLO_LECTURA:-0}
       LIMITE_ESCRITURAS: ${LIMITE_ESCRITURAS:-120}
+      # El día del halving (AAAA-MM-DD), para la fiesta del pueblo (ver README, «La fiesta del hito»). Vacío: sin fiesta del halving.
+      HALVING_FECHA: ${HALVING_FECHA:-}
     ports:
       - "127.0.0.1:18082:8000"
     volumes:

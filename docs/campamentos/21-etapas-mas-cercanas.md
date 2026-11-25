@@ -2,6 +2,8 @@
 
 *(Campamento 39b: la tarjeta dura 2.6 s la ligera, 3.5 la de etapa y 4.5 la de hito, y un toque la cierra; lo que celebra la montaña, al tempo de la celebración.)*
 
+*(Campamento 59: la celebración de una etapa se acompaña de **la fiesta del hito** en el pueblo, una sola vez por etapa (marca en el servidor) y para toda la familia; **la intermedia deja de ser solo «ligera a propósito»**: gana un gesto sobrio de 6 s (un toque de campana, tres osos con los brazos arriba y un farolito), que solo ve quien anota. «Probar la celebración» tiene siete botones (se suma «Halving»). Ver [59](59-la-fiesta-del-hito.md).)*
+
 Movido tal cual de `CLAUDE.md` el 18 nov 2026 (solo se añadieron enlaces y alguna nota con fecha). Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md).
 
 ## Campamento 21 · Etapas más cercanas

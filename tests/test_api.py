@@ -2830,7 +2830,7 @@ check("medid" not in _pub.lower() and "/medir" not in _pub and anon.get("/api/es
 check(push.CATEGORIAS["resguardo"]["rol"] == "admin" and push.CATEGORIAS["resguardo"]["defecto"] is False and "resguardo" in push.categorias_de("admin")
       and "resguardo" not in push.categorias_de("lector"), "«Revisión tranquila del respaldo» es solo del admin y nace apagada")
 check("no guarda" in push.CATEGORIAS["resguardo"]["ayuda"] and "180" in push.CATEGORIAS["resguardo"]["ayuda"], "su ayuda dice cada cuánto y que la app no guarda nada de la wallet")
-check(server.version_esquema(server.connect()) == server.VERSION_ESQUEMA == 18, "sin migración nueva: todo vive en `meta`")
+check(server.version_esquema(server.connect()) == server.VERSION_ESQUEMA >= 18, "sin migración nueva: todo vive en `meta` (la 19 es del campamento 59)")
 _T = server.TEXTO_RESGUARDO
 check(not re.search(r"\d", _T) and "sats" not in _T.lower() and "frase" not in _T.lower() and "«Revisado»" in _T and "no guarda" in _T and _T.startswith("¿"),
       f"el aviso pregunta con calma, sin cifras ni datos de la wallet, y dice dónde marcar «Revisado» ({_T})")
@@ -2996,5 +2996,91 @@ check("resguardo" not in _pub.lower() and "Revisado" not in _pub and anon.get("/
 _idx = adm.get("/").get_data(as_text=True)
 check('id="sis-revisado"' in _idx and _idx.index('id="sis-revisado"') < _idx.index('id="dc-previa-t"') and "no pide ni guarda" in _idx, "«Revisado» va en «Estado del sistema», encima de «Probar la celebración», y dice que la app no guarda nada")
 push.ahora = _de_dia
+
+# --- Campamento 59 · La fiesta del hito: la marca en el servidor (migración 19), una vez por etapa, y la fiesta de hoy para toda la familia.
+_c59 = server.connect()
+_cols59 = {r[1] for r in _c59.execute("PRAGMA table_info(hitos_celebrados)")}
+check(_cols59 == {"meta", "dia", "compra_id"}, f"la migración 19 crea hitos_celebrados (meta, dia, compra_id) {sorted(_cols59)}")
+check(not _cols59 & {"usuario", "usuario_id", "quien", "ip", "visto", "visto_ts", "abierto"}, "la marca no guarda quién la vio, quién abrió ni cuándo")
+server._m_hitos_celebrados(_c59); server._m_hitos_celebrados(_c59); _c59.commit()
+check({r[1] for r in _c59.execute("PRAGMA table_info(hitos_celebrados)")} == _cols59, "la migración 19 es idempotente (dos veces, la misma tabla)")
+check(server.MIGRACIONES_ESQUEMA[-1][0] == 19 and server.MIGRACIONES_ESQUEMA[-1][2] is server._m_hitos_celebrados, "la 19 va al final")
+_c59.close()
+# Una base vieja (en la 18, sin la tabla ni su fila de `esquema`): al arrancar se aplica solo la 19
+_ruta59 = os.path.join(tmp, "sin19.db")
+_src = server.connect(); _cm = sqlite3.connect(_ruta59); _src.backup(_cm); _src.close()
+_cm.execute("DROP TABLE hitos_celebrados"); _cm.execute("DELETE FROM esquema WHERE version = 19"); _cm.commit(); _cm.close()
+_ant_db = server.DB_PATH
+try:
+    server.DB_PATH = _ruta59
+    _cm = server.connect()
+    check(server.migrar(_cm) == [19] and server.version_esquema(_cm) == 19 and _cm.execute("SELECT COUNT(*) FROM hitos_celebrados").fetchone()[0] == 0,
+          "una base en la versión 18 aplica solo la 19 (y la tabla nace vacía: lo de antes lo cubre el saldo más alto)")
+    check(server.migrar(_cm) == [], "y otra vez no aplica nada")
+    _cm.close()
+finally:
+    server.DB_PATH = _ant_db
+# El saldo más alto, en el orden de las fechas (las compras del día antes que las ventas)
+check(server.pico_saldo([]) == 0 and server.pico_saldo([("2024-01-01", 1, "compra", 500), ("2024-01-02", 2, "venta", 200), ("2024-01-03", 3, "compra", 100)]) == 500
+      and server.pico_saldo([("2024-01-02", 2, "venta", 200), ("2024-01-02", 1, "compra", 500)]) == 500, "pico_saldo: el saldo más alto que tuvo el libro")
+sql("DELETE FROM hitos_celebrados")
+_hoy59 = ritmo.hoy_sv().isoformat()
+_cx59 = server.connect(); _movs59 = server.movimientos(_cx59); _cx59.close()
+_s59 = sum(-x if tp == "venta" else x for _f, _i, tp, x in _movs59)
+_m59 = ritmo.etapa_siguiente(max(_s59, server.pico_saldo(_movs59)))
+_sats59 = _m59 - _s59 + 10
+_r = adm.post("/api/compras", json={"fecha": _hoy59, "monto": 25, "sats": _sats59})
+_f59 = _r.get_json().get("fiesta")
+check(_r.status_code == 201 and _f59 == {"meta": ritmo.etapa_celebrada(_s59, _s59 + _sats59), "rango": ritmo.rango_etapa(_f59["meta"]) if _f59 else None},
+      f"una compra que cruza una etapa por primera vez trae su fiesta (la destacada, con su rango) {_f59}")
+_id59 = _r.get_json()["id"]
+check([tuple(x) for x in sql("SELECT meta, dia, compra_id FROM hitos_celebrados WHERE meta = ?", (_f59["meta"],))] == [(_f59["meta"], _hoy59, _id59)], "y queda marcada con el día de hoy (El Salvador) y su compra")
+_fl = luz.get("/api/fiesta").get_json()
+check(_fl == {"dia": _hoy59, "hito": {"meta": _f59["meta"], "rango": _f59["rango"], "id": _id59}, "halving": False}, f"la lectora lee la fiesta de hoy (sin escribir nada) {_fl}")
+check(anon.get("/api/fiesta").status_code == 401 and anon.get("/api/estado").get_json() == {"abierto": True}, "sin sesión no se lee; la entrada sigue sin decir nada")
+check(luz.post("/api/compras", json={"fecha": _hoy59, "monto": 25, "sats": 1000}).status_code == 403, "una lectora no anota (ni marca hitos)")
+_n_audit = len(audit())
+luz.get("/api/fiesta"); adm.get("/api/fiesta")
+check(len(audit()) == _n_audit and sql("SELECT COUNT(*) FROM hitos_celebrados")[0][0] == len(ritmo.etapas_cruzadas(_s59, _s59 + _sats59)), "leer la fiesta no audita ni escribe nada")
+# Vender y volver a cruzar: no se repite
+_rv = adm.post("/api/compras", json={"fecha": _hoy59, "monto": 1, "sats": 20, "tipo": "venta", "nota": "Gasto"})
+_rc = adm.post("/api/compras", json={"fecha": _hoy59, "monto": 1, "sats": 20})
+check(_rv.status_code == 201 and _rc.status_code == 201 and "fiesta" not in _rc.get_json() and "fiesta" not in _rv.get_json(), "vender y volver a cruzar la misma etapa no trae otra fiesta")
+# Editar nunca celebra
+_re = adm.put(f"/api/compras/{_rc.get_json()['id']}", json={"fecha": _hoy59, "monto": 1, "sats": 20 + (ritmo.etapa_siguiente(_s59 + _sats59) - _s59 - _sats59) + 5})
+check(_re.status_code == 200 and "fiesta" not in _re.get_json() and sql("SELECT COUNT(*) FROM hitos_celebrados WHERE compra_id = ?", (_rc.get_json()["id"],))[0][0] == 0, "editar una compra no marca ni celebra")
+adm.put(f"/api/compras/{_rc.get_json()['id']}", json={"fecha": _hoy59, "monto": 1, "sats": 20})
+# Una etapa ya cruzada antes de existir la marca (por debajo del saldo más alto): sin fiesta aunque la tabla esté vacía
+sql("DELETE FROM hitos_celebrados")
+_rb = adm.post("/api/compras", json={"fecha": _hoy59, "monto": 1, "sats": 30})
+check("fiesta" not in _rb.get_json(), "lo que el libro ya había alcanzado (el saldo más alto) no se celebra otra vez, aunque falte su marca")
+sql("INSERT INTO hitos_celebrados (meta, dia, compra_id) VALUES (?, ?, ?)", (_f59["meta"], _hoy59, _id59))
+# Anular (p. ej. «Deshacer») suelta la marca: volver a cruzar la celebra
+for _x in (_rb, _rc, _rv):
+    check(adm.delete(f"/api/compras/{_x.get_json()['id']}").status_code == 204, "se anulan los de la prueba")
+check(adm.delete(f"/api/compras/{_id59}").status_code == 204 and sql("SELECT COUNT(*) FROM hitos_celebrados WHERE compra_id = ?", (_id59,))[0][0] == 0,
+      "anular la compra quita su marca, en la misma operación")
+check(luz.get("/api/fiesta").get_json()["hito"] is None, "y la fiesta de hoy desaparece (no queda el farol de una compra anulada)")
+_r2 = adm.post("/api/compras", json={"fecha": _hoy59, "monto": 25, "sats": _sats59})
+check(_r2.get_json().get("fiesta") == _f59, "volver a anotarla la celebra")
+check(adm.delete(f"/api/compras/{_r2.get_json()['id']}").status_code == 204, "(se anula también)")
+# Una venta nunca celebra; varias etapas de hoy: la fiesta es la destacada
+check("fiesta" not in adm.post("/api/compras", json={"fecha": _hoy59, "monto": 1, "sats": 5, "tipo": "venta", "nota": "Gasto"}).get_json(), "una venta no trae fiesta")
+sql("DELETE FROM hitos_celebrados")
+_cx59 = server.connect(); _cid_cualq = _cx59.execute(f"SELECT id FROM compras WHERE {server.VIGENTES} ORDER BY id LIMIT 1").fetchone()[0]; _cx59.close()
+sql("INSERT INTO hitos_celebrados (meta, dia, compra_id) VALUES (1250000, ?, ?), (2500000, ?, ?), (1500000, ?, ?)", (_hoy59, _cid_cualq) * 3)
+sql("INSERT INTO hitos_celebrados (meta, dia, compra_id) VALUES (10000000, '2020-01-01', ?)", (_cid_cualq,))
+check(luz.get("/api/fiesta").get_json()["hito"] == {"meta": 2500000, "rango": "principal", "id": _cid_cualq}, "con varias de hoy, la destacada; la de otro día no cuenta")
+sql("DELETE FROM hitos_celebrados")
+# El halving: solo si el dueño escribe su día (HALVING_FECHA); una fecha mal escrita no rompe nada
+check(server._fecha_conf("") is None and server._fecha_conf("2028-13-40") is None and server._fecha_conf("abril") is None and server._fecha_conf(" 2028-04-17 ") == "2028-04-17",
+      "HALVING_FECHA: solo una fecha AAAA-MM-DD válida")
+_ant_hv = server.HALVING_FECHA
+try:
+    check(server.HALVING_FECHA is None and luz.get("/api/fiesta").get_json()["halving"] is False, "sin la variable no hay fiesta del halving (la app no inventa la fecha)")
+    server.HALVING_FECHA = _hoy59
+    check(luz.get("/api/fiesta").get_json() == {"dia": _hoy59, "hito": None, "halving": True}, "con HALVING_FECHA = hoy, la familia ve la fiesta del pueblo")
+finally:
+    server.HALVING_FECHA = _ant_hv
 
 print("OK", ok, "comprobaciones")

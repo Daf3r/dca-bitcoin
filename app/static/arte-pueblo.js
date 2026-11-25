@@ -78,14 +78,15 @@ export function cajaIglesia(x, s, u, yg, sol = 1) {
  * Dónde va cada pieza del pueblo. `limite(xa, xb)`: la y más alta (en pantalla, la menor) que pueden alcanzar los tejados entre `xa` y
  * `xb` sin acercarse al sendero ni a la salida. Se recorre de izquierda a derecha: primero la iglesia con su plaza, luego las casas (una
  * fila delante y, donde cabe, otra detrás, más chica). Lo que no cabe se encoge o no se pone; nunca se pone encima del camino.
+ * (Campamento D) `escala`: en escritorio, el pueblo entero más grande (la pantalla grande a 1080p: ×1.5): las mismas piezas, menos casas.
  */
-export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo = 0, sol = 1, ancho = null }) {
+export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo = 0, sol = 1, ancho = null, escala = 1 }) {
   const tel = forma === 'tel', esc = forma === 'esc', acostado = forma === 'acostado';
   // La escala: un rancho del frente mide unos 28 px en el teléfono, 30 en la tablet y 40 en escritorio.
-  const u = tel ? Math.max(1.4, Math.min(2.4, W / 168)) : forma === 'tab' ? 2.5 : esc ? Math.max(2.4, Math.min(3.6, H / 225)) : 1.3;
+  const k = esc ? escala : 1, u = (tel ? Math.max(1.4, Math.min(2.4, W / 168)) : forma === 'tab' ? 2.5 : esc ? Math.max(2.4, Math.min(3.6, H / 225)) : 1.3) * k;
   // La calle: en el teléfono y la tablet, a media franja del valle (delante va el primer plano); en escritorio, en el valle de la izquierda.
   const yg = esc ? H * 0.925 : acostado ? H - 12 : Math.min(H - 14, by + (H - by) * 0.75);
-  const x0 = esc ? Math.max(30, bx - (ancho ?? Math.min(560, bx - 40))) : 4;
+  const x0 = esc ? Math.max(30, bx - (ancho ?? Math.min(560 * k, bx - 40))) : 4;
   const xMax = esc ? bx - 26 : acostado ? Math.min(bx - 18, W * 0.5) : lago ? Math.min(W - 4, lago.cx - lago.rx * 0.95) : W - 4;
   // Los puntos del sendero, cada 4 px (para medir cuánto sitio deja encima).
   const muestras = [];
@@ -148,7 +149,7 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
   const anchoPlaza = tel || acostado ? 24 : 30, paso = (anchoPlaza * 0.78 - 6.6) / 5;
   const ninos = plaza ? [0, 1, 2, 3, 4, 5].map((j) => [plaza.x + (4 + j * paso) * u * plaza.s, yg + (2.6 + (j % 2) * 1.2) * u]) : [];
   // Los vecinos (osos, campamento 35) y los animales: en la calle, delante de las casas y en la plaza (`lugaresPueblo`).
-  return { u, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 12 * u), xFin + 4, yg + 4 * u] };
+  return { u, u0: u / k, yg, x0, xFin, xMaxArbol: xMax - 6 * u, piezas, atras, plaza, iglesia, sol, forma, ninos, caja: [x0 - 4, Math.min(yg - ALTO_IGLESIA * u, yAtras - 12 * u), xFin + 4, yg + 4 * u] };
 }
 
 // ------------------------------------------------------------------------------------------------ los sitios de los vecinos
@@ -384,6 +385,12 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   // La fila de atrás, entera y en su orden (sombra, muro de la terraza, paredes, tejados, puertas y ventanas), antes que la iglesia.
   const filaAtras = p('v-sombra v-sombra-atras', 'sombra', '', B) + p('v-terraza', 'terraza', '', B) + COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`, '', B)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`, '', B)).join('')
     + p('v-alero', 'alero', '', B) + p('v-techo-l', 'techo-l', '', B) + p('v-techo-s', 'techo-s', '', B) + p('v-teja', 'teja', sw(0.6), B) + p('v-poste', 'poste', sw(0.55), B) + p('v-puerta', 'puerta', '', B) + p('v-ventana v-ventana-atras', 'ventana', '', B);
+  // (Campamento 53B) La bruma baja del pueblo: un jirón quieto DETRÁS de la fila de atrás (se pinta antes que ella), a la altura de
+  // sus tejados: flota sobre la loma, no toca la terraza, la calle ni la plaza, y se deshace antes de los extremos del pueblo. Solo en
+  // escritorio, donde el pueblo queda a la izquierda de la salida del sendero (en el teléfono y la tablet detrás de las casas están el
+  // pie de la montaña y el sendero: ahí no va). Mismo degradado que la neblina del valle (`.v-mar`); su opacidad, `--v-mar`.
+  const bruma = sit.forma === 'esc' && atras.length
+    ? `<ellipse class="v-mar v-mar-pueblo" cx="${f1(sit.x0 + (sit.xFin - sit.x0) * 0.44)}" cy="${f1(yg - (TERRAZA + 9.5) * u)}" rx="${f1((sit.xFin - sit.x0) * 0.42)}" ry="${f1(9 * u)}"/>` : '';
   // Los árboles de aquí, detrás de las casas (campamento 22B, idea 56, ahora en el pueblo): un maquilishuat junto a la iglesia (en
   // febrero, todo rosado) y un árbol de fuego al final de la calle (en abril, rojo). Con sus flores caídas cuando florecen.
   const arbolito = (sp, x, y, r) => {
@@ -401,7 +408,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   if (fuegoV) add('sombra', elipse(xFuego - sol * 1.6 * u, yg + 0.9 * u, 6 * u, 1.1 * u));
   // Los charcos de luz: dos trazos (el halo ancho y el centro), sin degradados (más baratos de pintar que una elipse con degradado cada uno).
   const luzSuelo = `<path class="v-charco" d="${charcos.map(([x, y, r]) => elipse(x, y, r, r * 0.32)).join('')}"/><path class="v-charco v-charco-c" d="${charcos.map(([x, y, r]) => elipse(x, y, r * 0.5, r * 0.16)).join('')}"/>`;
-  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${p('v-sombra v-sombra-perro', 'perro-sombra')}${filaAtras}`
+  return `<g class="v-canton v-pueblo" aria-hidden="true">${p('v-calle', 'calle')}${p('v-plaza', 'plaza')}${p('v-plaza-borde', 'plaza-borde', sw(0.5))}${luzSuelo}${p('v-sombra', 'sombra')}${p('v-sombra v-sombra-perro', 'perro-sombra')}${bruma}${filaAtras}`
     + `${p('v-ig-lado', 'ig-lado')}${p('v-ig-frente', 'ig-frente')}${p('v-ig-torre', 'ig-torre')}${p('v-ig-relieve', 'ig-relieve')}${p('v-ig-torre-s', 'ig-torre-s')}${p('v-ig-atrio', 'ig-atrio')}${p('v-ig-atrio-s', 'ig-atrio-s')}${p('v-ig-cupula', 'ig-cupula')}${p('v-ig-moldura', 'ig-moldura', sw(0.45))}${p('v-ig-cruz', 'ig-cruz', sw(0.55))}`
     + `${frentes}${p('v-alero', 'alero')}${p('v-techo-l', 'techo-l')}${p('v-techo-s', 'techo-s')}${p('v-teja', 'teja', sw(0.6))}${p('v-chimenea', 'chimenea')}${p('v-poste', 'poste', sw(0.55))}`
     + `${p('v-puerta', 'puerta')}${p('v-ig-hueco', 'ig-hueco')}${p('v-ig-portal', 'ig-portal')}${p('v-ig-campana', 'ig-campana')}${p('v-ig-ventana', 'ig-ventana')}<path class="v-ventana" d="${A.ventana ?? ''}"/><path class="v-luz" d="${A.luz ?? ''}"/><path class="v-halo" d="${A.halo ?? ''}"${sw(4.2)}/>`

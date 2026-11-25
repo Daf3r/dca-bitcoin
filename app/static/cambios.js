@@ -9,6 +9,61 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 47) Los osos de la cumbre; resume también el pueblo se mueve 2 (2026-12-t) y la fiesta del hito, que salen casi a la vez.
+    id: '2026-12-u',
+    items: [
+      'Los osos de la cumbre duermen de noche y, al atardecer, se ponen de espaldas a mirar cómo baja el sol.',
+      'Cuando pasa algo en el pueblo, uno de ellos se asoma a mirar.',
+      'De vez en cuando se acomodan o se estiran, y en diciembre va creciendo a su lado un oso de nieve.',
+      'En el pueblo se mueven más vecinos: el panadero en su bicicleta, la tortillera y la hamaca de la siesta.',
+      'Al llegar a una etapa, el pueblo hace fiesta una vez para toda la familia.',
+    ],
+  },
+  {
+    // (Campamento 49) El pueblo se mueve 2; resume también la pantalla grande (2026-12-s) y la fiesta del hito (2026-12-r), que salen casi a la vez.
+    id: '2026-12-t',
+    items: [
+      'Los osos del pueblo se mueven más: el panadero cruza en su bicicleta, la tortillera palmea y la hamaca de la siesta se mece.',
+      'A mediodía la campana de la torre se mece unos minutos.',
+      'Cuando cambia la hora del pueblo, algún vecino camina hasta su sitio nuevo.',
+      'En las pantallas anchas pueden moverse dos cosas a la vez, lejos una de la otra.',
+      'Al llegar a una etapa, el pueblo hace fiesta una vez para toda la familia, y en la pantalla grande todo se lee de lejos.',
+    ],
+  },
+  {
+    // (Campamento D) La pantalla grande a 1920×1080; resume también la fiesta del hito (2026-12-r), la neblina y los vecinos con oficio, que salen casi a la vez.
+    id: '2026-12-s',
+    items: [
+      'En la pantalla grande los nombres de la montaña se leen de lejos, con menos datos a la vista.',
+      'En las pantallas anchas el pueblo se ve más grande.',
+      'En la pantalla grande el saldo se corre un poquito cada rato, para cuidar la pantalla.',
+      'Al llegar a una etapa, el pueblo hace fiesta una vez para toda la familia: campana, farolitos y cohetes.',
+      'La neblina de la mañana es más suave, y los vecinos tienen oficio.',
+    ],
+  },
+  {
+    // (Campamento 59) La fiesta del hito; resume también la neblina (2026-12-p y q) y los vecinos con oficio (2026-12-o), que salen casi a la vez.
+    id: '2026-12-r',
+    items: [
+      'Al llegar a una etapa, el pueblo hace fiesta: campana, osos en la plaza, farolitos y cohetes.',
+      'La ve toda la familia ese día, una vez, y queda un farol en la plaza hasta la medianoche.',
+      'Un toque la salta, y cada etapa tiene su fiesta una sola vez.',
+      'La neblina de la mañana es más suave y se levanta poco a poco hasta las nueve.',
+      'Los vecinos tienen oficio, y el pueblo y su suelo se ven limpios.',
+    ],
+  },
+  {
+    // (Campamento 53B) La neblina, segunda pasada; resume también la primera (2026-12-p) y los vecinos con oficio (2026-12-o).
+    id: '2026-12-q',
+    items: [
+      'La neblina dura más: se forma desde las cinco y se va levantando poco a poco hasta las nueve.',
+      'Al caer la tarde vuelve, fina, y se va antes de la noche.',
+      'En pantallas grandes, una bruma baja se queda detrás de las casas del pueblo, sin tocar el suelo.',
+      'Es clara y suave, sin bordes, y el pueblo y su suelo se ven limpios.',
+      'Los vecinos del pueblo tienen oficio: el panadero, la maestra, el pescador, el sacristán… y cada uno sigue su día.',
+    ],
+  },
+  {
     // (Campamento 53A) La neblina de la mañana; resume también los vecinos con oficio (2026-12-o) y el día entero del pueblo (2026-12-n),
     // que salen casi a la vez.
     id: '2026-12-p',

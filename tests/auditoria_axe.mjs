@@ -538,6 +538,13 @@ try {
       await p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 }); await p.waitForTimeout(500);
       await auditar(p, `celebración ligera de una etapa intermedia ${esquema}`);
       await ctx.close();
+      // (Campamento 59) La fiesta del hito en su clímax: las capas de la fiesta (decorativas), la plaza llena y los cohetes.
+      ({ ctx, p } = await abrir(anio, ADMIN, [['libro.efectos', 'todos']]));
+      await p.click('#cuenta-btn'); await p.click('#dc-sistema-btn'); await p.waitForTimeout(400);
+      await p.click('[data-previa="hito"]');
+      await p.waitForFunction(() => document.querySelectorAll('#montana > svg.fiesta-palma').length > 0, null, { timeout: 16000 });
+      await auditar(p, `la fiesta del hito en su clímax ${esquema}`);
+      await ctx.close();
       ({ ctx, p } = await abrir(anio, LECTOR));
       await p.locator('#t-pasos').scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
       await auditar(p, `«Próxima etapa» con su tramo (lectora) ${esquema}`);

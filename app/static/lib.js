@@ -132,6 +132,13 @@ export function etapasHasta(tope) {
   return out;
 }
 export const etapaSiguiente = (sats) => { for (const m of escalera()) if (m > sats) return m; return Number.POSITIVE_INFINITY; };
+/**
+ * (Campamento 47, idea 188) ¿«Tú» va ya en el último tramo antes de la cima? Cuando la siguiente etapa es un campamento (la potencia de
+ * 10 que es la cima): entre «Tú» y la meta ya no queda ninguna etapa. Desde las 100,000 (antes de la primera etapa no hay tramos).
+ * @param {number} sats
+ * @returns {boolean}
+ */
+export const ultimoTramo = (sats) => sats >= 1e5 && Number.isFinite(etapaSiguiente(sats)) && rangoEtapa(etapaSiguiente(sats)) === 'campamento';
 export const etapaAnterior = (sats) => { let prev = 0; for (const m of escalera()) { if (m > sats) break; prev = m; } return prev; };
 /** Etapas que se cruzan al subir de `desde` a `hasta` sats (vacío si no se sube). */
 export const etapasCruzadas = (desde, hasta) => (hasta > desde ? etapasHasta(Math.max(hasta, 1e5)).filter((m) => m > desde && m <= hasta) : []);
@@ -2051,6 +2058,21 @@ export function marcoTele(ahoraMs, listos, { cadaMs = 600e3, duraMs = 40e3, desf
   return { visible, dibujo: listos[((vuelta % n) + n) % n], vuelta, faltaMs: visible ? duraMs - dentro : cadaMs - dentro };
 }
 /**
+ * (Campamento D) Los nueve sitios de la deriva de la tele: hasta 12 px a cada lado y hacia abajo (hacia arriba, la cabecera se saldría de
+ * la pantalla y el reloj ya no iría en la fila del precio).
+ */
+export const DERIVA_TELE = [[0, 0], [12, 0], [12, 12], [0, 12], [-12, 12], [-12, 0], [-12, 6], [0, 6], [12, 6]];
+/**
+ * (Campamento D) Contra el quemado de la pantalla: el saldo y la cabecera de la tele se corren hasta 12 px, un sitio cada 10 minutos.
+ * Cambia a las :05:20, :15:20… (a mitad del marco de la historia, que tapa la pantalla: el salto no se ve). Devuelve `[dx, dy]` en px.
+ * @param {number} ahoraMs
+ * @returns {number[]}
+ */
+export function derivaTele(ahoraMs) {
+  const k = Math.floor((ahoraMs - 320e3) / 600e3), n = DERIVA_TELE.length;
+  return DERIVA_TELE[((k % n) + n) % n];
+}
+/**
  * Lo que enseña la tele en este momento: `'duerme'` (de 23:00 a 5:00, si el dispositivo no lo apagó y nadie la despertó un rato con un
  * toque), `'marco'` (el dibujo de la historia, si toca y no hay fiesta ni atardecer en curso: una compra nueva siempre gana) o `'escena'`.
  */
@@ -2490,3 +2512,109 @@ export function textoResguardo(r) {
   if (r.al_dia) return { estado: 'ok', palabra: 'Al día', detalle: ultima + sigue };
   return { estado: 'calma', palabra: r.revisado ? 'Cuando puedas' : 'Sin anotar', detalle: ultima + (r.revisado ? '' : ' Cuando mires dónde está, toca «Revisado».') + sigue };
 }
+
+// ---------------------------------------------------------------------------------------------
+// Campamento 59 · La fiesta del hito (A del diseño de Fable): un guion de cuatro tiempos a la escala del hito, para toda la familia.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * La escala de la fiesta de una etapa: `campamento` (10× desde 1M: 1M, 10M, 1 BTC…), `principal` (2.5 y 5 de cada potencia, y 100k) o
+ * `intermedia` (las demás). La del halving no sale de una etapa: es `halving`.
+ * @param {number} m
+ * @returns {'campamento' | 'principal' | 'intermedia'}
+ */
+export function escalaFiesta(m) {
+  const r = rangoEtapa(m);
+  return r === 'campamento' ? (m >= 1e6 ? 'campamento' : 'principal') : r;
+}
+/** Cuánto dura cada escala, en ms (24 s campamento · 12 s etapa principal y halving · 6 s intermedia, sobria). */
+export const MS_FIESTA = { campamento: 24_000, principal: 12_000, halving: 12_000, intermedia: 6000 };
+/** (59) Hasta nueve vecinos en la fiesta de un hito (el tope de un día cualquiera sigue en ocho: `arte-vecinos.js: MAX_VECINOS`). */
+export const MAX_VECINOS_FIESTA = 9;
+/**
+ * El guion de la fiesta (pura: la prueba la recorre entera). Cuatro tiempos —anuncio (la campana y los vecinos salen), la plaza (la rueda
+ * y los farolitos despegan), el clímax (cohetes, brazos arriba en la plaza y en la cumbre) y el cierre (chocolate en la plaza; queda el
+ * farol del hito)— a la escala de `escala`. Devuelve `{ ms, pasos, farol }`: `pasos`, en orden de tiempo, cada uno `{ en, que, … }` con
+ * `que` de entre `campana` ({ toques }), `vecinos` ({ cuadro }: 'salen', 'rueda', 'arriba', 'tres', 'chocolate'), `faroles`
+ * ({ n, dura }), `cohetes` ({ n }), `cumbre` (los osos de arriba dan su saltito) y `tu` («Tú» levanta los brazos).
+ * - `noche` (22:00 a 5:00): en el pueblo no hay nadie (regla del 35): sin vecinos; la campana, los farolitos y los cohetes sí.
+ * - `lluvia` (las tardes de la lluviosa): sin farolitos.
+ * - `efectos`: con «esenciales», cuadros quietos a saltos y un cohete que aparece y se apaga (sin farolitos volando); con «ninguno», nada
+ *   (el estado final: la tarjeta y el farol).
+ * - `ancho`: el de la escena; en el teléfono (< 700 px) el clímax es cielo y cumbre: tres cohetes como mucho.
+ * - `conTu`: solo quien anota; para quien solo mira «Tú» no sale. El halving nunca lleva a «Tú» ni los brazos de la cumbre.
+ * @param {'campamento' | 'principal' | 'intermedia' | 'halving'} escala
+ * @param {{ noche?: boolean, lluvia?: boolean, efectos?: string, ancho?: number, conTu?: boolean }} [o]
+ * @returns {{ ms: number, farol: boolean, pasos: Array<{ en: number, que: string, toques?: number, cuadro?: string, n?: number, dura?: number }> }}
+ */
+export function guionFiesta(escala, { noche = false, lluvia = false, efectos = 'todos', ancho = 390, conTu = false } = {}) {
+  const farol = escala !== 'intermedia';
+  if (efectos === 'ninguno') return { ms: 0, farol, pasos: [] };
+  const ms = MS_FIESTA[escala], tel = ancho < 700, quieto = efectos !== 'todos', red = escala === 'halving';
+  /** @type {Array<{ en: number, que: string, toques?: number, cuadro?: string, n?: number, dura?: number }>} */
+  const pasos = [];
+  const vec = (/** @type {number} */ en, /** @type {string} */ cuadro) => { if (!noche) pasos.push({ en, que: 'vecinos', cuadro }); };
+  const far = (/** @type {number} */ en, /** @type {number} */ n, /** @type {number} */ dura) => { if (!lluvia && !quieto && n) pasos.push({ en, que: 'faroles', n, dura }); };
+  const coh = (/** @type {number} */ en, /** @type {number} */ n) => { pasos.push({ en, que: 'cohetes', n: quieto ? 1 : n }); };
+  if (escala === 'campamento') {
+    pasos.push({ en: 0, que: 'campana', toques: 3 }); vec(0, 'salen');
+    vec(5000, 'rueda'); far(5000, 7, 17_000);
+    vec(10_000, 'arriba'); coh(10_000, tel ? 3 : 5); pasos.push({ en: 10_000, que: 'cumbre' });
+    if (conTu) pasos.push({ en: 10_000, que: 'tu' });
+    vec(16_000, 'chocolate');
+  } else if (escala === 'principal' || red) {
+    pasos.push({ en: 0, que: 'campana', toques: 2 }); vec(0, 'salen');
+    vec(2500, red ? 'rueda' : 'rueda5'); far(2500, red ? 4 : 3, 8500);
+    vec(5000, red ? 'arriba' : 'arriba5'); coh(5000, 1);
+    if (!red) { pasos.push({ en: 5000, que: 'cumbre' }); if (conTu) pasos.push({ en: 5000, que: 'tu' }); }
+  } else {
+    // La intermedia, sobria (reabre el «ligera a propósito» del 21): un toque, tres osos con los brazos arriba y un farolito.
+    pasos.push({ en: 0, que: 'campana', toques: 1 }); vec(1500, 'tres'); far(1500, 1, 4500);
+  }
+  return { ms, farol, pasos: pasos.sort((a, b) => a.en - b.en) };
+}
+/**
+ * Dónde estallan los cohetes del clímax (pura). En escritorio, sobre la cumbre; en el teléfono, a los lados de «Tú» (la tarjeta tapa la
+ * cumbre); en la tele, a la derecha de la cumbre (lejos del saldo y del reloj). Ninguno sube por encima de `techo` (el saldo y la
+ * tarjeta) más 8 px ni se sale de la escena. `tu` y `cumbre`: {x, y}; `k`: la escala (1 en el escritorio; fiesta.js la saca del ancho de la plaza). [{ x, y, r, c }]: el
+ * centro, el radio y el color (0–3).
+ * @param {{ W: number, H: number, n: number, tu: { x: number, y: number }, cumbre: { x: number, y: number }, techo?: number, k?: number, tv?: boolean }} o
+ * @returns {Array<{ x: number, y: number, r: number, c: number }>}
+ */
+export function palmasFiesta({ W, H, n, tu, cumbre, techo = 0, k = 1, tv = false }) {
+  const s = Math.max(0.8, Math.min(2.2, k)), e = W < 700 ? 1.25 : 1;
+  const c = cumbre, X = tu.x, Y = tu.y;
+  const lista = tv
+    ? [[c.x + 95 * s, c.y + 42 * s, 30 * s, 0], [c.x + 195 * s, c.y + 80 * s, 24 * s, 1], [c.x + 60 * s, c.y + 120 * s, 22 * s, 2], [c.x + 150 * s, c.y + 150 * s, 17 * s, 3], [c.x + 270 * s, c.y + 36 * s, 15 * s, 1]]
+    : W >= 1100
+      ? [[c.x - 62 * s, c.y + 46, 30 * s, 0], [c.x + 59 * s, c.y + 36, 26 * s, 1], [c.x - 10, Math.max(40 * s, c.y + 22), 36 * s, 2], [c.x + 95 * s, c.y + 78, 17 * s, 3], [c.x - 106 * s, c.y + 92, 15 * s, 1]]
+      : [[X - 70 * s * e, Y + 10 * s, 26 * s * e, 0], [X + 66 * s * e, Y + 26 * s, 22 * s * e, 1], [X + 8 * s, Y - 80 * s * e, 30 * s * e, 2], [X - 100 * s * e, Y + 92 * s, 16 * s * e, 3], [X + 60 * s * e, Y + 120 * s, 14 * s * e, 1]];
+  return lista.map(([x, y, r, col]) => ({ x, y, r, c: col }))
+    .filter((p) => Number.isFinite(p.x + p.y + p.r) && p.y - p.r > techo + 8 && p.x - p.r > 2 && p.x + p.r < W - 2 && p.y + p.r < H - 2)
+    .slice(0, n);
+}
+/**
+ * (59) La fiesta que toca ver ahora con lo que dice el servidor (`/api/fiesta`: { dia, hito: { meta, rango, id } | null, halving }) y lo
+ * que este aparato ya vio (`vista`: sus marcas opacas, «día#id» separadas por espacios, sin cifras). Al abrir, la familia ve la fiesta de un campamento o de una
+ * etapa principal de hoy (la intermedia, sobria, solo la ve quien anota); el halving, una vez. null si no hay nada nuevo.
+ * @param {{ dia?: string, hito?: { meta: number, rango?: string, id: number } | null, halving?: boolean } | null | undefined} f
+ * @param {string} vista
+ * @param {string} hoy
+ * @returns {{ escala: 'campamento' | 'principal' | 'halving', meta: number | null, marca: string } | null}
+ */
+export function fiestaPorVer(f, vista, hoy) {
+  if (!f || f.dia !== hoy) return null;
+  const h = f.hito, visto = (vista || '').split(' ');
+  if (h && escalaFiesta(h.meta) !== 'intermedia') {
+    const marca = `${f.dia}#${h.id}`;
+    if (!visto.includes(marca)) return { escala: /** @type {'campamento' | 'principal'} */ (escalaFiesta(h.meta)), meta: h.meta, marca };
+  }
+  if (f.halving && !visto.includes(`${f.dia}#halving`)) return { escala: 'halving', meta: null, marca: `${f.dia}#halving` };
+  return null;
+}
+/**
+ * (59) Si hoy queda encendido el farol del hito (hasta la medianoche): un campamento o una etapa principal cruzados hoy, o el halving.
+ * @param {{ dia?: string, hito?: { meta: number } | null, halving?: boolean } | null | undefined} f
+ * @param {string} hoy
+ */
+export const farolDelHito = (f, hoy) => Boolean(f && f.dia === hoy && ((f.hito && escalaFiesta(f.hito.meta) !== 'intermedia') || f.halving));

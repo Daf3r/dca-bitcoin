@@ -18,3 +18,5 @@ Un teleférico pequeño en el valle, **solo desde 1100 px** (escritorio y la tel
 
 ### Sin probar aquí
 - «Medir este aparato» en el PC del dueño y en la tele, de 10:00 a 13:00 (con la montaña a la vista: si baja de 55 fps, se quita); Safari de escritorio.
+
+*(Campamento 49: en pantallas de 1100 px o más, la cabina es también el segundo principal mientras se mueve el del pueblo, de 7:00 a 16:30 (`data-mueve2`); la tortillera ya no la para. Ver [49-el-pueblo-se-mueve-2.md](49-el-pueblo-se-mueve-2.md).)*

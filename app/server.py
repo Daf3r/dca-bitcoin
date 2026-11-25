@@ -331,6 +331,18 @@ def _m_medidas_aparato(conn: sqlite3.Connection) -> None:
     )""")
 
 
+def _m_hitos_celebrados(conn: sqlite3.Connection) -> None:
+    # La fiesta del hito (campamento 59): cada etapa (meta, en sats) que ya tuvo su fiesta, el día de El Salvador en que se anotó la compra
+    # que la cruzó y esa compra. Así la fiesta no se repite (si vendes y vuelves a cruzar 1M, no hay otra) y la familia sabe que «hoy hubo
+    # fiesta» (el farol del hito hasta la medianoche). No guarda quién la vio ni cuándo se abrió la app: solo el hecho del libro. Anular la
+    # compra quita su fila (`DELETE /api/compras`), para que volver a anotarla la celebre.
+    conn.execute("""CREATE TABLE IF NOT EXISTS hitos_celebrados (
+        meta      INTEGER PRIMARY KEY,
+        dia       TEXT    NOT NULL,
+        compra_id INTEGER NOT NULL REFERENCES compras(id)
+    )""")
+
+
 MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]], ...] = (
     (1, "tablas base (compras, precios, traslados, cuentas, avisos)", _m_tablas_base),
     (2, "columnas de compras (sats, anulación, txid, tipo, nota, extra) e índice de TXID", _m_columnas_compras),
@@ -350,6 +362,7 @@ MIGRACIONES_ESQUEMA: tuple[tuple[int, str, Callable[[sqlite3.Connection], None]]
     (16, "firmas (el libro de cumbre: una por persona y campamento)", _m_firmas),
     (17, "codigos_tv (entrar en la tele con un código de un solo uso)", _m_codigos_tv),
     (18, "medidas_aparato (medir este aparato: tiempo hasta el saldo y fotogramas al deslizar)", _m_medidas_aparato),
+    (19, "hitos_celebrados (la fiesta del hito: una vez por etapa)", _m_hitos_celebrados),
 )
 VERSION_ESQUEMA = MIGRACIONES_ESQUEMA[-1][0]
 
@@ -1618,7 +1631,7 @@ def estado_sistema(conn: sqlite3.Connection) -> dict[str, Any]:
     metricas = [{"ruta": r["ruta"], "n": r["n"], "errores": r["errores"], "lentas": r["lentas"], "ms_medio": round(r["ms_total"] / r["n"]) if r["n"] else 0,
                  "ms_max": round(r["ms_max"])} for r in conn.execute(
         "SELECT ruta, SUM(n) AS n, SUM(errores) AS errores, SUM(lentas) AS lentas, SUM(ms_total) AS ms_total, MAX(ms_max) AS ms_max "
-        "FROM metricas WHERE dia >= ? GROUP BY ruta ORDER BY n DESC LIMIT 15", (desde,))]
+        "FROM metricas WHERE dia >= ? GROUP BY ruta ORDER BY n DESC LIMIT 20", (desde,))]
     return {
         "ahora": ahora, "version": VERSION, "commit": VERSION_GIT[:12], "esquema": version_esquema(conn),
         "respaldo": {"ultimo": int(ultimo) if ultimo else None, "ok": ultimo is not None and ahora - ultimo < 36 * 3600, "prueba": prueba},
@@ -1794,6 +1807,30 @@ def ver_auditoria() -> Any:
                      "despues": json.loads(r["despues"]) if r["despues"] else None} for r in rows])
 
 
+def pico_saldo(movs: list[Mov]) -> int:
+    """El saldo más alto que tuvo el libro, en el orden de las fechas (0 sin movimientos)."""
+    saldo = pico = 0
+    for _fecha, _id, tipo, sats in sorted(movs, key=lambda m: (m[0], m[2] == "venta", m[1])):
+        saldo += -sats if tipo == "venta" else sats
+        pico = max(pico, saldo)
+    return pico
+
+
+def marcar_hito(conn: sqlite3.Connection, antes: list[Mov], cid: int, sats: int) -> dict[str, Any] | None:
+    """(Campamento 59) Si la compra `cid` cruza por primera vez la etapa destacada, la marca (con las demás que cruce por primera vez) y
+    devuelve la fiesta ({meta, rango}); si no, None. «Por primera vez»: ni ya marcada ni por debajo del saldo más alto que tuvo el libro
+    antes (lo que se cruzó antes de existir la tabla, o con una venta de por medio). Va en la misma transacción que la compra."""
+    saldo = sum(-s if tipo == "venta" else s for _f, _i, tipo, s in antes)
+    m = ritmo.etapa_celebrada(saldo, saldo + sats)
+    if m is None:
+        return None
+    pico, hechas = pico_saldo(antes), {r[0] for r in conn.execute("SELECT meta FROM hitos_celebrados")}
+    nuevas = [x for x in ritmo.etapas_cruzadas(saldo, saldo + sats) if x > pico and x not in hechas]
+    hoy = ritmo.hoy_sv().isoformat()
+    conn.executemany("INSERT OR IGNORE INTO hitos_celebrados (meta, dia, compra_id) VALUES (?, ?, ?)", [(x, hoy, cid) for x in nuevas])
+    return {"meta": m, "rango": ritmo.rango_etapa(m)} if m in nuevas else None
+
+
 @app.get("/healthz")
 def healthz() -> Response:
     db().execute("SELECT 1").fetchone()
@@ -1825,11 +1862,12 @@ def crear() -> Any:
     cid = insertar(conn, c, txid, tipo, nota, extra, etiquetas)
     nueva = fila(conn.execute(f"SELECT {COLS} FROM compras WHERE id = ?", (cid,)).fetchone())
     auth.auditar(conn, quien(), "alta", "compra", cid, None, nueva, auth.ip_resumida(ip_real()))
+    fiesta = marcar_hito(conn, antes, cid, c[3]) if tipo == "compra" else None  # (59) la marca, en la misma transacción que la compra
     conn.commit()
     push.vigilar_tx(conn, txid)
     _avisar_movimiento(conn, antes, cid, nueva)
     rep = txid_repetido(conn, txid, cid)
-    return jsonify({**nueva, **({"txid_repetido": rep} if rep else {})}), 201
+    return jsonify({**nueva, **({"txid_repetido": rep} if rep else {}), **({"fiesta": fiesta} if fiesta else {})}), 201
 
 
 @app.put("/api/compras/<int:cid>")
@@ -2278,6 +2316,35 @@ def parse_nombre_montana(v: Any) -> str:
     return t
 
 
+def _fecha_conf(v: str) -> str | None:
+    """Una fecha AAAA-MM-DD de la configuración, o None si falta o no es una fecha (nunca rompe el arranque)."""
+    v = (v or "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+        return None
+    try:
+        return date.fromisoformat(v).isoformat()
+    except ValueError:
+        return None
+
+
+# (Campamento 59) El día del próximo halving, si el dueño lo escribe (`HALVING_FECHA`, AAAA-MM-DD, hora de El Salvador). La app no sabe en
+# qué bloque va la red (eso llega con el nodo, campamento 60) y no inventa la fecha: sin la variable, no hay fiesta del halving.
+HALVING_FECHA = _fecha_conf(os.environ.get("HALVING_FECHA", ""))
+
+
+@app.get("/api/fiesta")
+def fiesta_de_hoy() -> Response:
+    """(Campamento 59) La fiesta de hoy para toda la familia (también quien solo mira y la tele): la etapa destacada que se cruzó hoy por
+    primera vez (con el id de su compra, que el aparato recuerda para no repetirla) y si hoy es el halving. Solo lee: no guarda quién
+    la pidió ni cuándo. Nunca sale en la entrada (pide sesión, como todo lo que no está en PUBLICAS)."""
+    conn, hoy = db(), ritmo.hoy_sv().isoformat()
+    filas = conn.execute(f"SELECT h.meta, h.compra_id FROM hitos_celebrados h JOIN compras c ON c.id = h.compra_id WHERE h.dia = ? AND c.{VIGENTES}",
+                         (hoy,)).fetchall()
+    m = ritmo.etapa_destacada([r["meta"] for r in filas])
+    hito = next(({"meta": m, "rango": ritmo.rango_etapa(m), "id": r["compra_id"]} for r in filas if r["meta"] == m), None) if m else None
+    return jsonify(dia=hoy, hito=hito, halving=hoy == HALVING_FECHA)
+
+
 @app.get("/api/montana")
 def ver_nombre_montana() -> Response:
     return jsonify(nombre=_meta(db(), "nombre_montana"))
@@ -2359,6 +2426,7 @@ def borrar(cid: int) -> Any:
     if falla := saldo_negativo([m for m in movimientos(conn) if m[1] != cid]):
         return jsonify(error=_error_saldo(falla).replace("No alcanzan los sats:", "No se puede anular, las ventas posteriores se quedarían sin sats:")), 409
     conn.execute("UPDATE compras SET anulada_ts = ?, anulada_por = ? WHERE id = ?", (int(time.time()), quien(), cid))
+    conn.execute("DELETE FROM hitos_celebrados WHERE compra_id = ?", (cid,))  # (59) anulada (p. ej. «Deshacer»), su etapa se celebra al volver a cruzarla
     auth.auditar(conn, quien(), "anulacion", "compra", cid, fila(previa), None, auth.ip_resumida(ip_real()))
     conn.commit()
     return "", 204

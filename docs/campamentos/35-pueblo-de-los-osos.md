@@ -1,5 +1,7 @@
 # Campamento 35 · El Pueblo de los Osos
 
+*(Campamento 59: en la fiesta de un hito salen **hasta nueve** vecinos —los ocho y el del bombo— y la fiesta reacciona a cruzar un hito; el tope de un día cualquiera sigue en ocho. Ver [59](59-la-fiesta-del-hito.md).)*
+
 Reglas vigentes e índice: [CLAUDE.md](../../CLAUDE.md). El pueblo: [22c-valle-de-verdad.md](22c-valle-de-verdad.md) y [34b-pulido-del-pueblo.md](34b-pulido-del-pueblo.md). Los osos de la familia: [25-osos.md](25-osos.md). Lo que se mueve en el pueblo: [34-el-pueblo-vive.md](34-el-pueblo-vive.md).
 
 ## Campamento 35 · El Pueblo de los Osos (ideas 100–107)

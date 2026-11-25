@@ -223,7 +223,8 @@ const PESOS = [
   ['campamento 20: cada cosa en su sitio', 297], // 157 comprobaciones
   ['campamento 21: etapas más cercanas', 151], // 129 comprobaciones
   ['campamento 21B: la tele de la sala (tarj', 306], // 113 comprobaciones
-  ['tele: el saldo contra la montaña (pulido', 229], // 87 comprobaciones
+  ['tele: el saldo contra la montaña (pulido', 275], // 103 comprobaciones (campamento D: con la app a 1920)
+  ['campamento D: la pantalla grande a 1920', 45], // 10 comprobaciones (estimado)
   ['campamento 24: medir este aparato (idea', 58], // 58 comprobaciones
   ['campamento 24: confianza (la revisión tr', 42], // 43 comprobaciones
   ['campamento 22: el valle vivo', 58], // 27 comprobaciones
@@ -253,9 +254,12 @@ const PESOS = [
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 52: vecinos con oficio', 111], // 22 comprobaciones (medido el 25 nov 2026)
+  ['campamento 49: el pueblo se mueve 2', 100], // 25 comprobaciones (medido el 25 nov 2026)
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
+  ['campamento 47: los osos de la cumbre', 40], // 14 comprobaciones (estimado)
+  ['campamento 59: la fiesta del hito', 110], // 24 comprobaciones (estimado: dos fiestas enteras de 24 s)
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -1058,8 +1062,8 @@ try {
       ok(e.sw <= e.cw, 'atmósfera: sin scroll horizontal');
       await r.ctx.close();
 
-      // Al amanecer sí cruzan aves
-      r = await entrar(navegador, srv, ADMIN, { hora: 6 }, fuerte);
+      // Al amanecer sí cruzan aves (49: el torogoz cruza de 5:00 a 6:00; desde las 6:00 la calle es del panadero)
+      r = await entrar(navegador, srv, ADMIN, { hora: 5.5 }, fuerte);
       e = await estado(r.p);
       eq(e.ave, 'ave', 'atmósfera: al amanecer cruzan aves');
       await r.ctx.close();
@@ -1100,7 +1104,7 @@ try {
           primero: `${h.firstElementChild.tagName.toLowerCase()}|${h.firstElementChild.getAttribute('role')}`,
           capas: [...h.querySelectorAll(':scope > svg.capa')].map((s) => `${[...s.classList].find((c) => c.startsWith('par-'))}|${s.getAttribute('aria-hidden')}|${cs(s).zIndex}|${cs(s).willChange}|${cs(s).transform}`),
           grupos: h.querySelector('svg').querySelectorAll('.par').length,
-          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb')) x = x.previousElementSibling; // (32, 34, 37, 51) entre los dos, solo las capas pequeñas de la cabina, de los animales, del vecino y de los ambientales
+          frente: (() => { const f = h.querySelector(':scope > svg.frente'); let x = f?.previousElementSibling; while (x?.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb, .v-capa-campana, .v-capa-camina')) x = x.previousElementSibling; // (32, 34, 37, 51) entre los dos, solo las capas pequeñas de la cabina, de los animales, del vecino y de los ambientales
           return f ? `${x === h.querySelector('svg')}|${cs(f).willChange}|${['#m-hecho', '#m-yo', '#m-campos', '#m-etiquetas', '#m-fx'].every((x) => f.querySelector(x))}|${['#m-hecho', '#m-yo', '#m-fx'].some((x) => h.querySelector('svg').querySelector(x))}` : 'sin frente'; })(),
           alba: document.getElementById('m-alba').ownerSVGElement.classList.contains('par-cielo'),
           aislada: cs(h).isolation, velo: cs(document.querySelector('.escena-velo')).willChange,
@@ -1913,7 +1917,7 @@ try {
       m = await medir(r.p);
       eq(m.naranja, '#f0b429', 'acento: tras llegar a 1 BTC es dorado');
       ok(m.contraste >= 4.5, `acento dorado: el texto de acento sobre las tarjetas llega a 4.5:1 (${m.contraste.toFixed(1)})`);
-      await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'naranja', null, { timeout: 12000 }); // la vista previa devuelve el estado real
+      await r.p.waitForFunction(() => document.documentElement.dataset.acento === 'naranja', null, { timeout: 40000 }); // la vista previa devuelve el estado real (59: espera a que acabe la fiesta del campamento, 24 s)
       eq(await r.p.evaluate(() => document.querySelectorAll('.aurora-epica, .luz-gota').length), 0, '1 BTC: los efectos se retiran solos');
       await r.ctx.close();
       // El cometa: al cruzar una etapa
@@ -2772,7 +2776,7 @@ try {
       eq(filas[0].e, 'ok', 'con las cuentas bien, «Tus cuentas» está bien');
       ok(/^(Todo en orden\.|\d+ cosas? por revisar\.)$/.test((await a.p.textContent('#sis-res')).trim()), 'el resumen dice cuántas cosas revisar');
       const rutas = await a.p.$$eval('#sis-met th[scope="row"]', (ths) => ths.map((t) => t.textContent));
-      ok(rutas.includes('/api/compras') && !rutas.some((r) => /^\/[a-f0-9]{64}/.test(r)), `las métricas salen por ruta (${rutas.slice(0, 3).join(', ')}…)`);
+      ok(rutas.includes('/api/compras') && !rutas.some((r) => /^\/[a-f0-9]{64}/.test(r)), `las métricas salen por ruta (${rutas.join(', ')})`);
       const errores = await a.p.$$eval('#sis-err .sis-fila', (fs) => fs.map((f) => f.textContent));
       ok(errores.some((t) => t.includes('prueba de error en el navegador') && t.includes('Safari · iPhone')), `el error del navegador aparece con su agente: ${errores[0]}`);
       ok(await a.p.locator('#sis-err-limpiar').isVisible(), 'y se puede limpiar la lista');
@@ -3064,8 +3068,8 @@ try {
       ok(/san-salvador/.test(await r.p.evaluate(() => document.querySelector('.lejos').dataset.volcanes)), 'volcanes: en escritorio también el de San Salvador');
       await r.ctx.close();
 
-      // Torogoz al amanecer (todos los efectos): cruza y aletea; con esenciales no está.
-      r = await ent(navegador, sAnio, ADMIN, { hora: 6 }, con('2026-03-10'));
+      // Torogoz al amanecer (todos los efectos): cruza y aletea; con esenciales no está. (49: cruza de 5:00 a 6:00; desde las 6:00, el panadero.)
+      r = await ent(navegador, sAnio, ADMIN, { hora: 5.5 }, con('2026-03-10'));
       eq([await cs(r.p, '.torogoz', 'animationName'), await cs(r.p, '.toro-ala:not(.toro-ala-lejos)', 'animationName'), await r.p.locator('.toro-ceja').count()], ['ave', 'toro-aleteo', 1], 'torogoz: al amanecer cruza el cielo y aletea');
       await r.p.evaluate(() => window.libroEfectos.fijar('esenciales'));
       eq(await cs(r.p, '.torogoz', 'display'), 'none', 'torogoz: con esenciales no está');
@@ -4981,7 +4985,7 @@ try {
         eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas'], '20·cuenta: «Administrar» y, al final, salir («Cerrar» va arriba desde el campamento 62)');
         ok(await a.p.locator('#dc-menu [data-previa]').count() === 0, '20·cuenta: la vista previa ya no está en el menú');
         await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(600);
-        ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 6 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus seis botones (campamento 21: etapa y etapa con sello)');
+        ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 7 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus siete botones (campamento 21: etapa y etapa con sello; 59: halving)');
         ok(!/temporal/i.test(await a.p.textContent('#dc-sistema')), '20·cuenta: ya no se llama temporal');
         const alto = await a.p.evaluate(() => [...document.querySelectorAll('#dc-previa button')].every((b) => b.getBoundingClientRect().height >= 47.5));
         ok(alto, '20·cuenta: sus botones miden 48 px');
@@ -5295,7 +5299,7 @@ try {
       // ---- Una etapa con sello: bandera, lacre y cometa; «Probar la celebración» tiene las dos
       const b = await ent(sAnio, ADMIN, { hora: 22 }, conLocal([['libro.efectos', 'todos']]));
       await b.p.click('#cuenta-btn'); await b.p.click('#dc-sistema-btn'); await b.p.waitForTimeout(400);
-      eq(await b.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia'], '21·probar: «Etapa» y «Etapa con sello»');
+      eq(await b.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia', 'Halving'], '21·probar: «Etapa» y «Etapa con sello» (59: y «Halving»)');
       await vigilarPiezas(b.p, ['.cometa']);
       await b.p.click('[data-previa="etapa"]');
       await b.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
@@ -5704,37 +5708,38 @@ try {
     } finally { sCod.parar(); }
   });
 
+  /**
+   * La caja del saldo de verdad (la cifra que se ve, `.od-num`, y su unidad, `#s-unidad`) con 8 px de margen: qué de lo dibujado la
+   * toca. Se calcula aparte del CSS que la coloca: la placa de «Tú», los rótulos, los campamentos y la cumbre (sus cajas), el sendero
+   * (un punto cada 8 px) y la silueta de la montaña (una rejilla de 6 px dentro de la caja, con `isPointInFill`).
+   */
+  const saldoLibre = (p) => p.evaluate(() => {
+    const M = 8;
+    const caja = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width }; };
+    const c = caja(document.querySelector('#s-sats .od-num')), u = caja(document.getElementById('s-unidad'));
+    const s = { l: Math.min(c.l, u.l) - M, t: Math.min(c.t, u.t) - M, r: Math.max(c.r, u.r) + M, b: Math.max(c.b, u.b) + M };
+    const cruza = (q) => q.w > 1 && q.l < s.r && s.l < q.r && q.t < s.b && s.t < q.b;
+    const choques = [];
+    const yo = document.querySelector('#montana #m-etiquetas .eti-yo');
+    if (yo && cruza(caja(yo))) choques.push('«Tú»');
+    for (const t of document.querySelectorAll('#montana #m-etiquetas text')) if (cruza(caja(t))) choques.push(`rótulo «${t.textContent.trim()}»`);
+    for (const g of document.querySelectorAll('#montana .campo')) if (cruza(caja(g))) choques.push(g.classList.contains('es-cima') ? 'la cumbre' : `campamento ${g.dataset.m}`);
+    const svg = document.querySelector('#montana > svg'), camino = svg.querySelector('#m-sendero'), monte = svg.querySelector('.monte');
+    const pt = svg.createSVGPoint(), mc = camino.getScreenCTM(), largo = camino.getTotalLength();
+    let sendero = 0;
+    for (let l = 0; l <= largo; l += 8) { const a = camino.getPointAtLength(l); pt.x = a.x; pt.y = a.y; const q = pt.matrixTransform(mc); if (q.x > s.l && q.x < s.r && q.y > s.t && q.y < s.b) sendero++; }
+    if (sendero) choques.push(`${sendero} puntos del sendero`);
+    const inv = monte.getScreenCTM().inverse();
+    let enMonte = 0;
+    for (let x = s.l; x <= s.r; x += 6) for (let y = s.t; y <= s.b; y += 6) { pt.x = x; pt.y = y; if (monte.isPointInFill(pt.matrixTransform(inv))) enMonte++; }
+    if (enMonte) choques.push(`${enMonte} muestras sobre la montaña`);
+    // Lo que se midió de verdad (si la montaña aún no tuviera sus rótulos, la prueba pasaría sin mirar nada)
+    const medido = { yo: Boolean(yo), rotulos: document.querySelectorAll('#montana #m-etiquetas text').length, campos: document.querySelectorAll('#montana .campo').length, puntos: Math.floor(largo / 8) };
+    return { choques, medido, txt: `${document.querySelector('#s-sats .sr').textContent} ${document.getElementById('s-unidad').textContent} en ${Math.round(s.l + M)}–${Math.round(s.r - M)} px${choques.length ? `: ${choques.join(', ')}` : ''}` };
+  });
+
   // ---------------------------------------------------------------- tele: el saldo contra la montaña (pulido final: la cifra y su unidad nunca tocan «Tú», la cumbre, los campamentos, los rótulos, el sendero ni la silueta)
   await bloque(async () => {
-    /**
-     * La caja del saldo de verdad (la cifra que se ve, `.od-num`, y su unidad, `#s-unidad`) con 8 px de margen: qué de lo dibujado la
-     * toca. Se calcula aparte del CSS que la coloca: la placa de «Tú», los rótulos, los campamentos y la cumbre (sus cajas), el sendero
-     * (un punto cada 8 px) y la silueta de la montaña (una rejilla de 6 px dentro de la caja, con `isPointInFill`).
-     */
-    const saldoLibre = (p) => p.evaluate(() => {
-      const M = 8;
-      const caja = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width }; };
-      const c = caja(document.querySelector('#s-sats .od-num')), u = caja(document.getElementById('s-unidad'));
-      const s = { l: Math.min(c.l, u.l) - M, t: Math.min(c.t, u.t) - M, r: Math.max(c.r, u.r) + M, b: Math.max(c.b, u.b) + M };
-      const cruza = (q) => q.w > 1 && q.l < s.r && s.l < q.r && q.t < s.b && s.t < q.b;
-      const choques = [];
-      const yo = document.querySelector('#montana #m-etiquetas .eti-yo');
-      if (yo && cruza(caja(yo))) choques.push('«Tú»');
-      for (const t of document.querySelectorAll('#montana #m-etiquetas text')) if (cruza(caja(t))) choques.push(`rótulo «${t.textContent.trim()}»`);
-      for (const g of document.querySelectorAll('#montana .campo')) if (cruza(caja(g))) choques.push(g.classList.contains('es-cima') ? 'la cumbre' : `campamento ${g.dataset.m}`);
-      const svg = document.querySelector('#montana > svg'), camino = svg.querySelector('#m-sendero'), monte = svg.querySelector('.monte');
-      const pt = svg.createSVGPoint(), mc = camino.getScreenCTM(), largo = camino.getTotalLength();
-      let sendero = 0;
-      for (let l = 0; l <= largo; l += 8) { const a = camino.getPointAtLength(l); pt.x = a.x; pt.y = a.y; const q = pt.matrixTransform(mc); if (q.x > s.l && q.x < s.r && q.y > s.t && q.y < s.b) sendero++; }
-      if (sendero) choques.push(`${sendero} puntos del sendero`);
-      const inv = monte.getScreenCTM().inverse();
-      let enMonte = 0;
-      for (let x = s.l; x <= s.r; x += 6) for (let y = s.t; y <= s.b; y += 6) { pt.x = x; pt.y = y; if (monte.isPointInFill(pt.matrixTransform(inv))) enMonte++; }
-      if (enMonte) choques.push(`${enMonte} muestras sobre la montaña`);
-      // Lo que se midió de verdad (si la montaña aún no tuviera sus rótulos, la prueba pasaría sin mirar nada)
-      const medido = { yo: Boolean(yo), rotulos: document.querySelectorAll('#montana #m-etiquetas text').length, campos: document.querySelectorAll('#montana .campo').length, puntos: Math.floor(largo / 8) };
-      return { choques, medido, txt: `${document.querySelector('#s-sats .sr').textContent} ${document.getElementById('s-unidad').textContent} en ${Math.round(s.l + M)}–${Math.round(s.r - M)} px${choques.length ? `: ${choques.join(', ')}` : ''}` };
-    });
     const fijo = { isMobile: false, hasTouch: false, deviceScaleFactor: 1 };
     const sinDialogos = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }];
     /** Una sesión por escenario y cuenta; cada tamaño, la página otra vez (con #tv, la tele; sin él, la app de escritorio). */
@@ -5756,10 +5761,11 @@ try {
       await ctx.close();
     };
     const TELES = [[1920, 1080], [1366, 768], [3840, 2160], [1080, 1920], [1024, 768], [2560, 1440], [1280, 720]];
-    // La app de escritorio (sin #tv), con la misma regla, donde hoy se cumple. A 1100 px (casi todos los saldos) y a 1440–1920 (un
-    // saldo de 8 cifras, solo la silueta) «sats» queda a menos de 8 px de la ladera desde antes de este arreglo, que no toca la app:
-    // lo decide el dueño (CLAUDE.md, «Pulido final · la tele», hallazgo). Cuando se arregle, 1100 y 1440 vuelven aquí.
-    const APP = [[2560, 1440]];
+    // La app de escritorio (sin #tv), con la misma regla, donde hoy se cumple. A 1100 px (casi todos los saldos) y a 1440 (un saldo de 8
+    // cifras, solo la silueta) «sats» queda a menos de 8 px de la ladera: lo decide el dueño (CLAUDE.md, «Pulido final · la tele», hallazgo).
+    // Cuando se arregle, 1100 y 1440 vuelven aquí. (Campamento D) El monitor de 1920 ya cumple: de 1600 a 2399 px la app usa la columna de
+    // la tele; a 1920×950, la ventana con las barras del navegador.
+    const APP = [[1920, 1080], [1920, 950], [2560, 1440]];
     for (const esc of ['hoy', 'medio', 'mil', 'ballena']) {
       const srv = await servidor(esc);
       try {
@@ -5768,6 +5774,55 @@ try {
         await recorrer(srv, ADMIN, APP, false, esc); // y la regla de siempre: la cumbre nunca invade el saldo
       } finally { srv.parar(); }
     }
+  });
+
+  // ---------------------------------------------------------------- campamento D: la pantalla grande a 1920×1080 (rótulos, datos, tope y deriva)
+  await bloque(async () => {
+    const srv = await servidor('milbtc'); // con eco («hace 1 año») y siete rótulos
+    try {
+      // Cada hora, su sesión: `entrar` fija `libro.hora` en cada carga.
+      const tele = async (hora) => {
+        const t = await entrar(navegador, srv, LECTOR, { hora, viewport: { width: 1920, height: 1080 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }]);
+        await t.p.evaluate(() => { location.hash = '#tv'; });
+        await t.p.reload({ waitUntil: 'networkidle' });
+        await t.p.waitForSelector('#montana #m-etiquetas .eti-yo', { state: 'attached', timeout: 10000 });
+        await t.p.waitForTimeout(1500);
+        for (let k = 0; k < 3 && await t.p.locator('dialog[open]').count(); k++) { await t.p.keyboard.press('Escape'); await t.p.waitForTimeout(300); }
+        return t;
+      };
+      let { ctx, p, consola } = await tele(12);
+      // Los rótulos de la montaña a 26 px o más y sin «Coinbase · hace…» ni la mini línea (el precio sigue)
+      const v = await p.evaluate(() => {
+        const vis = (e) => Boolean(e?.getClientRects().length && getComputedStyle(e).display !== 'none');
+        return { eco: Boolean(document.querySelector('#m-etiquetas .eco-txt')), tam: [...document.querySelectorAll('#m-etiquetas text')].map((t) => Number.parseFloat(getComputedStyle(t).fontSize)), meta: vis(document.getElementById('precio-meta')), estado: document.getElementById('cotizacion').dataset.estado, mini: [...document.querySelectorAll('#s-valor .mini')].some(vis), precio: vis(document.getElementById('precio')), pueblo: getComputedStyle(document.getElementById('montana')).getPropertyValue('--pueblo-k').trim() };
+      });
+      ok(v.tam.length >= 5 && v.tam.every((t) => t >= 26) && v.eco, `D: en la tele a 1080p los rótulos de la montaña (también el del eco) miden 26 px o más (${v.tam})`);
+      ok(v.estado === 'vivo' && !v.meta && !v.mini && v.precio, `D: dos datos menos (sin «Coinbase · hace…» ni la mini línea) y el precio a la vista (${JSON.stringify(v)})`);
+      eq(v.pueblo, '1.35', 'D: el pueblo, más grande en la tele');
+      // La deriva contra el quemado, en sus cuatro esquinas (hasta 12 px a los lados y hacia abajo): el saldo sigue sin tocar la montaña
+      for (const [dx, dy] of [[12, 12], [-12, 12], [-12, 0], [12, 0]]) {
+        await p.evaluate(([x, y]) => { document.documentElement.style.setProperty('--tv-dx', `${x}px`); document.documentElement.style.setProperty('--tv-dy', `${y}px`); }, [dx, dy]);
+        await p.waitForTimeout(150);
+        const r = await saldoLibre(p);
+        ok(r.choques.length === 0, `D: con la deriva en ${dx},${dy} el saldo no toca la montaña (${r.txt})`);
+      }
+      // El tope propio de la tele: 24 animaciones a la vista de noche (lo que cuenta el banco); mientras duerme, la escena en pausa
+      const corriendo = () => p.evaluate(() => {
+        const host = document.getElementById('montana');
+        const escondido = (e) => { for (let x = e; x && x !== host; x = x.parentElement) if (getComputedStyle(x).display === 'none') return true; return false; };
+        return document.getAnimations().filter((a) => { const t = a.effect?.target; return t && host.contains(t) && a.playState === 'running' && !escondido(t) && Number(getComputedStyle(t).opacity) !== 0; }).length;
+      });
+      eq(consola, [], `D: consola limpia (${consola.join(' | ')})`);
+      await ctx.close();
+      ({ ctx, p, consola } = await tele(21));
+      const noche = await corriendo();
+      ok(noche > 0 && noche <= 24, `D: de noche, ${noche} animaciones a la vista en la tele (tope 24)`);
+      await ctx.close();
+      ({ ctx, p, consola } = await tele(23.5));
+      await p.waitForFunction(() => document.documentElement.dataset.tvDuerme === '1', null, { timeout: 8000 });
+      ok(await p.evaluate(() => document.documentElement.dataset.tvDuerme === '1') && (await corriendo()) === 0, 'D: mientras la tele duerme, la escena no anima nada');
+      await ctx.close();
+    } finally { srv.parar(); }
   });
 
   // ---------------------------------------------------------------- campamento 24: medir este aparato (idea 44)
@@ -6256,7 +6311,7 @@ try {
       return {
         mueve, mar: vis('.v-mar-frente'), marOp: Number(cs('.v-mar-frente')?.opacity ?? 0), marAtras: Number(cs('.v-mar-atras')?.opacity ?? 0),
         // (Campamento 53A) La neblina es un degradado (sin bordes), quieta y sin desenfoques.
-        marSuave: [...document.querySelectorAll('#montana .v-mar')].every((e) => e.tagName === 'rect' && /m-v-mar/.test(getComputedStyle(e).fill) && getComputedStyle(e).filter === 'none' && getComputedStyle(e).animationName === 'none'), marBancos: document.querySelectorAll('#montana .v-mar').length, marPueblo: document.querySelectorAll('#m-v-pie .v-mar, .v-campos .v-mar').length,
+        marSuave: [...document.querySelectorAll('#montana .v-mar')].every((e) => ['rect', 'ellipse'].includes(e.tagName) && /m-v-(mar|jiron)/.test(getComputedStyle(e).fill) && getComputedStyle(e).filter === 'none' && getComputedStyle(e).animationName === 'none'), marBancos: document.querySelectorAll('#montana rect.v-mar').length, marPueblo: document.querySelectorAll('#m-v-pie .v-mar, .v-campos .v-mar').length,
         // El mar de niebla va detrás de la montaña (dentro de la capa del fondo, que se dibuja antes que ella).
         marDetras: !!fondo && !!monte && fondo.contains(document.querySelector('.v-mar')) && !!(fondo.compareDocumentPosition(monte) & Node.DOCUMENT_POSITION_FOLLOWING),
         marTop: Math.min(...[...document.querySelectorAll('#montana .v-mar')].map((e) => e.getBoundingClientRect().top)), saldoAbajo: document.querySelector('.saldo').getBoundingClientRect().bottom,
@@ -6272,8 +6327,8 @@ try {
     try {
       // Uno a la vez: en una sola página, recorriendo días y horas (cielo.js deja `data-mueve` y el CSS enseña lo que toca).
       let t = await entrar(navegador, srv, ADMIN, { hora: 12 }, conDia('2026-10-15', { 'libro.efectos': 'todos' })); await cerrar(t.p);
-      const recorrido = [['2026-10-15', 6, 'torogoz'], ['2026-10-15', 12, 'azacuanes'], ['2026-10-15', 17, 'pericos'], ['2026-10-15', 19, 'luciernagas'], ['2026-10-15', 23, 'relampagos'],
-        ['2026-05-17', 8.5, 'zompopos'], ['2026-05-17', 12, ''], ['2027-02-10', 23, 'luciernagas'], ['2027-02-10', 12, ''], ['2026-04-10', 10, 'azacuanes'], ['2026-08-10', 2, 'relampagos'], ['2026-08-10', 20, 'luciernagas']];
+      const recorrido = [['2026-10-15', 5.5, 'torogoz'], ['2026-10-15', 12, 'azacuanes'], ['2026-10-15', 17, 'pericos'], ['2026-10-15', 19, 'luciernagas'], ['2026-10-15', 23, 'relampagos'],
+        ['2026-05-17', 8.5, 'zompopos'], ['2026-05-17', 12.75, ''], ['2027-02-10', 23, 'luciernagas'], ['2027-02-10', 12.75, ''], ['2026-04-10', 10, 'azacuanes'], ['2026-08-10', 2, 'relampagos'], ['2026-08-10', 20, 'luciernagas']];
       const vistos = [];
       for (const [dia, hora, esperado] of recorrido) {
         await t.p.evaluate(([d, h]) => { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); window.libroCielo.aplicar(); }, [dia, hora]);
@@ -6294,17 +6349,33 @@ try {
         eq((await estado(t.p)).mueve.filter((m) => m !== 'luciernagas' && m !== 'torogoz'), [], `22B esenciales: ${dia} a las ${hora} no se mueve nada del valle`);
         await t.ctx.close();
       }
-      // 55 · el mar de niebla: a las 6:00 lleno, detrás de la montaña y por debajo del saldo; a las 7:15 se levanta; a mediodía no hay. También con «ninguno».
+      // 55 · la neblina: a las 6:00 ya llena, detrás de la montaña y por debajo del saldo; a las 8:30 se levanta; vuelve fina por la tarde (53B); a mediodía no hay. También con «ninguno».
       t = await entrar(navegador, srv, ADMIN, { hora: 6 }, conDia('2026-10-15', { 'libro.efectos': 'ninguno' })); await cerrar(t.p);
       let v = await estado(t.p);
       ok(v.mar && v.marOp > 0.95 && v.marDetras && v.marTop > v.saldoAbajo, `22B mar de niebla: a las 6:00, llena, detrás de la montaña y por debajo del saldo (desde ${Math.round(v.marTop)} px; el saldo acaba en ${Math.round(v.saldoAbajo)})`);
-      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '7.25'); window.libroCielo.aplicar(); });
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '8.5'); window.libroCielo.aplicar(); });
       v = await estado(t.p);
-      ok(v.marSuave && v.marBancos === 2 && v.marPueblo === 0, `53A neblina: dos bancos de degradado detrás de la montaña (ninguno en el pueblo), sin bordes, desenfoques ni movimiento (${v.marBancos})`);
-      ok(v.mar && v.marAtras > 0.3 && v.marAtras < 0.7, `22B mar de niebla: a las 7:15 se está levantando (${v.marAtras})`);
+      ok(v.marSuave && v.marBancos === 2 && v.marPueblo === 0, `53A neblina: dos bancos de degradado detrás de la montaña (en el teléfono, nada en el pueblo), sin bordes, desenfoques ni movimiento (${v.marBancos})`);
+      ok(v.mar && v.marAtras > 0.3 && v.marAtras < 0.7, `53B neblina: a las 8:30 se está levantando (${v.marAtras})`);
       ok(v.marAtras < v.marOp, `53A neblina: al levantarse se va primero la de más lejos (${v.marAtras} < ${v.marOp})`);
       await t.p.evaluate(() => { localStorage.setItem('libro.hora', '17.5'); window.libroCielo.aplicar(); });
-      ok(!(await estado(t.p)).mar, '22B mar de niebla: sin niebla de la tarde');
+      v = await estado(t.p);
+      ok(v.mar && v.marAtras > 0.3 && v.marAtras < 0.5, `53B neblina: en la lluviosa vuelve fina por la tarde (${v.marAtras})`);
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '12'); window.libroCielo.aplicar(); });
+      ok(!(await estado(t.p)).mar, '22B mar de niebla: a mediodía no hay');
+      await t.ctx.close();
+      // (53B) En escritorio: los dos jirones sobre el banco de atrás y la bruma baja del pueblo, detrás de las casas y por encima del suelo, con su degradado.
+      t = await entrar(navegador, srv, ADMIN, { hora: 6.75, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, conDia('2026-10-15', { 'libro.efectos': 'ninguno' })); await cerrar(t.p);
+      const esc = await t.p.evaluate(() => {
+        const b = document.querySelector('#montana .v-mar-pueblo'), fila = document.querySelector('#montana .v-pueblo .v-sombra-atras'), plaza = document.querySelector('#montana .v-pueblo .v-plaza');
+        const r = b?.getBoundingClientRect(), casas = [...document.querySelectorAll('#montana .v-pueblo .v-frente')].map((e) => e.getBoundingClientRect()).filter((q) => q.width);
+        return { hay: !!b, grad: !!document.getElementById('m-v-jiron'), relleno: b ? getComputedStyle(b).fill : '', op: b ? Number(getComputedStyle(b).opacity) : 0, jirones: document.querySelectorAll('#montana .v-mar-jiron').length,
+          antes: !!b && !!fila && !!(b.compareDocumentPosition(fila) & Node.DOCUMENT_POSITION_FOLLOWING), trasPlaza: !!b && !!plaza && !!(plaza.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING),
+          sobreSuelo: !!r && r.bottom <= Math.max(...casas.map((q) => q.bottom)) - 20, dentro: !!r && r.left >= document.querySelector('#montana .v-pueblo .v-ig-torre').getBoundingClientRect().left - 8 && r.right <= Math.max(...casas.map((q) => q.right)) + 8,
+          suave: [...document.querySelectorAll('#montana .v-mar')].every((e) => getComputedStyle(e).filter === 'none' && getComputedStyle(e).animationName === 'none') };
+      });
+      ok(esc.hay && esc.grad && /m-v-jiron/.test(esc.relleno) && esc.op > 0.9 && esc.jirones === 2 && esc.antes && esc.trasPlaza && esc.sobreSuelo && esc.dentro && esc.suave, `53B escritorio: la bruma del pueblo detrás de las casas, por encima del suelo y dentro del pueblo, y dos jirones; todo quieto y sin desenfoque (${JSON.stringify(esc)})`);
+      ok(t.consola.length === 0, `53B escritorio: consola limpia (${t.consola.slice(0, 2)})`);
       await t.ctx.close();
       // 54 · verde de invierno y dorado de verano; 56 · árboles en flor; 58 · vacas de día.
       t = await entrar(navegador, srv, ADMIN, { hora: 12 }, conDia('2026-07-10')); await cerrar(t.p);
@@ -6367,7 +6438,7 @@ try {
       await p.goto(`${srvE.url}/login`, { waitUntil: 'networkidle' });
       await p.waitForTimeout(800);
       const e = await p.evaluate(() => ({ mar: !!document.querySelector('.v-mar-frente') && getComputedStyle(document.querySelector('.v-mar-frente')).display !== 'none', vacas: !!document.querySelector('.v-vaca'), mueve: document.documentElement.dataset.mueve }));
-      ok(e.mar && e.vacas && e.mueve === 'torogoz', '22B entrada: el mar de niebla y las vacas también (paisaje, sin datos de nadie)');
+      ok(e.mar && e.vacas && e.mueve === 'cruza', '22B entrada: el mar de niebla y las vacas también (paisaje, sin datos de nadie; a las 6 cruza el panadero, campamento 49)');
       await ctx.close();
     } finally { srvE.parar(); }
   });
@@ -6687,7 +6758,7 @@ try {
       const svg = host.querySelector('svg'), inv = svg.getScreenCTM().inverse();
       const usuario = (x, y) => new DOMPoint(x, y).matrixTransform(inv);
       const monte = svg.querySelector('.monte'), nieve = svg.querySelector('.nieve-clip');
-      const cajas = [...g.querySelectorAll(':scope > .oso')].map((o) => ({ quien: o.getAttribute('class').replace('oso oso-', ''), r: o.getBoundingClientRect() }));
+      const cajas = [...g.querySelectorAll(':scope > .oso')].map((o) => ({ quien: [...o.classList].find((c) => /^oso-(grande|chico|mameluco)$/.test(c)).slice(4), r: o.getBoundingClientRect() })); // (47: el grupo lleva también oso-asoma u oso-hacia-…)
       const camino = svg.querySelector('#m-sendero'), m = camino.getScreenCTM(), L = camino.getTotalLength(), sendero = [];
       for (let l = 0; l <= L; l += 3) { const q = camino.getPointAtLength(l); sendero.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]); }
       const cruza = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -6856,7 +6927,7 @@ try {
         const n = await entrar(navegador, sMil, ADMIN, { hora: 21 }, conLs({ 'libro.dia': '2026-12-24', 'libro.efectos': 'esenciales' }));
         await cerrar(n.p);
         const r = await n.p.evaluate(() => { const h = document.getElementById('montana'), o = h.querySelector('#m-osos'); return { escena: h.querySelectorAll('*').length, osos: o.querySelectorAll('*').length + 1 }; });
-        ok(r.escena <= 1100 && r.osos <= 40, `25·nodos: la escena con mil compras en Nochebuena tiene ${r.escena} nodos (≤ 1100), los osos ${r.osos} (≤ 40)`);
+        ok(r.escena <= 1100 && r.osos <= 46, `25·nodos: la escena con mil compras en Nochebuena tiene ${r.escena} nodos (≤ 1100), los osos ${r.osos} (≤ 46 desde el 47)`);
         await n.ctx.close();
       } finally { sMil.parar(); }
 
@@ -7278,7 +7349,7 @@ try {
     });
     const anio = await servidor('anio');
     try {
-      for (const [w, h, hora, ef, espera] of [[1440, 900, 11, 'todos', 'tele-va'], [1440, 900, 14, 'todos', 'none'], [1440, 900, 11, 'esenciales', 'none'], [2560, 1440, 11, 'todos', 'tele-va'], [1100, 800, 12, 'todos', 'tele-va']]) {
+      for (const [w, h, hora, ef, espera] of [[1440, 900, 11, 'todos', 'tele-va'], [1440, 900, 14, 'todos', 'tele-va'], [1440, 900, 17, 'todos', 'none'], [1440, 900, 11, 'esenciales', 'none'], [2560, 1440, 11, 'todos', 'tele-va'], [1100, 800, 12, 'todos', 'tele-va']]) {
         const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs({ 'libro.efectos': ef }));
         await cerrar(t.p);
         const r = await tele(t.p);
@@ -7318,6 +7389,50 @@ try {
       const v = await e.p.evaluate(() => { const o = document.querySelector('#m-osos.osos'); if (!o) return 'sin osos'; o.classList.add('estira-1'); return getComputedStyle(o.querySelector('.oso-brazos')).display; });
       ok(v === 'none', `33 con «esenciales» no se estiran (${v})`);
       await e.ctx.close();
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 47: los osos de la cumbre (duermen, de espaldas, sombrero, lo plantado, se asoman)
+  await bloque(async () => {
+    const conLs = (x = {}) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); for (const [k, v] of Object.entries(o)) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, x];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const ver = (p, s) => p.evaluate((s) => [...document.querySelectorAll(`#montana ${s}`)].filter((e) => e.checkVisibility({ checkVisibilityCSS: true })).length, s);
+    const ir = async (p, dia, hora) => { await p.evaluate(([d, h]) => { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); window.libroCielo.aplicar(); }, [dia, hora]); await p.waitForTimeout(900); };
+    const anio = await servidor('anio');
+    try {
+      const t = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 } }, conLs({ 'libro.efectos': 'todos' }));
+      await cerrar(t.p);
+      const n = (await ver(t.p, '#m-osos > .oso'));
+      ok(n >= 1, `47 los osos están en la cumbre (${n})`);
+      eq([await ver(t.p, '.oso-dormido'), await ver(t.p, '.oso-zz'), await ver(t.p, '.oso-sombrero')], [0, 0, 0], '47 de día, ni ojos cerrados ni zetas ni sombrero (en noviembre)');
+      await ir(t.p, '2026-11-25', 23);
+      const d = await t.p.evaluate(() => document.documentElement.dataset.cumbre);
+      eq([d, await ver(t.p, '.oso-dormido'), await ver(t.p, '#m-osos .oso-rasgos')], ['duermen', n, 0], '47 (24) de 22:00 a 5:00 duermen: ojos cerrados en todos, sin los abiertos');
+      const zz = await t.p.evaluate(() => document.querySelectorAll('#montana #m-osos .oso-zz').length);
+      ok(zz <= 1 && await ver(t.p, '.oso-zz') === zz, `47 (24) y sus zetas, si caben junto a la cabeza del grande sin tocar rótulos ni «Tú» (${zz})`);
+      await ir(t.p, '2026-11-25', 17.75);
+      eq([await t.p.evaluate(() => document.documentElement.dataset.cumbre), await ver(t.p, '#m-osos .oso-hocico'), await ver(t.p, '#m-osos .oso-parche')], ['espaldas', 0, 0], '47 (184) de 17:30 a 18:15, de espaldas mirando bajar el sol (sin cara ni parche)');
+      await ir(t.p, '2027-04-14', 12);
+      const so = await ver(t.p, '.oso-sombrero');
+      ok(so <= 1 && (await t.p.evaluate(() => document.documentElement.dataset.cumbre)) === 'sol', `47 (189) al mediodía de abril, el grande con su sombrero si su copa cabe (${so})`);
+      // Lo plantado, según el día: el oso de nieve de diciembre y la banderita de septiembre (si caben); fuera del grupo de los osos.
+      for (const [dia, hora, sel] of [['2026-12-10', 12, '.c-nieve-oso'], ['2026-09-14', 15, '.c-patria'], ['2026-11-25', 12, '.c-plantado']]) {
+        await ir(t.p, dia, hora);
+        const r = await t.p.evaluate((sel) => { const h = document.getElementById('montana'), pl = [...h.querySelectorAll('.c-plantado')]; return { n: h.querySelectorAll(sel).length, dentro: Boolean(h.querySelector('#m-osos .c-plantado')), nan: pl.some((e) => /NaN/.test(e.getAttribute('d'))), estilo: pl.some((e) => e.hasAttribute('style')) }; }, sel);
+        ok(!r.dentro && !r.nan && !r.estilo && (dia === '2026-11-25' ? r.n === 0 : r.n <= 3), `47 lo plantado el ${dia}: ${r.n} trazos, fuera del grupo de los osos, sin NaN ni estilos (${JSON.stringify(r)})`);
+      }
+      // (229) Cuando alguien camina en el pueblo, uno de la cumbre mira hacia allá (y solo uno); con «esenciales», nadie.
+      await ir(t.p, '2026-11-25', 12);
+      const asoma = () => t.p.evaluate(() => { const h = document.getElementById('montana'); h.dataset.camina = '1'; const r = [...h.querySelectorAll('#m-osos > .oso')].filter((o) => !/^(none|matrix\(1, 0, 0, 1, 0, 0\))$/.test(getComputedStyle(o.querySelector('.oso-rasgos')).transform)).length; delete h.dataset.camina; return r; });
+      eq(await asoma(), 1, '47 (229) cuando un vecino camina, uno de los de la cumbre mira hacia el pueblo');
+      await t.p.evaluate(() => window.libroEfectos.fijar('esenciales'));
+      eq(await asoma(), 0, '47 (229) con «esenciales», no');
+      const nodos = await t.p.evaluate(() => document.querySelector('#montana #m-osos').querySelectorAll('*').length + 1);
+      ok(nodos <= 46, `47 los osos, ${nodos} nodos (≤ 46)`);
+      ok(t.consola.length === 0, `47 consola limpia (${t.consola.slice(0, 2)})`);
+      await t.ctx.close();
     } finally {
       anio.parar();
     }
@@ -7518,7 +7633,8 @@ try {
       const belen = [...document.querySelectorAll('#montana .v-pueblo [class*="v-belen"]')].map(bb);
       const portal = belen.length ? belen.reduce((u, b) => ({ x0: Math.min(u.x0, b.x0), x1: Math.max(u.x1, b.x1), y0: Math.min(u.y0, b.y0), y1: Math.max(u.y1, b.y1) })) : null;
       const pies = (g.querySelector('.v-vo-pie')?.getAttribute('d') ?? '').split(/(?=M)/).filter(Boolean).map((d) => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'path'); t.setAttribute('d', d); g.append(t); const b = bb(t); t.remove(); return b; });
-      return { turno: document.documentElement.dataset.turno, vecinos: pies.length, azul: n('.v-vo-azul'), brasa: n('.v-vo-brasa'), sobrePortal: portal ? pies.filter((b) => b.x0 < portal.x1 && b.x1 > portal.x0 && b.y1 > portal.y1 - 4).length : 0, portal: Boolean(portal) };
+      const chispas = ((document.querySelector('#montana > svg.v-amb-estrellitas .v-vo-brasa')?.getAttribute('d') ?? '').match(/M/g) || []).length; // (49, 201) las estrellitas titilan en su capa
+      return { turno: document.documentElement.dataset.turno, vecinos: pies.length, azul: n('.v-vo-azul'), brasa: n('.v-vo-brasa') + chispas, sobrePortal: portal ? pies.filter((b) => b.x0 < portal.x1 && b.x1 > portal.x0 && b.y1 > portal.y1 - 4).length : 0, portal: Boolean(portal) };
     });
     const anio = await servidor('anio');
     try {
@@ -7561,9 +7677,10 @@ try {
           ok(r.hay && r.actor === actor && r.anim === anim && r.bajoFrente && r.aria === 'true' && r.nodos <= 12, `37 a ${w} px, ${hora}:00 con «${ef}»: el vecino en su capa (${JSON.stringify(r)})`);
           await t.ctx.close();
         }
-        const t = await entrar(navegador, anio, ADMIN, { hora: 12.5, viewport: { width: w, height: h } }, conLs('todos'));
+        const t = await entrar(navegador, anio, ADMIN, { hora: 12.75, viewport: { width: w, height: h } }, conLs('todos'));
         await cerrar(t.p);
-        ok(!(await capa(t.p)).hay, `37 a ${w} px: en la siesta nadie se mueve (no hay capa)`);
+        const sx = await capa(t.p); // (49) desde el 49 la hamaca va en su capa toda la siesta y se mece solo de 13:00 a 14:00
+        ok(sx.hay && sx.actor === 'v-actor-hamaca' && sx.anim === 'none', `37 a ${w} px: al empezar la siesta nadie se mueve (la hamaca, quieta en su capa: ${JSON.stringify(sx)})`);
         await t.ctx.close();
       }
     } finally {
@@ -7652,7 +7769,7 @@ try {
       const t = await entrar(navegador, mil, ADMIN, { hora: 21, viewport: { width: 390, height: 664 } }, conLs('2026-12-24', 'esenciales'));
       await cerrar(t.p);
       const r = await pieza(t.p);
-      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 910, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030; desde el 51, +3 de las capas ambientales; desde el 52, +1 el portal de la iglesia en su trazo), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
+      ok(r.estrellas === 5 && r.subEstrellas === 46 && r.lu === 12 && r.luHijos && r.mares === 0 && r.subMares === 7 && r.cohetes === 0 && r.nan === 0 && r.total <= 915, `39 Nochebuena 21:00: ${r.total} nodos (antes, 1030; desde el 51, +3 de las capas ambientales; desde el 52, +1 el portal de la iglesia en su trazo; desde el 47, +7 de las poses de los osos de la cumbre), estrellas, luciérnagas y mares en menos trazos y los cohetes sin dibujar (${JSON.stringify(r)})`);
       // A las 23:45 (cielo.js avisa con «libro:cohetes») se ponen; pasada la medianoche, el día cambia y se redibuja con ellos; a las 0:45, fuera.
       const paso = (d, h) => t.p.evaluate(async ([dd, hh]) => { localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar(); await new Promise((res) => setTimeout(res, 400)); }, [d, h]);
       await paso('2026-12-24', 23.75);
@@ -7812,6 +7929,13 @@ try {
       ['.v-hu', 'v-humo', '16s'], ['.v-hu-b', '', '18s'], ['.v-cy-remo', 'v-remo', '4.2s'], ['.v-pis', 'v-pis', '10s'], ['.v-pis-r2', '', '13s'], ['.v-pis-r3', '', '9s'],
       ['.osos.salta .oso', 'oso-salta', '1.8s'], ['.osos.salta .oso-pie', 'oso-pie', '1.8s'], ['.oso-saluda', 'oso-saluda', '3.2s'], ['[data-efectos="todos"] .oso-tu', 'tu-respira', '4.8s'], ['#m-yo.anda.sola .oso-tu', '', '0.55s'],
       ['svg.v-capa-gallina', 'gallina-pica', '3.6s'], ['svg.v-actor-barre', 'vo-barre', '7.2s'], ['svg.v-actor-pelota', 'vo-bota', '9s'], ['svg.v-actor-brinda', 'vo-brinda', '3.2s'], ['svg.v-actor-chispea', 'vo-chispea', '1.8s'],
+      // (Campamento 59) La fiesta del hito: la campana late una vez por toque, los farolitos suben (fiesta.js les pone lo que dura su
+      // tramo del guion) y cada cohete estalla.
+      ['svg.fiesta-ondas', 'fiesta-onda', '1.6s'], ['svg.fiesta-faroles', 'fiesta-sube', '6s'], ['svg.fiesta-palma', 'fiesta-palma', '2.2s'],
+      // (Campamento 49) El pueblo se mueve 2: el panadero cruza (una pasada cada 40 s), la tortillera palmea, la campana, la hamaca, la
+      // ronda de la abuela (la misma duración que el actor), las estrellitas y el que camina al cambiar de turno (0.4 s por paso).
+      ['svg.v-actor-cruza', 'vo-cruza', '40s'], ['svg.v-actor-palmea', 'vo-palmea', '1s'], ['svg.v-capa-campana', 'vo-campana', '2s'], ['svg.v-actor-hamaca', 'vo-hamaca', '3s'],
+      ['svg.v-ronda', 'vo-ronda-barre', '7.2s'], ['svg.v-ronda', 'vo-ronda-pelota', '9s'], ['svg.v-amb-estrellitas', 'vo-titila', '12s'], ['svg.v-capa-camina', 'vo-camina', '3.2s'],
     ];
     // Lo que no se alarga: la interfaz, que responde a tu dedo, y el paso de «Tú» al anotar (decisión del dueño: la subida sigue en 1.4 s).
     const INTERFAZ = [
@@ -7888,7 +8012,7 @@ try {
       const humo = capas.filter((s) => s.classList.contains('v-amb-humo')), cay = capas.find((s) => s.classList.contains('v-amb-cayuco'));
       // Entre el principal y el frente solo hay capas pequeñas; ninguna capa ambiental lleva estilos o trazos rotos.
       let x = frente?.previousElementSibling, orden = true;
-      while (x && x !== host.querySelector(':scope > svg')) { if (!x.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb')) orden = false; x = x.previousElementSibling; }
+      while (x && x !== host.querySelector(':scope > svg')) { if (!x.matches('.tele-cabina, .v-capa-animal, .v-capa-vecino, .v-capa-amb, .v-capa-campana, .v-capa-camina')) orden = false; x = x.previousElementSibling; }
       const malos = capas.filter((s) => /NaN|undefined|Infinity/.test(`${s.getAttribute('viewBox')}${s.style.cssText}${s.innerHTML}`)).length;
       return {
         foco: raiz.dataset.foco, ambiente: raiz.dataset.ambiente ?? '', mueve: raiz.dataset.mueve ?? '',
@@ -8131,6 +8255,97 @@ try {
         }
         ok(!malos.length && !x.consola.length, `52 a ${w} px con «todos», ${RECORRIDO.reduce((n, [, hs]) => n + hs.length, 0)} momentos: nada encima de un vecino y un trazo por tono (${malos.join(' · ')}${x.consola.join(' | ')})`);
         await x.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 49: el pueblo se mueve 2 (el panadero cruza, la tortillera palmea, la campana, la hamaca, la ronda, las estrellitas, el que camina al cambiar de turno y dos focos en pantallas anchas)
+  await bloque(async () => {
+    const conLs = (dia, ef) => [(o) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', o.dia); localStorage.setItem('libro.efectos', o.ef); } catch { /* sin almacenamiento */ } }, { dia, ef }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const capas = (p) => p.evaluate(() => {
+      const h = document.getElementById('montana'), d = document.documentElement.dataset;
+      const de = (sel) => { const s = h.querySelector(`:scope > svg${sel}`); return s ? { anim: getComputedStyle(s).animationName, delay: getComputedStyle(s).animationDelay, aria: s.getAttribute('aria-hidden'), nodos: s.querySelectorAll('*').length + 1, malos: /NaN|undefined/.test(s.innerHTML + s.getAttribute('viewBox')) } : null; };
+      const cab = h.querySelector(':scope > svg.tele-cabina');
+      return { mueve: d.mueve ?? '', mueve2: d.mueve2 ?? '', ambiente: d.ambiente ?? '', actor: [...(h.querySelector(':scope > svg.v-capa-vecino:not(.v-ronda)')?.classList ?? [])].find((c) => c.startsWith('v-actor-')) ?? '',
+        vecino: de('.v-capa-vecino:not(.v-ronda)'), ronda: de('.v-ronda'), campana: de('.v-capa-campana'), estrellas: de('.v-amb-estrellitas'), cabina: cab ? getComputedStyle(cab).animationName : null,
+        campanaEnPrincipal: h.querySelector(':scope > svg #m-v-pie .v-ig-campana') !== null, ida: h.querySelector(':scope > svg.v-actor-cruza')?.style.getPropertyValue('--ida') ?? '' };
+    });
+    const anio = await servidor('anio');
+    try {
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        for (const [dia, hora, actor, anim] of [['2027-02-10', 6.5, 'v-actor-cruza', 'vo-cruza'], ['2027-02-10', 11.75, 'v-actor-palmea', 'vo-palmea'], ['2027-02-10', 13.5, 'v-actor-hamaca', 'vo-hamaca'], ['2027-02-10', 7.5, 'v-actor-barre', 'vo-barre']]) {
+          for (const ef of ['todos', 'esenciales']) {
+            const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: alto } }, conLs(dia, ef));
+            await cerrar(t.p);
+            const r = await capas(t.p);
+            const bien = r.actor === actor && (actor !== 'v-actor-cruza' || Math.abs(parseFloat(r.ida)) >= 10) && r.vecino && !r.vecino.malos && r.vecino.aria === 'true' && r.vecino.anim === (ef === 'todos' ? anim : 'none') && r.campana && !r.campanaEnPrincipal;
+            // La ronda (118): con la que barre, la abuela en su capa, con la misma duración y la misma fase (nunca a la vez).
+            const ronda = actor !== 'v-actor-barre' || (r.ronda && r.ronda.anim === (ef === 'todos' ? 'vo-ronda-barre' : 'none') && Math.abs(parseFloat(r.ronda.delay) - parseFloat(r.vecino.delay)) < 0.2);
+            // Dos focos (275): en pantallas anchas la cabina cruza con el del pueblo; en el teléfono no hay cabina.
+            const focos = w < 1100 ? r.cabina === null : hora < 7 ? r.mueve2 === '' && r.cabina === 'none' : r.mueve2 === 'teleferico' && r.cabina === (ef === 'todos' ? 'tele-va' : 'none'); // (de día: de 7:00 a 16:30)
+            ok(bien && ronda && focos && !t.consola.length, `49 a ${w} px, ${hora} h con «${ef}»: ${actor} en su capa (${JSON.stringify(r)}${t.consola.join(' | ')})`);
+            await t.ctx.close();
+          }
+        }
+        // La campana de las doce (25) y las estrellitas de Nochebuena (201).
+        for (const [dia, hora, prueba, que] of [['2027-02-10', 12.02, (r) => r.mueve === 'campana' && r.campana.anim === 'vo-campana', 'la campana se mece'], ['2026-12-24', 19, (r) => r.ambiente.includes('estrellitas') && r.estrellas?.anim === 'vo-titila' && !r.estrellas.malos, 'las estrellitas titilan']]) {
+          const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: alto } }, conLs(dia, 'todos'));
+          await cerrar(t.p);
+          const r = await capas(t.p);
+          ok(prueba(r) && !t.consola.length, `49 a ${w} px: ${que} (${JSON.stringify(r)}${t.consola.join(' | ')})`);
+          await t.ctx.close();
+        }
+      }
+      // 204: al cambiar de turno (el sábado de plaza a las tortillas) la de la tienda camina a su sitio: en su capa, el resto del pueblo
+      // espera, y en CADA paso del camino no toca nada de lo que el 52 llama «cosas» ni a otro vecino; al llegar, se dibuja con los demás.
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 11.9, viewport: { width: w, height: alto } }, conLs('2027-02-13', 'todos'));
+        await cerrar(t.p);
+        const antes = await t.p.evaluate(() => (document.querySelector('#montana .v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').split('M').length - 1);
+        await t.p.evaluate(() => { localStorage.setItem('libro.hora', '12.03'); window.libroCielo.aplicar(); });
+        const r = await t.p.evaluate(() => {
+          const h = document.getElementById('montana'), capa = h.querySelector(':scope > svg.v-capa-camina'), a = capa?.getAnimations()[0];
+          if (!capa || !a) return { capa: Boolean(capa), anim: Boolean(a) };
+          a.pause();
+          const vis = (e) => { for (let x = e; x && x.tagName !== 'svg'; x = x.parentElement) if (getComputedStyle(x).display === 'none') return false; return true; };
+          const rect = (e) => { const b = e.getBoundingClientRect(); return { c: e.getAttribute('class'), x0: b.left, x1: b.right, y0: b.top, y1: b.bottom }; };
+          const cosas = [...h.querySelectorAll(':is(.v-arbol .v-ar-tronco, .v-arbol .v-ar-copa, .v-arbol .v-ar-tallo, .v-tele-torre, .v-tele-cable, svg.tele-cabina, .v-pueblo > .v-animal, .v-pueblo > .v-gallina, circle.salida, .yo-anillo, #m-etiquetas > *)')].filter(vis).map(rect);
+          // Los demás vecinos, por su sombra de pie (como el 52): su caja, de los pies a la cabeza.
+          const pie = h.querySelector('.v-vecinos .v-vo-pie'), m = pie?.getScreenCTM(), sp = (x, y) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
+          const otros = (pie?.getAttribute('d') || '').split('M').filter(Boolean).map((tt) => { const n = tt.match(/-?[\d.]+/g).map(Number), kk = (n[2] - n[0]) / 4.4, x = (n[0] + n[2]) / 2, p0 = sp(x - 2.2 * kk, n[1] - 9 * kk), p1 = sp(x + 2.2 * kk, n[1]); return { c: 'vecino', x0: p0[0], y0: p0[1], x1: p1[0], y1: p1[1] }; });
+          const dur = a.effect.getComputedTiming().duration, pasos = Number(getComputedStyle(capa).getPropertyValue('--pasos')), malos = [];
+          const fig = capa.querySelector('.v-vo-pie') ?? capa;
+          for (let i = 0; i <= pasos; i++) {
+            a.currentTime = Math.min(dur, (dur * i) / pasos + 1);
+            const b = fig.getBoundingClientRect(), k = (b.right - b.left) / 4.4, caja = { x0: b.left, x1: b.right, y0: b.top - 8.4 * k, y1: b.bottom };
+            for (const q of [...cosas, ...otros]) if (Math.min(caja.x1, q.x1) - Math.max(caja.x0, q.x0) > 1.5 && Math.min(caja.y1, q.y1) - Math.max(caja.y0, q.y0) > 1.5) malos.push(`${i}: ${q.c}`);
+          }
+          const espera = [...h.querySelectorAll(':scope > svg.v-capa-vecino')].every((s) => s.getAnimations().every((x) => x.playState !== 'running'));
+          a.finish();
+          return { capa: true, anim: true, pasos, malos, espera, camina: h.dataset.camina, malo: /NaN|undefined/.test(capa.innerHTML + capa.style.cssText) };
+        });
+        await t.p.waitForTimeout(400);
+        const despues = await t.p.evaluate(() => ({ capa: Boolean(document.querySelector('#montana > svg.v-capa-camina')), camina: document.getElementById('montana').dataset.camina ?? null, pies: (document.querySelector('#montana .v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').split('M').length - 1 }));
+        ok(r.capa && r.anim && r.pasos >= 3 && !r.malos.length && r.espera && r.camina === '1' && !r.malo && !despues.capa && despues.camina === null && despues.pies >= 1 && !t.consola.length,
+          `49 a ${w} px (204): al cambiar de turno la de la tienda camina a su sitio, nada encima en ninguno de sus pasos y, al llegar, con los demás (${JSON.stringify({ antes, ...r, despues })}${t.consola.join(' | ')})`);
+        await t.ctx.close();
+        // Con «esenciales», aparece directo: ninguna capa del que camina.
+        const e = await entrar(navegador, anio, ADMIN, { hora: 11.9, viewport: { width: w, height: alto } }, conLs('2027-02-13', 'esenciales'));
+        await cerrar(e.p);
+        const directo = await e.p.evaluate(() => { localStorage.setItem('libro.hora', '12.03'); window.libroCielo.aplicar(); return [Boolean(document.querySelector('#montana > svg.v-capa-camina')), document.documentElement.dataset.turno]; });
+        eq(directo, [false, 'tortillas'], `49 a ${w} px (204): con «esenciales» el vecino aparece directo en su sitio nuevo`);
+        await e.ctx.close();
+        // En el teléfono, si el principal es de fuera del pueblo (a las 20:00, las luciérnagas), nadie camina: serían dos a la vez.
+        if (w < 1100) {
+          const l = await entrar(navegador, anio, ADMIN, { hora: 19.9, viewport: { width: w, height: alto } }, conLs('2027-02-12', 'todos'));
+          await cerrar(l.p);
+          const dos = await l.p.evaluate(() => { localStorage.setItem('libro.hora', '20.05'); window.libroCielo.aplicar(); return [Boolean(document.querySelector('#montana > svg.v-capa-camina')), document.documentElement.dataset.mueve]; });
+          eq(dos, [false, 'luciernagas'], `49 a ${w} px (204): con las luciérnagas de principal, nadie camina en el teléfono`);
+          await l.ctx.close();
+        }
       }
     } finally {
       anio.parar();
@@ -8507,6 +8722,107 @@ try {
       await l.p.click('#dh-anios button[data-anio="todos"]'); await l.p.waitForTimeout(250);
       ok(/en las compras del libro/.test(await l.p.innerText('#dh-detalle')) && !/(^|\s)tus?\s/i.test(await l.p.innerText('#dh-detalle')), `58: una lectora lee «Todos» sin tuteo (${await l.p.innerText('#dh-detalle')})`);
       await l.ctx.close();
+    } finally { srv.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamento 59: la fiesta del hito (una vez por etapa, para toda la familia, se salta con un toque; el farol hasta la medianoche; el halving)
+  await bloque(async () => {
+    const conLocal = (pares) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    const ent = async (srv, cuenta, opts = {}, init = conLocal([])) => {
+      const r = await entrar(navegador, srv, cuenta, opts, init);
+      for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); }
+      return r;
+    };
+    const estado = (p) => p.evaluate(() => {
+      const h = document.documentElement, host = document.getElementById('montana');
+      return { fiesta: h.dataset.fiestaHito ?? null, mueve: h.dataset.mueve ?? null, ambiente: h.dataset.ambiente ?? null, capas: host.querySelectorAll(':scope > svg.fiesta-capa').length, farol: host.querySelectorAll('.v-farol-hito').length,
+        nan: host.innerHTML.includes('NaN'), estilo: [...host.querySelectorAll(':scope > svg.fiesta-capa')].some((s) => /style=/.test(s.innerHTML)), vecinos: host.querySelectorAll('.v-vecinos path').length, festeja: Boolean(host.querySelector('#m-yo.festeja')),
+        tarjeta: document.getElementById('hito-cel').hidden ? null : `${document.getElementById('hc-k').textContent} · ${document.getElementById('hc-txt').textContent}` };
+    });
+    // Lo que sale en toda la fiesta, contado desde antes (las capas viven poco) y si «Tú» levantó los brazos en algún momento.
+    const vigilar = async (p) => { await vigilarPiezas(p, ['svg.fiesta-ondas', 'svg.fiesta-faroles', 'svg.fiesta-palma']); await p.evaluate(() => { window.__festeja = false; window.__vec0 = document.querySelectorAll('.v-vecinos path').length; window.__vecFiesta = window.__vec0; window.__vecCambia = false; new MutationObserver(() => { if (document.querySelector('#m-yo.festeja')) window.__festeja = true; const nv = document.querySelectorAll('.v-vecinos path').length; if (nv !== window.__vec0) window.__vecCambia = true; window.__vecFiesta = Math.max(window.__vecFiesta, nv); }).observe(document.getElementById('montana'), { subtree: true, attributes: true, childList: true }); }); };
+    const srv = await servidor('medio'); // 532,702 sats: con 470,000 más, la compra cruza 1M (un campamento)
+    try {
+      // ---- Quien anota cruza 1M: la fiesta entera (24 s), con «Tú» en el clímax; el servidor dice que es la primera vez
+      const a = await ent(srv, ADMIN, { hora: 16, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, conLocal([['libro.efectos', 'todos']]));
+      await a.p.evaluate(() => window.scrollTo(0, 0));
+      const antes = await estado(a.p);
+      await a.p.click('#anotar'); await a.p.waitForTimeout(400);
+      await a.p.fill('#h-sats', '470000');
+      await vigilar(a.p);
+      const resp = a.p.waitForResponse((r) => new URL(r.url()).pathname === '/api/compras' && r.request().method() === 'POST');
+      await a.p.click('#guardar');
+      await a.p.waitForTimeout(600);
+      if (await a.p.locator('#hoja-error.hoja-aviso').isVisible()) await a.p.click('#guardar'); // (una compra grande pide confirmar: es lo de siempre)
+      eq((await (await resp).json()).fiesta, { meta: 1_000_000, rango: 'campamento' }, '59: el servidor dice que 1M se cruza por primera vez');
+      await a.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'campamento', null, { timeout: 8000 });
+      let e = await estado(a.p);
+      ok(e.mueve === 'fiesta-hito' && !e.ambiente && e.capas >= 1 && !e.nan && !e.estilo && e.farol === 0, `59: la fiesta es el actor principal (data-mueve), lo ambiental espera, sus capas sin estilo en línea ni NaN, y el farol aún no (${JSON.stringify(e)})`);
+      eq(e.tarjeta, 'Nuevo hito · 1M sats', '59: la tarjeta de siempre la acompaña');
+      await a.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 15_000 });
+      const pz = await piezasVistas(a.p);
+      ok(pz['svg.fiesta-ondas'] === 1 && pz['svg.fiesta-faroles'] === 1 && pz['svg.fiesta-palma'] >= 1 && pz['svg.fiesta-palma'] <= 5, `59: la campana, los farolitos y los cohetes, cada uno en su capa (${JSON.stringify(pz)})`);
+      ok(await a.p.evaluate(() => window.__festeja && window.__vecCambia), '59: en el clímax «Tú» levanta los brazos (quien anota) y la plaza se llena');
+      const anim = await a.p.evaluate(() => document.getAnimations().filter((x) => x.effect?.target?.closest?.('svg.fiesta-capa')).map((x) => [x.effect.target.tagName, ...Object.keys(x.effect.getKeyframes()[0]).filter((k) => !['offset', 'easing', 'composite', 'computedOffset'].includes(k))]));
+      ok(anim.length > 0 && anim.every(([tag, ...props]) => tag.toLowerCase() === 'svg' && props.every((k) => ['transform', 'opacity'].includes(k))), `59: lo que se mueve es la capa entera, solo transform y opacidad (${JSON.stringify(anim)})`);
+      // Un toque la salta al estado final: sin capas, los vecinos del turno, el farol encendido y el director de vuelta
+      await a.p.mouse.click(1100, 500); await a.p.waitForTimeout(400);
+      e = await estado(a.p);
+      ok(!e.fiesta && e.capas === 0 && e.farol === 1 && e.mueve === antes.mueve && e.ambiente === antes.ambiente && e.vecinos === antes.vecinos && !e.nan, `59: un toque la salta: queda el farol y vuelve todo lo de antes (${JSON.stringify([antes, e])})`);
+      eq(a.consola, [], `59: consola limpia (${a.consola.join(' | ')})`);
+      // Al volver a abrir en el mismo aparato, no se repite (el farol sigue)
+      await a.p.reload(); await a.p.waitForTimeout(5000);
+      for (let k = 0; k < 3 && await a.p.locator('dialog[open]').count(); k++) { await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(400); }
+      await a.p.waitForTimeout(1200);
+      e = await estado(a.p);
+      ok(!e.fiesta && e.capas === 0 && e.farol === 1 && !e.tarjeta, `59: en el mismo aparato no se repite; el farol, sí (${JSON.stringify(e)})`);
+      ok(await a.p.evaluate(() => !/\d{5,}/.test(localStorage.getItem('libro.fiestas') ?? '') && /^\d{4}-\d{2}-\d{2}#\d+$/.test(localStorage.getItem('libro.fiestas') ?? '')), '59: el aparato recuerda solo una marca opaca (día#id), sin cifras');
+      // Vender y volver a cruzar 1M: no hay otra fiesta
+      const r2 = await a.p.evaluate(async (d) => { const p = (c) => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify(c) }).then((x) => x.json()); await p({ fecha: d, monto: 1, sats: 10_000, tipo: 'venta', nota: 'Gasto' }); return p({ fecha: d, monto: 5, sats: 20_000 }); }, hoySV());
+      ok(!('fiesta' in r2), '59: vender y volver a cruzar 1M no trae otra fiesta');
+      // «Probar la celebración» tiene el halving: la fiesta del pueblo, sin «Tú» ni la cumbre
+      await a.p.click('#cuenta-btn'); await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(400);
+      eq(await a.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia', 'Halving'], '59: «Probar la celebración» gana «Halving»');
+      await vigilar(a.p);
+      await a.p.evaluate(() => { window.__salta = false; new MutationObserver(() => { if (document.querySelector('#m-osos.salta')) window.__salta = true; }).observe(document.getElementById('montana'), { subtree: true, attributes: true }); });
+      await a.p.click('[data-previa="halving"]');
+      await a.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'halving', null, { timeout: 5000 });
+      eq((await estado(a.p)).tarjeta, 'Hoy, en la red de Bitcoin · El halving', '59: el halving lo dice la tarjeta (solo informa)');
+      await a.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 10_000 });
+      ok(await a.p.evaluate(() => !window.__festeja && !window.__salta), '59: el halving es del pueblo: «Tú» no levanta los brazos ni la cumbre salta');
+      await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(800);
+      ok(!(await estado(a.p)).fiesta, '59: una tecla también la salta');
+      await a.ctx.close();
+      // ---- Quien solo mira la ve al abrir (el mismo día), sin «Tú» y sin tutear; deja el farol
+      const l = await ent(srv, LECTOR, { hora: 16, viewport: { width: 390, height: 844 } }, conLocal([['libro.efectos', 'todos']]));
+      await vigilar(l.p);
+      await l.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'campamento', null, { timeout: 8000 });
+      e = await estado(l.p);
+      ok(e.tarjeta === 'Hoy el libro llegó a · 1M sats' && e.farol === 0, `59: la lectora ve la fiesta al abrir, con la voz del libro (${e.tarjeta})`);
+      // Un redibujo pedido a media fiesta (el saldo que crece, como cuando llega el precio tarde) espera a que acabe: no la corta.
+      await l.p.evaluate(() => { document.querySelector('.saldo').style.paddingBottom = '40px'; });
+      await l.p.waitForTimeout(1200);
+      ok((await estado(l.p)).fiesta === 'campamento', '59: un redibujo pedido a media fiesta espera a que acabe');
+      await l.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 15_000 });
+      ok(await l.p.evaluate(() => !window.__festeja), '59: para quien solo mira, «Tú» no sale en la fiesta');
+      await l.p.waitForFunction(() => !document.documentElement.dataset.fiestaHito, null, { timeout: 22_000 });
+      e = await estado(l.p);
+      ok(e.capas === 0 && e.farol === 1 && e.mueve !== 'fiesta-hito', `59: al acabar sola (24 s) queda el farol del hito (${JSON.stringify(e)})`);
+      eq(l.consola, [], `59: consola limpia de la lectora (${l.consola.join(' | ')})`);
+      await l.ctx.close();
+      // ---- Con «ninguno», el estado final de golpe (la tarjeta y el farol); con «esenciales», sin farolitos y un cohete; de noche, nadie en la plaza
+      const n0 = await ent(srv, LECTOR, { hora: 16, viewport: { width: 390, height: 844 } }, conLocal([['libro.efectos', 'ninguno']]));
+      await n0.p.waitForFunction(() => document.querySelector('.v-farol-hito'), null, { timeout: 10_000 }).catch(() => {});
+      e = await estado(n0.p);
+      ok(!e.fiesta && e.capas === 0 && e.farol === 1, `59: con «ninguno», el estado final: el farol, sin capas (${JSON.stringify(e)})`);
+      await n0.ctx.close();
+      const es = await ent(srv, LECTOR, { hora: 23, viewport: { width: 390, height: 844 } }, conLocal([['libro.efectos', 'esenciales'], ['libro.madrugada', '0']]));
+      await vigilar(es.p);
+      await es.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'campamento', null, { timeout: 8000 });
+      await es.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 15_000 });
+      const pe = await piezasVistas(es.p);
+      ok(pe['svg.fiesta-faroles'] === 0 && pe['svg.fiesta-palma'] === 1 && await es.p.evaluate(() => !window.__vecCambia), `59: con «esenciales» y de noche: sin farolitos, un cohete y nadie en la plaza (${JSON.stringify(pe)})`);
+      await es.ctx.close();
     } finally { srv.parar(); }
   });
 

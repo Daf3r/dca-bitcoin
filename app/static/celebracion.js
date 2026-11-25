@@ -1,16 +1,18 @@
-import { cruzo1Btc, etapaAnterior, etapaCelebrada, etapaSiguiente, metaSiguiente, nombreHito, nombreHitoMeses, rangoEtapa } from './lib.js';
+import { cruzo1Btc, escalaFiesta, farolDelHito, etapaAnterior, etapaCelebrada, etapaSiguiente, fiestaPorVer, hoyISO, metaSiguiente, MS_FIESTA, nombreHito, nombreHitoMeses, rangoEtapa } from './lib.js';
 import { avisar } from './avisar.js';
 import { lacre, selloSemana } from './arte-sellos.js';
 import { dCuenta } from './cuenta.js';
-import { $, R, fijarR, reducido } from './estado.js';
+import { $, R, S, fijarR, reducido, vozLibro } from './estado.js';
+import { enFiesta, fiestaDelHito } from './fiesta.js';
 import { MS_SUBIDA, esHito, pintar, pintarMontana } from './pintar.js';
+import { enTV } from './tv.js';
 
 // -------------------------------------------------------------- celebración
 /**
  * Solo cuando la acción de esta sesión cruza un hito; breve y sin bloquear nada. Si coinciden una etapa y un
  * hito de constancia (10 compras, 6 meses…), la tarjeta de la etapa sale primero y la de constancia después.
  */
-export function celebrar(antes, constancia = [], sello = null) {
+export function celebrar(antes, constancia = [], sello = null, fiesta = null) {
   const tarjetas = [];
   // Cualquier etapa que se cruce hacia arriba; si son varias, la destacada (campamento, principal, intermedia; campamento 21). Una
   // intermedia lleva una tarjeta ligera y breve, sin lacre: los sellos son de las principales y los campamentos.
@@ -22,6 +24,13 @@ export function celebrar(antes, constancia = [], sello = null) {
   }
   for (const c of constancia.slice(-2)) tarjetas.push({ k: 'Constancia', txt: c.tipo === 'compras' ? `${c.valor} compras` : nombreHitoMeses(c.valor), grande: false });
   if (sello) tarjetas.push({ k: 'Sello de la semana', txt: sello.nombre, grande: false, sello }); // el pasaporte de «Tu historia» (13C)
+  // (Campamento 59) La fiesta del hito: solo si el servidor dice que esta etapa (la misma de la tarjeta) se cruzó por primera vez. Empieza
+  // cuando «Tú» llega, como la tarjeta.
+  if (m && fiesta?.meta === m) setTimeout(() => fiestaDelHito({ escala: escalaFiesta(m), conTu: !vozLibro(), tv: enTV() }), reducido() ? 0 : MS_SUBIDA);
+  mostrarTarjetas(tarjetas, reducido() ? 0 : MS_SUBIDA);
+}
+/** Las tarjetas bajo el saldo, una tras otra; la primera aparece pasados `retraso` ms (cuando tu punto llega a la bandera). */
+function mostrarTarjetas(tarjetas, retraso) {
   if (!tarjetas.length) return;
   const el = $('hito-cel');
   clearTimeout(celebrar.t);
@@ -46,8 +55,42 @@ export function celebrar(antes, constancia = [], sello = null) {
     el.classList.remove('va'); void el.offsetWidth; el.classList.add('va');
     celebrar.t = setTimeout(() => { el.hidden = true; celebrar.t = setTimeout(() => mostrar(i + 1), 250); }, MS_TARJETA[t.larga ? 'larga' : t.grande ? 'grande' : t.ligera ? 'ligera' : 'normal']);
   };
-  // La primera aparece cuando tu punto llega a la bandera, no antes.
-  celebrar.t = setTimeout(() => mostrar(0), reducido() ? 0 : MS_SUBIDA);
+  celebrar.t = setTimeout(() => mostrar(0), retraso);
+}
+
+// ------------------------------------------------ (Campamento 59) la fiesta del hito para toda la familia
+// Quien abre la app el día de un campamento o de una etapa principal (también quien solo mira y la tele) ve la fiesta una vez en ese
+// aparato; la intermedia, sobria, solo la ve quien anota. El aparato recuerda solo marcas opacas («día#id» de la compra, o «día#halving»)
+// del día de hoy: ni cifras ni quién abrió (al servidor no se le dice nada: `/api/fiesta` solo se lee).
+const CLAVE_VISTAS = 'libro.fiestas';
+const vistas = () => { try { return localStorage.getItem(CLAVE_VISTAS) ?? ''; } catch { return ''; } };
+/** Recuerda en este aparato que la fiesta `marca` ya se vio (solo las de hoy). */
+export function fiestaVista(marca) {
+  const hoy = hoyISO(), lista = vistas().split(' ').filter((x) => x.startsWith(`${hoy}#`) && x !== marca);
+  try { localStorage.setItem(CLAVE_VISTAS, [...lista, marca].join(' ')); } catch { /* sin almacenamiento: a lo sumo se vería otra vez */ }
+}
+/** (59) Si la escena lleva hoy el farol del hito: hubo fiesta hoy y este aparato ya la vio (si no, se enciende al acabar la suya). */
+export const farolEncendido = () => farolDelHito(S.fiesta, hoyISO()) && !fiestaPorVer(S.fiesta, vistas(), hoyISO());
+/** Si hay una fiesta de hoy que este aparato no ha visto (`S.fiesta`, de `/api/fiesta`), la enseña con su tarjeta. `retraso`: ms. */
+let porEmpezar = null; // la marca de la fiesta que espera su momento (la subida de «Tú», un diálogo abierto)
+export function revisarFiesta(retraso = 0) {
+  const f = fiestaPorVer(S.fiesta, vistas(), hoyISO());
+  if (!f || enFiesta() || porEmpezar === f.marca) return;
+  porEmpezar = f.marca;
+  const empezar = () => {
+    if (porEmpezar !== f.marca) return;
+    // Con un diálogo abierto («Qué hay de nuevo» al entrar), la fiesta espera a que se cierre: cerrarlo no la salta.
+    if (enFiesta() || document.querySelector('dialog[open]')) { setTimeout(empezar, 600); return; }
+    porEmpezar = null;
+    fiestaVista(f.marca); // vista desde que empieza (si no, un dibujo de antes ya encendería el farol)
+    fiestaDelHito({ escala: f.escala, conTu: false, tv: enTV() });
+    const libro = vozLibro(), m = f.meta;
+    const t = f.escala === 'halving'
+      ? { k: 'Hoy, en la red de Bitcoin', txt: 'El halving', grande: false }
+      : { k: libro ? 'Hoy el libro llegó a' : f.escala === 'campamento' ? 'Nuevo hito' : 'Nueva etapa', txt: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, grande: f.escala === 'campamento', lacre: m };
+    mostrarTarjetas([t], 0);
+  };
+  setTimeout(empezar, retraso);
 }
 /** (39b · El tempo) Cuánto se queda cada tarjeta: lo que dura su animación en el CSS (`.hito-cel`: 2.6, 3.5 y 4.5 s; la de 1 BTC, un rato más). */
 export const MS_TARJETA = { ligera: 2600, normal: 3500, grande: 4500, larga: 6000 };
@@ -83,6 +126,15 @@ async function vistaPrevia(nivel) {
   let antes, despues;
   // «Etapa» es la siguiente intermedia (la celebración ligera) y «Etapa con sello», la siguiente principal (campamento 21).
   const siguienteDe = (rango) => { let m = etapaSiguiente(base); while (rangoEtapa(m) !== rango) m = etapaSiguiente(m); return m; };
+  if (nivel === 'halving') { // (59) la fiesta del pueblo, sin «Tú» ni la cumbre, sobre la montaña de ahora
+    if (window.scrollY > 40) { window.scrollTo({ top: 0, behavior: reducido() ? 'auto' : 'smooth' }); await pausa(480); }
+    avisar('Prueba de la celebración: no se guarda nada.', null, true);
+    mostrarTarjetas([{ k: 'Hoy, en la red de Bitcoin', txt: 'El halving', grande: false }], 0);
+    await fiestaDelHito({ escala: 'halving', tv: enTV() });
+    pintar({ montana: true });
+    previaActiva = false;
+    return;
+  }
   if (nivel === 'etapa' || nivel === 'paso') { const m = siguienteDe(nivel === 'paso' ? 'intermedia' : 'principal'); antes = Math.max(0, m - 20_000); despues = m + 10_000; }
   else if (nivel === 'epico') { antes = 1e8 - 30_000; despues = 1e8 + 5_000; }
   else if (nivel === 'hito') { let m = 1e6; while (m <= base) m *= 10; antes = m - 30_000; despues = m + 5_000; }
@@ -92,9 +144,13 @@ async function vistaPrevia(nivel) {
   avisar('Prueba de la celebración: no se guarda nada.', null, true);
   pintarMontana(false, antes, { antes, delta: despues - antes });
   if (!reducido()) setTimeout(() => destello(), MS_SUBIDA);
-  celebrar({ sats: antes }, nivel === 'constancia' ? [{ tipo: 'compras', valor: R.constancia?.compras?.valor ?? 25 }] : []);
-  // (39b) La espera cubre la subida y lo más largo de cada celebración al tempo nuevo (1 BTC: unos 9 s después de llegar).
+  // (59) Con la fiesta del hito de su escala (el mismo código, sin escribir la marca): la etapa que cruza se da por nueva.
+  const m = etapaCelebrada(antes, despues);
+  celebrar({ sats: antes }, nivel === 'constancia' ? [{ tipo: 'compras', valor: R.constancia?.compras?.valor ?? 25 }] : [], null, m ? { meta: m } : null);
+  // (39b) La espera cubre la subida y lo más largo de cada celebración al tempo nuevo (1 BTC: unos 9 s después de llegar); (59) y la
+  // fiesta, hasta que acabe (o se salte).
   await pausa(nivel === 'epico' ? 12_000 : nivel === 'hito' ? 7500 : nivel === 'paso' ? 4800 : 7000);
+  for (let t = 0; enFiesta() && t < MS_FIESTA.campamento + 2000; t += 250) await pausa(250);
   pintar({ montana: true }); // vuelve al estado real
   previaActiva = false;
 }

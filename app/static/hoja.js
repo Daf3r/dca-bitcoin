@@ -1,7 +1,7 @@
 import { hundirMoneda } from './montana.js';
-import { diaDe, fechaEscrita, sumarDias, etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, leerPrecio, montoCampo, montoDePrecio, montoHabitual, pct, precioCampo, precioDeMonto, precioDelDia, TOPE_DINERO, usd, usd0, walletNeto } from './lib.js';
+import { etapaDestacada, diaDe, fechaEscrita, sumarDias, etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, leerPrecio, montoCampo, montoDePrecio, montoHabitual, pct, precioCampo, precioDeMonto, precioDelDia, TOPE_DINERO, usd, usd0, walletNeto } from './lib.js';
 import { avisar } from './avisar.js';
-import { celebrar, destello } from './celebracion.js';
+import { celebrar, destello, fiestaVista } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
 import { $, R, S, api, normalizar, reducido } from './estado.js';
 import { MS_SUBIDA, pintar, progresoEtapa } from './pintar.js';
@@ -29,6 +29,10 @@ function conDeshacer(texto, deshacer, retraso = 0) {
 }
 const cuerpoDe = (c) => ({ fecha: c.fecha, monto: c.monto, sats: c.sats, txid: c.txid ?? '', tipo: c.tipo, nota: c.nota ?? '', extra: c.tipo === 'compra' && !!c.extra, etiquetas: c.etiquetas ?? [] });
 /** Pinta tras deshacer: la montaña baja o sube desde donde estaba, sin celebración. */
+/** (59) Anulada la compra de la fiesta de hoy, el servidor suelta su marca: tampoco queda el farol (lo dice el siguiente dibujo). */
+function soltarFiesta(id) {
+  if (S.fiesta?.hito?.id === id) S.fiesta = { ...S.fiesta, hito: null };
+}
 function repintarTrasDeshacer(mensaje) {
   pintar({ montana: true, desde: R.sats });
   avisar(mensaje, null, true);
@@ -611,7 +615,9 @@ $('guardar').addEventListener('click', async () => {
   const antes = R;
   try {
     const cuerpo = { fecha, monto: d.monto, sats: d.sats, txid: extraerTxid(H.txid), tipo: H.tipo, nota: H.nota.trim(), extra: H.tipo === 'compra' && H.extra, etiquetas: partirEtiquetas(H.etq) };
-    const g = normalizar(H.editando ? await api(`/api/compras/${H.editando}`, { metodo: 'PUT', cuerpo }) : await api('/api/compras', { metodo: 'POST', cuerpo }));
+    // (59) `fiesta`: la etapa que esta compra cruzó por primera vez (lo decide el servidor, que guarda la marca); no se queda en la compra.
+    const { fiesta = null, ...resp } = H.editando ? await api(`/api/compras/${H.editando}`, { metodo: 'PUT', cuerpo }) : await api('/api/compras', { metodo: 'POST', cuerpo });
+    const g = normalizar(resp);
     const comprasAntes = S.compras;
     S.compras = H.editando ? S.compras.map((x) => (x.id === g.id ? g : x)) : [...S.compras, g];
     const editando = H.editando;
@@ -622,12 +628,18 @@ $('guardar').addEventListener('click', async () => {
     H.guardando = false;
     cerrarHoja();
     // Una compra nueva se celebra en la montaña: si estás más abajo, se sube con suavidad a verla.
-    const festejo = !editando && g.tipo === 'compra' ? { antes: antes.sats, delta: g.sats } : null;
+    const festejo = !editando && g.tipo === 'compra' ? { antes: antes.sats, delta: g.sats, fiesta } : null;
     if (festejo && !reducido() && window.scrollY > 40) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       await new Promise((ok) => setTimeout(ok, 480));
     }
     pintar({ montana: true, desde: antes.sats, festejo });
+    if (fiesta) { // (59) la fiesta de hoy: deja el farol en los dibujos que vengan y este aparato no la repite al volver a abrir
+      // (Si hoy ya hubo otra, queda la destacada de las dos, como en el servidor.)
+      const previa = S.fiesta?.dia === hoyISO() ? S.fiesta.hito : null;
+      S.fiesta = { dia: hoyISO(), hito: previa && etapaDestacada([previa.meta, fiesta.meta]) === previa.meta ? previa : { ...fiesta, id: g.id }, halving: S.fiesta?.dia === hoyISO() && Boolean(S.fiesta.halving) };
+      fiestaVista(`${S.fiesta.dia}#${g.id}`);
+    }
     if (!editando && g.tipo === 'venta' && g.nota !== 'Comisión de retiro' && !reducido()) hundirMoneda(); // 16A: la venta queda en el lago
     if (festejo) sonarGuardado(antes.sats, R.sats); // solo si lo activaste en «Tu cuenta»
     if (festejo && !reducido()) setTimeout(() => destello(), MS_SUBIDA);
@@ -644,11 +656,12 @@ $('guardar').addEventListener('click', async () => {
       : async () => {
         await api(`/api/compras/${g.id}`, { metodo: 'DELETE' });
         S.compras = S.compras.filter((x) => x.id !== g.id);
+        soltarFiesta(g.id);
         repintarTrasDeshacer('Deshecho: lo que anotaste quedó anulado. Queda en el historial.');
       };
     conDeshacer(texto, deshacer, festejo && !reducido() ? MS_SUBIDA + 1300 : 0);
     // Si es la primera compra de su semana, nace el sello de esa semana (campamento 13C).
-    celebrar(antes, constancia, festejo ? selloNuevo(R.items, g.fecha) : null);
+    celebrar(antes, constancia, festejo ? selloNuevo(R.items, g.fecha) : null, fiesta);
   } catch (err) {
     H.guardando = false;
     $('hoja-error').classList.remove('hoja-aviso');
@@ -710,6 +723,7 @@ dialogo.addEventListener('close', async () => {
     if (err.status !== 404) { $('hoja-error').textContent = err.message; return; }
   }
   S.compras = S.compras.filter((x) => x.id !== id);
+  soltarFiesta(id);
   H.origen = $('t-compras');
   cerrarHoja();
   pintar({ montana: true, desde: antes.sats });

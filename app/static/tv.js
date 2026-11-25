@@ -1,6 +1,6 @@
 import { $, R, S } from './estado.js';
 import { pose } from './arte-osos-poses.js';
-import { corrimientoReloj, dibujosListos, entero, fechaCorta, fechaEscrita, horaSV, hoyISO, medianocheSV, modoTele, muestrasSismo, rejilla, riel, sitioLibre, tarjetaFiesta, textoReloj, usd } from './lib.js';
+import { corrimientoReloj, derivaTele, dibujosListos, entero, fechaCorta, fechaEscrita, horaSV, hoyISO, medianocheSV, modoTele, muestrasSismo, rejilla, riel, sitioLibre, tarjetaFiesta, textoReloj, usd } from './lib.js';
 import { sismografo } from './arte.js';
 import { sinMovimiento } from './movimiento.js';
 import { pintarMontana } from './pintar.js';
@@ -328,12 +328,26 @@ function ocultarMarco(ya = false) {
   if (ya || sinMovimiento()) quitar(); else fundidoMarco = setTimeout(quitar, 1300);
 }
 
+// ------------------------------------------------------------------------- la deriva contra el quemado (campamento D)
+// El saldo y la cabecera se corren hasta 12 px, un sitio cada 10 minutos (`lib.derivaTele`, a mitad del marco de la historia). Las
+// tarjetas se recolocan solas (miden el saldo). Solo `translate` de dos elementos HTML (styles.css: `--tv-dx`, `--tv-dy`).
+let deriva = '';
+function derivar(ahoraMs) {
+  const [dx, dy] = derivaTele(ahoraMs), clave = `${dx},${dy}`;
+  if (clave === deriva) return;
+  deriva = clave;
+  raiz.style.setProperty('--tv-dx', `${dx}px`);
+  raiz.style.setProperty('--tv-dy', `${dy}px`);
+  programarColocar();
+}
+
 // ------------------------------------------------------------------------- el pulso de la tele (cada 5 s, solo en la tele)
 let pulso = 0;
 /** Mira la hora y decide qué enseña la tele (escena, marco o reposo). `ahoraMs` se puede pasar para probar. */
 export function latir(ahoraMs = Date.now()) {
   if (!enTV() || document.visibilityState !== 'visible') return;
   pintarReloj(ahoraMs);
+  derivar(ahoraMs);
   const { h, m } = horaReloj(ahoraMs);
   if (despiertaHasta && ahoraMs >= despiertaHasta) despiertaHasta = 0; // el rato despierta ya pasó
   const estado = modoTele({ hora: h + m / 60, ahoraMs, duerme: teleDuermeActiva(), despiertaHasta, fiesta: !$('tv-fiesta').hidden, ritual: ritualEnCurso, listos: listosTele() });
@@ -383,6 +397,7 @@ export function salirTV() {
   vigilar(false);
   clearTimeout(fundidoNoche); dormida = false; despiertaHasta = 0;
   delete raiz.dataset.tvDuerme;
+  deriva = ''; raiz.style.removeProperty('--tv-dx'); raiz.style.removeProperty('--tv-dy');
   $('tv-noche').classList.remove('vis'); $('tv-noche').hidden = true;
   if (location.hash === '#tv') history.replaceState(null, '', `${location.pathname}${location.search}`);
   try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ya salió */ }

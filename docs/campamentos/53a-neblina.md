@@ -81,6 +81,7 @@ Se descartó además: un degradado lineal para las bandas y otro radial para el 
 En verde antes y después. La escena pesa un nodo menos en todas las fechas y el valle cinco menos (los trazos de la niebla contaban como valle; las paradas del degradado, no); las animaciones a la vista, las mismas en cada capa. Las `declara` no se bajaron (el banco solo falla si pesa más).
 
 ## Decidido (25 nov 2026; no se vuelve a preguntar)
+*(Campamento 53B: la neblina dura ahora de 5:00 a 9:00 y vuelve fina por la tarde, y en escritorio hay una bruma baja detrás de las casas del pueblo, por encima del suelo. Ver [53b-neblina-2.md](53b-neblina-2.md).)*
 - La neblina es **de degradado, no de planos**: espesa abajo, se deshace hacia arriba. Cambia el «planos opacos, sin degradados» del 22B (nota en cursiva allí).
 - **Nada montado sobre el pueblo** (casas, iglesia, vecinos, teleférico, árboles, colinas) **y el suelo sin lavar**: conserva su verde y su textura (pedido del dueño).
 - **Clara**, apenas teñida por la hora; ni rosada ni del color del cielo.

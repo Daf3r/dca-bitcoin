@@ -535,24 +535,26 @@ export function piscuchas(lista) {
 }
 // ------------------------------------------------------------------------------------------------ campamento 22B · el mar de niebla (idea 55)
 /**
- * De 5:00 a 7:30 la neblina llena el valle por detrás de la montaña y la loma del cantón asoma como una isla. Dos bancos: detrás de la
- * loma (vela el pie de la sierra media, cuyos lomos asoman) y delante de su falda, por debajo de la milpa (nunca delante de la montaña,
- * el sendero ni los rótulos). (Campamento 53A: antes eran planos opacos de borde festoneado, «nubes recortadas».) Cada banco es un
- * rectángulo relleno con el degradado `#m-v-mar` (montana.js), que es medio óvalo apoyado en su base: espeso abajo, se deshace hacia
- * arriba y hacia los lados, sin ningún borde. Por eso el rectángulo es mucho más ancho que la escena (el lomo del banco apenas se curva)
- * y cada uno va corrido hacia un lado: el de atrás sube más a la izquierda, el de delante a la derecha. Sin desenfoques: el degradado
- * hace el suavizado. Quieta; su opacidad la pone el CSS con `--v-mar` (cielo.js): se forma y se levanta con la hora sin redibujar.
+ * La neblina llena el valle por detrás de la montaña y la loma del cantón asoma como una isla (al amanecer; cuándo, cielo.js:
+ * `marNiebla`). Dos bancos: detrás de la loma (vela el pie de la sierra media, cuyos lomos asoman) y delante de su falda, por debajo de
+ * la milpa (nunca delante de la montaña, el sendero ni los rótulos). (Campamento 53A: antes eran planos opacos de borde festoneado.)
+ * Todo se rellena con un solo degradado, `#m-v-mar` (montana.js): un óvalo que llena la caja de cada pieza, espeso en el centro y nada
+ * en el borde. Un banco es un rectángulo que sigue otro tanto por debajo de la escena (se ve su mitad de arriba: espeso abajo, se
+ * deshace hacia arriba) y mucho más ancho que ella (su lomo apenas se curva); cada uno va corrido hacia un lado. (Campamento 53B) En
+ * escritorio (`jirones`), sobre el lomo del banco de atrás, dos jirones quietos (óvalos largos y bajos, con `#m-v-jiron`) rompen su línea recta. Sin desenfoques: el degradado
+ * hace el suavizado. Quieta; su opacidad la pone el CSS con `--v-mar`: se forma y se levanta con la hora sin redibujar.
  */
-export function marDeNiebla({ W, H, canton, milpa, k, cresta = [], techo = 0 }) {
+export function marDeNiebla({ W, H, canton, milpa, k, cresta = [], techo = 0, jirones = false }) {
   // El de atrás llena el valle hasta media altura de la sierra media (sus lomos más altos asoman), nunca por encima del saldo ni de las
   // casas; el de delante empieza por debajo de la milpa, entero (no vela la loma). `sube`: cuánto asoma el borde que se deshace por encima de `y0`.
   const ys = cresta.map((p) => p[1]), arriba = ys.length ? Math.min(...ys) : canton.y - 40 * k, abajo = ys.length ? Math.max(...ys) : canton.y;
   const yAtras = Math.max(techo + 24, Math.min(canton.y - 18 * k, arriba + (abajo - arriba) * 0.62)), yFrente = Math.max(canton.y + 12 * k, milpa.y + milpa.h + milpa.caida + 4 * k);
-  const banco = (y0, sube, cx, clase) => {
-    const y = Math.max(techo + 24, y0 - sube);
-    return `<rect class="v-mar ${clase}" x="${f1(cx - W * 3)}" y="${f1(y)}" width="${f1(W * 6)}" height="${f1(H + 10 - y)}"/>`;
-  };
-  return { atras: banco(yAtras, 30 * k, W * 0.3, 'v-mar-atras'), frente: banco(yFrente, 0, W * 0.7, 'v-mar-frente') };
+  const tope = (y0, sube) => Math.max(techo + 24, y0 - sube);
+  const banco = (y, cx, clase) => `<rect class="v-mar ${clase}" x="${f1(cx - W * 3)}" y="${f1(y)}" width="${f1(W * 6)}" height="${f1((H + 10 - y) * 2)}"/>`;
+  // Los jirones: su borde de arriba nunca pasa del tope del banco (así tampoco suben hacia el saldo).
+  const yA = tope(yAtras, 30 * k);
+  const jiron = (cx, dy, rx, ry) => `<ellipse class="v-mar v-mar-jiron" cx="${f1(cx)}" cy="${f1(yA + dy + ry)}" rx="${f1(rx)}" ry="${f1(ry)}"/>`;
+  return { atras: banco(yA, W * 0.3, 'v-mar-atras') + (jirones ? jiron(W * 0.15, 0, W * 0.36, 20 * k) + jiron(W * 0.86, 8 * k, W * 0.3, 17 * k) : ''), frente: banco(tope(yFrente, 0), W * 0.7, 'v-mar-frente') };
 }
 
 // ------------------------------------------------------------------------------------------------ campamento 22B · aves de paso (idea 57)

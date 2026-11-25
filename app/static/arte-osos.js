@@ -81,7 +81,20 @@ const GORRO = [[-2.1, -16.7], [2.7, -16.9], [0.4, -22.3]]; // el gorrito de cump
 // La sombra de contacto en la nieve, hacia el lado contrario al astro (empieza bajo el cuerpo: el borde de abajo da a la sombra).
 const PIE = [[-6.8, -0.4], [6.6, -0.4], [5.4, 1.6], [-2.2, 2.4], [-11, 1.6]];
 
-const TONOS = ['sombra', 'luz', 'medio', 'marino', 'celeste', 'parche', 'cinta', 'bufanda', 'hocico', 'rasgos', 'hocico-arriba', 'rasgos-arriba', 'gorro'];
+// (Campamento 47, idea 24) Dormidos (de 22:00 a 5:00; el CSS los enseña): la nariz de siempre y los ojos cerrados, dos medias lunas hacia
+// abajo. Un trazo por oso, en lugar de sus rasgos (que se esconden). Y (189) el sombrero de palma del grande en marzo y abril, al sol de
+// mediodía: el ala no pasa del ancho de la cabeza; la copa sube algo más (montana.js mira sus puntas contra el cielo, `PUNTAS_SOMBRERO`).
+const DORMIDO = [elipse(0.7, -11.6, 1.7, 1.12, 12), canto(-3.1, -13.4, 1.05, 0.72, 15, 165, 0.42, 6), canto(4.3, -13.5, 1.05, 0.72, 15, 165, 0.42, 6)];
+const SOMBRERO = [elipse(0.5, -16.4, 6.3, 1.25, 14), arco(0.5, -16.7, 3.3, 2.6, 180, 360, 10)];
+export const PUNTAS_SOMBRERO = [[0.5, -19.3], [-5.8, -16.4], [6.8, -16.4], [-2.8, -18.4], [3.8, -18.4]];
+/** (47, idea 24) Las zetas del sueño, en (x, y) de la escena (abajo a la izquierda de la primera), con `e` px por unidad: dos Z llenas. */
+const zeta = (x, y, h) => { const w = h * 0.9, t = h * 0.24; return [[x, y - h], [x + w, y - h], [x + w, y - h + t], [x + t * 1.4, y - t], [x + w, y - t], [x + w, y], [x, y], [x, y - t], [x + w - t * 1.4, y - h + t], [x, y - h + t]]; };
+const ZETAS = [zeta(0, 0, 2.6), zeta(3.4, -3.6, 3.2)];
+/** La caja de las zetas en sus unidades (desde el punto donde empiezan): para mirarlas contra el cielo. */
+export const CAJA_ZETAS = { x0: 0, y0: -6.8, x1: 6.3, y1: 0 };
+export function zetas(x, y, e) { return `<path class="oso-zz" d="${ZETAS.map((z) => d(z.map(([u, v]) => [x + u * e, y + v * e]))).join('')}"/>`; }
+
+const TONOS = ['sombra', 'luz', 'medio', 'marino', 'celeste', 'parche', 'cinta', 'bufanda', 'hocico', 'rasgos', 'hocico-arriba', 'rasgos-arriba', 'dormido', 'gorro', 'sombrero', 'hola'];
 const d = (pts) => `M${pts.map(([x, y]) => `${f1(x)} ${f1(y)}`).join('L')}Z`;
 /** (Campamento 26) Las piezas de siempre, para dibujar a los mismos osos en otras poses en la interfaz (`arte-osos-poses.js`). */
 export const PARTES = { arco, elipse, canto, CAB, PIEZAS, CARA, ROPA, BUFANDA, GORRO, PIE };
@@ -90,10 +103,14 @@ export const PARTES = { arco, elipse, canto, CAB, PIEZAS, CARA, ROPA, BUFANDA, G
  * Los osos en la escena. `lista`: [{ x, y, s, quien }] (el pie de cada uno, su escala y cuál es); `k`: escala de la escena (`ec × 1.1`).
  * Un grupo por oso (`oso oso-grande|chico|mameluco`), de atrás adelante, con un trazo por tono; la sombra de contacto de todos va aparte,
  * debajo. Con `aurora`, cada cara va también mirando arriba (el CSS enseña una u otra); con `cumple`, el grande lleva su gorrito.
+ * (Campamento 47) Cada uno lleva además sus ojos cerrados (`oso-dormido`, escondidos); con `sombrero`, el grande su sombrero de palma
+ * (sin gorrito); con `hola`, su brazo levantado (188); `asoma`: cuál mira hacia el pueblo cuando pasa algo abajo (229: `oso-asoma`), y
+ * los que no son el grande saben hacia qué lado queda él (`oso-hacia-i` o `-d`: hacia ahí se acomodan).
  * Devuelve el contenido del grupo de los osos (decorativo: la descripción de la montaña lo dice).
  */
-export function osos(lista, { k = 1, aurora = false, cumple = false } = {}) {
+export function osos(lista, { k = 1, aurora = false, cumple = false, sombrero = false, hola = false, asoma = null } = {}) {
   let pie = '', cuerpos = '';
+  const gx = lista.find((o) => o.quien === 'grande')?.x ?? 0;
   for (const { x, y, s = 1, quien = 'grande' } of [...lista].sort((a, b) => a.y - b.y)) {
     const e = k * s * K_OSO, T = (pts) => d(pts.map(([px, py]) => [x + px * e, y + py * e]));
     pie += T(PIE);
@@ -105,9 +122,13 @@ export function osos(lista, { k = 1, aurora = false, cumple = false } = {}) {
     for (const [tono, lista2] of Object.entries(CARA)) for (const pts of lista2) add(tono, pts);
     if (aurora) for (const [tono, lista2] of Object.entries(CARA_ARRIBA)) for (const pts of lista2) add(`${tono}-arriba`, pts);
     if (cumple && quien === 'grande') add('gorro', GORRO);
+    for (const pts of DORMIDO) add('dormido', pts);
+    if (sombrero && !cumple && quien === 'grande') for (const pts of SOMBRERO) add('sombrero', pts);
+    if (hola && quien === 'grande') { add('hola', ESTIRA[0]); add('hola', ESTIRA_MANOS[0]); }
     // (Campamento 33) Los brazos alzados de estirarse, en un solo trazo y escondidos: dentro del contorno de siempre (nada sale contra el cielo).
     const brazos = [...ESTIRA, ...ESTIRA_MANOS].map(T).join('');
-    cuerpos += `<g class="oso oso-${quien}">${TONOS.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}<path class="oso-brazos" d="${brazos}"/></g>`;
+    const extra = `${asoma === quien ? ' oso-asoma' : ''}${quien !== 'grande' ? ` oso-hacia-${gx < x ? 'i' : 'd'}` : ''}`;
+    cuerpos += `<g class="oso oso-${quien}${extra}">${TONOS.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}<path class="oso-brazos" d="${brazos}"/></g>`;
   }
   return `<path class="oso-pie" d="${pie}"/>${cuerpos}`;
 }
@@ -294,4 +315,37 @@ function contorno(pts) {
   const lado = (lista) => { const h = []; for (const q of lista) { while (h.length >= 2 && giro(h[h.length - 2], h[h.length - 1], q) <= 0) h.pop(); h.push(q); } h.pop(); return h; };
   const hull = [...lado(p), ...lado([...p].reverse())];
   return hull.flatMap((q, i) => { const r = hull[(i + 1) % hull.length]; return [q, [(q[0] + r[0]) / 2, (q[1] + r[1]) / 2]]; });
+}
+
+// ---------------------------------------------------------------------------------------------------------------- lo que se clava al lado
+// (Campamento 47, ideas 185, 26 y 190) Lo que se planta en la nieve junto a los osos, fuera de su grupo (no gasta su tope): el oso de
+// nieve de diciembre, que crece con los días; el paraguas celeste de las tardes de la lluviosa y la banderita azul y blanca del 13 al 15
+// de septiembre (las mismas formas y colores que las de la interfaz, campamento 28). En sus unidades, el pie en (0, 0); `e`: px por unidad.
+/** La etapa del oso de nieve ese día (AAAA-MM-DD): 1 una bola (1–7 dic), 2 dos (8–15), 3 con orejas (16–23), 4 con su bufanda (del 24 al 6 de enero); 0 si no toca. */
+export function etapaOsoNieve(dia) {
+  const m = dia.slice(5, 7), n = Number(dia.slice(8, 10));
+  if (m === '01') return n <= 6 ? 4 : 0;
+  if (m !== '12') return 0;
+  return n < 8 ? 1 : n < 16 ? 2 : n < 24 ? 3 : 4;
+}
+/**
+ * Una pieza plantada (`tipo`: 'nieve' | 'paraguas' | 'bandera') con el pie en (x, y): { svg, pts } (`pts`: sus vértices en la escena,
+ * para mirarlos contra el cielo, el sendero y los rótulos). `etapa`: la del oso de nieve. Trazos con clase `c-plantado` y la suya.
+ */
+export function plantado(tipo, x, y, e, etapa = 4) {
+  const T = (pts) => pts.map(([u, v]) => [x + u * e, y + v * e]);
+  const pts = [];
+  const trazo = (clase, lista) => { for (const p of lista) pts.push(...T(p)); return `<path class="c-plantado ${clase}" aria-hidden="true" d="${lista.map((p) => d(T(p))).join('')}"/>`; };
+  if (tipo === 'nieve') {
+    const bolas = [elipse(0, -3.3, 4.3, 3.4, 14), ...(etapa >= 2 ? [elipse(0.2, -8.9, 3, 2.7, 12)] : []), ...(etapa >= 3 ? [elipse(-2.1, -11.2, 0.95, 0.9, 8), elipse(2.5, -11.2, 0.95, 0.9, 8)] : [])];
+    const sombra = [canto(0, -3.3, 4.3, 3.4, 115, 245, 1.5, 8), ...(etapa >= 2 ? [canto(0.2, -8.9, 3, 2.7, 115, 245, 1.1, 8)] : []), [[-3.4, -0.6], [3.6, -0.6], [2.4, 0.9], [-9, 1.1]]];
+    const bufanda = [[[-2.7, -6.5], [3.1, -6.5], [3.2, -5.4], [-2.8, -5.4]], [[1.6, -5.6], [2.7, -5.6], [3.1, -3.2], [2.1, -3]]];
+    return { svg: trazo('c-nieve-oso', bolas) + trazo('c-nieve-oso c-nieve-sombra', sombra) + (etapa >= 4 ? trazo('c-nieve-oso c-nieve-bufanda', bufanda) : ''), pts };
+  }
+  if (tipo === 'paraguas') {
+    const tela = [...arco(0, -12, 6.2, 5.2, 180, 360, 10), [5.2, -11.2], [3.6, -12], [2, -11.2], [0, -12], [-2, -11.2], [-3.6, -12], [-5.2, -11.2]];
+    return { svg: trazo('c-lluvia c-paraguas-palo', [[[-0.3, -17.4], [0.3, -17.4], [0.3, 0.4], [-0.3, 0.4]]]) + trazo('c-lluvia c-paraguas', [tela]), pts };
+  }
+  const azul = [[[-0.25, -13], [0.25, -13], [0.25, 0.4], [-0.25, 0.4]], [[0.25, -13], [6, -13.2], [6, -12], [0.25, -11.8]], [[0.25, -10.2], [6, -10.4], [6, -9.2], [0.25, -9]]];
+  return { svg: trazo('c-patria c-bandera', azul) + trazo('c-patria c-bandera-b', [[[0.25, -11.8], [6, -12], [6, -10.4], [0.25, -10.2]]]), pts };
 }

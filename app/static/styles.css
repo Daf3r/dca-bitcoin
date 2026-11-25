@@ -991,7 +991,7 @@ html[data-escena-fuera] .escena *, html[data-escena-fuera] .escena *::before, ht
    el bosque brota (no están en la lista); el resto del paisaje espera quieto y retoma al detenerse. La lista va en `:where` (sin peso)
    para que la regla de abajo pueda dejar correr en la película lo que cruza de paso. */
 :is(.escena[data-desliza], .pe-montana[data-corre]) :where(.efecto-ambiente, .efecto-ambiente *, .estrella, .fugaz, .niebla-a, .niebla-b, .ave, .toro-ala, .toro-bota,
-  .eco-fantasma, .yo-halo, #m-yo:not(.anda) .oso-tu, .tele-cabina, .v-capa-vecino, .yo-nav, .llama, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
+  .eco-fantasma, .yo-halo, #m-yo:not(.anda) .oso-tu, .tele-cabina, .v-capa-vecino, .v-capa-campana, .v-amb-estrellitas, .v-capa-camina, .yo-nav, .llama, .aurora-cinta, .lago-reflejo, .pp-bandera, .chispa, .sb-sube, .sb-estallido, .gotas, .gota,
   .petalo, .fc-pulso, .fc-llama, .fc-fiesta, .lu, .lu-v, .v-hu, .v-pn-foco, .v-cy-remo, .v-cayuco, .v-amb-cayuco, .v-pis, .v-aza, .v-peri, .v-zompopos, .v-rayo,
   .campo.alcanzado:not(.iza, .agita) .banderin) { animation-play-state: paused !important; }
 /* En la película son 15 s, no un instante: lo que cruza de paso (una estrella fugaz, el torogoz, los cohetes, la llovizna, los pétalos,
@@ -4246,15 +4246,19 @@ html[data-cielo="noche"] .montana { --v-tin: 7%; }
 .v-canton { --copa: color-mix(in oklab, color-mix(in oklab, #4f8f48 calc(var(--v-verde, 1) * 100%), #8f8a4c) calc(var(--v-luz) + 6%), var(--pino0)); --corteza: color-mix(in oklab, var(--monte-sombra) 45%, #6f5a46); }
 .v-arbol { --copa: color-mix(in oklab, color-mix(in oklab, #5c9c4c calc(var(--v-verde, 1) * 100%), #9c9456) calc(var(--v-luz) + 4% + var(--v-verde, 1) * 4%), var(--pino0)); }
 
-/* 55 · La neblina del amanecer (5:00 a 7:30): quieta, detrás de la montaña; se forma y se levanta con `--v-mar`. (Campamento 53A)
-   Dos bancos suaves por profundidad (detrás de la loma y delante de su falda; el pueblo queda limpio delante de ellos), con el mismo
-   degradado: espesa abajo, se deshace hacia arriba, sin bordes ni desenfoques. Clara, apenas teñida por el cielo de la hora (`--c2`,
-   `--c3`). La de más cerca tarda más en irse. */
+/* 55 · La neblina (cuándo: cielo.js, `marNiebla`): quieta; se forma y se levanta con `--v-mar`. (Campamentos 53A y 53B)
+   Dos bancos suaves detrás de la montaña (detrás de la loma y delante de su falda), y, en escritorio, dos jirones sobre el lomo del de atrás y una
+   bruma baja detrás de las casas del pueblo; todo con el mismo degradado, sin bordes ni desenfoques. Clara, apenas
+   teñida por el cielo de la hora (`--c2`, `--c3`). Lo de más cerca tarda más en irse. Nada sobre el suelo, la plaza ni el sendero. */
 .v-mar { display: none; fill: url(#m-v-mar); opacity: var(--v-mar, 0); transition: opacity 4s linear; }
 html[data-mar-niebla] .v-mar { display: inline; }
 .montana { --v-niebla: color-mix(in oklab, var(--c3) 9%, #f4f1ee); --v-niebla-luz: color-mix(in oklab, var(--c2) 12%, #fffdf9); }
 .vm-0 { stop-color: var(--v-niebla); stop-opacity: 0.95; } .vm-1 { stop-color: var(--v-niebla-luz); stop-opacity: 0.84; } .vm-2 { stop-color: var(--v-niebla-luz); stop-opacity: 0; }
 .v-mar-frente { opacity: min(1, calc(var(--v-mar, 0) * 1.5)); }
+.vj-0 { stop-color: var(--v-niebla-luz); stop-opacity: 0.9; }
+.v-mar-jiron, .v-mar-pueblo { fill: url(#m-v-jiron); }
+.v-mar-jiron { opacity: calc(var(--v-mar, 0) * 0.85); }
+.v-mar-pueblo { opacity: min(1, calc(var(--v-mar, 0) * 1.3)); }
 
 /* 56 · Árboles de aquí: el maquilishuat del patio florece en febrero (toda la copa rosada) y el árbol de fuego en abril (la copa roja
    sobre su follaje verde, que queda en la sombra); a su pie, las flores caídas. `data-flor` (cielo.js). Es paisaje: con cualquier nivel
@@ -4755,6 +4759,8 @@ html[data-efectos] .eco-fantasma .oso-tu { animation: none; }
 .v-tele-torre { fill: color-mix(in oklab, #4a3d33 80%, var(--monte-sombra)); }
 .tele-cabina { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; will-change: transform; transform: translate(var(--ax), var(--ay)); }
 html[data-efectos="todos"][data-mueve="teleferico"] .tele-cabina { animation: tele-va 240s linear infinite; }
+/* (Campamento 49, idea 275) En pantallas anchas, mientras el principal es del pueblo, la cabina es el segundo principal (`data-mueve2`). */
+@media (min-width: 1100px) { html[data-efectos="todos"][data-mueve2="teleferico"] .tele-cabina { animation: tele-va 240s linear infinite; } }
 @keyframes tele-va { 0%, 55% { transform: translate(var(--ax), var(--ay)); } 72%, 83% { transform: translate(var(--bx), var(--by)); } 100% { transform: translate(var(--ax), var(--ay)); } }
 .tele-cabina .tc-cabina { fill: color-mix(in oklab, #c62f2b 86%, var(--monte-sombra)); }
 .tele-cabina .tc-techo { fill: color-mix(in oklab, #25365f 86%, var(--monte-sombra)); }
@@ -4829,9 +4835,9 @@ html:is([data-cielo="noche"], [data-cielo="atardecer"]) .v-vo-brasa { fill: #ffb
    hace su jugada de 9 s: tres botes cada vez más bajos, rueda hacia un osezno, sube a sus manos, vuelve a su sitio y espera (15:00–16:30;
    campamento 39b · El tempo). Quietos, se ven igual con cualquier nivel de efectos. */
 .montana svg.v-capa-vecino { position: absolute; pointer-events: none; overflow: visible; will-change: transform; transform-origin: 50% var(--pie, 100%); }
-html[data-efectos="todos"][data-mueve="barre"] .montana svg.v-actor-barre { animation: vo-barre calc(var(--t-accion) * 1.2) steps(1) infinite; }
+html[data-efectos="todos"][data-mueve="barre"] .montana svg.v-actor-barre { animation: vo-barre calc(var(--t-accion) * 1.2) steps(1) var(--fase, 0s) infinite; }
 @keyframes vo-barre { 0%, 40% { transform: rotate(-2.5deg); } 20% { transform: rotate(2.5deg); } 60%, 100% { transform: none; } }
-html[data-efectos="todos"][data-mueve="pelota"] .montana svg.v-actor-pelota { animation: vo-bota calc(var(--t-accion) * 1.5) steps(1) infinite; }
+html[data-efectos="todos"][data-mueve="pelota"] .montana svg.v-actor-pelota { animation: vo-bota calc(var(--t-accion) * 1.5) steps(1) var(--fase, 0s) infinite; }
 @keyframes vo-bota { 0%, 8%, 15%, 21%, 66%, 100% { transform: none; } 4% { transform: translateY(var(--bote)); } 12% { transform: translateY(calc(var(--bote) * 0.6)); } 18% { transform: translateY(calc(var(--bote) * 0.3)); } 26% { transform: translateX(calc(var(--bote) * -0.5)); } 31%, 58% { transform: translateX(calc(var(--bote) * -1)); } 62% { transform: translate(calc(var(--bote) * -0.5), calc(var(--bote) * 1.2)); } }
 
 /* ---------------------------------------------------------------- Campamento 41 · La Navidad entera (24, 25, 31, 1 y 6)
@@ -4859,6 +4865,58 @@ html:is([data-turno="nb-doce"], [data-festivo="navidad"]) .c-regalo { display: i
 .c-regalo-verde { fill: color-mix(in oklab, var(--vo-verde, #2e8b62) 82%, var(--monte-sombra)); }
 .osos.sin-nieve ~ .c-regalo { opacity: 0; }
 .osos[visibility="hidden"] ~ .c-regalo { visibility: hidden; }
+
+/* ---------------------------------------------------------------- Campamento 47 · Los osos de la cumbre
+   Poses quietas según la hora (cielo.js pone `html[data-cumbre]`; nada se redibuja): de 22:00 a 5:00 duermen (ojos cerrados y sus zetas,
+   salvo las noches de fiesta), de 17:30 a 18:15 se ven de espaldas mirando bajar el sol (sin cara ni parche) y en marzo y abril, de 10:00
+   a 15:00, el grande lleva su sombrero de palma. Cuando pasa algo en el pueblo (el panadero que cruza, un vecino que camina, la fiesta
+   del hito, el desfile), el que queda del lado del pueblo baja la mirada hacia allá y se inclina 4°; a saltos, como estirarse (33): un
+   cambio al empezar y otro al acabar, solo transform (y con «todos»). Igual con los gestos de cada diez minutos (`mira`, `acomoda`,
+   `estira-1`). Los festejos al guardar (187) acompañan una acción: salen también con «esenciales». */
+.montana { --oso-palma: #d9b46a; }
+.oso-dormido, .oso-zz, .oso-sombrero { display: none; }
+.oso-dormido { fill: var(--oso-rasgo); }
+.oso-zz { fill: color-mix(in oklab, var(--oso-celeste) 72%, var(--monte-sombra)); }
+.oso-sombrero { fill: color-mix(in oklab, var(--oso-palma) 90%, var(--luz-roca, #fff)); }
+.oso-hola { fill: color-mix(in oklab, var(--pelo) 93%, var(--luz-roca, #fff)); }
+html[data-cumbre="duermen"] .osos :is(.oso-dormido, .oso-zz) { display: inline; }
+html[data-cumbre="duermen"] .osos :is(.oso-rasgos, .oso-hola) { display: none; }
+html[data-cumbre="duermen"][data-cielo="noche"][data-efectos="todos"] .osos.con-aurora :is(.oso-hocico-arriba, .oso-rasgos-arriba) { display: none; }
+html[data-cumbre="duermen"][data-cielo="noche"][data-efectos="todos"] .osos.con-aurora .oso-hocico { display: inline; }
+html[data-cumbre="espaldas"] .osos :is(.oso-hocico, .oso-rasgos, .oso-parche) { display: none; }
+html[data-cumbre="sol"] .osos .oso-sombrero { display: inline; }
+/* Mirar hacia el pueblo: la cara (con las manitas) se corre hacia allá y hacia abajo, en proporción a su caja (vale a cualquier tamaño). */
+.osos .oso-asoma :is(.oso-hocico, .oso-rasgos), .osos.festeja-arriba :is(.oso-hocico, .oso-rasgos, .oso-hocico-arriba, .oso-rasgos-arriba) { transform-box: fill-box; }
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]):is([data-mueve="cruza"], [data-mueve="fiesta-hito"], [data-foco="desfile"]) .osos > .oso-asoma,
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]) .montana[data-camina] .osos > .oso-asoma,
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]) .osos.mira > .oso-asoma { --asoma: 1; }
+.osos > .oso-asoma { --asoma: 0; }
+.osos[data-mira="i"] > .oso-asoma .oso-hocico { transform: translate(calc(var(--asoma) * -12%), calc(var(--asoma) * 8%)); }
+.osos[data-mira="i"] > .oso-asoma .oso-rasgos { transform: translate(calc(var(--asoma) * -13%), calc(var(--asoma) * 24%)); }
+.osos[data-mira="d"] > .oso-asoma .oso-hocico { transform: translate(calc(var(--asoma) * 12%), calc(var(--asoma) * 8%)); }
+.osos[data-mira="d"] > .oso-asoma .oso-rasgos { transform: translate(calc(var(--asoma) * 13%), calc(var(--asoma) * 24%)); }
+.osos[data-mira="i"]:not([data-sin-inclinar]) > .oso-asoma { transform: rotate(calc(var(--asoma) * -4deg)); }
+.osos[data-mira="d"]:not([data-sin-inclinar]) > .oso-asoma { transform: rotate(calc(var(--asoma) * 4deg)); }
+/* Se acomodan: los que no son el grande se recuestan en él (5°), si así siguen dentro de la montaña. */
+html[data-efectos="todos"] .osos.acomoda:not([data-sin-acomodar]) > .oso-hacia-i { transform: rotate(-5deg); }
+html[data-efectos="todos"] .osos.acomoda:not([data-sin-acomodar]) > .oso-hacia-d { transform: rotate(5deg); }
+/* (187) Los festejos al guardar: con el saltito, los brazos arriba o la mirada al cielo (lo mismo que dura el saltito). */
+html:not([data-efectos="ninguno"]) .osos.festeja-brazos:not([data-sin-estirar]) .oso-brazos { display: inline; }
+html:not([data-efectos="ninguno"]) .osos.festeja-arriba :is(.oso-hocico, .oso-hocico-arriba) { transform: translateY(-14%); }
+html:not([data-efectos="ninguno"]) .osos.festeja-arriba :is(.oso-rasgos, .oso-rasgos-arriba) { transform: translateY(-42%); }
+/* (185, 26 y 190) Lo plantado junto a los osos: el oso de nieve (crece con los días de diciembre), el paraguas de las tardes de la
+   lluviosa y la banderita del 13 al 15 de septiembre. Se esconden con los osos. */
+.c-plantado { pointer-events: none; }
+.c-nieve-oso { fill: color-mix(in oklab, #fffdf8 90%, var(--luz-roca, #fff)); }
+.c-nieve-sombra { fill: color-mix(in oklab, var(--nieve-sb) 55%, var(--monte-sombra)); }
+.c-nieve-bufanda { fill: var(--oso-cinta); }
+.c-paraguas { fill: color-mix(in oklab, var(--oso-celeste) 88%, var(--monte-sombra)); }
+.c-paraguas-palo { fill: color-mix(in oklab, #3a2c22 85%, var(--monte-sombra)); }
+.c-bandera { fill: #2f5fae; }
+.c-bandera-b { fill: #fffaf3; }
+html:not([data-tarde]) .c-lluvia { display: none; }
+.osos.sin-nieve ~ .c-plantado { opacity: 0; }
+.osos[visibility="hidden"] ~ .c-plantado { visibility: hidden; }
 
 /* ---------------------------------------------------------------- Campamento 40 · El día entero del pueblo
    Turnos nuevos (cielo.js: turno; arte-vecinos.js: reparto), todo quieto: con cualquier nivel de efectos, el mismo dibujo.
@@ -4889,3 +4947,108 @@ html:is([data-cielo="amanecer"], [data-luces="templo"]) .v-pueblo .v-ig-portal {
 html[data-puerta="cerrada"] .v-pueblo .v-ig-portal { fill: color-mix(in oklab, #4a3020 70%, var(--monte-sombra)); }
 /* (52, idea 238) Las noches de luna llena el pescador no sale: el cayuco no está en el lago (ni su lámpara). */
 html[data-luna-llena][data-cielo="noche"] .montana :is(.v-cayuco, svg.v-amb-cayuco) { display: none; }
+
+/* ---------------------------------------------------------------- Campamento 59 · La fiesta del hito
+   (fiesta.js, arte-fiesta.js, lib.js: guionFiesta) Cada pieza que se mueve es su propia capa pequeña (un <svg> hermano del principal,
+   debajo del frente) y se mueve entera: solo transform y opacidad, una animación por capa, y se quita al acabar. Mientras dura,
+   `data-mueve="fiesta-hito"` (cielo.js): el actor de la franja y lo ambiental esperan; el vecino de la capa y los animales de la plaza
+   no se ven (los vecinos están en la fiesta). Con «esenciales», la campana y los cohetes solo aparecen y se apagan (sin farolitos);
+   con «ninguno», el guion no trae nada: queda el estado final (la tarjeta y el farol del hito). */
+.montana svg.fiesta-capa { position: absolute; pointer-events: none; overflow: visible; }
+html[data-mueve="fiesta-hito"] .montana :is(svg.v-capa-vecino, svg.v-capa-animal) { display: none; }
+html[data-mueve="fiesta-hito"] #m-v-pie :is(.v-animal, .v-gallina, .v-sombra-perro) { visibility: hidden; }
+.fi-onda { fill: none; stroke: var(--naranja-txt); stroke-width: 1.3px; stroke-linecap: round; }
+.fi-campana { fill: var(--naranja-txt); opacity: 0.85; }
+.fi-halo { fill: var(--naranja); opacity: 0.2; }
+html[data-cielo="noche"] .fi-halo, html[data-cielo="atardecer"] .fi-halo { opacity: 0.34; }
+.fi-cuerpo { fill: var(--naranja-txt); stroke: var(--naranja-osc); stroke-width: 0.35px; }
+.fi-llama { fill: var(--nieve); }
+.fi-cordel { fill: none; stroke: color-mix(in oklab, var(--nieve) 35%, var(--monte-sombra)); stroke-width: 0.5px; }
+.fi-rayos { fill: none; stroke-width: 1.5px; stroke-linecap: round; opacity: 0.95; }
+.fi-rayos.fi-c0 { stroke: var(--naranja); } .fi-rayos.fi-c1 { stroke: var(--naranja-txt); } .fi-rayos.fi-c2 { stroke: var(--nieve); } .fi-rayos.fi-c3 { stroke: var(--brasa); }
+.fi-chispas { fill: none; stroke: var(--nieve); stroke-width: 2.2px; stroke-linecap: round; opacity: 0.9; }
+/* La campana: tres ondas que laten una vez por toque (fiesta.js pone cuántos). */
+.montana svg.fiesta-ondas { transform-origin: 50% 70%; animation: fiesta-onda var(--t-gesto) var(--t-sale) both; }
+@keyframes fiesta-onda { 0% { opacity: 0; transform: scale(0.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2); } }
+/* Los farolitos suben juntos de la plaza hacia la cumbre (fiesta.js pone el recorrido, --dx y --dy, y lo que duran) y se pierden arriba. */
+.montana svg.fiesta-faroles { will-change: transform; animation: fiesta-sube var(--t-accion) var(--t-suave) both; }
+@keyframes fiesta-sube { 0% { opacity: 0; transform: translate(0, 0) scale(1); } 6% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx, 0), var(--dy, -80px)) scale(0.7); } }
+/* Cada cohete estalla en su palma (uno tras otro, cada medio segundo) y se apaga. */
+.montana svg.fiesta-palma { transform-origin: 50% 50%; animation: fiesta-palma calc(var(--t-gesto) * 1.375) var(--t-sale) both; }
+@keyframes fiesta-palma { 0% { opacity: 0; transform: scale(0.25); } 18% { opacity: 1; } 70% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.06); } }
+html[data-efectos="esenciales"] .montana svg.fiesta-palma { animation-name: fiesta-aparece; }
+html[data-efectos="esenciales"] .montana svg.fiesta-ondas { animation-name: fiesta-aparece; }
+@keyframes fiesta-aparece { 0% { opacity: 0; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+html[data-efectos="ninguno"] .montana svg.fiesta-capa { display: none; }
+/* El farol del hito (hasta la medianoche): colgado entre los faroles de la plaza, quieto; de noche su halo luce más. */
+.v-farol-hito .fi-halo { opacity: 0.16; }
+html[data-cielo="noche"] .v-farol-hito .fi-halo, html[data-cielo="atardecer"] .v-farol-hito .fi-halo { opacity: 0.4; }
+
+/* ================================================================ Campamento D · La pantalla grande a 1920×1080
+   Es el monitor de la casa (1920×1080): la app en ventana o a pantalla completa, y el modo pantalla grande (#tv) para mirarla de lejos.
+   - Pantalla grande desde 1600 px: los rótulos de la montaña a 26 px (`--rotulo-k`, que montana.js: etiquetar lee para que sus cajas
+     crezcan con ellos) y dos datos menos («Coinbase · hace 8 s» mientras el precio está vivo, lo ya realizado y la mini línea): de lejos
+     son ruido. Si el precio se queda viejo o no llega, su aviso sí se ve.
+   - El pueblo más grande (`--pueblo-k`, montana.js → arte-pueblo.js: sitiosPueblo): las mismas piezas y menos casas, en el mismo hueco
+     entre el borde y la salida del sendero. ×1.35 en la pantalla grande (a ×1.5 solo cabían la iglesia, la plaza y una casa delante)
+     y ×1.2 en la app desde 1800 px de ancho. El llano, el primer plano y el teleférico siguen a su escala. */
+@media (min-width: 1800px) { html:not([data-tv]) .montana { --pueblo-k: 1.2; } }
+/* La app de 1600 a 2399 px (el monitor de 1920 y su escala de Windows) toma la columna del saldo de la tele: con 8 cifras «sats» rozaba
+   la ladera a 1920 (24-pulido-final-a, «Hallazgo»). De 1100 a 1599 sigue como estaba: lo decide el dueño. */
+@media (min-width: 1600px) and (max-width: 2399px) { html:not([data-tv]) .saldo { width: min(40%, var(--medio-ancho)); } }
+@media (min-width: 1600px) {
+  html[data-tv] .montana { --rotulo-k: 1.625; --pueblo-k: 1.35; }
+  html[data-tv] :is(.campo-txt, .yo-txt) { font-size: 26px; }
+  html[data-tv] .campo-txt { stroke-width: 6px; }
+  html[data-tv] .campo-txt.cima { stroke-width: 5.5px; }
+  html[data-tv] .eco-txt { font-size: 26px; stroke-width: 6px; }
+  html[data-tv] .cotizacion[data-estado="vivo"] #precio-meta, html[data-tv] :is(.sd-r, .sd-gan .mini) { display: none; }
+}
+/* - El tope propio de la pantalla grande: 24 animaciones a la vista (el teléfono tiene 110). A 3 m no se distingue el titilar de cada
+     estrella, el temblor del reflejo del lago, el vaivén del papel picado ni el humo de cada farol: se quedan quietos o no salen; de las
+     luciérnagas quedan dos y de la lluvia seis gotas. Medido con mil compras a 1920×1080 (banco, casos «tele»): de 41–47 a 15–21 de
+     noche (Nochebuena, lluvia, el anochecer), de 37 a 19 en una tarde de lluvia y 15 de día. Mientras la tele duerme (23:00–5:00) la escena, tapada, se pausa.
+     La fiesta de un hito (unos segundos) va aparte, como en el teléfono. */
+html[data-tv] :is(.estrella, .lago-reflejo, .pp-bandera) { animation: none !important; }
+html[data-tv] :is(.lu:not(.lu-1, .lu-2), .farol .humo, .gota:nth-child(n+7)) { display: none !important; }
+html[data-tv-duerme] .montana * { animation-play-state: paused !important; }
+/* - La deriva contra el quemado (tv.js: `derivar`, lib.js: `derivaTele`): el saldo y la cabecera se corren hasta 12 px cada 10 minutos,
+     a mitad del marco de la historia. Sin transición: el salto no se ve. Los rótulos de la montaña dejan 20 px al saldo (8 + 12). */
+html[data-tv] :is(.cima, .saldo) { translate: var(--tv-dx, 0px) var(--tv-dy, 0px); }
+
+/* ---------------------------------------------------------------- Campamento 49 · El pueblo se mueve 2
+   Cada gesto, en su capa pequeña (montana.js: capaVecino, campanaDelPueblo, caminar), solo transform u opacidad, con «todos» y en su
+   franja (cielo.js: mueveRutina). El panadero cruza la calle en su bicicleta (116, 6:00–7:00: una pasada de ida y vuelta cada 40 s,
+   a saltos); la tortillera palmea (200, 11:30–12:30: solo sus manos); la campana de la torre se mece (25, 12:00–12:05, desde arriba);
+   la hamaca de la siesta (199, 13:00–14:00, despacio, a saltos, desde donde cuelga). La ronda (118): con la que barre y con la pelota,
+   la abuela se mece en su taburete cuando el actor descansa (la misma duración y la misma fase, `--fase`: nunca los dos a la vez).
+   Las estrellitas de los oseznos titilan (201, un ambiental). Quietos, se ven igual con cualquier nivel de efectos. */
+.montana svg.v-capa-campana { position: absolute; pointer-events: none; overflow: visible; will-change: transform; transform-origin: 50% 0; }
+html[data-efectos="todos"][data-mueve="cruza"] .montana svg.v-actor-cruza { animation: vo-cruza calc(var(--t-ambiente) * 2.5) linear var(--fase, 0s) infinite; }
+@keyframes vo-cruza {
+  0% { transform: translateX(0) scaleX(1); animation-timing-function: steps(8, end); }
+  11% { transform: translateX(var(--ida, 0px)) scaleX(1); animation-timing-function: steps(1, end); }
+  11.5% { transform: translateX(var(--ida, 0px)) scaleX(-1); animation-timing-function: steps(8, end); }
+  22.5% { transform: translateX(0) scaleX(-1); animation-timing-function: steps(1, end); }
+  23%, 100% { transform: translateX(0) scaleX(1); }
+}
+html[data-efectos="todos"][data-mueve="palmea"] .montana svg.v-actor-palmea { animation: vo-palmea calc(var(--t-gesto) * 0.625) steps(1) infinite; }
+@keyframes vo-palmea { 0%, 100% { transform: none; } 50% { transform: translateY(calc(var(--bote) * 0.45)); } }
+html[data-efectos="todos"][data-mueve="campana"] .montana svg.v-capa-campana { animation: vo-campana calc(var(--t-gesto) * 1.25) ease-in-out infinite alternate; }
+@keyframes vo-campana { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+html[data-efectos="todos"][data-mueve="hamaca"] .montana svg.v-actor-hamaca { animation: vo-hamaca calc(var(--t-gesto) * 1.875) steps(1) infinite; }
+@keyframes vo-hamaca { 0%, 100% { transform: rotate(-7deg); } 25%, 75% { transform: none; } 50% { transform: rotate(7deg); } }
+html[data-efectos="todos"][data-mueve="barre"] .montana svg.v-ronda { animation: vo-ronda-barre calc(var(--t-accion) * 1.2) steps(1) var(--fase, 0s) infinite; }
+html[data-efectos="todos"][data-mueve="pelota"] .montana svg.v-ronda { animation: vo-ronda-pelota calc(var(--t-accion) * 1.5) steps(1) var(--fase, 0s) infinite; }
+@keyframes vo-ronda-barre { 0%, 64%, 92%, 100% { transform: none; } 68%, 84% { transform: rotate(5deg); } 76% { transform: rotate(-5deg); } }
+@keyframes vo-ronda-pelota { 0%, 70%, 96%, 100% { transform: none; } 74%, 90% { transform: rotate(5deg); } 82% { transform: rotate(-5deg); } }
+.montana svg.v-amb-estrellitas { position: absolute; pointer-events: none; overflow: visible; will-change: opacity; }
+html[data-efectos="todos"][data-ambiente~="estrellitas"] .montana svg.v-amb-estrellitas { animation: vo-titila calc(var(--t-ambiente) * 0.75) steps(1) infinite; }
+@keyframes vo-titila { 0%, 12%, 44%, 75%, 100% { opacity: 1; } 8% { opacity: 0.45; } 40% { opacity: 0.6; } 71% { opacity: 0.5; } }
+html[data-mueve="fiesta-hito"] .montana svg:is(.v-amb-estrellitas, .v-capa-camina) { display: none; }
+/* (204) Al cambiar de turno, el que se queda en la calle camina a su sitio nuevo (a saltos, un paso cada 0.4 s) y, mientras, es el actor
+   principal: lo demás del pueblo espera (`data-camina`). Solo con «todos» (si no, montana.js ni pone la capa: aparece directo). */
+.montana svg.v-capa-camina { position: absolute; pointer-events: none; overflow: visible; will-change: transform; }
+html[data-efectos="todos"] .montana svg.v-capa-camina { animation: vo-camina calc(var(--t-gesto) * var(--largo, 2)) steps(var(--pasos, 8), end) both; }
+@keyframes vo-camina { from { transform: translate(var(--dx, 0px), var(--dy, 0px)); } to { transform: none; } }
+.montana[data-camina] :is(svg.v-capa-vecino, svg.v-capa-animal, svg.v-capa-campana) { animation-play-state: paused !important; }
