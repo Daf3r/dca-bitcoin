@@ -2166,6 +2166,8 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
     }
     const casas = new Set(['2026-12-16', '2026-12-17', '2026-12-18'].map((d) => { const q = V.reparto(lug, 'tp-posada', { dia: d, hora: 19 }).find((v) => v.t === 'espaldas' && !v.quien); return q ? Math.round(q.x) : null; }));
     if (lug.calle.length > 1 && casas.size < 2) f43.push(`${c.W} posada: siempre la misma casa`);
+    // El grupito de cada noche: los dos de espaldas y al menos dos oseznos con su farolito (en fila: nadie encima de nadie).
+    for (let d = 16; d <= 23; d++) { const q = V.reparto(lug, 'tp-posada', { dia: `2026-12-${d}`, hora: 19 }); if (q.filter((v) => v.t === 'espaldas' && !v.quien).length !== 2 || q.filter((v) => v.t === 'oseznoFarol').length < 2) f43.push(`${c.W} posada del ${d}: el grupito incompleto`); }
   }
   eq(f43, [], 'temporada 43: en cada tamaño y luz, cada temporada con su figura, su actor (la pelota, donde va) y ningún NaN; la milpa, con su gente solo donde la hay; la posada, en otra casa cada noche');
   const sm = A.sitiosMilpa({ x: 100, y: 200, w: 80, h: 16, caida: 4 }, 2);

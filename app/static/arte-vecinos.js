@@ -650,8 +650,9 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   // su sitio si esa noche no es su casa, y la de la tienda y su osezno miran el nacimiento, como cada noche de diciembre.
   else if (t === 'tp-posada') {
     const casas = lug.calle?.length ?? 0, noche = /^\d{4}-12-(1[6-9]|2[0-3])$/.test(dia) ? Number(dia.slice(8, 10)) - 16 : 0, i = casas ? noche % casas : 0;
-    en('calle', i, 'espaldas', { r: 0, dx: -2.2 }); en('calle', i, 'espaldas', { r: 2, dx: 2.4 });
-    for (const [j, dx, dy] of [[0, -6.2, 0.6], [1, 5.8, 0.6], [2, 0.2, 1.4]]) en('calle', i, 'oseznoFarol', { s: OSEZNO, r: j, dx, dy, f: dx < 0 ? 1 : -1 });
+    // En fila, alternados (un osezno, un mayor…), con su sitio cada uno: los oseznos no se montan sobre los mayores.
+    en('calle', i, 'espaldas', { r: 0, dx: -3 }); en('calle', i, 'espaldas', { r: 2, dx: 4.8 });
+    for (const [j, dx, f] of [[0, -7, 1], [1, 0.9, 1], [2, 8.8, -1]]) en('calle', i, 'oseznoFarol', { s: OSEZNO, r: j, dx, dy: 0.5, f });
     if (i !== 0) quien('tortillera', 'calle', 0, { t: 'pupusera' });
     quien('tienda', 'portal', 0, { t: 'espaldas' }); en('portal', 0, 'osezno', { r: 2, s: OSEZNO, dx: 3.2, dy: 0.5 }); quien('abuela', 'corredor', 0);
   }
