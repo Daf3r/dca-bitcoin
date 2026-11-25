@@ -224,6 +224,7 @@ const PESOS = [
   ['campamento 21: etapas más cercanas', 151], // 129 comprobaciones
   ['campamento 21B: la tele de la sala (tarj', 306], // 113 comprobaciones
   ['tele: el saldo contra la montaña (pulido', 229], // 87 comprobaciones
+  ['campamento D: la pantalla grande a 1920', 45], // 10 comprobaciones (estimado)
   ['campamento 24: medir este aparato (idea', 58], // 58 comprobaciones
   ['campamento 24: confianza (la revisión tr', 42], // 43 comprobaciones
   ['campamento 22: el valle vivo', 58], // 27 comprobaciones
@@ -5705,37 +5706,38 @@ try {
     } finally { sCod.parar(); }
   });
 
+  /**
+   * La caja del saldo de verdad (la cifra que se ve, `.od-num`, y su unidad, `#s-unidad`) con 8 px de margen: qué de lo dibujado la
+   * toca. Se calcula aparte del CSS que la coloca: la placa de «Tú», los rótulos, los campamentos y la cumbre (sus cajas), el sendero
+   * (un punto cada 8 px) y la silueta de la montaña (una rejilla de 6 px dentro de la caja, con `isPointInFill`).
+   */
+  const saldoLibre = (p) => p.evaluate(() => {
+    const M = 8;
+    const caja = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width }; };
+    const c = caja(document.querySelector('#s-sats .od-num')), u = caja(document.getElementById('s-unidad'));
+    const s = { l: Math.min(c.l, u.l) - M, t: Math.min(c.t, u.t) - M, r: Math.max(c.r, u.r) + M, b: Math.max(c.b, u.b) + M };
+    const cruza = (q) => q.w > 1 && q.l < s.r && s.l < q.r && q.t < s.b && s.t < q.b;
+    const choques = [];
+    const yo = document.querySelector('#montana #m-etiquetas .eti-yo');
+    if (yo && cruza(caja(yo))) choques.push('«Tú»');
+    for (const t of document.querySelectorAll('#montana #m-etiquetas text')) if (cruza(caja(t))) choques.push(`rótulo «${t.textContent.trim()}»`);
+    for (const g of document.querySelectorAll('#montana .campo')) if (cruza(caja(g))) choques.push(g.classList.contains('es-cima') ? 'la cumbre' : `campamento ${g.dataset.m}`);
+    const svg = document.querySelector('#montana > svg'), camino = svg.querySelector('#m-sendero'), monte = svg.querySelector('.monte');
+    const pt = svg.createSVGPoint(), mc = camino.getScreenCTM(), largo = camino.getTotalLength();
+    let sendero = 0;
+    for (let l = 0; l <= largo; l += 8) { const a = camino.getPointAtLength(l); pt.x = a.x; pt.y = a.y; const q = pt.matrixTransform(mc); if (q.x > s.l && q.x < s.r && q.y > s.t && q.y < s.b) sendero++; }
+    if (sendero) choques.push(`${sendero} puntos del sendero`);
+    const inv = monte.getScreenCTM().inverse();
+    let enMonte = 0;
+    for (let x = s.l; x <= s.r; x += 6) for (let y = s.t; y <= s.b; y += 6) { pt.x = x; pt.y = y; if (monte.isPointInFill(pt.matrixTransform(inv))) enMonte++; }
+    if (enMonte) choques.push(`${enMonte} muestras sobre la montaña`);
+    // Lo que se midió de verdad (si la montaña aún no tuviera sus rótulos, la prueba pasaría sin mirar nada)
+    const medido = { yo: Boolean(yo), rotulos: document.querySelectorAll('#montana #m-etiquetas text').length, campos: document.querySelectorAll('#montana .campo').length, puntos: Math.floor(largo / 8) };
+    return { choques, medido, txt: `${document.querySelector('#s-sats .sr').textContent} ${document.getElementById('s-unidad').textContent} en ${Math.round(s.l + M)}–${Math.round(s.r - M)} px${choques.length ? `: ${choques.join(', ')}` : ''}` };
+  });
+
   // ---------------------------------------------------------------- tele: el saldo contra la montaña (pulido final: la cifra y su unidad nunca tocan «Tú», la cumbre, los campamentos, los rótulos, el sendero ni la silueta)
   await bloque(async () => {
-    /**
-     * La caja del saldo de verdad (la cifra que se ve, `.od-num`, y su unidad, `#s-unidad`) con 8 px de margen: qué de lo dibujado la
-     * toca. Se calcula aparte del CSS que la coloca: la placa de «Tú», los rótulos, los campamentos y la cumbre (sus cajas), el sendero
-     * (un punto cada 8 px) y la silueta de la montaña (una rejilla de 6 px dentro de la caja, con `isPointInFill`).
-     */
-    const saldoLibre = (p) => p.evaluate(() => {
-      const M = 8;
-      const caja = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width }; };
-      const c = caja(document.querySelector('#s-sats .od-num')), u = caja(document.getElementById('s-unidad'));
-      const s = { l: Math.min(c.l, u.l) - M, t: Math.min(c.t, u.t) - M, r: Math.max(c.r, u.r) + M, b: Math.max(c.b, u.b) + M };
-      const cruza = (q) => q.w > 1 && q.l < s.r && s.l < q.r && q.t < s.b && s.t < q.b;
-      const choques = [];
-      const yo = document.querySelector('#montana #m-etiquetas .eti-yo');
-      if (yo && cruza(caja(yo))) choques.push('«Tú»');
-      for (const t of document.querySelectorAll('#montana #m-etiquetas text')) if (cruza(caja(t))) choques.push(`rótulo «${t.textContent.trim()}»`);
-      for (const g of document.querySelectorAll('#montana .campo')) if (cruza(caja(g))) choques.push(g.classList.contains('es-cima') ? 'la cumbre' : `campamento ${g.dataset.m}`);
-      const svg = document.querySelector('#montana > svg'), camino = svg.querySelector('#m-sendero'), monte = svg.querySelector('.monte');
-      const pt = svg.createSVGPoint(), mc = camino.getScreenCTM(), largo = camino.getTotalLength();
-      let sendero = 0;
-      for (let l = 0; l <= largo; l += 8) { const a = camino.getPointAtLength(l); pt.x = a.x; pt.y = a.y; const q = pt.matrixTransform(mc); if (q.x > s.l && q.x < s.r && q.y > s.t && q.y < s.b) sendero++; }
-      if (sendero) choques.push(`${sendero} puntos del sendero`);
-      const inv = monte.getScreenCTM().inverse();
-      let enMonte = 0;
-      for (let x = s.l; x <= s.r; x += 6) for (let y = s.t; y <= s.b; y += 6) { pt.x = x; pt.y = y; if (monte.isPointInFill(pt.matrixTransform(inv))) enMonte++; }
-      if (enMonte) choques.push(`${enMonte} muestras sobre la montaña`);
-      // Lo que se midió de verdad (si la montaña aún no tuviera sus rótulos, la prueba pasaría sin mirar nada)
-      const medido = { yo: Boolean(yo), rotulos: document.querySelectorAll('#montana #m-etiquetas text').length, campos: document.querySelectorAll('#montana .campo').length, puntos: Math.floor(largo / 8) };
-      return { choques, medido, txt: `${document.querySelector('#s-sats .sr').textContent} ${document.getElementById('s-unidad').textContent} en ${Math.round(s.l + M)}–${Math.round(s.r - M)} px${choques.length ? `: ${choques.join(', ')}` : ''}` };
-    });
     const fijo = { isMobile: false, hasTouch: false, deviceScaleFactor: 1 };
     const sinDialogos = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }];
     /** Una sesión por escenario y cuenta; cada tamaño, la página otra vez (con #tv, la tele; sin él, la app de escritorio). */
@@ -5757,10 +5759,11 @@ try {
       await ctx.close();
     };
     const TELES = [[1920, 1080], [1366, 768], [3840, 2160], [1080, 1920], [1024, 768], [2560, 1440], [1280, 720]];
-    // La app de escritorio (sin #tv), con la misma regla, donde hoy se cumple. A 1100 px (casi todos los saldos) y a 1440–1920 (un
-    // saldo de 8 cifras, solo la silueta) «sats» queda a menos de 8 px de la ladera desde antes de este arreglo, que no toca la app:
-    // lo decide el dueño (CLAUDE.md, «Pulido final · la tele», hallazgo). Cuando se arregle, 1100 y 1440 vuelven aquí.
-    const APP = [[2560, 1440]];
+    // La app de escritorio (sin #tv), con la misma regla, donde hoy se cumple. A 1100 px (casi todos los saldos) y a 1440 (un saldo de 8
+    // cifras, solo la silueta) «sats» queda a menos de 8 px de la ladera: lo decide el dueño (CLAUDE.md, «Pulido final · la tele», hallazgo).
+    // Cuando se arregle, 1100 y 1440 vuelven aquí. (Campamento D) El monitor de 1920 ya cumple: de 1600 a 2399 px la app usa la columna de
+    // la tele; a 1920×950, la ventana con las barras del navegador.
+    const APP = [[1920, 1080], [1920, 950], [2560, 1440]];
     for (const esc of ['hoy', 'medio', 'mil', 'ballena']) {
       const srv = await servidor(esc);
       try {
@@ -5769,6 +5772,55 @@ try {
         await recorrer(srv, ADMIN, APP, false, esc); // y la regla de siempre: la cumbre nunca invade el saldo
       } finally { srv.parar(); }
     }
+  });
+
+  // ---------------------------------------------------------------- campamento D: la pantalla grande a 1920×1080 (rótulos, datos, tope y deriva)
+  await bloque(async () => {
+    const srv = await servidor('medio');
+    try {
+      // Cada hora, su sesión: `entrar` fija `libro.hora` en cada carga.
+      const tele = async (hora) => {
+        const t = await entrar(navegador, srv, LECTOR, { hora, viewport: { width: 1920, height: 1080 }, isMobile: false, hasTouch: false, deviceScaleFactor: 1 }, [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); } catch { /* sin almacenamiento */ } }]);
+        await t.p.evaluate(() => { location.hash = '#tv'; });
+        await t.p.reload({ waitUntil: 'networkidle' });
+        await t.p.waitForSelector('#montana #m-etiquetas .eti-yo', { state: 'attached', timeout: 10000 });
+        await t.p.waitForTimeout(1500);
+        for (let k = 0; k < 3 && await t.p.locator('dialog[open]').count(); k++) { await t.p.keyboard.press('Escape'); await t.p.waitForTimeout(300); }
+        return t;
+      };
+      let { ctx, p, consola } = await tele(12);
+      // Los rótulos de la montaña a 26 px o más y sin «Coinbase · hace…» ni la mini línea (el precio sigue)
+      const v = await p.evaluate(() => {
+        const vis = (e) => Boolean(e?.getClientRects().length && getComputedStyle(e).display !== 'none');
+        return { tam: [...document.querySelectorAll('#m-etiquetas text')].map((t) => Number.parseFloat(getComputedStyle(t).fontSize)), meta: vis(document.getElementById('precio-meta')), estado: document.getElementById('cotizacion').dataset.estado, mini: [...document.querySelectorAll('#s-valor .mini')].some(vis), precio: vis(document.getElementById('precio')), pueblo: getComputedStyle(document.getElementById('montana')).getPropertyValue('--pueblo-k').trim() };
+      });
+      ok(v.tam.length >= 3 && v.tam.every((t) => t >= 26), `D: en la tele a 1080p los rótulos de la montaña miden 26 px o más (${v.tam})`);
+      ok(v.estado === 'vivo' && !v.meta && !v.mini && v.precio, `D: dos datos menos (sin «Coinbase · hace…» ni la mini línea) y el precio a la vista (${JSON.stringify(v)})`);
+      eq(v.pueblo, '1.35', 'D: el pueblo, más grande en la tele');
+      // La deriva contra el quemado, en sus cuatro esquinas (hasta 12 px a los lados y hacia abajo): el saldo sigue sin tocar la montaña
+      for (const [dx, dy] of [[12, 12], [-12, 12], [-12, 0], [12, 0]]) {
+        await p.evaluate(([x, y]) => { document.documentElement.style.setProperty('--tv-dx', `${x}px`); document.documentElement.style.setProperty('--tv-dy', `${y}px`); }, [dx, dy]);
+        await p.waitForTimeout(150);
+        const r = await saldoLibre(p);
+        ok(r.choques.length === 0, `D: con la deriva en ${dx},${dy} el saldo no toca la montaña (${r.txt})`);
+      }
+      // El tope propio de la tele: 24 animaciones a la vista de noche (lo que cuenta el banco); mientras duerme, la escena en pausa
+      const corriendo = () => p.evaluate(() => {
+        const host = document.getElementById('montana');
+        const escondido = (e) => { for (let x = e; x && x !== host; x = x.parentElement) if (getComputedStyle(x).display === 'none') return true; return false; };
+        return document.getAnimations().filter((a) => { const t = a.effect?.target; return t && host.contains(t) && a.playState === 'running' && !escondido(t) && Number(getComputedStyle(t).opacity) !== 0; }).length;
+      });
+      eq(consola, [], `D: consola limpia (${consola.join(' | ')})`);
+      await ctx.close();
+      ({ ctx, p, consola } = await tele(21));
+      const noche = await corriendo();
+      ok(noche > 0 && noche <= 24, `D: de noche, ${noche} animaciones a la vista en la tele (tope 24)`);
+      await ctx.close();
+      ({ ctx, p, consola } = await tele(23.5));
+      await p.waitForFunction(() => document.documentElement.dataset.tvDuerme === '1', null, { timeout: 8000 });
+      ok(await p.evaluate(() => document.documentElement.dataset.tvDuerme === '1') && (await corriendo()) === 0, 'D: mientras la tele duerme, la escena no anima nada');
+      await ctx.close();
+    } finally { srv.parar(); }
   });
 
   // ---------------------------------------------------------------- campamento 24: medir este aparato (idea 44)

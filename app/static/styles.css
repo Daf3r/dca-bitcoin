@@ -4952,8 +4952,8 @@ html[data-cielo="noche"] .v-farol-hito .fi-halo, html[data-cielo="atardecer"] .v
 }
 /* - El tope propio de la pantalla grande: 24 animaciones a la vista (el teléfono tiene 110). A 3 m no se distingue el titilar de cada
      estrella, el temblor del reflejo del lago, el vaivén del papel picado ni el humo de cada farol: se quedan quietos o no salen; de las
-     luciérnagas quedan dos y de la lluvia seis gotas. Medido con mil compras a 1920×1080: de 41–47 a 18–24 de noche (Nochebuena,
-     lluvia, el anochecer), de 37 a 23 en una tarde de lluvia y 19 de día. Mientras la tele duerme (23:00–5:00) la escena, tapada, se pausa.
+     luciérnagas quedan dos y de la lluvia seis gotas. Medido con mil compras a 1920×1080 (banco, casos «tele»): de 41–47 a 15–21 de
+     noche (Nochebuena, lluvia, el anochecer), de 37 a 19 en una tarde de lluvia y 15 de día. Mientras la tele duerme (23:00–5:00) la escena, tapada, se pausa.
      La fiesta de un hito (unos segundos) va aparte, como en el teléfono. */
 html[data-tv] :is(.estrella, .lago-reflejo, .pp-bandera) { animation: none !important; }
 html[data-tv] :is(.lu:not(.lu-1, .lu-2), .farol .humo, .gota:nth-child(n+7)) { display: none !important; }

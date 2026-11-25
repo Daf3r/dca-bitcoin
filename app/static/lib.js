@@ -2050,8 +2050,11 @@ export function marcoTele(ahoraMs, listos, { cadaMs = 600e3, duraMs = 40e3, desf
   const visible = dentro < duraMs;
   return { visible, dibujo: listos[((vuelta % n) + n) % n], vuelta, faltaMs: visible ? duraMs - dentro : cadaMs - dentro };
 }
-/** (Campamento D) Los nueve sitios de la deriva de la tele: el centro y las ocho direcciones a 12 px. */
-export const DERIVA_TELE = [[0, 0], [12, 0], [12, 12], [0, 12], [-12, 12], [-12, 0], [-12, -12], [0, -12], [12, -12]];
+/**
+ * (Campamento D) Los nueve sitios de la deriva de la tele: hasta 12 px a cada lado y hacia abajo (hacia arriba, la cabecera se saldría de
+ * la pantalla y el reloj ya no iría en la fila del precio).
+ */
+export const DERIVA_TELE = [[0, 0], [12, 0], [12, 12], [0, 12], [-12, 12], [-12, 0], [-12, 6], [0, 6], [12, 6]];
 /**
  * (Campamento D) Contra el quemado de la pantalla: el saldo y la cabecera de la tele se corren hasta 12 px, un sitio cada 10 minutos.
  * Cambia a las :05:20, :15:20… (a mitad del marco de la historia, que tapa la pantalla: el salto no se ve). Devuelve `[dx, dy]` en px.

@@ -9,6 +9,17 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento D) La pantalla grande a 1920×1080; resume también la fiesta del hito (2026-12-r), la neblina y los vecinos con oficio, que salen casi a la vez.
+    id: '2026-12-s',
+    items: [
+      'En la pantalla grande los nombres de la montaña se leen de lejos, y sobran menos datos.',
+      'En las pantallas anchas el pueblo se ve más grande.',
+      'En la pantalla grande el saldo se corre un poquito cada rato, para cuidar la pantalla.',
+      'Al llegar a una etapa, el pueblo hace fiesta una vez para toda la familia: campana, farolitos y cohetes.',
+      'La neblina de la mañana es más suave, y los vecinos tienen oficio.',
+    ],
+  },
+  {
     // (Campamento 59) La fiesta del hito; resume también la neblina (2026-12-p y q) y los vecinos con oficio (2026-12-o), que salen casi a la vez.
     id: '2026-12-r',
     items: [
