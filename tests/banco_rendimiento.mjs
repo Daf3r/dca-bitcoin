@@ -120,15 +120,16 @@ const CASOS = [
   { caso: '2 nov, las velitas', dia: '2026-11-02', hora: 19, declara: 846 },
   { caso: '12 dic, los inditos', dia: '2026-12-12', hora: 8, declara: 885 },
   { caso: '14 sept, la banderita', dia: '2026-09-14', hora: 15, declara: 877 },
-  // (Campamento 43) Las temporadas del pueblo: un momento de cada una (otro reparto de los mismos trazos).
-  { caso: 'marzo, los mangos', dia: '2027-03-14', hora: 10.5, declara: 1100 },
-  { caso: 'mayo, la siembra', dia: '2026-05-06', hora: 8.5, declara: 1100 },
-  { caso: 'agosto, la dobla', dia: '2026-08-19', hora: 8.5, declara: 1100 },
-  { caso: 'noviembre, la tapisca', dia: '2026-11-04', hora: 8.5, declara: 1100 },
-  { caso: 'julio, la atolada', dia: '2026-07-18', hora: 17, declara: 1100 },
-  { caso: 'diciembre, la posada', dia: '2026-12-18', hora: 19, declara: 1100 },
-  { caso: 'domingo, la mejenga', dia: '2027-02-14', hora: 15.5, declara: 1100 },
-  { caso: 'luna llena, los cuentos', dia: '2027-02-20', hora: 20.25, declara: 1100 },
+  // (Campamento 43) Las temporadas del pueblo: un momento de cada una (otro reparto de los mismos trazos). La milpa con su gente, +2
+  // frente a la base: el milpero trae a esa hora dos tonos que el pueblo no tenía (su camisa de maíz y la manita sobre su herramienta).
+  { caso: 'marzo, los mangos', dia: '2027-03-14', hora: 10.5, declara: 834 },
+  { caso: 'mayo, la siembra', dia: '2026-05-06', hora: 8.5, declara: 852 },
+  { caso: 'agosto, la dobla', dia: '2026-08-19', hora: 8.5, declara: 853 },
+  { caso: 'noviembre, la tapisca', dia: '2026-11-04', hora: 8.5, declara: 861 },
+  { caso: 'julio, la atolada', dia: '2026-07-18', hora: 17, declara: 841 },
+  { caso: 'diciembre, la posada', dia: '2026-12-18', hora: 19, declara: 886 },
+  { caso: 'domingo, la mejenga', dia: '2027-02-14', hora: 15.5, declara: 836 },
+  { caso: 'luna llena, los cuentos', dia: '2027-02-20', hora: 20.25, declara: 833 },
   // (Campamento E) El ánimo del valle según la semana del precio (`animo`: lo fuerza `libro.animo`): otro reparto de los mismos vecinos
   // (sentados de dos en dos si baja; la ropa tendida y vecinos de paseo si sube). Un miércoles de escuela por la mañana (la que barre ya
   // acabó: 10:00) y en la tarde de la pelota; los cinco estados, cada uno con lo suyo declarado (un tono de más es un trazo más).

@@ -53,10 +53,28 @@ En `app/static/cielo.js`, la misma tabla `COSTUMBRES` del 42. Con `false`, ese r
 - **164**: la v5 también pedía nadie hablando: así está (sin globos). El garrobo de la maqueta de los mangos es la idea 54 (campamento 45).
 
 ## Medido (banco `--rapido`, 390×664, mil compras, nodos con «esenciales»; antes = la base `claude/vida-42` en los mismos momentos)
-MEDIDAS
+| Momento | Nodos antes → después | Animaciones a la vista («todos») antes → después |
+|---|---|---|
+| Domingo de marzo 10:30 (los mangos) | 834 → 834 | 13 → 13 |
+| 6 may 8:30 (la siembra) | 850 → **852** | 36 → 36 |
+| 19 ago 8:30 (la dobla) | 851 → **853** | 36 → 36 |
+| 4 nov 8:30 (la tapisca) | 859 → **861** | 18 → 18 |
+| Sábado de julio 17:00 (la atolada) | 847 → 841 | 36 → 36 |
+| 18 dic 19:00 (la posada) | 889 → 886 | 45 → 45 |
+| Domingo 15:30 (la mejenga) | 843 → 836 | 15 → 14 (sin la abuela de la ronda) |
+| Luna llena 20:15 (los cuentos) | 835 → 833 | 38 → 38 |
+| Escritorio posada · mejenga · siembra (1440 / 1920 / 2560) | 956·907·914 / 971·924·933 / 969·923·930 → 953·900·914 / 970·917·935 / 968·916·932 (tope 1100) | — |
+| Tele 1920×1080, posada · mejenga | 971 · 924 → 968 · 917 | 24 · 15 → 24 · 14 (tope 24; la posada ya iba en el tope en la base) |
+
+**La milpa con su gente sube 2 nodos** (y el valle, 2): no es la gente (van en los trazos de siempre) sino dos tonos que a esa hora el pueblo no tenía: la camisa de maíz del milpero (su color, fijado por persona desde el 52) y la manita sobre su herramienta. Comprobado en el navegador comparando la escena con la costumbre encendida y apagada. Muy lejos del tope (852 de 1100). Lo demás baja o queda igual: los turnos de temporada no sacan las cosas de cada quien (la bicicleta, el comal) ni la ronda de la abuela. Cada momento va declarado en `tests/banco_rendimiento.mjs`; el banco entero en verde («OK: dentro de los topes»). Los demás casos del banco, iguales que en la base.
 
 ## Verificado
-VERIFICADO
+- `test_lib` (1197 comprobaciones), bloque «temporada 43»: el turno de cada temporada a cada hora (y lo que no lo es: un día de escuela, mayo, septiembre, Navidad, Nochebuena, sin luna llena), los mangos del sábado de plaza, la milpa con su gente (en sus semanas y horas; no en Difuntos ni el 10 de mayo; sí el Día de la Cruz), el foco de cada una (con los choques declarados), la frase del primer día y solo ese, **todas apagadas** (cada rato vuelve a ser el de siempre) y encendidas otra vez, que nada se mueve distinto, y el reparto en seis tamaños (320, 390, 844 acostado, 768, 1440 y 2560) con la luz de cada lado: la figura de cada temporada, su actor (la pelota en la mejenga y la atolada), de dos a ocho vecinos, ningún NaN; la milpa con su gente solo donde la hay (el milpero no sale dos veces y la que barre sigue siendo el actor); la posada en otra casa cada noche; los sitios de la milpa dentro de la parcela.
+- Pruebas viejas cambiadas con criterio (cambio intencional, nunca saltadas): la lista de turnos válidos de un año (35/40 en `test_lib`) suma los cinco `tp-…`; el tope de frases de la línea de hoy en dos años (51, idea 228) pasa de 70 a 90: las temporadas suman seis al año (de 69 a 81).
+- `test_ui` entero por partes (`PARTE=k/6`, de dos en dos): 300 + 455 + 305 + 476 + 636 + 622 comprobaciones, en verde a la primera. Bloque nuevo «campamento 43»: a 390 y 1440 px, nueve momentos con la página abierta (cambiando día y hora): el turno, el foco, lo que se mueve, el actor en su capa, de dos a ocho vecinos y ningún NaN; la siembra con dos en la parcela donde hay milpa (a 1440×900 no hay); la escena bajo 1000 nodos y la consola limpia; con «ninguno», la pelota de la mejenga quieta.
+- axe: 348 estados, sin violaciones. `tsc`, Biome (0 avisos) y `comprobar_recorte`, en verde. El banco (arriba), en verde.
+- No se corrieron los barridos (`rapido` y por pestañas), Lighthouse, `test_api` (no se tocó el servidor) ni la regresión visual: los corre el CI.
+- Capturas reales de cada temporada (los mangos el domingo y en el sábado de plaza, la siembra, la dobla, la tapisca, la atolada, la posada dos noches seguidas, la mejenga y los cuentos) a 390×844, 1440×900 y 1920×1080, en claro y oscuro, con «todos» y «ninguno», cada una con el pueblo de cerca (en el informe del campamento).
 
 ## Sin probar aquí
 - iPhone real y Safari: los turnos nuevos con la app abierta (el cambio de turno de las 18:30 en la posada, el de las 20:30 tras los cuentos).
