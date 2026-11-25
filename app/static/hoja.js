@@ -1,5 +1,5 @@
 import { hundirMoneda } from './montana.js';
-import { diaDe, fechaEscrita, sumarDias, etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, leerPrecio, montoCampo, montoDePrecio, montoHabitual, pct, precioCampo, precioDeMonto, precioDelDia, TOPE_DINERO, usd, usd0, walletNeto } from './lib.js';
+import { etapaDestacada, diaDe, fechaEscrita, sumarDias, etapaAnterior, etapaSiguiente, nombreHito, nombreWallet, walletNetoDe, etiquetasUsadas, partirEtiquetas, avisosAlAnotar, constanciaCruzada, selloNuevo, costoTrasCompra, entero, estimarMonto, extraerTxid, fechaCorta, fechaLarga, hoyISO, leerPrecio, montoCampo, montoDePrecio, montoHabitual, pct, precioCampo, precioDeMonto, precioDelDia, TOPE_DINERO, usd, usd0, walletNeto } from './lib.js';
 import { avisar } from './avisar.js';
 import { celebrar, destello, fiestaVista } from './celebracion.js';
 import { cargarHistorico, desdeHistorico } from './datos.js';
@@ -635,7 +635,9 @@ $('guardar').addEventListener('click', async () => {
     }
     pintar({ montana: true, desde: antes.sats, festejo });
     if (fiesta) { // (59) la fiesta de hoy: deja el farol en los dibujos que vengan y este aparato no la repite al volver a abrir
-      S.fiesta = { dia: hoyISO(), hito: { ...fiesta, id: g.id }, halving: S.fiesta?.dia === hoyISO() && Boolean(S.fiesta.halving) };
+      // (Si hoy ya hubo otra, queda la destacada de las dos, como en el servidor.)
+      const previa = S.fiesta?.dia === hoyISO() ? S.fiesta.hito : null;
+      S.fiesta = { dia: hoyISO(), hito: previa && etapaDestacada([previa.meta, fiesta.meta]) === previa.meta ? previa : { ...fiesta, id: g.id }, halving: S.fiesta?.dia === hoyISO() && Boolean(S.fiesta.halving) };
       fiestaVista(`${S.fiesta.dia}#${g.id}`);
     }
     if (!editando && g.tipo === 'venta' && g.nota !== 'Comisión de retiro' && !reducido()) hundirMoneda(); // 16A: la venta queda en el lago

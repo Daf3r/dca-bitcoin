@@ -523,7 +523,7 @@ export const marcarFiesta = (on) => { fiestaViva = Boolean(on); };
 /** (59) El farol del hito colgado entre los dos faroles de la plaza (sin plaza, nada). */
 function farolDelPueblo(lug) {
   const [a, b] = lug.poste ?? [];
-  return a && b ? dibujoFarolHito(Math.min(a[0], b[0]), Math.max(a[0], b[0]), Math.min(a[1], b[1]), a[2]) : '';
+  return a && b ? dibujoFarolHito(Math.min(a[0], b[0]), Math.max(a[0], b[0]), Math.min(a[1], b[1]) - 5.2 * a[2], a[2]) : ''; // el cordel, bajo las lámparas (a 10.4 unidades del suelo; el poste de las piscuchas, a 5.1)
 }
 /**
  * (59) Los sitios de la fiesta en la escena viva de la página (no en la película): la plaza (su centro, la escala y la altura de sus

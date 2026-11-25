@@ -8588,6 +8588,10 @@ try {
       await l.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'campamento', null, { timeout: 8000 });
       e = await estado(l.p);
       ok(e.tarjeta === 'Hoy el libro llegó a · 1M sats' && e.farol === 0, `59: la lectora ve la fiesta al abrir, con la voz del libro (${e.tarjeta})`);
+      // Un redibujo pedido a media fiesta (el saldo que crece, como cuando llega el precio tarde) espera a que acabe: no la corta.
+      await l.p.evaluate(() => { document.querySelector('.saldo').style.paddingBottom = '40px'; });
+      await l.p.waitForTimeout(1200);
+      ok((await estado(l.p)).fiesta === 'campamento', '59: un redibujo pedido a media fiesta espera a que acabe');
       await l.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 15_000 });
       ok(await l.p.evaluate(() => !window.__festeja), '59: para quien solo mira, «Tú» no sale en la fiesta');
       await l.p.waitForFunction(() => !document.documentElement.dataset.fiestaHito, null, { timeout: 22_000 });

@@ -398,7 +398,7 @@ export function pintarVoz() {
   }
   document.documentElement.dataset.voz = libro ? 'libro' : 'yo';
   // Si la montaña ya estaba dibujada con la otra voz (la cuenta llegó después que las compras), se rehace el rótulo del punto.
-  if (S.cargado && vozMontana !== libro && anchoMontana) pintarMontana(false);
+  if (S.cargado && vozMontana !== libro && anchoMontana) { clearTimeout(redibujo); redibujo = setTimeout(() => pintarMontana(false), Math.max(0, ocupadaHasta - performance.now())); } // (59) tras la subida o la fiesta
 }
 pintarVoz(); // con la pista del dispositivo, antes de que llegue la cuenta
 
@@ -450,6 +450,8 @@ export function pintarMontana(animar, desde, festejo = null) {
 // (Campamento 20) Si el bloque del saldo crece después de dibujar la montaña (llega el precio y «ya realizaste» baja a su renglón, otra
 // letra…), la cumbre quedaría bajo el texto: se redibuja, cuando acaba la subida si estaba subiendo. Si encoge no hace falta.
 let techoDibujado = 0, ocupadaHasta = 0, redibujo = 0;
+/** (59) La fiesta del hito ocupa la escena `ms` más: los redibujos que esperan (el saldo que crece, la familia, la voz) esperan también. */
+export function ocuparEscena(ms) { ocupadaHasta = Math.max(ocupadaHasta, performance.now() + ms); }
 new ResizeObserver(() => {
   if (!S.cargado || !anchoMontana) return;
   const techo = document.querySelector('.saldo').getBoundingClientRect().bottom - $('montana').getBoundingClientRect().top;

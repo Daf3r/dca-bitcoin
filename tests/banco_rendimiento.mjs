@@ -83,7 +83,7 @@ const CASOS = [
   // saltito de la cumbre: el frente ya lleva los cohetes del calendario. `fiesta`: el botón; `en`: cuándo se mide (ms
   // tras el clic: la subida de «Tú», 1.4 s, y el clímax, 10 s en un campamento y 5 s en una principal o el halving).
   { caso: 'fiesta del hito, tarde', dia: '2026-11-25', hora: 16, declara: 875, fiesta: 'hito', en: 12_400 },
-  { caso: 'fiesta del hito, noche de lluvia', dia: '2026-07-10', hora: 21, declara: 865, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta del hito, noche de lluvia', dia: '2026-07-10', hora: 23, declara: 865, fiesta: 'hito', en: 12_400 },
   { caso: 'fiesta del hito, tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 863, fiesta: 'hito', en: 12_400 },
   { caso: 'fiesta del hito, Nochebuena 23:55', dia: '2026-12-24', hora: 23.92, declara: 985, frente: 28, fiesta: 'hito', en: 12_400 },
   { caso: 'fiesta de etapa con sello', dia: '2026-11-25', hora: 10, declara: 860, fiesta: 'etapa', en: 7400 },

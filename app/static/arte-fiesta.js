@@ -70,15 +70,15 @@ export function palma(x, y, r, c, rayos = 12) {
 
 /**
  * El farol del hito: un farolito de papel colgado de un cordel entre los dos faroles de la plaza, encendido hasta la medianoche del día
- * de la fiesta. Sin cifra ni nombre. (x0, x1): los postes; `y`: la altura de sus faroles; `k`: la escala. Tres trazos, quietos.
+ * de la fiesta. Sin cifra ni nombre. (x0, x1): los postes; `y`: la altura del cordel (bajo sus lámparas); `k`: la escala. Tres trazos, quietos.
  * @param {number} x0
  * @param {number} x1
  * @param {number} y
  * @param {number} k
  */
 export function farolHito(x0, x1, y, k) {
-  const x = (x0 + x1) / 2, yc = y + 2.2 * k, yf = yc + 1.2 * k;
-  const cordel = `M${f1(x0)} ${f1(y)}Q${f1(x)} ${f1(y + 4.4 * k)} ${f1(x1)} ${f1(y)}M${f1(x)} ${f1(yc)}v${f1(1.2 * k)}`;
-  const cuerpo = `M${f1(x - 1.5 * k)} ${f1(yf)}h${f1(3 * k)}l${f1(0.55 * k)} ${f1(3.4 * k)}h${f1(-4.1 * k)}Z`;
-  return `<g class="v-farol-hito" aria-hidden="true"><path class="fi-halo" d="${circulo(x, yf + 1.8 * k, 4.6 * k)}"/><path class="fi-cordel" d="${cordel}"/><path class="fi-cuerpo" d="${cuerpo}"/></g>`;
+  const x = (x0 + x1) / 2, yc = y + 1.2 * k, yf = yc + 0.8 * k;
+  const cordel = `M${f1(x0)} ${f1(y)}Q${f1(x)} ${f1(y + 2.4 * k)} ${f1(x1)} ${f1(y)}M${f1(x)} ${f1(yc)}v${f1(0.8 * k)}`;
+  const cuerpo = `M${f1(x - 1.2 * k)} ${f1(yf)}h${f1(2.4 * k)}l${f1(0.45 * k)} ${f1(2.7 * k)}h${f1(-3.3 * k)}Z`;
+  return `<g class="v-farol-hito" aria-hidden="true"><path class="fi-halo" d="${circulo(x, yf + 1.4 * k, 3.6 * k)}"/><path class="fi-cordel" d="${cordel}"/><path class="fi-cuerpo" d="${cuerpo}"/></g>`;
 }

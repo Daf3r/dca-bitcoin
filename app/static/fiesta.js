@@ -8,6 +8,7 @@ import { guionFiesta, palmasFiesta } from './lib.js';
 import { nivelEfectos } from './movimiento.js';
 import { farolitos, ondasCampana, palma } from './arte-fiesta.js';
 import { gestoCumbre, marcarFiesta, ponerFarolHito, sitiosFiesta, vecinosFiesta } from './montana.js';
+import { ocuparEscena } from './pintar.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 let viva = null; // { host, timers, capas, guion, fin, quitar, vecinos }
@@ -48,11 +49,14 @@ export function fiestaDelHito({ escala, conTu = false, tv = false }) {
   terminarFiesta();
   const sit = sitiosFiesta();
   const C = window.libroCielo, h = C?.hora?.() ?? 12, raiz = document.documentElement;
-  const g = guionFiesta(escala, { noche: h >= 22 || h < 5, lluvia: raiz.dataset.epoca === 'lluviosa' && raiz.hasAttribute('data-tarde'), efectos: nivelEfectos(), ancho: sit?.W ?? innerWidth, conTu });
+  // Con lluvia: en la lluviosa, de día y al atardecer llueve en la escena (`.gotas`) y de noche hay relámpagos (la noche más cargada):
+  // sin farolitos.
+  const g = guionFiesta(escala, { noche: h >= 22 || h < 5, lluvia: raiz.dataset.epoca === 'lluviosa' && raiz.dataset.cielo !== 'amanecer', efectos: nivelEfectos(), ancho: sit?.W ?? innerWidth, conTu });
   if (!sit || !g.pasos.length) { if (g.farol) ponerFarolHito(); return Promise.resolve(); }
   return new Promise((listo) => {
     const v = { host: sit.host, timers: [], capas: [], guion: g, vecinos: false, fin: listo, quitar: null };
     viva = v;
+    ocuparEscena(g.ms + 300); // lo que redibuja la escena más tarde (el precio que llega, la familia, la voz) espera a que acabe
     marcarFiesta(true);
     C?.fiestaHito?.(true);
     raiz.dataset.fiestaHito = escala;
