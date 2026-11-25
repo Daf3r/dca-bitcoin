@@ -22,15 +22,16 @@ Cinco propuestas **aprobadas por el dueño**, más la prueba y la entrada de «Q
 - `test_lib` (ánimo E) leía la primera entrada de `CAMBIOS` como la del campamento E: ahora busca la suya por su `id`.
 
 ## Medidas (antes → después)
-Capturas en el scratchpad de la sesión: `c64/antes`, `c64/despues` (320, 390, 768, 1440 y 1920×1080; claro y oscuro; Resumen, Gráficos y Movimientos con `anio`, con `mil` —con traslados y ventas— y vacío), `c64/guia` (las dos secciones de la guía y «Tu historia»), `c64/ub-*.png` (el renglón vacío) y `c64/medidas.json` en cada carpeta.
+Capturas en el scratchpad de la sesión: `c64/antes`, `c64/despues` (320, 390, 768, 1440 y 1920×1080; claro y oscuro; Resumen, Gráficos y Movimientos con `anio`, con `mil` —con traslados y ventas— y vacío), `c64/guia` (las dos secciones de la guía y «Tu historia»), `c64/ub-*.png` (el renglón vacío) y `medidas.json` en cada carpeta (la de `despues`, repetida al final solo con `anio`).
 - «Dónde están tus sats» sin traslados: **267 → 69 px** a 390 (la maqueta, 60), 267 → 95 a 320 (la pregunta y el enlace en dos renglones), 222/244 → **56** en tablet y escritorio. Con letra muy grande, 108.
-- El Resumen entero a 390: **3388 → 3218 px** (320: 3413 → 3197; 768: 3454 → 3282; en escritorio no cambia: la columna de al lado manda).
+- El Resumen entero a 390: **3388 → 3185 px** (320: 3413 → 3189; 768: 3454 → 3282; en escritorio no cambia: la columna de al lado manda). Con `mil` (traslados y ventas), 3633 → 3630 a 390.
 - Las tarjetas a 390 (con `anio`): «Próxima etapa» 278 → 285 (gana su título), «Tus medallas» 463 → 456, «Cartas» 295 → 293, «Constancia» 390 → 387; «Sats por dólar» 159 → 171 (relleno de 14/16 a 20). A 320, todas bajan (relleno de 16): «Próxima etapa» 335 → 310, «Constancia» 467 → 457.
 - Gráficos en el teléfono, de «Qué gráfico ver» al dibujo: **277 → 227 px** a 390 y 277 → 225 a 320 (la maqueta, 223); sin desborde a 320, 360, 390 ni 699, con letra normal, grande y muy grande, con y sin «Todo». En escritorio, igual (251).
 - Ningún desborde horizontal en ninguna captura; sin errores de página.
 
 ## Pruebas
 - `test_ui`, bloque nuevo **«campamento 64: un solo material»** (27 comprobaciones, a 320, 390 y 1440): los secundarios a 48 px con filo, sin fondo y en tinta; los enlaces a 15 px, subrayados y con 48 px de toque; todas las tarjetas con el mismo radio y relleno y el mismo título; «Próxima etapa» como `h2`; el renglón vacío con su `h2` para el índice; el rango y «Ampliar» en una fila entre la lectura y el dibujo (en escritorio, junto al título); y el tabulador del rango a «Ampliar» y al gráfico.
+- Corrido: `test_lib` (1158), `tsc`, Biome (0 avisos), `test_api` (1346, con el disco simulado sano), `test_ui` entero por partes (las seis y, sueltos, los nueve bloques que el reparto movió al añadir el bloque nuevo a mitad de corrida: todo en verde), axe (348 estados, sin violaciones) y «Qué hay de nuevo» a 360×640 (cabe sin desplazar con letra normal y grande: 562 y 598 px). No corrí el barrido, Lighthouse, el banco de rendimiento ni la regresión visual (queda para el CI; la escena no se tocó).
 - Con Chromium a 3× (el iPhone 13 de las pruebas) el filo de 1.5 px se ajusta a los píxeles del aparato (sale de 1 a 1.5): la prueba acepta ese margen.
 
 ## Sin probar aquí
