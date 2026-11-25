@@ -382,6 +382,10 @@
   const PESO_MUEVE = {
     barre: { capas: 1, anim: 1 }, pelota: { capas: 1, anim: 1 }, brinda: { capas: 1, anim: 1 }, chispea: { capas: 1, anim: 1 },
     gallinas: { capas: 3, anim: 1 }, perro: { capas: 2, anim: 1 }, teleferico: { capas: 0, capasAncho: 1, anim: 1 },
+    // (Campamento 59) La fiesta del hito: no es del calendario (no sale en el mapa del día), sale al cruzar una etapa por primera vez o el
+    // día del halving, y mientras dura (30 s como mucho) es el actor principal: la campana, los farolitos y cada cohete, cada uno en su
+    // capa y con una animación; en el clímax, los farolitos y hasta cinco cohetes (tres en el teléfono). Lo ambiental espera.
+    'fiesta-hito': { capas: 7, capasAncho: 7, anim: 1 },
   };
   /**
    * (Campamento 51, idea 225) El mapa del día: cada tramo en que cambia algo (el turno, el foco, lo que se mueve o los ambientales), de
@@ -478,6 +482,10 @@
     aplicar();
   }
 
+  // (Campamento 59) Con la fiesta del hito en marcha (fiesta.js), `data-mueve` es `fiesta-hito` y no hay ambientales: la fiesta es el
+  // actor principal unos segundos. Vive aquí porque `aplicar` reescribe los dos atributos cada cinco minutos y al volver a la página.
+  let fiestaHitoViva = false;
+  function fiestaHito(on) { fiestaHitoViva = Boolean(on); aplicar(); }
   let diaAplicado = null; // (Campamento 30) para avisar del cambio de día
   let turnoAplicado = null; // (Campamento 35) para avisar del cambio de turno del pueblo
   let cohetesAplicados = null; // (Campamento 39) para poner o quitar los cohetes en su hora
@@ -510,12 +518,12 @@
     const mar = marNiebla(h);
     raiz.style.setProperty('--v-mar', mar.toFixed(3));
     raiz.toggleAttribute('data-mar-niebla', mar > 0);
-    const fl = flor(d), mv = mueve(d, h);
+    const fl = flor(d), mv = fiestaHitoViva ? 'fiesta-hito' : mueve(d, h);
     if (fl) raiz.dataset.flor = fl; else delete raiz.dataset.flor;
     if (mv) raiz.dataset.mueve = mv; else delete raiz.dataset.mueve;
     // (Campamento 51) El director: el foco del momento (`data-foco`, lo lee el CSS y la descripción) y los ambientales que van junto al
     // actor (`data-ambiente`, hasta tres, separados por espacios: el CSS enseña cada capa con `~=`).
-    const fo = foco(d, h), amb = ambiente(d, h);
+    const fo = foco(d, h), amb = fiestaHitoViva ? [] : ambiente(d, h);
     raiz.dataset.foco = fo.id === 'rutina' ? `rutina-${fo.rutina}` : fo.id;
     if (amb.length) raiz.dataset.ambiente = amb.join(' '); else delete raiz.dataset.ambiente;
     // (Campamento 35) El turno del pueblo: si cambió con la página abierta, montana.js rehace solo sus vecinos (`libro:turno`).
@@ -553,5 +561,5 @@
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
   window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
-    director, foco, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+    director, foco, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

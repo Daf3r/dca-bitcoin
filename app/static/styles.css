@@ -4889,3 +4889,39 @@ html:is([data-cielo="amanecer"], [data-luces="templo"]) .v-pueblo .v-ig-portal {
 html[data-puerta="cerrada"] .v-pueblo .v-ig-portal { fill: color-mix(in oklab, #4a3020 70%, var(--monte-sombra)); }
 /* (52, idea 238) Las noches de luna llena el pescador no sale: el cayuco no está en el lago (ni su lámpara). */
 html[data-luna-llena][data-cielo="noche"] .montana :is(.v-cayuco, svg.v-amb-cayuco) { display: none; }
+
+/* ---------------------------------------------------------------- Campamento 59 · La fiesta del hito
+   (fiesta.js, arte-fiesta.js, lib.js: guionFiesta) Cada pieza que se mueve es su propia capa pequeña (un <svg> hermano del principal,
+   debajo del frente) y se mueve entera: solo transform y opacidad, una animación por capa, y se quita al acabar. Mientras dura,
+   `data-mueve="fiesta-hito"` (cielo.js): el actor de la franja y lo ambiental esperan; el vecino de la capa y los animales de la plaza
+   no se ven (los vecinos están en la fiesta). Con «esenciales», la campana y los cohetes solo aparecen y se apagan (sin farolitos);
+   con «ninguno», el guion no trae nada: queda el estado final (la tarjeta y el farol del hito). */
+.montana svg.fiesta-capa { position: absolute; pointer-events: none; overflow: visible; }
+html[data-mueve="fiesta-hito"] .montana :is(svg.v-capa-vecino, svg.v-capa-animal) { display: none; }
+html[data-mueve="fiesta-hito"] #m-v-pie :is(.v-animal, .v-gallina, .v-sombra-perro) { visibility: hidden; }
+.fi-onda { fill: none; stroke: var(--naranja-txt); stroke-width: 1.3px; stroke-linecap: round; }
+.fi-campana { fill: var(--naranja-txt); opacity: 0.85; }
+.fi-halo { fill: var(--naranja); opacity: 0.2; }
+html[data-cielo="noche"] .fi-halo, html[data-cielo="atardecer"] .fi-halo { opacity: 0.34; }
+.fi-cuerpo { fill: var(--naranja-txt); stroke: var(--naranja-osc); stroke-width: 0.35px; }
+.fi-llama { fill: var(--nieve); }
+.fi-cordel { fill: none; stroke: color-mix(in oklab, var(--nieve) 35%, var(--monte-sombra)); stroke-width: 0.5px; }
+.fi-rayos { fill: none; stroke-width: 1.5px; stroke-linecap: round; opacity: 0.95; }
+.fi-rayos.fi-c0 { stroke: var(--naranja); } .fi-rayos.fi-c1 { stroke: var(--naranja-txt); } .fi-rayos.fi-c2 { stroke: var(--nieve); } .fi-rayos.fi-c3 { stroke: var(--brasa); }
+.fi-chispas { fill: none; stroke: var(--nieve); stroke-width: 2.2px; stroke-linecap: round; opacity: 0.9; }
+/* La campana: tres ondas que laten una vez por toque (fiesta.js pone cuántos). */
+.montana svg.fiesta-ondas { transform-origin: 50% 70%; animation: fiesta-onda var(--t-gesto) var(--t-sale) both; }
+@keyframes fiesta-onda { 0% { opacity: 0; transform: scale(0.6); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.2); } }
+/* Los farolitos suben juntos de la plaza hacia la cumbre (fiesta.js pone el recorrido, --dx y --dy, y lo que duran) y se pierden arriba. */
+.montana svg.fiesta-faroles { will-change: transform; animation: fiesta-sube var(--t-accion) var(--t-suave) both; }
+@keyframes fiesta-sube { 0% { opacity: 0; transform: translate(0, 0) scale(1); } 6% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx, 0), var(--dy, -80px)) scale(0.7); } }
+/* Cada cohete estalla en su palma (uno tras otro, cada medio segundo) y se apaga. */
+.montana svg.fiesta-palma { transform-origin: 50% 50%; animation: fiesta-palma calc(var(--t-gesto) * 1.375) var(--t-sale) both; }
+@keyframes fiesta-palma { 0% { opacity: 0; transform: scale(0.25); } 18% { opacity: 1; } 70% { opacity: 0.9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.06); } }
+html[data-efectos="esenciales"] .montana svg.fiesta-palma { animation-name: fiesta-aparece; }
+html[data-efectos="esenciales"] .montana svg.fiesta-ondas { animation-name: fiesta-aparece; }
+@keyframes fiesta-aparece { 0% { opacity: 0; } 20% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+html[data-efectos="ninguno"] .montana svg.fiesta-capa { display: none; }
+/* El farol del hito (hasta la medianoche): colgado entre los faroles de la plaza, quieto; de noche su halo luce más. */
+.v-farol-hito .fi-halo { opacity: 0.16; }
+html[data-cielo="noche"] .v-farol-hito .fi-halo, html[data-cielo="atardecer"] .v-farol-hito .fi-halo { opacity: 0.4; }

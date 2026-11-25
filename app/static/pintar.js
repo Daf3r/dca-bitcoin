@@ -1,4 +1,4 @@
-import { aFecha, acentoDe, aniosDelLibro, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapaCelebrada, hayAurora, haceCuanto, hoyISO, hora, mesesDelLibro, nombreHito, primeraCompra, pct, rangoEtapa, resumen, numCorto, tramoEtapas, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
+import { farolDelHito, escalaFiesta, MS_FIESTA, aFecha, acentoDe, aniosDelLibro, aniversario, btc, cumpleHoy, eco, efemeride, enPupusas, lluviaEstrellas, numeroBonito, TEXTO_BONITO, cruzo1Btc, entero, etapaAnterior, etapaCelebrada, hayAurora, haceCuanto, hoyISO, hora, mesesDelLibro, nombreHito, primeraCompra, pct, rangoEtapa, resumen, numCorto, tramoEtapas, satsCorto, serieValor, tocaComprar, usd, usd0, usdSigno, usdSignoCorto, variacionAyer } from './lib.js';
 import { pintarAnillo } from './anillo.js';
 import { avisar } from './avisar.js';
 import { pintarFavicon } from './favicon.js';
@@ -9,6 +9,7 @@ import { peliculaAbierta } from './pelicula.js';
 import { pintarTV } from './tv.js';
 import { dual, miniLinea, pegado } from './cifras.js';
 import { dibujarMontana, subir } from './montana.js';
+import { enFiesta, terminarFiesta } from './fiesta.js';
 import { pintarOdometro } from './odometro.js';
 import { ofrecerAvisos, pintarSaludo } from './cuenta.js';
 import { $, R, S, esAdmin, fijarR, quienAnota, reducido, vozLibro } from './estado.js';
@@ -415,6 +416,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   // (Campamento 23) Con la película del ascenso abierta, la escena de la página está vacía (una sola escena en el documento: ver
   // pelicula.js) y no se dibuja; al cerrarla, la película la vuelve a dibujar a la medida de ahora.
   if (peliculaAbierta()) return;
+  if (enFiesta()) terminarFiesta(); // (59) redibujar lleva la fiesta en marcha a su estado final (no se corta a medias)
   const host = $('montana');
   anchoMontana = host.clientWidth;
   altoMontana = host.clientHeight;
@@ -427,7 +429,7 @@ export function pintarMontana(animar, desde, festejo = null) {
   const pie = Number.parseFloat(getComputedStyle(host).getPropertyValue('--pie')) || 104;
   vozMontana = vozLibro();
   familiaMontana = firmaFamilia();
-  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), firmas: S.firmas, cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0, personas: S.familia?.personas ?? 0, iniciales: S.familia?.iniciales ?? '', primera: primeraCompra(S.compras), meses: mesesDelLibro(S.compras, diaVista()), anios: aniosDelLibro(S.compras, diaVista()) });
+  dibujarMontana(host, { pie, libro: vozMontana, sats: R.sats, meta: R.meta, etapa: R.etapa, inicio, techo, fechas, compras: R.nCompras, ventas: R.nVentas, plantar: Boolean(festejo), tocable: true, mensajes: S.mensajes, puedeEscribir: esAdmin(), firmas: S.firmas, cumples: cumpleHoy(S.cumples, diaVista()), aurora: hayAurora(R.racha), eco: eco(S.compras, R.sats), aniv: Boolean(aniversario(S.compras, diaVista())), lluvia: lluviaEstrellas(diaVista())?.fuerza ?? 0, memoria: R.sats <= 0 ? Math.max(0, ...R.items.map((c) => c.satsAcum ?? 0)) : 0, personas: S.familia?.personas ?? 0, iniciales: S.familia?.iniciales ?? '', primera: primeraCompra(S.compras), meses: mesesDelLibro(S.compras, diaVista()), anios: aniosDelLibro(S.compras, diaVista()), farolHito: farolDelHito(S.fiesta, hoyISO()) });
   let f = null;
   if (festejo && R.sats > festejo.antes) {
     // La celebración va en proporción (campamento 21): una etapa intermedia sube como una compra (su marca se enciende al pasar y la
@@ -439,7 +441,9 @@ export function pintarMontana(animar, desde, festejo = null) {
   }
   const ms = animar ? 2400 : f ? MS_SUBIDA : 1600;
   // La subida y su celebración no se cortan (39b: la de 1 BTC dura unos 9 s después de llegar).
-  ocupadaHasta = performance.now() + (inicio !== R.sats ? ms : 0) + (f?.nivel === 'epico' ? 11_000 : f ? 7000 : 0);
+  // (59) Y la fiesta del hito, si la hay (hasta 24 s después de llegar).
+  const fiestaMs = festejo?.fiesta && f?.etapa === festejo.fiesta.meta ? MS_FIESTA[escalaFiesta(f.etapa)] : 0;
+  ocupadaHasta = performance.now() + (inicio !== R.sats ? ms : 0) + Math.max(f?.nivel === 'epico' ? 11_000 : f ? 7000 : 0, fiestaMs);
   if (inicio !== R.sats) subir(inicio, R.sats, ms, f, animar);
 }
 // (Campamento 20) Si el bloque del saldo crece después de dibujar la montaña (llega el precio y «ya realizaste» baja a su renglón, otra

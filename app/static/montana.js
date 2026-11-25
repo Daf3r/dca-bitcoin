@@ -2,7 +2,8 @@
 import { estiranLosOsos, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
 import { sinMovimiento } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
-import { reparto, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
+import { reparto, repartoFiesta, svgVecinos, manoDe, luzPupusa, cajaVecino } from './arte-vecinos.js';
+import { farolHito as dibujoFarolHito } from './arte-fiesta.js';
 import { sitiosPueblo, lugaresPueblo, TERRAZA, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA } from './arte-osos.js';
 import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, cajasArbol, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
@@ -504,13 +505,73 @@ function vigilarTurno(host, info) {
     for (const [h, v] of vecinosVivos) {
       const g = h.isConnected && h.querySelector('.v-vecinos');
       if (!g) { vecinosVivos.delete(h); continue; }
-      if (v.turno !== t) {
+      if (v.turno !== t && !(fiestaViva && h === estado?.host)) { // (59) con la fiesta en marcha, el turno espera: al acabar se pone el de ese momento
         g.innerHTML = htmlVecinos(v, t); v.turno = t; if (v.conCapa) capaVecino(h, v, t);
         // (Campamento 40, idea 148) La descripción de la montaña cuenta el turno de ahora: se rehace con él.
         if (estado?.host === h && estado.valle) { estado.valle.turno = t; describir(estado.sats, estado.etapaDesc); }
       }
     }
   });
+}
+
+// ------------------------------------------------------------------ (Campamento 59) la fiesta del hito, en la escena viva
+// El guion vive en lib.js (`guionFiesta`), el arte en arte-fiesta.js y el que lo dirige en fiesta.js; aquí, lo que solo la escena sabe:
+// dónde están la plaza, la campana, la cumbre y «Tú», y cómo cambiar a los vecinos de la plaza (otro reparto de los mismos trazos).
+let fiestaViva = false;
+/** (59) Con la fiesta en marcha, el cambio de turno no rehace a los vecinos (al acabar, `vecinosFiesta(null)` pone los de ese momento). */
+export const marcarFiesta = (on) => { fiestaViva = Boolean(on); };
+/** (59) El farol del hito colgado entre los dos faroles de la plaza (sin plaza, nada). */
+function farolDelPueblo(lug) {
+  const [a, b] = lug.poste ?? [];
+  return a && b ? dibujoFarolHito(Math.min(a[0], b[0]), Math.max(a[0], b[0]), Math.min(a[1], b[1]), a[2]) : '';
+}
+/**
+ * (59) Los sitios de la fiesta en la escena viva de la página (no en la película): la plaza (su centro, la escala y la altura de sus
+ * faroles), la campana de la torre, la cumbre, «Tú» y el ancho y alto de la escena. null si no hay escena o pueblo.
+ */
+export function sitiosFiesta() {
+  if (!estado || estado.pelicula || !estado.host.isConnected) return null;
+  const v = vecinosVivos.get(estado.host), pl = v?.lug?.plaza ?? [];
+  if (!pl.length) return null;
+  const k = pl[0][2], cx = pl.reduce((a, q) => a + q[0], 0) / pl.length, cy = pl.reduce((a, q) => a + q[1], 0) / pl.length;
+  const cam = estado.host.querySelector('#m-v-pie .v-ig-campana');
+  let campana = null;
+  try { const b = cam?.getAttribute('d') ? cam.getBBox() : null; if (b?.width) campana = { x: b.x + b.width / 2, y: b.y + b.height / 2 }; } catch { /* sin caja */ }
+  const yo = estado.host.querySelector('#m-yo')?.getBBox?.();
+  const yoM = estado.host.querySelector('#m-yo')?.getCTM?.(), base = estado.host.querySelector(':scope > svg.frente')?.getCTM?.();
+  let tu = { x: estado.c.sx, y: estado.c.sy + 40 };
+  if (yo && yoM && base) { const t = base.inverse().multiply(yoM); tu = { x: t.a * (yo.x + yo.width / 2) + t.e, y: t.d * (yo.y + yo.height / 2) + t.f }; }
+  const poste = v.lug.poste ?? [];
+  return { host: estado.host, W: estado.W, H: estado.H, k, plaza: { x: cx, y: cy, alto: poste.length ? Math.min(...poste.map((q) => q[1])) : cy - 6 * k }, campana, cumbre: { x: estado.c.sx, y: estado.c.sy }, tu, techo: estado.techo };
+}
+/** (59) Los vecinos de la plaza en un cuadro de la fiesta (lib.js: `guionFiesta`); con `null`, los del turno de ahora (y su capa). */
+export function vecinosFiesta(cuadro) {
+  if (!estado) return;
+  const h = estado.host, v = vecinosVivos.get(h), g = h.isConnected && h.querySelector('.v-vecinos');
+  if (!v || !g) return;
+  if (!cuadro) {
+    const t = turnoDelPueblo();
+    g.innerHTML = htmlVecinos(v, t); v.turno = t; if (v.conCapa) capaVecino(h, v, t);
+    if (estado.valle) { estado.valle.turno = t; describir(estado.sats, estado.etapaDesc); }
+    return;
+  }
+  const poste = [...(v.lug.poste ?? [])];
+  g.innerHTML = svgVecinos(repartoFiesta(v.lug, cuadro), { sol: v.sol }) + (poste.length ? hilosPiscuchas(v.cometas, v.cometas.map(() => poste[0])) : '');
+}
+/** (59) Deja encendido el farol del hito en la escena de ahora (si no lo está ya). */
+export function ponerFarolHito() {
+  const pie = estado?.host.querySelector('#m-v-pie'), v = estado && vecinosVivos.get(estado.host);
+  if (!pie || !v || pie.querySelector('.v-farol-hito')) return;
+  const html = farolDelPueblo(v.lug);
+  if (html) pie.querySelector('.v-pueblo')?.insertAdjacentHTML('afterend', html);
+}
+/** (59) El clímax en la cumbre: los osos de arriba dan su saltito y, si toca, «Tú» levanta los brazos (los mismos gestos del 25 y el 31). */
+export function gestoCumbre(conTu) {
+  const host = estado?.host;
+  if (!host) return;
+  const os = host.querySelector('#m-osos.osos');
+  if (os) { os.classList.remove('salta'); os.getBoundingClientRect(); os.classList.add('salta'); setTimeout(() => os.classList.remove('salta'), 2000); }
+  if (conTu) { const yo = host.querySelector('#m-yo'); yo?.classList.add('festeja'); setTimeout(() => yo?.classList.remove('festeja'), 2600); }
 }
 
 /** Quita de `raiz` (la plantilla de la escena o la escena ya puesta) lo de otra temporada (ver `fueraDeTemporada`). */
@@ -550,7 +611,7 @@ function enCapas(host, W, H) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false, personas = 0, iniciales = '', primera = null, meses = 0, anios = 0, pelicula = false, rotulo = null }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false, personas = 0, iniciales = '', primera = null, meses = 0, anios = 0, pelicula = false, rotulo = null, farolHito = false }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo, pie);
@@ -752,7 +813,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   host.style.setProperty('--v-suelo', `${f1(pb.yg)}px`);
   host.style.setProperty('--v-suelo-atras', `${f1(pb.yg - TERRAZA * pb.u)}px`);
   host.style.setProperty('--v-sol', String(solV));
-  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
+  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${farolHito ? farolDelPueblo(infoV.lug) : ''}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);

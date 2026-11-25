@@ -589,3 +589,41 @@ export function luzPupusa(lista) {
   const h = lista.find((q) => q.horno);
   return h ? [h.x - 3 * h.k, h.y + 0.4 * h.k, 7 * h.k] : null;
 }
+/**
+ * (Campamento 59, la fiesta del hito) El reparto de la fiesta: los mismos ocho vecinos de siempre (con su color de ropa) y el del bombo,
+ * en la plaza. **Hasta nueve** (`MAX_FIESTA`: el tope «ocho como mucho» de un día cualquiera se abre solo en la fiesta de un hito) y,
+ * como siempre, nunca según las cuentas: el cuadro lo pone el guion (lib.js: `guionFiesta`), no el saldo. Cada cuadro es una pose quieta
+ * (a saltos, como los turnos): 'salen' (cuatro llegan a la plaza), 'rueda' (ocho en rueda, los de delante de espaldas, y el bombo),
+ * 'arriba' (la rueda con los brazos arriba), 'rueda5' y 'arriba5' (la de la etapa principal, de cinco), 'tres' (la intermedia: tres
+ * con los brazos arriba) y 'chocolate' (la pupusera hace de chocolatera y los demás brindan con su taza). Sin plaza, nadie.
+ * @param {{ plaza?: number[][] }} lug
+ * @param {string} cuadro
+ */
+export function repartoFiesta(lug, cuadro) {
+  const pl = lug.plaza ?? [];
+  if (!pl.length) return [];
+  const k = pl[0][2], cx = pl.reduce((a, q) => a + q[0], 0) / pl.length, cy = pl.reduce((a, q) => a + q[1], 0) / pl.length;
+  const L = [], V = VECINOS;
+  const pon = (t, dx, dy, extra = {}) => L.push({ t, x: cx + dx * k, y: cy + dy * k, k, ...extra });
+  const rueda = (tipos, rx, ry) => tipos.forEach(([t, r, osezno], i) => {
+    const a = (i / tipos.length) * Math.PI * 2 + 0.4, s = Math.sin(a), delante = s > 0.35;
+    // Los de delante miran al centro de la rueda: de espaldas (sin cara); los oseznos, más pequeños, delante también se ven de frente.
+    pon(delante && !osezno ? 'espaldas' : t, Math.cos(a) * rx, s * ry, { r, f: Math.cos(a) > 0 ? -1 : 1, ...(osezno ? { s: OSEZNO } : {}) });
+  });
+  const bombo = () => pon('bombo', 15.5, -0.4, { r: V.sacristan.r, f: -1 });
+  const ocho = (arriba) => [
+    [arriba ? 'estira' : 'vecina', V.tortillera.r], [arriba ? 'oseznoArriba' : 'osezno', 0, true], [arriba ? 'estira' : 'vecino', V.panadero.r], [arriba ? 'estira' : 'vecina', V.maestra.r],
+    [arriba ? 'oseznoArriba' : 'osezno', 1, true], [arriba ? 'estira' : 'vecina', V.tienda.r], [arriba ? 'estira' : 'vecino', V.pescador.r], [arriba ? 'estira' : 'vecino', V.milpero.r]];
+  if (cuadro === 'salen') {
+    pon('vecina', -7, 0.2, { r: V.tortillera.r }); pon('osezno', -3.5, 0.8, { r: 0, s: OSEZNO }); pon('vecino', 5.5, -0.2, { r: V.panadero.r, f: -1 }); pon('abuela', 11.5, 0.4, { r: V.abuela.r, f: -1 });
+  } else if (cuadro === 'rueda' || cuadro === 'arriba') { rueda(ocho(cuadro === 'arriba'), 10, 1.7); bombo(); }
+  else if (cuadro === 'rueda5' || cuadro === 'arriba5') { rueda(ocho(cuadro === 'arriba5').filter((_, i) => i % 3 !== 2).slice(0, 5), 7.5, 1.4); }
+  else if (cuadro === 'tres') { pon('oseznoArriba', -3.5, 0.4, { r: 0, s: OSEZNO }); pon('estira', 0.6, 0, { r: V.maestra.r }); pon('oseznoArriba', 4.6, 0.4, { r: 2, s: OSEZNO, f: -1 }); }
+  else if (cuadro === 'chocolate') {
+    pon('pupusera', -1.5, -0.4, { r: V.tortillera.r }); pon('brindis', -8.5, 0.4, { r: V.maestra.r }); pon('osezno', -5.2, 1.1, { r: 2, s: OSEZNO });
+    pon('brindis', 5.6, 0, { r: V.panadero.r, f: -1 }); pon('abuela', 10, 0.7, { r: V.abuela.r, f: -1 }); pon('oseznoArriba', 13.4, 1.1, { r: 1, s: OSEZNO, f: -1 });
+  }
+  return L.slice(0, MAX_FIESTA);
+}
+/** (59) En la fiesta de un hito, hasta nueve vecinos (el tope de un día cualquiera sigue en `MAX_VECINOS`). */
+export const MAX_FIESTA = 9;
