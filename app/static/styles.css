@@ -4918,6 +4918,36 @@ html:not([data-tarde]) .c-lluvia { display: none; }
 .osos.sin-nieve ~ .c-plantado { opacity: 0; }
 .osos[visibility="hidden"] ~ .c-plantado { visibility: hidden; }
 
+/* ---------------------------------------------------------------- Campamento 48 · «Tú» con más gestos
+   Poses quietas según la hora (cielo.js pone `html[data-tu]`, varias separadas por espacios; nada se redibuja): de 22:00 a 5:00 acampa
+   (191: la carpita naranja con la luz dentro y su palito al lado; el osito se esconde y deja de respirar), de 17:30 a 18:15 mira el
+   atardecer de espaldas (193: sin cara, manitas ni correas; la mochila al frente) y las tardes de la lluviosa lleva su capote amarillo
+   (192). Mientras anda, festeja o se estira, el osito de siempre: las poses le ceden. De 7:00 a 8:00, un momento después de los de la
+   cumbre, se estira (194: los brazos de festejar, a saltos y solo con «todos»). Lo que lleva por lo ya alcanzado (el equipo, los parches,
+   la flor del aniversario, el tecomate del día que se anota) solo se dibuja si toca. Todo dentro de su caja (`.yo-anillo`). */
+.tu-carpa, #m-yo .oso-mochila-espalda, #m-yo .tu-lluvia { display: none; }
+.tu-carpa { pointer-events: none; }
+.tu-carpa-tela { fill: color-mix(in oklab, var(--naranja) 86%, var(--monte-sombra)); }
+.tu-carpa-puerta { fill: color-mix(in oklab, #3a2418 82%, var(--monte-sombra)); }
+.tu-carpa-luz { fill: #ffd98a; }
+html[data-tu~="carpa"] #m-yo:not(.anda, .festeja, .estira) .tu-carpa { display: inline; }
+html[data-tu~="carpa"] #m-yo:not(.anda, .festeja, .estira) .oso-tu > :not(.oso-palo) { display: none; }
+html[data-tu~="carpa"] #m-yo:not(.anda, .festeja, .estira) .oso-tu { animation: none; }
+html[data-tu~="espaldas"] #m-yo:not(.anda, .festeja, .estira) .oso-tu > :is(.oso-hocico, .oso-rasgos, .oso-correa, .oso-tecomate, .oso-tecomate-tapon) { display: none; }
+html[data-tu~="espaldas"] #m-yo:not(.anda, .festeja, .estira) .oso-mochila-espalda { display: inline; }
+.oso-tu .oso-mochila-espalda { fill: var(--naranja); }
+html[data-tu~="capote"] #m-yo .tu-lluvia { display: inline; }
+.oso-tu .oso-capote { fill: color-mix(in oklab, #f2d43a 90%, var(--monte-sombra)); }
+html[data-efectos="todos"] #m-yo.estira .tu-festeja { display: inline; }
+/* (41) Al abrir, se para un instante en cada campamento que cruza: deja de bambolearse (la subida dura lo mismo). */
+html:not([data-efectos="ninguno"]) #m-yo.anda.para .oso-tu { animation: none; }
+.oso-tu .oso-cuerda { fill: color-mix(in oklab, #c9a36a 88%, var(--monte-sombra)); }
+.oso-tu .oso-piolet { fill: color-mix(in oklab, #55606b 85%, var(--monte-sombra)); }
+.oso-tu .oso-parches { fill: color-mix(in oklab, var(--oso-celeste) 85%, var(--monte-sombra)); }
+.oso-tu .oso-flor { fill: color-mix(in oklab, #ec9cbd 90%, var(--monte-sombra)); }
+.oso-tu .oso-tecomate { fill: color-mix(in oklab, #a8742f 88%, var(--monte-sombra)); }
+.oso-tu .oso-tecomate-tapon { fill: color-mix(in oklab, #5a3a1e 88%, var(--monte-sombra)); }
+
 /* ---------------------------------------------------------------- Campamento 40 · El día entero del pueblo
    Turnos nuevos (cielo.js: turno; arte-vecinos.js: reparto), todo quieto: con cualquier nivel de efectos, el mismo dibujo.
    (145) El perro tiene su día: en estos turnos se echa en otro sitio y va dibujado con los vecinos (el de siempre, y su sombra, no se

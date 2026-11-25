@@ -231,6 +231,7 @@ if (CIELO.mapaDelDia) {
     for (const ancho of [false, true]) for (const tr of CIELO.mapaDelDia(f, ancho)) {
       if (tr.capasAmb > AMBIENTALES) fallosMapa.push(`mapa ${f} ${tr.desde.toFixed(2)} h${ancho ? ' (ancho)' : ''}: ${tr.capasAmb} ambientales > ${AMBIENTALES}`);
       if (tr.cumbre && !CIELO.cumbre?.some((c) => c.id === tr.cumbre && c.pesa.anim === 0)) fallosMapa.push(`mapa ${f} ${tr.desde.toFixed(2)} h: la pose de la cumbre «${tr.cumbre}» no está declarada sin animaciones`); // (47)
+      for (const id of (tr.tu || '').split(' ').filter(Boolean)) if (!CIELO.tu?.some((t) => t.id === id && t.pesa.anim === 0 && t.pesa.capas === 0)) fallosMapa.push(`mapa ${f} ${tr.desde.toFixed(2)} h: la pose de «Tú» «${id}» no está declarada sin capas ni animaciones`); // (48)
       if (tr.anim > PRESUPUESTO.propia) fallosMapa.push(`mapa ${f} ${tr.desde.toFixed(2)} h: una capa con ${tr.anim} animaciones > ${PRESUPUESTO.propia}`);
     }
   }

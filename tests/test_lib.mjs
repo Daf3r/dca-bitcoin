@@ -2490,6 +2490,27 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   ok(pl.every((p) => p.pts.length && p.pts.every(([x, y]) => Number.isFinite(x + y)) && !/NaN|style=/.test(p.svg)) && pl.map((p) => (p.svg.match(/<path/g) || []).length).join() === '3,2,2', 'cumbre 47: lo plantado son pocos trazos, sin NaN ni estilos en línea');
   const L47 = await import('../app/static/lib.js');
   eq([5e4, 2e5, 7.6e5, 9e5, 4.6e6, 9.2e6, 1.2e7].map(L47.ultimoTramo), [false, false, true, true, false, true, false], 'cumbre 47 (188): el último tramo es cuando ya no queda etapa antes de la cima');
+
+  // ---- Campamento 48 · «Tú» con más gestos: sus poses por la hora, lo que lleva por lo alcanzado y sus piezas dentro de su caja.
+  eq([['2026-11-25', 23], ['2026-11-25', 4.9], ['2026-11-25', 5], ['2026-11-25', 17.6], ['2026-07-10', 15], ['2026-07-10', 17.6], ['2026-11-25', 15], ['2026-12-24', 23.9], ['2026-11-25', 12]].map(([f, h]) => C.poseTu(f, h)),
+    ['carpa', 'carpa', '', 'espaldas', 'capote', 'espaldas capote', '', '', ''], 'tú 48: acampa de 22 a 5 (191; no la noche del 24), de espaldas de 17:30 a 18:15 (193) y con capote las tardes de la lluviosa (192)');
+  let malTu = 0;
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) for (const tr of C.mapaDelDia(new Date(t).toISOString().slice(0, 10))) for (const id of tr.tu.split(' ').filter(Boolean)) if (!C.tu.some((x) => x.id === id && x.pesa.anim === 0 && x.pesa.capas === 0)) malTu++;
+  eq(malTu, 0, 'tú 48: el mapa del día declara las poses de «Tú», ninguna con capas ni animaciones');
+  const R48 = (lista, sats) => ({ sats, nCompras: lista.filter((c) => c.tipo !== 'venta').length, items: lista });
+  const compras48 = Array.from({ length: 12 }, (_, i) => ({ tipo: 'compra', fecha: `2025-${String(i + 1).padStart(2, '0')}-10`, satsAcum: (i + 1) * 1e6 }));
+  const con = L47.llevaTu(R48([...compras48, { tipo: 'venta', fecha: '2026-11-25', satsAcum: 2e6 }], 2e6), '2026-11-25'), sin = L47.llevaTu(R48(compras48.slice(0, 1), 1e6), '2026-11-25');
+  eq(con, { equipo: 2, parches: 3, flor: false, tecomate: false }, 'tú 48: el equipo sale del pico (una venta no lo quita), un parche por medalla ganada, y una venta de hoy no trae el tecomate');
+  eq(L47.llevaTu(R48(compras48.slice(0, 1), 1e6), '2026-01-10').flor, true, 'tú 48 (197): la flor el día que el libro cumple años');
+  eq([L47.llevaTu(R48([...compras48, { tipo: 'compra', fecha: '2026-11-25', satsAcum: 13e6 }], 13e6), '2026-11-25').tecomate, L47.llevaTu(R48([...compras48, { tipo: 'compra', fecha: '2026-11-25', satsAcum: 13e6 }], 13e6), '2026-11-25', { libro: true }).tecomate], [true, false], 'tú 48 (196): el tecomate el día que se anota una compra, y solo a quien anota');
+  // La regla de oro: sesenta días sin anotar y anotar ayer dan lo mismo, salvo lo alcanzado.
+  const ayer = L47.llevaTu(R48([...compras48.slice(0, 1), { tipo: 'compra', fecha: '2026-11-24', satsAcum: 1.1e6 }], 1.1e6), '2026-11-25');
+  eq({ ...ayer, parches: 0 }, { ...sin, parches: 0 }, 'tú 48: un día sin compra no enseña nada distinto (nada sale por una ausencia)');
+  const O48 = await import('../app/static/arte-osos.js'), base48 = O48.osoTu({ k: 1 }), todo48 = O48.osoTu({ k: 1, poses: true, equipo: 2, parches: 20, flor: true, tecomate: true });
+  const nodos48 = (x) => (x.match(/<(g|path|ellipse)\b/g) || []).length;
+  ok(!/carpa|capote|piolet|cuerda|parches|flor|tecomate|espalda/.test(base48) && !/NaN|style=/.test(todo48) && nodos48(todo48) - nodos48(base48) <= 12, `tú 48: sin pedirlo no lleva nada nuevo (el eco); con todo, ${nodos48(todo48) - nodos48(base48)} nodos más, sin NaN ni estilos en línea`);
+  ok((todo48.match(/class="oso-parches" d="([^"]+)"/)[1].match(/M/g) || []).length === O48.MAX_PARCHES && todo48.indexOf('tu-carpa') < todo48.indexOf('oso oso-tu') && todo48.includes('oso-capote tu-lluvia'), 'tú 48: como mucho ocho parches en un trazo, la carpa fuera del osito y el capote con su clase de la lluviosa');
+  ok(O48.PIEZAS_TU48.flat().every(([x, y]) => Number.isFinite(x + y) && x >= O48.CAJA_TU.x0 && x <= O48.CAJA_TU.x1 && y >= O48.CAJA_TU.y0 && y <= O48.CAJA_TU.y1), 'tú 48: la carpa, el capote, el equipo, los parches, la flor y el tecomate caben en la caja de «Tú»');
 }
 
 console.log(`OK ${n} comprobaciones`);

@@ -153,25 +153,61 @@ const ESTIRA_MANOS = [elipse(7.8, -14.6, 1.75, 1.6, 8), elipse(-7.8, -14.6, 1.75
 export const PUNTAS_ESTIRA = [[9.6, -14.6], [-9.6, -14.6], [7.8, -16.25], [-7.8, -16.25]];
 /** La caja de «Tú» en sus unidades (de la mochila al palito y de las orejas a la sombra de los pies): para los rótulos y los choques. */
 export const CAJA_TU = { x0: -11.2, x1: 9.9, y0: -18.2, y1: 2.5 };
+
+// (Campamento 48) «Tú» con más gestos: piezas dibujadas y escondidas (el CSS las enseña según la hora, `html[data-tu]`) y lo que lleva
+// por lo ya alcanzado (solo se dibuja si toca). Todo dentro de CAJA_TU: los rótulos, los osos y la tele no se enteran.
+// (191) La carpita naranja de la noche, con su puerta abierta y la luz dentro; el palito de siempre queda clavado al lado.
+const CARPA = [[-10.4, 0.2], [-2.2, -14.6], [6.2, 0.2]];
+const CARPA_PUERTA = [[-2.2, -12.4], [-5.6, 0.2], [1.2, 0.2]];
+const CARPA_LUZ = [[-2.2, -8.6], [-4.3, 0.2], [-0.1, 0.2]];
+// (193) De espaldas: la mochila al frente, en medio de la espalda (la cara, las manitas y las correas se esconden).
+const MOCHILA_ESPALDA = [...arco(0, -9.2, 3.9, 1.7, 180, 360, 6), ...arco(0, -4.4, 4.4, 2.4, 0, 180, 6)];
+// (192) El capote amarillo de la lluviosa: la capucha alrededor de la cara y la capa del cuello abajo (la mochila sigue asomando).
+const CAPOTE = [canto(CAB.x, CAB.y, CAB.rx + 0.9, CAB.ry + 0.3, 150, 390, 1.5, 14), prenda(-0.7)];
+// (40) El equipo según el campamento ya alcanzado: un rollo de cuerda sobre la mochila desde 1M y un piolet atado a ella desde 10M.
+const CUERDA = [elipse(-7.8, -12.9, 2.5, 1.35, 12), arco(-7.8, -12.9, 1.25, 0.6, 360, 0, 10)];
+const PIOLET = [[[-10.1, -1.4], [-9.4, -1.6], [-8.0, -16.2], [-8.7, -16.1]], [[-10.6, -16.9], [-6.8, -16.0], [-6.9, -15.4], [-10.5, -16.1]]];
+// (195) Los parches de la mochila: uno por medalla de constancia ya ganada, hasta ocho (dos columnas en lo que asoma de la mochila).
+const PARCHES = [[-9.1, -10.3], [-7.6, -9.4], [-9.1, -8.4], [-7.6, -7.5], [-9.1, -6.5], [-7.6, -5.6], [-9.1, -4.6], [-7.6, -3.7]];
+export const MAX_PARCHES = PARCHES.length;
+// (197) El aniversario del primer día: una flor de maquilishuat (cinco pétalos rosados) en lo alto de la mochila.
+const FLOR = Array.from({ length: 5 }, (_, i) => { const a = (i * 72 - 90) * RAD; return elipse(-9.4 + 1.05 * Math.cos(a), -12 + 1.05 * Math.sin(a), 0.78, 0.78, 6); });
+// (196) El día que se anota una compra, descansa con su tecomate en la mano (el cuerpo y el tapón).
+const TECOMATE = [elipse(4.4, -3.4, 1.95, 1.85, 12), elipse(4.4, -6, 1.2, 1.05, 10)];
+const TECOMATE_TAPON = elipse(4.4, -7.3, 0.55, 0.45, 6);
+/** (48) Todos los puntos de las piezas nuevas (para comprobar que caben en CAJA_TU). */
+export const PIEZAS_TU48 = [CARPA, CARPA_PUERTA, CARPA_LUZ, MOCHILA_ESPALDA, ...CAPOTE, ...CUERDA, ...PIOLET, ...FLOR, ...TECOMATE, TECOMATE_TAPON, ...PARCHES.map(([x, y]) => elipse(x, y, 0.62, 0.62, 6))];
+
 /**
  * El oso de «Tú» (decorativo; la descripción de la montaña dice dónde vas). `k`: unidades → px. Un trazo por tono; los brazos alzados
  * de la celebración van dibujados y escondidos (`tu-festeja`: los enseña la clase `festeja` de #m-yo); la bufanda de Navidad
  * (`v-navidad`) y, con `cumple`, el gorrito, como los de la cumbre. `bajo`: lo que va entre su sombra y el osito (la pisada de «Tú»).
+ * (Campamento 48) Con `poses`, también la carpa (`tu-carpa`, fuera del osito), la mochila de espaldas y el capote (`tu-lluvia`),
+ * escondidos; `equipo` (0, 1: la cuerda, 2: y el piolet), `parches` (cuántos), `flor` y `tecomate`, solo si tocan. El eco no los lleva.
  */
-export function osoTu({ k = 1, cumple = false, bajo = '' } = {}) {
+export function osoTu({ k = 1, cumple = false, bajo = '', poses = false, equipo = 0, parches = 0, flor = false, tecomate = false } = {}) {
   const T = (pts) => d(pts.map(([x, y]) => [x * k, y * k]));
   const pl = {};
   const add = (tono, pts) => { pl[tono] = (pl[tono] || '') + T(pts); };
+  if (equipo >= 2) for (const pts of PIOLET) add('piolet', pts);
   add('mochila', MOCHILA);
+  if (equipo >= 1) for (const pts of CUERDA) add('cuerda', pts); // el aro de fuera y, al revés, el hueco
+  for (const [x, y] of PARCHES.slice(0, Math.max(0, Math.min(MAX_PARCHES, parches)))) add('parches', elipse(x, y, 0.62, 0.62, 6));
+  if (flor) for (const pts of FLOR) add('flor', pts);
   for (const [tono, pts] of PIEZAS) add(tono, pts);
+  if (poses) add('mochila-espalda', MOCHILA_ESPALDA);
   for (const pts of CORREAS) add('correa', pts);
+  if (poses) for (const pts of CAPOTE) add('capote', pts);
   for (const pts of BUFANDA) add('bufanda', pts);
   for (const [tono, lista2] of Object.entries(CARA)) for (const pts of lista2) add(tono, pts);
+  if (tecomate) { for (const pts of TECOMATE) add('tecomate', pts); add('tecomate-tapon', TECOMATE_TAPON); }
   if (cumple) add('gorro', GORRO);
   add('palo', PALO);
-  const orden = ['mochila', 'sombra', 'luz', 'medio', 'correa', 'bufanda', 'hocico', 'rasgos', 'gorro', 'palo'];
+  const orden = ['piolet', 'mochila', 'cuerda', 'parches', 'flor', 'sombra', 'luz', 'medio', 'mochila-espalda', 'correa', 'capote', 'bufanda', 'hocico', 'rasgos', 'tecomate', 'tecomate-tapon', 'gorro', 'palo'];
+  const clase = (t) => `oso-${t}${t === 'bufanda' ? ' v-navidad' : t === 'capote' ? ' tu-lluvia' : ''}`;
   const festeja = `<g class="tu-festeja">${['luz', 'medio'].map((t) => `<path class="oso-${t}" d="${T(BRAZOS_ARRIBA[t])}"/>`).join('')}<path class="oso-hocico" d="${BRAZOS_ARRIBA.hocico.map(T).join('')}"/></g>`;
-  return `<path class="oso-pie" d="${T(PIE)}"/>${bajo}<g class="oso oso-tu">${orden.filter((t) => pl[t]).map((t) => `<path class="oso-${t}${t === 'bufanda' ? ' v-navidad' : ''}" d="${pl[t]}"/>`).join('')}${festeja}</g>`;
+  const carpa = poses ? `<g class="tu-carpa"><path class="tu-carpa-tela" d="${T(CARPA)}"/><path class="tu-carpa-puerta" d="${T(CARPA_PUERTA)}"/><path class="tu-carpa-luz" d="${T(CARPA_LUZ)}"/></g>` : '';
+  return `<path class="oso-pie" d="${T(PIE)}"/>${bajo}${carpa}<g class="oso oso-tu">${orden.filter((t) => pl[t]).map((t) => `<path class="${clase(t)}" d="${pl[t]}"/>`).join('')}${festeja}</g>`;
 }
 
 // ---------------------------------------------------------------------------------------------------------------- el sitio

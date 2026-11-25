@@ -268,6 +268,7 @@ export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
     fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
     md !== '05-03' && '.v-cruz-mayo', // (34) el Día de la Cruz
     md !== '12-24' && md !== '12-25' && '.c-regalo', // (41) los regalos de la cumbre
+    !lluviosa && '.tu-lluvia', // (48) el capote de «Tú»
     !etapaOsoNieve(d) && '.c-nieve-oso', !lluviosa && '.c-lluvia', !['09-13', '09-14', '09-15'].includes(md) && '.c-patria', // (47) lo plantado junto a los osos
   ].filter(Boolean);
 }
@@ -279,10 +280,10 @@ export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
  */
 const kTu = (ec) => ec * 1.1 * K_OSO * 1.25;
 export const cajaTu = (ec) => { const k = kTu(ec); return { x: CAJA_TU.x0 * k, y: CAJA_TU.y0 * k, w: (CAJA_TU.x1 - CAJA_TU.x0) * k, h: (CAJA_TU.y1 - CAJA_TU.y0) * k }; };
-function yoTu(ec, cumple) {
+function yoTu(ec, cumple, extra = {}) {
   const c = cajaTu(ec);
   // La pisada va sobre la sombra del osito y bajo su cuerpo, más ancha que él: asoma a los lados y por delante.
-  return `<rect class="yo-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/><g class="tu">${osoTu({ k: kTu(ec), cumple, bajo: `<ellipse class="yo-punto" rx="${f1(8.6 * kTu(ec))}" ry="${f1(2.4 * kTu(ec))}" cy="${f1(0.6 * kTu(ec))}"/>` })}</g>`;
+  return `<rect class="yo-anillo" x="${f1(c.x)}" y="${f1(c.y)}" width="${f1(c.w)}" height="${f1(c.h)}"/><g class="tu">${osoTu({ k: kTu(ec), cumple, ...extra, bajo: `<ellipse class="yo-punto" rx="${f1(8.6 * kTu(ec))}" ry="${f1(2.4 * kTu(ec))}" cy="${f1(0.6 * kTu(ec))}"/>` })}</g>`;
 }
 
 /**
@@ -724,7 +725,7 @@ function enCapas(host, W, H) {
 /**
  * Dibuja la escena en `host` con la escala de `sats` y deja a "Tú" en `inicio` (para animar luego con subir).
  */
-export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false, personas = 0, iniciales = '', primera = null, meses = 0, anios = 0, pelicula = false, rotulo = null, farolHito = false }) {
+export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false, personas = 0, iniciales = '', primera = null, meses = 0, anios = 0, pelicula = false, rotulo = null, farolHito = false, lleva = {} }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
   const c = composicion(W, H, techo, pie);
@@ -975,7 +976,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 22C) Navidad en la subida: luminarias a los dos lados del camino que se encienden hasta donde llegaste (las de más
   // arriba esperan apagadas) y, en «Tú», una corona de foquitos. Solo del 1 de diciembre al 6 de enero (el CSS las enseña).
   s += '<g class="v-navidad nav-sendero" id="m-nav-sendero"><path class="ns-off"/><path class="ns-glow"/><path class="ns-on ns-0"/><path class="ns-on ns-1"/><path class="ns-on ns-2"/></g>';
-  s += `<g id="m-osos"></g><g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><ellipse class="yo-halo" rx="13" ry="4.6" cy="0.5"/><circle class="v-navidad yo-nav yo-nav-0" r="12.8"/><circle class="v-navidad yo-nav yo-nav-1" r="12.8"/><circle class="v-navidad yo-nav yo-nav-2" r="12.8"/>${yoTu(ec, cumples.length > 0)}</g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
+  s += `<g id="m-osos"></g><g id="m-etapas"></g><g id="m-campos"></g><g class="efecto-ambiente huellas" id="m-huellas"></g><g class="eco" id="m-eco"></g><g class="yo" id="m-yo"><circle class="efecto-ambiente linterna" r="38" fill="url(#m-luz)"/><ellipse class="yo-halo" rx="13" ry="4.6" cy="0.5"/><circle class="v-navidad yo-nav yo-nav-0" r="12.8"/><circle class="v-navidad yo-nav yo-nav-1" r="12.8"/><circle class="v-navidad yo-nav yo-nav-2" r="12.8"/>${yoTu(ec, cumples.length > 0, { poses: true, ...(tocable && !pelicula ? lleva : {}) })}</g><g id="m-etiquetas"></g><g class="fx" id="m-fx"></g>`;
   // Reloj de sol (16A): sobre los pinos de adorno, pero detrás de los árboles de honor (antes sus piedras quedaban encima de las copas).
   const suelo = W < 1100 ? by - 4 : H * 0.93;
   s += relojDeSol(c.sx, suelo, W, Math.abs(suelo - pb.yg) < 10 * pb.u ? [pb.caja[0] - 6 * pb.u, pb.caja[2] + 6 * pb.u] : null); // 16A (y, desde el pulido, sin pisar la calle del pueblo)
@@ -1937,16 +1938,31 @@ export function subir(desde, hasta, ms = 2000, festejo = null, sola = false) {
   const yo = host.querySelector('#m-yo');
   yo.classList.add('anda'); // (31) el osito anda mientras sube; al llegar, quieto
   yo.classList.toggle('sola', sola);
+  // (Campamento 48, idea 41) Andando por su cuenta (al abrir), se para un instante en cada campamento que cruza, como para mirar el
+  // paisaje, y sigue. La subida dura lo mismo (las paradas salen del tiempo de andar: 0.25 s cada una, como mucho un 30 % del total);
+  // al anotar (y en la película) no se para.
+  const paradas = sola ? estado.campos.map(({ m }) => altitud(m, esc)).filter((a) => a > a0 + 1e-6 && a < a1 - 1e-6).map((a) => 1 - (1 - (a - a0) / (a1 - a0)) ** (1 / 3)).sort((x, y) => x - y) : [];
+  const pausa = paradas.length ? Math.min(250, (ms * 0.3) / paradas.length) / ms : 0, andar = 1 - pausa * paradas.length;
+  const virtual = (r) => {
+    for (const [i, kc] of paradas.entries()) {
+      const s0 = kc * andar + i * pausa;
+      if (r < s0) return [(r - i * pausa) / andar, false];
+      if (r < s0 + pausa) return [kc, true];
+    }
+    return [Math.min(1, (r - paradas.length * pausa) / andar), false];
+  };
   const t0 = performance.now();
+  let parado = false;
   const paso = (t) => {
     if (estado.host !== host || !host.isConnected) return; // la escena se redibujó (resize)
-    const k = Math.min(1, (t - t0) / ms), e = 1 - (1 - k) ** 3;
+    const r = Math.min(1, (t - t0) / ms), [kv, quieto] = r < 1 ? virtual(r) : [1, false], k = r < 1 ? Math.min(kv, 0.9999) : 1, e = 1 - (1 - k) ** 3;
+    if (quieto !== parado) { parado = quieto; yo.classList.toggle('para', quieto); } // (41) sigue «anda» (las pruebas esperan a que acabe); solo deja de bambolearse
     const alt = a0 + (a1 - a0) * e;
     const satsAhora = 10 ** (Math.log10(esc.base) + alt * (Math.log10(esc.cima) - Math.log10(esc.base)));
     const p = colocar(k < 1 ? satsAhora : hasta, k < 1);
     if (estela) estela.style.strokeDasharray = `0 ${f1(l0)} ${f1(Math.max(0, enAltura(alt) - l0))} ${f1(L)}`;
     if (k < 1) requestAnimationFrame(paso);
-    else { yo.classList.remove('anda', 'sola'); if (festejo) llegar(festejo, p, hasta); }
+    else { yo.classList.remove('anda', 'sola', 'para'); if (festejo) llegar(festejo, p, hasta); }
   };
   requestAnimationFrame(paso);
 }
@@ -2146,6 +2162,9 @@ setInterval(() => {
   // Uno tras otro: el grande, el chico y el del mameluco, con 0.3 s entre cada uno; a los 2.6 s, todos quietos.
   [1, 2, 3].forEach((i) => setTimeout(() => os.classList.add(`estira-${i}`), (i - 1) * 600));
   setTimeout(() => os.classList.remove('estira-1', 'estira-2', 'estira-3'), 6000); // (39b) se estiran en 6 s, no en 2.6
+  // (Campamento 48, idea 194) «Tú» también, un momento después del último (si no va subiendo): los brazos de festejar, a saltos.
+  const yo = estado?.host?.querySelector('#m-yo');
+  if (yo) { setTimeout(() => { if (!yo.classList.contains('anda')) yo.classList.add('estira'); }, 1800); setTimeout(() => yo.classList.remove('estira'), 5400); }
 }, 20_000);
 
 /** Tras una venta (idea 40): la última monedita del lago cae desde arriba y se queda brillando en el fondo. */

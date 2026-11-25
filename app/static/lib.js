@@ -1106,6 +1106,27 @@ export function aniversario(items, hoy = hoyISO()) {
   return sumarMeses(primera, anios * 12) === hoy ? { anios } : null;
 }
 
+/**
+ * (Campamento 48) Lo que «Tú» lleva por lo ya alcanzado (nunca por lo que falta): el equipo según el campamento más alto al que llegó
+ * el saldo (40: la cuerda desde 1M, el piolet desde 10M; una venta no lo quita), un parche por medalla de constancia ganada (195), la
+ * flor del aniversario del primer día (197) y, solo a quien anota, su tecomate el día que hay una compra anotada con la fecha de hoy
+ * (196: una venta o un traslado no cuentan; un día sin compra no enseña nada distinto).
+ * @param {{ sats?: number, items?: Array<{ tipo?: string, fecha: string, satsAcum?: number }>, nCompras?: number } | null | undefined} R
+ * @param {string} [hoy]
+ * @param {{ libro?: boolean }} [opc]
+ * @returns {{ equipo: number, parches: number, flor: boolean, tecomate: boolean }}
+ */
+export function llevaTu(R, hoy = hoyISO(), { libro = false } = {}) {
+  const items = R?.items ?? [];
+  const pico = items.reduce((m, c) => Math.max(m, c.satsAcum ?? 0), R?.sats ?? 0);
+  return {
+    equipo: pico >= 1e7 ? 2 : pico >= 1e6 ? 1 : 0,
+    parches: medallas(R, hoy).filter((m) => m.ganada).length,
+    flor: Boolean(aniversario(items, hoy)),
+    tecomate: !libro && items.some((c) => c.tipo !== 'venta' && c.fecha === hoy),
+  };
+}
+
 /** Cuántas pupusas (idea 28, huevo de pascua): a un precio fijo en dólares; sin precio no se calcula. */
 export function enPupusas(valorUsd, precio = 0.75) {
   return valorUsd > 0 ? Math.floor(valorUsd / precio) : null;
