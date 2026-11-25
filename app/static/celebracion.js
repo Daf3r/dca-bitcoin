@@ -72,19 +72,25 @@ export function fiestaVista(marca) {
 /** (59) Si la escena lleva hoy el farol del hito: hubo fiesta hoy y este aparato ya la vio (si no, se enciende al acabar la suya). */
 export const farolEncendido = () => farolDelHito(S.fiesta, hoyISO()) && !fiestaPorVer(S.fiesta, vistas(), hoyISO());
 /** Si hay una fiesta de hoy que este aparato no ha visto (`S.fiesta`, de `/api/fiesta`), la enseña con su tarjeta. `retraso`: ms. */
+let porEmpezar = null; // la marca de la fiesta que espera su momento (la subida de «Tú», un diálogo abierto)
 export function revisarFiesta(retraso = 0) {
   const f = fiestaPorVer(S.fiesta, vistas(), hoyISO());
-  if (!f || enFiesta()) return;
-  fiestaVista(f.marca);
-  setTimeout(() => {
-    if (enFiesta()) return;
+  if (!f || enFiesta() || porEmpezar === f.marca) return;
+  porEmpezar = f.marca;
+  const empezar = () => {
+    if (porEmpezar !== f.marca) return;
+    // Con un diálogo abierto («Qué hay de nuevo» al entrar), la fiesta espera a que se cierre: cerrarlo no la salta.
+    if (enFiesta() || document.querySelector('dialog[open]')) { setTimeout(empezar, 600); return; }
+    porEmpezar = null;
+    fiestaVista(f.marca); // vista desde que empieza (si no, un dibujo de antes ya encendería el farol)
     fiestaDelHito({ escala: f.escala, conTu: false, tv: enTV() });
     const libro = vozLibro(), m = f.meta;
     const t = f.escala === 'halving'
       ? { k: 'Hoy, en la red de Bitcoin', txt: 'El halving', grande: false }
       : { k: libro ? 'Hoy el libro llegó a' : f.escala === 'campamento' ? 'Nuevo hito' : 'Nueva etapa', txt: m >= 1e8 ? nombreHito(m) : `${nombreHito(m)} sats`, grande: f.escala === 'campamento', lacre: m };
     mostrarTarjetas([t], 0);
-  }, retraso);
+  };
+  setTimeout(empezar, retraso);
 }
 /** (39b · El tempo) Cuánto se queda cada tarjeta: lo que dura su animación en el CSS (`.hito-cel`: 2.6, 3.5 y 4.5 s; la de 1 BTC, un rato más). */
 export const MS_TARJETA = { ligera: 2600, normal: 3500, grande: 4500, larga: 6000 };

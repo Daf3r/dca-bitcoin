@@ -256,6 +256,7 @@ const PESOS = [
   ['campamento 62: menús', 90], // 17 comprobaciones (estimado)
   ['campamento 63: anotar y buscar', 85], // 35 comprobaciones
   ['campamentos 57 y 58: «Tu historia» a mi', 25], // 29 comprobaciones
+  ['campamento 59: la fiesta del hito', 110], // 24 comprobaciones (estimado: dos fiestas enteras de 24 s)
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -4981,7 +4982,7 @@ try {
         eq(m[2].items, ['clave', 'sesiones', 'historial', 'datos', 'enlaces', 'sistema', 'salir', 'salir-todas'], '20·cuenta: «Administrar» y, al final, salir («Cerrar» va arriba desde el campamento 62)');
         ok(await a.p.locator('#dc-menu [data-previa]').count() === 0, '20·cuenta: la vista previa ya no está en el menú');
         await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(600);
-        ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 6 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus seis botones (campamento 21: etapa y etapa con sello)');
+        ok(await ver(a.p, '#dc-sistema') && await a.p.locator('#dc-previa button[data-previa]').count() === 7 && (await a.p.textContent('#dc-previa-t')).trim() === 'Probar la celebración', '20·cuenta: «Probar la celebración» vive en Estado del sistema, con sus siete botones (campamento 21: etapa y etapa con sello; 59: halving)');
         ok(!/temporal/i.test(await a.p.textContent('#dc-sistema')), '20·cuenta: ya no se llama temporal');
         const alto = await a.p.evaluate(() => [...document.querySelectorAll('#dc-previa button')].every((b) => b.getBoundingClientRect().height >= 47.5));
         ok(alto, '20·cuenta: sus botones miden 48 px');
@@ -5295,7 +5296,7 @@ try {
       // ---- Una etapa con sello: bandera, lacre y cometa; «Probar la celebración» tiene las dos
       const b = await ent(sAnio, ADMIN, { hora: 22 }, conLocal([['libro.efectos', 'todos']]));
       await b.p.click('#cuenta-btn'); await b.p.click('#dc-sistema-btn'); await b.p.waitForTimeout(400);
-      eq(await b.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia'], '21·probar: «Etapa» y «Etapa con sello»');
+      eq(await b.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia', 'Halving'], '21·probar: «Etapa» y «Etapa con sello» (59: y «Halving»)');
       await vigilarPiezas(b.p, ['.cometa']);
       await b.p.click('[data-previa="etapa"]');
       await b.p.waitForFunction(() => !document.getElementById('hito-cel').hidden, null, { timeout: 12000 });
@@ -8507,6 +8508,103 @@ try {
       await l.p.click('#dh-anios button[data-anio="todos"]'); await l.p.waitForTimeout(250);
       ok(/en las compras del libro/.test(await l.p.innerText('#dh-detalle')) && !/(^|\s)tus?\s/i.test(await l.p.innerText('#dh-detalle')), `58: una lectora lee «Todos» sin tuteo (${await l.p.innerText('#dh-detalle')})`);
       await l.ctx.close();
+    } finally { srv.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamento 59: la fiesta del hito (una vez por etapa, para toda la familia, se salta con un toque; el farol hasta la medianoche; el halving)
+  await bloque(async () => {
+    const conLocal = (pares) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    const ent = async (srv, cuenta, opts = {}, init = conLocal([])) => {
+      const r = await entrar(navegador, srv, cuenta, opts, init);
+      for (let k = 0; k < 3 && await r.p.locator('dialog[open]').count(); k++) { await r.p.keyboard.press('Escape'); await r.p.waitForTimeout(400); }
+      return r;
+    };
+    const estado = (p) => p.evaluate(() => {
+      const h = document.documentElement, host = document.getElementById('montana');
+      return { fiesta: h.dataset.fiestaHito ?? null, mueve: h.dataset.mueve ?? null, ambiente: h.dataset.ambiente ?? null, capas: host.querySelectorAll(':scope > svg.fiesta-capa').length, farol: host.querySelectorAll('.v-farol-hito').length,
+        nan: host.innerHTML.includes('NaN'), estilo: [...host.querySelectorAll(':scope > svg.fiesta-capa')].some((s) => /style=/.test(s.innerHTML)), vecinos: host.querySelectorAll('.v-vecinos path').length, festeja: Boolean(host.querySelector('#m-yo.festeja')),
+        tarjeta: document.getElementById('hito-cel').hidden ? null : `${document.getElementById('hc-k').textContent} · ${document.getElementById('hc-txt').textContent}` };
+    });
+    // Lo que sale en toda la fiesta, contado desde antes (las capas viven poco) y si «Tú» levantó los brazos en algún momento.
+    const vigilar = async (p) => { await vigilarPiezas(p, ['svg.fiesta-ondas', 'svg.fiesta-faroles', 'svg.fiesta-palma']); await p.evaluate(() => { window.__festeja = false; window.__vec0 = document.querySelectorAll('.v-vecinos path').length; window.__vecFiesta = window.__vec0; window.__vecCambia = false; new MutationObserver(() => { if (document.querySelector('#m-yo.festeja')) window.__festeja = true; const nv = document.querySelectorAll('.v-vecinos path').length; if (nv !== window.__vec0) window.__vecCambia = true; window.__vecFiesta = Math.max(window.__vecFiesta, nv); }).observe(document.getElementById('montana'), { subtree: true, attributes: true, childList: true }); }); };
+    const srv = await servidor('medio'); // 532,702 sats: con 470,000 más, la compra cruza 1M (un campamento)
+    try {
+      // ---- Quien anota cruza 1M: la fiesta entera (24 s), con «Tú» en el clímax; el servidor dice que es la primera vez
+      const a = await ent(srv, ADMIN, { hora: 16, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, conLocal([['libro.efectos', 'todos']]));
+      await a.p.evaluate(() => window.scrollTo(0, 0));
+      const antes = await estado(a.p);
+      await a.p.click('#anotar'); await a.p.waitForTimeout(400);
+      await a.p.fill('#h-sats', '470000');
+      await vigilar(a.p);
+      const resp = a.p.waitForResponse((r) => new URL(r.url()).pathname === '/api/compras' && r.request().method() === 'POST');
+      await a.p.click('#guardar');
+      await a.p.waitForTimeout(600);
+      if (await a.p.locator('#hoja-error.hoja-aviso').isVisible()) await a.p.click('#guardar'); // (una compra grande pide confirmar: es lo de siempre)
+      eq((await (await resp).json()).fiesta, { meta: 1_000_000, rango: 'campamento' }, '59: el servidor dice que 1M se cruza por primera vez');
+      await a.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'campamento', null, { timeout: 8000 });
+      let e = await estado(a.p);
+      ok(e.mueve === 'fiesta-hito' && !e.ambiente && e.capas >= 1 && !e.nan && !e.estilo && e.farol === 0, `59: la fiesta es el actor principal (data-mueve), lo ambiental espera, sus capas sin estilo en línea ni NaN, y el farol aún no (${JSON.stringify(e)})`);
+      eq(e.tarjeta, 'Nuevo hito · 1M sats', '59: la tarjeta de siempre la acompaña');
+      await a.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 15_000 });
+      const pz = await piezasVistas(a.p);
+      ok(pz['svg.fiesta-ondas'] === 1 && pz['svg.fiesta-faroles'] === 1 && pz['svg.fiesta-palma'] >= 1 && pz['svg.fiesta-palma'] <= 5, `59: la campana, los farolitos y los cohetes, cada uno en su capa (${JSON.stringify(pz)})`);
+      ok(await a.p.evaluate(() => window.__festeja && window.__vecCambia), '59: en el clímax «Tú» levanta los brazos (quien anota) y la plaza se llena');
+      const anim = await a.p.evaluate(() => document.getAnimations().filter((x) => x.effect?.target?.closest?.('svg.fiesta-capa')).map((x) => [x.effect.target.tagName, ...Object.keys(x.effect.getKeyframes()[0]).filter((k) => !['offset', 'easing', 'composite', 'computedOffset'].includes(k))]));
+      ok(anim.length > 0 && anim.every(([tag, ...props]) => tag.toLowerCase() === 'svg' && props.every((k) => ['transform', 'opacity'].includes(k))), `59: lo que se mueve es la capa entera, solo transform y opacidad (${JSON.stringify(anim)})`);
+      // Un toque la salta al estado final: sin capas, los vecinos del turno, el farol encendido y el director de vuelta
+      await a.p.mouse.click(1100, 500); await a.p.waitForTimeout(400);
+      e = await estado(a.p);
+      ok(!e.fiesta && e.capas === 0 && e.farol === 1 && e.mueve === antes.mueve && e.ambiente === antes.ambiente && e.vecinos === antes.vecinos && !e.nan, `59: un toque la salta: queda el farol y vuelve todo lo de antes (${JSON.stringify([antes, e])})`);
+      eq(a.consola, [], `59: consola limpia (${a.consola.join(' | ')})`);
+      // Al volver a abrir en el mismo aparato, no se repite (el farol sigue)
+      await a.p.reload(); await a.p.waitForTimeout(5000);
+      for (let k = 0; k < 3 && await a.p.locator('dialog[open]').count(); k++) { await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(400); }
+      await a.p.waitForTimeout(1200);
+      e = await estado(a.p);
+      ok(!e.fiesta && e.capas === 0 && e.farol === 1 && !e.tarjeta, `59: en el mismo aparato no se repite; el farol, sí (${JSON.stringify(e)})`);
+      ok(await a.p.evaluate(() => !/\d{5,}/.test(localStorage.getItem('libro.fiestas') ?? '') && /^\d{4}-\d{2}-\d{2}#\d+$/.test(localStorage.getItem('libro.fiestas') ?? '')), '59: el aparato recuerda solo una marca opaca (día#id), sin cifras');
+      // Vender y volver a cruzar 1M: no hay otra fiesta
+      const r2 = await a.p.evaluate(async (d) => { const p = (c) => fetch('/api/compras', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Libro': '1' }, body: JSON.stringify(c) }).then((x) => x.json()); await p({ fecha: d, monto: 1, sats: 10_000, tipo: 'venta', nota: 'Gasto' }); return p({ fecha: d, monto: 5, sats: 20_000 }); }, hoySV());
+      ok(!('fiesta' in r2), '59: vender y volver a cruzar 1M no trae otra fiesta');
+      // «Probar la celebración» tiene el halving: la fiesta del pueblo, sin «Tú» ni la cumbre
+      await a.p.click('#cuenta-btn'); await a.p.click('#dc-sistema-btn'); await a.p.waitForTimeout(400);
+      eq(await a.p.locator('#dc-previa button').allTextContents(), ['Compra', 'Etapa', 'Etapa con sello', 'Hito grande', '1 BTC', 'Constancia', 'Halving'], '59: «Probar la celebración» gana «Halving»');
+      await vigilar(a.p);
+      await a.p.evaluate(() => { window.__salta = false; new MutationObserver(() => { if (document.querySelector('#m-osos.salta')) window.__salta = true; }).observe(document.getElementById('montana'), { subtree: true, attributes: true }); });
+      await a.p.click('[data-previa="halving"]');
+      await a.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'halving', null, { timeout: 5000 });
+      eq((await estado(a.p)).tarjeta, 'Hoy, en la red de Bitcoin · El halving', '59: el halving lo dice la tarjeta (solo informa)');
+      await a.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 10_000 });
+      ok(await a.p.evaluate(() => !window.__festeja && !window.__salta), '59: el halving es del pueblo: «Tú» no levanta los brazos ni la cumbre salta');
+      await a.p.keyboard.press('Escape'); await a.p.waitForTimeout(800);
+      ok(!(await estado(a.p)).fiesta, '59: una tecla también la salta');
+      await a.ctx.close();
+      // ---- Quien solo mira la ve al abrir (el mismo día), sin «Tú» y sin tutear; deja el farol
+      const l = await ent(srv, LECTOR, { hora: 16, viewport: { width: 390, height: 844 } }, conLocal([['libro.efectos', 'todos']]));
+      await vigilar(l.p);
+      await l.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'campamento', null, { timeout: 8000 });
+      e = await estado(l.p);
+      ok(e.tarjeta === 'Hoy el libro llegó a · 1M sats' && e.farol === 0, `59: la lectora ve la fiesta al abrir, con la voz del libro (${e.tarjeta})`);
+      await l.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 15_000 });
+      ok(await l.p.evaluate(() => !window.__festeja), '59: para quien solo mira, «Tú» no sale en la fiesta');
+      await l.p.waitForFunction(() => !document.documentElement.dataset.fiestaHito, null, { timeout: 22_000 });
+      e = await estado(l.p);
+      ok(e.capas === 0 && e.farol === 1 && e.mueve !== 'fiesta-hito', `59: al acabar sola (24 s) queda el farol del hito (${JSON.stringify(e)})`);
+      eq(l.consola, [], `59: consola limpia de la lectora (${l.consola.join(' | ')})`);
+      await l.ctx.close();
+      // ---- Con «ninguno», el estado final de golpe (la tarjeta y el farol); con «esenciales», sin farolitos y un cohete; de noche, nadie en la plaza
+      const n0 = await ent(srv, LECTOR, { hora: 16, viewport: { width: 390, height: 844 } }, conLocal([['libro.efectos', 'ninguno']]));
+      await n0.p.waitForFunction(() => document.querySelector('.v-farol-hito'), null, { timeout: 10_000 }).catch(() => {});
+      e = await estado(n0.p);
+      ok(!e.fiesta && e.capas === 0 && e.farol === 1, `59: con «ninguno», el estado final: el farol, sin capas (${JSON.stringify(e)})`);
+      await n0.ctx.close();
+      const es = await ent(srv, LECTOR, { hora: 23, viewport: { width: 390, height: 844 } }, conLocal([['libro.efectos', 'esenciales'], ['libro.madrugada', '0']]));
+      await vigilar(es.p);
+      await es.p.waitForFunction(() => document.documentElement.dataset.fiestaHito === 'campamento', null, { timeout: 8000 });
+      await es.p.waitForFunction(() => window.__piezas['svg.fiesta-palma'] > 0, null, { timeout: 15_000 });
+      const pe = await piezasVistas(es.p);
+      ok(pe['svg.fiesta-faroles'] === 0 && pe['svg.fiesta-palma'] === 1 && await es.p.evaluate(() => !window.__vecCambia), `59: con «esenciales» y de noche: sin farolitos, un cohete y nadie en la plaza (${JSON.stringify(pe)})`);
+      await es.ctx.close();
     } finally { srv.parar(); }
   });
 

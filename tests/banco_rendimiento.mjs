@@ -6,7 +6,8 @@
 //   (Campamento 39) Cada fecha declara lo que pesa (`declara`, falla si pasa) y las pantallas anchas (1440 y 2560) tienen su tope de nodos.
 //   Lo blando (solo informa, mediana de 3): el tiempo de crear la escena con la CPU 4× más lenta y los fotogramas por segundo en
 //   reposo con la montaña a la vista (Chromium, CPU 4×). Varían de máquina a máquina: el iPhone de verdad lo mide «Medir este aparato».
-// Uso: node tests/banco_rendimiento.mjs [--rapido]   (PYTHON=ruta/python si Flask no está en python3; BANCO_JSON=ruta guarda la tabla)
+// Uso: node tests/banco_rendimiento.mjs [--rapido]   (PYTHON=ruta/python si Flask no está en python3; BANCO_JSON=ruta guarda la tabla;
+//      SOLO=texto mide solo los casos cuyo nombre lo lleva)
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
@@ -75,6 +76,18 @@ const CASOS = [
   { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 824 },
   { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 832 },
   { caso: 'viernes, pupusas', dia: '2027-02-12', hora: 19, declara: 826 },
+  // (Campamento 59) La fiesta del hito, medida en su clímax («Probar la celebración», que usa el mismo código): la campana, los
+  // farolitos y los cohetes, cada uno en su capa pequeña, mientras dura (unos +12 nodos en el clímax; el resto de la diferencia con
+  // el día normal es la escena de la prueba, que se dibuja con el saldo inventado de cada nivel); los vecinos de la fiesta son otro
+  // reparto de los mismos trazos. Lo ambiental espera (0 ambientales). En Nochebuena a las 23:55 (el pico) la fiesta no repite el
+  // saltito de la cumbre: el frente ya lleva los cohetes del calendario. `fiesta`: el botón; `en`: cuándo se mide (ms
+  // tras el clic: la subida de «Tú», 1.4 s, y el clímax, 10 s en un campamento y 5 s en una principal o el halving).
+  { caso: 'fiesta del hito, tarde', dia: '2026-11-25', hora: 16, declara: 875, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta del hito, noche de lluvia', dia: '2026-07-10', hora: 21, declara: 865, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta del hito, tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 863, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta del hito, Nochebuena 23:55', dia: '2026-12-24', hora: 23.92, declara: 985, frente: 28, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta de etapa con sello', dia: '2026-11-25', hora: 10, declara: 860, fiesta: 'etapa', en: 7400 },
+  { caso: 'fiesta del halving', dia: '2026-11-25', hora: 10, declara: 840, fiesta: 'halving', en: 5800 },
 ];
 /** (Campamento 39, idea 131) Las pantallas anchas (escritorio 1440×900 y tele 2560×1440): solo los nodos, frente a `TOPES_ANCHO`. */
 const ANCHOS = [[1440, 900], [2560, 1440]].flatMap(([w, h]) => [
@@ -118,7 +131,7 @@ const medir = (p) => p.evaluate(() => {
   const anim = {}, ambientales = new Set();
   // (Campamento 51) Cada capa propia (un <svg> pequeño, hermano del principal: la cabina, una gallina, el perro, el vecino del turno, un
   // ambiental) cuenta por separado: el presupuesto es de 3 por capa, no de 3 entre todas. Su clave: `propia:` y su primera clase propia.
-  const GENERICAS = new Set(['', 'efecto-ambiente', 'v-capa-amb', 'v-capa-animal', 'v-capa-vecino']);
+  const GENERICAS = new Set(['', 'efecto-ambiente', 'v-capa-amb', 'v-capa-animal', 'v-capa-vecino', 'fiesta-capa']);
   const propia = (svg) => `propia:${(svg?.getAttribute('class') ?? '?').split(/\s+/).filter((k) => !GENERICAS.has(k)).join('.') || '?'}`;
   for (const a of document.getAnimations()) {
     const t = a.effect?.target;
@@ -178,14 +191,20 @@ const navegador = await chromium.launch();
 const srv = await servidor('mil');
 const filas = [], fallos = [...fallosMapa];
 try {
-  for (const { caso: nombre, dia, hora, declara, frente } of CASOS) {
+  // (59) `SOLO=texto`: solo los casos cuyo nombre lo lleva (para medir uno a mano; el CI los corre todos).
+  for (const { caso: nombre, dia, hora, declara, frente, fiesta, en } of CASOS.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
     const pres = { ...PRESUPUESTO, ...(frente ? { frente } : {}) };
+    // (59) La fiesta: se lanza con «Probar la celebración» y se mide en su clímax.
+    const festejar = async (p) => { if (!fiesta) return; await p.evaluate((f) => document.querySelector(`[data-previa="${f}"]`).click(), fiesta); await p.waitForTimeout(en); };
     let { ctx, p } = await abrir(navegador, srv, dia, hora, 'esenciales');
+    await festejar(p);
     const n = await medir(p);
     await ctx.close();
     ({ ctx, p } = await abrir(navegador, srv, dia, hora, 'todos'));
+    await festejar(p);
     const t = await medir(p);
-    const b = RAPIDO ? {} : await blando(ctx, p);
+    if (fiesta) n.escena = Math.max(n.escena, t.escena); // con «todos» la fiesta lleva más piezas (los farolitos y todos los cohetes)
+    const b = RAPIDO || fiesta ? {} : await blando(ctx, p);
     await ctx.close();
     const total = Object.values(t.anim).reduce((a, x) => a + x, 0);
     filas.push({ caso: nombre, escena: n.escena, valle: n.valle, osos: n.osos, escenaTodos: t.escena, animaciones: t.anim, ambientales: t.ambientales, total, ...b });
@@ -193,10 +212,10 @@ try {
     if (declara != null && n.escena > declara + 6) fallos.push(`${nombre}: la escena pesa ${n.escena} nodos y la fecha declara ${declara} (+6)`);
     for (const [capa, x] of Object.entries(t.anim)) if (x > (pres[capa] ?? pres.propia)) fallos.push(`${nombre}: ${x} animaciones a la vista en «${capa}» > ${pres[capa] ?? pres.propia}`);
     if (t.ambientales > AMBIENTALES) fallos.push(`${nombre}: ${t.ambientales} ambientales moviéndose a la vez > ${AMBIENTALES}`);
-    if (t.ambientales !== ambientalesDeclarados(dia, hora)) fallos.push(`${nombre}: se mueven ${t.ambientales} ambientales y el mapa del día declara ${ambientalesDeclarados(dia, hora)}`);
+    if (t.ambientales !== (fiesta ? 0 : ambientalesDeclarados(dia, hora))) fallos.push(`${nombre}: se mueven ${t.ambientales} ambientales y el mapa del día declara ${ambientalesDeclarados(dia, hora)}`);
     if (total > PRESUPUESTO.total) fallos.push(`${nombre}: ${total} animaciones a la vista > ${PRESUPUESTO.total}`);
   }
-  for (const { caso: nombre, dia, hora, w, h } of ANCHOS) {
+  for (const { caso: nombre, dia, hora, w, h } of ANCHOS.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
     const { ctx, p } = await abrir(navegador, srv, dia, hora, 'esenciales', [w, h]);
     const n = await medir(p);
     await ctx.close();

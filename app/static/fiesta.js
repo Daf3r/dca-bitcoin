@@ -75,7 +75,11 @@ export function fiestaDelHito({ escala, conTu = false, tv = false }) {
         } else if (p.que === 'cohetes') {
           const lista = palmasFiesta({ W: sit.W, H: sit.H, n: p.n ?? 1, tu: sit.tu, cumbre: sit.cumbre, techo: techoDe(sit.host, sit.techo), k: sit.k * 0.35, tv }); // (la escala de los cohetes: la de la plaza, en su ancho)
           lista.forEach((q, i) => { const s = pon(`fiesta-palma fi-p${i}`, palma(q.x, q.y, q.r, q.c), 2600 + i * 500); s.style.animationDelay = `${i * 500}ms`; });
-        } else if (p.que === 'cumbre') gestoCumbre(conTuAqui);
+        } else if (p.que === 'cumbre') {
+          // En la hora de los cohetes del calendario (24 y 31 a medianoche: el frente ya lleva los suyos), la cumbre se queda con el
+          // saltito de la llegada: el del clímax pasaría el presupuesto del frente (28).
+          if (!sit.host.querySelector('g.cohetes')?.firstElementChild) gestoCumbre(conTuAqui);
+        }
       });
     }
     en(g.ms, () => terminarFiesta());
