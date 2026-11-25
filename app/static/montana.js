@@ -1,5 +1,5 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
-import { estiranLosOsos, ultimoTramo, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos } from './lib.js';
+import { estiranLosOsos, ultimoTramo, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos, ANIMOS } from './lib.js';
 import { sinMovimiento, conAmbiente } from './movimiento.js';
 import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
 import { reparto, repartoFiesta, svgVecinos, manoDe, luzPupusa, cajaVecino, recorrido, tramoLibre } from './arte-vecinos.js';
@@ -474,7 +474,46 @@ function conArbol(lug, arbol) {
 function opcionesReparto(info, t) {
   const C = window.libroCielo, dia = C?.dia?.() ?? '', hora = C?.hora?.() ?? 12;
   // (Campamento 52) `hora`: los vecinos con oficio están en el sitio de esa hora (no caminan: se dibuja al poner la escena o el turno).
-  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora };
+  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora() };
+}
+// ------------------------------------------------------------------ (Campamento E) el precio, a su ritmo: el ánimo del valle
+// lib.js decide el estado con los cierres diarios (`animoDelValle`); datos.js lo trae con el histórico (`ponerAnimo`). Aquí se recuerda,
+// se deja en `<html data-animo>` (sin él: la calma) y, si cambia, se rehacen solo los vecinos de cada escena viva, sin que nadie camine.
+// El cielo, los textos y la descripción no lo leen. Con el interruptor de este aparato apagado («El valle sigue al precio: no»), calma.
+const CLAVE_ANIMO = 'libro.valle.precio';
+let animoCalculado = 'calma', sigueEstaVisita = null;
+/** (E) ¿Sigue el valle al precio en este aparato? (encendido de fábrica; solo se guarda «no»). */
+export function valleSiguePrecio() {
+  if (sigueEstaVisita !== null) return sigueEstaVisita;
+  try { return localStorage.getItem(CLAVE_ANIMO) !== '0'; } catch { return true; }
+}
+/** (E) Para probar un estado sin esperar al mercado (como `libro.hora`): `localStorage` `libro.animo` = calma, fresco, abrigo, aire o plaza. */
+const animoForzado = () => { try { const a = localStorage.getItem('libro.animo'); return ANIMOS.includes(/** @type {any} */ (a)) ? a : null; } catch { return null; } };
+/** (E) El ánimo que se dibuja ahora. Deja `<html data-animo>` al día (sin rehacer nada). */
+export function animoAhora() {
+  const a = valleSiguePrecio() ? (animoForzado() ?? animoCalculado) : 'calma', html = document.documentElement;
+  if (a === 'calma') delete html.dataset.animo; else html.dataset.animo = a;
+  return a;
+}
+/** (E) El estado calculado de hoy (o el interruptor recién tocado): si lo que se ve cambia, se rehacen los vecinos de cada escena viva. */
+export function ponerAnimo(a = animoCalculado) {
+  const antes = document.documentElement.dataset.animo ?? 'calma';
+  animoCalculado = ANIMOS.includes(a) ? a : 'calma';
+  if (animoAhora() === antes) return;
+  for (const [h, v] of vecinosVivos) {
+    const g = h.isConnected && h.querySelector('.v-vecinos');
+    if (!g) { vecinosVivos.delete(h); continue; }
+    if (fiestaViva && h === estado?.host) continue; // (59) con la fiesta en marcha, espera: al acabar se pone el de ese momento
+    if (caminando?.host === h) pararCamino();
+    g.innerHTML = htmlVecinos(v, v.turno);
+    if (v.conCapa) capaVecino(h, v, v.turno);
+  }
+}
+/** (E) El interruptor de «Tu cuenta» (por aparato). */
+export function fijarValleSiguePrecio(si) {
+  sigueEstaVisita = Boolean(si);
+  try { if (si) localStorage.removeItem(CLAVE_ANIMO); else localStorage.setItem(CLAVE_ANIMO, '0'); } catch { /* vale esta visita */ }
+  ponerAnimo();
 }
 /**
  * (Campamento 49) Lo que va al dibujo grande de cada vecino cuando hay capas: el actor (o su parte quieta, `quedaT`: los postes de la

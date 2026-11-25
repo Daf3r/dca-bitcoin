@@ -105,11 +105,21 @@ const CASOS = [
   { caso: 'abril, sombrero', dia: '2027-04-14', hora: 12, declara: 841 },
   { caso: 'diciembre, oso de nieve', dia: '2026-12-10', hora: 12, declara: 892 },
   { caso: '14 sept, la banderita', dia: '2026-09-14', hora: 15, declara: 877 },
+  // (Campamento E) El ánimo del valle según la semana del precio (`animo`: lo fuerza `libro.animo`): otro reparto de los mismos vecinos
+  // (sentados de dos en dos si baja; la ropa tendida y vecinos de paseo si sube). Un miércoles de escuela por la mañana (la que barre ya
+  // acabó: 10:00) y en la tarde de la pelota; los cinco estados, cada uno con lo suyo declarado (un tono de más es un trazo más).
+  ...['calma', 'fresco', 'abrigo', 'aire', 'plaza'].flatMap((animo) => [
+    { caso: `ánimo ${animo}, mañana`, dia: '2027-02-10', hora: 10, animo, declara: 850 },
+    { caso: `ánimo ${animo}, pelota`, dia: '2027-02-10', hora: 15.5, animo, declara: 852 },
+  ]),
 ];
 /** (Campamento 39, idea 131) Las pantallas anchas (escritorio 1440×900 y tele 2560×1440): solo los nodos, frente a `TOPES_ANCHO`. */
 const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
   { caso: `Nochebuena ${w}`, dia: '2026-12-24', hora: 21, w, h },
   { caso: `31 dic ${w}`, dia: '2026-12-31', hora: 23.92, w, h },
+  // (E) con el valle en «plaza» y en «abrigo» (los que más vecinos sacan), un día cualquiera por la mañana
+  { caso: `ánimo plaza ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'plaza' },
+  { caso: `ánimo abrigo ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'abrigo' },
 ]);
 /**
  * (Campamento 49, idea 275) Los principales a la vez en pantallas anchas, con «todos»: hasta dos (uno del pueblo y la cabina del
@@ -134,6 +144,8 @@ const TELE = [
   { caso: 'tele noche de lluvia', dia: '2026-07-10', hora: 21 },
   { caso: 'tele Nochebuena, cena', dia: '2026-12-24', hora: 19 },
   { caso: 'tele Nochebuena', dia: '2026-12-24', hora: 21 },
+  { caso: 'tele día, ánimo plaza', dia: '2027-02-10', hora: 10, animo: 'plaza' }, // (E)
+  { caso: 'tele tarde, ánimo abrigo', dia: '2027-02-10', hora: 15.5, animo: 'abrigo' },
 ];
 
 const puertoLibre = () => new Promise((res) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); }); });
@@ -149,10 +161,10 @@ async function servidor(escenario) {
   throw new Error(`no arrancó el escenario ${escenario}`);
 }
 
-async function abrir(navegador, srv, dia, hora, efectos, ancho = null, tv = false) {
+async function abrir(navegador, srv, dia, hora, efectos, ancho = null, tv = false, animo = null) {
   const ctx = ancho ? await navegador.newContext({ viewport: { width: ancho[0], height: ancho[1] } }) : await navegador.newContext({ ...devices['iPhone 13'], viewport: { width: 390, height: 664 } });
   const p = await ctx.newPage();
-  await p.addInitScript(([d, h, e]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.efectos', e); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.madrugada', '0'); } catch { /* sin almacenamiento */ } }, [dia, hora, efectos]);
+  await p.addInitScript(([d, h, e, a]) => { try { localStorage.setItem('libro.dia', d); localStorage.setItem('libro.hora', String(h)); localStorage.setItem('libro.efectos', e); localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.pestanas', 'todo'); localStorage.setItem('libro.madrugada', '0'); if (a) localStorage.setItem('libro.animo', a); } catch { /* sin almacenamiento */ } }, [dia, hora, efectos, animo]);
   await p.goto(`${srv.url}/login`, { waitUntil: 'networkidle' });
   await p.fill('input[autocomplete="username"]', 'Daf3r');
   await p.fill('input[autocomplete="current-password"]', 'clave-de-prueba-12');
@@ -245,15 +257,15 @@ const srv = await servidor('mil');
 const filas = [], fallos = [...fallosMapa];
 try {
   // (59) `SOLO=texto`: solo los casos cuyo nombre lo lleva (para medir uno a mano; el CI los corre todos).
-  for (const { caso: nombre, dia, hora, declara, frente, fiesta, en } of CASOS.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
+  for (const { caso: nombre, dia, hora, declara, frente, fiesta, en, animo } of CASOS.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
     const pres = { ...PRESUPUESTO, ...(frente ? { frente } : {}) };
     // (59) La fiesta: se lanza con «Probar la celebración» y se mide en su clímax.
     const festejar = async (p) => { if (!fiesta) return; await p.evaluate((f) => document.querySelector(`[data-previa="${f}"]`).click(), fiesta); await p.waitForTimeout(en); };
-    let { ctx, p } = await abrir(navegador, srv, dia, hora, 'esenciales');
+    let { ctx, p } = await abrir(navegador, srv, dia, hora, 'esenciales', null, false, animo);
     await festejar(p);
     const n = await medir(p);
     await ctx.close();
-    ({ ctx, p } = await abrir(navegador, srv, dia, hora, 'todos'));
+    ({ ctx, p } = await abrir(navegador, srv, dia, hora, 'todos', null, false, animo));
     await festejar(p);
     const t = await medir(p);
     if (fiesta) n.escena = Math.max(n.escena, t.escena); // con «todos» la fiesta lleva más piezas (los farolitos y todos los cohetes)
@@ -268,8 +280,8 @@ try {
     if (t.ambientales !== (fiesta ? 0 : ambientalesDeclarados(dia, hora))) fallos.push(`${nombre}: se mueven ${t.ambientales} ambientales y el mapa del día declara ${ambientalesDeclarados(dia, hora)}`);
     if (total > PRESUPUESTO.total) fallos.push(`${nombre}: ${total} animaciones a la vista > ${PRESUPUESTO.total}`);
   }
-  for (const { caso: nombre, dia, hora, w, h } of ANCHOS.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
-    const { ctx, p } = await abrir(navegador, srv, dia, hora, 'esenciales', [w, h]);
+  for (const { caso: nombre, dia, hora, w, h, animo } of ANCHOS.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
+    const { ctx, p } = await abrir(navegador, srv, dia, hora, 'esenciales', [w, h], false, animo);
     const n = await medir(p);
     await ctx.close();
     filas.push({ caso: nombre, escena: n.escena, valle: n.valle, osos: n.osos, animaciones: {}, total: 0, ancho: true });
@@ -286,8 +298,8 @@ try {
     if (t.escena > (TOPES_ANCHO[w] ?? TOPES.escena)) fallos.push(`${nombre}: escena ${t.escena}`);
     for (const [capa, x] of Object.entries(t.anim)) if (x > (PRESUPUESTO[capa] ?? PRESUPUESTO.propia)) fallos.push(`${nombre}: ${x} animaciones a la vista en «${capa}»`);
   }
-  for (const { caso: nombre, dia, hora } of TELE.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
-    const { ctx, p } = await abrir(navegador, srv, dia, hora, 'todos', [1920, 1080], true);
+  for (const { caso: nombre, dia, hora, animo } of TELE.filter((c) => !process.env.SOLO || c.caso.includes(process.env.SOLO))) {
+    const { ctx, p } = await abrir(navegador, srv, dia, hora, 'todos', [1920, 1080], true, animo);
     const t = await medir(p);
     await ctx.close();
     const total = Object.values(t.anim).reduce((a, x) => a + x, 0);

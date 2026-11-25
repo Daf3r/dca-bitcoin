@@ -321,9 +321,10 @@ export const VECINOS = {
  * están, llevan el brazo arriba y miran hacia ellas. Nunca más de `n` figuras (la pelota no cuenta) y nunca según las cuentas.
  * (Campamento 40) `dia`: la fecha (la carta del día, 141; el tendedero de los lunes y jueves, 143; la fila del fin de semana, 142);
  * `escuela`: si ese día hay escuela (cielo.js: `escuela`); `canton`: [x, y, k, f], dónde va hoy por el camino real la que baja del
- * cantón (144; montana.js lo saca de la hora al dibujar el turno), o null.
+ * cantón (144; montana.js lo saca de la hora al dibujar el turno), o null. (Campamento E) `animo`: el del valle según la semana del
+ * precio (lib.js: `ANIMOS`; 'calma', el de siempre).
  */
-export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null, hora = null } = {}) {
+export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null, hora = null, animo = 'calma' } = {}) {
   const L = [];
   const en = (sitio, i, tipo, extra = {}) => { const q = lug[sitio]?.[i]; if (q) L.push({ t: tipo, x: q[0] + (extra.dx ?? 0) * q[2], y: q[1] + (extra.dy ?? 0) * q[2], k: q[2], ...extra }); };
   const oseznos = (cuantos, tipo = null) => {
@@ -527,6 +528,25 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   else if (t === 'e1-visitas') { en('calle', 0, 'vecina', { r: 0 }); en('calle', 0, 'osezno', { s: OSEZNO, r: 1, dx: 3.1 }); en('calle', 1, 'vecino', { r: 2, f: -1 }); en('corredor', 0, 'abuela', { r: 2 }); en('corredor', 1, 'vecina', { r: 1, f: -1 }); oseznos(2); en('plaza', 2, 'pelota', { dx: 1.7, dy: -0.2, actor: 'pelota' }); }
   else if (t === 'e6-guarda') { en('plaza', 0, 'escalera', { r: 0, dx: -2 }); en('plaza', 2, 'oseznoArriba', { s: OSEZNO, r: 1, f: -1 }); en('plaza', 3, 'osezno', { s: OSEZNO, r: 2 }); en('calle', 0, 'vecina', { r: 1 }); en('corredor', 0, 'abuela', { r: 2 }); en('atrio', 0, 'vendedora', { r: 0 }); }
   // 'duerme' (22:00–5:00): nadie en la calle (103).
+  // ---- (Campamento E) El ánimo del valle según la semana del precio (lib.js: `animoDelValle`): vestuario y reparto del turno que toque,
+  // nunca un actor. Solo en los turnos de un día cualquiera (no el sábado de plaza, la misa, el desfile ni la Navidad entera, que mandan)
+  // y siempre después del reparto del turno: si la calle va llena, lo del ánimo es lo que no sale (el actor nunca se queda fuera). Los
+  // mismos vecinos y poses de siempre (0 nodos): nada de brazos arriba, cohetes ni farolitos (son de los hitos). Si baja, se juntan
+  // (sentados de dos en dos, en los corredores); si sube, salen (la ropa tendida cualquier día, vecinos de paseo en la plaza).
+  const conAnimo = animo !== 'calma' && Boolean(dia) && DIARIOS.includes(t) && t !== 'mercado';
+  const libre = (ids) => ids.find((id) => !ya.has(id));
+  const junto = (sitio, i, dx, ids) => { const id = libre(ids); if (id) quien(id, sitio, i, { t: 'sentado', dx, f: -1, animo }); };
+  const paseo = (i, ids, f = 1) => { const id = libre(ids); if (id) quien(id, 'plaza', i, { f, animo }); };
+  if (conAnimo && (animo === 'fresco' || animo === 'abrigo')) {
+    const gente = ['tortillera', 'maestra', 'sacristan', 'tienda', 'panadero', 'pescador'];
+    if (!ya.has('abuela')) quien('abuela', 'corredor', 0, { animo });
+    junto('corredor', 0, 4.6, gente); // con la abuela, en su corredor
+    if (animo === 'abrigo') { const a = libre(gente); if (a) { quien(a, 'corredor', 1, { t: 'sentado', animo }); junto('corredor', 1, 4.6, gente); } } // y otra pareja en el de al lado
+  }
+  if (conAnimo && (animo === 'aire' || animo === 'plaza')) { // uno de paseo en la plaza; con «plaza», dos
+    paseo(1, ['maestra', 'tienda', 'tortillera', 'sacristan']);
+    if (animo === 'plaza') paseo(3, ['panadero', 'pescador', 'milpero', 'tienda'].filter((id) => id !== 'milpero' || milpero), -1);
+  }
   // Nadie se monta sobre otro: en el orden del reparto, quien cae encima de alguien ya puesto no sale (como mucho se rozan).
   // Los oseznos de la plaza van en corro, escalonados (unos un paso más adelante): entre ellos sí se rozan. (Pulido) Tampoco se para
   // nadie sobre el perro, las gallinas o la cruz (`lug.ocupado`): un adulto da unos pasos a un lado (3 o 6 unidades) o no sale.
@@ -561,7 +581,8 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   // (40, 143) Lunes y jueves, la ropa tendida (el lunes, sábanas; el jueves, los uniformes de la escuela) de la mañana a las 16:00; en la
   // lluviosa se recoge al empezar la siesta, antes del aguacero. Delante de una casa con corredor donde no tape a nadie; si no cabe, no sale.
   const lluviosa = Boolean(md) && md.slice(0, 2) >= '05' && md.slice(0, 2) <= '10';
-  if ((sem === 1 || sem === 4) && (['manana', 'mananaLibre', 'tortillas', 'salida'].includes(t) || (!lluviosa && ['siesta', 'tarde'].includes(t)))) {
+  // (E) Con el valle al aire libre, la ropa sale cualquier día (los mismos turnos; el jueves, los uniformes; los demás, las sábanas).
+  if ((sem === 1 || sem === 4 || (conAnimo && (animo === 'aire' || animo === 'plaza'))) && (['manana', 'mananaLibre', 'tortillas', 'salida'].includes(t) || (!lluviosa && ['siesta', 'tarde'].includes(t)))) {
     const tipo = sem === 1 ? 'tendedero' : 'tendederoJueves';
     const sitios = [...(lug.corredor ?? []).slice(2), ...[...(lug.calle ?? [])].reverse(), ...(lug.corredor ?? []).slice(0, 2)];
     // Primero el largo, sin moverlo; si no cabe en ningún sitio, el corto, con unos pasos a un lado si hace falta.

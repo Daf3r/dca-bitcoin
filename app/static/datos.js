@@ -5,7 +5,8 @@ import { pintar, pintarLinea, pintarPrecio } from './pintar.js';
 import { entradaTarjetas } from './entrada.js';
 import { pintarCaida } from './reportes.js';
 import { enTV, fiestaTV, teleDormida } from './tv.js';
-import { actualizarFirmas } from './montana.js';
+import { actualizarFirmas, ponerAnimo } from './montana.js';
+import { animoDelValle, hoyISO } from './lib.js';
 import { revisarFiesta } from './celebracion.js';
 import { enFiesta } from './fiesta.js';
 import { MS_SUBIDA } from './pintar.js';
@@ -116,10 +117,12 @@ export function desdeHistorico() {
 
 export async function cargarHistorico(intento = 0) {
   const desde = desdeHistorico();
+  let completo = false;
   try {
     const j = await api(`/api/historico?desde=${desde}`);
     S.historico = j.precios;
     S.histDesde = desde;
+    completo = !j.cargando;
     // El servidor rellena en segundo plano: se vuelve a preguntar mientras diga «cargando».
     if (j.cargando && intento < 10) setTimeout(() => cargarHistorico(intento + 1), 3000);
     S.histEstado = j.precios.length > 1 ? 'ok' : j.cargando && intento < 10 ? 'cargando' : 'error';
@@ -133,6 +136,9 @@ export async function cargarHistorico(intento = 0) {
   if (S.cargado && !(S.errorCarga && !R.n)) pintarLinea(); // y la mini línea del valor
   pintarSatsDolar();
   pintarCaida();
+  // (Campamento E) El ánimo del valle sale de los cierres diarios, cuando están completos (mientras el servidor rellena, espera: así
+  // los vecinos no se rehacen varias veces al abrir). Cambia a lo sumo una vez al día (lib.js: `animoDelValle`).
+  if (completo && S.histEstado === 'ok') { S.animoDia = hoyISO(); ponerAnimo(animoDelValle(S.historico)); }
 }
 
 export async function consultarPrecio() {

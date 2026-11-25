@@ -261,6 +261,7 @@ const PESOS = [
   ['campamento 47: los osos de la cumbre', 40], // 14 comprobaciones (estimado)
   ['campamento 48: «Tú» con más gestos', 30], // 9 comprobaciones (estimado)
   ['campamento 59: la fiesta del hito', 110], // 24 comprobaciones (estimado: dos fiestas enteras de 24 s)
+  ['campamento E: el precio, a su ritmo', 20], // 50 comprobaciones (medido el 25 nov 2026: 15 s)
   ['sin histórico de precios', 5], // 3 comprobaciones
 ];
 const PESO_NUEVO = 60;
@@ -8409,7 +8410,7 @@ try {
     const conLs = (pares = []) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
     const cerrarTodo = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
     const escritorio = { isMobile: false, hasTouch: false };
-    const SIETE = ['dc-contraste', 'dc-ganancia', 'dc-madrugada', 'dc-tv', 'dc-tv-duerme', 'dc-titulo', 'dc-sonido'];
+    const SIETE = ['dc-contraste', 'dc-ganancia', 'dc-madrugada', 'dc-tv', 'dc-tv-duerme', 'dc-titulo', 'dc-sonido', 'dc-valle']; // (E) ocho, con «El valle sigue al precio»
     try {
       // 300 · «Cerrar» arriba y pegado; «‹ Tu cuenta» en las vistas de dentro (teléfono, por pestañas)
       {
@@ -8875,6 +8876,74 @@ try {
       ok(pe['svg.fiesta-faroles'] === 0 && pe['svg.fiesta-palma'] === 1 && await es.p.evaluate(() => !window.__vecCambia), `59: con «esenciales» y de noche: sin farolitos, un cohete y nadie en la plaza (${JSON.stringify(pe)})`);
       await es.ctx.close();
     } finally { srv.parar(); }
+  });
+
+  // ---------------------------------------------------------------- campamento E: el precio, a su ritmo (el valle según la semana del precio, sin cambiar ningún texto ni el cielo; el interruptor)
+  await bloque(async () => {
+    const anio = await servidor('anio');
+    const cerrarE = async (p) => { for (let k = 0; k < 4 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    const ls = (pares) => [(ps) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); for (const [k, v] of ps) localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } }, pares];
+    try {
+      for (const vp of [{ width: 390, height: 664 }, { width: 1440, height: 900, isMobile: false, hasTouch: false }]) {
+        // Un martes con escuela (las pruebas no dependen del día real): lo que se lee de la página con cada estado, a dos horas del día.
+        const r = await entrar(navegador, anio, ADMIN, { hora: 10, viewport: vp, ...(vp.width > 1000 ? { isMobile: false, hasTouch: false } : {}) }, ls([['libro.dia', '2026-10-06']]));
+        await cerrarE(r.p);
+        eq(await r.p.evaluate(() => document.documentElement.dataset.animo ?? 'calma'), 'calma', `E a ${vp.width} px: con los precios de prueba, la calma`);
+        const res = {};
+        for (const hora of [10, 15]) {
+          res[hora] = await r.p.evaluate(async (h) => {
+            localStorage.setItem('libro.hora', String(h)); window.libroCielo.aplicar();
+            await new Promise((ok) => setTimeout(ok, 400));
+            const M = await import([...document.querySelectorAll('link[rel=modulepreload]')].map((l) => l.href).find((u) => /\/montana\.js/.test(u)));
+            const raiz = document.documentElement, mont = document.getElementById('montana');
+            const foto = () => ({
+              texto: `${document.body.innerText}\n${[...document.querySelectorAll('[aria-label], [title], [alt]')].map((e) => `${e.getAttribute('aria-label') ?? ''}${e.getAttribute('title') ?? ''}${e.getAttribute('alt') ?? ''}`).join('|')}\n${document.getElementById('m-desc')?.textContent ?? ''}`,
+              cielo: JSON.stringify([raiz.getAttribute('style'), Object.entries(raiz.dataset).filter(([k]) => k !== 'animo').sort()]),
+              vecinos: mont.querySelector('.v-vecinos')?.innerHTML ?? '', nodos: mont.querySelectorAll('*').length, anim: document.getAnimations().length,
+              fiesta: mont.querySelectorAll('.cohetes > *, [class*="festeja"], [class*="farol-hito"], .v-capa-camina').length,
+              clases: [...new Set([...mont.querySelectorAll('.v-vecinos [class]')].flatMap((e) => [...e.classList]))].sort().join(' '),
+            });
+            const out = {};
+            // (Un tono de siempre que a esa hora no salía es un trazo más, no una pieza nueva.)
+            for (const a of ['fresco', 'abrigo', 'aire', 'plaza']) {
+              M.ponerAnimo('calma'); const c = foto();
+              M.ponerAnimo(a); const e = foto(), attr = raiz.dataset.animo;
+              M.ponerAnimo('calma');
+              out[a] = { attr, mismoTexto: c.texto === e.texto, mismoCielo: c.cielo === e.cielo, otroValle: c.vecinos !== e.vecinos, nodos: e.nodos - c.nodos, anim: e.anim - c.anim, fiesta: e.fiesta - c.fiesta, clasesNuevas: e.clases.split(' ').filter((x) => !c.clases.split(' ').includes(x) && !/^v-vo-(pelo|som|r0|r1|r2|palma|pelo2|rasgo|brasa)$/.test(x)), alarma: /rojo|verde|alarma/.test(e.clases) };
+            }
+            return out;
+          }, hora);
+        }
+        for (const a of ['fresco', 'abrigo', 'aire', 'plaza']) {
+          const [d, t] = [res[10][a], res[15][a]];
+          eq([d.attr, t.attr], [a, a], `E a ${vp.width} px: <html data-animo="${a}">`);
+          ok(d.mismoTexto && t.mismoTexto, `E a ${vp.width} px · ${a}: ningún texto de la página cambia (la descripción de la montaña, las etiquetas, la línea de hoy)`);
+          ok(d.mismoCielo && t.mismoCielo, `E a ${vp.width} px · ${a}: el cielo y los demás atributos de <html> no se tocan`);
+          ok(d.otroValle || t.otroValle, `E a ${vp.width} px · ${a}: el pueblo sí cambia (a las 10 o a las 15)`);
+          ok([d, t].every((x) => Math.abs(x.nodos) <= 2 && x.anim <= 0 && x.fiesta <= 0 && !x.clasesNuevas.length && !x.alarma), `E a ${vp.width} px · ${a}: sin nodos ni animaciones nuevas, sin piezas de fiesta ni colores de alarma (${JSON.stringify([d, t].map((x) => [x.nodos, x.anim, x.fiesta, x.clasesNuevas]))})`);
+        }
+        eq(r.consola, [], `E a ${vp.width} px: sin errores en la consola`);
+        await r.ctx.close();
+      }
+      // El interruptor (por aparato, en «Más ajustes de este aparato»): apagado, siempre la calma; se recuerda.
+      const r = await entrar(navegador, anio, ADMIN, { hora: 10 }, ls([['libro.dia', '2026-10-06'], ['libro.animo', 'plaza']]));
+      await cerrarE(r.p);
+      const vec = () => r.p.evaluate(() => [document.documentElement.dataset.animo ?? 'calma', document.querySelector('#montana .v-vecinos').innerHTML.length]);
+      const [a0, n0] = await vec();
+      await r.p.click('#cuenta-btn'); await r.p.waitForTimeout(500);
+      ok(await r.p.evaluate(() => Boolean(document.getElementById('dc-valle').closest('#dc-mas')) && !document.getElementById('dc-atajos').closest('#dc-mas')), 'E: el interruptor va dentro de «Más ajustes de este aparato» (no con los atajos)');
+      eq([a0, (await r.p.textContent('#dc-valle')).trim()], ['plaza', 'El valle sigue al precio: sí'], 'E: encendido de fábrica');
+      await r.p.click('#dc-valle'); await r.p.waitForTimeout(300);
+      const [a1, n1] = await vec();
+      eq([a1, (await r.p.textContent('#dc-valle')).trim(), await r.p.evaluate(() => localStorage.getItem('libro.valle.precio'))], ['calma', 'El valle sigue al precio: no', '0'], 'E: apagado, la calma, y se recuerda en este aparato');
+      ok(n1 !== n0, 'E: al apagarlo, el pueblo vuelve a la calma sin recargar');
+      await r.p.click('#dc-valle'); await r.p.waitForTimeout(300);
+      eq([(await vec())[0], await r.p.evaluate(() => localStorage.getItem('libro.valle.precio'))], ['plaza', null], 'E: encendido otra vez');
+      eq(r.consola, [], 'E: el interruptor, sin errores en la consola');
+      await r.ctx.close();
+    } finally {
+      anio.parar();
+    }
   });
 
   // ---------------------------------------------------------------- sin histórico de precios

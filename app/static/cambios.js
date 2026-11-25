@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento E) El precio, a su ritmo; resume también «Tú» con más gestos (2026-12-v) y los osos de la cumbre (2026-12-u).
+    id: '2026-12-w',
+    items: [
+      'El pueblo sigue la semana del precio: unas semanas los vecinos se juntan y otras salen a la plaza y tienden la ropa.',
+      'Casi siempre está en calma. Se apaga en «Tu cuenta», en «Más ajustes de este aparato».',
+      'El osito «Tú» acampa de noche, mira el atardecer y lleva en su mochila lo ya logrado.',
+      'Los osos de la cumbre se estiran por la mañana, y al llegar a una etapa hay fiesta en el pueblo.',
+    ],
+  },
+  {
     // (Campamento 48) «Tú» con más gestos; resume también los osos de la cumbre (2026-12-u) y el pueblo que se mueve (2026-12-t).
     id: '2026-12-v',
     items: [

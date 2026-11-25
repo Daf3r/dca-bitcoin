@@ -2511,6 +2511,61 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   ok(!/carpa|capote|piolet|cuerda|parches|flor|tecomate|espalda/.test(base48) && !/NaN|style=/.test(todo48) && nodos48(todo48) - nodos48(base48) <= 12, `tú 48: sin pedirlo no lleva nada nuevo (el eco); con todo, ${nodos48(todo48) - nodos48(base48)} nodos más, sin NaN ni estilos en línea`);
   ok((todo48.match(/class="oso-parches" d="([^"]+)"/)[1].match(/M/g) || []).length === O48.MAX_PARCHES && todo48.indexOf('tu-carpa') < todo48.indexOf('oso oso-tu') && todo48.includes('oso-capote tu-lluvia'), 'tú 48: como mucho ocho parches en un trazo, la carpa fuera del osito y el capote con su clase de la lluviosa');
   ok(O48.PIEZAS_TU48.flat().every(([x, y]) => Number.isFinite(x + y) && x >= O48.CAJA_TU.x0 && x <= O48.CAJA_TU.x1 && y >= O48.CAJA_TU.y0 && y <= O48.CAJA_TU.y1), 'tú 48: la carpa, el capote, el equipo, los parches, la flor y el tecomate caben en la caja de «Tú»');
+
+  // ---- Campamento E · El precio, a su ritmo: el ánimo del valle por la semana del precio (lib.js: `animoDelValle`).
+  // Una serie de cierres diarios desde el 1 de julio de 2026: `f(i)` es el precio del día i.
+  const serieE = (n, f) => Array.from({ length: n }, (_, i) => [L47.sumarDias('2026-07-01', i), f(i)]);
+  const diaE = (i) => L47.sumarDias('2026-07-01', i), anE = (s, i) => L47.animoDelValle(s, diaE(i)); // el ánimo del día i (con los cierres hasta i − 1)
+  const plano = serieE(90, () => 60000);
+  eq([anE(plano, 80), L47.animoDelValle([], diaE(80)), L47.animoDelValle(null, diaE(80)), anE(plano.slice(0, 10), 80)], ['calma', 'calma', 'calma', 'calma'], 'ánimo E: sin cambios, sin histórico o con el último cierre de hace días, la calma');
+  // Un escalón en el día 60: la semana del día 60 al 66 compara con el precio de antes.
+  const escalon = (x) => serieE(90, (i) => (i < 60 ? 60000 : 60000 * x));
+  eq([0.9, 0.84, 1.09, 1.16].map((x) => anE(escalon(x), 61)), ['fresco', 'abrigo', 'aire', 'plaza'], 'ánimo E: semana −10 % fresco, −16 % abrigo, +9 % aire libre, +16 % plaza');
+  eq([0.95, 1.05].map((x) => anE(escalon(x), 61)), ['calma', 'calma'], 'ánimo E: una semana de ±5 % es la calma');
+  // Lejos del máximo de 30 días (−25 %) pero con la semana quieta: abrigo; y ese mismo día un rebote de +9 % en la semana: manda la semana.
+  // (Un 1 % menos cada día: la semana, −6.8 %, no entra en fresco; el día 45 ya está 22 % bajo el máximo.) Y una caída de 40 % con un
+  // rebote de +9 % en la semana, aún 35 % bajo el máximo: manda la semana.
+  const lento = serieE(90, (i) => 60000 * 0.99 ** Math.max(0, i - 20)), rebote = serieE(90, (i) => (i < 30 ? 60000 : i < 45 ? 36000 : 39240));
+  eq([anE(lento, 44), anE(lento, 47), anE(rebote, 46)], ['calma', 'abrigo', 'aire'], 'ánimo E: 22 % bajo el máximo de 30 días, abrigo; con una semana de subida a la vez, manda la semana');
+  // El tope: una subida que no para (+1.5 % al día, semana ≈ +11 %) da aire libre siete días y después la calma, aunque siga subiendo.
+  const sube = serieE(120, (i) => 60000 * 1.015 ** Math.max(0, i - 50));
+  const vistos = Array.from({ length: 30 }, (_, k) => anE(sube, 52 + k));
+  eq([vistos.filter((a) => a !== 'calma').length, vistos.slice(-10).every((a) => a === 'calma')], [7, true], `ánimo E: como mucho siete días seguidos y luego la calma, aunque la medida siga (${vistos.join(' ')})`);
+  // La vuelta: entra en fresco con −10 %, se queda con −6 % (aún dentro del tercio) y sale con −4 %.
+  const dentro = serieE(70, (i) => (i < 55 ? 60000 : i < 62 ? 54000 : 54000 * 1.04)); // −10 % el día 55; el 62, frente al 55 (54000), +4 %: calma
+  const sigue = serieE(70, (i) => (i < 55 ? 60000 : 56400)); // el 55: −6 %: no entra
+  const entra = serieE(70, (i) => (i < 55 ? 60000 : i < 58 ? 54000 : 56400)); // entra con −10 % y el 58 la semana es −6 %: sigue
+  eq([anE(sigue, 57), anE(entra, 60), anE(dentro, 64)], ['calma', 'fresco', 'calma'], 'ánimo E: −6 % no entra, pero quien ya estaba en fresco se queda; con la semana de vuelta, la calma');
+  // Hoy no cuenta (ni el precio vivo): el ánimo de hoy sale del cierre de ayer; y no depende de desde cuándo pidió el histórico el aparato.
+  const conHoy = [...plano.slice(0, 81), [diaE(80), 30000]];
+  eq([anE(conHoy, 80), anE(conHoy, 81)], ['calma', 'abrigo'], 'ánimo E: el cierre de hoy cuenta mañana, no hoy (cambia a lo sumo una vez al día)');
+  const largo = [...serieE(400, (i) => 30000 + 100 * i).map(([f, p]) => [L47.sumarDias(f, -400), p]), ...escalon(0.9)];
+  eq(anE(largo, 61), anE(escalon(0.9), 61), 'ánimo E: el mismo ánimo con un año más de histórico delante (cada aparato pide desde otra fecha)');
+  ok(L47.animosDeSerie(sube).every((d) => L47.ANIMOS.includes(d.animo) && Number.isFinite(d.sem + d.dist)), 'ánimo E: la serie da siempre uno de los cinco estados');
+  // El reparto: lo del ánimo solo en los turnos de un día cualquiera, después del de siempre (el actor no cambia), sin poses de fiesta.
+  const FIESTA_E = /^(oseznoArriba|estira|oseznoLuz|abrazo|brindis|volcancito|cohete)|Saluda$/;
+  const malE = [], difiere = {};
+  for (const [li, lug] of lugs.entries()) for (const dia of ['2026-10-05', '2026-10-06', '2026-10-08', '2026-10-10', '2026-10-11', '2026-12-10']) for (let h = 4.5; h < 22; h += 0.25) {
+    const t = C.turno(dia, h), o = { dia, hora: h, escuela: C.escuela(dia) }, base = V.reparto(lug, t, o), clave = (l) => JSON.stringify(l.map((v) => [v.t, v.quien ?? '', Math.round(v.x), Math.round(v.y)]));
+    for (const animo of ['fresco', 'abrigo', 'aire', 'plaza']) {
+      const l = V.reparto(lug, t, { ...o, animo }), nuevos = l.filter((v) => v.animo);
+      if (clave(l) !== clave(base)) difiere[`${li}${animo}`] = (difiere[`${li}${animo}`] ?? 0) + 1;
+      if (['misa', 'mercado', 'desfile', 'posada', 'duerme'].includes(t) || t.includes('-')) { if (clave(l) !== clave(base)) malE.push(`${dia} ${h} ${t} ${animo}: un turno especial cambia`); continue; }
+      if (JSON.stringify(l.filter((v) => v.actor || v.ronda)) !== JSON.stringify(base.filter((v) => v.actor || v.ronda))) malE.push(`${dia} ${h} ${t} ${animo}: cambia el actor`);
+      if (nuevos.some((v) => FIESTA_E.test(v.t) || v.actor || v.ronda)) malE.push(`${dia} ${h} ${t} ${animo}: una pose de fiesta o un actor nuevo`);
+      if (l.filter((v) => !V.COSAS.has(v.t)).length > V.MAX_VECINOS || /NaN|style=/.test(V.svgVecinos(l))) malE.push(`${dia} ${h} ${t} ${animo}: más de ocho o un trazo roto`);
+      if (new Set(l.filter((v) => v.quien).map((v) => v.quien)).size !== l.filter((v) => v.quien).length) malE.push(`${dia} ${h} ${t} ${animo}: un vecino dos veces`);
+    }
+  }
+  eq(malE.slice(0, 5), [], 'ánimo E: solo en los turnos de un día cualquiera, con el mismo actor, sin poses de fiesta, ocho como mucho y nadie dos veces');
+  ok(['fresco', 'abrigo', 'aire', 'plaza'].every((a) => (difiere[`0${a}`] ?? 0) >= 8 && (difiere[`1${a}`] ?? 0) >= 8), `ánimo E: cada estado se nota en varios ratos del día, en el teléfono y en escritorio (${JSON.stringify(difiere)})`);
+  // Nada aconseja: la entrada de «Qué hay de nuevo» y la etiqueta del interruptor, sin palabras de compra o venta ni juicios.
+  // (cambios.js importa la app entera: se lee su primera entrada como texto)
+  const fuenteE = fs.readFileSync(new URL('../app/static/cambios.js', import.meta.url), 'utf8'), primeraE = fuenteE.slice(fuenteE.indexOf('export const CAMBIOS = ['), fuenteE.indexOf('\n  },'));
+  const CAMBIOS_E = [{ id: primeraE.match(/id: '([^']+)'/)[1], items: [...primeraE.matchAll(/^ {6}'(.+)',$/gm)].map((m) => m[1]) }];
+  const NO_ACONSEJA = /\b(compr\w*|vend\w*|aprovech\w*|momento|oportunidad\w*|barat\w*|car[oa]s?|baj\w*|sub\w*|ganga|rojo|verde|alarma|cuidado|deber\w*)\b/i;
+  const textoE = `${CAMBIOS_E[0].items.join(' ')} El valle sigue al precio: sí El valle sigue al precio: no`;
+  ok(CAMBIOS_E[0].id === '2026-12-w' && CAMBIOS_E[0].items.length >= 3 && CAMBIOS_E[0].items.length <= 6 && !NO_ACONSEJA.test(textoE.replace(/semana del precio|sigue al precio|el precio/gi, '')), `ánimo E: lo que dice el campamento no aconseja (${textoE.match(NO_ACONSEJA)?.[0] ?? 'nada'})`);
 }
 
 console.log(`OK ${n} comprobaciones`);

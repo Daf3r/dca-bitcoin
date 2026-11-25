@@ -2639,3 +2639,102 @@ export function fiestaPorVer(f, vista, hoy) {
  * @param {string} hoy
  */
 export const farolDelHito = (f, hoy) => Boolean(f && f.dia === hoy && ((f.hito && escalaFiesta(f.hito.meta) !== 'intermedia') || f.halving));
+
+// ------------------------------------------------------------------ (Campamento E) el precio, a su ritmo: el ánimo del valle
+/**
+ * (E) Los cinco estados del valle según la semana del precio (la Manta, el sexto del diseño, queda fuera por ahora). Ninguno es mejor
+ * que otro: si baja, el pueblo se junta y se arropa; si sube, sale al aire libre. Son repartos de los mismos vecinos (arte-vecinos.js:
+ * `reparto`, opción `animo`), nunca un texto, un color de alarma ni el cielo; los brazos arriba, los cohetes y los farolitos siguen
+ * siendo de los hitos.
+ */
+export const ANIMOS = /** @type {const} */ (['calma', 'fresco', 'abrigo', 'aire', 'plaza']);
+/**
+ * (E) Los umbrales (en %): la semana (el cierre frente al de siete días antes) y la distancia al máximo de los últimos 30 cierres. El
+ * cambio de un solo día no cuenta. `vuelta`: para salir hay que volver un tercio hacia dentro del umbral (umbral × 2/3). `tope`: un
+ * estado dura como mucho 7 días seguidos; después vuelve la calma y no regresa hasta que la medida salga y vuelva a entrar.
+ */
+export const UMBRAL_ANIMO = Object.freeze({ fresco: -8, abrigo: -15, lejos: 22, aire: 8, plaza: 15, vuelta: 2 / 3, tope: 7, ventana: 120 });
+const NIVEL_ANIMO = /** @type {const} */ (['abrigo', 'fresco', 'calma', 'aire', 'plaza']); // nivel −2 … +2
+/**
+ * (E) El nivel de una medida (−2 abrigo, −1 fresco, 0 calma, +1 aire libre, +2 plaza), con los umbrales multiplicados por `q` (1 para
+ * entrar, 2/3 para seguir). Si coinciden una caída lejos del máximo y una semana de subida (un rebote), manda la semana.
+ * @param {number} sem
+ * @param {number} dist
+ * @param {number} q
+ */
+function nivelAnimo(sem, dist, q) {
+  const U = UMBRAL_ANIMO;
+  if (sem >= U.plaza * q) return 2;
+  if (sem >= U.aire * q) return 1;
+  if (sem <= U.abrigo * q || dist >= U.lejos * q) return -2;
+  if (sem <= U.fresco * q) return -1;
+  return 0;
+}
+/**
+ * (E) ¿Sigue el estado `nivel` con su umbral de salir (dos tercios del de entrar)? Cada uno con su propia medida: fresco y aire libre
+ * con la semana; abrigo con la semana o la distancia al máximo; plaza con la semana.
+ * @param {number} nivel
+ * @param {number} sem
+ * @param {number} dist
+ */
+function sigueAnimo(nivel, sem, dist) {
+  const U = UMBRAL_ANIMO, q = U.vuelta;
+  if (nivel === 2) return sem >= U.plaza * q;
+  if (nivel === 1) return sem >= U.aire * q;
+  if (nivel === -2) return sem <= U.abrigo * q || dist >= U.lejos * q;
+  return sem <= U.fresco * q;
+}
+/**
+ * @param {string} f
+ * @param {number} n
+ */
+const diasAntes = (f, n) => { const [y, m, d] = f.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d - n)).toISOString().slice(0, 10); };
+/**
+ * (E) Los estados día a día de una serie de cierres diarios (`[[AAAA-MM-DD, precio]…]`, en cualquier orden): para cada día con su
+ * cierre de siete días antes, { fecha, sem, dist, medida, animo }. `medida` es el nivel con la vuelta (sin el tope); `animo`, lo que se
+ * ve (con el tope). 100 % determinista: lo decide solo la serie. Sirve para `animoDelValle` y para la simulación del documento.
+ * @param {Array<[string, number]> | null | undefined} serie
+ * @returns {Array<{ fecha: string, sem: number, dist: number, medida: number, animo: typeof ANIMOS[number] }>}
+ */
+export function animosDeSerie(serie) {
+  const U = UMBRAL_ANIMO, p = new Map();
+  for (const [f, v] of serie ?? []) if (typeof f === 'string' && v > 0) p.set(f, v);
+  const fechas = [...p.keys()].sort();
+  /** @type {Array<{ fecha: string, sem: number, dist: number, medida: number, animo: typeof ANIMOS[number] }>} */
+  const out = [];
+  let cur = 0, racha = 0;
+  for (const f of fechas) {
+    const hoy = p.get(f), antes = p.get(diasAntes(f, 7));
+    if (!antes) { cur = 0; racha = 0; continue; }
+    let max = hoy;
+    for (let i = 1; i < 30; i++) { const q = p.get(diasAntes(f, i)); if (q && q > max) max = q; }
+    const sem = (hoy / antes - 1) * 100, dist = (1 - hoy / max) * 100;
+    const entra = nivelAnimo(sem, dist, 1);
+    let medida = entra;
+    // Con un estado puesto, se queda mientras su propia medida no vuelva un tercio hacia dentro (abrigo de grado baja a fresco); sube de
+    // grado solo con los umbrales de entrar. Si la semana entra del otro lado (un rebote), manda la semana.
+    if (cur !== 0 && Math.sign(entra) !== -Math.sign(cur) && !(Math.sign(entra) === Math.sign(cur) && Math.abs(entra) > Math.abs(cur))) {
+      if (sigueAnimo(cur, sem, dist)) medida = cur;
+      else if (Math.abs(cur) === 2 && sigueAnimo(Math.sign(cur), sem, dist)) medida = Math.sign(cur);
+    }
+    racha = medida !== 0 && Math.sign(medida) === Math.sign(cur) ? racha + 1 : medida !== 0 ? 1 : 0;
+    cur = medida;
+    out.push({ fecha: f, sem, dist, medida, animo: racha > U.tope ? 'calma' : NIVEL_ANIMO[medida + 2] });
+  }
+  return out;
+}
+/**
+ * (E) El ánimo del valle de hoy: el estado del último cierre completo (el de ayer o antes; nunca el precio vivo), así que cambia a lo
+ * sumo una vez al día. Mira solo los cierres de los `ventana` días anteriores a hoy: el mismo resultado en cada aparato aunque cada uno
+ * haya pedido el histórico desde otra fecha. Sin histórico suficiente o con el último cierre de hace más de tres días: 'calma' (el
+ * interruptor de este aparato lo decide quien llama). Sale de precios públicos, nunca de las compras ni de nadie.
+ * @param {Array<[string, number]> | null | undefined} historico
+ * @param {string} [hoy]
+ * @returns {typeof ANIMOS[number]}
+ */
+export function animoDelValle(historico, hoy = hoyISO()) {
+  const desde = diasAntes(hoy, UMBRAL_ANIMO.ventana);
+  const dias = animosDeSerie((historico ?? []).filter((x) => x[0] >= desde && x[0] < hoy));
+  const ult = dias.at(-1);
+  return ult && ult.fecha >= diasAntes(hoy, 3) ? ult.animo : 'calma';
+}
