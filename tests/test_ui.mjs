@@ -8046,7 +8046,7 @@ try {
       ['svg.fiesta-ondas', 'fiesta-onda', '1.6s'], ['svg.fiesta-faroles', 'fiesta-sube', '6s'], ['svg.fiesta-palma', 'fiesta-palma', '2.2s'],
       // (Campamento 49) El pueblo se mueve 2: el panadero cruza (una pasada cada 40 s), la tortillera palmea, la campana, la hamaca, la
       // ronda de la abuela (la misma duración que el actor), las estrellitas y el que camina al cambiar de turno (0.4 s por paso).
-      ['svg.v-actor-cruza', 'vo-cruza', '40s'], ['svg.v-actor-palmea', 'vo-palmea', '1s'], ['svg.v-capa-campana', 'vo-campana', '2s'], ['svg.v-actor-hamaca', 'vo-hamaca', '3s'],
+      ['svg.v-actor-cruza', 'vo-cruza', '40s'], ['svg.v-actor-palmea', 'vo-palmea', '1s'], ['svg.v-capa-campana', 'vo-campana', '2s'], ['svg.v-actor-hamaca', 'vo-hamaca', '3s'], ['svg.v-actor-mece', 'vo-mece', '4s'], // (42) la piñata del Día del Niño
       ['svg.v-ronda', 'vo-ronda-barre', '7.2s'], ['svg.v-ronda', 'vo-ronda-pelota', '9s'], ['svg.v-amb-estrellitas', 'vo-titila', '12s'], ['svg.v-capa-camina', 'vo-camina', '3.2s'],
     ];
     // Lo que no se alarga: la interfaz, que responde a tu dedo, y el paso de «Tú» al anotar (decisión del dueño: la subida sigue en 1.4 s).
@@ -8175,12 +8175,13 @@ try {
       ok(es.cay && es.cayVis && es.cayCorre === 0 && es.humoVis === 0 && es.moviendo === 0, `51 con «esenciales»: el cayuco quieto en el lago, sin humo (${JSON.stringify({ ...es, desc: undefined })})`);
       await e.ctx.close();
       // 228: un día raro (el 15 de septiembre), la línea de hoy cuenta el foco, igual para quien solo mira; un día de rutina, nada.
+      // (42) A las 12:00 del 15, acabado el desfile, el foco es el de las fiestas del año (la plaza llena), ya no la rutina.
       for (const [quien, cuenta] of [['admin', ADMIN], ['lectora', LECTOR]]) {
         const r = await entrar(navegador, anio, cuenta, { hora: 12, viewport: { width: 390, height: 844 } }, conLs('2026-09-15', 'esenciales'));
         await cerrar(r.p);
         await r.p.waitForTimeout(400);
         const av = await r.p.evaluate(() => ({ txt: document.getElementById('aviso-txt')?.textContent ?? '', visible: !document.getElementById('aviso').hidden, foco: document.documentElement.dataset.foco }));
-        ok(av.visible && /15 de septiembre: por la mañana el pueblo tiene su desfile/.test(av.txt) && !/\b(tu|tus|tú)\b/i.test(av.txt) && av.foco === 'rutina-' + (await r.p.evaluate(() => window.libroCielo.rutinaDelDia('2026-09-15'))), `51 línea de hoy (${quien}): el 15 de septiembre la cuenta el aviso del día, sin tutear (${JSON.stringify(av)})`);
+        ok(av.visible && /15 de septiembre: por la mañana el pueblo tiene su desfile/.test(av.txt) && !/\b(tu|tus|tú)\b/i.test(av.txt) && av.foco === 'fiestas', `51 línea de hoy (${quien}): el 15 de septiembre la cuenta el aviso del día, sin tutear (${JSON.stringify(av)})`);
         await r.ctx.close();
       }
       const n = await entrar(navegador, anio, ADMIN, { hora: 12, viewport: { width: 390, height: 844 } }, conLs(DIA, 'esenciales'));
