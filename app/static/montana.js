@@ -223,7 +223,7 @@ function lago(c, W, H, ventas = 0, kv = 1) {
   }
   // (Campamento 22) El lago de época: en la seca el agua baja (`.lago-nivel` encoge en el CSS) y deja ver su playa; en la lluviosa la
   // cubre. Tule en la orilla, una garza quieta y el cayuco del pescador.
-  return `<g class="lago" aria-hidden="true"><path class="lago-playa" d="${orilla.join('')}Z"/><g class="lago-nivel"><path class="lago-agua" d="${orilla.join('')}Z" fill="url(#m-lago)"/><g class="lago-luz">${sol}</g><g class="lago-luna">${reflejo}${estrellas}</g>${monedasDelLago(cx, cy, rx, ry, ventas)}<ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><path class="lago-borde" d="M${f1(cx - rx * 0.85)} ${f1(cy - ry * 0.45)}Q${f1(cx)} ${f1(cy - ry * 1.25)} ${f1(cx + rx * 0.85)} ${f1(cy - ry * 0.45)}"/>${vidaLago({ cx, cy, rx, ry, k: kv })}</g>${tule({ cx, cy, rx, ry, k: kv })}<!--v-vacas--></g>`; // (22B) las vacas, en la orilla (se ponen con el valle)
+  return `<g class="lago" data-gz="${f1(2 * cx)}" aria-hidden="true"><path class="lago-playa" d="${orilla.join('')}Z"/><g class="lago-nivel"><path class="lago-agua" d="${orilla.join('')}Z" fill="url(#m-lago)"/><g class="lago-luz">${sol}</g><g class="lago-luna">${reflejo}${estrellas}</g>${monedasDelLago(cx, cy, rx, ry, ventas)}<ellipse class="efecto-ambiente lago-onda" cx="${f1(cx)}" cy="${f1(cy)}" rx="${f1(rx * 0.6)}" ry="${f1(ry * 0.6)}"/><path class="lago-borde" d="M${f1(cx - rx * 0.85)} ${f1(cy - ry * 0.45)}Q${f1(cx)} ${f1(cy - ry * 1.25)} ${f1(cx + rx * 0.85)} ${f1(cy - ry * 0.45)}"/>${vidaLago({ cx, cy, rx, ry, k: kv })}</g>${tule({ cx, cy, rx, ry, k: kv })}<!--v-vacas--></g>`; // (22B) las vacas, en la orilla (se ponen con el valle)
 }
 
 /**
@@ -475,7 +475,8 @@ function opcionesReparto(info, t) {
   const C = window.libroCielo, dia = C?.dia?.() ?? '', hora = C?.hora?.() ?? 12;
   // (Campamento 52) `hora`: los vecinos con oficio están en el sitio de esa hora (no caminan: se dibuja al poner la escena o el turno).
   // (Campamento 43) `temporada`: la milpa con su gente y los mangos del sábado de plaza (cielo.js: `temporadaDelPueblo`).
-  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora(), temporada: C?.temporadaDelPueblo && dia ? C.temporadaDelPueblo(dia, hora) : null };
+  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora(), temporada: C?.temporadaDelPueblo && dia ? C.temporadaDelPueblo(dia, hora) : null,
+    animal: C?.animalDelPueblo && dia ? C.animalDelPueblo(dia, hora) : '' }; // (45) el animal de la hora en la plaza (se mira al dibujar el turno)
 }
 // ------------------------------------------------------------------ (Campamento E) el precio, a su ritmo: el ánimo del valle
 // lib.js decide el estado con los cierres diarios (`animoDelValle`); datos.js lo trae con el histórico (`ponerAnimo`). Aquí se recuerda,
@@ -1141,6 +1142,9 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
     host.getBoundingClientRect(); // (el estado de `inicio`, ya calculado sin transiciones)
   } finally { delete host.dataset.colocando; }
   podar(host); // (30, idea 19) lo que se puso después (los campamentos, la ladera y los osos) también va podado
+  // (45, idea 175) La otra orilla de la garza: el doble del centro del lago, como variable (CSSOM: sin estilos en línea en el SVG).
+  const lagoG = host.querySelector('.lago[data-gz]');
+  if (lagoG) lagoG.style.setProperty('--gz-x', lagoG.dataset.gz);
   if (tocable && !pelicula) telefericoValle(host, W, pb.u0, host.querySelector('#m-sendero'), host.querySelector('#m-sendero')?.getTotalLength() ?? 0); // (32)
   if (tocable && !pelicula) { animalesDelPueblo(host); ambientalesDelValle(host); campanaDelPueblo(host); } // (34), (51, F3) y (49, 25)
   if (tocable || pelicula) vigilarTurno(host, infoV); // (35) los vecinos cambian de turno con la página abierta
@@ -2168,7 +2172,7 @@ function describir(sats, meta) {
   estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima, lb) + (estado.compras ? ` Al pie crece ${lb ? 'el bosque del libro' : 'tu bosque'}: un pino por compra (${estado.compras}).` : '')
     + (arbolesDe(estado.compras).length ? ` Entre los pinos crecen ${lb ? 'los' : 'tus'} árboles de honor: ${arbolesDe(estado.compras).map((t) => ({ ceibo: 'un ceibo', amate: 'un amate', maquilishuat: 'un maquilishuat' })[t]).join(', ')}.` : '')
     + (estado.eco ? ` ${lb ? 'El eco' : 'Tu eco'}, una sombra quieta en el sendero, marca dónde ${lb ? 'estaba el libro' : 'estabas'} hace un año: ${entero(estado.eco.sats)} sats.` : '')
-    + (estado.valle ? ` ${textoValle(estado.valle)}` : '')
+    + (estado.valle ? ` ${textoValle({ ...estado.valle, animal: vecinosVivos.get(estado.host)?.lista?.find((v) => v.animal)?.t ?? '' })}` : '') // (45) el animal que está dibujado
     + (estado.osos ? ` ${textoOsos(estado.osos.n)}` : '');
 }
 

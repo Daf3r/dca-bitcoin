@@ -22,7 +22,7 @@ Auditoría hecha leyendo el plan (`39-50-la-vida-del-valle-plan.md`), `CLAUDE.md
 - **Dependabot** #20, #21 y #22 (siguen apuntando a la rama vieja o esperan Playwright; con CI apagado, mezclarlos puede esperar al próximo ciclo).
 - **Cuando se renueve el CI**: lanzar una corrida completa sobre `main` (botón «Run workflow») y mirarla.
 - **Decidir** sobre lo que Fable entrega (celebración, nodo, «Tu historia» a miles, modo TV, caídas y subidas): qué entra y qué no.
-- **Confirmar** con la familia lo sensible ya aprobado en bloque (misa de gallo, padre, Viernes Santo, Difuntos, inditos, tecolote) por si algo no cuadra al verlo.
+- **Confirmar** con la familia lo sensible ya aprobado en bloque (misa de gallo, padre, Viernes Santo, Difuntos, inditos, tecolote) por si algo no cuadra al verlo. *(Campamento 45: el tecolote ya sale, una noche de cada cuatro; se quita con `tecolote: false` en `cielo.js: COSTUMBRES`.)*
 - **El nodo**: dar la URL interna de su mempool.space cuando corra, y el acceso por WireGuard desde el Vultr.
 
 ## Observación del dueño (24 nov 2026): «las animaciones y la viveza son muy cortas»

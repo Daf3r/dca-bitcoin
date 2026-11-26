@@ -73,7 +73,7 @@ const CASOS = [
   { caso: 'antes del alba', dia: '2027-02-10', hora: 4.75, declara: 833 },
   { caso: 'mediodía, tortillas', dia: '2027-02-10', hora: 11.75, declara: 840 },
   { caso: 'mediodía, salida de la escuela', dia: '2027-02-10', hora: 12.25, declara: 840 },
-  { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 838 },
+  { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 839 }, // (45) +1: el verde del garrobo al sol (la hamaca y su ropa van en su capa)
   { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 843 },
   { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 835 },
   { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 850 },
@@ -89,7 +89,7 @@ const CASOS = [
   // ronda, con la que barre y con la pelota: +6 a +7 en los turnos de la mañana de escuela y de la tarde, aunque la ronda esté quieta).
   { caso: 'amanecer, el panadero cruza', dia: '2027-02-10', hora: 6.5, declara: 841 },
   { caso: 'mediodía, la campana', dia: '2027-02-10', hora: 12.02, declara: 840 },
-  { caso: 'siesta, la hamaca se mece', dia: '2027-02-10', hora: 13.5, declara: 838 },
+  { caso: 'siesta, la hamaca se mece', dia: '2027-02-10', hora: 13.5, declara: 839 }, // (45) +1: el garrobo
   { caso: 'fiesta del hito, tarde', dia: '2026-11-25', hora: 16, declara: 892, fiesta: 'hito', en: 12_400 },
   { caso: 'fiesta del hito, noche de lluvia', dia: '2026-07-10', hora: 23, declara: 866, fiesta: 'hito', en: 12_400 },
   { caso: 'fiesta del hito, tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 885, fiesta: 'hito', en: 12_400 },
@@ -130,6 +130,14 @@ const CASOS = [
   { caso: 'diciembre, la posada', dia: '2026-12-18', hora: 19, declara: 886 },
   { caso: 'domingo, la mejenga', dia: '2027-02-14', hora: 15.5, declara: 837 },
   { caso: 'luna llena, los cuentos', dia: '2027-02-20', hora: 20.25, declara: 833 },
+  // (Campamento 45) Los animales de aquí: el de la hora en la plaza (el gallo, el garrobo de la seca, los zanates y, una noche de cada
+  // cuatro, el tecolote), en los trazos de los vecinos; y las poses quietas del valle (las vacas echadas a mediodía, la garza en la otra
+  // orilla por la tarde: 0 nodos, ya estaban dibujadas). Lo que sube es algún tono que el pueblo no tenía a esa hora.
+  { caso: 'el gallo', dia: '2026-11-25', hora: 5.5, declara: 850 },
+  { caso: 'el garrobo, vacas echadas', dia: '2027-02-10', hora: 13, declara: 839 },
+  { caso: 'los zanates', dia: '2026-11-25', hora: 18, declara: 846 },
+  { caso: 'el tecolote', dia: '2026-11-28', hora: 23, declara: 836 }, // +2 frente a una noche sin él: su trazo oscuro y sus ojos
+  { caso: 'el gallo en Navidad', dia: '2026-12-10', hora: 5.5, declara: 893 },
   // (Campamento E) El ánimo del valle según la semana del precio (`animo`: lo fuerza `libro.animo`): otro reparto de los mismos vecinos
   // (sentados de dos en dos si baja; la ropa tendida y vecinos de paseo si sube). Un miércoles de escuela por la mañana (la que barre ya
   // acabó: 10:00) y en la tarde de la pelota; los cinco estados, cada uno con lo suyo declarado (un tono de más es un trazo más).
@@ -149,6 +157,9 @@ const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
   { caso: `posada ${w}`, dia: '2026-12-18', hora: 19, w, h },
   { caso: `mejenga ${w}`, dia: '2027-02-14', hora: 15.5, w, h },
   { caso: `siembra ${w}`, dia: '2026-05-06', hora: 8.5, w, h },
+  // (45) el tecolote (la noche) y el garrobo con las vacas echadas (la siesta)
+  { caso: `tecolote ${w}`, dia: '2026-11-28', hora: 23, w, h },
+  { caso: `garrobo ${w}`, dia: '2027-02-10', hora: 13, w, h },
   // (E) con el valle en «plaza» y en «abrigo» (los que más vecinos sacan), un día cualquiera por la mañana
   { caso: `ánimo plaza ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'plaza' },
   { caso: `ánimo abrigo ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'abrigo' },
@@ -182,6 +193,8 @@ const TELE = [
   { caso: 'tele Día del Niño, la piñata', dia: '2026-10-01', hora: 15.5 },
   { caso: 'tele posada', dia: '2026-12-18', hora: 19 }, // (43)
   { caso: 'tele mejenga', dia: '2027-02-14', hora: 15.5 },
+  { caso: 'tele garrobo', dia: '2027-02-10', hora: 13 }, // (45)
+  { caso: 'tele zanates', dia: '2026-11-25', hora: 18 },
 ];
 
 const puertoLibre = () => new Promise((res) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); }); });

@@ -254,6 +254,7 @@ const PESOS = [
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 42: las fiestas del resto', 60], // 6 comprobaciones (estimado: como el 41)
   ['campamento 43: las temporadas del pue', 30], // 8 comprobaciones (estimado: la mitad del 42)
+  ['campamento 45: los animales de aquí', 30], // 8 comprobaciones (estimado: como el 43)
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 52: vecinos con oficio', 111], // 22 comprobaciones (medido el 25 nov 2026)
   ['campamento 49: el pueblo se mueve 2', 100], // 25 comprobaciones (medido el 25 nov 2026)
@@ -6394,7 +6395,11 @@ try {
       const r3 = (x) => Math.round(x * 1000) / 1000;
       ok(julio.verde === 1 && febrero.verde === 0 && mayo.verde > 0.4 && mayo.verde < 0.5 && julio.falda < febrero.falda - 0.01 && mayo.falda > julio.falda && mayo.falda < febrero.falda, `22B verdor: la falda baja, verde en julio (${r3(julio.falda)}), dorada en febrero (${r3(febrero.falda)}) y a medio camino el 7 de mayo (${r3(mayo.falda)}, ${mayo.verde})`);
       ok(febrero.maqui > 0.04 && febrero.flores === 1 && abril.fuego > 0.08 && abril.flores === 1 && julio.flores === 0 && julio.maqui < 0 && julio.fuego < 0, `22B árboles: el maquilishuat rosado en febrero (${r3(febrero.maqui)}), el árbol de fuego rojo en abril (${r3(abril.fuego)}), verdes en julio y flores caídas solo cuando florecen`);
-      ok(julio.vacas === 1 && julio.vacaPie && julio.garcitas && !julio.vacaEchada && !julio.vacaSobreSendero && !julio.vacaSobreRotulo, '22B vacas: en el teléfono una vaca de pie con sus garcitas, sin pisar el sendero ni un rótulo');
+      // (Campamento 45, idea 174) De 11:30 a 14:00 las vacas se echan (la pose de la noche): a mediodía, echadas; a media mañana, de pie.
+      ok(julio.vacas === 1 && !julio.vacaPie && !julio.garcitas && julio.vacaEchada, '22B vacas (45): a mediodía, la vaca del teléfono echada y sin garcitas');
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '10'); window.libroCielo.aplicar(); });
+      v = await estado(t.p);
+      ok(v.vacas === 1 && v.vacaPie && v.garcitas && !v.vacaEchada && !v.vacaSobreSendero && !v.vacaSobreRotulo, '22B vacas: en el teléfono una vaca de pie con sus garcitas (a las 10:00), sin pisar el sendero ni un rótulo');
       await t.p.evaluate(() => { localStorage.setItem('libro.hora', '21'); window.libroCielo.aplicar(); });
       v = await estado(t.p);
       ok(!v.vacaPie && v.vacaEchada && !v.garcitas, '22B vacas: de noche, echadas y sin garcitas');
@@ -8048,6 +8053,63 @@ try {
           return { hay: Boolean(c), anim: c ? getComputedStyle(c).animationName : '' };
         });
         ok(quieta.hay && quieta.anim === 'none', `43 a ${w} px: con «ninguno», la pelota de la mejenga quieta en su sitio (${JSON.stringify(quieta)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 45: los animales de aquí (el reloj de los animales en la plaza, el tecolote, las vacas echadas y la garza de orilla en orilla, con libro.dia)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-11-25'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // [día, hora, el animal que nombra la descripción ('' si ninguno), data-valle]
+    const GUION = [
+      ['2026-11-25', 5.5, 'gallo', ''], ['2027-02-10', 13, 'garrobo', 'vacas garza'], ['2026-11-25', 18, 'zanates', 'garza'], ['2026-11-28', 23, 'tecolote', ''],
+      ['2026-11-25', 23, '', ''], ['2026-07-10', 12, '', 'vacas garza'], ['2026-11-25', 9, '', ''], ['2026-12-10', 5.5, 'gallo', ''],
+    ];
+    const FRASES = { gallo: 'un gallo', garrobo: 'un garrobo', zanates: 'zanates', tecolote: 'un tecolote' };
+    const mira = (p, d, h) => p.evaluate(async ([dd, hh]) => {
+      localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar();
+      await new Promise((res) => setTimeout(res, 500));
+      const host = document.getElementById('montana'), raiz = document.documentElement;
+      const malos = [...host.querySelectorAll('[d], [transform]')].filter((e) => /NaN|undefined|Infinity/.test(`${e.getAttribute('d') ?? ''}${e.getAttribute('transform') ?? ''}`)).length;
+      const gz = host.querySelector('.lago .v-gz'), agua = host.querySelector('.lago .lago-agua'), echada = host.querySelector('.v-vaca-echada'), pie = host.querySelector('.v-vaca-pie');
+      const centro = (e) => { const b = e.getBoundingClientRect(); return b.x + b.width / 2; };
+      return {
+        valle: raiz.dataset.valle ?? '', desc: host.querySelector('#m-desc')?.textContent ?? '', malos, ojos: Boolean(host.querySelector('.v-vecinos .v-vo-brasa')),
+        garza: gz && agua && getComputedStyle(gz).display !== 'none' ? Math.sign(centro(gz) - centro(agua)) : null, echadas: echada ? getComputedStyle(echada).display : null, dePie: pie ? getComputedStyle(pie).display : null,
+        nodos: host.querySelectorAll('*').length,
+      };
+    }, [d, h]);
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 5.5, viewport: { width: w, height: alto } }, conLs);
+        await cerrar(t.p);
+        // Al abrir directo a las 5:30 (sin cambio de turno), la descripción ya nombra el gallo.
+        const alAbrir = await t.p.evaluate(() => document.querySelector('#montana #m-desc')?.textContent ?? '');
+        ok(alAbrir.includes('un gallo'), `45 a ${w} px: al abrir a las 5:30, la descripción nombra el gallo`);
+        const fallos = [];
+        let maxNodos = 0;
+        for (const [d, h, animal, valle] of GUION) {
+          const r = await mira(t.p, d, h);
+          maxNodos = Math.max(maxNodos, r.nodos);
+          const nombra = Object.entries(FRASES).filter(([, f]) => r.desc.includes(f)).map(([a]) => a);
+          if (r.valle !== valle || nombra.join() !== animal || r.malos) fallos.push(`${d} ${h}: ${JSON.stringify({ ...r, desc: nombra })}`);
+          // De noche, el pueblo duerme: en sus trazos solo están los ojos encendidos del tecolote, si sale.
+          if (h === 23 && r.ojos !== (animal === 'tecolote')) fallos.push(`${d} ${h}: los ojos del tecolote (${r.ojos})`);
+          // La garza: reflejada en la otra orilla por la tarde, en la suya por la mañana; las vacas, echadas a mediodía.
+          // (Por su sitio en la pantalla, no por el estilo: así falla también si un motor no aplica el reflejo.)
+          if (r.garza !== null && r.garza !== (valle.includes('garza') ? 1 : -1)) fallos.push(`${d} ${h}: la garza del lado ${r.garza}`);
+          if (r.echadas !== null && h < 19 && (valle.includes('vacas') ? r.echadas === 'none' || r.dePie !== 'none' : r.echadas !== 'none' || r.dePie === 'none')) fallos.push(`${d} ${h}: las vacas ${r.echadas}/${r.dePie}`);
+        }
+        eq(fallos, [], `45 a ${w} px: el animal de cada hora (lo nombra la descripción), el tecolote solo su noche, la garza de orilla en orilla, las vacas echadas a mediodía y ningún NaN`);
+        ok(maxNodos <= 1000 && t.consola.length === 0, `45 a ${w} px: la escena, como mucho ${maxNodos} nodos, y la consola limpia (${t.consola.slice(0, 2)})`);
+        // Nada de esto se anima: a la tarde, con la garza en la otra orilla y las vacas echadas, ninguna animación en la garza ni en las vacas.
+        const quietas = await t.p.evaluate(() => document.getAnimations().filter((a) => a.effect?.target?.closest?.('.v-garza, .v-vaca, .v-vaca-sombra, .v-garcita')).length);
+        ok(quietas === 0, `45 a ${w} px: la garza y las vacas, quietas (${quietas} animaciones)`);
         await t.ctx.close();
       }
     } finally {

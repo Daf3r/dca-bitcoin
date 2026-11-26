@@ -491,6 +491,9 @@ export function vidaLago({ cx, cy, rx, ry, k }) {
   const pico = `M${f1(gx + 3.2 * s)} ${f1(gy - 13.1 * s)}L${f1(gx + 6 * s)} ${f1(gy - 12.4 * s)}L${f1(gx + 3.2 * s)} ${f1(gy - 12.4 * s)}Z`;
   const patas = `M${f1(gx - 0.4 * s)} ${f1(gy - 4.5 * s)}L${f1(gx - 0.2 * s)} ${f1(gy)}M${f1(gx + 0.6 * s)} ${f1(gy - 4.5 * s)}L${f1(gx + 1 * s)} ${f1(gy)}`;
   const reflejo = `M${f1(gx - 3 * s)} ${f1(gy + 1.2 * s)}Q${f1(gx)} ${f1(gy + 3.4 * s)} ${f1(gx + 2.4 * s)} ${f1(gy + 1.4 * s)}`;
+  // (Campamento 45, idea 175) Por la tarde pesca en la otra orilla: la misma garza, reflejada sobre el centro del lago (mira hacia el agua):
+  // lo hace el CSS (`html[data-valle~="garza"]`) con el doble del centro del lago (`--gz-x`, que montana.js pone en `.lago` desde su
+  // `data-gz`). Sin grupo ni trazo nuevo: 0 nodos.
   const garza = `<path class="v-garza v-gz-pata" d="${patas}" stroke-width="${f1(0.55 * s)}"/><path class="v-garza v-gz-reflejo" d="${reflejo}" stroke-width="${f1(1.4 * s)}"/><path class="v-garza v-gz-cuello" d="${cuello}" stroke-width="${f1(1.1 * s)}"/>`
     + `<path class="v-garza v-gz" d="${cuerpo}"/><path class="v-garza v-gz-s" d="${sombraG}"/><path class="v-garza v-gz-pico" d="${pico}"/>`;
   // El cayuco: casco de madera (borda clara y costado en sombra), el pescador sentado con su sombrero, el remo y la lámpara.

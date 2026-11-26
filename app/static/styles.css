@@ -4213,6 +4213,11 @@ html[data-epoca="seca"] .lago-nivel { transform: scale(0.84, 0.8); }
 .v-gz-pata { fill: none; stroke: color-mix(in oklab, #2b2b2b 60%, var(--monte-sombra)); }
 .v-gz-reflejo { fill: none; stroke: #fff; opacity: 0.18; stroke-linecap: round; }
 html[data-cielo="noche"] .v-garza { display: none; }
+/* (Campamento 45, idea 175) La garza pesca por la mañana en una orilla y por la tarde (12:00–19:00) en la otra: la misma, reflejada sobre
+   el centro del lago (`--gz-x`, el doble de su x: montana.js lo pone en `.lago`). Va en el CSS y no en el atributo `transform` de los
+   trazos porque WebKit no deja que el CSS anule ese atributo (comprobado en el WebKit del sandbox). Quieta: no se anima nunca. */
+.v-garza { transform-box: view-box; transform-origin: 0 0; }
+html[data-valle~="garza"] .v-garza { transform: matrix(-1, 0, 0, 1, var(--gz-x, 0), 0); }
 .v-cy-casco { fill: color-mix(in oklab, #5a3a22 var(--v-som), var(--monte-sombra)); }
 .v-cy-borda { fill: color-mix(in oklab, #a0703f var(--v-luz), var(--monte)); }
 .v-cy-pescador { fill: color-mix(in oklab, #3a3430 55%, var(--monte-sombra)); }
@@ -4315,6 +4320,9 @@ html[data-flor="fuego"] .v-fuego.copa-sombra { fill: color-mix(in oklab, color-m
 .v-vaca-echada { display: none; }
 html[data-cielo="noche"] .v-vaca-echada { display: inline; }
 html[data-cielo="noche"] :is(.v-vaca-pie, .v-garcita) { display: none; }
+/* (Campamento 45, idea 174) De 11:30 a 14:00 las vacas se echan (la pose de la noche, ya dibujada; las garcitas se van con ellas). */
+html[data-valle~="vacas"] .v-vaca-echada { display: inline; }
+html[data-valle~="vacas"] :is(.v-vaca-pie, .v-garcita) { display: none; }
 .v-garcita { fill: color-mix(in oklab, #f7f4ee var(--v-blanco), var(--monte)); }
 
 /* 57, 60 y 61 · Lo que se mueve (ambiente: solo con «todos», y siempre uno a la vez, `data-mueve` de cielo.js): los azacuanes de octubre

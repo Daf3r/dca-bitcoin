@@ -2302,10 +2302,11 @@ export const piscuchasDelValle = (personas) => Math.max(0, Math.min(PISCUCHAS_MA
  * La frase del valle para la descripción de la montaña (lectores de pantalla). Sin «tu»: el valle es el mismo para toda la familia.
  * `arbol` = { fecha, etapa } si el libro ya tiene su árbol; `milpa`: si en ese tamaño se dibuja (campamento 38).
  * `foco`: la frase del foco del día (campamento 51), si la hay. `turno`: el turno del pueblo de ahora (campamento 40, idea 148): qué
- * pasa en él, en una frase (`FRASE_TURNO`; los de fiesta ya los cuenta su foco).
- * @param {{ luces?: number, arbol?: { fecha: string, etapa: string } | null, milpa?: boolean, foco?: string, turno?: string, sem?: number }} [valle]
+ * pasa en él, en una frase (`FRASE_TURNO`; los de fiesta ya los cuenta su foco). (Campamento 45) `animal`: el animal de la hora que
+ * está dibujado en la plaza (`FRASE_ANIMAL`), si lo hay.
+ * @param {{ luces?: number, arbol?: { fecha: string, etapa: string } | null, milpa?: boolean, foco?: string, turno?: string, sem?: number, animal?: string }} [valle]
  */
-export function textoValle({ luces = 0, arbol = null, milpa = true, foco = '', turno = '', sem = -1 } = {}) {
+export function textoValle({ luces = 0, arbol = null, milpa = true, foco = '', turno = '', sem = -1, animal = '' } = {}) {
   // (22C) El pueblo bajó al pie de la montaña: el sendero empieza en él. (Campamento 38, idea 121) Sus vecinos son osos polares: lo
   // decorativo va con aria-hidden y lo que se ve tiene que estar aquí (sin tutear y sin nombres). Sin milpa en ese tamaño, no se nombra.
   let t = `Al pie de la montaña hay un pueblo con su iglesia, su plaza y sus casas de colores; de él sale el camino real hasta donde empieza el sendero. En el pueblo, los vecinos son osos polares. Alrededor hay campos${milpa ? ' con su milpa' : ''}, un bosque y un lago, y una quebrada baja de la montaña${luces ? `; de noche se ven ${luces} luces, una por mes del libro, en los caseríos de la sierra` : ''}.`;
@@ -2315,8 +2316,20 @@ export function textoValle({ luces = 0, arbol = null, milpa = true, foco = '', t
   // (Campamento 52, idea 238) La semana de cada oficio: el lunes el panadero descansa y el sábado la tortillera hace tamales.
   const fr = FRASE_SEMANA[sem]?.[turno] ?? FRASE_TURNO[turno];
   if (fr) t += ` ${fr}`;
+  if (FRASE_ANIMAL[animal]) t += ` ${FRASE_ANIMAL[animal]}`;
   return t;
 }
+/**
+ * (Campamento 45) El animal de la hora en la plaza del pueblo (cielo.js: `animalDelPueblo`), para la descripción de la montaña: una
+ * frase, sin tutear y sin mandar nada.
+ * @type {Record<string, string>}
+ */
+export const FRASE_ANIMAL = {
+  gallo: 'En la plaza hay un gallo.',
+  garrobo: 'En la plaza, un garrobo toma el sol.',
+  zanates: 'Tres zanates buscan comida en el suelo de la plaza.',
+  tecolote: 'En la rama baja del árbol de la plaza vela un tecolote.',
+};
 /**
  * (Campamento 40, idea 148) Lo que pasa en el pueblo en cada turno de un día cualquiera, para la descripción de la montaña: una frase,
  * sin tutear, sin nombres y sin mandar nada. Los turnos de fiesta (la Navidad entera, el desfile) no llevan: ya los cuenta su foco.

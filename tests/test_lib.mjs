@@ -2175,6 +2175,63 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
     for (let d = 16; d <= 23; d++) { const q = V.reparto(lug, 'tp-posada', { dia: `2026-12-${d}`, hora: 19 }); if (q.filter((v) => v.t === 'espaldas' && !v.quien).length !== 2 || q.filter((v) => v.t === 'oseznoFarol').length < 2) f43.push(`${c.W} posada del ${d}: el grupito incompleto`); }
   }
   eq(f43, [], 'temporada 43: en cada tamaño y luz, cada temporada con su figura, su actor (la pelota, donde va) y ningún NaN; la milpa, con su gente solo donde la hay; la posada, en otra casa cada noche');
+  // ---- Campamento 45 · Los animales de aquí (172 con la 54, 173, 174 y 175): el animal de la hora en la plaza, las poses quietas del
+  // valle, una línea de COSTUMBRES cada uno, y el reparto en cada tamaño (nadie encima de nadie, detrás del panadero que cruza, el
+  // tecolote dentro de la copa del árbol de la plaza).
+  {
+    const dias45 = () => { const d = []; for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2028, 0, 1); t += 864e5) d.push(new Date(t).toISOString().slice(0, 10)); return d; };
+    const lunaDe = (f) => C.lunaLlena(C.faseLunar(new Date(Date.parse(`${f}T00:00:00Z`) + 27 * 3600e3)));
+    const an = (f, hs) => hs.map((h) => C.animalDelPueblo(f, h));
+    eq(an('2026-11-25', [4.9, 5, 5.9, 6, 10.9, 11, 13.9, 14, 17.4, 17.5, 18.4, 18.5]), ['', 'gallo', 'gallo', '', '', 'garrobo', 'garrobo', '', '', 'zanates', 'zanates', ''], 'animales 45: el gallo de 5 a 6, el garrobo de 11 a 14 (en la seca) y los zanates de 17:30 a 18:30');
+    eq(an('2026-07-10', [5.5, 12, 18]), ['gallo', '', 'zanates'], 'animales 45: en la lluviosa no hay garrobo');
+    // El tecolote: una noche de cada cuatro (un sorteo por fecha), nunca con luna llena ni en Navidad, solo cuando el pueblo duerme; la
+    // noche es la de la fecha de la tarde (a las 2:00 manda la del día antes).
+    let noches = 0, malTeco = 0;
+    for (const f of dias45()) {
+      const t = C.animalDelPueblo(f, 23) === 'tecolote';
+      if (t) noches++;
+      const sig = new Date(Date.parse(`${f}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
+      if (t !== (C.animalDelPueblo(sig, 2) === 'tecolote') && !C.navidad(sig)) malTeco++;
+      if (t && (C.navidad(f) || C.turno(f, 23) !== 'duerme' || lunaDe(f))) malTeco++;
+      if (C.animalDelPueblo(f, 21.9) === 'tecolote' || C.animalDelPueblo(f, 4.5) === 'tecolote') malTeco++;
+    }
+    ok(malTeco === 0 && noches > 730 * 0.15 && noches < 730 * 0.26, `animales 45 (173): el tecolote, ${noches} noches de 730 (una de cada cuatro, menos las de luna llena y Navidad), de 22:00 a 4:30, la misma noche antes y después de medianoche`);
+    eq([C.poseValle('2026-11-25', 9), C.poseValle('2026-11-25', 11.5), C.poseValle('2026-11-25', 12.5), C.poseValle('2026-11-25', 14), C.poseValle('2026-11-25', 18.9), C.poseValle('2026-11-25', 19)], ['', 'vacas', 'vacas garza', 'garza', 'garza', ''], 'animales 45 (174, 175): las vacas echadas de 11:30 a 14:00 y la garza en la otra orilla de 12:00 a 19:00');
+    ok(C.valle.every((x) => x.pesa.capas === 0 && x.pesa.anim === 0) && C.director('2026-11-25', 12.5).valle === 'vacas garza' && C.director('2026-11-25', 5.5).animal === 'gallo', 'animales 45: las poses del valle no pesan (0 capas, 0 animaciones) y el director las lleva');
+    // Nada se mueve distinto: lo que se mueve no depende de los animales.
+    const antesA = { ...C.costumbres }, mueveAntes = dias45().slice(0, 60).flatMap((f) => [5.5, 12, 18, 23].map((h) => C.mueve(f, h))).join();
+    for (const k of ['gallo', 'garrobo', 'zanates', 'tecolote', 'vacas', 'garza']) C.costumbres[k] = false;
+    const apag = dias45().some((f) => [5.5, 12, 18, 23, 2].some((h) => C.animalDelPueblo(f, h) !== '' || C.poseValle(f, h) !== ''));
+    const mueveDespues = dias45().slice(0, 60).flatMap((f) => [5.5, 12, 18, 23].map((h) => C.mueve(f, h))).join();
+    Object.assign(C.costumbres, antesA);
+    ok(!apag && mueveAntes === mueveDespues && C.animalDelPueblo('2026-11-25', 5.5) === 'gallo', 'animales 45: con su línea de COSTUMBRES en false, cada animal no sale; lo que se mueve es lo mismo con ellos y sin ellos');
+    // El reparto: en cada tamaño y con la luz de cada lado, el animal sale (si cabe) una sola vez, sin tapar ni ser tapado por nadie, sin
+    // NaN; el gallo, detrás del panadero que cruza (la capa del que cruza no lo cuenta como obstáculo); el tecolote, dentro de la copa.
+    const f45 = [], CASOS45 = [['amanece', '2026-11-25', 5.5, 'gallo'], ['tortillas', '2027-02-10', 11.75, 'garrobo'], ['siesta', '2027-02-10', 13, 'garrobo'], ['pupusas', '2026-11-25', 18, 'zanates'], ['vuelta', '2026-11-25', 17.6, 'zanates'], ['duerme', '2026-11-28', 23, 'tecolote'], ['amanece', '2026-12-10', 5.5, 'gallo']];
+    for (const c of FORMAS) for (const sol of [1, -1]) {
+      const sit = P.sitiosPueblo({ ...c, sol }), lug = P.lugaresPueblo(sit);
+      for (const [t, d45, h45, animal] of CASOS45) {
+        const l = V.reparto(lug, t, { dia: d45, hora: h45, escuela: C.escuela(d45), animal }), sin = V.reparto(lug, t, { dia: d45, hora: h45, escuela: C.escuela(d45) });
+        const a = l.filter((v) => v.animal), svg = V.svgVecinos(l, { sol });
+        if (/NaN|undefined|Infinity|style=/.test(svg)) f45.push(`${c.W} ${t} ${animal}: el SVG`);
+        if (a.length !== 1 || a[0].t !== animal) { f45.push(`${c.W}/${c.forma} ${t}: ${animal} no sale`); continue; }
+        // Los demás, los mismos que sin el animal (va el último: no aparta a nadie).
+        if (JSON.stringify(l.filter((v) => !v.animal)) !== JSON.stringify(sin)) f45.push(`${c.W} ${t}: el ${animal} cambia el reparto`);
+        const ca = V.cajaVecino(a[0]);
+        for (const v of l) if (!v.animal && !['perroEchado', 'pelota'].includes(v.t) && animal !== 'tecolote') { const cv = V.cajaVecino(v), r = 0.35 * v.k; if (ca.x0 < cv.x1 - r && ca.x1 > cv.x0 + r && ca.y0 < cv.y1 - r && ca.y1 > cv.y0 + r) f45.push(`${c.W} ${t}: el ${animal} encima de ${v.t}`); }
+        const pan = l.find((v) => v.actor === 'cruza');
+        if (animal === 'gallo' && pan && !(a[0].y < pan.y - pan.k)) f45.push(`${c.W} ${t}: el gallo delante del panadero que cruza`);
+        if (animal === 'tecolote') {
+          const k = sit.u * sit.plaza.s, cx = sit.plaza.x + (c.forma === 'tel' || c.forma === 'acostado' ? 24 : 30) * k * 0.42, cy = sit.yg - 12 * k, rx = 8.4 * k * 0.9, ry = 6.2 * k * 0.9;
+          const dentro = [[ca.x0, ca.y0], [ca.x1, ca.y0], [ca.x0, ca.y1], [ca.x1, ca.y1]].every(([x, y]) => ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1);
+          if (!dentro) f45.push(`${c.W} tecolote fuera de la copa`);
+        }
+      }
+    }
+    eq(f45, [], 'animales 45: en cada tamaño y luz, el animal de la hora sale una vez, sin tapar a nadie ni cambiar el reparto, detrás del panadero que cruza; el tecolote, dentro de la copa');
+    const L = await import('../app/static/lib.js');
+    ok(L.textoValle({ animal: 'tecolote' }).includes('tecolote') && !L.textoValle({ animal: '' }).includes('gallo') && Object.values(L.FRASE_ANIMAL).every((x) => /\.$/.test(x) && !/\b(tu|tus|tú)\b/i.test(x)), 'animales 45: la descripción de la montaña nombra el animal dibujado, sin tutear');
+  }
   const sm = A.sitiosMilpa({ x: 100, y: 200, w: 80, h: 16, caida: 4 }, 2);
   ok(sm.length === 2 && sm.every(([x, y, k]) => x > 100 && x < 180 && y > 190 && y < 222 && k === 2), `temporada 43: los dos sitios de la milpa caen dentro de la parcela (${JSON.stringify(sm)})`);
 }
