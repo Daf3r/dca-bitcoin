@@ -2911,7 +2911,11 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   eq([C.turno('2026-09-09', 15), C.turno('2026-09-09', 18)], ['tp-lluvia', 'pupusas'], 'lluvia 44: sin `charcos`, al escampar las pupusas de siempre');
   Object.assign(CO, { charcos: true, canicula: false });
   ok(C.llueveLaTarde('2026-07-22') && C.turno('2026-07-22', 15) === 'tp-lluvia' && C.poseTu('2026-07-22', 15) === 'capote' && C.fraseDelFoco('2026-07-15') === null, 'lluvia 44: sin `canicula`, julio y agosto llueven como antes');
-  Object.assign(CO, { canicula: true, cerco: false });
+  Object.assign(CO, { aguacero: false });
+  let distinta = 0;
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) { const f = new Date(t).toISOString().slice(0, 10); if (C.llueveLaTarde(f) !== (C.epoca(f) === 'lluviosa')) distinta++; }
+  ok(distinta === 0 && C.poseTu('2026-09-13', 15) === 'capote' && C.poseTu('2026-07-04', 15) === 'capote', `lluvia 44: sin \`aguacero\` ni \`canicula\`, llueve toda la lluviosa como antes (también el domingo de la mejenga y el sábado de atolada: el capote) (${distinta})`);
+  Object.assign(CO, { aguacero: true, canicula: true, cerco: false });
   ok(cercos.every((f) => !C.cerco(f, 21)), 'lluvia 44: sin `cerco`, el halo de siempre');
   Object.assign(CO, { cerco: true });
 }

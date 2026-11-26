@@ -482,8 +482,10 @@
    * paraguas de los osos de la cumbre y de la interfaz, la fiesta del hito y el pueblo (`html[data-lluvia]`, todo el día).
    */
   function llueveLaTarde(f) {
-    if (epoca(f) !== 'lluviosa' || canicula(f) || atolada(f) || (semana(f) === 0 && COSTUMBRES.mejenga)) return false;
-    return ![14, 15, 16, 17].some((h) => turnoDelAnio(f, h));
+    if (epoca(f) !== 'lluviosa' || canicula(f)) return false;
+    // Las tardes de costumbre solo se quedan secas si el pueblo tiene su tarde de lluvia (`aguacero`): con esa línea en `false`, como antes.
+    if (!COSTUMBRES.aguacero) return true;
+    return !atolada(f) && !(semana(f) === 0 && COSTUMBRES.mejenga) && ![14, 15, 16, 17].some((h) => turnoDelAnio(f, h));
   }
   /** (166) ¿Hay charcos al escampar? Si llovió en el pueblo hasta las 17:45 (el turno de antes era el de la lluvia). */
   const charcos = (f) => COSTUMBRES.charcos && turno(f, 17.7) === 'tp-lluvia';
@@ -801,7 +803,7 @@
   }
   /** (51, idea 228) La frase de la rutina del día, para la descripción de la montaña (lectores de pantalla). */
   // (Campamento 44) Con la tarde de lluvia, la pelota no sale: los oseznos se quedan bajo el corredor.
-  const fraseRutina = (f) => (rutinaDelDia(f) === 'pelota' && COSTUMBRES.aguacero && llueveLaTarde(f) ? 'Por la tarde llueve en el pueblo y los oseznos se quedan bajo el corredor.' : FRASE_RUTINA[rutinaDelDia(f)]);
+  const fraseRutina = (f) => (rutinaDelDia(f) === 'pelota' && COSTUMBRES.aguacero && llueveLaTarde(f) ? 'Las tardes de esta época llueve en el pueblo.' : FRASE_RUTINA[rutinaDelDia(f)]);
   /** La franja a la que pertenece la hora. */
   function franja(h) {
     if (h >= 19 || h < 5) return 'noche';
