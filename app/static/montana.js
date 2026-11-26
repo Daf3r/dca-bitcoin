@@ -334,6 +334,7 @@ export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
     fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
     md !== '05-03' && '.v-cruz-mayo', // (34) el Día de la Cruz
     md !== '12-24' && md !== '12-25' && '.c-regalo', // (41) los regalos de la cumbre
+    !(C.historiaDelDia?.(d)?.cap === 'cumbre') && '.c-globo', // (53C, 242) el globo que llegó a la cumbre
     !llueve && '.tu-lluvia', // (48) el capote de «Tú»
     !llueve && '.clima-lluvia', // (44) la nube cargada y sus 20 gotas
     !etapaOsoNieve(d) && '.c-nieve-oso', !llueve && '.c-lluvia', !['09-13', '09-14', '09-15'].includes(md) && '.c-patria', // (47) lo plantado junto a los osos
@@ -547,7 +548,11 @@ function opcionesReparto(info, t) {
   const animal = C?.animalDelPueblo && dia ? C.animalDelPueblo(dia, hora) : '';
   info.animal = animal; // (46) el animal pedido al dibujar: si cambia con la página abierta, se rehacen los vecinos (`vigilarTurno`)
   return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora(), temporada: C?.temporadaDelPueblo && dia ? C.temporadaDelPueblo(dia, hora) : null,
-    animal }; // (45) el animal de la hora en la plaza (se mira al dibujar el turno)
+    animal, // (45) el animal de la hora en la plaza (se mira al dibujar el turno)
+    // (53C) La historia de varios días a esta hora, la obra de la casa que se pinta, el osezno de las tardes y si es la entrada (el
+    // osezno, 241, nunca sale en ella).
+    historia: C?.historiaAhora && dia ? C.historiaAhora(dia, hora) : null, obra: C?.obrasDelPueblo && dia ? C.obrasDelPueblo(dia).obra : null,
+    conOsezno: Boolean(C?.conElOsezno && dia && C.conElOsezno(dia, hora)), entrada: Boolean(info.entrada) };
 }
 // ------------------------------------------------------------------ (Campamento E) el precio, a su ritmo: el ánimo del valle
 // lib.js decide el estado con los cierres diarios (`animoDelValle`); datos.js lo trae con el histórico (`ponerAnimo`). Aquí se recuerda,
@@ -1056,14 +1061,14 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 43, idea 154) La milpa con su gente: dos sitios dentro de la parcela, para los que la trabajan (donde no hay milpa, ninguno).
   const lugV = lugaresPueblo(pb);
   lugV.milpa = cm.milpa ? sitiosMilpa(cm.milpa, pb.u * 0.7) : [];
-  const C = window.libroCielo, infoV = { lug: conArbol(lugV, arbolV), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula,
+  const C = window.libroCielo, infoV = { lug: conArbol(lugV, arbolV), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula, entrada: !tocable && !pelicula,
     camino: conCamino && pb.plaza ? { ...valle.camino, u: pb.u, pts, arbol: arbolV, caja: [pb.caja[0], pb.yg - 16 * pb.u, pb.caja[2]] } : null };
   // (Campamento 40, idea 146) Las sombras del pueblo se alargan y se acortan desde su base (el suelo de la calle y el de la terraza):
   // el CSS las tuerce y estira según `data-sombra`, sin redibujarlas.
   host.style.setProperty('--v-suelo', `${f1(pb.yg)}px`);
   host.style.setProperty('--v-suelo-atras', `${f1(pb.yg - TERRAZA * pb.u)}px`);
   host.style.setProperty('--v-sol', String(solV));
-  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno) })}${farolHito ? farolDelPueblo(infoV.lug) : ''}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u0 * 0.62), forma: valle.forma })}</g>`;
+  s += `<g id="m-v-pie">${conCamino ? caminoReal(valle.camino) : ''}${pueblo(pb, { ventanas: personas, evitar: arbolV ? [arbolV.x - arbolV.ra, arbolV.x + arbolV.ra] : null, vecinos: htmlVecinos(infoV, infoV.turno), obras: C?.obrasDelPueblo ? C.obrasDelPueblo(C.dia()) : null })}${farolHito ? farolDelPueblo(infoV.lug) : ''}${piscuchas(pisV)}${arbolV ? arbolPrimerDia(arbolV) : ''}${primerPlano({ W, H, sitios: sitiosPP, huecos: huecosPP, k: Math.max(1, pb.u0 * 0.62), forma: valle.forma })}</g>`;
   const { ini: cIni, fin: cFin } = valle.camino; // las cajas [x0, y0, x1, y1] del camino y del árbol: los árboles de honor y el papel picado las esquivan
   const cajasValle = [[Math.min(cIni[0], cFin[0]), Math.min(cIni[1], cFin[1]) - 8, Math.max(cIni[0], cFin[0]), Math.max(cIni[1], cFin[1]) + 4]];
   if (arbolV) cajasValle.push([arbolV.x - arbolV.ra, arbolV.y - arbolV.ra * 1.3, arbolV.x + arbolV.ra, arbolV.y + 4]);
@@ -1312,7 +1317,11 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
     if ([[CAJA_ZETAS.x0, CAJA_ZETAS.y0], [CAJA_ZETAS.x1, CAJA_ZETAS.y0], [CAJA_ZETAS.x0, CAJA_ZETAS.y1], [CAJA_ZETAS.x1, CAJA_ZETAS.y1]].every(([u, v]) => conAire(X + u * ez, Y + v * ez))) { g.insertAdjacentHTML('beforeend', zetas(X, Y, ez)); break; }
   }
   regalosCumbre(g, sitio.lista, ec * 1.1 * K_OSO, silueta);
-  const cajas = [...sitio.cajas, ...plantadosCumbre(g, sitio, { e: ec * 1.1 * K_OSO, dia, sendero, textos: [...(meta ? [meta] : []), ...textos], nieve: puntosNieve(nieveMedidas, altitud(inicio, esc)), conAire })];
+  // (Campamento 53C, 242) El martes del globo, el globo que se escapó del pueblo está en la cumbre: ocupa el único sitio junto a los osos
+  // (ese día no se planta nada más).
+  const hc = window.libroCielo?.historiaDelDia?.(dia), globo = hc?.id === 'globo' && hc.cap === 'cumbre';
+  const opPl = { e: ec * 1.1 * K_OSO, dia, sendero, textos: [...(meta ? [meta] : []), ...textos], nieve: puntosNieve(nieveMedidas, altitud(inicio, esc)), conAire };
+  const cajas = [...sitio.cajas, ...(globo ? globoCumbre(g, sitio, opPl) : plantadosCumbre(g, sitio, opPl))];
   // Si se sentaron en la nieve de hoy (no en la que hay siempre), ¿desde qué altitud los cubre? Más abajo (al empezar la película, o
   // al principio de una subida que les trae la nieve) quedarían sobre la roca: esperan escondidos hasta que la nieve llega (`colocar`).
   let nieve = 0;
@@ -1363,6 +1372,39 @@ function plantadosCumbre(g, sitio, { e, dia, sendero, textos, nieve, conAire }) 
     }
   }
   return puestas;
+}
+
+/**
+ * (Campamento 53C, idea 242) El globo rojo que subió del pueblo, atado a una piedrita delante de los osos (no a su lado: a 390 px quedaría
+ * contra el cielo): tres nodos (la piedra con su hilo, el globo y su brillo), fuera del grupo de los osos, justo después de él (se esconde
+ * con ellos). El primer sitio, de delante hacia los lados, con todo dentro de la montaña con aire, lejos del sendero y de los rótulos y,
+ * si se puede, sin tapar a ningún oso; si no cabe, no sale. Devuelve su caja.
+ */
+function globoCumbre(g, sitio, { e, sendero, textos, conAire }) {
+  for (const x of g.parentNode?.querySelectorAll(':scope > .c-plantado') ?? []) x.remove();
+  const frente = [...sitio.lista].sort((a, b) => b.y - a.y)[0];
+  if (!frente) return [];
+  const u = e * 1.15, cajaDe = (x, y) => [x - 2.6 * u, y - 14.4 * u, x + 3.2 * u, y + 0.6 * u];
+  const libre = (b, conOsos) => (conOsos || !sitio.cajas.some((c) => b[0] < c[2] && b[2] > c[0] && b[1] < c[3] && b[3] > c[1]))
+    && !textos.some((c) => b[0] < c[2] && b[2] > c[0] && b[1] < c[3] && b[3] > c[1])
+    && !sendero.some(([sx, sy]) => Math.max(b[0] - sx, 0, sx - b[2]) ** 2 + Math.max(b[1] - sy, 0, sy - b[3]) ** 2 < 64)
+    && [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].every(([px, py]) => Number.isFinite(px + py) && conAire(px, py));
+  for (const conOsos of [false, true]) {
+    for (const dx of [0, -6, 6, -10, 10, -14, 14]) {
+      for (const dy of [3.4, 1.4, 5.4]) {
+        const x = frente.x + dx * u, y = frente.y + dy * u, b = cajaDe(x, y);
+        if (!libre(b, conOsos)) continue;
+        const piedra = `M${f1(x - 1.6 * u)} ${f1(y + 0.4 * u)}Q${f1(x)} ${f1(y - 1.6 * u)} ${f1(x + 1.6 * u)} ${f1(y + 0.4 * u)}Z`;
+        const hilo = `M${f1(x - 0.14 * u)} ${f1(y - 0.6 * u)}L${f1(x + 0.14 * u)} ${f1(y - 0.6 * u)}L${f1(x + 0.7 * u)} ${f1(y - 8.6 * u)}L${f1(x + 0.42 * u)} ${f1(y - 8.6 * u)}Z`;
+        const [gx, gy, rx, ry] = [x + 0.56 * u, y - 11.4 * u, 2.5 * u, 3.0 * u];
+        g.insertAdjacentHTML('afterend', `<path class="c-plantado c-globo c-globo-hilo" aria-hidden="true" d="${piedra}${hilo}"/>`
+          + `<path class="c-plantado c-globo c-globo-rojo" aria-hidden="true" d="M${f1(gx - rx)} ${f1(gy)}a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(2 * rx)} 0a${f1(rx)} ${f1(ry)} 0 1 0 ${f1(-2 * rx)} 0Z"/>`
+          + `<path class="c-plantado c-globo c-globo-brillo" aria-hidden="true" d="M${f1(gx - 1.3 * u)} ${f1(gy - 0.9 * u)}a${f1(0.5 * u)} ${f1(0.7 * u)} 0 1 0 ${f1(1 * u)} 0a${f1(0.5 * u)} ${f1(0.7 * u)} 0 1 0 ${f1(-1 * u)} 0Z"/>`);
+        return [b];
+      }
+    }
+  }
+  return [];
 }
 
 /**

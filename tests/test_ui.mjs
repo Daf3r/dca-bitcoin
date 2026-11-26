@@ -257,6 +257,7 @@ const PESOS = [
   ['campamento 45: los animales de aquí', 30], // 8 comprobaciones (estimado: como el 43)
   ['campamento 46: luna y estrellas', 40], // 12 comprobaciones (estimado: algo más que el 45)
   ['campamento 44: lluvia y verano', 36], // 12 comprobaciones (estimado: como el 46)
+  ['campamento 53C: historias de varios dí', 40], // 12 comprobaciones (estimado: como el 44)
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 52: vecinos con oficio', 111], // 22 comprobaciones (medido el 25 nov 2026)
   ['campamento 49: el pueblo se mueve 2', 100], // 25 comprobaciones (medido el 25 nov 2026)
@@ -8215,6 +8216,54 @@ try {
         ok(ce.cerco && /matrix\(0\.65.* 0\.22$/.test(ce.halo) && !sinCe.cerco && !/0\.22$/.test(sinCe.halo), `44 a ${w} px: el cerco de la luna en septiembre con la luna crecida (${ce.halo}); en noviembre, el halo de siempre (${sinCe.halo})`);
         // Todo quieto: nada de esto anima a los vecinos ni al halo; ningún NaN y la consola limpia.
         ok([ll, ch, pu, ce].every((r) => r.anima === 0) && [ll, ch, pu, ca, ce].every((r) => !r.malos) && t.consola.length === 0, `44 a ${w} px: ninguna animación nueva (la lluvia, los charcos y el cerco, quietos; en la canícula, la pelota de siempre), ningún NaN y la consola limpia (${[ll, ch, pu, ce].map((r) => r.anima)} ${t.consola.slice(0, 2)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 53C: historias de varios días (el circo, la ramada, el globo que sube a la cumbre, el osezno, la casa que se pinta y el mural, con libro.dia; todo quieto)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2027-01-08'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Cambia el día y la hora con la página abierta y mira la escena (al cambiar de día, la escena se vuelve a dibujar: `libro:dia`).
+    const mira = (p, d, h) => p.evaluate(async ([dd, hh]) => {
+      localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar();
+      await new Promise((res) => setTimeout(res, 700));
+      const host = document.getElementById('montana'), raiz = document.documentElement;
+      const malos = [...host.querySelectorAll('[d], [transform]')].filter((e) => /NaN|undefined|Infinity/.test(`${e.getAttribute('d') ?? ''}${e.getAttribute('transform') ?? ''}`)).length;
+      // Lo de la historia va en el grupo de los vecinos (quieto); el actor de la rutina, si toca, sigue en su capa como siempre.
+      const vecinas = [...host.querySelectorAll('.v-vecinos')];
+      return {
+        turno: raiz.dataset.turno ?? '', mueve: raiz.dataset.mueve ?? '', foco: raiz.dataset.foco ?? '', malos, grupos: host.querySelectorAll('.v-vecinos').length,
+        pelota: host.querySelectorAll(':scope > svg.v-actor-pelota').length, hamaca: host.querySelectorAll(':scope > svg.v-actor-hamaca').length,
+        globo: host.querySelectorAll('.c-globo').length, globoVisto: [...host.querySelectorAll('.c-globo-rojo')].some((e) => e.getBoundingClientRect().width > 2),
+        mural: host.querySelectorAll('.v-mural').length, obra: host.querySelectorAll('.v-obra').length,
+        anima: document.getAnimations().filter((a) => a.playState === 'running' && vecinas.some((v) => v.contains(a.effect?.target ?? null))).length,
+        nodos: host.querySelectorAll('*').length,
+      };
+    }, [d, h]);
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 10, viewport: { width: w, height: alto } }, conLs);
+        await cerrar(t.p);
+        // 244 · el circo: la carpa ocupa la plaza (sin hamaca ni pelota en sus franjas) y la función al anochecer; el foco es la historia.
+        const ca = await mira(t.p, '2027-01-10', 13.5), pe = await mira(t.p, '2027-01-10', 15.5), fu = await mira(t.p, '2027-01-10', 18.5);
+        ok(ca.foco === 'historia' && ca.mueve === '' && ca.hamaca === 0 && pe.mueve === '' && pe.pelota === 0 && fu.turno === 'pupusas' && fu.foco === 'historia' && [ca, pe, fu].every((r) => r.grupos === 1), `53C a ${w} px: con la carpa en la plaza no se mece la hamaca ni bota la pelota (${ca.mueve}|${pe.mueve}); la función al anochecer (${fu.turno})`);
+        // 240 · la ramada: el domingo de los horcones solos no hay mejenga.
+        const ra = await mira(t.p, '2027-07-11', 15.5);
+        ok(ra.turno === 'tarde' && ra.pelota === 0 && ra.foco === 'historia', `53C a ${w} px: con la ramada en la plaza, el domingo no hay mejenga (${ra.turno})`);
+        // 242 · el globo: el martes, en la cumbre (tres trazos, a la vista); el lunes, todavía no (podado).
+        const g2 = await mira(t.p, '2027-06-07', 12), g3 = await mira(t.p, '2027-06-08', 12);
+        ok(g2.globo === 0 && g3.globo === 3 && g3.globoVisto, `53C a ${w} px: el globo llega a la cumbre el martes (${g3.globo} trazos) y el lunes no está (${g2.globo})`);
+        // 243 y 247 · la media pared de la casa que se pinta (solo ese día) y el mural de la escuela, que se queda.
+        const c2 = await mira(t.p, '2027-02-02', 10), c3 = await mira(t.p, '2027-02-03', 10), m0 = await mira(t.p, '2027-10-17', 15), m4 = await mira(t.p, '2027-10-21', 15), m9 = await mira(t.p, '2028-02-10', 15);
+        ok(c2.obra === 1 && c3.obra === 0 && m0.mural === 0 && m4.mural === 3 && m9.mural === 3, `53C a ${w} px: la media pared solo el segundo día (${c2.obra}, ${c3.obra}); el mural crece y se queda (${m0.mural} → ${m4.mural} → ${m9.mural})`);
+        // Todo quieto, ningún NaN, la escena del teléfono bajo su tope y la consola limpia.
+        const todos = [ca, pe, fu, ra, g2, g3, c2, c3, m0, m4, m9];
+        ok(todos.every((r) => !r.malos && r.anima === 0) && (w > 500 || todos.every((r) => r.nodos < 1000)) && t.consola.length === 0, `53C a ${w} px: ninguna animación nueva, ningún NaN, la escena bajo 1000 nodos en el teléfono y la consola limpia (${Math.max(...todos.map((r) => r.nodos))} nodos; ${todos.map((r) => `${r.anima}/${r.malos}`).join(' ')}; ${t.consola.slice(0, 2).join(' | ')})`);
         await t.ctx.close();
       }
     } finally {

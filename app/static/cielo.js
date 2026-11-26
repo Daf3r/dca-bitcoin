@@ -275,6 +275,14 @@
     charcos: true, // 166 · al escampar (17:45–18:30), dos oseznos saltan en los charcos de la plaza
     canicula: true, // 167 · del 15 de julio al 15 de agosto las tardes no traen lluvia (fechas fijas y aproximadas)
     cerco: true, // 171 · las noches de la lluviosa con la luna crecida, un cerco pálido alrededor (de oídas: por confirmar con la familia)
+    // (Campamento 53C) Las historias de varios días (con `false`, esos días son los de siempre; el calendario de las demás no se mueve).
+    circo: true, // 244 · del 8 al 12 de enero: la lona, la carpa, la función al anochecer y el redondel de aserrín
+    casaPintada: true, // 243 · la primera semana de febrero, una casa del pueblo cambia de color en tres días
+    osezno: true, // 241 · la segunda semana de marzo nace un osezno en el pueblo: los pañales, la visita y la vecina con él en brazos
+    ramada: true, // 240 · de jueves a domingo, dos veces al año, la ramada de la atolada (también se apaga con `atolada`)
+    globo: true, // 242 · dos veces al año, un globo rojo se escapa: domingo en la plaza, lunes en el árbol, martes en la cumbre
+    mural: true, // 247 · la tercera semana de octubre los oseznos pintan un mural en la pared de la escuela
+    obras: true, // 248 · lo que cada año deja (la casa repintada, el mural): con `false`, el pueblo de siempre
   };
   /**
    * (Campamento 42) El domingo de Pascua de un año (AAAA-MM-DD), con el cálculo gregoriano de siempre (Meeus/Jones/Butcher). Es la misma
@@ -423,7 +431,8 @@
     if (h >= 17.5 && h < 18.5) return C.zanates ? 'zanates' : '';
     if (h >= 22 || h < 4.5) {
       const noche = h < 4.5 ? diaAntes(f) : f;
-      return C.tecolote && turno(f, h) === 'duerme' && !navidad(f) && !navidad(noche) && !lunaDeLaNoche(noche) && sorteo(noche, 4) === 0 ? 'tecolote' : '';
+      // (53C) Con la carpa o la ramada en la plaza, el tecolote no baja a la rama del árbol.
+      return C.tecolote && turno(f, h) === 'duerme' && !navidad(f) && !navidad(noche) && !lunaDeLaNoche(noche) && sorteo(noche, 4) === 0 && !plazaOcupada(f, h) ? 'tecolote' : '';
     }
     return '';
   }
@@ -502,6 +511,130 @@
     const n = nocheDe(f, h);
     return epoca(n) === 'lluviosa' && !canicula(n) && luzDeLaNoche(n) >= 0.75;
   }
+  // ---------------------------------------------------------------------------------------------------- (Campamento 53C) historias de varios días
+  /** (53C) El año desde el que el valle cuenta sus historias: las fechas ya vividas no cambian. */
+  const HISTORIAS_DESDE = 2027;
+  const dos = (n) => String(n).padStart(2, '0');
+  /** El `n`-ésimo día `sem` (0 = domingo) de un mes, AAAA-MM-DD. */
+  const enesimo = (a, mes, sem, n) => `${a}-${dos(mes)}-${dos(1 + ((sem - new Date(Date.UTC(a, mes - 1, 1)).getUTCDay() + 7) % 7) + 7 * (n - 1))}`;
+  /**
+   * (Campamento 53C, idea 239) Las historias de varios días: cosas que empiezan un día y terminan otro. Cada una, en una línea: su
+   * costumbre (`linea`), lo que se ve cada día (`caps`, en orden: un capítulo por día), el primer día de cada vez que pasa en un año
+   * (`inicios`), si levanta algo en la plaza (`plaza`: ese rato la plaza es suya y nadie más la usa) y la frase de la línea de hoy, solo el
+   * primer día. Todo sale de la fecha: igual en todos los aparatos, no avanza «si entras», no guarda nada y no lee nada de la familia.
+   * Ocho al año (el cayuco nuevo, 245, y el nido del torogoz, 246, esperan su arte: con ellos serían diez).
+   */
+  const HISTORIAS = [
+    { id: 'circo', linea: 'circo', caps: ['lona', 'carpa', 'funcion', 'funcion', 'aserrin'], inicios: (a) => [`${a}-01-08`], plaza: true, frase: 'Llegó el circo al pueblo: estos días hay una carpa en la plaza.' },
+    { id: 'casa', linea: 'casaPintada', caps: ['escalera', 'media', 'entera'], inicios: (a) => [enesimo(a, 2, 1, 1)], frase: 'En el pueblo están pintando una casa de otro color.' },
+    { id: 'osezno', linea: 'osezno', caps: ['panales', 'visita', 'brazos'], inicios: (a) => [enesimo(a, 3, 1, 2)], frase: 'Nació un osezno en el pueblo: delante de su casa hay pañales tendidos.' },
+    { id: 'ramada', linea: 'ramada', caps: ['horcones', 'techo', 'atolada', 'solos'], inicios: (a) => [masDias(enesimo(a, 7, 6, 2), -2), masDias(enesimo(a, 8, 6, 3), -2)], plaza: true, frase: 'En la plaza levantan la ramada para la atolada del sábado.' },
+    { id: 'globo', linea: 'globo', caps: ['plaza', 'arbol', 'cumbre'], inicios: (a) => [enesimo(a, 6, 0, 1), enesimo(a, 11, 0, 3)], frase: 'Hoy está el de los globos en la plaza del pueblo.' },
+    { id: 'mural', linea: 'mural', caps: ['botes', 'sol', 'volcan', 'torogoz', 'posan'], inicios: (a) => [enesimo(a, 10, 1, 3)], frase: 'Esta semana los oseznos pintan un mural en la pared de la escuela.' },
+  ];
+  /**
+   * (53C) Los días de fiesta del calendario (41, 42, el desfile y el Día de la Cruz), estén o no encendidas sus costumbres: si la familia
+   * apaga una, el calendario de las historias no se mueve. La Navidad entera (1 dic – 6 ene) y Semana Santa entera (de Ramos a Pascua).
+   */
+  const FIJAS = ['05-03', '05-10', '06-17', '08-05', '08-06', '09-14', '09-15', '10-01', '11-01', '11-02', '12-12'];
+  function diaDeFiesta(f) {
+    const p = pascua(Number(f.slice(0, 4)));
+    return navidad(f) || (f >= masDias(p, -7) && f <= p) || FIJAS.includes(f.slice(5));
+  }
+  /** (53C) «La semana de fiesta»: el día de fiesta y uno a cada lado (la víspera y el día después también son suyos). */
+  const semanaDeFiesta = (f) => diaDeFiesta(masDias(f, -1)) || diaDeFiesta(f) || diaDeFiesta(masDias(f, 1));
+  /** (53C) Días tranquilos, como poco, entre una historia y la siguiente. */
+  const DESCANSO = 5;
+  const calendarios = new Map();
+  /**
+   * (53C, idea 239) El calendario de las historias de un año: [{ id, desde, hasta, dias }], por fecha. Solo una a la vez, ninguna en
+   * semana de fiesta (las fiestas mandan) y entre una y otra al menos `DESCANSO` días tranquilos: si la fecha de una lo incumple, va una
+   * semana después (o antes, o dos); si no cabe, ese año no sale (una prueba recorre los años y comprueba que todas salen). El sábado de
+   * la ramada es siempre de atolada (julio o agosto).
+   */
+  function calendarioHistorias(anio) {
+    if (calendarios.has(anio)) return calendarios.get(anio);
+    const puestas = [];
+    if (anio >= HISTORIAS_DESDE) {
+      const pedidas = HISTORIAS.flatMap((hi) => hi.inicios(anio).map((d) => ({ hi, d }))).sort((a, b) => (a.d < b.d ? -1 : a.d > b.d ? 1 : 0));
+      for (const { hi, d } of pedidas) {
+        for (const s of [0, 7, -7, 14, -14]) {
+          const desde = masDias(d, s), dias = hi.caps.map((_, i) => masDias(desde, i)), hasta = dias.at(-1), prev = puestas.at(-1);
+          if (desde.slice(0, 4) !== String(anio) || hasta.slice(0, 4) !== String(anio) || dias.some(semanaDeFiesta)) continue;
+          if (prev && desde <= masDias(prev.hasta, DESCANSO)) continue;
+          if (hi.id === 'ramada' && !['07', '08'].includes(dias[2].slice(5, 7))) continue;
+          puestas.push({ id: hi.id, desde, hasta, dias });
+          break;
+        }
+      }
+    }
+    calendarios.set(anio, puestas);
+    return puestas;
+  }
+  /**
+   * (53C) La historia de una fecha: { id, cap, i, n } (el capítulo de hoy, cuál es y cuántos tiene) o null. Con su costumbre apagada,
+   * null (la ramada también con la atolada apagada: es su ramada).
+   */
+  function historiaDelDia(f) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f ?? '')) return null;
+    const x = calendarioHistorias(Number(f.slice(0, 4))).find((c) => f >= c.desde && f <= c.hasta);
+    const hi = x && HISTORIAS.find((c) => c.id === x.id);
+    if (!hi || !COSTUMBRES[hi.linea] || (hi.id === 'ramada' && !COSTUMBRES.atolada)) return null;
+    const i = x.dias.indexOf(f);
+    return { id: hi.id, cap: hi.caps[i], i, n: hi.caps.length };
+  }
+  /**
+   * (53C) El capítulo a esta hora (lo que pide el reparto de los vecinos): los días de función del circo, la carpa de día y la función de
+   * 17:45 a 20:00; el último, el redondel de aserrín hasta que lo barren (a las 11:30 ya no está). Cambia con el turno: `libro:turno`.
+   */
+  function historiaAhora(f, h) {
+    const x = historiaDelDia(f);
+    if (!x) return null;
+    if (x.cap === 'funcion' && !(h >= 17.75 && h < 20)) return { ...x, cap: 'carpa' };
+    if (x.cap === 'aserrin' && h >= 11.5) return null;
+    return x;
+  }
+  /** (53C) ¿Hay algo levantado en la plaza a esta hora (la lona, la carpa, la ramada, el aserrín)? Ese rato la plaza es de la historia. */
+  const plazaOcupada = (f, h) => { const x = historiaAhora(f, h); return Boolean(x && HISTORIAS.find((c) => c.id === x.id).plaza); };
+  /**
+   * (53C, 241) Desde que nace hasta fin de año, algunas tardes (una de cada tres, por sorteo, de 14:00 a 17:45 y nunca un día de otra
+   * historia) la vecina sale con el osezno en brazos a su corredor. Es de fondo: no es foco ni cuenta como historia.
+   */
+  function conElOsezno(f, h) {
+    if (!COSTUMBRES.osezno || h < 14 || h >= 17.75 || historiaDelDia(f) || !/^\d{4}/.test(f ?? '')) return false;
+    const nace = calendarioHistorias(Number(f.slice(0, 4))).find((x) => x.id === 'osezno');
+    return Boolean(nace) && f > nace.hasta && sorteo(f, 3) === 0;
+  }
+  /** (53C, 243) La casa que se pinta cada año (su número en las casas del pueblo, `arte-pueblo.js: CASAS`), una distinta cada año. */
+  const CASAS_PINTADAS = [1, 3, 0, 2, 5, 4, 6];
+  /**
+   * (53C, ideas 243, 247 y 248) Lo que cada año deja en el pueblo (lo lee arte-pueblo.js al dibujarlo, una vez al día): `casas`, las
+   * repintadas hasta hoy ([casa, paso de color]…, en orden: la de este año, desde el tercer día de su obra); `obra`, la de esos días
+   * ({ casa, paso, cap }); y `mural`, cuántas manchas tiene el mural de la escuela (de 0 a 3; null si no hay: antes del primero). El
+   * mural se queda hasta el octubre siguiente, cuando lo cambian. Con `obras` en `false`, el pueblo de siempre (salvo la obra de estos
+   * días); el tope de lo que pesa (`PESO_OBRAS`) lo vigila el banco.
+   */
+  function obrasDelPueblo(f) {
+    const r = { casas: [], obra: null, mural: null };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(f ?? '')) return r;
+    const anio = Number(f.slice(0, 4));
+    for (let a = HISTORIAS_DESDE; a <= anio; a++) {
+      const cal = calendarioHistorias(a), casa = cal.find((x) => x.id === 'casa'), mural = cal.find((x) => x.id === 'mural');
+      const i = CASAS_PINTADAS[(a - HISTORIAS_DESDE) % CASAS_PINTADAS.length], paso = 1 + ((a - HISTORIAS_DESDE) % 4);
+      if (casa && COSTUMBRES.casaPintada) {
+        if (f >= casa.desde && f <= casa.hasta) r.obra = { casa: i, paso, cap: ['escalera', 'media', 'entera'][casa.dias.indexOf(f)] };
+        if (f >= casa.hasta && (COSTUMBRES.obras || f === casa.hasta)) r.casas.push([i, paso]);
+      }
+      if (mural && COSTUMBRES.mural) {
+        const j = mural.dias.indexOf(f);
+        if (j >= 0) r.mural = [0, 1, 2, 3, 3][j];
+        else if (f > mural.hasta && COSTUMBRES.obras) r.mural = 3;
+      }
+    }
+    return r;
+  }
+  /** (53C, 248) El tope escrito de lo que pesa lo que cada año deja: como mucho 12 nodos en la escena (lo vigila el banco). */
+  const PESO_OBRAS = { tope: 12, mural: 3, colores: 4 };
   /**
    * (Campamento 45, ideas 174 y 175) Lo del valle que cambia con la hora sin que nada se mueva: poses quietas que enseña el CSS
    * (`html[data-valle]`, separadas por espacios), como las de la cumbre (0 capas, 0 animaciones; ya están dibujadas):
@@ -552,14 +685,16 @@
     if (h < 11.5) return escuela(f) ? 'manana' : mangos(f) ? 'tp-mangos' : 'mananaLibre';
     if (h < 12.5) return h >= 12 && escuela(f) ? 'salida' : 'tortillas';
     if (h < 14) return 'siesta';
-    if (sem === 0 && h >= 15 && h < 16.5 && COSTUMBRES.mejenga && !navidad(f)) return 'tp-mejenga';
+    // (53C) Con algo levantado en la plaza (la ramada, la carpa), la plaza es de la historia: ni mejenga, ni charcos, ni cuentos.
+    const ocupada = plazaOcupada(f, h);
+    if (sem === 0 && h >= 15 && h < 16.5 && COSTUMBRES.mejenga && !navidad(f) && !ocupada) return 'tp-mejenga';
     // (Campamento 44) Las tardes de lluvia (165), de 14:00 a 17:45, son otro reparto de la tarde y de la vuelta (paraguas, la hoja de
     // huerta, los oseznos bajo el corredor); al escampar, de 17:45 a 18:30, los charcos (166), antes de las pupusas.
     const llueve = COSTUMBRES.aguacero && llueveLaTarde(f);
     if (h < 16) return llueve ? 'tp-lluvia' : 'tarde';
     if (h < 17.75) return atolada(f) ? 'tp-atolada' : llueve ? 'tp-lluvia' : 'vuelta';
-    if (h < 20) return md >= '12-01' || md <= '01-06' ? (h >= 18.5 && posadaDe(f) >= 0 ? 'tp-posada' : 'posada') : h < 18.5 && charcos(f) ? 'tp-charcos' : 'pupusas';
-    if (h < 20.5 && COSTUMBRES.cuentos && lunaDeLaNoche(f)) return 'tp-cuentos';
+    if (h < 20) return md >= '12-01' || md <= '01-06' ? (h >= 18.5 && posadaDe(f) >= 0 ? 'tp-posada' : 'posada') : h < 18.5 && charcos(f) && !ocupada ? 'tp-charcos' : 'pupusas';
+    if (h < 20.5 && COSTUMBRES.cuentos && lunaDeLaNoche(f) && !ocupada) return 'tp-cuentos';
     return 'fresca';
   }
   /**
@@ -632,6 +767,10 @@
     // (Campamento 42) Las fiestas del resto del año: su guion por turnos y, si algo se mueve distinto, su franja (`mueveAnio`).
     { id: 'fiestas', rareza: 'anio', delDia: (f) => Boolean(fiestaDelAnio(f)), cuando: (f, h) => turnoDelAnio(f, h) !== '' || mueveAnio(f, h) !== null, mueve: mueveAnio, pesa: { nodos: 0, anim: 0 }, frase: (f) => FRASE_ANIO[fiestaDelAnio(f)] ?? null },
     { id: 'cruz', rareza: 'anio', delDia: (f) => f.slice(5) === '05-03', cuando: (f) => f.slice(5) === '05-03', pesa: { nodos: 0, anim: 0 }, frase: () => 'Es Día de la Cruz: en el pueblo hay una cruz adornada con frutas.' },
+    // (Campamento 53C, idea 239) Las historias de varios días: de 6:00 a 20:00, el capítulo de hoy (todo quieto: otro reparto de los mismos
+    // trazos). Con la plaza ocupada, la hamaca del árbol y la pelota no salen (`mueve`: nadie en su franja); la frase, el primer día.
+    { id: 'historia', rareza: 'anio', delDia: (f) => Boolean(historiaDelDia(f)), cuando: (f, h) => h >= 6 && h < 20 && Boolean(historiaAhora(f, h)), mueve: (f, h) => (plazaOcupada(f, h) && ['hamaca', 'pelota'].includes(mueveRutina(f, h)) ? '' : null), pesa: { nodos: 0, anim: 0 },
+      frase: (f) => { const x = historiaDelDia(f); return x?.i === 0 ? HISTORIAS.find((c) => c.id === x.id).frase : null; } },
     { id: 'zompopos', rareza: 'anio', delDia: zompopos, cuando: (f, h) => zompopos(f) && h >= 7.5 && h < 10, mueve: () => 'zompopos', pesa: { nodos: 0, anim: 0 }, frase: (f) => (f.slice(5) === '05-15' ? 'Empieza la semana de los zompopos de mayo: por las mañanas salen en el valle.' : null) },
     { id: 'azacuanes', rareza: 'anio', delDia: azacuanes, cuando: (f, h) => azacuanes(f) && h >= 8 && h < 16, mueve: () => 'azacuanes', pesa: { nodos: 0, anim: 0 }, frase: (f) => (['10-10', '04-01'].includes(f.slice(5)) ? 'Llegan los azacuanes: estos días pasan sobre el valle a mediodía.' : null) },
     // (Campamento 43) Las temporadas del pueblo: los mangos, la atolada y la milpa con su gente (otros repartos; nada se mueve distinto).
@@ -654,7 +793,10 @@
   // de agosto) y Semana Santa, a veces, en los días de azacuanes (del 1 al 20 de abril): manda la fiesta, y los azacuanes vuelan igual.
   // (Campamento 43) La temporada de mangos cae en los días de azacuanes (del 1 al 20 de abril) y la siembra en el Día de la Cruz: manda
   // el primero (los azacuanes vuelan igual; la cruz sigue en el pueblo y la milpa tiene su gente).
-  const CHOQUES = [['navidad', 'luna'], ['posada', 'luna'], ['cruz', 'luna'], ['fiestas', 'luna'], ['fiestas', 'azacuanes'], ['cruz', 'temporada'], ['azacuanes', 'temporada']];
+  // (Campamento 53C) Las historias caen a veces en luna llena (de 19:00 a 20:00), en los días de azacuanes (el mural de octubre), en
+  // una temporada (la ramada del sábado de atolada, el osezno en los mangos de marzo): manda la historia (los azacuanes vuelan igual).
+  const CHOQUES = [['navidad', 'luna'], ['posada', 'luna'], ['cruz', 'luna'], ['fiestas', 'luna'], ['fiestas', 'azacuanes'], ['cruz', 'temporada'], ['azacuanes', 'temporada'],
+    ['historia', 'zompopos'], ['historia', 'azacuanes'], ['historia', 'temporada'], ['historia', 'luna']];
   function diaAntes(f) { return new Date(Date.parse(`${f}T12:00:00Z`) - 864e5).toISOString().slice(0, 10); }
   /**
    * (Campamento 51, idea 227) La rutina del día, cuando no hay nada raro: a quién se fija uno hoy en el pueblo. Una baraja fija de seis
@@ -986,5 +1128,5 @@
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
   window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, pascua, fiestaDelAnio, turnoDelAnio, mueveAnio, costumbres: COSTUMBRES, temporadaDelPueblo, temporadaAhora, faenaDelDia, posadaDe, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
-    director, foco, canicula, llueveLaTarde, charcos, cerco, conejo, figuraDelCielo, geminidas, lucero, luceroAhora, eclipse, eclipses: ECLIPSES, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, animalDelPueblo, poseValle, valle: VALLE, sorteo, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+    director, foco, historias: HISTORIAS, historiasDesde: HISTORIAS_DESDE, calendarioHistorias, historiaDelDia, historiaAhora, plazaOcupada, conElOsezno, obrasDelPueblo, pesoObras: PESO_OBRAS, diaDeFiesta, semanaDeFiesta, descanso: DESCANSO, canicula, llueveLaTarde, charcos, cerco, conejo, figuraDelCielo, geminidas, lucero, luceroAhora, eclipse, eclipses: ECLIPSES, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, animalDelPueblo, poseValle, valle: VALLE, sorteo, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

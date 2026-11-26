@@ -2286,7 +2286,8 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   const frases = dias.map(C.fraseDelFoco).filter(Boolean), rutinas = C.rutinas.map((x) => C.fraseRutina(dias.find((f) => C.rutinaDelDia(f) === x)));
   const mandar = /\b(tu|tus|tú|te|compra|compre|comprar|abre|mira|mire|ven|entra|no te pierdas|aprovecha)\b/i;
   // (43) Las temporadas suman seis frases al año (el primer día de cada una): de 69 a 81 en dos años; el tope, de 70 a 90.
-  ok(frases.length >= 10 && frases.length <= 90 && [...frases, ...rutinas].every((t) => t.length < 110 && !mandar.test(t) && /\.$/.test(t)), `director 228: la línea de hoy cuenta lo raro (${frases.length} días en dos años) y nada manda ni tutea; seis frases de la rutina`);
+  // (53C) Las historias de varios días, desde 2027, suman ocho (el primer día de cada una; en 2026 no hay): de 83 a 91; el tope, a 100.
+  ok(frases.length >= 10 && frases.length <= 100 && [...frases, ...rutinas].every((t) => t.length < 110 && !mandar.test(t) && /\.$/.test(t)), `director 228: la línea de hoy cuenta lo raro (${frases.length} días en dos años) y nada manda ni tutea; seis frases de la rutina`);
   eq([C.fraseDelFoco('2026-11-25'), Boolean(C.fraseDelFoco('2026-12-24')), Boolean(C.fraseDelFoco('2026-10-10')), C.fraseDelFoco('2026-10-11'), Boolean(C.fraseDelFoco('2026-09-15'))], [null, true, true, null, true], 'director 228: un miércoles cualquiera, nada; Nochebuena, el primer día de los azacuanes (no el segundo) y el 15 de septiembre, sí');
   // F3: los ambientales, hasta tres; de noche ninguno; cada uno con lo que pesa, y el mapa del día lo reparte sin pasarse.
   let ambMal = 0;
@@ -2918,6 +2919,123 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   Object.assign(CO, { aguacero: true, canicula: true, cerco: false });
   ok(cercos.every((f) => !C.cerco(f, 21)), 'lluvia 44: sin `cerco`, el halo de siempre');
   Object.assign(CO, { cerco: true });
+}
+
+// Campamento 53C · Historias de varios días (239–244, 247 y 248): el motor (un calendario de capítulos por fecha, una historia a la vez,
+// nunca en semana de fiesta y con cinco días tranquilos entre una y otra), cada historia con su línea de COSTUMBRES, la plaza que se
+// ocupa (sin mejenga, pelota ni hamaca ese rato), el osezno de las tardes, lo que cada año deja (con su tope) y el reparto de cada
+// capítulo en cada turno y tamaño. Todo sale de la fecha.
+{
+  const almacen = {}, raiz = { dataset: {}, atributos: new Set(), toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty() {} } };
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem: (k, v) => { almacen[k] = String(v); }, removeItem: (k) => { delete almacen[k]; } }, setInterval() {}, Intl, Date, Math, Number, Object, Event: class { constructor(t) { this.type = t; } }, dispatchEvent() {} };
+  ctx.window = ctx;
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo, V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js'), L = await import('../app/static/lib.js');
+  const mas = (f, k) => new Date(Date.parse(`${f}T12:00:00Z`) + k * 864e5).toISOString().slice(0, 10);
+  // La fiesta, con las piezas de siempre (no con la regla del motor): la Navidad entera, Semana Santa de Ramos a Pascua y cada fecha fija.
+  const fiesta = (f) => C.navidad(f) || Boolean(C.festivo(f)) || Boolean(C.fiestaDelAnio(f)) || ['09-15', '05-03'].includes(f.slice(5)) || (f >= mas(L.pascua(Number(f.slice(0, 4))), -7) && f <= L.pascua(Number(f.slice(0, 4))));
+  const cuantas = { circo: 1, casa: 1, osezno: 1, ramada: 2, globo: 2, mural: 1 };
+  const malas = [];
+  for (let a = 2027; a <= 2100; a++) {
+    const cal = C.calendarioHistorias(a), dias = cal.flatMap((x) => x.dias);
+    for (const [id, k] of Object.entries(cuantas)) if (cal.filter((x) => x.id === id).length !== k) malas.push(`${a}: ${id} sale ${cal.filter((x) => x.id === id).length} veces`);
+    if (new Set(dias).size !== dias.length) malas.push(`${a}: dos historias el mismo día`);
+    for (const f of dias) if ([-1, 0, 1].some((k) => fiesta(mas(f, k)))) malas.push(`${f}: historia en semana de fiesta`);
+    for (let i = 1; i < cal.length; i++) if (cal[i].desde <= mas(cal[i - 1].hasta, 5)) malas.push(`${cal[i].desde}: menos de cinco días tranquilos`);
+    for (const x of cal) { if (x.dias.some((f, i) => f !== mas(x.desde, i)) || x.dias.length !== C.historias.find((h) => h.id === x.id).caps.length) malas.push(`${x.desde}: capítulos sin seguir`); }
+    for (const x of cal.filter((c) => c.id === 'ramada')) if (C.turno(x.dias[2], 16.5) !== 'tp-atolada' || new Date(`${x.dias[2]}T12:00:00Z`).getUTCDay() !== 6) malas.push(`${x.desde}: la ramada sin su sábado de atolada`);
+  }
+  eq(malas.slice(0, 5), [], 'historias 239: de 2027 a 2100, cada año salen todas (ocho), nunca dos el mismo día, ninguna en semana de fiesta, con cinco días tranquilos entre una y otra, y la ramada con su sábado de atolada');
+  eq([C.calendarioHistorias(2026).length, C.historiaDelDia('2026-07-09'), C.historiaDelDia('2027-01-07'), C.historiaDelDia('2027-01-08')?.cap, C.historiaDelDia('2027-01-12')?.cap, C.historiaDelDia('2027-01-13')],
+    [0, null, null, 'lona', 'aserrin', null], 'historias 239: empiezan en 2027 (las fechas ya vividas no cambian); el circo del 8 al 12 de enero');
+  // Cada día del año, a lo sumo una; todo sale de la fecha (lo mismo en cada llamada, a cualquier hora, sin guardar nada).
+  const antes = JSON.stringify(almacen);
+  let dobles = 0, total = 0;
+  for (let t = Date.UTC(2027, 0, 1); t < Date.UTC(2029, 0, 1); t += 864e5) {
+    const f = new Date(t).toISOString().slice(0, 10), x = C.historiaDelDia(f);
+    if (x) total++;
+    if (JSON.stringify(x) !== JSON.stringify(C.historiaDelDia(f)) || C.calendarioHistorias(Number(f.slice(0, 4))).filter((c) => f >= c.desde && f <= c.hasta).length > 1) dobles++;
+  }
+  ok(dobles === 0 && total >= 2 * 28 && total <= 2 * 32 && JSON.stringify(almacen) === antes, `historias 239: en dos años, a lo sumo una historia por día, igual en cada llamada y sin tocar el aparato (${total} días)`);
+  // El foco (de 6:00 a 20:00 del día de su capítulo) y su frase, el primer día y solo ese, sin «tú» ni verbos de mandar.
+  const mandar = /\b(tu|tus|tú|te|compra|compre|comprar|abre|mira|mire|ven|entra|no te pierdas|aprovecha)\b/i;
+  const primeros = C.calendarioHistorias(2027).map((x) => x.desde);
+  ok(primeros.every((f) => C.foco(f, 10).id === 'historia' && C.foco(f, 5).id !== 'historia' && /\.$/.test(C.fraseDelFoco(f)) && !mandar.test(C.fraseDelFoco(f)) && C.fraseDelFoco(f).length < 110 && C.fraseDelFoco(mas(f, 1)) === null),
+    `historias 239: el foco del capítulo de día y la línea de hoy solo el primer día (${primeros.map(C.fraseDelFoco).join(' | ')})`);
+  // La plaza ocupada (la carpa, la ramada): ni mejenga, ni charcos, ni cuentos; la pelota y la hamaca no salen (su franja queda quieta).
+  eq([C.turno('2027-07-11', 15.5), C.turno('2027-01-10', 13.5), C.mueve('2027-01-10', 13.5), C.mueve('2027-01-10', 15.5), C.mueve('2027-07-11', 15.5), C.mueve('2027-07-11', 8.5), C.mueve('2027-06-06', 15.5), C.plazaOcupada('2027-01-12', 9), C.plazaOcupada('2027-01-12', 12)],
+    ['tarde', 'siesta', '', '', '', 'gallinas', 'pelota', true, false], 'historias: con la ramada el domingo no hay mejenga; con la carpa, ni hamaca ni pelota (las gallinas siguen); el día del globo, la pelota de siempre; el aserrín se barre a las 11:30');
+  eq([C.historiaAhora('2027-01-10', 17.5).cap, C.historiaAhora('2027-01-10', 18).cap, C.historiaAhora('2027-01-10', 20).cap], ['carpa', 'funcion', 'carpa'], 'historias 244: la función del circo, de 17:45 a 20:00');
+  ok(['2027-01-09', '2027-07-08'].every((f) => !C.animalDelPueblo(f, 23)) && C.animalDelPueblo('2027-01-09', 5.5) === 'gallo', 'historias: con la carpa o la ramada en la plaza, el tecolote no baja a la rama (el gallo, sí)');
+  // El osezno de las tardes (241): desde que nace hasta fin de año, una tarde de cada tres, nunca en otra historia; antes, nunca.
+  const nace = C.calendarioHistorias(2027).find((x) => x.id === 'osezno');
+  let tardes = 0, mal = 0;
+  for (let t = Date.UTC(2027, 0, 1); t < Date.UTC(2028, 0, 1); t += 864e5) {
+    const f = new Date(t).toISOString().slice(0, 10);
+    if (C.conElOsezno(f, 15)) { tardes++; if (f <= nace.hasta || C.historiaDelDia(f)) mal++; }
+    if (C.conElOsezno(f, 10) || C.conElOsezno(f, 18)) mal++;
+  }
+  ok(mal === 0 && tardes > 60 && tardes < 140, `historias 241: el osezno en brazos, algunas tardes desde que nace (${tardes} en 2027)`);
+  // Lo que cada año deja (243, 247 y 248): la casa repintada se queda; el mural, desde su primer octubre; la obra, sus tres días.
+  const ob = (f) => C.obrasDelPueblo(f);
+  eq([ob('2027-01-20').casas.length, ob('2027-02-01').obra?.cap, ob('2027-02-02').obra?.cap, ob('2027-02-02').casas.length, ob('2027-02-03').casas.length, ob('2027-10-17').mural, ob('2027-10-19').mural, ob('2027-10-22').mural, ob('2028-05-01').mural, ob('2028-05-01').casas.length, ob('2030-05-01').casas.length],
+    [0, 'escalera', 'media', 0, 1, null, 1, 3, 3, 2, 4], 'historias 248: la casa cambia de color el tercer día y se queda, el mural crece en su semana y se queda hasta el octubre siguiente');
+  // El tope de lo que cada año deja: en seis tamaños y con la luz de cada lado, de 2027 a 2045, nunca más de 12 trazos que el pueblo de siempre.
+  const sitios = [{ W: 320, H: 640, forma: 'tel', by: 520, bx: 50, pts: [[50, 520], [190, 470], [100, 410], [200, 290]], lago: { cx: 262, cy: 600, rx: 50, ry: 10 }, techo: 240 },
+    { W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 768, H: 900, forma: 'tab', by: 760, bx: 150, pts: [[150, 760], [520, 650], [260, 520], [470, 330]], lago: { cx: 640, cy: 830, rx: 100, ry: 14 }, techo: 300 },
+    { W: 844, H: 390, forma: 'acostado', by: 360, bx: 430, pts: [[430, 360], [700, 300], [520, 230], [590, 140]], lago: null, techo: 120 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 2560, H: 1440, forma: 'esc', by: 1318, bx: 900, pts: [[900, 1318], [1600, 1100], [980, 880], [1560, 230]], lago: null, techo: 600 }].flatMap((c) => [1, -1].map((sol) => P.sitiosPueblo({ ...c, sol })));
+  const trazos = (svg) => (svg.match(/<path /g) ?? []).length;
+  let peor = -99, roto = 0;
+  for (const sit of sitios) {
+    const base = trazos(P.pueblo(sit, {}));
+    for (let a = 2027; a <= 2045; a++) for (const md of ['02-02', '05-01', '10-19', '12-31']) {
+      const svg = P.pueblo(sit, { obras: ob(`${a}-${md}`) });
+      peor = Math.max(peor, trazos(svg) - base);
+      if (/NaN|style=/.test(svg)) roto++;
+    }
+  }
+  ok(peor <= C.pesoObras.tope && roto === 0, `historias 248: lo que cada año deja pesa como mucho ${C.pesoObras.tope} trazos más que el pueblo de siempre (el peor: ${peor}), sin NaN ni estilos`);
+  // El reparto de cada capítulo, en cada turno de su día (cada cuarto de hora), en cinco tamaños y con la luz de cada lado: su pieza está,
+  // de una a ocho figuras, nadie dentro de lo que levanta la historia, sin pelota con la plaza ocupada, sin NaN; el osezno nunca en la entrada.
+  const lugs = sitios.slice(2).map((s) => P.lugaresPueblo(s));
+  const pieza = { lona: 'lona', carpa: 'carpa', funcion: 'carpa', aserrin: 'aserrin', horcones: 'ramadaHorcones', techo: 'ramada', atolada: 'ramadaFiesta', solos: 'ramadaHorcones', panales: 'panales', visita: 'panales', arbol: 'globoSuelto', brazos: 'bebe' };
+  const fallos = [];
+  for (const x of C.calendarioHistorias(2027)) for (const f of x.dias) for (let q = 0; q < 96; q += 1) {
+    const h = q / 4, t = C.turno(f, h), H = C.historiaAhora(f, h);
+    if (!H) continue;
+    for (const [i, lug] of lugs.entries()) {
+      const op = { dia: f, escuela: C.escuela(f), hora: h, temporada: C.temporadaDelPueblo(f, h), animal: C.animalDelPueblo(f, h), historia: H, obra: C.obrasDelPueblo(f).obra };
+      const l = V.reparto(lug, t, op), est = l.filter((v) => V.ESTRUCTURAS.has(v.t)).map((v) => V.cajaVecino(v)), nf = l.filter((v) => !V.COSAS.has(v.t)).length;
+      if (/NaN|style=/.test(V.svgVecinos(l))) fallos.push(`${f} ${h} ${i}: trazo roto`);
+      if (l.some((v) => !V.ESTRUCTURAS.has(v.t) && !v.libre && est.some((c) => { const b = V.cajaVecino(v); return b.x0 < c.x1 && b.x1 > c.x0 && b.y0 < c.y1 && b.y1 > c.y0; }))) fallos.push(`${f} ${h} ${i}: alguien dentro`);
+      if (!['duerme', 'alba'].includes(t) && (nf < 1 || nf > 8)) fallos.push(`${f} ${h} ${i}: ${nf} figuras`);
+      const k = pieza[H.cap];
+      if (k && (k !== 'bebe' || !['duerme', 'alba', 'fresca'].includes(t)) && !l.some((v) => v.t === k)) fallos.push(`${f} ${h} ${i} ${t}: falta ${k}`);
+      if (C.plazaOcupada(f, h) && l.some((v) => v.t === 'pelota' || v.actor === 'pelota' || v.actor === 'hamaca')) fallos.push(`${f} ${h} ${i}: la plaza ocupada con pelota o hamaca`);
+      if (H.id === 'osezno' && V.reparto(lug, t, { ...op, entrada: true }).some((v) => ['panales', 'bebe'].includes(v.t))) fallos.push(`${f} ${h} ${i}: el osezno en la entrada`);
+    }
+  }
+  eq(fallos.slice(0, 5), [], 'historias 240–247: cada capítulo en cada turno de su día, en cinco tamaños y con la luz de cada lado (su pieza, de una a ocho figuras, nadie dentro, sin pelota con la plaza ocupada, nunca en la entrada)');
+  // Las piezas nuevas: sin sombra de pie las cosas, la carpa y el de los globos caben bajo el sendero (se encogen si hace falta).
+  ok(['ramada', 'ramadaFiesta', 'ramadaHorcones', 'carpa', 'lona', 'panales', 'palmas', 'aserrin', 'globoSuelto'].every((t) => V.COSAS.has(t)) && ['globero', 'oseznoGlobo', 'bebe', 'zancos', 'malabar'].every((t) => V.PERSONAJES.includes(t) && !V.COSAS.has(t)), 'historias: lo que levanta una historia es una cosa (no cuenta entre los ocho); los personajes nuevos, vecinos');
+  const tel = lugs[0], carpa = V.reparto(tel, 'tarde', { dia: '2027-01-10', escuela: false, hora: 15, historia: C.historiaAhora('2027-01-10', 15) }).find((v) => v.t === 'carpa');
+  ok(carpa && V.cajaVecino(carpa).y0 >= tel.techoPlaza - 0.01, 'historias 244: la carpa no sube más de lo que deja el sendero encima de la plaza');
+  // Cada historia se apaga con su línea: esos días vuelven a ser los de siempre y el calendario de las demás no se mueve.
+  const CO = C.costumbres, cal0 = JSON.stringify(C.calendarioHistorias(2027));
+  for (const [k, f] of [['circo', '2027-01-10'], ['casaPintada', '2027-02-02'], ['osezno', '2027-03-09'], ['ramada', '2027-07-09'], ['globo', '2027-06-07'], ['mural', '2027-10-19']]) {
+    ok(k in CO && C.historiaDelDia(f), `historias: COSTUMBRES.${k}`);
+    CO[k] = false;
+    ok(C.historiaDelDia(f) === null && C.foco(f, 10).id !== 'historia' && C.fraseDelFoco(C.calendarioHistorias(2027).find((x) => x.dias.includes(f)).desde) === null && JSON.stringify(C.calendarioHistorias(2027)) === cal0, `historias: con \`${k}\` en false, ese día es el de siempre (sin foco ni frase) y las demás no se mueven`);
+    CO[k] = true;
+  }
+  CO.atolada = false;
+  ok(C.historiaDelDia('2027-07-09') === null && C.turno('2027-07-10', 16.5) !== 'tp-atolada', 'historias 240: sin la atolada no hay ramada');
+  CO.atolada = true; CO.obras = false;
+  ok(ob('2028-05-01').casas.length === 0 && ob('2028-05-01').mural === null && ob('2028-02-09').casas.length === 1 && ob('2028-10-15').mural === null && ob('2028-10-17').mural === 1, 'historias 248: sin `obras`, lo de cada año no se queda (solo la obra de esos días)');
+  CO.obras = true;
 }
 
 console.log(`OK ${n} comprobaciones`);

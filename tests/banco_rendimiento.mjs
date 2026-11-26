@@ -145,7 +145,7 @@ const CASOS = [
   { caso: 'el lucero de la tarde', dia: '2026-08-15', hora: 18, declara: 817 },
   { caso: 'el lucero de la mañana', dia: '2026-11-26', hora: 5.25, declara: 828 },
   { caso: 'Gemínidas, miran arriba', dia: '2026-12-14', hora: 23, declara: 859 },
-  { caso: 'eclipse de luna', dia: '2029-06-25', hora: 21, declara: 836 },
+  { caso: 'eclipse de luna', dia: '2029-06-25', hora: 21, declara: 839 }, // (53C) +3: el mural de la escuela, que desde octubre de 2027 se queda (248)
   // (Campamento 44) Lluvia y verano. La llovizna (la nube cargada y sus 20 gotas) se poda los días que no llueve por la tarde, también los
   // de la seca (antes se escondía con el CSS): **−23 nodos en cada fecha** sin lluvia. La tarde de lluvia (paraguas, hoja de huerta, los
   // oseznos bajo el corredor) es otro reparto de los mismos trazos y sin la pelota (−2 animaciones); los charcos, en los tonos de siempre;
@@ -154,6 +154,15 @@ const CASOS = [
   { caso: 'al escampar, charcos', dia: '2026-09-09', hora: 18, declara: 841 },
   { caso: 'la canícula', dia: '2026-07-22', hora: 15.5, declara: 824 },
   { caso: 'el cerco de la luna', dia: '2026-09-22', hora: 21, declara: 837 },
+  // (Campamento 53C) Las historias de varios días: otro reparto de los mismos trazos (lo que levantan, en los tonos de los vecinos). Se
+  // miden la función del circo (la carpa y la plaza llena al anochecer), la carpa de noche (lo levantado se queda), el sábado de la
+  // ramada y el martes del globo en la cumbre (+3 nodos, fuera del grupo de los osos). Y el tope de lo que cada año deja (248): un
+  // miércoles de noviembre de 2040, con trece casas pintadas y el mural, como mucho 12 nodos más que el día normal (827 + 12).
+  { caso: 'historia: circo, la función', dia: '2027-01-10', hora: 18.5, declara: 811 },
+  { caso: 'historia: circo, la carpa de noche', dia: '2027-01-11', hora: 23, declara: 806 },
+  { caso: 'historia: ramada, la atolada', dia: '2027-07-10', hora: 16.5, declara: 814 },
+  { caso: 'historia: el globo en la cumbre', dia: '2027-06-08', hora: 12, declara: 844 },
+  { caso: 'historia: lo que cada año deja (2040)', dia: '2040-11-28', hora: 12, declara: 839 },
   // (Campamento E) El ánimo del valle según la semana del precio (`animo`: lo fuerza `libro.animo`): otro reparto de los mismos vecinos
   // (sentados de dos en dos si baja; la ropa tendida y vecinos de paseo si sube). Un miércoles de escuela por la mañana (la que barre ya
   // acabó: 10:00) y en la tarde de la pelota; los cinco estados, cada uno con lo suyo declarado (un tono de más es un trazo más).
@@ -183,6 +192,8 @@ const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
   { caso: `lluvia ${w}`, dia: '2026-09-09', hora: 15.5, w, h },
   { caso: `charcos ${w}`, dia: '2026-09-09', hora: 18, w, h },
   { caso: `cerco ${w}`, dia: '2026-09-22', hora: 21, w, h },
+  // (53C) la función del circo (la carpa en la plaza al anochecer)
+  { caso: `historia: circo ${w}`, dia: '2027-01-10', hora: 18.5, w, h },
   // (E) con el valle en «plaza» y en «abrigo» (los que más vecinos sacan), un día cualquiera por la mañana
   { caso: `ánimo plaza ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'plaza' },
   { caso: `ánimo abrigo ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'abrigo' },

@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 53C) Historias de varios días (239–244, 247 y 248); resume también lluvia y verano (2026-12-zc).
+    id: '2026-12-zd',
+    items: [
+      'En el pueblo pasan cosas que duran varios días: llega el circo en enero y se levanta la ramada antes de la atolada.',
+      'Un globo rojo se escapa de la plaza, se enreda en el árbol y al tercer día está en la cumbre con los osos.',
+      'Nace un osezno, una casa se pinta de otro color y los oseznos pintan un mural en la escuela, que se queda.',
+      'Y desde la última vez: las tardes de lluvia con paraguas, los charcos y la canícula.',
+    ],
+  },
+  {
     // (Campamento 44) Lluvia y verano (165, 166, 167 y 171); resume también luna y estrellas (2026-12-zb).
     id: '2026-12-zc',
     items: [

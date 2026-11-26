@@ -37,8 +37,8 @@ export const COLA_PERRO = 1.0 * K_PERRO;
  * (el tejado asienta sobre la pared, la puerta y las ventanas dentro de su fachada, la chimenea sobre el tejado).
  * Escala: la puerta mide 6 unidades (un vecino oso, 6.7) y las ventanas van de 3 a 5.6, a la altura de una persona.
  */
-export function piezasCasa(x, y0, s, i, u, sol = 1) {
-  const [w, h, d, rh, color, corredor] = CASAS[i % CASAS.length];
+export function piezasCasa(x, y0, s, i, u, sol = 1, pintada = null) {
+  const [w, h, d, rh, base, corredor] = CASAS[i % CASAS.length], color = pintada ?? base; // (53C) `pintada`: el color de la casa que se pintó
   const k = u * s, ox = sol > 0 ? x : x + (w + d * 0.62) * k;
   const m = (px, py) => [ox + sol * px * k, y0 + py * k];
   const dx = d * 0.62, dy = -d * 0.24, ov = 1.4; // el fondo en perspectiva y el vuelo del alero
@@ -159,9 +159,25 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
  * del farol (donde se amarran las piscuchas cuando no hay oseznos). Cada sitio, [x, y, k] (su pie y la escala del pueblo). Solo
  * depende del sitio del pueblo: nunca de las cuentas ni de las compras.
  */
+/**
+ * (Campamento 53C) La casa de la escuela, la misma que piensa el reparto de los vecinos (arte-vecinos.js: la última casa con corredor; con
+ * una sola, la primera sin él): en su pared lateral pintan los oseznos el mural (247). Si esa pared queda detrás del árbol de fuego del
+ * final de la calle (en el teléfono y a 1440 px la escuela es la última casa), el mural va en la de la casa de antes, que se ve.
+ */
+export function casaEscuela(sit) {
+  const casas = sit.piezas.filter((q) => q.tipo === 'casa'), con = casas.filter((q) => CASAS[q.i % CASAS.length][5]);
+  const escuela = con.length >= 2 ? con.at(-1) : (casas.find((q) => !CASAS[q.i % CASAS.length][5]) ?? casas[0] ?? null);
+  const u = sit.u, xF = Math.min(sit.xFin + 7 * u, sit.xMaxArbol ?? Infinity), rF = 6.6 * u * 1.3 + 2 * u;
+  const lado = (q) => { const [w, , d] = CASAS[q.i % CASAS.length], k = u * q.s, ox = sit.sol > 0 ? q.x : q.x + (w + d * 0.62) * k, a = ox + sit.sol * w * k, b = ox + sit.sol * (w + d * 0.62) * k; return [Math.min(a, b), Math.max(a, b)]; };
+  const libre = (q) => { const [a, b] = lado(q); return b < xF - rF || a > xF + rF; };
+  return [escuela, ...[...casas].reverse()].find((q) => q && libre(q)) ?? escuela;
+}
+/** (Campamento 53C, 243 y 248) El color de una casa del frente con lo que cada año dejó (`obras.casas`: [casa, paso]…). */
+export const colorCasa = (i, obras) => (obras?.casas ?? []).reduce((c, [j, paso]) => (j === i ? (c + paso) % COLORES.length : c), CASAS[i % CASAS.length][4]);
 export function lugaresPueblo(sit) {
   const { u, yg, piezas, sol } = sit;
-  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [], perro: [], farol: [], rama: [], forma: sit.forma }, delante = []; // (41) `forma`: en el teléfono, la mesa corta
+  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [], perro: [], farol: [], rama: [], casas: [], escuela: null, forma: sit.forma }, delante = []; // (41) `forma`: en el teléfono, la mesa corta
+  const escuela = casaEscuela(sit); // (53C) la pared del mural
   for (const q of piezas) {
     const k = u * q.s;
     if (q.tipo === 'iglesia') {
@@ -171,6 +187,7 @@ export function lugaresPueblo(sit) {
     } else if (q.tipo === 'plaza') {
       const w = (sit.forma === 'tel' || sit.forma === 'acostado' ? 24 : 30) * k, cx = q.x + w * 0.42;
       lug.banca.push([cx + w * 0.2, yg + 0.5 * k, k]);
+      lug.techoPlaza = yg - (q.alto ?? 99) * k; // (53C) hasta dónde puede subir lo que se levanta en la plaza (lo que deja el sendero)
       // (Campamento 45, idea 173) La rama baja del árbol de la plaza, del lado del astro y dentro de su copa: donde se posa el tecolote.
       lug.rama.push([cx + sol * 2.2 * k, yg - 7.8 * k, k]);
       // (36) Frente al nacimiento de Navidad, del lado contrario al astro y con aire (no lo tapan).
@@ -189,6 +206,9 @@ export function lugaresPueblo(sit) {
       const m = (px, py) => [ox + sol * px * k, yg + py * k, k];
       // Con corredor: dos sitios en él y uno en la calle, delante (va al final de la calle); sin corredor, uno en la calle, a su lado.
       if (corredor) { lug.corredor.push(m(w * 0.7, 0.5), m(w * 0.22, 0.5)); delante.push(m(w * 0.3, 4.2)); } else lug.calle.push(m(w + 3.2, 3.4));
+      // (53C) Delante de su pared (la escalera de la que se pinta, 243) y, la de la escuela, delante de su pared lateral (el mural, 247).
+      lug.casas.push({ i: q.i, pie: m(w * 0.5, corredor ? 0.7 : 1.2) });
+      if (q === escuela) lug.escuela = { i: q.i, lado: m(w + d * 0.31, 2.2) };
     }
   }
   for (const [x, y] of sit.ninos ?? []) lug.plaza.push([x, y, u]);
@@ -204,7 +224,7 @@ export function lugaresPueblo(sit) {
  * banderitas en las fiestas), los vecinos osos y los animales, el humo del fogón. `ventanas`: cuántas se encienden de noche (una por
  * persona). `vecinos`: el SVG de los vecinos del turno de ahora (montana.js), en su grupo `.v-vecinos`, que se rehace al cambiar de turno.
  */
-export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) {
+export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '', obras = null } = {}) {
   const { u, yg, piezas, atras, sol } = sit;
   // Un acumulador por tono: todo el pueblo en unos pocos trazos. La fila de atrás va en los suyos (B), que se pintan antes que la
   // iglesia y que el frente: así nada de atrás queda encima de lo de delante (pulido del pueblo).
@@ -219,11 +239,30 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   // La calle: tierra apisonada delante de las casas, de la iglesia al final del pueblo.
   add('calle', poli([[sit.x0 - 2 * u, yg + 0.4 * u], [sit.xFin + 2 * u, yg + 0.4 * u], [sit.xFin + 6 * u, yg + 5.6 * u], [sit.x0 - 6 * u, yg + 5.6 * u]]));
   // ---- una casa: frente (la pared larga, de cara), su hastial (al lado del astro), el tejado de teja, el alero y la puerta.
-  const casa = (x, y0, s, i, fila) => {
-    const c = piezasCasa(x, y0, s, i, u, sol);
+  // (Campamento 53C) Lo que cada año deja (243, 247 y 248: cielo.js, `obrasDelPueblo`): el color de las casas del frente que se pintaron,
+  // la media pared del segundo día de obra (un trazo más, del color nuevo, entre las fachadas y los hastiales) y el mural de la escuela
+  // en su pared lateral (de una a tres manchas planas: el sol, el volcán y el torogoz; un trazo cada una, después de los hastiales).
+  const escuela = obras?.mural ? casaEscuela(sit) : null;
+  let colorObra = '';
+  const mural = { sol: '', volcan: '', ave: '' };
+  const casa = (x, y0, s, i, fila, q = null) => {
+    const c = piezasCasa(x, y0, s, i, u, sol, fila === 0 && obras ? colorCasa(i, obras) : null);
     add('sombra', poli(c.sombra));
     add(`frente-${c.color}`, poli(c.frente));
     add(`lado-${c.color}`, poli(c.lado));
+    if (fila === 0 && obras?.obra?.casa === i && obras.obra.cap === 'media') {
+      const [a, b, cc, d] = c.frente, mid = (p0, p1) => [p0[0] + (p1[0] - p0[0]) * 0.5, p0[1] + (p1[1] - p0[1]) * 0.5];
+      add('obra', poli([a, mid(a, b), mid(d, cc), d]));
+      colorObra = COLORES[(colorCasa(i, obras) + obras.obra.paso) % COLORES.length];
+    }
+    if (q && q === escuela) {
+      // La pared lateral (el hastial sin su punta): de abajo cerca, abajo lejos, arriba lejos y arriba cerca; (a, b) de 0 a 1 en ella.
+      const [P0, P1, P2, , P3] = c.lado, en = (a, b) => [P0[0] + (P1[0] - P0[0]) * a + (P3[0] - P0[0] + (P2[0] - P1[0] - P3[0] + P0[0]) * a) * b, P0[1] + (P1[1] - P0[1]) * a + (P3[1] - P0[1] + (P2[1] - P1[1] - P3[1] + P0[1]) * a) * b];
+      const ovalo = (a, b, ra, rb) => poli(Array.from({ length: 10 }, (_, j) => en(a + ra * Math.cos((j * Math.PI) / 5), b + rb * Math.sin((j * Math.PI) / 5))));
+      if (obras.mural >= 1) mural.sol = ovalo(0.3, 0.74, 0.16, 0.1);
+      if (obras.mural >= 2) mural.volcan = poli([en(0.4, 0.14), en(0.94, 0.14), en(0.76, 0.5), en(0.64, 0.5)]);
+      if (obras.mural >= 3) mural.ave = ovalo(0.24, 0.36, 0.1, 0.055) + poli([en(0.17, 0.33), en(0.1, 0.18), en(0.14, 0.17), en(0.22, 0.3)]);
+    }
     add('techo-l', poli(c.techo));
     add('techo-s', poli(c.techoS));
     add('teja', `M${P(c.teja[0])}L${P(c.teja[1])}`); // el borde de las tejas
@@ -306,7 +345,7 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   for (const p of piezas) {
     if (p.tipo === 'iglesia') iglesia(p.x, p.s);
     else if (p.tipo === 'plaza') pz = plaza(p.x, p.s, p.alto);
-    else { const r = casa(p.x, yg, p.s, p.i, 0); altos.push(r); if (altos.length % 2 === 0 && altos.length < 6) { const [a, b] = [altos[altos.length - 2], r]; cordeles.push([a.alero[1], b.alero[0]]); } }
+    else { const r = casa(p.x, yg, p.s, p.i, 0, p); altos.push(r); if (altos.length % 2 === 0 && altos.length < 6) { const [a, b] = [altos[altos.length - 2], r]; cordeles.push([a.alero[1], b.alero[0]]); } }
   }
   // Las ventanas: tantas encendidas como personas con cuenta, empezando por las del frente; las demás, oscuras.
   let vent = Math.max(0, ventanas);
@@ -383,7 +422,8 @@ export function pueblo(sit, { ventanas = 0, evitar = null, vecinos = '' } = {}) 
   const humo = humos.slice(0, sit.forma === 'esc' ? 2 : 1).map(([hx, hy], i) => [0, 1, 2].map((j) => `<circle class="efecto-ambiente v-humos v-hu v-hu-${j}${i ? ' v-hu-b' : ''}" cx="${f1(hx)}" cy="${f1(hy)}" r="${f1((1.4 + j * 0.45) * u)}"/>`).join('')).join('');
   const sw = (n) => ` stroke-width="${f1(n * u)}"`;
   const p = (clase, k, extra = '', X = A) => (X[k] ? `<path class="${clase}" d="${X[k]}"${extra}/>` : '');
-  const frentes = COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`)).join('');
+  const frentes = COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`)).join('') + (colorObra ? p(`v-frente v-c-${colorObra} v-obra`, 'obra') : '') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`)).join('')
+    + Object.entries(mural).map(([k, d]) => (d ? `<path class="v-mural v-mural-${k}" d="${d}"/>` : '')).join('');
   // La fila de atrás, entera y en su orden (sombra, muro de la terraza, paredes, tejados, puertas y ventanas), antes que la iglesia.
   const filaAtras = p('v-sombra v-sombra-atras', 'sombra', '', B) + p('v-terraza', 'terraza', '', B) + COLORES.map((c) => p(`v-frente v-c-${c}`, `frente-${c}`, '', B)).join('') + COLORES.map((c) => p(`v-pared-l v-c-${c}`, `lado-${c}`, '', B)).join('')
     + p('v-alero', 'alero', '', B) + p('v-techo-l', 'techo-l', '', B) + p('v-techo-s', 'techo-s', '', B) + p('v-teja', 'teja', sw(0.6), B) + p('v-poste', 'poste', sw(0.55), B) + p('v-puerta', 'puerta', '', B) + p('v-ventana v-ventana-atras', 'ventana', '', B);

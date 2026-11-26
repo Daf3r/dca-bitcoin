@@ -4388,6 +4388,11 @@ html[data-mueve="relampagos"] .v-rayo { animation: v-rayo 31s linear 6s infinite
 /* Las casas: el frente de cara (luz a medias) y el hastial al astro (más luz). */
 .v-frente { fill: color-mix(in oklab, color-mix(in oklab, var(--vc) 84%, var(--monte-sombra)) var(--v-luz), var(--monte)); }
 .v-pueblo .v-pared-l { fill: color-mix(in oklab, color-mix(in oklab, var(--vc) 90%, var(--luz-roca)) calc(var(--v-luz) + 10%), var(--monte)); }
+/* (Campamento 53C, 247) El mural de la escuela, en su pared lateral: tres manchas planas (el sol, el volcán, el torogoz), con la luz del
+   hastial; de noche manda la noche, como las paredes. */
+.v-mural-sol { fill: color-mix(in oklab, #f2b632 calc(var(--v-luz) + 10%), var(--monte)); }
+.v-mural-volcan { fill: color-mix(in oklab, #4f6f8f calc(var(--v-luz) + 10%), var(--monte)); }
+.v-mural-ave { fill: color-mix(in oklab, #2f9c8a calc(var(--v-luz) + 10%), var(--monte)); }
 .v-pueblo .v-alero { fill: #1a0e08; fill-opacity: 0.26; }
 .v-teja { fill: none; stroke: color-mix(in oklab, var(--v-teja-s) var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
 .v-poste { fill: none; stroke: color-mix(in oklab, #5b3b22 var(--v-som), var(--monte-sombra)); stroke-linecap: round; }
@@ -4968,6 +4973,10 @@ html:not([data-efectos="ninguno"]) .osos.festeja-arriba :is(.oso-rasgos, .oso-ra
 /* (185, 26 y 190) Lo plantado junto a los osos: el oso de nieve (crece con los días de diciembre), el paraguas de las tardes de la
    lluviosa y la banderita del 13 al 15 de septiembre. Se esconden con los osos. */
 .c-plantado { pointer-events: none; }
+/* (Campamento 53C, 242) El globo rojo que subió del pueblo, atado a su piedrita delante de los osos (solo ese martes: lo demás, podado). */
+.c-globo-hilo { fill: color-mix(in oklab, #3a2c26 80%, var(--monte-sombra)); }
+.c-globo-rojo { fill: color-mix(in oklab, #d8443a 88%, var(--monte-sombra)); }
+.c-globo-brillo { fill: #fffaf0; fill-opacity: 0.55; }
 .c-nieve-oso { fill: color-mix(in oklab, #fffdf8 90%, var(--luz-roca, #fff)); }
 .c-nieve-sombra { fill: color-mix(in oklab, var(--nieve-sb) 55%, var(--monte-sombra)); }
 .c-nieve-bufanda { fill: var(--oso-cinta); }
