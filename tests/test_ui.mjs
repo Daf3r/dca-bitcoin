@@ -8144,7 +8144,7 @@ try {
         // La hora exacta de los animales (encargo del dueño, 26 nov 2026): el mismo día, solo pasa la hora; cada animal llega y se va a
         // su hora aunque el turno no cambie, sin duplicar a los vecinos ni la capa del actor.
         const fallos = [];
-        const GUION = [[5.5, 'un gallo'], [6.2, ''], [13.5, 'un garrobo'], [14.1, ''], [17.4, ''], [17.6, 'zanates'], [18.6, '']]; // (a las 11:00 el garrobo de este pueblo no cabe hasta la siesta: lo del 45)
+        const GUION = [[5.5, 'un gallo'], [6.2, ''], [13.5, 'un garrobo'], [14.1, ''], [17.4, ''], [17.6, 'zanates'], [18.6, '']]; // (de 11:00 a 11:30 el garrobo no cabe en la plaza de la mañana: llega con las tortillas; lo del 45)
         for (const [h, frase] of GUION) {
           const r = await mira(t.p, '2027-02-10', h);
           const nombra = ['un gallo', 'un garrobo', 'zanates', 'un tecolote'].filter((f) => r.desc.includes(f));
@@ -8157,8 +8157,13 @@ try {
         ok(nov.dataLucero === 'manana' && nov.lucero === 'inline' && dia.lucero === 'none' && jul.dataLucero === 'tarde' && jul.lucero === 'inline' && nov.anima + jul.anima === 0, `46 a ${w} px: el lucero de la mañana en noviembre y el de la tarde en julio, quieto; de día no (${JSON.stringify([nov.lucero, dia.lucero, jul.lucero])})`);
         const ecl = await mira(t.p, '2029-06-25', 21), sin = await mira(t.p, '2029-06-25', 23);
         ok(ecl.eclipse && !sin.eclipse && ecl.luna !== sin.luna, `46 a ${w} px: la luna cobriza solo en la totalidad del eclipse (${ecl.luna} / ${sin.luna})`);
-        const gem = await mira(t.p, '2026-12-14', 23), otra = await mira(t.p, '2026-12-16', 23);
-        ok(gem.cumbre === 'estrellas' && gem.arriba === 'inline' && otra.cumbre === 'duermen', `46 a ${w} px: la noche de las Gemínidas los de la cumbre miran arriba (${gem.cumbre}, ${gem.arriba}); otra noche duermen`);
+        // Con «esenciales» (la cara de la aurora solo sale con «todos»: así se mira la pose propia de las Gemínidas).
+        await t.p.evaluate(() => { document.documentElement.dataset.efectos = 'esenciales'; });
+        const gem = await mira(t.p, '2026-12-14', 23);
+        const caras = await t.p.evaluate(() => { const o = document.querySelector('#montana .osos'); return { clase: o?.getAttribute('class') ?? '', hocico: o ? getComputedStyle(o.querySelector('.oso-hocico')).display : '' }; });
+        const otra = await mira(t.p, '2026-12-16', 23);
+        await t.p.evaluate(() => { document.documentElement.dataset.efectos = 'todos'; });
+        ok(gem.cumbre === 'estrellas' && gem.arriba === 'inline' && caras.clase.includes('mira-cielo') && caras.hocico === 'none' && otra.cumbre === 'duermen' && otra.arriba !== 'inline', `46 a ${w} px: la noche de las Gemínidas los de la cumbre miran arriba (${gem.cumbre}, ${gem.arriba}, ${caras.clase}); otra noche duermen (${otra.arriba})`);
         ok([nov, dia, jul, abr, ecl, sin, gem, otra].every((r) => !r.malos) && t.consola.length === 0, `46 a ${w} px: ningún NaN y la consola limpia (${t.consola.slice(0, 2)})`);
         await t.ctx.close();
       }

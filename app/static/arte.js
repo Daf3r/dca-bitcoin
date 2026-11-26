@@ -647,11 +647,12 @@ export function sitioFigura(pts, { libre, alto = [70, 170], paso = 6, W = 2600, 
     let mejor = null, dm = Infinity;
     for (let y = -y0 * s; y + y1 * s < H; y += paso) {
       for (let x = -x0 * s; x + x1 * s < W; x += paso) {
-        if (!pts.every(([px, py]) => AIRE.every(([dx, dy]) => libre(x + px * s + dx, y + py * s + dy)))) continue;
+        // Con `cerca` ([x, y]), de los sitios de ese tamaño, el que deja el centro de la figura más cerca de ese punto (lo que no
+        // mejora al mejor ya hallado ni se mira).
+        const d = cerca ? Math.hypot(x + ((x0 + x1) / 2) * s - cerca[0], y + ((y0 + y1) / 2) * s - cerca[1]) : 0;
+        if (d >= dm || !pts.every(([px, py]) => AIRE.every(([dx, dy]) => libre(x + px * s + dx, y + py * s + dy)))) continue;
         if (!cerca) return { x, y, s };
-        // Con `cerca` ([x, y]), de los sitios de ese tamaño, el que deja el centro de la figura más cerca de ese punto.
-        const d = Math.hypot(x + ((x0 + x1) / 2) * s - cerca[0], y + ((y0 + y1) / 2) * s - cerca[1]);
-        if (d < dm) { dm = d; mejor = { x, y, s }; }
+        dm = d; mejor = { x, y, s };
       }
     }
     if (mejor) return mejor;
