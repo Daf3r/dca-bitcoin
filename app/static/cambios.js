@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 45) Los animales de aquí; resume también las temporadas y las fiestas del pueblo (2026-12-z y 2026-12-y).
+    id: '2026-12-za',
+    items: [
+      'El pueblo vive sus fiestas y sus temporadas: mangos en marzo, posadas en diciembre y mejenga los domingos.',
+      'Llegan los animales de aquí: un gallo al amanecer, un garrobo al sol en la época seca y zanates al atardecer.',
+      'Algunas noches, un tecolote vela en el árbol de la plaza.',
+      'A mediodía las vacas se echan y por la tarde la garza pesca en la otra orilla del lago.',
+    ],
+  },
+  {
     // (Campamento 43) Las temporadas del pueblo; resume también las fiestas del año (2026-12-y), un solo material (x) y el precio (w).
     id: '2026-12-z',
     items: [

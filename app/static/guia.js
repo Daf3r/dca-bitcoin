@@ -135,6 +135,8 @@ export const FECHAS_ALMANAQUE = [
   // (Campamento 43) Las temporadas del pueblo: un domingo de mangos (con la mejenga), la siembra, la atolada, la posada y una luna llena.
   ['Mangos y mejenga (domingo de marzo)', '2027-03-14'], ['La siembra (mayo)', '2027-05-05'], ['Sábado de atolada (julio)', '2027-07-17'],
   ['Las posadas (diciembre)', '2026-12-18'], ['Luna llena: los cuentos', '2027-02-20'],
+  // (Campamento 45) Los animales de aquí: un sábado de la seca con los cuatro (el gallo, el garrobo, los zanates y, de noche, el tecolote).
+  ['Los animales de aquí (noche de tecolote)', '2026-11-28'],
 ];
 const hhmm = (h) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 /**
@@ -164,7 +166,7 @@ function pintarAlmanaque() {
       const foco = tr.foco ? ` · foco: ${tr.foco === 'rutina' ? `rutina (${tr.rutina})` : tr.foco}` : '';
       const amb = tr.ambiente?.length ? ` · ambiente: ${tr.ambiente.join(', ')}` : '';
       const peso = tr.capas != null ? ` · capas pequeñas: ${tr.capas} (hasta ${tr.anim} animaciones por capa)` : '';
-      txt.textContent = `${hhmm(tr.desde)}–${hhmm(tr.hasta)} · ${tr.turno}${tr.mueve ? ` · se mueve: ${tr.mueve}` : ''}${tr.mueve2 ? ` + ${tr.mueve2} (ancho)` : ''}${foco}${amb}${tr.cumbre ? ` · la cumbre: ${tr.cumbre}` : ''}${tr.tu ? ` · «Tú»: ${tr.tu}` : ''}${peso}`;
+      txt.textContent = `${hhmm(tr.desde)}–${hhmm(tr.hasta)} · ${tr.turno}${tr.mueve ? ` · se mueve: ${tr.mueve}` : ''}${tr.mueve2 ? ` + ${tr.mueve2} (ancho)` : ''}${foco}${amb}${tr.cumbre ? ` · la cumbre: ${tr.cumbre}` : ''}${tr.tu ? ` · «Tú»: ${tr.tu}` : ''}${tr.animal ? ` · en la plaza: ${tr.animal}` : ''}${tr.valle ? ` · el valle: ${tr.valle}` : ''}${peso}`;
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'enlace';

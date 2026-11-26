@@ -475,7 +475,8 @@ function opcionesReparto(info, t) {
   const C = window.libroCielo, dia = C?.dia?.() ?? '', hora = C?.hora?.() ?? 12;
   // (Campamento 52) `hora`: los vecinos con oficio están en el sitio de esa hora (no caminan: se dibuja al poner la escena o el turno).
   // (Campamento 43) `temporada`: la milpa con su gente y los mangos del sábado de plaza (cielo.js: `temporadaDelPueblo`).
-  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora(), temporada: C?.temporadaDelPueblo && dia ? C.temporadaDelPueblo(dia, hora) : null };
+  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora(), temporada: C?.temporadaDelPueblo && dia ? C.temporadaDelPueblo(dia, hora) : null,
+    animal: C?.animalDelPueblo && dia ? C.animalDelPueblo(dia, hora) : '' }; // (45) el animal de la hora en la plaza (se mira al dibujar el turno)
 }
 // ------------------------------------------------------------------ (Campamento E) el precio, a su ritmo: el ánimo del valle
 // lib.js decide el estado con los cierres diarios (`animoDelValle`); datos.js lo trae con el histórico (`ponerAnimo`). Aquí se recuerda,
@@ -2168,7 +2169,7 @@ function describir(sats, meta) {
   estado.host.querySelector('#m-desc').textContent = descripcionMontana(sats, meta, estado.esc.campos, estado.esc.cima, lb) + (estado.compras ? ` Al pie crece ${lb ? 'el bosque del libro' : 'tu bosque'}: un pino por compra (${estado.compras}).` : '')
     + (arbolesDe(estado.compras).length ? ` Entre los pinos crecen ${lb ? 'los' : 'tus'} árboles de honor: ${arbolesDe(estado.compras).map((t) => ({ ceibo: 'un ceibo', amate: 'un amate', maquilishuat: 'un maquilishuat' })[t]).join(', ')}.` : '')
     + (estado.eco ? ` ${lb ? 'El eco' : 'Tu eco'}, una sombra quieta en el sendero, marca dónde ${lb ? 'estaba el libro' : 'estabas'} hace un año: ${entero(estado.eco.sats)} sats.` : '')
-    + (estado.valle ? ` ${textoValle(estado.valle)}` : '')
+    + (estado.valle ? ` ${textoValle({ ...estado.valle, animal: vecinosVivos.get(estado.host)?.lista?.find((v) => v.animal)?.t ?? '' })}` : '') // (45) el animal que está dibujado
     + (estado.osos ? ` ${textoOsos(estado.osos.n)}` : '');
 }
 

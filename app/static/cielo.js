@@ -256,6 +256,13 @@
     posadas: true, // 161 · del 16 al 23 de diciembre, de 18:30 a 20:00: la posada, cada noche frente a otra casa (religiosa)
     mejenga: true, // 163 · los domingos de 15:00 a 16:30 (fuera de la Navidad): las porterías de palo y los oseznos jugando en la plaza
     cuentos: true, // 164 · las noches de luna llena, de 20:00 a 20:30: la abuela en la plaza y los oseznos sentados en rueda
+    // (Campamento 45) Los animales de aquí, quietos (con `false`, ese animal no sale y ese rato es el de siempre).
+    gallo: true, // 172 · de 5:00 a 6:00, el gallo en la plaza
+    garrobo: true, // 54 · en la época seca, de 11:00 a 14:00, un garrobo al sol en la plaza
+    zanates: true, // 172 · de 17:30 a 18:30, tres zanates en fila en el suelo de la plaza
+    tecolote: true, // 173 · una noche de cada cuatro (nunca con luna llena ni en Navidad), el tecolote en la rama del árbol de la plaza (en algunos lugares es de mal agüero)
+    vacas: true, // 174 · de 11:30 a 14:00, las vacas del potrero echadas
+    garza: true, // 175 · la garza pesca en una orilla del lago por la mañana y en la otra por la tarde
   };
   /**
    * (Campamento 42) El domingo de Pascua de un año (AAAA-MM-DD), con el cálculo gregoriano de siempre (Meeus/Jones/Butcher). Es la misma
@@ -383,6 +390,38 @@
     if (atolada(f) && md <= '07-07') return 'Es sábado de atolada: por la tarde hay atol de elote en el pueblo.';
     return null;
   }
+  // ---------------------------------------------------------------------------------------------------- (Campamento 45) los animales de aquí
+  /** (45) Un sorteo de 0 a n−1 por fecha (revuelto, como `bitSemana`): igual en todos los aparatos, sin guardar nada. */
+  const sorteo = (f, n) => { let x = (Math.round(Date.parse(`${f}T00:00:00Z`) / 864e5) * 2654435761) >>> 0; x ^= x >>> 15; x = Math.imul(x, 2246822519) >>> 0; x ^= x >>> 13; return x % n; };
+  /**
+   * (Campamento 45, ideas 172, 54 y 173; la 172 de la v5: «el reloj de los animales») El animal de la hora en la plaza, uno a la vez y
+   * quieto (va en los trazos de los vecinos: arte-vecinos.js, `reparto`): el gallo de 5:00 a 6:00, un garrobo al sol de 11:00 a 14:00 en
+   * la época seca, tres zanates en fila de 17:30 a 18:30 y, cuando el pueblo duerme, una noche de cada cuatro, el tecolote en la rama baja
+   * del árbol de la plaza (nunca con luna llena ni en Navidad: el árbol es entonces el pino). La noche es la de la fecha de la tarde
+   * (pasada la medianoche, la del día antes). Como la milpa (43), se mira la hora **al dibujar el turno**: sin aviso nuevo. '' si no toca.
+   */
+  function animalDelPueblo(f, h) {
+    const C = COSTUMBRES;
+    if (h >= 5 && h < 6) return C.gallo ? 'gallo' : '';
+    if (h >= 11 && h < 14) return C.garrobo && epoca(f) === 'seca' ? 'garrobo' : '';
+    if (h >= 17.5 && h < 18.5) return C.zanates ? 'zanates' : '';
+    if (h >= 22 || h < 4.5) {
+      const noche = h < 4.5 ? diaAntes(f) : f;
+      return C.tecolote && turno(f, h) === 'duerme' && !navidad(f) && !navidad(noche) && !lunaDeLaNoche(noche) && sorteo(noche, 4) === 0 ? 'tecolote' : '';
+    }
+    return '';
+  }
+  /**
+   * (Campamento 45, ideas 174 y 175) Lo del valle que cambia con la hora sin que nada se mueva: poses quietas que enseña el CSS
+   * (`html[data-valle]`, separadas por espacios), como las de la cumbre (0 capas, 0 animaciones; ya están dibujadas):
+   *   vacas  11:30–14:00 (174): las vacas del potrero, echadas (la pose de la noche)
+   *   garza  12:00–19:00 (175): la garza pesca en la otra orilla del lago (de noche no hay garza)
+   */
+  const VALLE = [
+    { id: 'vacas', cuando: (_f, h) => COSTUMBRES.vacas && h >= 11.5 && h < 14, pesa: { capas: 0, anim: 0 } },
+    { id: 'garza', cuando: (_f, h) => COSTUMBRES.garza && h >= 12 && h < 19, pesa: { capas: 0, anim: 0 } },
+  ];
+  const poseValle = (f, h) => VALLE.filter((v) => v.cuando(f, h)).map((v) => v.id).join(' ');
   /**
    * (Campamento 35, idea 102) El turno del Pueblo de los Osos: quién está en la calle según la hora y el día (El Salvador). Amanece
    * (5:00–7:00: el que se estira, el panadero, la que barre), mañana (hasta las 11:30; entre semana los oseznos están en la escuela,
@@ -614,11 +653,12 @@
    * (Campamento 51, idea 223) El director del valle: con la fecha y la hora, qué se ve. Pura y sin guardar nada (lo mismo en todos los
    * aparatos). { foco, rareza, rutina, turno, mueve, ambiente }: el foco del momento (o 'rutina'), su peldaño, la rutina del día, el
    * turno del pueblo (`turno`), lo que se mueve (`mueve`: uno, el del foco si trae a alguien), el segundo principal de las pantallas
-   * anchas (`mueve2`, campamento 49) y los ambientales (hasta tres).
+   * anchas (`mueve2`, campamento 49) y los ambientales (hasta tres). (45) `animal`: el de la hora en la plaza; `valle`: las poses
+   * quietas del potrero y del lago.
    */
   function director(f, h) {
     const fo = foco(f, h);
-    return { foco: fo.id, rareza: fo.rareza, rutina: rutinaDelDia(f), turno: turno(f, h), mueve: mueve(f, h), mueve2: mueve2(f, h), ambiente: ambiente(f, h), cumbre: poseCumbre(f, h), tu: poseTu(f, h) };
+    return { foco: fo.id, rareza: fo.rareza, rutina: rutinaDelDia(f), turno: turno(f, h), mueve: mueve(f, h), mueve2: mueve2(f, h), ambiente: ambiente(f, h), cumbre: poseCumbre(f, h), tu: poseTu(f, h), animal: animalDelPueblo(f, h), valle: poseValle(f, h) };
   }
   /**
    * (Campamento 51, idea 228) La frase del foco para la línea de hoy: solo si ese día tiene algo raro (de mes o más raro), la del
@@ -654,7 +694,7 @@
   function mapaDelDia(f, ancho = false) {
     const t = [];
     for (let q = 0; q < 288; q++) {
-      const h = q / 12, dr = director(f, h), clave = `${dr.turno}|${dr.foco}|${dr.mueve}|${dr.mueve2}|${dr.ambiente.join(' ')}|${dr.cumbre}|${dr.tu}`;
+      const h = q / 12, dr = director(f, h), clave = `${dr.turno}|${dr.foco}|${dr.mueve}|${dr.mueve2}|${dr.ambiente.join(' ')}|${dr.cumbre}|${dr.tu}|${dr.animal}|${dr.valle}`;
       if (t.length && t.at(-1).clave === clave) continue;
       const pm = PESO_MUEVE[dr.mueve], amb = dr.ambiente.map((id) => AMBIENTALES.find((a) => a.id === id).pesa);
       // (49, 275) En pantallas anchas, el segundo principal suma su capa.
@@ -814,6 +854,9 @@
     // (Campamento 48) Las poses de «Tú» (acampa, de espaldas, con capote); la fiesta del hito también lo despierta.
     const pt = fiestaHitoViva ? '' : poseTu(d, h);
     if (pt) raiz.dataset.tu = pt; else delete raiz.dataset.tu;
+    // (Campamento 45) Las vacas echadas a mediodía y la garza en la otra orilla por la tarde (poses quietas: nada se redibuja).
+    const pv = poseValle(d, h);
+    if (pv) raiz.dataset.valle = pv; else delete raiz.dataset.valle;
     raiz.dataset.tinta = ti;
     raiz.style.setProperty('--cielo-txt', t.txt);
     raiz.style.setProperty('--cielo-txt2', t.txt2);
@@ -831,5 +874,5 @@
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
   window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, pascua, fiestaDelAnio, turnoDelAnio, mueveAnio, costumbres: COSTUMBRES, temporadaDelPueblo, temporadaAhora, faenaDelDia, posadaDe, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
-    director, foco, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+    director, foco, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, animalDelPueblo, poseValle, valle: VALLE, sorteo, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

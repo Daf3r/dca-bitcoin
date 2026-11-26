@@ -51,7 +51,7 @@ En `app/static/cielo.js`, la misma tabla `COSTUMBRES` del 42. Con `false`, ese r
 - **155 · la ramada que se levanta el jueves y el viernes** (v5, 240): historia de varios días, campamento 53 (la maqueta `s-ramada` existe en `prototipo-vida5.patch`).
 - **161 · el farolito que se queda encendido en la puerta de cada casa visitada** (v5): **arte nuevo** (un farolito de puerta) y memoria de varios días. **Para Fable**; hoy la posada no deja rastro.
 - **163 · la pelota que se queda en la plaza hasta el lunes** (v5, 254): campamento 54.
-- **164**: la v5 también pedía nadie hablando: así está (sin globos). El garrobo de la maqueta de los mangos es la idea 54 (campamento 45).
+- **164**: la v5 también pedía nadie hablando: así está (sin globos). El garrobo de la maqueta de los mangos es la idea 54 (campamento 45). *(Campamento 45: hecho; el garrobo es una de las horas del reloj de los animales, de 11:00 a 14:00 en la seca, junto a la banca del árbol de la plaza: ver [45-animales-de-aqui.md](45-animales-de-aqui.md).)*
 
 ## Medido (banco `--rapido`, 390×664, mil compras, nodos con «esenciales»; antes = la base `claude/vida-42` en los mismos momentos)
 | Momento | Nodos antes → después | Animaciones a la vista («todos») antes → después |

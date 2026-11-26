@@ -161,7 +161,7 @@ export function sitiosPueblo({ W, H, forma, by, bx, pts = [], lago = null, techo
  */
 export function lugaresPueblo(sit) {
   const { u, yg, piezas, sol } = sit;
-  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [], perro: [], farol: [], forma: sit.forma }, delante = []; // (41) `forma`: en el teléfono, la mesa corta
+  const lug = { atrio: [], corredor: [], calle: [], plaza: [], banca: [], poste: [], portal: [], ocupado: [], perro: [], farol: [], rama: [], forma: sit.forma }, delante = []; // (41) `forma`: en el teléfono, la mesa corta
   for (const q of piezas) {
     const k = u * q.s;
     if (q.tipo === 'iglesia') {
@@ -171,6 +171,8 @@ export function lugaresPueblo(sit) {
     } else if (q.tipo === 'plaza') {
       const w = (sit.forma === 'tel' || sit.forma === 'acostado' ? 24 : 30) * k, cx = q.x + w * 0.42;
       lug.banca.push([cx + w * 0.2, yg + 0.5 * k, k]);
+      // (Campamento 45, idea 173) La rama baja del árbol de la plaza, del lado del astro y dentro de su copa: donde se posa el tecolote.
+      lug.rama.push([cx + sol * 2.2 * k, yg - 7.8 * k, k]);
       // (36) Frente al nacimiento de Navidad, del lado contrario al astro y con aire (no lo tapan).
       lug.portal.push([cx + w * 0.62 - sol * 14 * k, yg + 2.4 * k, k]);
       lug.poste.push([q.x + 3.6 * k, yg - 5.1 * k, k], [q.x + w - 1 * k, yg - 5.1 * k, k]);

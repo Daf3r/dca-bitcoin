@@ -254,9 +254,15 @@ const TIPOS = {
   porteria: () => [['pelo2', p([-4, 0], [-3.7, 0], [-3.7, -5], [3.7, -5], [3.7, 0], [4, 0], [4, -5.3], [-4, -5.3])]],
   // (164) el osezno sentado en el suelo, en la rueda de los cuentos
   oseznoSuelo: (r) => [['pelo', e(0, -1.5, 2.0, 1.5)], ['pelo', e(-1.5, -0.4, 1.0, 0.5)], ['pelo', e(1.5, -0.4, 1.0, 0.5)], [r, p([-1.7, -2.6], [1.7, -2.6], [1.9, -1.0], [-1.9, -1.0])], ...cabeza(0, 2.2, false)],
+  // ---- (Campamento 45) Los animales de aquí: los de las maquetas aprobadas (prototipo-vida4.patch), sin cambios de forma. Quietos y en
+  // los tonos de siempre (lo oscuro, la cresta roja, el verde del garrobo, los ojos encendidos): van en los mismos trazos (0 nodos).
+  gallo: () => [['rasgo', p([-1.6, -1.0], [-1.9, -2.8], [-1.2, -2.0], [-0.2, -2.2], [0.5, -3.4], [1.1, -3.6], [1.6, -3.1], [1.2, -2.9], [1.1, -1.6], [0.3, -0.8], [0.3, 0], [0, 0], [0, -0.8], [-0.9, -0.8])], ['r1', p([0.5, -3.5], [0.8, -4.1], [1.1, -3.6], [1.4, -4.0], [1.5, -3.3])]],
+  zanates: () => [['rasgo', p([-3.2, -0.9], [-2.2, -1.3], [-1.6, -1.0], [-2.0, -0.6], [-1.2, 0], [-3.4, -0.5])], ['rasgo', p([0.2, -0.9], [1.2, -1.3], [1.8, -1.0], [1.4, -0.6], [2.2, 0], [0, -0.5])], ['rasgo', p([3.8, -0.9], [4.8, -1.3], [5.4, -1.0], [5.0, -0.6], [5.8, 0], [3.6, -0.5])]],
+  garrobo: () => [['r0', p([-3.4, -0.3], [-1.2, -0.9], [0.6, -1.3], [1.8, -1.9], [2.7, -1.7], [2.9, -1.2], [1.9, -0.9], [1.5, -0.3], [0.9, 0], [0.7, -0.5], [-0.8, -0.3], [-1.0, 0], [-1.5, 0], [-1.5, -0.3])], ['rasgo', e(2.3, -1.5, 0.18)]],
+  tecolote: () => [['rasgo', e(0, -1.6, 1.25, 1.6)], ['rasgo', p([-1.2, -2.6], [-1.0, -3.6], [-0.4, -3.0])], ['rasgo', p([1.2, -2.6], [1.0, -3.6], [0.4, -3.0])], ['brasa', e(-0.5, -2.2, 0.32)], ['brasa', e(0.5, -2.2, 0.32)]],
 };
 /** (Campamento 41) Lo que no es un vecino sino una cosa en el suelo: sin sombra de pie, no cuenta entre los ocho y no aparta a nadie. */
-export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola', 'porteria']);
+export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola', 'porteria', 'gallo', 'zanates', 'garrobo', 'tecolote']); // (45) los animales de aquí
 /** (Campamento 40) Sin sombra de pie, pero sí es un vecino (cuenta y aparta a los demás): la hamaca, con sus postes y el que duerme en ella. */
 const SIN_PIE = new Set(['hamaca', 'hamacaPostes', 'hamacaSola', 'tortilleraManos', 'estrellita']); // (49) las partes que van a su capa no repiten la sombra
 export const PERSONAJES = Object.keys(TIPOS);
@@ -333,6 +339,12 @@ export function carta(dia, t, n) {
   const sal = [...t].reduce((a, c) => a + c.charCodeAt(0), 0);
   return (((numDia(dia) + sal) % n) + n) % n;
 }
+/** (Campamento 45) El sitio del reloj de los animales: primero junto a la banca del árbol de la plaza ([sitio, i, unidades de lado]). */
+const RELOJ = {
+  gallo: [['banca', 0, 0], ['banca', 0, -3], ['plaza', 5, 1], ['plaza', 4, 2]],
+  garrobo: [['banca', 0, 0], ['banca', 0, -3], ['plaza', 4, 3], ['plaza', 5, 1]],
+  zanates: [['banca', 0, -2], ['banca', 0, -4], ['plaza', 5, -1], ['plaza', 4, 0]],
+};
 /** (Campamento 52) Los turnos de un día cualquiera (los de los vecinos con oficio): en ellos salen las cosas de cada quien (237). */
 const DIARIOS = ['alba', 'amanece', 'manana', 'mananaLibre', 'tp-mangos', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'mercado'];
 /** (Campamento 40, idea 145) Los turnos en que el perro se echa en otro sitio (dibujado con los vecinos; el de siempre se esconde). */
@@ -358,7 +370,7 @@ export const VECINOS = {
  * cantón (144; montana.js lo saca de la hora al dibujar el turno), o null. (Campamento E) `animo`: el del valle según la semana del
  * precio (lib.js: `ANIMOS`; 'calma', el de siempre).
  */
-export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null, hora = null, animo = 'calma', temporada = null } = {}) {
+export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null, hora = null, animo = 'calma', temporada = null, animal = '' } = {}) {
   const L = [];
   const en = (sitio, i, tipo, extra = {}) => { const q = lug[sitio]?.[i]; if (q) L.push({ t: tipo, x: q[0] + (extra.dx ?? 0) * q[2], y: q[1] + (extra.dy ?? 0) * q[2], k: q[2], ...extra }); };
   const oseznos = (cuantos, tipo = null) => {
@@ -752,6 +764,16 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     if (['manana', 'mananaLibre', 'tp-mangos', 'siesta', 'tarde', 'vuelta'].includes(t)) cosa(sem === 6 ? 'olla' : 'comal', [['calle', 1, -4], ['calle', 1, 4]]);
     if (['siesta', 'tarde', 'vuelta'].includes(t)) cosa('atarraya', [['corredor', 2, 3], ['corredor', 1, 3], ['corredor', 0, -3]]);
     if (!fuera.some((v) => v.quien === 'tienda' && v.t === 'escoba')) cosa('escobaSola', [['corredor', 1, 2.6], ['corredor', 1, -2.6]], [0, 1.5, -1.5]);
+  }
+  // ---- (Campamento 45) El reloj de los animales (172, con la 54 y la 173; cielo.js: `animalDelPueblo`): el animal de la hora, quieto,
+  // en un solo sitio de la plaza: junto a la banca, bajo el árbol (detrás de la calle: nunca se le pone delante al panadero que cruza
+  // ni al que camina). Va el último y solo donde no tapa a nadie: si la banca está ocupada (la hamaca, la siesta), unos pasos más allá
+  // o en la orilla de la plaza; si no cabe, ese rato no sale. El tecolote, en la rama baja del árbol, dentro de su copa (`lug.rama`).
+  if (animal === 'tecolote') { const q = lug.rama?.[0]; if (q) fuera.push({ t: 'tecolote', x: q[0], y: q[1], k: q[2], animal: true }); }
+  else if (RELOJ[animal]) {
+    const v = RELOJ[animal].flatMap(([sitio, i, dx0]) => { const q = lug[sitio]?.[i]; return q ? [0, 1.5, -1.5].map((dx) => ({ t: animal, x: q[0] + (dx0 + dx) * q[2], y: q[1] - 0.2 * q[2], k: q[2], animal: true })) : []; })
+      .find((w) => !choca(cajaVecino(w), m * w.k) && dentro(w));
+    if (v) { fuera.push(v); puestos.push(cajaVecino(v)); }
   }
   // (49, idea 118) La ronda: en la mañana de la que barre y en la tarde de la pelota, cuando el actor descansa, la abuela se mece en su
   // taburete (su capa, la misma fase: nunca los dos a la vez).
