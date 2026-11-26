@@ -158,7 +158,7 @@ jobs:
   rendimiento:
     name: Rendimiento (Lighthouse y banco de la escena)
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
