@@ -259,10 +259,19 @@ const TIPOS = {
   gallo: () => [['rasgo', p([-1.6, -1.0], [-1.9, -2.8], [-1.2, -2.0], [-0.2, -2.2], [0.5, -3.4], [1.1, -3.6], [1.6, -3.1], [1.2, -2.9], [1.1, -1.6], [0.3, -0.8], [0.3, 0], [0, 0], [0, -0.8], [-0.9, -0.8])], ['r1', p([0.5, -3.5], [0.8, -4.1], [1.1, -3.6], [1.4, -4.0], [1.5, -3.3])]],
   zanates: () => [['rasgo', p([-3.2, -0.9], [-2.2, -1.3], [-1.6, -1.0], [-2.0, -0.6], [-1.2, 0], [-3.4, -0.5])], ['rasgo', p([0.2, -0.9], [1.2, -1.3], [1.8, -1.0], [1.4, -0.6], [2.2, 0], [0, -0.5])], ['rasgo', p([3.8, -0.9], [4.8, -1.3], [5.4, -1.0], [5.0, -0.6], [5.8, 0], [3.6, -0.5])]],
   garrobo: () => [['r0', p([-3.4, -0.3], [-1.2, -0.9], [0.6, -1.3], [1.8, -1.9], [2.7, -1.7], [2.9, -1.2], [1.9, -0.9], [1.5, -0.3], [0.9, 0], [0.7, -0.5], [-0.8, -0.3], [-1.0, 0], [-1.5, 0], [-1.5, -0.3])], ['rasgo', e(2.3, -1.5, 0.18)]],
+  // (Campamento 44) Lluvia y verano: las poses de la maqueta v4 (`prototipo-vida4.patch`), tal cual: la vecina con su paraguas, el que se
+  // tapa con una hoja de huerta (camisa sin mangas: los brazos arriba la sujetan) y el osezno que salta en un charco; los charcos, de la
+  // maqueta v5 (`charcos3`, en el tono de la sombra con un brillo de pelo).
+  paraguas: (r) => [...cuerpo(), ...brazos(0, 1), ...vestido(r), ...cabeza(),
+    ['rasgo', p([2.1, -10.4], [2.35, -10.4], [2.35, -4.6], [2.1, -4.6])], ['rasgo', ['p', arco(1.0, -9.3, 4.6, 2.5, 180, 360, 10)]]], // la tela del paraguas: los mismos puntos de la maqueta
+  hojaHuerta: (r) => [...cuerpo(), ...brazos(1, 1), ...camisa(r).map(([t, [, pts]]) => [t, ['p', pts.filter(([x, y]) => !(Math.abs(x) > 2.2 && y > -3.5))]]), ...cabeza(0, 0.15),
+    ['r0', p([-5.0, -7.5], [-4.6, -8.5], [-2, -9.5], [1.5, -9.7], [4.8, -8.8], [5.4, -7.9], [1.6, -8.7], [-2, -8.6])], ['pelo2', e(-2.3, -8.8, 0.55)], ['pelo2', e(2.3, -9.0, 0.55)]],
+  oseznoSalta: (r) => [...mv([...cuerpo(), ...brazos(1, 1), ...pantaloncito(r), ...cabeza(0, 0, false)], 0, -1.3), ['som', e(0, 0.25, 3.4, 0.6)], ['pelo2', e(-2.6, -0.5, 0.35, 0.5)], ['pelo2', e(2.7, -0.7, 0.35, 0.5)]],
+  charcos3: () => [['som', e(-4, 0, 3.4, 0.75)], ['som', e(2.4, 0.9, 2.5, 0.55)], ['som', e(6.2, -0.4, 1.5, 0.38)], ['pelo2', e(-4.6, -0.15, 1.3, 0.16)]],
   tecolote: () => [['rasgo', e(0, -1.6, 1.25, 1.6)], ['rasgo', p([-1.2, -2.6], [-1.0, -3.6], [-0.4, -3.0])], ['rasgo', p([1.2, -2.6], [1.0, -3.6], [0.4, -3.0])], ['brasa', e(-0.5, -2.2, 0.32)], ['brasa', e(0.5, -2.2, 0.32)]],
 };
 /** (Campamento 41) Lo que no es un vecino sino una cosa en el suelo: sin sombra de pie, no cuenta entre los ocho y no aparta a nadie. */
-export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola', 'porteria', 'gallo', 'zanates', 'garrobo', 'tecolote']); // (45) los animales de aquí
+export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola', 'porteria', 'gallo', 'zanates', 'garrobo', 'tecolote', 'charcos3']); // (45) los animales de aquí; (44) los charcos
 /** (Campamento 40) Sin sombra de pie, pero sí es un vecino (cuenta y aparta a los demás): la hamaca, con sus postes y el que duerme en ella. */
 const SIN_PIE = new Set(['hamaca', 'hamacaPostes', 'hamacaSola', 'tortilleraManos', 'estrellita']); // (49) las partes que van a su capa no repiten la sombra
 export const PERSONAJES = Object.keys(TIPOS);
@@ -346,9 +355,9 @@ const RELOJ = {
   zanates: [['banca', 0, -2], ['banca', 0, -4], ['plaza', 5, -1], ['plaza', 4, 0]],
 };
 /** (Campamento 52) Los turnos de un día cualquiera (los de los vecinos con oficio): en ellos salen las cosas de cada quien (237). */
-const DIARIOS = ['alba', 'amanece', 'manana', 'mananaLibre', 'tp-mangos', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'mercado'];
+const DIARIOS = ['alba', 'amanece', 'manana', 'mananaLibre', 'tp-mangos', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'tp-lluvia', 'pupusas', 'tp-charcos', 'fresca', 'mercado']; // (44) la tarde de lluvia y los charcos
 /** (Campamento 40, idea 145) Los turnos en que el perro se echa en otro sitio (dibujado con los vecinos; el de siempre se esconde). */
-export const PERRO_TURNOS = ['alba', 'amanece', 'manana', 'tortillas', 'salida', 'siesta', 'pupusas', 'posada', 'fresca', 'tp-mejenga']; // (43) en la mejenga se echa en la calle: la plaza es la cancha
+export const PERRO_TURNOS = ['alba', 'amanece', 'manana', 'tortillas', 'salida', 'siesta', 'pupusas', 'posada', 'fresca', 'tp-mejenga', 'tp-charcos']; // (43) en la mejenga se echa en la calle: la plaza es la cancha; (44) los charcos son la hora de las pupusas
 /**
  * (Campamento 52, idea 230) Los ocho vecinos de siempre: cada uno con su color de ropa (el mismo en todos los turnos: lo fija la persona,
  * no el turno) y su prenda. Ninguno lleva nombre ni es nadie de la familia; las ventanas (una por persona con cuenta) no se tocan.
@@ -383,7 +392,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   // que nadie quede encima; si no cabe, en su sitio de siempre. Así, en sus turnos, el perro siempre va con los vecinos.
   let perroHoy = null;
   const perro = (sitio, i, dx = 0, extra = {}) => { const q = lug[sitio]?.[i]; perroHoy = q ? { x: q[0] + dx * q[2], y: q[1] + (extra.dy ?? 0) * q[2], k: q[2], bajo: Boolean(extra.bajo) } : null; };
-  const c = (m) => carta(dia, t === 'vuelta' ? 'tarde' : t === 'salida' ? 'tortillas' : t, m); // la vuelta y la salida siguen la carta de su turno de antes
+  const c = (m) => carta(dia, t === 'vuelta' ? 'tarde' : t === 'salida' ? 'tortillas' : t === 'tp-charcos' ? 'pupusas' : t, m); // la vuelta y la salida siguen la carta de su turno de antes (44: los charcos, la de las pupusas)
   const md = (dia || '').slice(5), sem = dia ? new Date(`${dia}T12:00:00Z`).getUTCDay() : -1;
   const navidad = Boolean(md) && (md >= '12-01' || md <= '01-06');
   // (40, 144) La que baja del cantón por el camino real (de 5:30 a 7:00) y vuelve a subir (de 16:00 a 17:30); va al final de la lista.
@@ -524,7 +533,24 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     if (milpero) quien('milpero', 'calle', 0); else if (k === 0) quien('tienda', 'calle', 0); else if (k === 1) quien('sacristan', 'atrio', 1);
     if (t === 'vuelta') delCanton();
   }
-  else if (t === 'pupusas' || t === 'posada') {
+  // (Campamento 44, idea 165) La tarde de lluvia (mayo–octubre, 14:00–17:45, salvo la canícula y las tardes de costumbre: cielo.js,
+  // `llueveLaTarde`): la de la tienda y la maestra con su paraguas, uno tapándose con una hoja de huerta (el milpero los días que baja; si
+  // no, el pescador), la abuela en su corredor y los oseznos bajo el corredor de al lado. Nadie en la plaza: no hay pelota (la franja de
+  // la pelota queda sin actor) ni recado.
+  else if (t === 'tp-lluvia') {
+    // Los oseznos van primero (son la figura de la tarde): los mayores se apartan de ellos, no al revés.
+    const bajo = lug.corredor?.length > 1 ? 1 : 0, dx0 = bajo ? 0 : 3.6;
+    en('corredor', bajo, 'osezno', { s: OSEZNO, r: 1, dx: dx0 - 1.4 }); en('corredor', bajo, 'oseznoArriba', { s: OSEZNO, r: 0, dx: dx0 + 1.6, f: -1 });
+    if (lug.corredor?.length > 2) en('corredor', 2, 'osezno', { s: OSEZNO, r: 2, f: -1 });
+    quien('abuela', 'corredor', 0);
+    quien('tienda', 'calle', 0, { t: 'paraguas', alt: [['calle', 0, -5]] });
+    quien('maestra', 'atrio', 1, { t: 'paraguas', f: -1, alt: [['atrio', 0], ['calle', 1, 5]] });
+    quien(milpero ? 'milpero' : 'pescador', 'calle', 1, { t: 'hojaHuerta', alt: [['calle', 0, -8], ['atrio', 2], ['atrio', 3], ['plaza', 4]] });
+  }
+  else if (t === 'pupusas' || t === 'posada' || t === 'tp-charcos') {
+    // (Campamento 44, idea 166) Al escampar (17:45–18:30), la hora de las pupusas con los charcos en la plaza y dos oseznos saltando en
+    // ellos (quietos: el salto es la pose). Van los primeros: con ocho como mucho, no se quedan fuera.
+    if (t === 'tp-charcos') { en('plaza', 2, 'charcos3', { dx: 1 }); en('plaza', 1, 'oseznoSalta', { s: OSEZNO, r: 0 }); en('plaza', 3, 'oseznoSalta', { s: OSEZNO, r: 2, f: -1 }); }
     // (36, idea 112) En Navidad, al anochecer, además la de la tienda y su osezno miran el nacimiento (de espaldas; el nacimiento no cambia).
     if (t === 'posada') { quien('tienda', 'portal', 0, { t: 'espaldas' }); en('portal', 0, 'osezno', { r: 2, s: OSEZNO, dx: 3.2, dy: 0.5 }); }
     const k = c(2);
@@ -695,7 +721,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     junto('corredor', 0, 4.6, gente); // con la abuela, en su corredor
     if (animo === 'abrigo') { const a = libre(gente); if (a) { quien(a, 'corredor', 1, { t: 'sentado', animo }); junto('corredor', 1, 4.6, gente); } } // y otra pareja en el de al lado
   }
-  if (conAnimo && (animo === 'aire' || animo === 'plaza')) { // uno de paseo en la plaza; con «plaza», dos
+  if (conAnimo && (animo === 'aire' || animo === 'plaza') && t !== 'tp-lluvia') { // uno de paseo en la plaza; con «plaza», dos (con lluvia, nadie pasea)
     paseo(1, ['maestra', 'tienda', 'tortillera', 'sacristan']);
     if (animo === 'plaza') paseo(3, ['panadero', 'pescador', 'milpero', 'tienda'].filter((id) => id !== 'milpero' || milpero), -1);
   }
@@ -734,7 +760,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   // lluviosa se recoge al empezar la siesta, antes del aguacero. Delante de una casa con corredor donde no tape a nadie; si no cabe, no sale.
   const lluviosa = Boolean(md) && md.slice(0, 2) >= '05' && md.slice(0, 2) <= '10';
   // (E) Con el valle al aire libre, la ropa sale cualquier día (los mismos turnos; el jueves, los uniformes; los demás, las sábanas).
-  if ((sem === 1 || sem === 4 || (conAnimo && (animo === 'aire' || animo === 'plaza'))) && (['manana', 'mananaLibre', 'tp-mangos', 'tortillas', 'salida'].includes(t) || (!lluviosa && ['siesta', 'tarde'].includes(t)))) {
+  if ((sem === 1 || sem === 4 || (conAnimo && (animo === 'aire' || animo === 'plaza'))) && (['manana', 'mananaLibre', 'tp-mangos', 'tortillas', 'salida'].includes(t) || ((!lluviosa || temporada?.seco) && ['siesta', 'tarde'].includes(t)))) { // (44, 167) la tarde que no llueve (la canícula), como en la seca
     const tipo = sem === 1 ? 'tendedero' : 'tendederoJueves';
     const sitios = [...(lug.corredor ?? []).slice(2), ...[...(lug.calle ?? [])].reverse(), ...(lug.corredor ?? []).slice(0, 2)];
     // Primero el largo, sin moverlo; si no cabe en ningún sitio, el corto, con unos pasos a un lado si hace falta.
@@ -762,7 +788,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     if (sem !== 1 && (t === 'tortillas' || t === 'salida') && pan) cosa('bicicleta', [['calle', 0, -12.5], ['calle', 0, 7]]);
     else if (sem !== 1 && ensuCasa && !['alba', 'amanece', 'manana', 'mananaLibre', 'tp-mangos', 'mercado'].includes(t)) cosa('bicicleta', [['calle', 0, -4]]);
     if (['manana', 'mananaLibre', 'tp-mangos', 'siesta', 'tarde', 'vuelta'].includes(t)) cosa(sem === 6 ? 'olla' : 'comal', [['calle', 1, -4], ['calle', 1, 4]]);
-    if (['siesta', 'tarde', 'vuelta'].includes(t)) cosa('atarraya', [['corredor', 2, 3], ['corredor', 1, 3], ['corredor', 0, -3]]);
+    if (['siesta', 'tarde', 'vuelta', 'tp-lluvia'].includes(t)) cosa('atarraya', [['corredor', 2, 3], ['corredor', 1, 3], ['corredor', 0, -3]]);
     if (!fuera.some((v) => v.quien === 'tienda' && v.t === 'escoba')) cosa('escobaSola', [['corredor', 1, 2.6], ['corredor', 1, -2.6]], [0, 1.5, -1.5]);
   }
   // ---- (Campamento 45) El reloj de los animales (172, con la 54 y la 173; cielo.js: `animalDelPueblo`): el animal de la hora, quieto,

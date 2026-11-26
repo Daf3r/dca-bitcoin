@@ -256,6 +256,7 @@ const PESOS = [
   ['campamento 43: las temporadas del pue', 30], // 8 comprobaciones (estimado: la mitad del 42)
   ['campamento 45: los animales de aquí', 30], // 8 comprobaciones (estimado: como el 43)
   ['campamento 46: luna y estrellas', 40], // 12 comprobaciones (estimado: algo más que el 45)
+  ['campamento 44: lluvia y verano', 36], // 12 comprobaciones (estimado: como el 46)
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 52: vecinos con oficio', 111], // 22 comprobaciones (medido el 25 nov 2026)
   ['campamento 49: el pueblo se mueve 2', 100], // 25 comprobaciones (medido el 25 nov 2026)
@@ -8165,6 +8166,54 @@ try {
         await t.p.evaluate(() => { document.documentElement.dataset.efectos = 'todos'; });
         ok(gem.cumbre === 'estrellas' && gem.arriba === 'inline' && caras.clase.includes('mira-cielo') && caras.hocico === 'none' && otra.cumbre === 'duermen' && otra.arriba !== 'inline', `46 a ${w} px: la noche de las Gemínidas los de la cumbre miran arriba (${gem.cumbre}, ${gem.arriba}, ${caras.clase}); otra noche duermen (${otra.arriba})`);
         ok([nov, dia, jul, abr, ecl, sin, gem, otra].every((r) => !r.malos) && t.consola.length === 0, `46 a ${w} px: ningún NaN y la consola limpia (${t.consola.slice(0, 2)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 44: lluvia y verano (la tarde de lluvia con sus paraguas y los oseznos bajo el corredor, los charcos al escampar, la canícula sin llovizna y el cerco de la luna; todo quieto)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-09-09'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } }];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // Cambia el día y la hora con la página abierta y mira la escena (al cambiar de día, la escena se vuelve a dibujar: `libro:dia`).
+    const mira = (p, d, h) => p.evaluate(async ([dd, hh]) => {
+      localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar();
+      await new Promise((res) => setTimeout(res, 700));
+      const host = document.getElementById('montana'), raiz = document.documentElement;
+      const malos = [...host.querySelectorAll('[d], [transform]')].filter((e) => /NaN|undefined|Infinity/.test(`${e.getAttribute('d') ?? ''}${e.getAttribute('transform') ?? ''}`)).length;
+      const halo = host.querySelector('.luna .halo'), seco = host.querySelector('.aire-seco');
+      const vecinas = [...host.querySelectorAll('.v-vecinos, :scope > svg.v-capa-vecino')];
+      return {
+        turno: raiz.dataset.turno ?? '', mueve: raiz.dataset.mueve ?? '', lluvia: raiz.hasAttribute('data-lluvia'), canicula: raiz.hasAttribute('data-canicula'), cerco: raiz.hasAttribute('data-cerco'),
+        desc: host.querySelector('#m-desc')?.textContent ?? '', malos, grupos: host.querySelectorAll('.v-vecinos').length, pelota: host.querySelectorAll(':scope > svg.v-actor-pelota').length,
+        gotas: host.querySelectorAll('.clima-lluvia .gota').length, capote: host.querySelectorAll('.tu-lluvia').length, paraguasCumbre: host.querySelectorAll('.c-lluvia').length,
+        seco: seco ? getComputedStyle(seco).display : null, halo: halo ? `${getComputedStyle(halo).transform} ${getComputedStyle(halo).strokeOpacity}` : '',
+        anima: document.getAnimations().filter((a) => a.playState === 'running' && vecinas.some((v) => v.contains(a.effect?.target ?? null)) || a.effect?.target?.closest?.('.halo')).length,
+        nodos: host.querySelectorAll('*').length,
+      };
+    }, [d, h]);
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 15, viewport: { width: w, height: alto } }, conLs);
+        await cerrar(t.p);
+        // 165 · la tarde de lluvia: otro reparto de los mismos trazos; nadie en la plaza y sin la pelota (la franja queda sin actor).
+        const ll = await mira(t.p, '2026-09-09', 15.5);
+        ok(ll.turno === 'tp-lluvia' && ll.lluvia && ll.mueve !== 'pelota' && ll.pelota === 0 && ll.grupos === 1 && ll.gotas === 20 && ll.capote > 0 && /paraguas/.test(ll.desc), `44 a ${w} px: la tarde de lluvia (${JSON.stringify({ t: ll.turno, m: ll.mueve, p: ll.pelota, g: ll.gotas, c: ll.capote })}), con paraguas en la descripción`);
+        // 166 · los charcos al escampar, hasta las 18:30; después, las pupusas de siempre.
+        const ch = await mira(t.p, '2026-09-09', 18), pu = await mira(t.p, '2026-09-09', 18.6);
+        ok(ch.turno === 'tp-charcos' && /charcos/.test(ch.desc) && pu.turno === 'pupusas' && !/charcos/.test(pu.desc) && ch.grupos === 1 && pu.grupos === 1, `44 a ${w} px: los charcos de 17:45 a 18:30 (${ch.turno} → ${pu.turno})`);
+        // 167 · la canícula: la llovizna no se dibuja (se poda), ni el capote ni el paraguas de la cumbre; vuelve el aire seco y la tarde de siempre.
+        const ca = await mira(t.p, '2026-07-22', 15.5);
+        ok(ca.canicula && !ca.lluvia && ca.turno === 'tarde' && ca.gotas === 0 && ca.capote === 0 && ca.paraguasCumbre === 0 && ca.seco === 'inline' && ca.mueve === 'pelota', `44 a ${w} px: en la canícula, sin llovizna (${ca.gotas}), sin capote (${ca.capote}) y con el aire seco (${ca.seco}); la pelota de siempre`);
+        ok(ca.nodos < ll.nodos, `44 a ${w} px: la canícula pesa menos que una tarde de lluvia (${ca.nodos} < ${ll.nodos})`);
+        // 171 · el cerco de la luna: el halo de siempre, más abierto (quieto), las noches de la lluviosa con la luna crecida.
+        const ce = await mira(t.p, '2026-09-22', 21), sinCe = await mira(t.p, '2026-11-26', 21);
+        ok(ce.cerco && /matrix\(0\.65.* 0\.22$/.test(ce.halo) && !sinCe.cerco && !/0\.22$/.test(sinCe.halo), `44 a ${w} px: el cerco de la luna en septiembre con la luna crecida (${ce.halo}); en noviembre, el halo de siempre (${sinCe.halo})`);
+        // Todo quieto: nada de esto anima a los vecinos ni al halo; ningún NaN y la consola limpia.
+        ok([ll, ch, pu, ce].every((r) => r.anima === 0) && [ll, ch, pu, ca, ce].every((r) => !r.malos) && t.consola.length === 0, `44 a ${w} px: ninguna animación nueva (la lluvia, los charcos y el cerco, quietos; en la canícula, la pelota de siempre), ningún NaN y la consola limpia (${[ll, ch, pu, ce].map((r) => r.anima)} ${t.consola.slice(0, 2)})`);
         await t.ctx.close();
       }
     } finally {

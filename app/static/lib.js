@@ -2357,6 +2357,9 @@ export const FRASE_TURNO = {
   'tp-atolada': 'Es sábado de atolada en el pueblo: hay atol de elote en la calle.',
   'tp-posada': 'En el pueblo hay posada: un grupito con farolitos está frente a una casa.',
   'tp-cuentos': 'Es noche de luna llena y los oseznos se sientan en la plaza alrededor de la abuela.',
+  // (Campamento 44) La tarde de lluvia y los charcos al escampar.
+  'tp-lluvia': 'Llueve en el pueblo: unos vecinos van con paraguas y los oseznos se quedan bajo el corredor.',
+  'tp-charcos': 'Acaba de escampar en el pueblo y dos oseznos saltan en los charcos de la plaza.',
 };
 /**
  * (Campamento 52, idea 238) La semana de cada oficio, por día de la semana (0 = domingo): el lunes el panadero descansa (de madrugada,

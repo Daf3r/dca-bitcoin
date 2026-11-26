@@ -170,7 +170,7 @@
     if (h >= 13 && h < 14 && hayActor(f, h, 'hamaca')) return 'hamaca'; // (199) la hamaca de la siesta se mece
     if (h >= 10 && h < 13) return 'teleferico';
     if (h >= 14 && h < 15) return 'perro';
-    if (h >= 15 && h < 16.5) return 'pelota'; // (37) la pelota de los oseznos (el perro cruza antes)
+    if (h >= 15 && h < 16.5 && hayActor(f, h, 'pelota')) return 'pelota'; // (37) la pelota de los oseznos (el perro cruza antes); (44) con lluvia, no sale
     if (h >= 16.5 && h < 18) return 'pericos';
     if (epoca(f) === 'lluviosa' && (h >= 22 || h < 5)) return 'relampagos';
     if (h >= 18 || h < 5) return 'luciernagas';
@@ -186,6 +186,7 @@
     if (a === 'cruza') return t === 'amanece' && semana(f) !== 1;
     if (a === 'palmea') return (t === 'tortillas' || t === 'salida') && semana(f) !== 6;
     if (a === 'hamaca') return t === 'siesta' && !navidad(f);
+    if (a === 'pelota') return t !== 'tp-lluvia'; // (44, 165) las tardes de lluvia los oseznos están bajo el corredor: no hay pelota
     return false;
   }
   /** (Campamento 49, idea 275) Los actores del pueblo: con uno de ellos de principal, en pantallas anchas cabe un segundo en otra zona. */
@@ -269,6 +270,11 @@
     geminidas: true, // 181 · las noches del 13 y del 14 de diciembre los osos de la cumbre miran las estrellas fugaces en vez de dormir
     lucero: true, // 182 · Venus, el lucero de la tarde o de la mañana, cuando toca de verdad
     eclipse: true, // 183 · la luna cobriza en los eclipses totales que se ven desde aquí (tabla de la NASA)
+    // (Campamento 44) Lluvia y verano: la lluvia de calendario (la misma regla de la llovizna de siempre, nunca el clima real).
+    aguacero: true, // 165 · las tardes de lluvia (mayo–octubre, 14:00–17:45): paraguas, la hoja de huerta y los oseznos bajo el corredor
+    charcos: true, // 166 · al escampar (17:45–18:30), dos oseznos saltan en los charcos de la plaza
+    canicula: true, // 167 · del 15 de julio al 15 de agosto las tardes no traen lluvia (fechas fijas y aproximadas)
+    cerco: true, // 171 · las noches de la lluviosa con la luna crecida, un cerco pálido alrededor (de oídas: por confirmar con la familia)
   };
   /**
    * (Campamento 42) El domingo de Pascua de un año (AAAA-MM-DD), con el cálculo gregoriano de siempre (Meeus/Jones/Butcher). Es la misma
@@ -378,7 +384,9 @@
    * (Campamento 43) Lo que la temporada pone en el reparto de ese momento, aparte del turno (lo pasa montana.js a arte-vecinos.js:
    * `reparto`): `milpa`, la faena de la milpa ('' si nadie), y `mangos`, si el sábado de plaza de marzo y abril se bajan mangos.
    */
-  const temporadaDelPueblo = (f, h) => ({ milpa: milpaConGente(f, h), mangos: mangos(f) && turno(f, h) === 'mercado' });
+  // (Campamento 44, 167) `seco`: si la tarde de hoy no llueve en la época lluviosa (la canícula, una tarde de costumbre): la ropa tendida
+  // se queda hasta las 16:00, como en la seca.
+  const temporadaDelPueblo = (f, h) => ({ milpa: milpaConGente(f, h), mangos: mangos(f) && turno(f, h) === 'mercado', seco: epoca(f) === 'lluviosa' && !llueveLaTarde(f) });
   /** (43) La temporada del momento, para el foco ('' si no hay): los mangos, la atolada o la milpa. */
   function temporadaAhora(f, h) {
     const t = turno(f, h);
@@ -394,6 +402,7 @@
     if (md === '08-15' && faenaDelDia(f)) return 'Es tiempo de doblar la milpa: estas mañanas hay gente en ella.';
     if (md === '11-03' && faenaDelDia(f)) return 'Es la tapisca: estas mañanas cosechan la milpa del valle.';
     if (atolada(f) && md <= '07-07') return 'Es sábado de atolada: por la tarde hay atol de elote en el pueblo.';
+    if (md === '07-15' && canicula(f)) return 'Empieza la canícula: hasta mediados de agosto, las tardes no traen lluvia.'; // (44, 167)
     return null;
   }
   // ---------------------------------------------------------------------------------------------------- (Campamento 45) los animales de aquí
@@ -463,6 +472,34 @@
    */
   const ECLIPSES = [['2029-06-25', 20.54, 22.24], ['2033-10-08', 4.28, 5.6], ['2036-08-06', 20.08, 21.67]];
   const eclipse = (f, h) => COSTUMBRES.eclipse && ECLIPSES.some(([d, a, b]) => d === f && h >= a && h < b);
+  // ---------------------------------------------------------------------------------------------------- (Campamento 44) lluvia y verano
+  /** (167) La canícula: del 15 de julio al 15 de agosto (fechas fijas y aproximadas: la de verdad cambia cada año). */
+  const canicula = (f) => COSTUMBRES.canicula && f.slice(5) >= '07-15' && f.slice(5) <= '08-15';
+  /**
+   * (165, 167) ¿Llueve esta tarde? La lluvia de calendario (la misma regla de la llovizna de siempre, nunca el clima real): en la época
+   * lluviosa, salvo en la canícula y salvo las tardes que tienen su costumbre (la mejenga del domingo, la atolada del sábado, la tarde de
+   * una fiesta del año): esas tardes no llueve. Lo leen todos los de la tarde de lluvia: la llovizna del cielo, el capote de «Tú», el
+   * paraguas de los osos de la cumbre y de la interfaz, la fiesta del hito y el pueblo (`html[data-lluvia]`, todo el día).
+   */
+  function llueveLaTarde(f) {
+    if (epoca(f) !== 'lluviosa' || canicula(f) || atolada(f) || (semana(f) === 0 && COSTUMBRES.mejenga)) return false;
+    return ![14, 15, 16, 17].some((h) => turnoDelAnio(f, h));
+  }
+  /** (166) ¿Hay charcos al escampar? Si llovió en el pueblo hasta las 17:45 (el turno de antes era el de la lluvia). */
+  const charcos = (f) => COSTUMBRES.charcos && turno(f, 17.7) === 'tp-lluvia';
+  /** (171) La luz de la luna de una noche (la de las 21:00, como `lunaDeLaNoche`): de 0 (nueva) a 1 (llena). */
+  const luzDeLaNoche = (f) => (1 - Math.cos(2 * Math.PI * faseLunar(new Date(Date.parse(`${f}T00:00:00Z`) + 27 * 3600e3)))) / 2;
+  /**
+   * (171) El cerco de la luna: las noches de la época lluviosa (no en la canícula) con la luna crecida (iluminada al 75 % o más: unas nueve
+   * noches de cada luna, alrededor de la llena), de 19:00 a 5:00 (pasada la medianoche, la noche del día antes). Nunca en un eclipse (la
+   * luna roja manda). Es el halo de siempre, más abierto (`html[data-cerco]`, solo CSS). Que se tome por anuncio de lluvia es de oídas:
+   * por confirmar con la familia (no se escribe en la app).
+   */
+  function cerco(f, h) {
+    if (!COSTUMBRES.cerco || !(h >= 19 || h < 5) || eclipse(f, h)) return false;
+    const n = nocheDe(f, h);
+    return epoca(n) === 'lluviosa' && !canicula(n) && luzDeLaNoche(n) >= 0.75;
+  }
   /**
    * (Campamento 45, ideas 174 y 175) Lo del valle que cambia con la hora sin que nada se mueva: poses quietas que enseña el CSS
    * (`html[data-valle]`, separadas por espacios), como las de la cumbre (0 capas, 0 animaciones; ya están dibujadas):
@@ -514,9 +551,12 @@
     if (h < 12.5) return h >= 12 && escuela(f) ? 'salida' : 'tortillas';
     if (h < 14) return 'siesta';
     if (sem === 0 && h >= 15 && h < 16.5 && COSTUMBRES.mejenga && !navidad(f)) return 'tp-mejenga';
-    if (h < 16) return 'tarde';
-    if (h < 17.75) return atolada(f) ? 'tp-atolada' : 'vuelta';
-    if (h < 20) return md >= '12-01' || md <= '01-06' ? (h >= 18.5 && posadaDe(f) >= 0 ? 'tp-posada' : 'posada') : 'pupusas';
+    // (Campamento 44) Las tardes de lluvia (165), de 14:00 a 17:45, son otro reparto de la tarde y de la vuelta (paraguas, la hoja de
+    // huerta, los oseznos bajo el corredor); al escampar, de 17:45 a 18:30, los charcos (166), antes de las pupusas.
+    const llueve = COSTUMBRES.aguacero && llueveLaTarde(f);
+    if (h < 16) return llueve ? 'tp-lluvia' : 'tarde';
+    if (h < 17.75) return atolada(f) ? 'tp-atolada' : llueve ? 'tp-lluvia' : 'vuelta';
+    if (h < 20) return md >= '12-01' || md <= '01-06' ? (h >= 18.5 && posadaDe(f) >= 0 ? 'tp-posada' : 'posada') : h < 18.5 && charcos(f) ? 'tp-charcos' : 'pupusas';
     if (h < 20.5 && COSTUMBRES.cuentos && lunaDeLaNoche(f)) return 'tp-cuentos';
     return 'fresca';
   }
@@ -593,7 +633,7 @@
     { id: 'zompopos', rareza: 'anio', delDia: zompopos, cuando: (f, h) => zompopos(f) && h >= 7.5 && h < 10, mueve: () => 'zompopos', pesa: { nodos: 0, anim: 0 }, frase: (f) => (f.slice(5) === '05-15' ? 'Empieza la semana de los zompopos de mayo: por las mañanas salen en el valle.' : null) },
     { id: 'azacuanes', rareza: 'anio', delDia: azacuanes, cuando: (f, h) => azacuanes(f) && h >= 8 && h < 16, mueve: () => 'azacuanes', pesa: { nodos: 0, anim: 0 }, frase: (f) => (['10-10', '04-01'].includes(f.slice(5)) ? 'Llegan los azacuanes: estos días pasan sobre el valle a mediodía.' : null) },
     // (Campamento 43) Las temporadas del pueblo: los mangos, la atolada y la milpa con su gente (otros repartos; nada se mueve distinto).
-    { id: 'temporada', rareza: 'anio', delDia: (f) => mangos(f) || atolada(f) || Boolean(faenaDelDia(f)), cuando: (f, h) => temporadaAhora(f, h) !== '', pesa: { nodos: 0, anim: 0 }, frase: fraseTemporada },
+    { id: 'temporada', rareza: 'anio', delDia: (f) => mangos(f) || atolada(f) || Boolean(faenaDelDia(f)) || (f.slice(5) === '07-15' && canicula(f)), cuando: (f, h) => temporadaAhora(f, h) !== '', pesa: { nodos: 0, anim: 0 }, frase: fraseTemporada },
     // (43, idea 161) Desde las 18:30 del 16 al 23 de diciembre, la posada es la de los farolitos (`tp-posada`): la frase, el primer día.
     { id: 'posada', rareza: 'anio', delDia: (f) => navidad(f) && !['12-24', '12-25', '12-31', '01-01'].includes(f.slice(5)), cuando: (f, h) => ['posada', 'tp-posada'].includes(turno(f, h)), pesa: { nodos: 0, anim: 0 }, frase: (f) => (posadaDe(f) === 0 ? 'Empiezan las posadas: cada noche, hasta el 23, un grupito con farolitos llega a una casa del pueblo.' : null) },
     { id: 'luna', rareza: 'mes', delDia: lunaDeLaNoche, cuando: (f, h) => (h >= 19 || h < 5) && lunaDeLaNoche(h < 5 ? diaAntes(f) : f), pesa: { nodos: 0, anim: 0 }, frase: (f) => (lunaDeLaNoche(diaAntes(f)) ? null : 'Esta noche hay luna llena sobre el valle.') },
@@ -680,13 +720,13 @@
    * de siempre (el CSS les cede):
    *   carpa     22:00–5:00 (191): acampa en su sitio, con la luz dentro; no las noches de fiesta (como los de la cumbre)
    *   espaldas  17:30–18:15 (193): mira bajar el sol de espaldas, con la mochila al frente (a la misma hora que los de la cumbre)
-   *   capote    época lluviosa, 14:00–17:45 (192): su capote amarillo
+   *   capote    época lluviosa, 14:00–17:45 (192): su capote amarillo (44: solo las tardes que llueve, `llueveLaTarde`)
    * La fiesta del hito (59) las quita (aplicar).
    */
   const TU = [
     { id: 'carpa', cuando: (f, h) => (h >= 22 || h < 5) && !/^(nb-(cena|misa|doce)|f31-(cena|espera|doce)|n25-polvora|e1-polvora)$/.test(turno(f, h)), pesa: { capas: 0, anim: 0 } },
     { id: 'espaldas', cuando: (_f, h) => h >= 17.5 && h < 18.25, pesa: { capas: 0, anim: 0 } },
-    { id: 'capote', cuando: (f, h) => epoca(f) === 'lluviosa' && h >= 14 && h < 17.75, pesa: { capas: 0, anim: 0 } },
+    { id: 'capote', cuando: (f, h) => llueveLaTarde(f) && h >= 14 && h < 17.75, pesa: { capas: 0, anim: 0 } }, // (44) solo las tardes que llueve (no en la canícula)
   ];
   const poseTu = (f, h) => TU.filter((t) => t.cuando(f, h)).map((t) => t.id).join(' ');
   /**
@@ -760,7 +800,8 @@
     return t.map((x, i) => ({ ...x, hasta: t[i + 1]?.desde ?? 24 }));
   }
   /** (51, idea 228) La frase de la rutina del día, para la descripción de la montaña (lectores de pantalla). */
-  const fraseRutina = (f) => FRASE_RUTINA[rutinaDelDia(f)];
+  // (Campamento 44) Con la tarde de lluvia, la pelota no sale: los oseznos se quedan bajo el corredor.
+  const fraseRutina = (f) => (rutinaDelDia(f) === 'pelota' && COSTUMBRES.aguacero && llueveLaTarde(f) ? 'Por la tarde llueve en el pueblo y los oseznos se quedan bajo el corredor.' : FRASE_RUTINA[rutinaDelDia(f)]);
   /** La franja a la que pertenece la hora. */
   function franja(h) {
     if (h >= 19 || h < 5) return 'noche';
@@ -906,6 +947,11 @@
     const lz = luceroAhora(d, h);
     if (lz) raiz.dataset.lucero = lz; else delete raiz.dataset.lucero;
     raiz.toggleAttribute('data-eclipse', eclipse(d, h));
+    // (Campamento 44) La tarde de lluvia de hoy (165–167: el día entero, lo lee el CSS de la llovizna y de los paraguas), la canícula (el
+    // aire seco de la tarde) y el cerco de la luna (171): nada se redibuja.
+    raiz.toggleAttribute('data-lluvia', llueveLaTarde(d));
+    raiz.toggleAttribute('data-canicula', canicula(d));
+    raiz.toggleAttribute('data-cerco', cerco(d, h));
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
     // (Campamento 28) Los osos de la interfaz se duermen de 22:00 a 5:00 aunque el velo esté apagado, y las tardes (13:00 a 18:00) de la
@@ -938,5 +984,5 @@
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
   window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, pascua, fiestaDelAnio, turnoDelAnio, mueveAnio, costumbres: COSTUMBRES, temporadaDelPueblo, temporadaAhora, faenaDelDia, posadaDe, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
-    director, foco, conejo, figuraDelCielo, geminidas, lucero, luceroAhora, eclipse, eclipses: ECLIPSES, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, animalDelPueblo, poseValle, valle: VALLE, sorteo, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+    director, foco, canicula, llueveLaTarde, charcos, cerco, conejo, figuraDelCielo, geminidas, lucero, luceroAhora, eclipse, eclipses: ECLIPSES, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, animalDelPueblo, poseValle, valle: VALLE, sorteo, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();

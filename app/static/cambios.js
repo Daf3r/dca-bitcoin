@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 44) Lluvia y verano (165, 166, 167 y 171); resume también luna y estrellas (2026-12-zb).
+    id: '2026-12-zc',
+    items: [
+      'Las tardes de lluvia, en el pueblo salen los paraguas y los oseznos se quedan bajo el corredor; al escampar, dos saltan en los charcos.',
+      'En la canícula, de mediados de julio a mediados de agosto, las tardes no traen lluvia.',
+      'Las noches de la época de lluvias, con la luna crecida, la luna lleva un cerco pálido.',
+      'Y desde la última vez: el conejo en la luna llena, las estrellas del cielo de aquí, el lucero y los animales del pueblo a su hora.',
+    ],
+  },
+  {
     // (Campamento 46) Luna y estrellas y la hora exacta de los animales; resume también los animales de aquí (2026-12-za).
     id: '2026-12-zb',
     items: [
