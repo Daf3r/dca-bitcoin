@@ -53,7 +53,7 @@ En `app/static/cielo.js`, la tabla `COSTUMBRES` (arriba de `pascua`). Cambiar `t
 - **218 · el perro junto a la piñata, esperando**: no entra; el perro de siempre sigue en su sitio (ponerlo con los vecinos exige comprobar que nadie quede encima, como en el 41).
 - **Las cumbres y «Tú» en estas fechas** (se estiran, de espaldas al atardecer…): ya lo hacen por la hora (47, 48); nada propio de cada fiesta.
 - **«Más fila en las pupusas»** el Día del Padre y la noche de Gloria: queda la de siempre (la fila del fin de semana).
-- Las **temporadas** del bloque 149–164 (mangos 152, la milpa con su gente 154, la atolada 155, las posadas 161, la mejenga 163, la luna llena 164) son del **campamento 43** según el plan: no se hicieron aquí.
+- Las **temporadas** del bloque 149–164 (mangos 152, la milpa con su gente 154, la atolada 155, las posadas 161, la mejenga 163, la luna llena 164) son del **campamento 43** según el plan: no se hicieron aquí. *(Campamento 43: hechas, ver [43-temporadas-del-pueblo.md](43-temporadas-del-pueblo.md).)*
 
 ## Medido (banco `--rapido`, 390×664, mil compras, nodos con «esenciales»; antes = `main` sin el 42, en los mismos momentos)
 | Momento | Nodos antes → después | Animaciones a la vista («todos») antes → después |

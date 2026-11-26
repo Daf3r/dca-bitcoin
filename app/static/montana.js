@@ -6,7 +6,7 @@ import { reparto, repartoFiesta, svgVecinos, manoDe, luzPupusa, cajaVecino, reco
 import { farolHito as dibujoFarolHito } from './arte-fiesta.js';
 import { sitiosPueblo, lugaresPueblo, TERRAZA, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
 import { OSOS, osos, sitioOsos, piesOsos, dentroDe, osoTu, CAJA_TU, K_OSO, PUNTAS_ESTIRA, PUNTAS_SOMBRERO, zetas, CAJA_ZETAS, plantado, etapaOsoNieve } from './arte-osos.js';
-import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, caminoReal, arbolPrimerDia, cajasArbol, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
+import { escalaValle, formaValle, sitiosValle, sitiosLadera, canton, milpa, sitiosMilpa, caminoReal, arbolPrimerDia, cajasArbol, quebrada, tule, vidaLago, lucesValle, piscuchas, hilosPiscuchas, grabadoLuna, marDeNiebla, potrero, bandadas, zompopos, relampago, sitioRayo, alturaVolcanes } from './arte-valle.js';
 const f1 = (n) => n.toFixed(1);
 /** (Campamento 39) Un círculo como subtrazo, redondeado como el `<circle>` de antes (centro y radio a una décima): para juntar muchos en un trazo. */
 const circuloD = (cx, cy, r) => { const x = Number(f1(cx)), y = Number(f1(cy)), q = Number(f1(r)); return `M${f1(x - q)} ${f1(y)}a${f1(q)} ${f1(q)} 0 1 0 ${f1(2 * q)} 0a${f1(q)} ${f1(q)} 0 1 0 ${f1(-2 * q)} 0Z`; };
@@ -474,7 +474,8 @@ function conArbol(lug, arbol) {
 function opcionesReparto(info, t) {
   const C = window.libroCielo, dia = C?.dia?.() ?? '', hora = C?.hora?.() ?? 12;
   // (Campamento 52) `hora`: los vecinos con oficio están en el sitio de esa hora (no caminan: se dibuja al poner la escena o el turno).
-  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora() };
+  // (Campamento 43) `temporada`: la milpa con su gente y los mangos del sábado de plaza (cielo.js: `temporadaDelPueblo`).
+  return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora(), temporada: C?.temporadaDelPueblo && dia ? C.temporadaDelPueblo(dia, hora) : null };
 }
 // ------------------------------------------------------------------ (Campamento E) el precio, a su ritmo: el ánimo del valle
 // lib.js decide el estado con los cierres diarios (`animoDelValle`); datos.js lo trae con el histórico (`ponerAnimo`). Aquí se recuerda,
@@ -964,7 +965,10 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // (Campamento 35) Los vecinos osos del turno de ahora; sus hilos llevan las piscuchas a la manita de un osezno (o al poste del farol si
   // no hay oseznos en la plaza) y se rehacen con ellos al cambiar de turno (`libro:turno`).
   const pisV = valle.piscuchas.slice(0, piscuchasDelValle(personas)).map((q) => ({ ...q, k: kp, hilo: null }));
-  const C = window.libroCielo, infoV = { lug: conArbol(lugaresPueblo(pb), arbolV), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula,
+  // (Campamento 43, idea 154) La milpa con su gente: dos sitios dentro de la parcela, para los que la trabajan (donde no hay milpa, ninguno).
+  const lugV = lugaresPueblo(pb);
+  lugV.milpa = cm.milpa ? sitiosMilpa(cm.milpa, pb.u * 0.7) : [];
+  const C = window.libroCielo, infoV = { lug: conArbol(lugV, arbolV), sol: solV, cometas: C?.piscuchas && !C.piscuchas(C.dia()) ? [] : pisV, turno: turnoDelPueblo(), conCapa: tocable && !pelicula,
     camino: conCamino && pb.plaza ? { ...valle.camino, u: pb.u, pts, arbol: arbolV, caja: [pb.caja[0], pb.yg - 16 * pb.u, pb.caja[2]] } : null };
   // (Campamento 40, idea 146) Las sombras del pueblo se alargan y se acortan desde su base (el suelo de la calle y el de la terraza):
   // el CSS las tuerce y estira según `data-sombra`, sin redibujarlas.

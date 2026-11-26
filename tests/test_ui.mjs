@@ -253,6 +253,7 @@ const PESOS = [
   ['campamento 39: hacer sitio 2', 25], // 7 comprobaciones
   ['campamento 41: la Navidad entera', 60], // 4 comprobaciones
   ['campamento 42: las fiestas del resto', 60], // 6 comprobaciones (estimado: como el 41)
+  ['campamento 43: las temporadas del pue', 30], // 8 comprobaciones (estimado: la mitad del 42)
   ['campamento 40: el día entero del pueblo', 202], // 37 comprobaciones (medido el 25 nov 2026)
   ['campamento 52: vecinos con oficio', 111], // 22 comprobaciones (medido el 25 nov 2026)
   ['campamento 49: el pueblo se mueve 2', 100], // 25 comprobaciones (medido el 25 nov 2026)
@@ -7993,6 +7994,60 @@ try {
           return { hay: Boolean(c), anim: c ? getComputedStyle(c).animationName : '' };
         });
         ok(quieta.hay && quieta.anim === 'none', `42 a ${w} px: con «ninguno», la piñata quieta en su sitio (${JSON.stringify(quieta)})`);
+        await t.ctx.close();
+      }
+    } finally {
+      anio.parar();
+    }
+  });
+
+  // ---------------------------------------------------------------- campamento 43: las temporadas del pueblo (mangos, la milpa con su gente, la atolada, las posadas, la mejenga y los cuentos de luna llena, con libro.dia)
+  await bloque(async () => {
+    const conLs = [() => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2027-03-14'); localStorage.setItem('libro.efectos', 'todos'); } catch { /* sin almacenamiento */ } }, null];
+    const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
+    // [día, hora, turno, foco, lo que se mueve, el actor en su capa ('' si nadie)]
+    const GUION = [
+      ['2027-03-14', 10.5, 'tp-mangos', 'temporada', 'teleferico', ''], ['2027-03-13', 9, 'mercado', 'temporada', 'gallinas', ''], ['2026-05-06', 8.5, 'manana', 'temporada', 'gallinas', 'barre'],
+      ['2026-07-18', 16.2, 'tp-atolada', 'temporada', 'pelota', 'pelota'], ['2026-07-18', 17, 'tp-atolada', 'temporada', 'pericos', 'pelota'], ['2026-12-18', 19, 'tp-posada', 'posada', 'luciernagas', ''],
+      ['2027-02-14', 15.5, 'tp-mejenga', 'mejenga', 'pelota', 'pelota'], ['2027-02-20', 20.25, 'tp-cuentos', 'luna', 'luciernagas', ''], ['2026-12-20', 15.5, 'tarde', 'rutina-', 'pelota', 'pelota'],
+    ];
+    const mira = (p, d, h) => p.evaluate(async ([dd, hh]) => {
+      localStorage.setItem('libro.dia', dd); localStorage.setItem('libro.hora', String(hh)); window.libroCielo.aplicar();
+      await new Promise((res) => setTimeout(res, 500));
+      const host = document.getElementById('montana'), raiz = document.documentElement, capa = host.querySelector(':scope > svg.v-capa-vecino:not(.v-ronda)');
+      const malos = [...host.querySelectorAll('[d], [transform], [points]')].filter((e) => /NaN|undefined|Infinity/.test(`${e.getAttribute('d') ?? ''}${e.getAttribute('transform') ?? ''}${e.getAttribute('points') ?? ''}`)).length
+        + [...host.querySelectorAll('svg')].filter((x) => /NaN|undefined/.test(`${x.getAttribute('viewBox')}${x.style.cssText}`)).length;
+      const pies = [...(host.querySelector('.v-vecinos .v-vo-pie')?.getAttribute('d') ?? '').matchAll(/M(-?[\d.]+) (-?[\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+      // (154) Los de la milpa: sus pies dentro de la parcela (si en ese tamaño hay milpa).
+      const suelo = host.querySelector('.v-campos .v-mp-suelo'), b = suelo?.getBBox?.();
+      const enMilpa = b ? pies.filter(([x, y]) => x > b.x - 6 && x < b.x + b.width + 6 && y > b.y - 4 && y < b.y + b.height + 4).length : -1;
+      return { turno: raiz.dataset.turno, foco: raiz.dataset.foco, mueve: raiz.dataset.mueve ?? '', actor: capa ? [...capa.classList].find((c) => c.startsWith('v-actor-'))?.slice(8) : '', malos, pies: pies.length, enMilpa, nodos: host.querySelectorAll('*').length };
+    }, [d, h]);
+    const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
+    try {
+      for (const [w, alto] of [[390, 844], [1440, 900]]) {
+        const t = await entrar(navegador, anio, ADMIN, { hora: 10.5, viewport: { width: w, height: alto } }, conLs);
+        await cerrar(t.p);
+        const fallos = [];
+        let maxNodos = 0, milpa = null;
+        for (const [d, h, turno, foco, mueve, actor] of GUION) {
+          const r = await mira(t.p, d, h);
+          maxNodos = Math.max(maxNodos, r.nodos);
+          if (r.turno !== turno || !r.foco?.startsWith(foco) || r.mueve !== mueve || (r.actor ?? '') !== actor || r.malos || r.pies < 2 || r.pies > 8) fallos.push(`${d} ${h}: ${JSON.stringify(r)}`);
+          if (d === '2026-05-06') milpa = r.enMilpa;
+        }
+        eq(fallos, [], `43 a ${w} px: las temporadas del pueblo, cada turno con su gente (de dos a ocho), su foco, lo que se mueve, su actor y ningún NaN (hasta ${maxNodos} nodos)`);
+        // La siembra: donde hay milpa, dos trabajándola; donde no cabe (1440×900), nadie en ella.
+        ok(milpa === -1 || milpa === 2, `43 a ${w} px (154): la milpa con su gente (${milpa === -1 ? 'sin milpa en este tamaño' : `${milpa} en la parcela`})`);
+        ok(maxNodos <= 1000 && t.consola.length === 0, `43 a ${w} px: la escena, como mucho ${maxNodos} nodos, y la consola limpia (${t.consola.slice(0, 2)})`);
+        // Con «ninguno», la pelota de la mejenga se queda quieta (el estado final).
+        const quieta = await t.p.evaluate(async () => {
+          window.libroEfectos.fijar('ninguno'); localStorage.setItem('libro.dia', '2027-02-14'); localStorage.setItem('libro.hora', '15.5'); window.libroCielo.aplicar();
+          await new Promise((res) => setTimeout(res, 400));
+          const c = document.querySelector('#montana > svg.v-actor-pelota');
+          return { hay: Boolean(c), anim: c ? getComputedStyle(c).animationName : '' };
+        });
+        ok(quieta.hay && quieta.anim === 'none', `43 a ${w} px: con «ninguno», la pelota de la mejenga quieta en su sitio (${JSON.stringify(quieta)})`);
         await t.ctx.close();
       }
     } finally {

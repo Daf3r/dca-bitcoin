@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 43) Las temporadas del pueblo; resume también las fiestas del año (2026-12-y), un solo material (x) y el precio (w).
+    id: '2026-12-z',
+    items: [
+      'El pueblo vive sus fiestas del año, cada una el día entero, y ahora también sus temporadas.',
+      'En marzo hay mangos, la milpa tiene quien la siembre y los sábados de julio hay atol.',
+      'En diciembre hay posadas, los domingos mejenga y, con luna llena, cuentos en la plaza.',
+      'Los botones van más ordenados y el pueblo sigue la semana del precio.',
+    ],
+  },
+  {
     // (Campamento 42) Las fiestas del resto del año; resume también un solo material (2026-12-x) y el precio a su ritmo (2026-12-w).
     id: '2026-12-y',
     items: [

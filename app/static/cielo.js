@@ -249,6 +249,13 @@
     nino: true, // 158 · 1 de octubre, Día del Niño: la piñata
     difuntos: true, // 159 · 1 y 2 de noviembre: flores y, al anochecer del 2, las velitas (día de duelo para muchas familias)
     inditos: true, // 160 · 12 de diciembre: los oseznos de inditos a la iglesia (religiosa)
+    // (Campamento 43) Las temporadas del pueblo (lo que cambia con la época, no con una fecha): con `false`, ese rato es el de siempre.
+    mangos: true, // 152 · marzo y abril, las mañanas sin escuela y el sábado de plaza: un osezno baja mangos con su vara bajo el árbol de la plaza
+    milpa: true, // 154 · las dos primeras semanas de la siembra, la dobla y la tapisca, de 6:00 a 10:00: el milpero y otro trabajan la milpa
+    atolada: true, // 155 · los sábados de julio y agosto, de 16:00 a 17:45: la olla del atol en la calle y los oseznos con su elote
+    posadas: true, // 161 · del 16 al 23 de diciembre, de 18:30 a 20:00: la posada, cada noche frente a otra casa (religiosa)
+    mejenga: true, // 163 · los domingos de 15:00 a 16:30 (fuera de la Navidad): las porterías de palo y los oseznos jugando en la plaza
+    cuentos: true, // 164 · las noches de luna llena, de 20:00 a 20:30: la abuela en la plaza y los oseznos sentados en rueda
   };
   /**
    * (Campamento 42) El domingo de Pascua de un año (AAAA-MM-DD), con el cálculo gregoriano de siempre (Meeus/Jones/Butcher). Es la misma
@@ -331,6 +338,51 @@
     difuntos2: 'Es Día de los Difuntos: flores por la mañana y velitas al anochecer.',
     inditos: 'Es 12 de diciembre: los oseznos van a la iglesia vestidos de inditos.',
   };
+  // ---------------------------------------------------------------------------------------------------- (Campamento 43) las temporadas
+  /** (43, idea 152) La temporada de mangos: marzo y abril. */
+  const mangos = (f) => COSTUMBRES.mangos && ['03', '04'].includes(f.slice(5, 7));
+  /** (43, idea 155) La atolada: los sábados de julio y agosto (cuando hay elote). */
+  const atolada = (f) => COSTUMBRES.atolada && ['07', '08'].includes(f.slice(5, 7)) && semana(f) === 6;
+  /** (43, idea 161) Las posadas: del 16 al 23 de diciembre; la noche de la posada (0 a 7), o −1. */
+  const posadaDe = (f) => (COSTUMBRES.posadas && f.slice(5) >= '12-16' && f.slice(5) <= '12-23' ? Number(f.slice(8, 10)) - 16 : -1);
+  /**
+   * (43, idea 154) La faena de la milpa de una fecha: las dos primeras semanas de cada etapa (`milpa`) hay alguien trabajándola: la
+   * siembra (1–14 de mayo, con el chuzo), la dobla (15–28 de agosto) y la tapisca (1–14 de noviembre, con su matate). '' si no.
+   */
+  function faenaDelDia(f) {
+    if (!COSTUMBRES.milpa) return '';
+    const md = f.slice(5);
+    if (md >= '05-01' && md <= '05-14') return 'siembra';
+    if (md >= '08-15' && md <= '08-28') return 'dobla';
+    if (md >= '11-01' && md <= '11-14') return 'tapisca';
+    return '';
+  }
+  /** (43) Las mañanas de un día cualquiera (los días de fiesta, su guion manda: en la milpa no hay nadie). */
+  const MANANAS = ['amanece', 'manana', 'mananaLibre', 'misa', 'mercado'];
+  /** (43, 154) La gente de la milpa ahora: la faena del día de 6:00 a 10:00, si el turno es una mañana de siempre; si no, ''. */
+  const milpaConGente = (f, h) => (h >= 6 && h < 10 && MANANAS.includes(turno(f, h)) ? faenaDelDia(f) : '');
+  /**
+   * (Campamento 43) Lo que la temporada pone en el reparto de ese momento, aparte del turno (lo pasa montana.js a arte-vecinos.js:
+   * `reparto`): `milpa`, la faena de la milpa ('' si nadie), y `mangos`, si el sábado de plaza de marzo y abril se bajan mangos.
+   */
+  const temporadaDelPueblo = (f, h) => ({ milpa: milpaConGente(f, h), mangos: mangos(f) && turno(f, h) === 'mercado' });
+  /** (43) La temporada del momento, para el foco ('' si no hay): los mangos, la atolada o la milpa. */
+  function temporadaAhora(f, h) {
+    const t = turno(f, h);
+    if (t === 'tp-mangos' || (t === 'mercado' && mangos(f))) return 'mangos';
+    if (t === 'tp-atolada') return 'atolada';
+    return milpaConGente(f, h) ? 'milpa' : '';
+  }
+  /** (43) Lo que cuenta la línea de hoy el primer día de cada temporada (una frase, sin «tú» y sin mandar nada). */
+  function fraseTemporada(f) {
+    const md = f.slice(5);
+    if (md === '03-01' && mangos(f)) return 'Es temporada de mangos: los días sin escuela, un osezno los baja con su vara en la plaza.';
+    if (md === '05-01' && faenaDelDia(f)) return 'Empieza la siembra: estas mañanas siembran la milpa del valle.';
+    if (md === '08-15' && faenaDelDia(f)) return 'Es tiempo de doblar la milpa: estas mañanas hay gente en ella.';
+    if (md === '11-03' && faenaDelDia(f)) return 'Es la tapisca: estas mañanas cosechan la milpa del valle.';
+    if (atolada(f) && md <= '07-07') return 'Es sábado de atolada: por la tarde hay atol de elote en el pueblo.';
+    return null;
+  }
   /**
    * (Campamento 35, idea 102) El turno del Pueblo de los Osos: quién está en la calle según la hora y el día (El Salvador). Amanece
    * (5:00–7:00: el que se estira, el panadero, la que barre), mañana (hasta las 11:30; entre semana los oseznos están en la escuela,
@@ -363,12 +415,18 @@
     const sem = new Date(`${f}T12:00:00Z`).getUTCDay();
     if (sem === 0 && h >= 7.5 && h < 10) return 'misa';
     if (sem === 6 && h < 12) return 'mercado';
-    if (h < 11.5) return escuela(f) ? 'manana' : 'mananaLibre';
+    // (Campamento 43) Las temporadas del pueblo: otros turnos de los mismos osos, dentro de los de siempre (las fiestas de arriba mandan).
+    // Marzo y abril, las mañanas sin escuela, los mangos (152); el domingo de 15:00 a 16:30, la mejenga (163); los sábados de julio y
+    // agosto, la atolada (155); del 16 al 23 de diciembre, de 18:30, la posada (161); y las noches de luna llena, de 20:00 a 20:30, los
+    // cuentos en la plaza (164). La milpa con su gente (154) no es un turno: va con el de la mañana (`temporadaDelPueblo`).
+    if (h < 11.5) return escuela(f) ? 'manana' : mangos(f) ? 'tp-mangos' : 'mananaLibre';
     if (h < 12.5) return h >= 12 && escuela(f) ? 'salida' : 'tortillas';
     if (h < 14) return 'siesta';
+    if (sem === 0 && h >= 15 && h < 16.5 && COSTUMBRES.mejenga && !navidad(f)) return 'tp-mejenga';
     if (h < 16) return 'tarde';
-    if (h < 17.75) return 'vuelta';
-    if (h < 20) return md >= '12-01' || md <= '01-06' ? 'posada' : 'pupusas';
+    if (h < 17.75) return atolada(f) ? 'tp-atolada' : 'vuelta';
+    if (h < 20) return md >= '12-01' || md <= '01-06' ? (h >= 18.5 && posadaDe(f) >= 0 ? 'tp-posada' : 'posada') : 'pupusas';
+    if (h < 20.5 && COSTUMBRES.cuentos && lunaDeLaNoche(f)) return 'tp-cuentos';
     return 'fresca';
   }
   /**
@@ -443,10 +501,15 @@
     { id: 'cruz', rareza: 'anio', delDia: (f) => f.slice(5) === '05-03', cuando: (f) => f.slice(5) === '05-03', pesa: { nodos: 0, anim: 0 }, frase: () => 'Es Día de la Cruz: en el pueblo hay una cruz adornada con frutas.' },
     { id: 'zompopos', rareza: 'anio', delDia: zompopos, cuando: (f, h) => zompopos(f) && h >= 7.5 && h < 10, mueve: () => 'zompopos', pesa: { nodos: 0, anim: 0 }, frase: (f) => (f.slice(5) === '05-15' ? 'Empieza la semana de los zompopos de mayo: por las mañanas salen en el valle.' : null) },
     { id: 'azacuanes', rareza: 'anio', delDia: azacuanes, cuando: (f, h) => azacuanes(f) && h >= 8 && h < 16, mueve: () => 'azacuanes', pesa: { nodos: 0, anim: 0 }, frase: (f) => (['10-10', '04-01'].includes(f.slice(5)) ? 'Llegan los azacuanes: estos días pasan sobre el valle a mediodía.' : null) },
-    { id: 'posada', rareza: 'anio', delDia: (f) => navidad(f) && !['12-24', '12-25', '12-31', '01-01'].includes(f.slice(5)), cuando: (f, h) => turno(f, h) === 'posada', pesa: { nodos: 0, anim: 0 } },
+    // (Campamento 43) Las temporadas del pueblo: los mangos, la atolada y la milpa con su gente (otros repartos; nada se mueve distinto).
+    { id: 'temporada', rareza: 'anio', delDia: (f) => mangos(f) || atolada(f) || Boolean(faenaDelDia(f)), cuando: (f, h) => temporadaAhora(f, h) !== '', pesa: { nodos: 0, anim: 0 }, frase: fraseTemporada },
+    // (43, idea 161) Desde las 18:30 del 16 al 23 de diciembre, la posada es la de los farolitos (`tp-posada`): la frase, el primer día.
+    { id: 'posada', rareza: 'anio', delDia: (f) => navidad(f) && !['12-24', '12-25', '12-31', '01-01'].includes(f.slice(5)), cuando: (f, h) => ['posada', 'tp-posada'].includes(turno(f, h)), pesa: { nodos: 0, anim: 0 }, frase: (f) => (posadaDe(f) === 0 ? 'Empiezan las posadas: cada noche, hasta el 23, un grupito con farolitos llega a una casa del pueblo.' : null) },
     { id: 'luna', rareza: 'mes', delDia: lunaDeLaNoche, cuando: (f, h) => (h >= 19 || h < 5) && lunaDeLaNoche(h < 5 ? diaAntes(f) : f), pesa: { nodos: 0, anim: 0 }, frase: (f) => (lunaDeLaNoche(diaAntes(f)) ? null : 'Esta noche hay luna llena sobre el valle.') },
     { id: 'misa', rareza: 'semana', delDia: (f) => semana(f) === 0, cuando: (f, h) => turno(f, h) === 'misa', pesa: { nodos: 0, anim: 0 } },
     { id: 'mercado', rareza: 'semana', delDia: (f) => semana(f) === 6, cuando: (f, h) => turno(f, h) === 'mercado', pesa: { nodos: 0, anim: 0 } },
+    // (Campamento 43, idea 163) El domingo por la tarde, la mejenga: la pelota que bota es la de siempre (la franja `pelota`).
+    { id: 'mejenga', rareza: 'semana', delDia: (f) => semana(f) === 0 && COSTUMBRES.mejenga && !navidad(f), cuando: (f, h) => turno(f, h) === 'tp-mejenga', pesa: { nodos: 0, anim: 0 } },
   ];
   /**
    * (Campamento 51) Choques declarados: los días en que dos focos raros (de mes o más) pueden estar a la vez, y quién manda (el primero
@@ -456,7 +519,9 @@
    */
   // (Campamento 42) Las fiestas del año caen a veces en luna llena (el anochecer del 14 de septiembre, el del 2 de noviembre, las noches
   // de agosto) y Semana Santa, a veces, en los días de azacuanes (del 1 al 20 de abril): manda la fiesta, y los azacuanes vuelan igual.
-  const CHOQUES = [['navidad', 'luna'], ['posada', 'luna'], ['cruz', 'luna'], ['fiestas', 'luna'], ['fiestas', 'azacuanes']];
+  // (Campamento 43) La temporada de mangos cae en los días de azacuanes (del 1 al 20 de abril) y la siembra en el Día de la Cruz: manda
+  // el primero (los azacuanes vuelan igual; la cruz sigue en el pueblo y la milpa tiene su gente).
+  const CHOQUES = [['navidad', 'luna'], ['posada', 'luna'], ['cruz', 'luna'], ['fiestas', 'luna'], ['fiestas', 'azacuanes'], ['cruz', 'temporada'], ['azacuanes', 'temporada']];
   function diaAntes(f) { return new Date(Date.parse(`${f}T12:00:00Z`) - 864e5).toISOString().slice(0, 10); }
   /**
    * (Campamento 51, idea 227) La rutina del día, cuando no hay nada raro: a quién se fija uno hoy en el pueblo. Una baraja fija de seis
@@ -765,6 +830,6 @@
   aplicar();
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
-  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, pascua, fiestaDelAnio, turnoDelAnio, mueveAnio, costumbres: COSTUMBRES, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
+  window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, pascua, fiestaDelAnio, turnoDelAnio, mueveAnio, costumbres: COSTUMBRES, temporadaDelPueblo, temporadaAhora, faenaDelDia, posadaDe, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
     director, foco, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();
