@@ -6395,7 +6395,11 @@ try {
       const r3 = (x) => Math.round(x * 1000) / 1000;
       ok(julio.verde === 1 && febrero.verde === 0 && mayo.verde > 0.4 && mayo.verde < 0.5 && julio.falda < febrero.falda - 0.01 && mayo.falda > julio.falda && mayo.falda < febrero.falda, `22B verdor: la falda baja, verde en julio (${r3(julio.falda)}), dorada en febrero (${r3(febrero.falda)}) y a medio camino el 7 de mayo (${r3(mayo.falda)}, ${mayo.verde})`);
       ok(febrero.maqui > 0.04 && febrero.flores === 1 && abril.fuego > 0.08 && abril.flores === 1 && julio.flores === 0 && julio.maqui < 0 && julio.fuego < 0, `22B árboles: el maquilishuat rosado en febrero (${r3(febrero.maqui)}), el árbol de fuego rojo en abril (${r3(abril.fuego)}), verdes en julio y flores caídas solo cuando florecen`);
-      ok(julio.vacas === 1 && julio.vacaPie && julio.garcitas && !julio.vacaEchada && !julio.vacaSobreSendero && !julio.vacaSobreRotulo, '22B vacas: en el teléfono una vaca de pie con sus garcitas, sin pisar el sendero ni un rótulo');
+      // (Campamento 45, idea 174) De 11:30 a 14:00 las vacas se echan (la pose de la noche): a mediodía, echadas; a media mañana, de pie.
+      ok(julio.vacas === 1 && !julio.vacaPie && !julio.garcitas && julio.vacaEchada, '22B vacas (45): a mediodía, la vaca del teléfono echada y sin garcitas');
+      await t.p.evaluate(() => { localStorage.setItem('libro.hora', '10'); window.libroCielo.aplicar(); });
+      v = await estado(t.p);
+      ok(v.vacas === 1 && v.vacaPie && v.garcitas && !v.vacaEchada && !v.vacaSobreSendero && !v.vacaSobreRotulo, '22B vacas: en el teléfono una vaca de pie con sus garcitas (a las 10:00), sin pisar el sendero ni un rótulo');
       await t.p.evaluate(() => { localStorage.setItem('libro.hora', '21'); window.libroCielo.aplicar(); });
       v = await estado(t.p);
       ok(!v.vacaPie && v.vacaEchada && !v.garcitas, '22B vacas: de noche, echadas y sin garcitas');
