@@ -263,6 +263,12 @@
     tecolote: true, // 173 · una noche de cada cuatro (nunca con luna llena ni en Navidad), el tecolote en la rama del árbol de la plaza (en algunos lugares es de mal agüero)
     vacas: true, // 174 · de 11:30 a 14:00, las vacas del potrero echadas
     garza: true, // 175 · la garza pesca en una orilla del lago por la mañana y en la otra por la tarde
+    // (Campamento 46) La luna y las estrellas (con `false`, el cielo de siempre).
+    conejo: true, // 179 · las noches de luna llena, los mares de la luna dibujan el conejo
+    estrellas: true, // 180 · unas veinte de las 46 estrellas como en el cielo de aquí: Orión y las Cabritas (noviembre–marzo), el Alacrán (mayo–agosto)
+    geminidas: true, // 181 · las noches del 13 y del 14 de diciembre los osos de la cumbre miran las estrellas fugaces en vez de dormir
+    lucero: true, // 182 · Venus, el lucero de la tarde o de la mañana, cuando toca de verdad
+    eclipse: true, // 183 · la luna cobriza en los eclipses totales que se ven desde aquí (tabla de la NASA)
   };
   /**
    * (Campamento 42) El domingo de Pascua de un año (AAAA-MM-DD), con el cálculo gregoriano de siempre (Meeus/Jones/Butcher). Es la misma
@@ -398,7 +404,8 @@
    * quieto (va en los trazos de los vecinos: arte-vecinos.js, `reparto`): el gallo de 5:00 a 6:00, un garrobo al sol de 11:00 a 14:00 en
    * la época seca, tres zanates en fila de 17:30 a 18:30 y, cuando el pueblo duerme, una noche de cada cuatro, el tecolote en la rama baja
    * del árbol de la plaza (nunca con luna llena ni en Navidad: el árbol es entonces el pino). La noche es la de la fecha de la tarde
-   * (pasada la medianoche, la del día antes). Como la milpa (43), se mira la hora **al dibujar el turno**: sin aviso nuevo. '' si no toca.
+   * (pasada la medianoche, la del día antes). Se mira la hora al dibujar el turno y, desde el 46 (encargo del dueño), su cambio también avisa (`libro:turno`, en
+   * `aplicar`): con la página abierta, cada animal llega y se va a su hora (con el reloj de cinco minutos de `aplicar`). '' si no toca.
    */
   function animalDelPueblo(f, h) {
     const C = COSTUMBRES;
@@ -411,6 +418,51 @@
     }
     return '';
   }
+  // ---------------------------------------------------------------------------------------------------- (Campamento 46) luna y estrellas
+  /** La noche de una fecha y hora: la de la tarde (antes del mediodía, la del día antes). */
+  const nocheDe = (f, h) => (h < 12 ? diaAntes(f) : f);
+  /** (179) El conejo en la luna: las noches de luna llena (la misma regla del director: la luna de las 21:00 de esa noche). */
+  const conejo = (f, h) => COSTUMBRES.conejo && lunaDeLaNoche(nocheDe(f, h));
+  /**
+   * (180) La figura del cielo de aquí que se ve esa temporada al anochecer: Orión con las Siete Cabritas (las Pléyades) y Aldebarán, de
+   * noviembre a marzo; el Alacrán (Escorpio), de mayo a agosto; los demás meses, las estrellas de siempre (''). El dibujo, en arte.js.
+   */
+  const figuraDelCielo = (f) => { if (!COSTUMBRES.estrellas) return ''; const m = Number(f.slice(5, 7)); return m >= 11 || m <= 3 ? 'orion' : m >= 5 && m <= 8 ? 'alacran' : ''; };
+  /** (181) Las noches de las Gemínidas (del 13 y del 14 de diciembre, de 19:00 a 5:00): los de la cumbre miran el cielo. */
+  const geminidas = (f, h) => COSTUMBRES.geminidas && (h >= 19 || h < 5) && ['12-13', '12-14'].includes(nocheDe(f, h).slice(5));
+  /**
+   * (182) Venus, el lucero: de la mañana desde una conjunción inferior hasta la superior siguiente y de la tarde de la superior a la
+   * inferior, menos los días en que el sol lo tapa (8 alrededor de la inferior, 40 alrededor de la superior). Las conjunciones publicadas
+   * (inferior: 23 mar 2025, 24 oct 2026, 1 jun 2028, 6 ene 2030; superior: 6 ene 2026, 11 ago 2027, 23 mar 2029); fuera de la tabla, el
+   * ciclo de 583.92 días desde la más cercana. 'manana', 'tarde' o ''.
+   */
+  const CONJUNCIONES = [['2025-03-23', 'i'], ['2026-01-06', 's'], ['2026-10-24', 'i'], ['2027-08-11', 's'], ['2028-06-01', 'i'], ['2029-03-23', 's'], ['2030-01-06', 'i']];
+  function lucero(f) {
+    if (!COSTUMBRES.lucero) return '';
+    const t = Date.parse(`${f}T12:00:00Z`) / 864e5, CICLO = 583.92, ref = Date.parse(`${CONJUNCIONES[0][0]}T12:00:00Z`) / 864e5;
+    const fase = (((t - ref) % CICLO) + CICLO) % CICLO; // días desde la conjunción inferior (con el ciclo medio)
+    // Con la tabla, el día exacto: la última conjunción antes de la fecha y la siguiente.
+    const ts = CONJUNCIONES.map(([d, k]) => [Date.parse(`${d}T12:00:00Z`) / 864e5, k]);
+    let antes = null, despues = null;
+    for (const c of ts) { if (c[0] <= t) antes = c; else if (!despues) despues = c; }
+    if (!antes || !despues) {
+      if (fase < 8 || fase > CICLO - 8 || Math.abs(fase - CICLO / 2) < 40) return '';
+      return fase < CICLO / 2 ? 'manana' : 'tarde';
+    }
+    const margen = (c) => (c[1] === 'i' ? 8 : 40);
+    if (t - antes[0] < margen(antes) || despues[0] - t < margen(despues)) return '';
+    return antes[1] === 'i' ? 'manana' : 'tarde';
+  }
+  /** (182) El lucero a esta hora: el de la tarde de 17:30 a 20:30 y el de la mañana de 4:00 a 6:30 (`html[data-lucero]`). */
+  const luceroAhora = (f, h) => { const l = lucero(f); return (l === 'tarde' && h >= 17.5 && h < 20.5) || (l === 'manana' && h >= 4 && h < 6.5) ? l : ''; };
+  /**
+   * (183) Los eclipses totales de luna que se ven desde aquí, con la hora de la totalidad en El Salvador (UTC−6). De la tabla de la NASA
+   * («Lunar Eclipses: 2021–2030» y «2031–2040», eclipse.gsfc.nasa.gov): el máximo en TD menos 6 horas y la mitad de la totalidad a cada
+   * lado; solo los que tienen la totalidad de noche aquí (los de 2029-12-20, 2036-02-11 y 2040-05-26 caen de día o con la luna puesta).
+   * [fecha local, desde, hasta]. `html[data-eclipse]`: la luna se pone cobriza esos minutos.
+   */
+  const ECLIPSES = [['2029-06-25', 20.54, 22.24], ['2033-10-08', 4.28, 5.6], ['2036-08-06', 20.08, 21.67]];
+  const eclipse = (f, h) => COSTUMBRES.eclipse && ECLIPSES.some(([d, a, b]) => d === f && h >= a && h < b);
   /**
    * (Campamento 45, ideas 174 y 175) Lo del valle que cambia con la hora sin que nada se mueva: poses quietas que enseña el CSS
    * (`html[data-valle]`, separadas por espacios), como las de la cumbre (0 capas, 0 animaciones; ya están dibujadas):
@@ -608,12 +660,15 @@
   /**
    * (Campamento 47) Los osos de la cumbre según la hora: una pose quieta que enseña el CSS (`html[data-cumbre]`), a saltos y sin nada
    * que se mueva (0 capas, 0 animaciones; la declara el director y la lee el banco):
+   *   estrellas las noches del 13 y del 14 de diciembre, 19:00–5:00 (46, idea 181): miran arriba, a las Gemínidas (no duermen)
    *   duermen   22:00–5:00 (24): ojos cerrados y sus zetas; no en las noches de fiesta (el 24 y el 31 esperan las doce despiertos)
    *   espaldas  17:30–18:15 (184): de espaldas, mirando bajar el sol
    *   sol       marzo y abril, 10:00–15:00 (189): el grande con su sombrero de palma
    * `ninguno` (''): la de siempre. La fiesta del hito (59) los despierta (aplicar).
    */
   const CUMBRE = [
+    // (Campamento 46, idea 181) Las noches de las Gemínidas no duermen: miran el cielo (antes que «duermen»: `find` toma la primera).
+    { id: 'estrellas', cuando: (f, h) => geminidas(f, h), pesa: { capas: 0, anim: 0 } },
     { id: 'duermen', cuando: (f, h) => (h >= 22 || h < 5) && !/^(nb-(cena|misa|doce)|f31-(cena|espera|doce)|n25-polvora|e1-polvora)$/.test(turno(f, h)), pesa: { capas: 0, anim: 0 } },
     { id: 'espaldas', cuando: (_f, h) => h >= 17.5 && h < 18.25, pesa: { capas: 0, anim: 0 } },
     { id: 'sol', cuando: (f, h) => ['03', '04'].includes(f.slice(5, 7)) && h >= 10 && h < 15, pesa: { capas: 0, anim: 0 } },
@@ -789,6 +844,7 @@
   function fiestaHito(on) { fiestaHitoViva = Boolean(on); aplicar(); }
   let diaAplicado = null; // (Campamento 30) para avisar del cambio de día
   let turnoAplicado = null; // (Campamento 35) para avisar del cambio de turno del pueblo
+  let animalAplicado = ''; // (Campamento 46) y del animal de la hora
   let cohetesAplicados = null; // (Campamento 39) para poner o quitar los cohetes en su hora
   function aplicar() {
     const h = hora();
@@ -840,8 +896,16 @@
     if (puertaIglesia(d, h)) raiz.dataset.puerta = 'cerrada'; else delete raiz.dataset.puerta; // (52, 234)
     const fe = festivo(d);
     if (fe) raiz.dataset.festivo = fe; else delete raiz.dataset.festivo;
-    if (turnoAplicado !== null && tu !== turnoAplicado && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:turno'));
+    // (Campamento 46, encargo del dueño del 26 nov 2026) También cuando cambia el animal de la hora (el gallo se va a las 6:00, el garrobo
+    // llega a las 11:00, los zanates a las 17:30 y se van a las 18:30): un solo aviso aunque cambien los dos a la vez.
+    const an = animalDelPueblo(d, h);
+    if (turnoAplicado !== null && (tu !== turnoAplicado || an !== animalAplicado) && typeof window.dispatchEvent === 'function' && typeof Event === 'function') window.dispatchEvent(new Event('libro:turno'));
     turnoAplicado = tu;
+    animalAplicado = an;
+    // (Campamento 46) El lucero a su hora (182) y la luna cobriza de un eclipse (183): el CSS los enseña, nada se redibuja.
+    const lz = luceroAhora(d, h);
+    if (lz) raiz.dataset.lucero = lz; else delete raiz.dataset.lucero;
+    raiz.toggleAttribute('data-eclipse', eclipse(d, h));
     // Modo madrugada (idea 20): de 22:00 a 5:00 la página se atenúa y se calienta un poco (un velo en el CSS), para abrirla en la cama.
     raiz.toggleAttribute('data-madrugada', madrugadaActiva(h));
     // (Campamento 28) Los osos de la interfaz se duermen de 22:00 a 5:00 aunque el velo esté apagado, y las tardes (13:00 a 18:00) de la
@@ -874,5 +938,5 @@
   setInterval(() => { if (document.visibilityState === 'visible' && horaTemporal === null) aplicar(); }, 300_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') aplicar(); });
   window.libroCielo = { dia, fiesta, epoca, cohetes, cohetesPuestos, festivo, turnoFiesta, pascua, fiestaDelAnio, turnoDelAnio, mueveAnio, costumbres: COSTUMBRES, temporadaDelPueblo, temporadaAhora, faenaDelDia, posadaDe, navidad, piscuchas, milpa, fogon, lunaLlena, verdor, marNiebla, flor, azacuanes, zompopos, mueve, mueveRutina, mueve2, hayActor, turno, escuela, sombraDelPueblo, lucesDelPueblo, puertaIglesia,
-    director, foco, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, animalDelPueblo, poseValle, valle: VALLE, sorteo, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
+    director, foco, conejo, figuraDelCielo, geminidas, lucero, luceroAhora, eclipse, eclipses: ECLIPSES, poseCumbre, cumbre: CUMBRE, poseTu, tu: TU, animalDelPueblo, poseValle, valle: VALLE, sorteo, gestoDeLosOsos, gestosCumbre: GESTOS_CUMBRE, rutinaDelDia, ambiente, fraseDelFoco, fraseRutina, focos: FOCOS, choques: CHOQUES, rareza: RAREZA, rutinas: RUTINAS, ambientales: AMBIENTALES, maxAmbientales: MAX_AMBIENTALES, mapaDelDia, pesoMueve: PESO_MUEVE, fiestaHito, vacaciones, madrugadaPref, fijarMadrugada, hora, franja, colores, tinta, faseLunar, saludo, paletas: P, tintas: TINTA, aplicar, fijarHora };
 })();
