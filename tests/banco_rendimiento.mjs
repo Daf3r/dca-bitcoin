@@ -44,40 +44,40 @@ const CASOS = [
   // (Campamento 40) +1 en cada fecha: la sombra del perro va en su propio trazo (se esconde con él cuando se echa en otro sitio).
   // (Campamento 51) Las capas de los ambientales suman tres nodos a cada fecha (las del humo y del cayuco, y el grupo que guarda la
   // transformación del cayuco en el lago): de ahí que cada `declara` suba 3 desde el 39 y el 41.
-  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 850 },
+  { caso: 'día normal', dia: '2026-11-25', hora: 12, declara: 827 },
   // (Campamento 51) Las franjas del día en que se mueve alguien del pueblo (la que barre, las gallinas, el perro, la pelota) y el
   // anochecer del fogón: con los ambientales (F3) junto al actor, que es lo que el director reparte.
   // (Campamento 53A) La neblina del amanecer (53B: de 5:00 a 9:00 y, fina, por la tarde): quieta; en el teléfono, dos bancos de degradado (los jirones y la bruma del pueblo, solo en escritorio) (ningún caso caía en su franja).
-  { caso: 'amanecer, neblina', dia: '2026-11-25', hora: 6, declara: 851 },
-  { caso: 'día, barre', dia: '2026-11-25', hora: 7.5, declara: 843 },
-  { caso: 'día, gallinas', dia: '2026-11-25', hora: 8.5, declara: 843 },
-  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 853 },
-  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 853 },
-  { caso: 'anochecer, fogón', dia: '2026-11-25', hora: 19, declara: 847 },
-  { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 845 },
-  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 919 },
-  { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 848 },
+  { caso: 'amanecer, neblina', dia: '2026-11-25', hora: 6, declara: 828 },
+  { caso: 'día, barre', dia: '2026-11-25', hora: 7.5, declara: 820 },
+  { caso: 'día, gallinas', dia: '2026-11-25', hora: 8.5, declara: 820 },
+  { caso: 'día, perro', dia: '2026-11-25', hora: 14.5, declara: 830 },
+  { caso: 'día, pelota', dia: '2026-11-25', hora: 15.5, declara: 830 },
+  { caso: 'anochecer, fogón', dia: '2026-11-25', hora: 19, declara: 824 },
+  { caso: 'noche normal', dia: '2026-11-25', hora: 21, declara: 822 },
+  { caso: 'Nochebuena', dia: '2026-12-24', hora: 21, declara: 896 },
+  { caso: 'tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 839 },
   { caso: 'noche de lluvia', dia: '2026-07-10', hora: 21, declara: 840 },
   // El pico del año: los cohetes (14 animaciones, en el frente) solo de 23:50 a 0:30 del 24 y del 31; esos 40 minutos el frente admite 28
   // (medido el 24 nov 2026: 26 en Nochebuena, con el papel picado de la fiesta; ya era así antes del 39, solo que el banco no lo medía).
-  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 960, frente: 28 },
-  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 924, frente: 28 },
+  { caso: 'Nochebuena, cohetes', dia: '2026-12-24', hora: 23.92, declara: 937, frente: 28 },
+  { caso: '31 dic, cohetes', dia: '2026-12-31', hora: 23.92, declara: 901, frente: 28 },
   // (Campamento 41) La Navidad entera: un turno de cada fecha nueva (los demás pesan lo mismo: otro reparto de los mismos trazos).
-  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 929 },
-  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 920 },
-  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 890 },
-  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 930, frente: 28 },
-  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 887 },
+  { caso: 'Nochebuena, cena', dia: '2026-12-24', hora: 19, declara: 906 },
+  { caso: '25 dic, estrenos', dia: '2026-12-25', hora: 9.5, declara: 897 },
+  { caso: '31 dic, la espera', dia: '2026-12-31', hora: 23.58, declara: 867 },
+  { caso: '1 ene, las doce', dia: '2027-01-01', hora: 0.5, declara: 907, frente: 28 },
+  { caso: '6 ene, se guarda', dia: '2027-01-06', hora: 15.2, declara: 864 },
   // (Campamento 40) El día entero del pueblo: un día de escuela de la seca (miércoles 10 de febrero de 2027), un lunes de ropa tendida y
   // un viernes de pupusas. Ninguno mueve a nadie nuevo: otro reparto de los mismos trazos.
-  { caso: 'antes del alba', dia: '2027-02-10', hora: 4.75, declara: 834 },
-  { caso: 'mediodía, tortillas', dia: '2027-02-10', hora: 11.75, declara: 841 },
-  { caso: 'mediodía, salida de la escuela', dia: '2027-02-10', hora: 12.25, declara: 841 },
-  { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 840 }, // (45) +1: el verde del garrobo al sol (la hamaca y su ropa van en su capa)
-  { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 844 },
-  { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 836 },
-  { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 851 },
-  { caso: 'viernes, pupusas', dia: '2027-02-12', hora: 19, declara: 838 },
+  { caso: 'antes del alba', dia: '2027-02-10', hora: 4.75, declara: 811 },
+  { caso: 'mediodía, tortillas', dia: '2027-02-10', hora: 11.75, declara: 818 },
+  { caso: 'mediodía, salida de la escuela', dia: '2027-02-10', hora: 12.25, declara: 818 },
+  { caso: 'siesta, la hamaca', dia: '2027-02-10', hora: 13, declara: 817 }, // (45) +1: el verde del garrobo al sol (la hamaca y su ropa van en su capa)
+  { caso: 'la vuelta del cantón', dia: '2027-02-10', hora: 16.75, declara: 821 },
+  { caso: 'la fresca', dia: '2027-02-10', hora: 21, declara: 813 },
+  { caso: 'lunes, ropa tendida', dia: '2027-02-08', hora: 9, declara: 828 },
+  { caso: 'viernes, pupusas', dia: '2027-02-12', hora: 19, declara: 815 },
   // (Campamento 59) La fiesta del hito, medida en su clímax («Probar la celebración», que usa el mismo código): la campana, los
   // farolitos y los cohetes, cada uno en su capa pequeña, mientras dura (unos +12 nodos en el clímax; el resto de la diferencia con
   // el día normal es la escena de la prueba, que se dibuja con el saldo inventado de cada nivel); los vecinos de la fiesta son otro
@@ -87,65 +87,73 @@ const CASOS = [
   // (Campamento 49) El pueblo se mueve 2: el panadero que cruza (6:00–7:00), la tortillera que palmea, la campana de las doce, la hamaca
   // de la siesta y las estrellitas de Nochebuena; cada uno en su capa (la campana, todo el día: +1 nodo en cada fecha; la abuela de la
   // ronda, con la que barre y con la pelota: +6 a +7 en los turnos de la mañana de escuela y de la tarde, aunque la ronda esté quieta).
-  { caso: 'amanecer, el panadero cruza', dia: '2027-02-10', hora: 6.5, declara: 842 },
-  { caso: 'mediodía, la campana', dia: '2027-02-10', hora: 12.02, declara: 841 },
-  { caso: 'siesta, la hamaca se mece', dia: '2027-02-10', hora: 13.5, declara: 840 }, // (45) +1: el garrobo
-  { caso: 'fiesta del hito, tarde', dia: '2026-11-25', hora: 16, declara: 893, fiesta: 'hito', en: 12_400 },
+  { caso: 'amanecer, el panadero cruza', dia: '2027-02-10', hora: 6.5, declara: 819 },
+  { caso: 'mediodía, la campana', dia: '2027-02-10', hora: 12.02, declara: 818 },
+  { caso: 'siesta, la hamaca se mece', dia: '2027-02-10', hora: 13.5, declara: 817 }, // (45) +1: el garrobo
+  { caso: 'fiesta del hito, tarde', dia: '2026-11-25', hora: 16, declara: 870, fiesta: 'hito', en: 12_400 },
   { caso: 'fiesta del hito, noche de lluvia', dia: '2026-07-10', hora: 23, declara: 867, fiesta: 'hito', en: 12_400 },
-  { caso: 'fiesta del hito, tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 886, fiesta: 'hito', en: 12_400 },
-  { caso: 'fiesta del hito, Nochebuena 23:55', dia: '2026-12-24', hora: 23.92, declara: 1000, frente: 28, fiesta: 'hito', en: 12_400 },
-  { caso: 'fiesta de etapa con sello', dia: '2026-11-25', hora: 10, declara: 872, fiesta: 'etapa', en: 7400 },
-  { caso: 'fiesta del halving', dia: '2026-11-25', hora: 10, declara: 852, fiesta: 'halving', en: 5800 },
+  { caso: 'fiesta del hito, tarde de lluvia', dia: '2026-07-10', hora: 15, declara: 877, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta del hito, Nochebuena 23:55', dia: '2026-12-24', hora: 23.92, declara: 977, frente: 28, fiesta: 'hito', en: 12_400 },
+  { caso: 'fiesta de etapa con sello', dia: '2026-11-25', hora: 10, declara: 849, fiesta: 'etapa', en: 7400 },
+  { caso: 'fiesta del halving', dia: '2026-11-25', hora: 10, declara: 829, fiesta: 'halving', en: 5800 },
   // (Campamento 47) +4 en cada fecha: los ojos cerrados de los osos (un trazo por oso, escondidos de día) y sus zetas.
   // (Campamento 48) +8 en cada fecha (+11 en la lluviosa): la carpa y la mochila de espaldas de «Tú» (escondidas según la hora), su equipo y sus parches (mil compras) y el capote.
   // (Campamento 47) Los osos de la cumbre: sus poses quietas (cielo.js: CUMBRE, 0 animaciones) y lo plantado a su lado según el día
   // (fuera de su grupo). Los ojos cerrados van siempre dibujados (+3 nodos en los osos y en cada fecha); las zetas, +1 si caben.
-  { caso: 'madrugada, duermen', dia: '2026-11-25', hora: 23, declara: 835 },
-  { caso: 'atardecer, de espaldas', dia: '2026-11-25', hora: 17.75, declara: 847 },
-  { caso: 'abril, sombrero', dia: '2027-04-14', hora: 12, declara: 842 },
-  { caso: 'diciembre, oso de nieve', dia: '2026-12-10', hora: 12, declara: 893 },
+  { caso: 'madrugada, duermen', dia: '2026-11-25', hora: 23, declara: 812 },
+  { caso: 'atardecer, de espaldas', dia: '2026-11-25', hora: 17.75, declara: 824 },
+  { caso: 'abril, sombrero', dia: '2027-04-14', hora: 12, declara: 819 },
+  { caso: 'diciembre, oso de nieve', dia: '2026-12-10', hora: 12, declara: 870 },
   // (Campamento 42) Las fiestas del resto del año: el momento grande de cada fecha (otro reparto de los mismos trazos; lo que sube es
   // algún tono que un día cualquiera no sale a esa hora: la brasa de los farolitos y las velitas, el rojo de la piñata).
-  { caso: 'Ramos, misa con palmas', dia: '2026-03-29', hora: 8.5, declara: 837 },
-  { caso: 'Viernes Santo, en silencio', dia: '2027-03-26', hora: 12, declara: 834 },
-  { caso: 'Sábado de Gloria, al lago', dia: '2026-04-04', hora: 9, declara: 836 },
-  { caso: '10 de mayo, las mañanitas', dia: '2026-05-10', hora: 6, declara: 837 },
-  { caso: '10 de mayo, la mesa', dia: '2026-05-10', hora: 12.5, declara: 838 },
-  { caso: 'Día del Padre, en hombros', dia: '2026-06-17', hora: 15.5, declara: 838 },
-  { caso: '6 de agosto, la misa', dia: '2026-08-06', hora: 8.5, declara: 870 },
-  { caso: '5 de agosto, la plaza de noche', dia: '2026-08-05', hora: 19, declara: 870 },
-  { caso: '14 sept, los farolitos', dia: '2026-09-14', hora: 19, declara: 869 },
-  { caso: '15 sept, se guarda la bandera', dia: '2026-09-15', hora: 16, declara: 871 },
-  { caso: 'Día del Niño, la piñata', dia: '2026-10-01', hora: 15.5, declara: 850 },
-  { caso: '2 nov, las velitas', dia: '2026-11-02', hora: 19, declara: 847 },
-  { caso: '12 dic, los inditos', dia: '2026-12-12', hora: 8, declara: 886 },
-  { caso: '14 sept, la banderita', dia: '2026-09-14', hora: 15, declara: 878 },
+  { caso: 'Ramos, misa con palmas', dia: '2026-03-29', hora: 8.5, declara: 814 },
+  { caso: 'Viernes Santo, en silencio', dia: '2027-03-26', hora: 12, declara: 811 },
+  { caso: 'Sábado de Gloria, al lago', dia: '2026-04-04', hora: 9, declara: 813 },
+  { caso: '10 de mayo, las mañanitas', dia: '2026-05-10', hora: 6, declara: 813 },
+  { caso: '10 de mayo, la mesa', dia: '2026-05-10', hora: 12.5, declara: 814 },
+  { caso: 'Día del Padre, en hombros', dia: '2026-06-17', hora: 15.5, declara: 814 },
+  { caso: '6 de agosto, la misa', dia: '2026-08-06', hora: 8.5, declara: 846 },
+  { caso: '5 de agosto, la plaza de noche', dia: '2026-08-05', hora: 19, declara: 846 },
+  { caso: '14 sept, los farolitos', dia: '2026-09-14', hora: 19, declara: 845 },
+  { caso: '15 sept, se guarda la bandera', dia: '2026-09-15', hora: 16, declara: 847 },
+  { caso: 'Día del Niño, la piñata', dia: '2026-10-01', hora: 15.5, declara: 826 },
+  { caso: '2 nov, las velitas', dia: '2026-11-02', hora: 19, declara: 824 },
+  { caso: '12 dic, los inditos', dia: '2026-12-12', hora: 8, declara: 863 },
+  { caso: '14 sept, la banderita', dia: '2026-09-14', hora: 15, declara: 854 },
   // (Campamento 43) Las temporadas del pueblo: un momento de cada una (otro reparto de los mismos trazos). La milpa con su gente, +2
   // frente a la base: el milpero trae a esa hora dos tonos que el pueblo no tenía (su camisa de maíz y la manita sobre su herramienta).
-  { caso: 'marzo, los mangos', dia: '2027-03-14', hora: 10.5, declara: 835 },
+  { caso: 'marzo, los mangos', dia: '2027-03-14', hora: 10.5, declara: 812 },
   { caso: 'mayo, la siembra', dia: '2026-05-06', hora: 8.5, declara: 853 },
   { caso: 'agosto, la dobla', dia: '2026-08-19', hora: 8.5, declara: 854 },
-  { caso: 'noviembre, la tapisca', dia: '2026-11-04', hora: 8.5, declara: 862 },
-  { caso: 'julio, la atolada', dia: '2026-07-18', hora: 17, declara: 842 },
-  { caso: 'diciembre, la posada', dia: '2026-12-18', hora: 19, declara: 887 },
-  { caso: 'domingo, la mejenga', dia: '2027-02-14', hora: 15.5, declara: 838 },
-  { caso: 'luna llena, los cuentos', dia: '2027-02-20', hora: 20.25, declara: 834 },
+  { caso: 'noviembre, la tapisca', dia: '2026-11-04', hora: 8.5, declara: 839 },
+  { caso: 'julio, la atolada', dia: '2026-07-18', hora: 17, declara: 818 },
+  { caso: 'diciembre, la posada', dia: '2026-12-18', hora: 19, declara: 864 },
+  { caso: 'domingo, la mejenga', dia: '2027-02-14', hora: 15.5, declara: 815 },
+  { caso: 'luna llena, los cuentos', dia: '2027-02-20', hora: 20.25, declara: 811 },
   // (Campamento 45) Los animales de aquí: el de la hora en la plaza (el gallo, el garrobo de la seca, los zanates y, una noche de cada
   // cuatro, el tecolote), en los trazos de los vecinos; y las poses quietas del valle (las vacas echadas a mediodía, la garza en la otra
   // orilla por la tarde: 0 nodos, ya estaban dibujadas). Lo que sube es algún tono que el pueblo no tenía a esa hora.
-  { caso: 'el gallo', dia: '2026-11-25', hora: 5.5, declara: 851 },
-  { caso: 'el garrobo, vacas echadas', dia: '2027-02-10', hora: 13, declara: 840 },
-  { caso: 'los zanates', dia: '2026-11-25', hora: 18, declara: 847 },
-  { caso: 'el tecolote', dia: '2026-11-28', hora: 23, declara: 837 }, // +2 frente a una noche sin él: su trazo oscuro y sus ojos
-  { caso: 'el gallo en Navidad', dia: '2026-12-10', hora: 5.5, declara: 894 },
+  { caso: 'el gallo', dia: '2026-11-25', hora: 5.5, declara: 828 },
+  { caso: 'el garrobo, vacas echadas', dia: '2027-02-10', hora: 13, declara: 817 },
+  { caso: 'los zanates', dia: '2026-11-25', hora: 18, declara: 824 },
+  { caso: 'el tecolote', dia: '2026-11-28', hora: 23, declara: 814 }, // +2 frente a una noche sin él: su trazo oscuro y sus ojos
+  { caso: 'el gallo en Navidad', dia: '2026-12-10', hora: 5.5, declara: 871 },
   // (Campamento 46) Luna y estrellas: la figura del cielo de aquí (las mismas 46 estrellas recolocadas: 0 nodos), el conejo (los mismos
   // mares: 0), el lucero (un trazo: **+1 en cada fecha de este banco**, que es lo único que sube; solo los días que lo hay, casi todo el
   // año), la luna cobriza de un eclipse (un color: 0) y las Gemínidas (la cara que mira arriba, dibujada esas noches: +2 en los osos).
-  { caso: 'el Alacrán', dia: '2026-07-15', hora: 21, declara: 838 },
-  { caso: 'el lucero de la tarde', dia: '2026-08-15', hora: 18, declara: 841 },
-  { caso: 'el lucero de la mañana', dia: '2026-11-26', hora: 5.25, declara: 851 },
-  { caso: 'Gemínidas, miran arriba', dia: '2026-12-14', hora: 23, declara: 882 },
+  { caso: 'el Alacrán', dia: '2026-07-15', hora: 21, declara: 814 },
+  { caso: 'el lucero de la tarde', dia: '2026-08-15', hora: 18, declara: 817 },
+  { caso: 'el lucero de la mañana', dia: '2026-11-26', hora: 5.25, declara: 828 },
+  { caso: 'Gemínidas, miran arriba', dia: '2026-12-14', hora: 23, declara: 859 },
   { caso: 'eclipse de luna', dia: '2029-06-25', hora: 21, declara: 836 },
+  // (Campamento 44) Lluvia y verano. La llovizna (la nube cargada y sus 20 gotas) se poda los días que no llueve por la tarde, también los
+  // de la seca (antes se escondía con el CSS): **−23 nodos en cada fecha** sin lluvia. La tarde de lluvia (paraguas, hoja de huerta, los
+  // oseznos bajo el corredor) es otro reparto de los mismos trazos y sin la pelota (−2 animaciones); los charcos, en los tonos de siempre;
+  // la canícula, sin llovizna (−23 nodos y −20 animaciones); el cerco de la luna, solo CSS (0).
+  { caso: 'tarde de lluvia, paraguas', dia: '2026-09-09', hora: 15.5, declara: 838 },
+  { caso: 'al escampar, charcos', dia: '2026-09-09', hora: 18, declara: 841 },
+  { caso: 'la canícula', dia: '2026-07-22', hora: 15.5, declara: 824 },
+  { caso: 'el cerco de la luna', dia: '2026-09-22', hora: 21, declara: 837 },
   // (Campamento E) El ánimo del valle según la semana del precio (`animo`: lo fuerza `libro.animo`): otro reparto de los mismos vecinos
   // (sentados de dos en dos si baja; la ropa tendida y vecinos de paseo si sube). Un miércoles de escuela por la mañana (la que barre ya
   // acabó: 10:00) y en la tarde de la pelota; los cinco estados, cada uno con lo suyo declarado (un tono de más es un trazo más).
@@ -171,6 +179,10 @@ const ANCHOS = [[1440, 900], [1920, 1080], [2560, 1440]].flatMap(([w, h]) => [
   // (46) las Gemínidas (la cumbre mira arriba) y el lucero de la tarde
   { caso: `Gemínidas ${w}`, dia: '2026-12-14', hora: 23, w, h },
   { caso: `lucero ${w}`, dia: '2026-08-15', hora: 18, w, h },
+  // (44) la tarde de lluvia, los charcos y el cerco de la luna
+  { caso: `lluvia ${w}`, dia: '2026-09-09', hora: 15.5, w, h },
+  { caso: `charcos ${w}`, dia: '2026-09-09', hora: 18, w, h },
+  { caso: `cerco ${w}`, dia: '2026-09-22', hora: 21, w, h },
   // (E) con el valle en «plaza» y en «abrigo» (los que más vecinos sacan), un día cualquiera por la mañana
   { caso: `ánimo plaza ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'plaza' },
   { caso: `ánimo abrigo ${w}`, dia: '2027-02-10', hora: 10, w, h, animo: 'abrigo' },
@@ -207,6 +219,8 @@ const TELE = [
   { caso: 'tele garrobo', dia: '2027-02-10', hora: 13 }, // (45)
   { caso: 'tele zanates', dia: '2026-11-25', hora: 18 },
   { caso: 'tele lucero de la tarde', dia: '2026-08-15', hora: 18 }, // (46)
+  { caso: 'tele charcos', dia: '2026-09-09', hora: 18 }, // (44)
+  { caso: 'tele cerco de la luna', dia: '2026-09-22', hora: 21 },
 ];
 
 const puertoLibre = () => new Promise((res) => { const s = net.createServer().listen(0, '127.0.0.1', () => { const { port } = s.address(); s.close(() => res(port)); }); });

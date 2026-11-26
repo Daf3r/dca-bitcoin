@@ -137,6 +137,8 @@ export const FECHAS_ALMANAQUE = [
   ['Las posadas (diciembre)', '2026-12-18'], ['Luna llena: los cuentos', '2027-02-20'],
   // (Campamento 45) Los animales de aquí: un sábado de la seca con los cuatro (el gallo, el garrobo, los zanates y, de noche, el tecolote).
   ['Los animales de aquí (noche de tecolote)', '2026-11-28'],
+  // (Campamento 44) Lluvia y verano: una tarde de lluvia con sus charcos al escampar, la canícula y una noche con el cerco de la luna.
+  ['Tarde de lluvia y charcos (septiembre)', '2026-09-09'], ['La canícula (julio)', '2026-07-22'], ['El cerco de la luna (septiembre)', '2026-09-22'],
 ];
 const hhmm = (h) => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
 /**

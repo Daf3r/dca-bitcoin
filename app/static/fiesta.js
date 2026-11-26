@@ -49,9 +49,9 @@ export function fiestaDelHito({ escala, conTu = false, tv = false }) {
   terminarFiesta();
   const sit = sitiosFiesta();
   const C = window.libroCielo, h = C?.hora?.() ?? 12, raiz = document.documentElement;
-  // Con lluvia: en la lluviosa, de día y al atardecer llueve en la escena (`.gotas`) y de noche hay relámpagos (la noche más cargada):
+  // Con lluvia: en la lluviosa, de día y al atardecer llueve en la escena (`.gotas`; campamento 44: si esa tarde llueve, `data-lluvia`) y de noche hay relámpagos (la noche más cargada):
   // sin farolitos.
-  const g = guionFiesta(escala, { noche: h >= 22 || h < 5, lluvia: raiz.dataset.epoca === 'lluviosa' && raiz.dataset.cielo !== 'amanecer', efectos: nivelEfectos(), ancho: sit?.W ?? innerWidth, conTu });
+  const g = guionFiesta(escala, { noche: h >= 22 || h < 5, lluvia: (raiz.dataset.cielo === 'noche' ? raiz.dataset.epoca === 'lluviosa' : raiz.hasAttribute('data-lluvia')) && raiz.dataset.cielo !== 'amanecer', efectos: nivelEfectos(), ancho: sit?.W ?? innerWidth, conTu });
   if (!sit || !g.pasos.length) { if (g.farol) ponerFarolHito(); return Promise.resolve(); }
   return new Promise((listo) => {
     const v = { host: sit.host, timers: [], capas: [], guion: g, vecinos: false, fin: listo, quitar: null };

@@ -319,6 +319,9 @@ function lago(c, W, H, ventas = 0, kv = 1) {
 export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
   if (!C?.navidad) return [];
   const md = d.slice(5), fi = C.fiesta(d), mp = C.milpa(d), fl = C.flor(d), lluviosa = C.epoca(d) === 'lluviosa';
+  // (Campamento 44) La tarde de lluvia de hoy (165–167): sin ella (la seca, la canícula, una tarde de costumbre) no se dibujan la
+  // llovizna del cielo, el capote de «Tú» ni el paraguas de la cumbre.
+  const llueve = C.llueveLaTarde ? C.llueveLaTarde(d) : lluviosa;
   return [
     !C.navidad(d) && '.v-navidad, .oso-bufanda',
     !['12-24', '12-25', '12-31', '01-01'].includes(md) && '.cohetes',
@@ -331,8 +334,9 @@ export function fueraDeTemporada(d, C = globalThis.window?.libroCielo) {
     fl !== 'maquilishuat' && '.v-flores-maqui', fl !== 'fuego' && '.v-flores-fuego',
     md !== '05-03' && '.v-cruz-mayo', // (34) el Día de la Cruz
     md !== '12-24' && md !== '12-25' && '.c-regalo', // (41) los regalos de la cumbre
-    !lluviosa && '.tu-lluvia', // (48) el capote de «Tú»
-    !etapaOsoNieve(d) && '.c-nieve-oso', !lluviosa && '.c-lluvia', !['09-13', '09-14', '09-15'].includes(md) && '.c-patria', // (47) lo plantado junto a los osos
+    !llueve && '.tu-lluvia', // (48) el capote de «Tú»
+    !llueve && '.clima-lluvia', // (44) la nube cargada y sus 20 gotas
+    !etapaOsoNieve(d) && '.c-nieve-oso', !llueve && '.c-lluvia', !['09-13', '09-14', '09-15'].includes(md) && '.c-patria', // (47) lo plantado junto a los osos
   ].filter(Boolean);
 }
 

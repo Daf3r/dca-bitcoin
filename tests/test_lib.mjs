@@ -1375,7 +1375,7 @@ ok(iluminacionLunar(0) === 0 && Math.abs(iluminacionLunar(0.5) - 1) < 1e-9 && Ma
   // Lo que se mueve: uno a la vez, cada uno a su hora.
   eq([5, 6.9, 7, 7.5, 9.9, 10, 12, 16.4, 16.5, 17.9, 18, 21.9, 22, 2, 4.9].map((h) => C.mueve('2026-05-17', h)),
     ['torogoz', 'cruza', 'barre', 'zompopos', 'zompopos', 'teleferico', 'campana', 'pelota', 'pericos', 'pericos', 'luciernagas', 'luciernagas', 'relampagos', 'relampagos', 'relampagos'], 'valle 22B: un 17 de mayo, torogoz, la que barre (37), zompopos, el teleférico (32), la pelota (37), pericos, luciérnagas y relámpagos, cada uno a su hora');
-  eq([7.9, 8, 15.9, 16, 16.5, 22, 2].map((h) => C.mueve('2026-10-15', h)), ['barre', 'azacuanes', 'azacuanes', 'pelota', 'pericos', 'relampagos', 'relampagos'], 'valle 22B: un 15 de octubre, los azacuanes de día; relámpagos de madrugada (lluviosa)');
+  eq([7.9, 8, 15.9, 16, 16.5, 22, 2].map((h) => C.mueve('2026-10-15', h)), ['barre', 'azacuanes', 'azacuanes', '', 'pericos', 'relampagos', 'relampagos'], 'valle 22B: un 15 de octubre, los azacuanes de día; relámpagos de madrugada (lluviosa); (44) a las 16:00 llueve: no hay pelota');
   eq([8, 12, 18, 22, 2, 5.5].map((h) => C.mueve('2027-02-10', h)), ['gallinas', 'campana', 'luciernagas', 'luciernagas', 'luciernagas', 'torogoz'], 'valle 22B: en la seca no hay relámpagos y las luciérnagas siguen toda la noche');
   eq([9.9, 10, 12.9, 13, 11].map((h) => C.mueve('2026-11-25', h)).concat(C.mueve('2026-10-15', 11)), ['gallinas', 'teleferico', 'teleferico', 'hamaca', 'teleferico', 'azacuanes'], 'valle 32: el teleférico de 10:00 a 13:00, y los días de azacuanes, ellos');
   eq([7.5, 12].map((h) => C.mueve('2026-04-20', h)), ['barre', 'azacuanes'], 'valle 22B: en abril pasan los azacuanes (sin zompopos)');
@@ -1834,12 +1834,12 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   const C = ctx.window.libroCielo;
   const t0 = raiz.dataset.turno;
   almacen['libro.hora'] = '13.5'; C.aplicar(); almacen['libro.hora'] = '14'; C.aplicar();
-  ok(t0 === 'siesta' && raiz.dataset.turno === 'tarde' && avisos.filter((x) => x === 'libro:turno').length === 1, `pueblo 35: <html data-turno> y un solo aviso «libro:turno» al cambiar de turno (${JSON.stringify(avisos)})`);
+  ok(t0 === 'siesta' && raiz.dataset.turno === 'tp-lluvia' && avisos.filter((x) => x === 'libro:turno').length === 1, `pueblo 35: <html data-turno> y un solo aviso «libro:turno» al cambiar de turno (${JSON.stringify(avisos)})`);
   const V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js');
   // (Campamento 40) El día entero: antes del alba, la tortillera, la salida de la escuela, la siesta desde las 12:30, la vuelta del cantón
   // (16:00) y la fresca (20:00–22:00).
   eq([2, 4.4, 4.5, 5, 6.9, 7, 11.4, 11.5, 11.9, 12, 12.4, 12.5, 13.9, 14, 15.9, 16, 17.7, 17.75, 19.9, 20, 21.9, 22].map((h) => C.turno('2026-10-14', h)),
-    ['duerme', 'duerme', 'alba', 'amanece', 'amanece', 'manana', 'manana', 'tortillas', 'tortillas', 'salida', 'salida', 'siesta', 'siesta', 'tarde', 'tarde', 'vuelta', 'vuelta', 'pupusas', 'pupusas', 'fresca', 'fresca', 'duerme'], 'pueblo 35 (40): los turnos de un miércoles de octubre');
+    ['duerme', 'duerme', 'alba', 'amanece', 'amanece', 'manana', 'manana', 'tortillas', 'tortillas', 'salida', 'salida', 'siesta', 'siesta', 'tp-lluvia', 'tp-lluvia', 'tp-lluvia', 'tp-lluvia', 'tp-charcos', 'pupusas', 'fresca', 'fresca', 'duerme'], 'pueblo 35 (40): los turnos de un miércoles de octubre (44: la tarde de lluvia y los charcos al escampar)');
   eq([['2026-10-17', 12.2], ['2026-10-18', 12.2], ['2026-11-25', 12.2], ['2026-09-15', 12.2]].map(([f, h]) => C.turno(f, h)), ['tortillas', 'tortillas', 'tortillas', 'p15-plaza'], 'pueblo 40: sin escuela (sábado, domingo, vacaciones, el 15 de septiembre) no hay salida: sigue la tortillera (42: el 15, la plaza llena de su guion)');
   eq([['2026-10-18', 10.5], ['2026-11-16', 9], ['2027-01-15', 9], ['2027-01-18', 9]].map(([f, h]) => C.turno(f, h)), ['mananaLibre', 'mananaLibre', 'mananaLibre', 'manana'], 'pueblo 35: el domingo (después de misa) y las vacaciones (15 nov – 15 ene), los oseznos salen desde la mañana');
   let malos = 0;
@@ -1851,7 +1851,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
       if (fi) { if (x !== fi) malos++; continue; }
       const fa = C.turnoDelAnio(f, h); // (42) y las fiestas del resto del año, el suyo (solo de 5:00 a 22:00)
       if (fa) { if (x !== fa || h >= 22 || h < 5) malos++; continue; }
-      if (!['duerme', 'alba', 'amanece', 'manana', 'mananaLibre', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'misa', 'mercado', 'desfile', 'posada', 'tp-mangos', 'tp-mejenga', 'tp-atolada', 'tp-posada', 'tp-cuentos'].includes(x) || ((h >= 22 || h < 4.5) !== (x === 'duerme')) || ((h >= 4.5 && h < 5) !== (x === 'alba')) || (['manana', 'salida'].includes(x) && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
+      if (!['duerme', 'alba', 'amanece', 'manana', 'mananaLibre', 'tortillas', 'salida', 'siesta', 'tarde', 'vuelta', 'pupusas', 'fresca', 'misa', 'mercado', 'desfile', 'posada', 'tp-mangos', 'tp-mejenga', 'tp-atolada', 'tp-posada', 'tp-cuentos', 'tp-lluvia', 'tp-charcos'].includes(x) || ((h >= 22 || h < 4.5) !== (x === 'duerme')) || ((h >= 4.5 && h < 5) !== (x === 'alba')) || (['manana', 'salida'].includes(x) && (sem === 0 || sem === 6 || C.vacaciones(f)))) malos++;
     }
   }
   eq(malos, 0, 'pueblo 35 (40): en cada cuarto de hora de un año, un turno válido; de noche nadie (de 4:30 a 5:00, solo el panadero); la escuela solo entre semana fuera de vacaciones');
@@ -2126,7 +2126,7 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   eq(dia('2027-03-14', [7, 7.5, 10, 11.4, 11.5]).concat(dia('2027-03-10', [9]), dia('2027-03-13', [9]), dia('2027-05-09', [10.5])), ['tp-mangos', 'misa', 'tp-mangos', 'tp-mangos', 'tortillas', 'manana', 'mercado', 'mananaLibre'], 'temporada 43 (152): en marzo y abril, las mañanas sin escuela son de mangos (el domingo, antes y después de misa); con escuela, la mañana de siempre; en mayo, ya no');
   eq([C.temporadaDelPueblo('2027-03-13', 9).mangos, C.temporadaDelPueblo('2027-03-13', 12.5).mangos, C.temporadaDelPueblo('2027-05-08', 9).mangos], [true, false, false], 'temporada 43 (152): el sábado de plaza de marzo y abril también se bajan mangos (no después de la plaza ni en mayo)');
   eq(dia('2027-02-14', [14.9, 15, 16.4, 16.5]).concat(dia('2026-12-20', [15.5]), dia('2027-02-13', [15.5])), ['tarde', 'tp-mejenga', 'tp-mejenga', 'vuelta', 'tarde', 'tarde'], 'temporada 43 (163): el domingo de 15:00 a 16:30, la mejenga (en Navidad, la tarde de siempre; el sábado, también)');
-  eq(dia('2026-07-18', [15.9, 16, 17.7, 17.75]).concat(dia('2026-08-29', [16.5]), dia('2026-09-05', [16.5]), dia('2026-07-15', [16.5])), ['tarde', 'tp-atolada', 'tp-atolada', 'pupusas', 'tp-atolada', 'vuelta', 'vuelta'], 'temporada 43 (155): los sábados de julio y agosto, de 16:00 a 17:45, la atolada (en septiembre y entre semana, la vuelta de siempre)');
+  eq(dia('2026-07-18', [15.9, 16, 17.7, 17.75]).concat(dia('2026-08-29', [16.5]), dia('2026-09-05', [16.5]), dia('2026-07-15', [16.5])), ['tarde', 'tp-atolada', 'tp-atolada', 'pupusas', 'tp-atolada', 'tp-lluvia', 'vuelta'], 'temporada 43 (155): los sábados de julio y agosto, de 16:00 a 17:45, la atolada (en septiembre y entre semana, la vuelta de siempre; 44: el sábado de septiembre llueve y el 15 de julio es canícula)');
   eq(dia('2026-12-18', [18.4, 18.5, 19.9, 20]).concat(dia('2026-12-15', [19]), dia('2026-12-23', [19]), dia('2026-12-24', [19])), ['posada', 'tp-posada', 'tp-posada', 'fresca', 'posada', 'tp-posada', 'nb-cena'], 'temporada 43 (161): del 16 al 23 de diciembre, de 18:30 a 20:00, la posada (Nochebuena sigue su guion)');
   eq(dia('2027-02-20', [19.9, 20, 20.4, 20.5]).concat(dia('2027-02-10', [20.2])), ['pupusas', 'tp-cuentos', 'tp-cuentos', 'fresca', 'fresca'], 'temporada 43 (164): las noches de luna llena, de 20:00 a 20:30, los cuentos (sin luna llena, la fresca)');
   eq([['2026-05-06', 8.5], ['2026-05-06', 5.9], ['2026-05-06', 10], ['2026-05-15', 8.5], ['2026-08-19', 8], ['2026-11-04', 8], ['2026-11-02', 8], ['2026-05-10', 8], ['2026-05-03', 8.5]].map(([f, h]) => C.temporadaDelPueblo(f, h).milpa), ['siembra', '', '', '', 'dobla', 'tapisca', '', '', 'siembra'], 'temporada 43 (154): la milpa con su gente, las dos primeras semanas de cada etapa, de 6:00 a 10:00, en una mañana de siempre (no en Difuntos ni el 10 de mayo)');
@@ -2753,14 +2753,14 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   eq(anE(largo, 61), anE(escalon(0.9), 61), 'ánimo E: el mismo ánimo con un año más de histórico delante (cada aparato pide desde otra fecha)');
   ok(L47.animosDeSerie(sube).every((d) => L47.ANIMOS.includes(d.animo) && Number.isFinite(d.sem + d.dist)), 'ánimo E: la serie da siempre uno de los cinco estados');
   // El reparto: lo del ánimo solo en los turnos de un día cualquiera, después del de siempre (el actor no cambia), sin poses de fiesta.
-  const FIESTA_E = /^(oseznoArriba|estira|oseznoLuz|abrazo|brindis|volcancito|cohete)|Saluda$/;
+  const FIESTA_E = /^(oseznoArriba|estira|oseznoLuz|abrazo|brindis|volcancito|cohete)|Saluda$/; // (44) la tarde de lluvia y los charcos son de un día cualquiera de la lluviosa: el ánimo también
   const malE = [], difiere = {};
   for (const [li, lug] of lugs.entries()) for (const dia of ['2026-10-05', '2026-10-06', '2026-10-08', '2026-10-10', '2026-10-11', '2026-12-10']) for (let h = 4.5; h < 22; h += 0.25) {
     const t = C.turno(dia, h), o = { dia, hora: h, escuela: C.escuela(dia) }, base = V.reparto(lug, t, o), clave = (l) => JSON.stringify(l.map((v) => [v.t, v.quien ?? '', Math.round(v.x), Math.round(v.y)]));
     for (const animo of ['fresco', 'abrigo', 'aire', 'plaza']) {
       const l = V.reparto(lug, t, { ...o, animo }), nuevos = l.filter((v) => v.animo);
       if (clave(l) !== clave(base)) difiere[`${li}${animo}`] = (difiere[`${li}${animo}`] ?? 0) + 1;
-      if (['misa', 'mercado', 'desfile', 'posada', 'duerme'].includes(t) || t.includes('-')) { if (clave(l) !== clave(base)) malE.push(`${dia} ${h} ${t} ${animo}: un turno especial cambia`); continue; }
+      if (['misa', 'mercado', 'desfile', 'posada', 'duerme'].includes(t) || (t.includes('-') && !['tp-lluvia', 'tp-charcos'].includes(t))) { if (clave(l) !== clave(base)) malE.push(`${dia} ${h} ${t} ${animo}: un turno especial cambia`); continue; }
       if (JSON.stringify(l.filter((v) => v.actor || v.ronda)) !== JSON.stringify(base.filter((v) => v.actor || v.ronda))) malE.push(`${dia} ${h} ${t} ${animo}: cambia el actor`);
       if (nuevos.some((v) => FIESTA_E.test(v.t) || v.actor || v.ronda)) malE.push(`${dia} ${h} ${t} ${animo}: una pose de fiesta o un actor nuevo`);
       if (l.filter((v) => !V.COSAS.has(v.t)).length > V.MAX_VECINOS || /NaN|style=/.test(V.svgVecinos(l))) malE.push(`${dia} ${h} ${t} ${animo}: más de ocho o un trazo roto`);
@@ -2826,6 +2826,98 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   ok(A.sitioFigura(A.FIGURAS_CIELO.orion, { libre: () => false, alto: [70, 170] }) === null, 'luna 46 (180): sin sitio, ninguna figura (las estrellas de siempre)');
   // (179, la luna con el conejo, vive en montana.js, que no se carga aquí: lo mira el bloque «campamento 46» de test_ui.)
   ok(!/NaN/.test(A.luceroD(10, 10, 3)), 'luna 46 (182): el lucero, un destello sin NaN');
+}
+
+// Campamento 44 · Lluvia y verano (165, 166, 167 y 171): la tarde de lluvia de calendario y sus excepciones, los turnos nuevos (la lluvia y
+// los charcos), la pelota que no sale con lluvia, la canícula (la llovizna, el capote y la ropa tendida), el cerco de la luna y una línea
+// de COSTUMBRES para cada una. Todo quieto: ningún actor nuevo.
+{
+  const almacen = {}, avisos = [];
+  const raiz = { dataset: {}, atributos: new Set(), toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty() {} } };
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem: (k, v) => { almacen[k] = String(v); }, removeItem: (k) => { delete almacen[k]; } }, setInterval() {}, Intl, Date, Math, Number, Object, Event: class { constructor(t) { this.type = t; } }, dispatchEvent: (ev) => avisos.push(ev.type) };
+  ctx.window = ctx;
+  almacen['libro.dia'] = '2026-09-09'; almacen['libro.hora'] = '13.5';
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo, V = await import('../app/static/arte-vecinos.js'), P = await import('../app/static/arte-pueblo.js'), L = await import('../app/static/lib.js');
+  // 167 · la canícula, del 15 de julio al 15 de agosto; 165 · la tarde de lluvia, en la lluviosa salvo la canícula y las tardes de costumbre.
+  eq(['2026-07-14', '2026-07-15', '2026-08-15', '2026-08-16'].map(C.canicula), [false, true, true, false], 'lluvia 44 (167): la canícula, del 15 de julio al 15 de agosto');
+  eq(['2026-09-09', '2026-05-04', '2026-10-30', '2026-07-22', '2026-08-01', '2026-11-04', '2027-02-10', '2026-09-13', '2026-07-04', '2026-06-17', '2026-10-01', '2026-05-10', '2026-09-12'].map(C.llueveLaTarde),
+    [true, true, true, false, false, false, false, false, false, false, false, false, true], 'lluvia 44 (165): llueve las tardes de la lluviosa; no en la canícula, la seca, el domingo de la mejenga, el sábado de atolada ni las tardes de fiesta (17 jun, 1 oct, 10 may); un sábado de septiembre sí');
+  const dia = (f, hs) => hs.map((h) => C.turno(f, h));
+  eq(dia('2026-09-09', [13.9, 14, 15.9, 16, 17.7, 17.75, 18.4, 18.5, 20]), ['siesta', 'tp-lluvia', 'tp-lluvia', 'tp-lluvia', 'tp-lluvia', 'tp-charcos', 'tp-charcos', 'pupusas', 'fresca'], 'lluvia 44 (165, 166): la tarde de lluvia de 14:00 a 17:45 y los charcos al escampar, hasta las 18:30');
+  eq(dia('2026-07-22', [15, 16.5, 18]).concat(dia('2026-09-13', [14.5, 15.5, 17]), dia('2026-07-04', [14.5, 16.5, 18]), dia('2027-02-10', [15, 18])), ['tarde', 'vuelta', 'pupusas', 'tarde', 'tp-mejenga', 'vuelta', 'tarde', 'tp-atolada', 'pupusas', 'tarde', 'pupusas'], 'lluvia 44: en la canícula, el domingo de la mejenga, el sábado de atolada y en la seca, la tarde de siempre (y sin charcos)');
+  // La pelota no sale con lluvia: la franja queda sin actor (nadie lo nombra en `data-mueve`), y donde sale, el reparto la trae.
+  eq([C.mueve('2026-09-09', 15.5), C.mueve('2026-07-22', 15.5), C.mueve('2026-09-09', 14.5), C.mueve2('2026-09-09', 15.5)], ['', 'pelota', 'perro', ''], 'lluvia 44 (165): con lluvia no hay pelota (el perro cruza igual); en la canícula, la de siempre');
+  const lugs = [{ W: 390, H: 760, forma: 'tel', by: 600, bx: 55, pts: [[55, 600], [232, 540], [120, 470], [242, 327]], lago: { cx: 320, cy: 680, rx: 62, ry: 12 }, techo: 270 },
+    { W: 768, H: 900, forma: 'tab', by: 760, bx: 150, pts: [[150, 760], [520, 650], [260, 520], [470, 330]], lago: { cx: 640, cy: 830, rx: 100, ry: 14 }, techo: 300 },
+    { W: 844, H: 390, forma: 'acostado', by: 360, bx: 430, pts: [[430, 360], [700, 300], [520, 230], [590, 140]], lago: null, techo: 120 },
+    { W: 1440, H: 774, forma: 'esc', by: 708, bx: 466, pts: [[466, 708], [860, 610], [500, 480], [890, 62]], lago: null, techo: 400 },
+    { W: 2560, H: 1440, forma: 'esc', by: 1318, bx: 900, pts: [[900, 1318], [1600, 1100], [980, 880], [1560, 230]], lago: null, techo: 600 }].flatMap((c) => [1, -1].map((sol) => P.lugaresPueblo(P.sitiosPueblo({ ...c, sol }))));
+  const malos = [];
+  for (let t = Date.UTC(2026, 4, 1); t < Date.UTC(2026, 10, 1); t += 864e5) {
+    const f = new Date(t).toISOString().slice(0, 10);
+    for (const h of [15, 15.5, 16.25]) {
+      const m = C.mueve(f, h), l = V.reparto(lugs[6], C.turno(f, h), { dia: f, escuela: C.escuela(f), hora: h, temporada: C.temporadaDelPueblo(f, h) });
+      const pel = l.some((v) => v.actor === 'pelota');
+      if (!C.turnoDelAnio(f, h) && ((m === 'pelota' && !pel) || (C.turno(f, h) === 'tp-lluvia' && (m === 'pelota' || pel)))) malos.push(`${f} ${h}: ${m} / ${C.turno(f, h)}`);
+    }
+  }
+  eq(malos.slice(0, 5), [], 'lluvia 44: de mayo a octubre, a la hora de la pelota, `data-mueve` la nombra solo si el reparto la trae (con lluvia, ninguna)');
+  // El reparto: la tarde de lluvia con paraguas, la hoja de huerta y los oseznos bajo el corredor (nadie en la plaza); los charcos con
+  // dos oseznos saltando. En cinco tamaños y con la luz de cada lado: de dos a ocho, sin actor, sin NaN ni estilos.
+  const fallos = [];
+  for (const [i, lug] of lugs.entries()) {
+    const lluvia = V.reparto(lug, 'tp-lluvia', { dia: '2026-09-09', escuela: true, hora: 15.5 }), ch = V.reparto(lug, 'tp-charcos', { dia: '2026-09-09', escuela: true, hora: 18 });
+    const nL = lluvia.filter((v) => !V.COSAS.has(v.t)).length, nC = ch.filter((v) => !V.COSAS.has(v.t)).length;
+    const plaza = new Set((lug.plaza ?? []).map((q) => `${Math.round(q[0])} ${Math.round(q[1])}`));
+    if (!lluvia.some((v) => v.t === 'paraguas') || !lluvia.some((v) => v.t === 'hojaHuerta') || lluvia.some((v) => v.actor || v.t === 'pelota') || nL < 2 || nL > 8) fallos.push(`${i} lluvia: ${lluvia.map((v) => v.t)}`);
+    if (lluvia.some((v) => (v.s ?? 1) < 1 && plaza.has(`${Math.round(v.x)} ${Math.round(v.y)}`)) || !lluvia.some((v) => (v.s ?? 1) < 1)) fallos.push(`${i} lluvia: oseznos fuera del corredor`);
+    if (!ch.some((v) => v.t === 'charcos3') || ch.filter((v) => v.t === 'oseznoSalta').length !== 2 || nC < 2 || nC > 8) fallos.push(`${i} charcos: ${ch.map((v) => v.t)}`);
+    for (const l of [lluvia, ch]) if (/NaN|style=/.test(V.svgVecinos(l)) || new Set(l.filter((v) => v.quien).map((v) => v.quien)).size !== l.filter((v) => v.quien).length) fallos.push(`${i}: trazo roto o un vecino dos veces`);
+  }
+  eq(fallos.slice(0, 5), [], 'lluvia 44 (165, 166): la tarde de lluvia (paraguas, hoja de huerta, oseznos bajo el corredor, sin pelota) y los charcos con dos oseznos que saltan, en cinco tamaños');
+  ok(V.COSAS.has('charcos3') && V.PERRO_TURNOS.includes('tp-charcos') && !V.PERRO_TURNOS.includes('tp-lluvia'), 'lluvia 44: los charcos son una cosa del suelo; con ellos el perro se echa donde la pupusera (como en las pupusas)');
+  // 167 · en la canícula la ropa tendida se queda hasta las 16:00 (como en la seca); con lluvia, se recoge a mediodía (40).
+  const ropa = (f, t, h) => V.reparto(lugs[6], t, { dia: f, escuela: true, hora: h, temporada: C.temporadaDelPueblo(f, h) }).some((v) => /^tendedero/.test(v.t));
+  eq([ropa('2026-07-23', 'tarde', 15), ropa('2026-09-10', 'tp-lluvia', 15), ropa('2027-02-11', 'tarde', 15)], [true, false, true], 'lluvia 44 (167): el jueves de canícula la ropa sigue tendida por la tarde; el de lluvia, no; en la seca, sí');
+  // El capote de «Tú» (48) y los paraguas siguen a la tarde de lluvia: en la canícula, no.
+  eq([C.poseTu('2026-09-09', 15), C.poseTu('2026-07-22', 15), C.poseTu('2026-09-13', 15)], ['capote', '', ''], 'lluvia 44 (167): el capote de «Tú» solo las tardes que llueve');
+  // Lo que deja en <html> y el aviso de las 18:30 (los charcos se secan: cambia el turno).
+  almacen['libro.hora'] = '15'; C.aplicar();
+  ok(raiz.atributos.has('data-lluvia') && !raiz.atributos.has('data-canicula') && raiz.dataset.turno === 'tp-lluvia' && !raiz.dataset.mueve?.includes('pelota'), 'lluvia 44: un miércoles de septiembre a las 15:00, `data-lluvia`, la tarde de lluvia y sin pelota');
+  avisos.length = 0; almacen['libro.hora'] = '18.4'; C.aplicar(); almacen['libro.hora'] = '18.6'; C.aplicar();
+  ok(avisos.filter((x) => x === 'libro:turno').length === 2 && raiz.dataset.turno === 'pupusas', 'lluvia 44 (166): al escampar llegan los charcos y a las 18:30 se van (un aviso cada vez)');
+  almacen['libro.dia'] = '2026-07-22'; almacen['libro.hora'] = '15'; C.aplicar();
+  ok(!raiz.atributos.has('data-lluvia') && raiz.atributos.has('data-canicula') && raiz.dataset.turno === 'tarde', 'lluvia 44 (167): en la canícula, `data-canicula` y la tarde de siempre');
+  // 171 · el cerco de la luna: las noches de la lluviosa (no en la canícula) con la luna al 75 % o más; nunca en un eclipse.
+  const cercos = [];
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) { const f = new Date(t).toISOString().slice(0, 10); if (C.cerco(f, 21)) cercos.push(f); }
+  const luz = (f) => (1 - Math.cos(2 * Math.PI * C.faseLunar(new Date(Date.parse(`${f}T00:00:00Z`) + 27 * 3600e3)))) / 2;
+  ok(cercos.length >= 30 && cercos.length <= 60 && cercos.every((f) => C.epoca(f) === 'lluviosa' && !C.canicula(f) && luz(f) >= 0.75), `lluvia 44 (171): el cerco ${cercos.length} noches de 2026, todas de la lluviosa (fuera de la canícula) con la luna crecida`);
+  ok(cercos.every((f) => C.cerco(new Date(Date.parse(f) + 864e5).toISOString().slice(0, 10), 2)) && !C.cerco(cercos[0], 12) && !C.cerco(cercos[0], 18.5), 'lluvia 44 (171): la misma noche pasada la medianoche; de día y antes de las 19:00, no');
+  eq([C.cerco('2029-06-25', 21), C.cerco('2029-06-25', 20)], [false, true], 'lluvia 44 (171): en la totalidad del eclipse, la luna roja y sin cerco; antes, con él');
+  // La línea de hoy, el primer día de la canícula (sin «tú» y sin mandar nada); la frase de la montaña con lluvia y con charcos.
+  ok(C.fraseDelFoco('2026-07-15')?.includes('canícula') && !C.fraseDelFoco('2026-07-16')?.includes('canícula'), 'lluvia 44 (167): la línea de hoy avisa el primer día de la canícula, solo ese');
+  ok(['tp-lluvia', 'tp-charcos'].every((t) => L.FRASE_TURNO[t] && !/\btu\b|\btú\b/i.test(L.FRASE_TURNO[t])), 'lluvia 44: la descripción de la montaña cuenta la lluvia y los charcos, sin tutear');
+  // Nada se mueve distinto: el mapa del día de una tarde de lluvia no pesa más que el de una tarde de la seca.
+  const pesa = (f) => Math.max(...C.mapaDelDia(f).filter((x) => x.desde >= 14 && x.desde < 18.5).map((x) => x.capas));
+  ok(pesa('2026-09-09') <= pesa('2027-02-10'), 'lluvia 44: una tarde de lluvia no suma capas ni animaciones (todo quieto)');
+  // Cada cosa se apaga con su línea: con `false`, la tarde de siempre.
+  const CO = C.costumbres;
+  for (const k of ['aguacero', 'charcos', 'canicula', 'cerco']) ok(k in CO, `lluvia 44: COSTUMBRES.${k}`);
+  Object.assign(CO, { aguacero: false });
+  eq([C.turno('2026-09-09', 15), C.turno('2026-09-09', 18), C.mueve('2026-09-09', 15.5)], ['tarde', 'pupusas', 'pelota'], 'lluvia 44: sin `aguacero`, la tarde de siempre y la pelota (y sin charcos)');
+  Object.assign(CO, { aguacero: true, charcos: false });
+  eq([C.turno('2026-09-09', 15), C.turno('2026-09-09', 18)], ['tp-lluvia', 'pupusas'], 'lluvia 44: sin `charcos`, al escampar las pupusas de siempre');
+  Object.assign(CO, { charcos: true, canicula: false });
+  ok(C.llueveLaTarde('2026-07-22') && C.turno('2026-07-22', 15) === 'tp-lluvia' && C.poseTu('2026-07-22', 15) === 'capote' && C.fraseDelFoco('2026-07-15') === null, 'lluvia 44: sin `canicula`, julio y agosto llueven como antes');
+  Object.assign(CO, { aguacero: false });
+  let distinta = 0;
+  for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) { const f = new Date(t).toISOString().slice(0, 10); if (C.llueveLaTarde(f) !== (C.epoca(f) === 'lluviosa')) distinta++; }
+  ok(distinta === 0 && C.poseTu('2026-09-13', 15) === 'capote' && C.poseTu('2026-07-04', 15) === 'capote', `lluvia 44: sin \`aguacero\` ni \`canicula\`, llueve toda la lluviosa como antes (también el domingo de la mejenga y el sábado de atolada: el capote) (${distinta})`);
+  Object.assign(CO, { aguacero: true, canicula: true, cerco: false });
+  ok(cercos.every((f) => !C.cerco(f, 21)), 'lluvia 44: sin `cerco`, el halo de siempre');
+  Object.assign(CO, { cerco: true });
 }
 
 console.log(`OK ${n} comprobaciones`);
