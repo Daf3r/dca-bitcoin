@@ -3,6 +3,8 @@
 Anotado por encargo del dueño: **cuando haya límite de Fable otra vez** se usa Fable para lo de arte nuevo; **mientras tanto solo hay Opus** y se sigue con lo que no exige dibujo nuevo. Complementa a `39-50-pendientes-revision.md` (del 24 nov) y al plan (`39-50-la-vida-del-valle-plan.md`). Si algo de aquí se hace, se tacha aquí y se anota en el documento de su campamento.
 
 ## 1. Para Fable (arte nuevo que quedó sin dibujar)
+
+**Ahora vive en su propio campamento: [`65-arte-para-fable.md`](65-arte-para-fable.md)** (la tabla de abajo queda como copia del 26 nov; el 65 manda).
 Regla: Opus no inventa dibujos que no estén en las maquetas o los prototipos (`docs/pulido-visual/vida-del-valle/prototipo-vida4.patch` y `prototipo-vida5.patch`). Cada línea dice de dónde sale y qué hace falta dibujar.
 
 | De | Qué falta dibujar | Nota |
