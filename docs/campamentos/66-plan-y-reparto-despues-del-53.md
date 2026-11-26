@@ -45,3 +45,6 @@ Mientras no haya límite de Fable, Opus puede seguir con **54, 55 y 56** (solo l
 
 ## 6. El CI
 El trabajo «Rendimiento (Lighthouse y banco de la escena)» tarda **~32 a 39 minutos** (límite 60). **Cada momento que se declara en el banco suma tiempo**: declarar solo los que prueban algo. Si crece más, la salida duradera es **partir el banco en dos trabajos** (una `PARTE` en `banco_rendimiento.mjs`, como `test_ui`).
+
+## 7. Lighthouse en rojo en `main` (26 nov 2026): para Fable cuando vuelva
+El chequeo «Rendimiento (Lighthouse)» del CI da **62 a 67** en la app (mínimo 70) **también en `main`** (corrida 252) y en el PR del 53C. Medido en la misma máquina: **64 en `main`, 64 en `755ef18` (antes de 42–46), 63 en `4c86bce` (19 nov, antes de «La vida del valle»)**: la puntuación no depende del código sino de la velocidad del corredor, que rinde menos que cuando se fijó el mínimo. El dueño mezcló el #125 con ese chequeo en rojo y **dejó la decisión para esta sesión** (con Fable): subir la medición a algo estable (por ejemplo más corridas o un perfil de CPU fijo), bajar el mínimo a 60, o dejar Lighthouse informativo y fiarse del iPhone (59 fps). Hasta decidirlo, el CI de `main` marcará rojo en ese punto: es esperado. No es un problema de arte; si Fable lo mira, que sea con medidas, no con el ojo.
