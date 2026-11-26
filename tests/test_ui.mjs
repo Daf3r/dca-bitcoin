@@ -3070,7 +3070,7 @@ try {
       // Fuera de temporada: sin papel picado ni cohetes (desde el campamento 30 ni se dibujan: no hay elemento); época seca de día: aire
       // dorado y sin llovizna; de día no cruza el torogoz.
       eq([await cs(r.p, '.papel-picado', 'display'), await cs(r.p, '.cohetes', 'display'), await cs(r.p, '.aire-seco', 'display'), await cs(r.p, '.clima-lluvia', 'display'), await cs(r.p, '.torogoz', 'animationName')],
-        [null, null, 'inline', 'none', 'none'], 'fuera de temporada: sin papel picado ni cohetes (ni dibujados); época seca: aire dorado; de día no cruza el torogoz');
+        [null, null, 'inline', null, 'none'], 'fuera de temporada: sin papel picado ni cohetes (ni dibujados); época seca: aire dorado (44: y la llovizna ni se dibuja); de día no cruza el torogoz');
       await r.ctx.close();
       r = await ent(navegador, sAnio, ADMIN, { hora: 12, viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false }, con('2026-03-10'));
       ok(/san-salvador/.test(await r.p.evaluate(() => document.querySelector('.lejos').dataset.volcanes)), 'volcanes: en escritorio también el de San Salvador');
@@ -7645,10 +7645,11 @@ try {
     const anio = await servidor('anio');
     try {
       for (const [w, h] of [[390, 844], [1440, 900]]) {
-        // Un miércoles de octubre (escuela): por la mañana sin oseznos; por la tarde, los cinco con su pelota; de noche, nadie.
+        // Un miércoles de octubre (escuela): por la mañana sin oseznos; por la tarde, los cinco con su pelota (44: es tarde de lluvia: los
+        // oseznos bajo el corredor y los paraguas); de noche, nadie.
         // (40) Al amanecer, en el teléfono, puede bajar además la del cantón por el camino real (144): hasta cuatro. (52) Y el sacristán
         // en la puerta de la iglesia: hasta cinco.
-        for (const [hora, turno, min, max] of [[6, 'amanece', 2, 5], [9, 'manana', 3, 5], [12.5, 'siesta', 2, 3], [15, 'tarde', 6, 8], [19, 'pupusas', 3, 5], [23, 'duerme', 0, 0]]) {
+        for (const [hora, turno, min, max] of [[6, 'amanece', 2, 5], [9, 'manana', 3, 5], [12.5, 'siesta', 2, 3], [15, 'tp-lluvia', 5, 8], [19, 'pupusas', 3, 5], [23, 'duerme', 0, 0]]) {
           const t = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: w, height: h } }, conLs('2026-10-14', { 'libro.efectos': 'esenciales' }));
           await cerrar(t.p);
           const r = await pueblo(t.p);
@@ -7665,7 +7666,7 @@ try {
       await t.p.waitForTimeout(200);
       const b = await pueblo(t.p);
       const mismo = await t.p.evaluate((x) => x === document.querySelector('#montana > svg'), antes);
-      ok(a.turno === 'siesta' && b.turno === 'tarde' && b.n > a.n && mismo, `35: al pasar de la siesta a la tarde con la página abierta, salen los oseznos sin redibujar la escena (${a.n} → ${b.n})`);
+      ok(a.turno === 'siesta' && b.turno === 'tp-lluvia' && b.n > a.n && mismo, `35: al pasar de la siesta a la tarde con la página abierta (44: una tarde de lluvia), salen los oseznos sin redibujar la escena (${a.n} → ${b.n})`);
       await t.ctx.close();
       // En noviembre, con «todos»: de tarde los hilos de las piscuchas bajan a la manita de un osezno; de noche, amarrados al poste del farol.
       const hilos = async (hora) => { const x = await entrar(navegador, anio, ADMIN, { hora, viewport: { width: 1440, height: 900 } }, conLs('2026-11-25', { 'libro.efectos': 'todos' })); await cerrar(x.p); const r = await pueblo(x.p); await x.ctx.close(); return r.hilos; };
@@ -7722,7 +7723,7 @@ try {
 
   // ---------------------------------------------------------------- campamento 37: el pueblo se mueve (la capa del vecino: la que barre y la pelota de los oseznos)
   await bloque(async () => {
-    const conLs = (ef) => [(e) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-09-16'); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, ef]; // un miércoles sin azacuanes
+    const conLs = (ef) => [(e) => { try { localStorage.setItem('libro.avisos.preguntado', '1'); localStorage.setItem('libro.madrugada', '0'); localStorage.setItem('libro.dia', '2026-07-22'); localStorage.setItem('libro.efectos', e); } catch { /* sin almacenamiento */ } }, ef]; // un miércoles sin azacuanes (44: de la canícula, que no llueve: con lluvia no hay pelota)
     const cerrar = async (p) => { for (let k = 0; k < 3 && await p.locator('dialog[open]').count(); k++) { await p.keyboard.press('Escape'); await p.waitForTimeout(300); } };
     const capa = (p) => p.evaluate(() => {
       const h = document.getElementById('montana'), c = h.querySelector(':scope > svg.v-capa-vecino'), frente = h.querySelector(':scope > svg.frente');
@@ -9227,6 +9228,8 @@ try {
           res[hora] = await r.p.evaluate(async (h) => {
             localStorage.setItem('libro.hora', String(h)); window.libroCielo.aplicar();
             await new Promise((ok) => setTimeout(ok, 400));
+            // (44) Si al cambiar de turno alguien camina a su sitio nuevo (49, 204), se espera a que llegue: la foto es del pueblo quieto.
+            for (let k = 0; k < 75 && document.querySelector('#montana > svg.v-capa-camina'); k++) await new Promise((ok) => setTimeout(ok, 200));
             const M = await import([...document.querySelectorAll('link[rel=modulepreload]')].map((l) => l.href).find((u) => /\/montana\.js/.test(u)));
             const raiz = document.documentElement, mont = document.getElementById('montana');
             const foto = () => ({
