@@ -8075,18 +8075,22 @@ try {
       await new Promise((res) => setTimeout(res, 500));
       const host = document.getElementById('montana'), raiz = document.documentElement;
       const malos = [...host.querySelectorAll('[d], [transform]')].filter((e) => /NaN|undefined|Infinity/.test(`${e.getAttribute('d') ?? ''}${e.getAttribute('transform') ?? ''}`)).length;
-      const gz = host.querySelector('.lago .v-gz'), echada = host.querySelector('.v-vaca-echada'), pie = host.querySelector('.v-vaca-pie');
+      const gz = host.querySelector('.lago .v-gz'), agua = host.querySelector('.lago .lago-agua'), echada = host.querySelector('.v-vaca-echada'), pie = host.querySelector('.v-vaca-pie');
+      const centro = (e) => { const b = e.getBoundingClientRect(); return b.x + b.width / 2; };
       return {
         valle: raiz.dataset.valle ?? '', desc: host.querySelector('#m-desc')?.textContent ?? '', malos, ojos: Boolean(host.querySelector('.v-vecinos .v-vo-brasa')),
-        garza: gz ? getComputedStyle(gz).transform : null, echadas: echada ? getComputedStyle(echada).display : null, dePie: pie ? getComputedStyle(pie).display : null,
+        garza: gz && agua && getComputedStyle(gz).display !== 'none' ? Math.sign(centro(gz) - centro(agua)) : null, echadas: echada ? getComputedStyle(echada).display : null, dePie: pie ? getComputedStyle(pie).display : null,
         nodos: host.querySelectorAll('*').length,
       };
     }, [d, h]);
     const anio = await servidor('anio', { FECHA_PRUEBA: '2026-11-20' });
     try {
       for (const [w, alto] of [[390, 844], [1440, 900]]) {
-        const t = await entrar(navegador, anio, ADMIN, { hora: 9, viewport: { width: w, height: alto } }, conLs);
+        const t = await entrar(navegador, anio, ADMIN, { hora: 5.5, viewport: { width: w, height: alto } }, conLs);
         await cerrar(t.p);
+        // Al abrir directo a las 5:30 (sin cambio de turno), la descripción ya nombra el gallo.
+        const alAbrir = await t.p.evaluate(() => document.querySelector('#montana #m-desc')?.textContent ?? '');
+        ok(alAbrir.includes('un gallo'), `45 a ${w} px: al abrir a las 5:30, la descripción nombra el gallo`);
         const fallos = [];
         let maxNodos = 0;
         for (const [d, h, animal, valle] of GUION) {
@@ -8097,7 +8101,8 @@ try {
           // De noche, el pueblo duerme: en sus trazos solo están los ojos encendidos del tecolote, si sale.
           if (h === 23 && r.ojos !== (animal === 'tecolote')) fallos.push(`${d} ${h}: los ojos del tecolote (${r.ojos})`);
           // La garza: reflejada en la otra orilla por la tarde, en la suya por la mañana; las vacas, echadas a mediodía.
-          if (r.garza !== null && h < 19 && (valle.includes('garza') ? !/^matrix\(-1, 0, 0, 1/.test(r.garza) : r.garza !== 'none')) fallos.push(`${d} ${h}: la garza ${r.garza}`);
+          // (Por su sitio en la pantalla, no por el estilo: así falla también si un motor no aplica el reflejo.)
+          if (r.garza !== null && r.garza !== (valle.includes('garza') ? 1 : -1)) fallos.push(`${d} ${h}: la garza del lado ${r.garza}`);
           if (r.echadas !== null && h < 19 && (valle.includes('vacas') ? r.echadas === 'none' || r.dePie !== 'none' : r.echadas !== 'none' || r.dePie === 'none')) fallos.push(`${d} ${h}: las vacas ${r.echadas}/${r.dePie}`);
         }
         eq(fallos, [], `45 a ${w} px: el animal de cada hora (lo nombra la descripción), el tecolote solo su noche, la garza de orilla en orilla, las vacas echadas a mediodía y ningún NaN`);
