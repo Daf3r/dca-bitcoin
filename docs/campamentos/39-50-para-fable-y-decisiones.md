@@ -21,7 +21,7 @@ Regla: Opus no inventa dibujos que no estén en las maquetas o los prototipos (`
 | 45 (174) | **El corral y su camino** (las vacas van en un solo trazo) | |
 
 ## 2. Para después, sin arte (Opus puede)
-- **Mejoras de la v5 que piden memoria de varios días** (campamentos 53 y 54): la **ramada de la atolada** y la **milpa por capítulos**, la **pelota que se queda hasta el lunes** y el **canasto que se va llenando**.
+- **Mejoras de la v5 que piden memoria de varios días** (campamentos 53 y 54): la **ramada de la atolada** y la **milpa por capítulos**, la **pelota que se queda hasta el lunes** y el **canasto que se va llenando**. *(Campamento 53C: la ramada, hecha; la milpa por capítulos sigue para después: ver [53c-historias-de-varios-dias.md](53c-historias-de-varios-dias.md).)*
 - **El perro junto a la piñata** (42): colocarlo con los vecinos exige comprobar que nadie quede encima.
 - **«Más fila» en las pupusas** el Día del Padre y la noche de Gloria (42): hoy queda la fila de siempre.
 - **La semana de Semana Santa en `escuela()`** (43): `escuela(f)` no sabe de la semana de vacaciones; los mangos de esos días siguen la regla de siempre.

@@ -269,9 +269,42 @@ const TIPOS = {
   oseznoSalta: (r) => [...mv([...cuerpo(), ...brazos(1, 1), ...pantaloncito(r), ...cabeza(0, 0, false)], 0, -1.3), ['som', e(0, 0.25, 3.4, 0.6)], ['pelo2', e(-2.6, -0.5, 0.35, 0.5)], ['pelo2', e(2.7, -0.7, 0.35, 0.5)]],
   charcos3: () => [['som', e(-4, 0, 3.4, 0.75)], ['som', e(2.4, 0.9, 2.5, 0.55)], ['som', e(6.2, -0.4, 1.5, 0.38)], ['pelo2', e(-4.6, -0.15, 1.3, 0.16)]],
   tecolote: () => [['rasgo', e(0, -1.6, 1.25, 1.6)], ['rasgo', p([-1.2, -2.6], [-1.0, -3.6], [-0.4, -3.0])], ['rasgo', p([1.2, -2.6], [1.0, -3.6], [0.4, -3.0])], ['brasa', e(-0.5, -2.2, 0.32)], ['brasa', e(0.5, -2.2, 0.32)]],
+  // ---- (Campamento 53C) Las historias de varios días: los personajes y las cosas de las maquetas aprobadas (`prototipo-vida5.patch`:
+  // s-ramada, s-bebe, s-globo, s-circo), tal cual, en la misma talla y los mismos tonos (0 nodos: van en los trazos de siempre).
+  // (240) La ramada de la atolada: el jueves, los cuatro horcones (y las palmas apiladas); el viernes, con su techo de palma; el sábado,
+  // con banderines. (En la maqueta era una sola con su variante en `r`; aquí, tres tipos.)
+  ramadaHorcones: () => RAMADA_HORCONES,
+  ramada: () => [...RAMADA_HORCONES, ...RAMADA_TECHO],
+  ramadaFiesta: () => [...RAMADA_HORCONES, ...RAMADA_TECHO, ['r1', p([-7.6, -7.4], [-6.4, -7.4], [-7, -6.2])], ['r2', p([-5.2, -7.4], [-4, -7.4], [-4.6, -6.2])], ['azul', p([-2.8, -7.4], [-1.6, -7.4], [-2.2, -6.2])], ['r1', p([-0.4, -7.4], [0.8, -7.4], [0.2, -6.2])], ['r2', p([2, -7.4], [3.2, -7.4], [2.6, -6.2])], ['azul', p([4.4, -7.4], [5.6, -7.4], [5, -6.2])], ['r1', p([6.6, -7.4], [7.6, -7.4], [7.1, -6.2])]],
+  palmas: () => [['r0', p([-5, 0.3], [-3, -1.6], [3, -1.9], [5.5, -0.2], [3.6, 0.6], [-3.4, 0.7])], ['palma', p([-4.6, 0.9], [4.8, 0.5], [4.8, 0.9], [-4.6, 1.3])]],
+  // (241) Nace un osezno: el tendedero de pañales (el último, un baberito de maíz) y la vecina con el osezno en brazos, envuelto en su manta.
+  panales: () => [['rasgo', p([-7.2, 0], [-6.85, 0], [-6.85, -6.7], [-7.2, -6.7])], ['rasgo', p([6.85, 0], [7.2, 0], [7.2, -6.7], [6.85, -6.7])], ['rasgo', p([-7, -6.45], [7, -6.25], [7, -6.1], [-7, -6.3])],
+    ...[-5.6, -3.4, -1.2, 1.0, 3.2].map((x) => ['pelo2', p([x, -6.25], [x + 1.7, -6.22], [x + 1.7, -4.4], [x, -4.4])]), ['r2', p([5.0, -6.15], [6.3, -6.12], [6.5, -4.9], [5.65, -4.7], [4.8, -4.9])]],
+  bebe: (r) => [...cuerpo(), ...brazos(), ...vestido(r), ...cabeza(), ['pelo2', p([-0.2, -4.0], [2.7, -3.6], [2.5, -1.9], [-0.4, -2.2])], ['pelo', e(1.7, -4.4, 0.95, 0.85)], ['pelo', e(1.0, -5.1, 0.32)], ['pelo', e(2.4, -5.1, 0.32)], ['rasgo', e(2.0, -4.3, 0.16)]],
+  // (242) El globo que se escapa: el de los globos (cinco, cada uno de un color), el osezno con el suyo, rojo, y el globo suelto en el árbol.
+  globero: (r) => [...cuerpo(), ...brazos(0, 1), ...camisa(r), ...cabeza(), ...sombrero(), ['rasgo', p([2.2, -5.6], [2.4, -5.6], [2.4, -11], [2.2, -11])],
+    ['r1', e(1.0, -12.4, 1.5, 1.8)], ['r2', e(3.7, -12.7, 1.5, 1.8)], ['r0', e(2.3, -14.8, 1.5, 1.8)], ['azul', e(0.1, -15.1, 1.4, 1.7)], ['brasa', e(4.5, -15.3, 1.4, 1.7)]],
+  oseznoGlobo: (r) => [...cuerpo(), ...brazos(0, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['rasgo', p([2.15, -10.9], [2.35, -10.9], [2.35, -5.6], [2.15, -5.6])], ['r1', e(2.25, -12.8, 1.9, 2.3)], ['pelo2', e(1.55, -13.7, 0.45, 0.6)]],
+  globoSuelto: () => [['rasgo', p([-0.1, -3.0], [0.1, -3.0], [0.6, -0.4], [0.4, -0.4])], ['r1', e(0, -4.9, 1.9, 2.3)], ['pelo2', e(-0.7, -5.8, 0.45, 0.6)]],
+  // (244) Llega el circo: la lona tendida con sus dos palos, la carpa a rayas con su banderita, el oso en zancos y el osezno malabarista.
+  // Sin animales y sin rueda. El redondel de aserrín que queda al irse (una mancha del color de la palma: lo puede pulir Fable).
+  lona: () => [['r1', p([-7, 0], [-5, -1.6], [3, -1.9], [7, -0.4], [6, 0.5], [-6, 0.6])], ['pelo2', p([-3, -1.75], [-0.5, -1.85], [0.4, 0.55], [-2.2, 0.55])], ['pelo2', p([3, -1.9], [5, -1.2], [5.6, 0.5], [3.4, 0.5])],
+    ['palma', p([-9, 0.4], [-8.6, 0.4], [-8.0, -9], [-8.4, -9])], ['palma', p([8.4, 0.2], [8.8, 0.2], [9.2, -6], [8.8, -6])]],
+  carpa: () => [['r1', p([-9, 0], [-9, -6], [0, -13], [9, -6], [9, 0])], ['pelo2', p([-5.4, 0], [-5.4, -8.8], [-1.8, -11.6], [-1.8, 0])], ['pelo2', p([1.8, 0], [1.8, -11.6], [5.4, -8.8], [5.4, 0])],
+    ['r2', p([-9.6, -6.3], [9.6, -6.3], [9.6, -5.3], [-9.6, -5.3])], ['rasgo', p([-1.3, 0], [-1.3, -4.0], [0, -5.0], [1.3, -4.0], [1.3, 0])],
+    ['rasgo', p([-0.12, -13], [0.12, -13], [0.12, -15.6], [-0.12, -15.6])], ['r2', p([0.12, -15.6], [2.4, -15.0], [0.12, -14.3])]],
+  zancos: (r) => [['palma', p([-1.4, 0], [-1.0, 0], [-1.0, -5], [-1.4, -5])], ['palma', p([1.0, 0], [1.4, 0], [1.4, -5], [1.0, -5])],
+    ...mv([...cuerpo(), ...brazos(1, 0), ...camisa(r), ...cabeza(), ['r1', p([-1.6, -8.0], [1.6, -8.0], [0, -11.2])], ['r2', e(0, -11.3, 0.5)]], 0, -4.6)],
+  malabar: (r) => [...cuerpo(), ...brazos(1, 1), ...pantaloncito(r), ...cabeza(0, 0, false), ['r1', e(-2.6, -10.6, 0.6)], ['r2', e(0, -12.0, 0.6)], ['r0', e(2.6, -10.6, 0.6)]],
+  aserrin: () => [['palma', e(0, -0.2, 7.6, 1.3)], ['pelo2', e(-2.4, -0.4, 1.6, 0.22)]],
 };
+/** (Campamento 53C) Los horcones de la ramada y su techo de palma (maqueta `s-ramada`). */
+const RAMADA_HORCONES = [['palma', p([-8, 0], [-7.6, 0], [-7.6, -8], [-8, -8])], ['palma', p([7.6, 0], [8, 0], [8, -8], [7.6, -8])], ['palma', p([-2.6, -1.2], [-2.2, -1.2], [-2.2, -8.6], [-2.6, -8.6])], ['palma', p([2.6, -1.2], [3.0, -1.2], [3.0, -8.6], [2.6, -8.6])]];
+const RAMADA_TECHO = [['r0', p([-9, -7.6], [-4, -10.4], [5, -10.4], [9.2, -7.6], [9.2, -8.6], [5, -11.4], [-4, -11.4], [-9, -8.6])], ['r0', p([-9, -7.6], [9.2, -7.6], [5, -10.4], [-4, -10.4])]];
+/** (Campamento 53C) Lo que levanta una historia en la plaza o en la calle: ocupa su sitio (nadie se le pone encima ni delante). */
+export const ESTRUCTURAS = new Set(['ramadaHorcones', 'ramada', 'ramadaFiesta', 'palmas', 'panales', 'lona', 'carpa', 'aserrin']);
 /** (Campamento 41) Lo que no es un vecino sino una cosa en el suelo: sin sombra de pie, no cuenta entre los ocho y no aparta a nadie. */
-export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola', 'porteria', 'gallo', 'zanates', 'garrobo', 'tecolote', 'charcos3']); // (45) los animales de aquí; (44) los charcos
+export const COSAS = new Set(['pinata', 'velita', 'pelota', 'mesa', 'mesaCorta', 'volcancito', 'volcancitoApagado', 'polvora', 'tendedero', 'tendederoJueves', 'tendederoCorto', 'tendederoJuevesCorto', 'perroEchado', 'bicicleta', 'comal', 'olla', 'atarraya', 'escobaSola', 'porteria', 'gallo', 'zanates', 'garrobo', 'tecolote', 'charcos3', 'globoSuelto', ...ESTRUCTURAS]); // (45) los animales de aquí; (44) los charcos; (53C) lo de las historias
 /** (Campamento 40) Sin sombra de pie, pero sí es un vecino (cuenta y aparta a los demás): la hamaca, con sus postes y el que duerme en ella. */
 const SIN_PIE = new Set(['hamaca', 'hamacaPostes', 'hamacaSola', 'tortilleraManos', 'estrellita']); // (49) las partes que van a su capa no repiten la sombra
 export const PERSONAJES = Object.keys(TIPOS);
@@ -379,7 +412,7 @@ export const VECINOS = {
  * cantón (144; montana.js lo saca de la hora al dibujar el turno), o null. (Campamento E) `animo`: el del valle según la semana del
  * precio (lib.js: `ANIMOS`; 'calma', el de siempre).
  */
-export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null, hora = null, animo = 'calma', temporada = null, animal = '' } = {}) {
+export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela = true, canton = null, hora = null, animo = 'calma', temporada = null, animal = '', historia = null, obra = null, conOsezno = false, entrada = false } = {}) {
   const L = [];
   const en = (sitio, i, tipo, extra = {}) => { const q = lug[sitio]?.[i]; if (q) L.push({ t: tipo, x: q[0] + (extra.dx ?? 0) * q[2], y: q[1] + (extra.dy ?? 0) * q[2], k: q[2], ...extra }); };
   const oseznos = (cuantos, tipo = null) => {
@@ -461,6 +494,46 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
     quien('milpero', 'milpa', 0, { t: faena === 'tapisca' ? 'matate' : 'milpero' });
     en('milpa', 1, faena === 'siembra' ? 'chuzo' : faena === 'tapisca' ? 'matate' : 'campesino', { r: 1, f: -1 });
   }
+  // ---- (Campamento 53C) Las historias de varios días (cielo.js: `historiaAhora`): el capítulo de hoy va antes que el pueblo (con ocho
+  // como mucho, no se queda fuera). Lo que levanta en la plaza o en la calle (`ESTRUCTURAS`: la lona, la carpa, la ramada, los pañales)
+  // ocupa su sitio de día y de noche: nadie se le pone encima ni delante, y las cosas del turno que caerían dentro (la pelota, los
+  // charcos) no salen. Los de la historia salen de día (no antes del alba ni en la fresca). `alto`: si no cabe bajo lo que deja el
+  // sendero encima de la plaza, se encoge un poco (hasta el 70 %) y si ni así cabe, no sale. Nada se mueve: todo quieto.
+  const H = historia, gente = !['duerme', 'alba', 'fresca'].includes(t), ZANCOS = [['calle', 0, -5], ['atrio', 1], ['calle', 1, 4]];
+  const her = (sitio, i, tipo, extra = {}) => en(sitio, i, tipo, { historia: H?.id ?? true, ...extra });
+  const enCasa = (c, tipo, extra = {}) => { if (c) L.push({ t: tipo, x: c[0] + (extra.dx ?? 0) * c[2], y: c[1] + (extra.dy ?? 0) * c[2], k: c[2], historia: H?.id ?? true, ...extra }); };
+  if (H?.id === 'circo') {
+    if (H.cap === 'lona') { her('plaza', 2, 'lona', { dx: 1.8, dy: -1 }); if (gente) { her('plaza', 5, 'zancos', { r: 0, dx: 2, alto: true, alt: ZANCOS }); her('plaza', 0, 'oseznoArriba', { s: OSEZNO, r: 2, alt: [['atrio', 0], ['calle', 0, 4]] }); } }
+    else if (H.cap === 'carpa' || H.cap === 'funcion') {
+      her('plaza', 2, 'carpa', { dx: 1.8, dy: -1.4, alto: true });
+      if (gente) { her('plaza', 5, 'zancos', { r: 0, dx: 3.5, alto: true, alt: ZANCOS }); her('plaza', 0, 'malabar', { s: OSEZNO, r: 1, dx: -3, alt: [['atrio', 0], ['calle', 0, 5], ['calle', 1, -4]] }); }
+      // Los días de función, al anochecer (17:45–20:00), los vecinos llegan con los oseznos en hombros.
+      if (H.cap === 'funcion') { her('calle', 0, 'hombros', { r: 0 }); her('atrio', 1, 'hombros', { r: 2, f: -1 }); }
+    } else if (H.cap === 'aserrin') { her('plaza', 2, 'aserrin', { dx: 1.8, dy: -0.3 }); if (gente) her('plaza', 5, 'escoba', { r: 1, f: -1, dx: 1, alt: [['plaza', 0, -2], ['calle', 0, -5]] }); }
+  } else if (H?.id === 'ramada') {
+    her('plaza', 2, H.cap === 'techo' ? 'ramada' : H.cap === 'atolada' ? 'ramadaFiesta' : 'ramadaHorcones', { dx: 1.8, dy: -1, alto: true });
+    if (H.cap === 'horcones') { her('plaza', 2, 'palmas', { dx: 12, dy: 0.5, aparte: [['plaza', 2, 12], ['atrio', 0], ['atrio', 4], ['calle', 0, -6], ['calle', 1, 6]] }); if (gente) her('plaza', 0, 'chuzo', { r: 1, alt: [['atrio', 0], ['calle', 0, -5]] }); }
+    if (H.cap === 'techo' && gente) her('plaza', 5, 'escalera', { r: 0, dx: 3, alt: [['plaza', 0, -3]] }); // un vecino termina el techo desde su escalera
+    // El sábado, de 16:00 a 17:45, la atolada debajo: la olla y uno con su huacal bajo el techo, y la guitarra al lado.
+    if (H.cap === 'atolada' && t === 'tp-atolada') { her('plaza', 2, 'olla', { dx: 0.3, dy: 0.6, libre: true }); her('plaza', 2, 'huacal', { r: 2, dx: 5.4, dy: 0.8, libre: true }); her('plaza', 5, 'guitarra', { r: 1, dx: 4, alt: [['plaza', 0, -2], ['calle', 0, -5]] }); }
+  } else if (H?.id === 'globo') {
+    if (H.cap === 'plaza' && gente) { her('plaza', 4, 'globero', { r: 0, dx: 1, alto: true, alt: [['plaza', 5], ['atrio', 0], ['calle', 0, -5]] }); her('plaza', 1, 'oseznoGlobo', { s: OSEZNO, r: 2, alt: [['plaza', 3], ['atrio', 1]] }); }
+    // El lunes amanece enredado en el árbol de la plaza (en su copa) y los oseznos lo miran desde abajo.
+    if (H.cap === 'arbol') { her('banca', 0, 'globoSuelto', { dx: -1.5, dy: -13.5 }); if (gente) { her('plaza', 1, 'oseznoArriba', { s: OSEZNO, r: 0 }); her('plaza', 2, 'oseznoArriba', { s: OSEZNO, r: 1 }); } }
+  } else if (H?.id === 'osezno' && !entrada) { // (241) nunca en la entrada
+    if (H.cap !== 'brazos') her('calle', 1, 'panales', { dy: -0.6, aparte: [['calle', 1], ['calle', 1, -4], ['calle', 1, 4], ['calle', 0], ['calle', 0, -4]] });
+    if (H.cap === 'visita' && gente) { const cerca = [['calle', 1, -9], ['calle', 1, 9], ['corredor', 1], ['corredor', 0], ['calle', 0], ['calle', 0, -5], ['atrio', 1]]; her('calle', 1, 'tamales', { r: 0, dx: -9, alt: cerca }); her('calle', 1, 'flores', { r: 1, dx: 9, f: -1, alt: cerca }); her('corredor', 1, 'huacal', { r: 2, alt: cerca }); }
+    if (H.cap === 'brazos' && gente) { her('corredor', 1, 'bebe', { r: 1, alt: [['corredor', 0], ['calle', 1]] }); her('calle', 1, 'oseznoArriba', { s: OSEZNO, r: 0, dx: -4, alt: [['calle', 0], ['plaza', 4]] }); her('calle', 1, 'vecino', { r: 2, dx: 4, f: -1, alt: [['calle', 0, 4], ['atrio', 1]] }); }
+  } else if (H?.id === 'casa' && obra && gente) { // (243) delante de la casa que se pinta: la escalera; el tercer día, dos la miran
+    const c = lug.casas?.find((q) => q.i === obra.casa)?.pie;
+    if (obra.cap !== 'entera') enCasa(c, 'escalera', { r: 0 }); else { enCasa(c, 'espaldas', { r: 1, dx: -2.6 }); enCasa(c, 'espaldas', { r: 2, dx: 2.6 }); }
+  } else if (H?.id === 'mural' && gente) { // (247) los oseznos pintan la pared de la escuela; el viernes posan delante
+    const c = lug.escuela?.lado, posan = H.cap === 'posan';
+    for (let j = 0; j < (posan ? 3 : 2); j++) enCasa(c, posan ? 'osezno' : 'oseznoArriba', { s: OSEZNO, r: j, dx: (j - (posan ? 1 : 0.5)) * 3.4, f: posan || j ? 1 : -1 });
+    if (posan) enCasa(c, 'maestra', { r: 2, dx: 6.4, f: -1 });
+  }
+  // (241) Desde que nace, algunas tardes la vecina sale a su corredor con el osezno en brazos (de fondo: cielo.js, `conElOsezno`).
+  if (conOsezno && !entrada && ['tarde', 'vuelta', 'tp-lluvia'].includes(t)) en('corredor', 1, 'bebe', { r: 1 });
   // (Campamento 43, idea 152) Los mangos (marzo y abril): un osezno los baja con su vara bajo el árbol de la plaza (su canasto, al lado)
   // (la de la tienda, con su canasto de siempre en el atrio). Las mañanas sin escuela (`tp-mangos`) y el sábado de plaza (`temporada.mangos`).
   const mangos = () => { en('banca', 0, 'oseznoVara', { s: OSEZNO, r: 0, dx: -3 }); };
@@ -733,8 +806,21 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   let figuras = 0;
   const choca = (c, roce) => puestos.some((q) => !(c.osezno && q.osezno) && c.x0 < q.x1 - roce && c.x1 > q.x0 + roce && c.y0 < q.y1 - roce && c.y1 > q.y0 + roce);
   const fuera = [];
-  for (const v of L) {
-    if (COSAS.has(v.t)) { fuera.push(v); continue; }
+  const levantado = []; // (53C) las cajas de lo que levanta la historia
+  const encima = (b) => levantado.some((q) => b.x0 < q.x1 && b.x1 > q.x0 && b.y0 < q.y1 && b.y1 > q.y0);
+  const techo = Number.isFinite(lug.techoPlaza) ? lug.techoPlaza : -Infinity;
+  for (const v0 of L) {
+    let v = v0;
+    // (53C) Lo alto de una historia (la carpa, la ramada, el de los globos, el de los zancos) se encoge si no cabe bajo el sendero.
+    if (v.alto) { v = [1, 0.85, 0.7].map((s2) => ({ ...v0, s: (v0.s ?? 1) * s2 })).find((q) => cajaVecino(q).y0 >= techo); if (!v) continue; }
+    // (53C) Lo que levanta la historia ocupa su sitio. Lo que va aparte (las palmas apiladas, los pañales) prueba unos pasos a un lado si
+    // pisa a alguien o algo ya puesto (las gallinas, el perro); si no cabe, no sale.
+    if (ESTRUCTURAS.has(v.t)) {
+      if (v.aparte) { v = v.aparte.map(([s2, i2, dx2 = 0]) => { const q = lug[s2]?.[i2]; return q && { ...v, x: q[0] + dx2 * q[2], y: q[1] + (v0.dy ?? 0) * q[2], k: q[2] }; }).find((q) => q && !choca(cajaVecino(q), 0) && dentro(q)); if (!v) continue; }
+      const cj = cajaVecino(v), r0 = m * v.k; levantado.push(cj); puestos.push({ x0: cj.x0 - r0, x1: cj.x1 + r0, y0: cj.y0 - r0, y1: cj.y1 + r0 }); fuera.push(v); continue; // (sin roce: con su margen)
+    }
+    if (v.libre) { fuera.push(v); if (!COSAS.has(v.t)) { puestos.push(cajaVecino(v)); figuras++; } continue; }
+    if (COSAS.has(v.t)) { if (!encima(cajaVecino(v))) fuera.push(v); continue; }
     if (figuras >= n) continue;
     const roce = m * v.k, adulto = (v.s ?? 1) >= 1;
     // (40) Quien se aparta unos pasos no se sale de la calle (`lug.borde`: en escritorio acaba junto al sendero); la fila del fin de
@@ -754,7 +840,7 @@ export function reparto(lug, t, { n = MAX_VECINOS, hilos = 0, dia = '', escuela 
   if (perroHoy && PERRO_TURNOS.includes(t)) {
     const v = { t: 'perroEchado', x: perroHoy.x, y: perroHoy.y, k: perroHoy.k }, cj = cajaVecino(v);
     const s0 = lug.perro?.[0];
-    if (perroHoy.bajo || !choca(cj, m * v.k)) { fuera.push(v); puestos.push(cj); } else if (s0) fuera.push({ t: 'perroEchado', x: s0[0], y: s0[1], k: s0[2] });
+    if ((perroHoy.bajo && fuera.some((w) => w.actor === 'hamaca')) || !choca(cj, m * v.k)) { fuera.push(v); puestos.push(cj); } else if (s0 && !encima(cajaVecino({ t: 'perroEchado', x: s0[0], y: s0[1], k: s0[2] }))) fuera.push({ t: 'perroEchado', x: s0[0], y: s0[1], k: s0[2] }); // (53C) bajo la carpa o la ramada, no
   }
   // (40, 143) Lunes y jueves, la ropa tendida (el lunes, sábanas; el jueves, los uniformes de la escuela) de la mañana a las 16:00; en la
   // lluviosa se recoge al empezar la siesta, antes del aguacero. Delante de una casa con corredor donde no tape a nadie; si no cabe, no sale.
