@@ -9,6 +9,16 @@ import { ofrecerAvisos } from './cuenta.js';
 // avisar. Aquí quedan solo las últimas entradas (el archivo se sirve entero); las anteriores están en el historial de git.
 export const CAMBIOS = [
   {
+    // (Campamento 46) Luna y estrellas y la hora exacta de los animales; resume también los animales de aquí (2026-12-za).
+    id: '2026-12-zb',
+    items: [
+      'El gallo, el garrobo y los zanates del pueblo llegan y se van a su hora, también con la app abierta.',
+      'Las noches de luna llena, en la luna se ve el conejo.',
+      'Las estrellas se ponen como en el cielo de aquí: Orión de noviembre a marzo y el Escorpión de mayo a agosto.',
+      'El lucero sale al anochecer o antes del alba, y las noches de estrellas fugaces de diciembre los osos de la cumbre miran arriba.',
+    ],
+  },
+  {
     // (Campamento 45) Los animales de aquí; resume también las temporadas y las fiestas del pueblo (2026-12-z y 2026-12-y).
     id: '2026-12-za',
     items: [

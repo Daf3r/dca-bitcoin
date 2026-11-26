@@ -201,6 +201,14 @@ html[data-efectos="todos"]:is([data-cielo="dia"], [data-cielo="amanecer"]) .estr
 .fugaz { stroke: var(--astro); stroke-width: 1.6; stroke-linecap: round; opacity: 0; }
 @keyframes fugaz { 0%, 94% { opacity: 0; transform: translate(0, 0); } 95% { opacity: 0.9; } 100% { opacity: 0; transform: translate(190px, 84px); } }
 html[data-efectos="todos"][data-cielo="noche"] .fugaz { animation: fugaz 34s linear 9s infinite; }
+/* (Campamento 46) El lucero (182): un destello quieto junto al astro, solo a su hora (cielo.js pone `data-lucero`: de 17:30 a 20:30 el
+   de la tarde, de 4:00 a 6:30 el de la mañana) y solo los días que lo hay (la escena lo dibuja entonces). Sin animación. La luna de un
+   eclipse total (183): cobriza los minutos de la totalidad (`data-eclipse`), con el halo apagado. Nada se redibuja. */
+.lucero { fill: var(--astro); opacity: 0.95; display: none; }
+html[data-lucero] .lucero { display: inline; }
+html[data-eclipse] .luna .astro { fill: #b5582f; }
+html[data-eclipse] .luna .halo { opacity: 0.35; }
+html[data-eclipse] .luna-mares { opacity: 0.6; }
 
 /* ---- Atmósfera (solo con todos los efectos; todo lo que lleva `efecto-ambiente` desaparece con esenciales o ninguno) ---- */
 /* Parallax por capas: la sierra lejana y la media se retrasan al bajar y se mueven con el puntero; el cielo, aún más.
@@ -4924,13 +4932,17 @@ html[data-cumbre="duermen"] .osos :is(.oso-dormido, .oso-zz) { display: inline; 
 html[data-cumbre="duermen"] .osos :is(.oso-rasgos, .oso-hola) { display: none; }
 html[data-cumbre="duermen"][data-cielo="noche"][data-efectos="todos"] .osos.con-aurora :is(.oso-hocico-arriba, .oso-rasgos-arriba) { display: none; }
 html[data-cumbre="duermen"][data-cielo="noche"][data-efectos="todos"] .osos.con-aurora .oso-hocico { display: inline; }
+/* (Campamento 46, idea 181) Las noches de las Gemínidas no duermen: miran arriba, con cualquier nivel de efectos (es una pose quieta:
+   miran el cielo estrellado aunque las fugaces solo crucen con «todos»). La cara alzada se dibuja solo esas fechas (`.mira-cielo`). */
+html[data-cumbre="estrellas"] .osos.mira-cielo :is(.oso-hocico-arriba, .oso-rasgos-arriba) { display: inline; }
+html[data-cumbre="estrellas"] .osos.mira-cielo :is(.oso-hocico, .oso-rasgos, .oso-hola) { display: none; }
 html[data-cumbre="espaldas"] .osos :is(.oso-hocico, .oso-rasgos, .oso-parche) { display: none; }
 html[data-cumbre="sol"] .osos .oso-sombrero { display: inline; }
 /* Mirar hacia el pueblo: la cara (con las manitas) se corre hacia allá y hacia abajo, en proporción a su caja (vale a cualquier tamaño). */
 .osos .oso-asoma :is(.oso-hocico, .oso-rasgos), .osos.festeja-arriba :is(.oso-hocico, .oso-rasgos, .oso-hocico-arriba, .oso-rasgos-arriba) { transform-box: fill-box; }
-html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]):is([data-mueve="cruza"], [data-mueve="fiesta-hito"], [data-foco="desfile"]) .osos > .oso-asoma,
-html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]) .montana[data-camina] .osos > .oso-asoma,
-html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"]) .osos.mira > .oso-asoma { --asoma: 1; }
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"], [data-cumbre="estrellas"]):is([data-mueve="cruza"], [data-mueve="fiesta-hito"], [data-foco="desfile"]) .osos > .oso-asoma,
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"], [data-cumbre="estrellas"]) .montana[data-camina] .osos > .oso-asoma,
+html[data-efectos="todos"]:not([data-cumbre="duermen"], [data-cumbre="espaldas"], [data-cumbre="estrellas"]) .osos.mira > .oso-asoma { --asoma: 1; }
 .osos > .oso-asoma { --asoma: 0; }
 .osos[data-mira="i"] > .oso-asoma .oso-hocico { transform: translate(calc(var(--asoma) * -12%), calc(var(--asoma) * 8%)); }
 .osos[data-mira="i"] > .oso-asoma .oso-rasgos { transform: translate(calc(var(--asoma) * -13%), calc(var(--asoma) * 24%)); }

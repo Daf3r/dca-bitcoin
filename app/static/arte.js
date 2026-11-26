@@ -616,3 +616,51 @@ export function monedasDelLago(cx, cy, rx, ry, n) {
   const sitios = [[-0.35, 0.12], [0.12, 0.3], [0.4, 0.02], [-0.08, 0.34], [0.26, 0.2]];
   return sitios.slice(0, Math.min(5, n)).map(([x, y], i) => `<g class="lago-moneda" transform="translate(${f1(cx + rx * x)} ${f1(cy + ry * y)})"><ellipse class="lm-brillo" rx="5.6" ry="2.8"/><ellipse class="lm-disco" rx="2.9" ry="1.5"/><path class="lm-raya" d="M-1.7 -0.4q1.7 -1 3.4 0"/></g>`.replace('class="lago-moneda"', `class="lago-moneda m${i}"`)).join('');
 }
+
+// ---------------------------------------------------------------- (Campamento 46) el cielo de aquí
+/**
+ * (Idea 180) Las figuras del cielo que se ve desde El Salvador al anochecer, como en una carta del cielo (norte arriba, este a la
+ * izquierda), en unidades de la figura: [x, y, r], con `r` el radio de la estrella en px (de 0.45 a 1.6, como las demás). No son un
+ * dibujo nuevo: son unas veinte de las 46 estrellas de siempre, colocadas donde están de verdad (montana.js gasta igual sus `rnd()`).
+ *   orion    Orión (Betelgeuse, Bellatrix, Meissa, el cinturón, la espada, Saiph y Rigel), Aldebarán y las Siete Cabritas (las Pléyades)
+ *   alacran  el Alacrán (Escorpio): Antares, las tenazas y la cola con su aguijón
+ */
+export const FIGURAS_CIELO = {
+  orion: [[0, 0, 1.55], [0.5, 0.05, 1.15], [0.27, -0.22, 0.8], [0.17, 0.42, 1.05], [0.27, 0.39, 1.05], [0.37, 0.35, 1.05], [0.25, 0.58, 0.6], [0.26, 0.66, 0.7], [0.08, 0.85, 1.05], [0.6, 0.8, 1.45],
+    [0.95, -0.3, 1.3], [1.03, -0.34, 0.6], [1.08, -0.39, 0.55],
+    [1.32, -0.72, 0.6], [1.37, -0.74, 0.55], [1.41, -0.69, 0.6], [1.35, -0.66, 0.5], [1.3, -0.67, 0.5], [1.44, -0.75, 0.45], [1.38, -0.79, 0.45]],
+  alacran: [[0.38, -0.56, 1.1], [0.33, -0.4, 1.15], [0.3, -0.24, 0.85], [0.44, -0.66, 0.6], [0.16, -0.3, 0.75], [0.05, -0.18, 1.6], [-0.02, -0.07, 0.85], [-0.05, 0.12, 1.05],
+    [-0.07, 0.3, 0.9], [-0.05, 0.45, 0.85], [0.03, 0.6, 0.85], [0.18, 0.7, 1.05], [0.33, 0.68, 0.85], [0.4, 0.58, 0.95], [0.33, 0.5, 1.25], [0.28, 0.48, 0.8]],
+};
+/**
+ * (180) Dónde cabe una figura: el mayor tamaño (su alto, de `alto[1]` a `alto[0]` px) y el primer sitio, de arriba abajo y de izquierda
+ * a derecha (cada `paso` px), en que todas sus estrellas, con 5 px de aire, caen en el cielo libre (`libre(x, y)`: lo decide quien
+ * llama: ni la montaña, ni los textos, ni la luna); con `cerca`, el de ese tamaño más cerca de ese punto. Devuelve { x, y, s } (el
+ * origen y la escala de la figura) o null si no cabe.
+ */
+export function sitioFigura(pts, { libre, alto = [70, 170], paso = 6, W = 2600, H = 1500, cerca = null }) {
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys), h0 = y1 - y0 || 1;
+  const AIRE = [[0, 0], [5, 0], [-5, 0], [0, 5], [0, -5]];
+  for (let a = alto[1]; a >= alto[0]; a *= 0.88) {
+    const s = a / h0;
+    let mejor = null, dm = Infinity;
+    for (let y = -y0 * s; y + y1 * s < H; y += paso) {
+      for (let x = -x0 * s; x + x1 * s < W; x += paso) {
+        // Con `cerca` ([x, y]), de los sitios de ese tamaño, el que deja el centro de la figura más cerca de ese punto (lo que no
+        // mejora al mejor ya hallado ni se mira).
+        const d = cerca ? Math.hypot(x + ((x0 + x1) / 2) * s - cerca[0], y + ((y0 + y1) / 2) * s - cerca[1]) : 0;
+        if (d >= dm || !pts.every(([px, py]) => AIRE.every(([dx, dy]) => libre(x + px * s + dx, y + py * s + dy)))) continue;
+        if (!cerca) return { x, y, s };
+        dm = d; mejor = { x, y, s };
+      }
+    }
+    if (mejor) return mejor;
+  }
+  return null;
+}
+/** (Idea 182) El lucero: un destello de cuatro puntas (largo `l`), relleno, en un solo trazo. */
+export function luceroD(x, y, l) {
+  const c = l * 0.22;
+  return `M${f1(x)} ${f1(y - l)}Q${f1(x + c)} ${f1(y - c)} ${f1(x + l)} ${f1(y)}Q${f1(x + c)} ${f1(y + c)} ${f1(x)} ${f1(y + l)}Q${f1(x - c)} ${f1(y + c)} ${f1(x - l)} ${f1(y)}Q${f1(x - c)} ${f1(y - c)} ${f1(x)} ${f1(y - l)}Z`;
+}

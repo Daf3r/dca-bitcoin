@@ -2778,4 +2778,54 @@ const NAVIDAD41 = ['nb-madruga', 'nb-compras', 'nb-tamales', 'nb-cena', 'nb-misa
   ok(CAMBIOS_E[0].id >= '2026-12-w' && /semana del precio/.test(CAMBIOS_E[0].items.join(' ')) && CAMBIOS_E[0].items.length >= 3 && CAMBIOS_E[0].items.length <= 6 && !NO_ACONSEJA.test(textoE.replace(/semana del precio|sigue al precio|el precio/gi, '')), `ánimo E (y las entradas que lo resumen, 42): lo que dice el campamento no aconseja (${textoE.match(NO_ACONSEJA)?.[0] ?? 'nada'})`);
 }
 
+// Campamento 46 · Luna y estrellas (179–183) y la hora exacta de los animales del 45: las reglas de cielo.js (las figuras del cielo de
+// aquí por mes, el lucero de la tarde o de la mañana contra fechas publicadas, los eclipses de la tabla, las Gemínidas en la cumbre), la
+// línea de COSTUMBRES de cada una, el aviso al cambiar el animal de la hora y el sitio de una figura (arte.js), puro.
+{
+  const almacen = {}, avisos = [];
+  const raiz = { dataset: {}, atributos: new Set(), toggleAttribute(k, on) { if (on) this.atributos.add(k); else this.atributos.delete(k); }, style: { setProperty() {} } };
+  const ctx = { document: { documentElement: raiz, addEventListener() {}, visibilityState: 'visible' }, localStorage: { getItem: (k) => almacen[k] ?? null, setItem: (k, v) => { almacen[k] = String(v); }, removeItem: (k) => { delete almacen[k]; } }, setInterval() {}, Intl, Date, Math, Number, Object, Event: class { constructor(t) { this.type = t; } }, dispatchEvent: (ev) => avisos.push(ev.type) };
+  ctx.window = ctx;
+  almacen['libro.dia'] = '2027-02-10'; almacen['libro.hora'] = '5.5';
+  vm.runInNewContext(fs.readFileSync(new URL('../app/static/cielo.js', import.meta.url), 'utf8'), ctx);
+  const C = ctx.window.libroCielo, A = await import('../app/static/arte.js');
+  // La hora exacta de los animales (encargo del dueño, 26 nov 2026): un aviso al cambiar el animal, aunque no cambie el turno; uno solo si cambian los dos.
+  const paso = ([h0, h1]) => { almacen['libro.hora'] = String(h0); C.aplicar(); avisos.length = 0; almacen['libro.hora'] = String(h1); C.aplicar(); return [avisos.filter((x) => x === 'libro:turno').length, C.turno('2027-02-10', h0) === C.turno('2027-02-10', h1)]; };
+  const pasos = [[5.5, 6.2], [6.2, 6.4], [10.9, 11.1], [13.9, 14.1], [17.4, 17.6], [18.4, 18.6], [19, 19.5]].map(paso);
+  eq(pasos.map((x) => x[0]), [1, 0, 1, 1, 1, 1, 0], 'luna 46 (hora exacta): «libro:turno» cuando se va el gallo (6:00), llega y se va el garrobo (11:00, 14:00), llegan y se van los zanates (17:30, 18:30); uno solo aunque cambie también el turno');
+  ok(pasos[0][1] && pasos[2][1] && pasos[5][1], 'luna 46 (hora exacta): a las 6:00, a las 11:00 y a las 18:30 el turno no cambia: el aviso es del animal');
+  ok(raiz.dataset.turno === 'pupusas' && C.animalDelPueblo('2027-02-10', 18.6) === '', 'luna 46: a las 18:36, el turno de las pupusas y ningún animal');
+  // 180 · las figuras del cielo de aquí: Orión y las Siete Cabritas de noviembre a marzo, el Alacrán de mayo a agosto.
+  eq(['2026-11-01', '2027-01-15', '2027-03-31', '2027-04-10', '2027-05-01', '2027-08-31', '2027-09-15', '2027-10-20'].map(C.figuraDelCielo), ['orion', 'orion', 'orion', '', 'alacran', 'alacran', '', ''], 'luna 46 (180): Orión y las Cabritas de noviembre a marzo, el Alacrán de mayo a agosto');
+  for (const [k, pts] of Object.entries(A.FIGURAS_CIELO)) ok(pts.length >= 14 && pts.length <= 24 && pts.every(([x, y, r]) => Number.isFinite(x + y + r) && r > 0), `luna 46 (180): la figura ${k}, ${pts.length} estrellas (de las 46 de siempre)`);
+  // 182 · el lucero, contra conjunciones publicadas (inferior: 24 oct 2026, 1 jun 2028; superior: 6 ene 2026, 11 ago 2027) y sus máximas elongaciones.
+  eq(['2026-01-06', '2026-08-15', '2026-10-24', '2026-11-26', '2027-01-03', '2027-08-11', '2028-01-10', '2028-06-01', '2028-08-20', '2030-01-06'].map(C.lucero), ['', 'tarde', '', 'manana', 'manana', '', 'tarde', '', 'manana', ''], 'luna 46 (182): el lucero de la tarde o de la mañana según toque de verdad, nada cerca de las conjunciones');
+  eq([C.luceroAhora('2026-08-15', 18), C.luceroAhora('2026-08-15', 21), C.luceroAhora('2026-11-26', 5), C.luceroAhora('2026-11-26', 18), C.luceroAhora('2026-11-26', 12)], ['tarde', '', 'manana', '', ''], 'luna 46 (182): el de la tarde, al anochecer; el de la mañana, antes del alba; de día, ninguno');
+  // 183 · los eclipses totales de luna que se ven desde aquí (NASA, «Lunar Eclipses: 2021–2040»): cada fecha es de luna llena, y solo su rato.
+  eq([C.eclipse('2029-06-25', 21), C.eclipse('2029-06-25', 20), C.eclipse('2029-06-25', 22.5), C.eclipse('2033-10-08', 4.5), C.eclipse('2036-08-06', 21), C.eclipse('2026-11-25', 21)], [true, false, false, true, true, false], 'luna 46 (183): la luna roja solo en los minutos de la totalidad de los eclipses de la tabla');
+  ok(C.eclipses.every(([f, h0]) => C.lunaLlena(C.faseLunar(new Date(Date.parse(`${f}T00:00:00Z`) + (h0 + 6) * 3600e3)))), 'luna 46 (183): cada eclipse de la tabla cae en luna llena (la cuenta de la fase lo confirma)');
+  // 181 · las Gemínidas: los de la cumbre miran arriba las noches del 13 y del 14 de diciembre (no duermen), también pasada la medianoche.
+  eq([['2026-12-13', 21], ['2026-12-14', 23], ['2026-12-15', 2], ['2026-12-15', 23], ['2026-12-12', 23], ['2026-12-14', 12]].map(([f, h]) => C.poseCumbre(f, h)), ['estrellas', 'estrellas', 'estrellas', 'duermen', 'duermen', ''], 'luna 46 (181): las noches de las Gemínidas los osos de la cumbre miran el cielo');
+  ok(C.cumbre[0].id === 'estrellas' && C.cumbre[0].pesa.capas === 0, 'luna 46 (181): la pose va antes que «duermen» y no pesa');
+  // 179 · el conejo: las noches de luna llena (la misma regla del director: la luna de las 21:00), con su línea.
+  const llenas = []; for (let t = Date.UTC(2026, 0, 1); t < Date.UTC(2027, 0, 1); t += 864e5) { const f = new Date(t).toISOString().slice(0, 10); if (C.conejo(f, 21)) llenas.push(f); }
+  ok(llenas.length >= 24 && llenas.length <= 48 && llenas.every((f) => C.conejo(f, 21) === C.conejo(new Date(Date.parse(f) + 864e5).toISOString().slice(0, 10), 3)), `luna 46 (179): el conejo en ${llenas.length} noches de 2026, la misma noche antes y después de la medianoche`);
+  // Cada cosa se apaga con su línea.
+  const CO = C.costumbres;
+  for (const k of ['conejo', 'estrellas', 'geminidas', 'lucero', 'eclipse']) ok(k in CO, `luna 46: COSTUMBRES.${k}`);
+  Object.assign(CO, { conejo: false, estrellas: false, geminidas: false, lucero: false, eclipse: false });
+  ok(!C.conejo(llenas[0], 21) && C.figuraDelCielo('2027-01-15') === '' && C.poseCumbre('2026-12-14', 23) === 'duermen' && C.lucero('2026-11-26') === '' && !C.eclipse('2029-06-25', 21), 'luna 46: con su línea en false, nada de esto sale');
+  Object.assign(CO, { conejo: true, estrellas: true, geminidas: true, lucero: true, eclipse: true });
+  // El sitio de una figura (puro): con una montaña en triángulo y una caja de texto arriba, todas sus estrellas en el cielo libre.
+  const W = 390, monte = (x, y) => y > 240 + Math.abs(x - 240) * 0.9, texto = (_x, y) => y < 200;
+  const libre = (x, y) => x > 6 && x < W - 6 && y > 6 && !monte(x, y) && !texto(x, y) && Math.hypot(x - 330, y - 300) > 60;
+  for (const [k, pts] of Object.entries(A.FIGURAS_CIELO)) {
+    const sf = A.sitioFigura(pts, { libre, alto: [70, 170], paso: 6 });
+    ok(sf && pts.every(([x, y]) => [[0, 0], [5, 0], [-5, 0], [0, 5], [0, -5]].every(([dx, dy]) => libre(sf.x + x * sf.s + dx, sf.y + y * sf.s + dy))), `luna 46 (180): ${k} cabe en el cielo libre, ni en la montaña ni bajo el texto ni junto a la luna (${JSON.stringify(sf)})`);
+  }
+  ok(A.sitioFigura(A.FIGURAS_CIELO.orion, { libre: () => false, alto: [70, 170] }) === null, 'luna 46 (180): sin sitio, ninguna figura (las estrellas de siempre)');
+  // (179, la luna con el conejo, vive en montana.js, que no se carga aquí: lo mira el bloque «campamento 46» de test_ui.)
+  ok(!/NaN/.test(A.luceroD(10, 10, 3)), 'luna 46 (182): el lucero, un destello sin NaN');
+}
+
 console.log(`OK ${n} comprobaciones`);

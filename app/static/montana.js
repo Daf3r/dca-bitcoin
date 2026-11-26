@@ -1,7 +1,7 @@
 // La montaña de la cabecera: el saldo en sats es la altitud y los hitos son campamentos.
 import { estiranLosOsos, ultimoTramo, arbolesDe, escalaMontana, altitud, descripcionMontana, nombreHito, entero, textoCampamento, fechaLarga, iluminacionLunar, etapasHasta, etapaSiguiente, marcasDeEtapa, rangoEtapa, firmasDe, textoFirmantes, accionFirmas, arbolDelPrimerDia, inicialesGrabadas, fechaGrabada, lucesDelValle, piscuchasDelValle, textoValle, textoOsos, ANIMOS } from './lib.js';
 import { sinMovimiento, conAmbiente } from './movimiento.js';
-import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago } from './arte.js';
+import { volcanes, torogoz, papelPicado, cohetes, rehacerCohetes, clima, arbolHonor, monedaB, petroglifo, farolCumple, luciernagas, relojDeSol, monedasDelLago, FIGURAS_CIELO, sitioFigura, luceroD } from './arte.js';
 import { reparto, repartoFiesta, svgVecinos, manoDe, luzPupusa, cajaVecino, recorrido, tramoLibre } from './arte-vecinos.js';
 import { farolHito as dibujoFarolHito } from './arte-fiesta.js';
 import { sitiosPueblo, lugaresPueblo, TERRAZA, ANCHO_PERRO, COLA_PERRO, pueblo, llano, bordeLlano, enBorde, primerPlano, campos as camposLlano, laderaBaja } from './arte-pueblo.js';
@@ -49,7 +49,7 @@ const SUBIDA_MIN = { tel: 252, tab: 430 };
  * La luna con su fase (0 nueva, 0.25 cuarto creciente, 0.5 llena, 0.75 cuarto menguante): el disco apagado y encima la parte
  * iluminada (un semicírculo y media elipse, que es el terminador). Creciente se ilumina por la derecha; menguante, al revés.
  */
-export function luna(cx, cy, r, fase) {
+export function luna(cx, cy, r, fase, { conejo = false } = {}) {
   const k = Math.cos(2 * Math.PI * fase); // 1 nueva, -1 llena
   const rx = Math.abs(k) * r;
   const barrido = k > 0 ? 0 : 1;
@@ -59,7 +59,13 @@ export function luna(cx, cy, r, fase) {
   // borde algo más apagado (el limbo): la luna deja de ser un disco plano.
   // (Campamento 39, idea 128) Los siete mares, del mismo tono, en un solo trazo.
   const mar = (dx, dy, rx2, ry2) => elipseD(cx + dx * r, cy + dy * r, rx2 * r, ry2 * r);
-  const mares = mar(-0.4, -0.16, 0.3, 0.42) + mar(-0.06, -0.5, 0.32, 0.18) + mar(0.3, -0.3, 0.21, 0.17) + mar(0.44, 0.0, 0.16, 0.21) + mar(0.2, 0.22, 0.13, 0.1) + mar(-0.3, 0.5, 0.17, 0.1) + mar(0.62, -0.38, 0.07, 0.09);
+  // (Campamento 46, idea 179) Las noches de luna llena, los mares de verdad (como se ven desde aquí, con el norte arriba), que dibujan
+  // el conejo de la tradición mesoamericana: las orejas (Fecunditatis y Néctar, largas hacia abajo a la derecha), la cabeza
+  // (Tranquilidad), el lomo (Serenidad y Lluvias) y las patas (Nubes y Humores, con el Océano de las Tormentas). El mismo trazo.
+  const mares = conejo
+    ? mar(-0.56, -0.06, 0.22, 0.4) + mar(-0.3, -0.42, 0.24, 0.19) + mar(0.16, -0.38, 0.16, 0.15) + mar(0.37, -0.08, 0.19, 0.15) + mar(0.72, -0.3, 0.1, 0.12)
+      + mar(0.6, 0.18, 0.08, 0.2) + mar(0.66, 0.4, 0.05, 0.08) + mar(0.4, 0.3, 0.07, 0.14) + mar(0.36, 0.48, 0.04, 0.07) + mar(-0.12, 0.36, 0.17, 0.13) + mar(-0.46, 0.42, 0.09, 0.09) + mar(-0.05, -0.74, 0.3, 0.06)
+    : mar(-0.4, -0.16, 0.3, 0.42) + mar(-0.06, -0.5, 0.32, 0.18) + mar(0.3, -0.3, 0.21, 0.17) + mar(0.44, 0.0, 0.16, 0.21) + mar(0.2, 0.22, 0.13, 0.1) + mar(-0.3, 0.5, 0.17, 0.1) + mar(0.62, -0.38, 0.07, 0.09);
   return `<circle class="luna-sombra" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r)}"/><defs><clipPath id="m-luna-luz"><path d="${luz}"${espejo}/></clipPath></defs><path class="astro" d="${luz}"${espejo}/>`
     + `<g class="luna-mares" clip-path="url(#m-luna-luz)"><path d="${mares}"/><circle class="luna-limbo" cx="${f1(cx)}" cy="${f1(cy)}" r="${f1(r * 0.97)}"/></g>`;
 }
@@ -72,6 +78,63 @@ export function luna(cx, cy, r, fase) {
  *   saldo. Nunca aclaran el fondo de una cifra.
  * El CSS enseña una u otra según `html[data-cielo]`.
  */
+/**
+ * (Campamento 46, ideas 180 y 182) Las 46 estrellas, en sus cinco trazos de siempre (uno por ritmo), con dos cosas del cielo de aquí:
+ * - la figura de la temporada (cielo.js: `figuraDelCielo`; arte.js: `FIGURAS_CIELO`): las primeras estrellas de la lista se colocan
+ *   como en el cielo, en el primer sitio libre donde quepa entera (`sitioFigura`): ni en la montaña (su silueta, `pts`), ni bajo los
+ *   textos de la escena, ni junto a la luna o al rótulo de la cumbre, ni por debajo de los volcanes. Si no cabe, las de siempre.
+ * - el lucero (`lucero`, un destello quieto) donde quepa junto al astro, solo los días que lo hay; el CSS lo enseña a su hora
+ *   (`html[data-lucero]`). Ningún `rnd()`: las estrellas ya los gastaron en su orden.
+ */
+/** (46) Las cajas de los textos de la escena (las mismas que esquivan los osos), medidas al empezar a dibujar: con la página aún sin tocar, no fuerzan otro cálculo de la página. */
+function cajasDeTexto(host) {
+  const hr = host.getBoundingClientRect(), cont = host.closest('.escena, .pe-escena') ?? host.parentElement;
+  return [...(cont?.querySelectorAll(':scope > .cima, :scope > .saldo, :scope > .pe-cab, :scope > .pe-cap') ?? []), ...document.querySelectorAll('.login-caja')]
+    .map((el) => el.getBoundingClientRect()).filter((r) => r.width && r.height)
+    .map((r) => [r.left - hr.left - 6, r.top - hr.top - 6, r.right - hr.left + 6, r.bottom - hr.top + 6]);
+}
+function estrellasDelCielo(host, { W, H, c, ec, estrellas, pts, dia, textos }) {
+  const C = window.libroCielo;
+  const bajo = c.sy + 0.12 * H;
+  const techoMonte = Math.min(...pts.map((q) => q[1])); // por encima de la cima no hace falta mirar la silueta
+  const libreYa = (x, y) => Math.hypot(x - c.sol[0], y - c.sol[1]) > c.rs * 1.7
+    && !(Math.abs(x - c.sx) < 70 * ec && y > c.sy - 70 * ec) && !textos.some(([a, b, d, e]) => x > a && x < d && y > b && y < e) && (y < techoMonte || !dentroDe(pts, x, y));
+  // Lo libre se mira una vez por casilla de 3 px y se recuerda: la búsqueda pregunta muchas veces por los mismos sitios (crear la escena
+  // no debe notarlo).
+  const G = 3, cols = Math.ceil(W / G) + 1, memo = new Uint8Array(cols * (Math.ceil(Math.max(0, bajo) / G) + 1));
+  const libre = (x, y) => {
+    if (!(x > 6 && x < W - 6 && y > 6 && y < bajo)) return false;
+    const i = Math.round(y / G) * cols + Math.round(x / G);
+    if (!memo[i]) memo[i] = libreYa(Math.round(x / G) * G, Math.round(y / G) * G) ? 1 : 2;
+    return memo[i] === 1;
+  };
+  const lista = estrellas.map((e) => [...e]);
+  let s = '', lucero = null;
+  const lz = dia && C?.lucero ? C.lucero(dia) : '';
+  if (lz) {
+    const l = Math.max(3.4, c.rs * 0.11), aire = (x, y) => [[0, 0], [8, 0], [-8, 0], [0, 8], [0, -8]].every(([dx, dy]) => libre(x + dx, y + dy));
+    for (const k of [2.6, 3.4, 4.4]) {
+      lucero = [-125, -55, -150, -30, 180, 0, -90].map((g) => [c.sol[0] + Math.cos((g * Math.PI) / 180) * k * c.rs, c.sol[1] + Math.sin((g * Math.PI) / 180) * k * c.rs]).find(([x, y]) => aire(x, y)) ?? null;
+      if (lucero) break;
+    }
+    // Si junto al astro no hay sitio (el teléfono, con el saldo encima), el punto de cielo libre más cercano a él.
+    if (!lucero) { const sp = sitioFigura([[0, 0, 1]], { libre: aire, alto: [1, 1], paso: 6, W, H: bajo, cerca: c.sol }); if (sp) lucero = [sp.x, sp.y]; }
+    if (lucero) s += `<path class="lucero" d="${luceroD(lucero[0], lucero[1], l)}"/>`;
+  }
+  const fig = dia && C?.figuraDelCielo ? C.figuraDelCielo(dia) : '';
+  const figura = FIGURAS_CIELO[fig];
+  // Cerca del hueco entre la cumbre y el astro (en el teléfono queda a la izquierda, bajo el saldo: es el cielo que hay), sin el lucero.
+  const libreF = (x, y) => libre(x, y) && (!lucero || Math.hypot(x - lucero[0], y - lucero[1]) > 16);
+  const cerca = [(c.sx + c.sol[0]) / 2, Math.min(c.sy, c.sol[1]) - c.rs];
+  const sf = figura ? sitioFigura(figura, { libre: libreF, alto: [70, Math.min(190, H * 0.28)], paso: Math.max(6, Math.round(W / 140)), W, H: bajo, cerca }) : null;
+  if (sf) figura.forEach(([x, y, r], i) => { lista[i] = [sf.x + x * sf.s, sf.y + y * sf.s, r]; });
+  host.dataset.figura = sf ? fig : ''; // (lo leen las pruebas)
+  const ritmos = ['', '', '', '', ''];
+  lista.forEach(([x, y, r], i) => { ritmos[i % 5] += circuloD(x, y, r); });
+  // Las estrellas, antes que el lucero (como siempre: primero en el cielo).
+  s = ritmos.map((d, i) => `<path class="estrella t${i}" d="${d}"/>`).join('') + s;
+  return s;
+}
 function luzDelCielo(W, H, c, techo) {
   const cx = W * 0.4, cy = H * 0.2, largo = Math.hypot(W, H) * 1.15, ancho = Math.max(80, Math.min(W, H) * 0.24);
   const rnd = azar(23);
@@ -429,7 +492,9 @@ function campanaDelPueblo(host) {
 /**
  * (Campamento 35) El Pueblo de los Osos: el turno de ahora (cielo.js, por la hora y el día de El Salvador) y lo que se dibuja de él. Al
  * cambiar de turno con la página abierta (`libro:turno`, unas seis veces al día) se rehace solo el grupo de los vecinos (`.v-vecinos`)
- * de cada escena viva: es la única excepción a «nada se redibuja al cambiar de hora» (idea 102), un repintado del dibujo grande.
+ * de cada escena viva: es la única excepción a «nada se redibuja al cambiar de hora» (idea 102), un repintado del dibujo grande. Desde el
+ * campamento 46 (con el visto bueno del dueño del 26 nov 2026) también al cambiar el animal de la hora (unas cuatro o cinco veces más al
+ * día: 4:30 si hubo tecolote, 6:00, 11:00, 17:30 y 18:30), con el mismo aviso y solo ese grupo (y la capa del actor).
  */
 /** (Campamento 51, idea 228) La frase del foco del día para la descripción: lo raro si lo hay; si no, la rutina del día (cielo.js). */
 const focoDelDia = () => { const C = window.libroCielo, d = C?.dia?.(); return d ? (C.fraseDelFoco?.(d) ?? C.fraseRutina?.(d) ?? '') : ''; };
@@ -475,8 +540,10 @@ function opcionesReparto(info, t) {
   const C = window.libroCielo, dia = C?.dia?.() ?? '', hora = C?.hora?.() ?? 12;
   // (Campamento 52) `hora`: los vecinos con oficio están en el sitio de esa hora (no caminan: se dibuja al poner la escena o el turno).
   // (Campamento 43) `temporada`: la milpa con su gente y los mangos del sábado de plaza (cielo.js: `temporadaDelPueblo`).
+  const animal = C?.animalDelPueblo && dia ? C.animalDelPueblo(dia, hora) : '';
+  info.animal = animal; // (46) el animal pedido al dibujar: si cambia con la página abierta, se rehacen los vecinos (`vigilarTurno`)
   return { hilos: info.cometas.length, dia, escuela: C?.escuela ? C.escuela(dia) : true, canton: sitioCanton(info.camino, t, hora), hora, animo: animoAhora(), temporada: C?.temporadaDelPueblo && dia ? C.temporadaDelPueblo(dia, hora) : null,
-    animal: C?.animalDelPueblo && dia ? C.animalDelPueblo(dia, hora) : '' }; // (45) el animal de la hora en la plaza (se mira al dibujar el turno)
+    animal }; // (45) el animal de la hora en la plaza (se mira al dibujar el turno)
 }
 // ------------------------------------------------------------------ (Campamento E) el precio, a su ritmo: el ánimo del valle
 // lib.js decide el estado con los cierres diarios (`animoDelValle`); datos.js lo trae con el histórico (`ponerAnimo`). Aquí se recuerda,
@@ -642,15 +709,25 @@ function vigilarTurno(host, info) {
   if (oyeTurno) return;
   oyeTurno = true;
   window.addEventListener('libro:turno', () => {
-    const t = turnoDelPueblo();
+    const t = turnoDelPueblo(), C = window.libroCielo, d = C?.dia?.() ?? '', an = C?.animalDelPueblo && d ? C.animalDelPueblo(d, C.hora()) : '';
     for (const [h, v] of vecinosVivos) {
       const g = h.isConnected && h.querySelector('.v-vecinos');
       if (!g) { vecinosVivos.delete(h); continue; }
-      if (v.turno !== t && !(fiestaViva && h === estado?.host)) { // (59) con la fiesta en marcha, el turno espera: al acabar se pone el de ese momento
+      if (fiestaViva && h === estado?.host) continue; // (59) con la fiesta en marcha, el turno espera: al acabar se pone el de ese momento
+      if (v.turno !== t) {
         if (v.conCapa) caminar(h, v, t, v.lista); else { g.innerHTML = htmlVecinos(v, t); v.turno = t; } // (49, 204) uno camina a su sitio nuevo
-        // (Campamento 40, idea 148) La descripción de la montaña cuenta el turno de ahora: se rehace con él.
-        if (estado?.host === h && estado.valle) { estado.valle.turno = t; describir(estado.sats, estado.etapaDesc); }
-      }
+      } else if ((v.animal ?? '') !== an) {
+        // (Campamento 46, encargo del dueño) Solo cambió el animal de la hora: se rehacen los vecinos con él (o sin él), sin que nadie
+        // camine; la capa del actor se vuelve a poner con el reparto nuevo (como al acabar la fiesta). Si el animal no cabe (el garrobo
+        // de 11:00 a 11:30 en la plaza de la mañana), lo dibujado no cambia: no se repinta.
+        const antes = v.lista?.find((x) => x.animal)?.t ?? '', todos = reparto(v.lug, t, opcionesReparto(v, t));
+        if ((todos.find((x) => x.animal)?.t ?? '') === antes) continue;
+        if (caminando?.host === h) pararCamino();
+        g.innerHTML = htmlVecinos(v, t, { todos });
+        if (v.conCapa) capaVecino(h, v, t);
+      } else continue;
+      // (Campamento 40, idea 148) La descripción de la montaña cuenta el turno de ahora (y, desde el 45, el animal): se rehace con él.
+      if (estado?.host === h && estado.valle) { estado.valle.turno = t; describir(estado.sats, estado.etapaDesc); }
     }
   });
 }
@@ -769,6 +846,7 @@ function enCapas(host, W, H) {
 export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, techo = 0, fechas = {}, compras = 0, plantar = false, tocable = false, aurora = false, eco = null, aniv = false, lluvia = 0, memoria = 0, ventas = 0, mensajes = [], puedeEscribir = false, firmas = [], cumples = [], pie = 104, libro = false, personas = 0, iniciales = '', primera = null, meses = 0, anios = 0, pelicula = false, rotulo = null, farolHito = false, lleva = {} }) {
   const W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
   if (!W || !H) return;
+  const textosCielo = cajasDeTexto(host); // (46) antes de escribir nada en la página
   const c = composicion(W, H, techo, pie);
   const esc = escalaMontana(sats, c.campos);
   const rnd = azar(42);
@@ -813,9 +891,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   s += `<rect class="cielo-0" x="0" y="0" width="${W}" height="${H}" fill="url(#m-cielo)"/><rect class="resplandor" x="0" y="0" width="${W}" height="${H}" fill="url(#m-resplandor)"/>`;
   // (Campamento 39, idea 126) Las 46 estrellas, en cinco trazos: uno por ritmo (las de un mismo ritmo ya titilaban a la vez); el mismo
   // `rnd()` en el mismo orden, y cada estrella, un círculo dentro de su trazo. 41 nodos y 32 animaciones menos, y se ve igual.
-  const ritmos = ['', '', '', '', ''];
-  for (let i = 0; i < 46; i++) { const x = rnd() * W, y = rnd() * H * 0.5, r = 0.5 + rnd() * 1.1; ritmos[i % 5] += circuloD(x, y, r); }
-  s += ritmos.map((d, i) => `<path class="estrella t${i}" d="${d}"/>`).join('');
+  // (Campamento 46, idea 180) Las primeras de ellas pueden ir donde está la figura del cielo de aquí esa temporada (Orión y las
+  // Cabritas, el Alacrán): se gastan los mismos `rnd()` y se colocan después, cuando ya se sabe dónde está la montaña (`<!--estrellas-->`).
+  const estrellas = [];
+  for (let i = 0; i < 46; i++) { const x = rnd() * W, y = rnd() * H * 0.5, r = 0.5 + rnd() * 1.1; estrellas.push([x, y, r]); }
+  s += '<!--estrellas-->';
   // Estrella fugaz (muy esporádica, solo de noche y con todos los efectos): una raya corta que cruza el cielo alto.
   s += `<line class="fugaz" x1="${f1(W * 0.16)}" y1="${f1(H * 0.1)}" x2="${f1(W * 0.16 + 46)}" y2="${f1(H * 0.1 + 20)}"/>`;
   // Lluvia de estrellas real (idea 43): esa noche cruzan más (dos de más a los lados del máximo, cuatro la noche del máximo).
@@ -825,7 +905,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   // El halo es un degradado radial (luz que se difumina), no un disco.
   const halo = `<circle class="halo" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 3.4)}" fill="url(#m-halo)"/>`;
   s += `<g class="sol">${halo}<circle class="astro sol-disco" cx="${f1(c.sol[0])}" cy="${f1(c.sol[1])}" r="${f1(c.rs * 0.9)}" fill="url(#m-sol)"/></g>`; // el sol, algo menor que la luna: con su halo se lee como luz, no como un disco
-  s += `<g class="luna">${halo}${luna(c.sol[0], c.sol[1], c.rs, window.libroCielo?.faseLunar() ?? 0.5)}${monedaB(c.sol[0], c.sol[1], c.rs)}</g>`;
+  const Cc = window.libroCielo, hoyC = Cc?.dia?.() ?? '', horaC = Cc?.hora?.() ?? 12;
+  s += `<g class="luna">${halo}${luna(c.sol[0], c.sol[1], c.rs, Cc?.faseLunar() ?? 0.5, { conejo: Boolean(hoyC && Cc.conejo?.(hoyC, horaC)) })}${monedaB(c.sol[0], c.sol[1], c.rs)}</g>`;
   // El torogoz cruza al amanecer por el cielo libre entre el saldo y la cumbre.
   s += (aurora ? auroraBoreal(W, H, techo) : '') + nubes(H) + torogoz(Math.min(Math.max(techo + 44, H * 0.2), c.sy - 20), W >= 1100 ? 1.45 : W >= 700 ? 1.3 : 1.2) + '<!--v-cielo--></g>';
   // Velo cálido del cielo para las celebraciones: va antes de las montañas, así solo tiñe el cielo.
@@ -879,6 +960,8 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const cimaPts = [...izq.slice(0, 10), ...cuerno, ...der.filter((p) => p[0] > c.sx + 48 * ecC)];
   const contorno = cimaPts.map((p, i) => `${i ? 'L' : 'M'}${f1(p[0])} ${f1(p[1])}`).join('');
   const silueta = `${contorno}L${f1(derX + W)} ${H}L${f1(izqX - W)} ${H}Z`;
+  // (Campamento 46, ideas 180 y 182) Las estrellas, ya con la silueta: la figura del cielo de aquí y el lucero, en el cielo libre.
+  s = s.replace('<!--estrellas-->', () => estrellasDelCielo(host, { W, H, c, ec, estrellas, pts: [...cimaPts, [derX + W, H], [izqX - W, H]], dia: hoyC, textos: textosCielo }));
   // La arista central baja quebrada (roca), no en línea recta: así la cara iluminada no parece una cascada.
   const alto = piso - c.sy;
   const quiebre = [[0.012, 0.07], [0.034, 0.13], [0.018, 0.2], [0.046, 0.29], [0.03, 0.38], [0.06, 0.52], [0.05, 0.7], [0.075, 1]]
@@ -1037,7 +1120,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   const altoCohete = Math.max(60, suelo - Math.max(techo + 60, c.sy + 30));
   host.style.setProperty('--cohete-alto', `${f1(altoCohete)}px`); // hasta dónde suben los silbadores
   // (Campamento 39, idea 125) Los cohetes, solo en su hora (23:40–0:40): el resto de sus cuatro días, el grupo va vacío y se llena al llegar.
-  const Cc = window.libroCielo;
+  // (`Cc`: el cielo, ya leído arriba con la luna)
   s += cohetes(W, suelo, W >= 1100 ? 1.6 : 1.25, altoCohete, Cc?.cohetesPuestos ? Cc.cohetesPuestos(Cc.dia(), Cc.hora()) : true);
   vigilarCohetes();
   // (30, idea 19) Se arma en una plantilla (inerte: sin estilos ni medidas), se le quita lo de otra temporada y entra ya podada.
@@ -1137,7 +1220,7 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
   host.dataset.colocando = '';
   try {
     colocar(sats, false);
-    estado.osos = colocarOsos({ host, W, H, c, ec, esc, inicio: pelicula || inicio <= 0 ? sats : Math.min(inicio, sats), campos, nieveMedidas, camino, L, silueta: [...cimaPts, [derX + W, H], [izqX - W, H]], cara: [[c.sx, c.sy], ...cuerno.slice(N_CARA), ...der.filter((p) => p[0] > c.sx + 48 * ecC), [derX + W, H], ...[...quiebre].reverse()], aurora, cumple: cumples.length > 0, hola: tocable && !pelicula && ultimoTramo(sats) });
+    estado.osos = colocarOsos({ host, W, H, c, ec, esc, inicio: pelicula || inicio <= 0 ? sats : Math.min(inicio, sats), campos, nieveMedidas, camino, L, silueta: [...cimaPts, [derX + W, H], [izqX - W, H]], cara: [[c.sx, c.sy], ...cuerno.slice(N_CARA), ...der.filter((p) => p[0] > c.sx + 48 * ecC), [derX + W, H], ...[...quiebre].reverse()], aurora, arriba: Boolean(hoyC && (Cc.geminidas?.(hoyC, 23) || Cc.geminidas?.(hoyC, 1))), cumple: cumples.length > 0, hola: tocable && !pelicula && ultimoTramo(sats) });
     if (inicio !== sats) colocar(inicio, false);
     host.getBoundingClientRect(); // (el estado de `inicio`, ya calculado sin transiciones)
   } finally { delete host.dataset.colocando; }
@@ -1159,7 +1242,11 @@ export function dibujarMontana(host, { sats, meta, etapa = meta, inicio = sats, 
  * (`arte-osos.js: sitioOsos`); aquí se le dan el sendero (cada 3 px), la meta (mojón y bandera, con 8 px de aire) y las cajas de lo que
  * se lee encima de la escena (el saldo, la cabecera, la tarjeta de la entrada, los textos de la película).
  */
-function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, camino, L, silueta, cara, aurora, cumple, hola = false }) {
+function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, camino, L, silueta, cara, aurora, arriba = false, cumple, hola = false }) {
+  // (Campamento 46, idea 181) Las noches de las Gemínidas (`arriba`) llevan también la cara que mira al cielo, como con aurora; el CSS la
+  // enseña con la pose `estrellas` (cielo.js: CUMBRE). Se colocan como con aurora (la cabeza alzada va dentro de la de siempre).
+  const conAurora = aurora;
+  aurora = aurora || arriba;
   const cima = campos.find((x) => x.cima), g = host.querySelector('#m-osos');
   if (!cima || !g) return null;
   const sendero = [];
@@ -1191,7 +1278,7 @@ function colocarOsos({ host, W, H, c, ec, esc, inicio, campos, nieveMedidas, cam
     if (sin && sin.lista.length > (sitio?.lista.length ?? 0)) { sitio = sin; cumple = false; }
   }
   if (!sitio) return null;
-  g.setAttribute('class', `osos${aurora ? ' con-aurora' : ''}`);
+  g.setAttribute('class', `osos${conAurora ? ' con-aurora' : ''}${arriba ? ' mira-cielo' : ''}`);
   g.setAttribute('aria-hidden', 'true');
   g.dataset.zona = sitio.zona; // dónde se sentaron: «nieve» (la de siempre), «nieveHoy» o «cumbre» (lo leen las pruebas)
   // (Campamento 33) ¿Caben estirados? Las puntas de los brazos alzados, con 2 px de aire, dentro de la montaña; si no, no se estiran.
