@@ -58,21 +58,31 @@ Con una línea en `false`, esos días son los de siempre (su foco, su frase, su 
 - **Desde 2027**: las fechas de 2026 (las del banco y las pruebas) se quedan como estaban.
 - **Todo quieto**: el malabarista hace malabares quieto (la pose de la maqueta); ninguna historia trae un actor a `data-mueve`. Si un día se quiere que se mueva, sería el actor de su franja (226).
 - **El globo en la cumbre** lo dibujó Opus (no venía en el parche): la piedrita con su hilo, el globo rojo y su brillo, **delante de los osos** (de delante hacia los lados, siempre dentro de la nieve con aire; primero sin tapar a ningún oso). Ese día no se planta nada más (ni el paraguas de la lluviosa).
+- **La pared del mural** es la lateral de la escuela (`casaEscuela`, la misma que piensa el reparto); si queda detrás del árbol de fuego del final de la calle (en el teléfono y a 1440 px la escuela es la última casa), va en la de la casa de antes, que se ve, y allí posan los oseznos.
 - **El mural** se dejó en lo mínimo que dice la idea («tres manchas de color y nada más»): un óvalo de sol, un volcán y un torogoz en su pared lateral, tres trazos. Para pulir por Fable (ver [65](65-arte-para-fable.md)).
 - **La media pared** es la mitad del frente que no da al hastial; el color nuevo, un paso de la paleta del pueblo (cal, añil, ocre, rosa, menta) que cambia cada año.
 - **La casa que se pinta cada año** sigue `CASAS_PINTADAS` (1, 3, 0, 2, 5, 4, 6): la primera es una de las que se ven en el teléfono.
 
 ## Lo que queda para después o para Fable (y por qué)
+**Encargo del dueño (26 nov 2026): Opus hace solo la base; Fable mejora todo lo visual después.** Los dibujos son los de la maqueta tal cual (solo se movieron de sitio para que nada quede encima de otro); lo que no tenía maqueta (el globo de la cumbre, el mural, la media pared, el aserrín) es provisional. **La crítica de lo visual, historia por historia y con sus capturas, está en [65](65-arte-para-fable.md) (filas «53C»)**: Fable la lee primero.
 - **245 · El cayuco nuevo**: exige el presupuesto de pantallas anchas (131) y resolver antes la incoherencia del cayuco del 51 (el pescador está en el pueblo desde las 9:00 y el cayuco sigue con él dentro: `39-50-para-fable-y-decisiones.md`). No se tocó. Su arte, en [65](65-arte-para-fable.md).
 - **246 · El nido del torogoz**: depende del torogoz posado (177), que es de Fable; que anida en túneles de los paredones y cría de marzo a junio es **de oídas: por confirmar con el dueño**.
 - **Arte que falta** (en [65](65-arte-para-fable.md)): los botes y las brochas, el mural de verdad, el aserrín, el techo de la ramada (verde, se confunde con la copa a 390 px), el globo de la cumbre (pulirlo) y la banca nueva de la 248.
 - **Las mejoras de la v5 que llaman a este motor** y no estaban en el encargo: la milpa por capítulos (154), la gallina echada y los pollitos (176, que además son arte de Fable), el cayuco nuevo como obra que se queda (206).
 
 ## Medido
-(pendiente: banco antes y después)
+Banco `--rapido` (390×664, mil compras, nodos con «esenciales»), entero, antes (`origin/main`) y después en el mismo sandbox:
+- **Ningún momento de antes sube salvo uno**: el eclipse del 25 jun 2029, **836 → 839** (+3: el mural de la escuela, que desde octubre de 2027 se queda; declarado). A 2560 px los momentos de febrero de 2027 bajan 2 (la casa repintada deja un color que ya no sale). Todo lo demás, igual (nodos, valle, osos y animaciones a la vista).
+- Momentos nuevos (declarados): la función del circo **811** (32 animaciones a la vista, como un anochecer cualquiera), la carpa de noche **806**, el sábado de la ramada a las 16:30 **814** (el sábado de atolada sin ramada: 818), el martes del globo en la cumbre **844** (junio, con la llovizna de la lluviosa; el globo, +3) y **un miércoles de 2040 830** (con trece casas pintadas y el mural; el tope, día normal 827 + 12 = 839). Pantallas anchas, la función del circo: 878 · 895 · 894 (tope 1100).
+- Ninguna animación nueva: todo quieto.
 
 ## Verificado
-(pendiente)
+- `test_lib` (1283 comprobaciones), bloque «historias»: el calendario de 2027 a 2100 (todas cada año, una por día, ninguna en semana de fiesta —comprobado contra `festivo`, `fiestaDelAnio`, el desfile, la Cruz, la Navidad y Semana Santa, no contra la regla del motor—, cinco días tranquilos, la ramada con su sábado de atolada); nada antes de 2027; todo de la fecha y sin tocar el aparato; foco y frase solo el primer día; la plaza ocupada (sin mejenga, hamaca, pelota ni tecolote); el osezno de las tardes; lo que cada año deja y su tope (seis tamaños, las dos luces, 2027–2045); el reparto de cada capítulo en cada cuarto de hora de su día en cinco tamaños y las dos luces (su pieza, de una a ocho figuras, nadie dentro de lo levantado, sin NaN, el osezno nunca en la entrada); cada línea de `COSTUMBRES` apagada (esos días son los de siempre y el calendario de las demás no se mueve).
+- **Pruebas viejas cambiadas** (cambio intencional): el tope de frases de la línea de hoy en dos años (director 228) pasa de 90 a 100 (las historias suman ocho en 2027: 91).
+- `test_ui` entero por partes (`PARTE=k/6`, de dos en dos): 328 + 590 + 352 + 373 + 637 + 557, en verde. Bloque nuevo «campamento 53C» (a 390 y 1440 px, cambiando día y hora con la página abierta): la carpa sin hamaca ni pelota, la función, el domingo de la ramada sin mejenga, el globo en la cumbre solo el martes, la media pared solo el segundo día, el mural que crece y se queda; todo quieto, sin NaN, bajo 1000 nodos y la consola limpia.
+- axe: 348 estados, sin violaciones. `tsc`, Biome (0 avisos) y `comprobar_recorte`, en verde. El banco entero, antes y después (arriba): «OK».
+- Capturas a 390, 1440 y 1920 de cada historia en cada uno de sus días (claro, «todos»), con el pueblo de cerca y la cumbre del globo entera.
+- **No se corrieron**: los barridos (`rapido` y por pestañas), Lighthouse, `test_api` (no se tocó el servidor) ni la regresión visual (sus fechas son de 2026: no cambian); las capturas en oscuro y con «ninguno» no se hicieron una por una (todo es quieto y va en los tonos de siempre).
 
 ## Sin probar aquí
 - iPhone real y Safari: el reparto con la carpa o la ramada (que nadie quede encima), el globo de la cumbre a 390 px con la nieve real del saldo de la familia, el mural en la pared de la escuela.

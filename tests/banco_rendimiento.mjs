@@ -145,7 +145,7 @@ const CASOS = [
   { caso: 'el lucero de la tarde', dia: '2026-08-15', hora: 18, declara: 817 },
   { caso: 'el lucero de la mañana', dia: '2026-11-26', hora: 5.25, declara: 828 },
   { caso: 'Gemínidas, miran arriba', dia: '2026-12-14', hora: 23, declara: 859 },
-  { caso: 'eclipse de luna', dia: '2029-06-25', hora: 21, declara: 836 },
+  { caso: 'eclipse de luna', dia: '2029-06-25', hora: 21, declara: 839 }, // (53C) +3: el mural de la escuela, que desde octubre de 2027 se queda (248)
   // (Campamento 44) Lluvia y verano. La llovizna (la nube cargada y sus 20 gotas) se poda los días que no llueve por la tarde, también los
   // de la seca (antes se escondía con el CSS): **−23 nodos en cada fecha** sin lluvia. La tarde de lluvia (paraguas, hoja de huerta, los
   // oseznos bajo el corredor) es otro reparto de los mismos trazos y sin la pelota (−2 animaciones); los charcos, en los tonos de siempre;

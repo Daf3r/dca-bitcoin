@@ -8233,7 +8233,8 @@ try {
       await new Promise((res) => setTimeout(res, 700));
       const host = document.getElementById('montana'), raiz = document.documentElement;
       const malos = [...host.querySelectorAll('[d], [transform]')].filter((e) => /NaN|undefined|Infinity/.test(`${e.getAttribute('d') ?? ''}${e.getAttribute('transform') ?? ''}`)).length;
-      const vecinas = [...host.querySelectorAll('.v-vecinos, :scope > svg.v-capa-vecino')];
+      // Lo de la historia va en el grupo de los vecinos (quieto); el actor de la rutina, si toca, sigue en su capa como siempre.
+      const vecinas = [...host.querySelectorAll('.v-vecinos')];
       return {
         turno: raiz.dataset.turno ?? '', mueve: raiz.dataset.mueve ?? '', foco: raiz.dataset.foco ?? '', malos, grupos: host.querySelectorAll('.v-vecinos').length,
         pelota: host.querySelectorAll(':scope > svg.v-actor-pelota').length, hamaca: host.querySelectorAll(':scope > svg.v-actor-hamaca').length,
@@ -8262,7 +8263,7 @@ try {
         ok(c2.obra === 1 && c3.obra === 0 && m0.mural === 0 && m4.mural === 3 && m9.mural === 3, `53C a ${w} px: la media pared solo el segundo día (${c2.obra}, ${c3.obra}); el mural crece y se queda (${m0.mural} → ${m4.mural} → ${m9.mural})`);
         // Todo quieto, ningún NaN, la escena del teléfono bajo su tope y la consola limpia.
         const todos = [ca, pe, fu, ra, g2, g3, c2, c3, m0, m4, m9];
-        ok(todos.every((r) => !r.malos && r.anima === 0) && (w > 500 || todos.every((r) => r.nodos < 1000)) && t.consola.length === 0, `53C a ${w} px: ninguna animación nueva, ningún NaN, la escena bajo 1000 nodos en el teléfono y la consola limpia (${Math.max(...todos.map((r) => r.nodos))} nodos; ${t.consola.slice(0, 2).join(' | ')})`);
+        ok(todos.every((r) => !r.malos && r.anima === 0) && (w > 500 || todos.every((r) => r.nodos < 1000)) && t.consola.length === 0, `53C a ${w} px: ninguna animación nueva, ningún NaN, la escena bajo 1000 nodos en el teléfono y la consola limpia (${Math.max(...todos.map((r) => r.nodos))} nodos; ${todos.map((r) => `${r.anima}/${r.malos}`).join(' ')}; ${t.consola.slice(0, 2).join(' | ')})`);
         await t.ctx.close();
       }
     } finally {
